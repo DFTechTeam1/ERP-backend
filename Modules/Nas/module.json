@@ -1,0 +1,11 @@
+{
+    "name": "Nas",
+    "alias": "nas",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Nas\\Providers\\NasServiceProvider"
+    ],
+    "files": []
+}

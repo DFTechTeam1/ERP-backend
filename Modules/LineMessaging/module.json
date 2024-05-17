@@ -1,0 +1,11 @@
+{
+    "name": "LineMessaging",
+    "alias": "linemessaging",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\LineMessaging\\Providers\\LineMessagingServiceProvider"
+    ],
+    "files": []
+}

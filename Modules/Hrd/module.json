@@ -1,0 +1,11 @@
+{
+    "name": "Hrd",
+    "alias": "hrd",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Hrd\\Providers\\HrdServiceProvider"
+    ],
+    "files": []
+}

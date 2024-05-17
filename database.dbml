@@ -1,0 +1,478 @@
+Project ERP {
+    database_type: 'PostgreSQL'
+}
+
+Table line_messages {
+    id int [pk, increment]
+    type varchar
+    reply_token varchar
+    user_id varchar
+    message longtext
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table settings {
+    id bigint [pk, increment]
+    key varchar
+    value longtext
+}
+
+Table users {
+    id bigint [pk, increment]
+    uid varchar [note: 'type will binary(16)']
+    email varchar [not null]
+    password varchar [not null]
+    image varchar
+    email_verified_at timestamp
+    last_login_at timestamp
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table user_login_histories {
+    id bigint [pk, increment]
+    user_id int [not null]
+    login_at timestamp [not null]
+    ip varchar
+}
+
+Table divisions {
+    id bigint [pk, increment]
+    name varchar [unique, not null]
+    parent_id int
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table positions {
+    id bigint [pk, increment]
+    uid varchar [note: 'type will binary(16)']
+    name varchar [not null]
+    division_id int [ref: > divisions.id]
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+// Table employees {
+//     id bigint [pk, increment]
+//     uid varchar [note: 'type will binary(16)']
+//     employee_id varchar(20) [not null]
+//     photo varchar
+//     fingerspot_id varchar
+//     email varchar [not null, unique]
+//     name varchar [not null]
+//     nickname varchar [not null]
+//     address varchar [not null]
+//     current_address varchar
+//     phone varchar(16) [not null]
+//     position_id int [ref: > positions.id]
+//     level_staff enum [not null]
+//     status tinyint [not null, note: '1 for permanenet, 2 for contract, 3 for part time, 4 for freelance, 5 for internship, 6 for inactive, 7 for waiting HR checking (usually comes from self-filling after the contract)']
+//     join_date date
+//     probation_status tinyint
+//     end_probation_date date
+//     start_preview_probation date
+//     exit_date date
+//     gender enum [note: 'female or male. This should related to localization']
+//     education enum [note: 'smp, sma/smk, diploma, s1, s2, s3']
+//     education_name varchar
+//     education_major varchar
+//     graduation_year year
+//     nik varchar [not null]
+//     bank_detail longtext [note: 'Format: [{"bank_name": "", "account_number": "", "account_holder_name": "", "is_active": ""}]']
+//     pob varchar(100)
+//     dob date
+//     religion enum [note: 'katholik, islam, kristen, budha, hindu, khonghucu. All should related to localization']
+//     martial_status enum [note: 'married, single']
+//     relation_contact longtext [note: 'Format: {"name": "", "phone": "", "relationship": ""}']
+//     referal_code varchar(5)
+//     created_at timestamp
+//     updated_at timestamp
+//     created_by int
+//     updated_by int
+
+//     Indexes {
+//         (name, email, employee_id) [name:'employee_credential']
+//     }
+// }
+
+Table employees {
+    id bigint [pk, increment]
+    uid varchar [note: 'type will be binary(16)']
+    name varchar [not null]
+    nickname varchar(50)
+    email varchar(200) [not null]
+    phone varchar(15) [not null]
+    id_number varchar(16) [not null]
+    religion enum [note: 'katholik, islam, kristen, budha, hindu, khonghucu. All should related to localization', not null]
+    martial_status enum [note: 'married, single', not null]
+    address varchar [not null]
+    city_id int
+    province_id int
+    country_id int
+    postal_code varchar(6) [not null]
+    current_address varchar [not null]
+    blood_type varchar(1)
+    date_of_birth date [not null]
+    place_of_birth varchar(100) [not null]
+    dependent int [note: 'tanggungan']
+    gender enum [note: 'female or male. This should related to localization']
+    bank_detail longtext [note: 'Format: [{"bank_name": "", "account_number": "", "account_holder_name": "", "is_active": ""}]']
+    relation_contact longtext [note: 'Format: {"name": "", "phone": "", "relationship": ""}']
+    education enum [note: 'smp, sma/smk, diploma, s1, s2, s3']
+    education_name varchar
+    education_major varchar
+    graduation_year year
+    position_id int [ref: > positions.id]
+    boss_id int [note: 'related to this table']
+    level_staff enum [not null, note: 'manager,lead,staff,junior staff']
+    status tinyint [not null, note: '1 for permanenet, 2 for contract, 3 for part time, 4 for freelance, 5 for internship, 6 for inactive, 7 for waiting HR checking (usually comes from self-filling after the contract)']
+    placement varchar(255)
+    join_date date [not null]
+    start_review_probation_date date
+    probation_status tinyint
+    end_probation_date date
+    company_name varchar(200)
+    bpjs_status tinyint
+    bpjs_ketenagakerjaan_number varchar(50)
+    bpjs_kesehatan varchar(50)
+    npwp_number varchar(50)
+    bpjs_photo varchar(255)
+    npwp_photo varchar(255)
+    id_number_photo varchar(255)
+    kk_photo varchar(255)
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table employee_experiences {
+    id bigint [pk, increment]
+    employee_id int [ref: > employees.id]
+    name varchar
+    position varchar
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table jobs {
+    id int [pk, increment]
+    uid varchar [note: 'type will binary(16)']
+    name varchar [not null]
+    description longtext [not null]
+    images longtext [note : '["image.jpg", "image.png"]']
+    status tinyint [note: '1 for publish, 2 for draft, 3 expired']
+    slug varchar [not null]
+    deadline timestamp
+    position_id int [ref: > positions.id]
+    is_have_test_stage bool [not null, default: false]
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table employee_signs {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    employee_id bigint [not null, ref: > employees.id]
+    sign varchar [not null, note: 'sign stored as image']
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table talent_pools {
+    id int [pk, increment]
+    uid varchar [note: 'type will binary(16)']
+    name varchar [not null]
+    email varchar [not null]
+    phone varchar(15) [not null]
+    attachments longtext [note: 'format: ["file.pdf", "cv.pdf"]']
+    job_id int [ref: > jobs.id]
+    status tinyint [note: '1 for passed, 2 for failed, 3 for on process']
+    failed_reason text [note: 'Reason (for internal only)']
+    ats_detail longtext
+    referral_code varchar(5)
+    stages longtext [note: 'Format: [{"stage": "screening", "status": "1", "updated_at": ""}, {"stage": "interview", "status": "0", "updated_at": ""}]']
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table document_templates {
+    id int [pk, increment]
+    uid varchar [note: 'type will binary(16)']
+    template_type tinyint [not null]
+    name varchar [not null]
+    template text [not null]
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table notification_template {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    name varchar [not null]
+    notification_type tinyint [not null]
+    template text [not null]
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table brands {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    name varchar [not null]
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table suppliers {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    name varchar [not null]
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table inventory_types {
+    id int [pk, increment]
+    name varchar [not null]
+    slug varchar [not null]
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table inventories {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    name varchar [not null]
+    item_type int [not null]
+    brand_id int [not null, ref: > brands.id]
+    supplier_id int [not null, ref: > suppliers.id]
+    unit_id int
+    description text
+    warranty tinyint [note: 'In years']
+    year_of_purchase year
+    purchase_price double
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table inventory_images {
+    id int [pk, increment]
+    inventory_id int [ref: > inventories.id]
+    image varchar
+    is_main bool
+}
+
+Table inventory_items {
+    inventory_id int [ref: > inventories.id]
+    inventory_code varchar(20) [not null]
+    qrcode varchar [note: 'Auto generate']
+    current_location tinyint [note: '1 for in user, 2 for in warehouse, 3 for in outside']
+    status tinyint [note: '1 for in use, 2 for in repair, 3 for broke, 4 for disposal']
+}
+
+Table units {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    name varchar
+}
+
+Table inventory_position {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    inventory_id int [ref: > invetories.id]
+    pic_id int
+    pic_type varchar
+    assign_at timestamp
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table inventory_position_histories {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    inventory_id int [ref: > invetories.id]
+    location_id int
+    location_type varchar
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table inventory_request {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    request_by int [ref: > employees.id]
+    request_code varchar(100)
+    note varchar
+    status tinyint [note: '1 waiting approval, 2 for draft, 3 for in process, 4 for completed, 5 rejected']
+    request_at timestamp
+    approved_at timestamp
+    rejected_at timestamp
+    reject_reason varchar
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table inventory_request_items {
+    id int [pk, increment]
+    inventory_request_id int [ref: > inventory_request.id]
+    name varchar [not null]
+    quantity double [not null]
+    price double [not null]
+    image varchar
+}
+
+Table inventory_maintenance_request {
+    id int [pk, increment]
+    uid varchar [not null, note: 'type will binary(16)']
+    inventory_position_id int [ref: > inventory_position.id]
+    inventory_id int [ref: > invetories.id]
+    requester_note varchar
+    technican_note varchar
+    status tinyint [note: '1 for requesting, 2 for in process, 3 for completed']
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table addons {
+    id int [pk, increment]
+    name varchar [not null]
+    description text
+    preview_img varchar [not null]
+    tutorial_video varchar
+    main_file varchar [not null]
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table addons_update_histories {
+    id int [pk, increment]
+    addon_id int [not null]
+    improvements longtext
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table projects {
+    id int [pk, increment]
+    name varchar [not null]
+    client_portal varchar [not null]
+    project_date date [not null]
+    event_type enum [note: 'wedding, engagement, party, event, birthday, concert, corporate, exhibition']
+    venue varchar [not null]
+    marketing_id int [ref: > employees.id]
+    collaboration varchar
+    note varchar
+    status tinyint [note: '1 for active-ongoing, 2 is draft, 3 for done, 4 for waiting approval, 5 completed, 6 for cancel']
+    classification enum [note: 's,a,b,c,d']
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table project_person_in_charge {
+    id int [pk, increment]
+    project_id int [ref: > projects.id]
+    pic_id int [ref: > employees.id]
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table project_boards {
+    id int [pk, increment]
+    project_id int [ref: > projects.id]
+    name varchar [not null]
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table project_references {
+    id int [pk, increment]
+    project_id int [ref: > projects.id]
+    media_path varchar
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table teams {
+    id int [pk, increment]
+    leader int [not null]
+    name varchar [not null]
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table team_members {
+    id int [pk, increment]
+    team_id int [ref: > teams.id]
+    member_id int
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table project_tasks {
+    id int [pk, increment]
+    project_id int [ref: > projects.id]
+    start_date date
+    end_date date
+    description text
+    name varchar [not null]
+    status tinyint
+    start_working_at datetime
+    position_on_board int [ref: > project_boards.id]
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+    updated_by int
+}
+
+Table project_task_pic {
+    id int [pk, increment]
+    project_task_id int [ref: > project_tasks.id]
+    employee_id int
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table project_task_attachments {
+    id int [pk, increment]
+    project_task_id int [ref: > project_tasks.id]
+    media varchar
+    display_name varchar
+    related_task_id int [ref: > project_tasks.id]
+    type tinyint [note: '1 for media, 2 for other task link, 3 for external link']
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table project_task_comments {
+    id int [pk, increment]
+    project_task_id int [ref: > project_tasks.id]
+    sender_id int [ref: > employees.id]
+    message varchar [not null]
+    created_at timestamp
+    updated_at timestamp
+}

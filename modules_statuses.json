@@ -1,0 +1,9 @@
+{
+    "Company": true,
+    "Hrd": true,
+    "Inventory": true,
+    "Nas": true,
+    "Production": true,
+    "Addon": true,
+    "LineMessaging": true
+}
