@@ -67,6 +67,7 @@ class PositionService {
                 $order
             )->toArray();
 
+            $paginated = [];
             foreach ($positions as $position) {
                 unset($position['division_id']);
                 unset($position['division']['id']);
@@ -85,7 +86,7 @@ class PositionService {
             );
         } catch (\Throwable $th) {
             return generalResponse(
-                errorMessage('message'),
+                errorMessage($th),
                 true,
                 [],
                 Code::BadRequest->value,
@@ -98,9 +99,9 @@ class PositionService {
      *
      * @return array
      */
-    public function getAll()
+    public function getAll(string $select = 'id,uid,name', string $where = '')
     {
-        $data = $this->repo->list('id,uid,name');
+        $data = $this->repo->list($select, $where);
 
         $data = collect($data)->map(function ($item) {
             return [

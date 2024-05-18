@@ -14,11 +14,12 @@ use Modules\Addon\Http\Controllers\AddonController;
  *
 */
 
+Route::post('addon/askDeveloper', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'askDeveloper']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('addon', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'index']);
     Route::post('addon/nas', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'store']);
     Route::get('addon/{id}',[\Modules\Addon\Http\Controllers\Api\AddonController::class, 'show']);
-    Route::post('addon/askDeveloper', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'askDeveloper']);
     Route::post('addon/bulk', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'bulkDelete']);
     
     Route::post('addon/upgrades/{id}', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'upgrades']);

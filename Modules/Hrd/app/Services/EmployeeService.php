@@ -733,4 +733,22 @@ class EmployeeService
             return errorResponse($th);
         }
     }
+
+    public function getProjectManagers()
+    {
+        $service = new \Modules\Company\Services\PositionService();
+
+        $data = $this->repo->list('id, uid as value, name as title', '', [
+            'position' => function ($query) {
+                return $query->selectRaw('id,name,uid')
+                    ->whereRaw("LOWER(name) = 'project manager'");
+            }
+        ]);
+
+        return generalResponse(
+            'success',
+            false, 
+            $data->toArray(),
+        );
+    }
 }

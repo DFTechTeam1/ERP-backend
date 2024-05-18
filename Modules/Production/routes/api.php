@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\ProductionController;
 
 /*
@@ -14,8 +15,7 @@ use Modules\Production\Http\Controllers\ProductionController;
  *
 */
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('production', ProductionController::class)->names('production');
-
-    
+Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
+    Route::get('eventTypes', [ProjectController::class, 'getEventTypes']);
+    Route::get('classList', [ProjectController::class, 'getClassList']);
 });
