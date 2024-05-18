@@ -65,9 +65,11 @@ class InventoryService {
 
             if (!empty($search)) { // array
                 if (!empty($search['name']) && empty($where)) {
-                    $where = "LOWER(name) LIKE '%{$search['name']}%'";
+                    $name = strtolower($search['name']);
+                    $where = "LOWER(name) LIKE '%{$name}%'";
                 } else if (!empty($search['name']) && !empty($where)) {
-                    $where .= " AND LOWER(name) LIKE '%{$search['name']}%'";
+                    $name = strtolower($search['name']);
+                    $where .= " AND LOWER(name) LIKE '%{$name}%'";
                 }
 
                 if (
@@ -193,6 +195,38 @@ class InventoryService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    public function getAll()
+    {
+        $data = $this->repo->list('id,uid as value,name as title', '', ['items', 'image']);
+
+        $data = collect($data)->map(function ($item) {
+            $locationGroup = collect($item->items)->groupBy('current_location');
+            $location = [];
+            foreach ($locationGroup as $locationId => $loc) {
+                $location[] = [
+                    'text' => count($locationGroup[$locationId]) . ' ' . $locationGroup[$locationId][0]['location'],
+                    'color' => $locationGroup[$locationId][0]['location_badge']
+                ];
+
+            }
+
+            $image = $item->image ? asset('storage/inventory/' . $item->image->image) : asset('images/noimage.png');
+
+            return [
+                'value' => $item->value,
+                'title' => $item->title,
+                'location' => $location,
+                'image' => $image,
+            ];
+        })->all();
+
+        return generalResponse(
+            'success',
+            false,
+            $data,
+        );
     }
 
     public function datatable()

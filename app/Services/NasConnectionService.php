@@ -109,7 +109,9 @@ class NasConnectionService {
             '_sid' => $this->sid,
             'folder_path' => $this->config['data']['folder'],
         ];
-        $response = Http::get($this->url, $payload);
+        $response = Http::withHeaders([
+            'Access-Control-Allow-Origin' => '*',
+        ])->get($this->url, $payload);
 
         $body = json_decode($response->body(), true);
 
@@ -156,6 +158,7 @@ class NasConnectionService {
 
         curl_setopt_array($curl, array(
         CURLOPT_URL => $this->url,
+        CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_ENCODING => '',
         CURLOPT_MAXREDIRS => 10,

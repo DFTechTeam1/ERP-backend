@@ -16,9 +16,20 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::get('ilham', function () {
-    $nas = new NasConnectionService();
-    $setting = $nas->folderList();
-    return response()->json($setting);
+    // $nas = new NasConnectionService();
+    // $setting = $nas->folderList();
+    // return response()->json($setting);
+
+    $brands = \Modules\Inventory\Models\Brand::all();
+    $brands = collect($brands)->map(function ($item) {
+        $item['name'] = strtolower($item->name);
+
+        return $item;
+    })->all();
+
+    $lg = collect($brands)->where('name', 'lg')->values()[0];
+
+    return $lg;
 });
 
 Route::prefix('auth')->group(function () {

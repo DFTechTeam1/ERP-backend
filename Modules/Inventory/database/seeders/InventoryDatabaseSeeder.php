@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Inventory\database\seeders;
+namespace Modules\Inventory\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
@@ -11,6 +11,12 @@ class InventoryDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            SupplierSeeder::class,
+            BrandSeeder::class,
+            UnitSeeder::class,
+            InventoryTypeSeeder::class,
+            InventorySeeder::class,
+        ]);
     }
 }

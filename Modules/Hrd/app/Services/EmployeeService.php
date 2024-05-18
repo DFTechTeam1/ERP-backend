@@ -536,10 +536,10 @@ class EmployeeService
             $data['company_name'] = $data['company'];
             $data['date_of_birth'] = $data['date_of_birth'] != 'null' ? date('Y-m-d', strtotime($data['date_of_birth'])) : null;
             $data['position_id'] = getIdFromUid($data['position_id'], new Position());
-            $data['province_id'] = $data['province_id'] != 'null' ? $data['province_id'] : null;
-            $data['city_id'] = $data['city_id'] != 'null' ? $data['city_id'] : null;
-            $data['district_id'] = $data['district_id'] != 'null' ? $data['district_id'] : null;
-            $data['village_id'] = $data['village_id'] != 'null' ? $data['village_id'] : null;
+            $data['province_id'] = isset($data['province_id']) ? $data['province_id'] : null;
+            $data['city_id'] = isset($data['city_id']) ? $data['city_id'] : null;
+            $data['district_id'] = isset($data['district_id']) ? $data['district_id'] : null;
+            $data['village_id'] = isset($data['village_id']) ? $data['village_id'] : null;
             $data['dependant'] = $data['dependents'] != null ? $data['dependents'] : null;
 
             if (isset($data['boss_id'])) {
@@ -736,13 +736,9 @@ class EmployeeService
 
     public function getProjectManagers()
     {
-        $service = new \Modules\Company\Services\PositionService();
-
-        $data = $this->repo->list('id, uid as value, name as title', '', [
-            'position' => function ($query) {
-                return $query->selectRaw('id,name,uid')
-                    ->whereRaw("LOWER(name) = 'project manager'");
-            }
+        $data = $this->repo->list('id, uid as value, name as title', '', [], '', '', [
+            'relation' => 'position',
+            'query' => "LOWER(name) like 'project manager'",
         ]);
 
         return generalResponse(
