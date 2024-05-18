@@ -98,6 +98,16 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->addAsUser($request->user_id));
     }
 
+    /**
+     * Get project manaagers only
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProjectManagers()
+    {
+        return apiResponse($this->employeeService->getProjectManagers());
+    }
+
     public function activateAccount(string $key)
     {
         return apiResponse($this->employeeService->activateAccount($key));

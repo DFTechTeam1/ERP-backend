@@ -13,11 +13,11 @@ enum Classification: string
     public function label()
     {
         return match ($this) {
-            static::gradeS => __("global.grade" .$this),
-            static::gradeA => __("global.grade" .$this),
-            static::gradeB => __("global.grade" .$this),
-            static::gradeC => __("global.grade" .$this),
-            static::gradeD => __("global.grade" .$this),
+            static::gradeS => __("global.grades"),
+            static::gradeA => __("global.gradea"),
+            static::gradeB => __("global.gradeb"),
+            static::gradeC => __("global.gradec"),
+            static::gradeD => __("global.graded"),
         };
     }
 }

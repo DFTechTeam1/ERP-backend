@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 
 class PermissionSeeder extends Seeder
@@ -14,6 +15,7 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
+        Schema::disableForeignKeyConstraints();
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         DB::table('permissions')->truncate();
@@ -80,5 +82,7 @@ class PermissionSeeder extends Seeder
         }
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        Schema::enableForeignKeyConstraints();
     }
 }

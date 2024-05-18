@@ -22,5 +22,5 @@ Route::middleware(['auth:sanctum'])->prefix('nas')->group(function () {
     Route::get('folderList', [NasController::class, 'folderList']);
 
     // show addons
-    Route::get('addons', [NasController::class, 'showAddons']);
 });
+Route::get('addons', [NasController::class, 'showAddons']);

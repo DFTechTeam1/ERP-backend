@@ -69,6 +69,7 @@ class DivisionService
                 $order
             )->toArray();
 
+            $paginated = [];
             foreach ($divisions as $division) {
                 unset($division['parent_id']);
                 unset($division['parent_division']['id']);
