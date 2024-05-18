@@ -4,6 +4,7 @@ namespace Modules\Inventory\database\seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\Inventory\Models\InventoryType;
+use Illuminate\Support\Facades\Schema;
 
 class InventoryTypeSeeder extends Seeder
 {
@@ -12,6 +13,7 @@ class InventoryTypeSeeder extends Seeder
      */
     public function run(): void
     {
+        Schema::disableForeignKeyConstraints();
         InventoryType::truncate();
 
         $data = [
@@ -40,5 +42,7 @@ class InventoryTypeSeeder extends Seeder
             $d['slug'] = strtolower(implode('_', explode(' ', $d['name'])));
             InventoryType::create($d);
         }
+
+        Schema::enableForeignKeyConstraints();
     }
 }
