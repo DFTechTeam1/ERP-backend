@@ -3,6 +3,7 @@
 namespace Modules\Addon\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class AddonSeeder extends Seeder
 {
@@ -12,6 +13,7 @@ class AddonSeeder extends Seeder
     public function run(): void
     {
         // $this->call([]);
+        Schema::disableForeignKeyConstraints();
         \Modules\Addon\Models\Addon::truncate();
 
         
@@ -24,5 +26,7 @@ class AddonSeeder extends Seeder
         foreach ($data as $d) {
             \Modules\Addon\Models\Addon::create($d);
         }
+
+        Schema::enableForeignKeyConstraints();
     }
 }

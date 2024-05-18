@@ -5,6 +5,7 @@ namespace Modules\Company\Database\Seeders;
 use Illuminate\Database\Seeder;
 use Modules\Company\Models\Division;
 use Modules\Company\Models\Position;
+use Illuminate\Support\Facades\Schema;
 
 class PositionSeeder extends Seeder
 {
@@ -13,6 +14,7 @@ class PositionSeeder extends Seeder
      */
     public function run(): void
     {
+        Schema::disableForeignKeyConstraints();
         Position::truncate();
 
         $hr = Division::findByName('hr');
@@ -80,5 +82,7 @@ class PositionSeeder extends Seeder
         foreach ($positions as $position) {
             Position::create($position);
         }
+
+        Schema::enableForeignKeyConstraints();
     }
 }
