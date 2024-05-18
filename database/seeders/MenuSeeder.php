@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Menu;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class MenuSeeder extends Seeder
 {
@@ -13,6 +14,7 @@ class MenuSeeder extends Seeder
      */
     public function run(): void
     {
+        Schema::disableForeignKeyConstraints();
         \App\Models\Menu::truncate();
 
         $menus = [
@@ -34,5 +36,7 @@ class MenuSeeder extends Seeder
         foreach ($menus as $menu) {
             Menu::create($menu);
         }
+
+        Schema::enableForeignKeyConstraints();
     }
 }

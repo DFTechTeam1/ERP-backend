@@ -3,6 +3,7 @@
 namespace Modules\Company\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 use Modules\Company\Models\Division;
 
 class DivisionSeeder extends Seeder
@@ -12,6 +13,7 @@ class DivisionSeeder extends Seeder
      */
     public function run(): void
     {
+        Schema::disableForeignKeyConstraints();
         Division::truncate();
         
         $divisions = [
@@ -52,5 +54,7 @@ class DivisionSeeder extends Seeder
         foreach ($divisions as $division) {
             Division::create($division);
         }
+
+        Schema::enableForeignKeyConstraints();
     }
 }
