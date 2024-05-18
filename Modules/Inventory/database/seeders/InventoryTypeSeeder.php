@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Inventory\database\seeders;
+namespace Modules\Inventory\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\Inventory\Models\InventoryType;
@@ -39,8 +39,12 @@ class InventoryTypeSeeder extends Seeder
         ];
 
         foreach ($data as $d) {
-            $d['slug'] = strtolower(implode('_', explode(' ', $d['name'])));
-            InventoryType::create($d);
+            $slug = strtolower(implode('_', explode(' ', $d['name'])));
+
+            \Modules\Inventory\Models\InventoryType::create([
+                'name' => $d['name'],
+                'slug' => $slug,
+            ]);
         }
 
         Schema::enableForeignKeyConstraints();
