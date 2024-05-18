@@ -53,6 +53,11 @@ return [
     'concert' => 'Concert',
     'corporate' => 'Corporate',
     'exhibition' => 'Exhibition',
+    'grades' => 'S (Special)',
+    'gradea' => 'A (Big)',
+    'gradeb' => 'B (Standard)',
+    'gradec' => 'C (Budget)',
+    'graded' => 'D (Template)',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

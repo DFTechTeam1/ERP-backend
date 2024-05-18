@@ -66,7 +66,8 @@ class LoginController extends Controller
                 'token' => $token->plainTextToken,
                 'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
                 'user' => $user,
-                'permissions' => $permissions
+                'permissions' => $permissions,
+                'role' => $role,
             ];
 
             $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
