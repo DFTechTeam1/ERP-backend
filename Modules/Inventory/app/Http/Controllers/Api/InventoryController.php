@@ -35,6 +35,11 @@ class InventoryController extends Controller
         ));
     }
 
+    public function getAll()
+    {
+        return apiResponse($this->service->getAll());
+    }
+
     /**
      * Add more stock to selected product
      *

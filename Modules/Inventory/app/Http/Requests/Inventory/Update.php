@@ -36,7 +36,6 @@ class Update extends FormRequest
             'images.*' => [
                 'nullable',
                 File::types(['jpeg', 'jpg', 'png', 'webp'])
-                    ->max(2048)
             ],
             'status' => 'nullable',
             'current_images' => 'nullable',

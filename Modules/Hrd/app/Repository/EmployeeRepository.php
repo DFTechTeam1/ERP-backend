@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Repository;
 
+use Illuminate\Database\Eloquent\Builder;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\Interface\EmployeeInterface;
 
@@ -33,7 +34,8 @@ class EmployeeRepository extends EmployeeInterface
         string $where = "",
         array $relation = [],
         string $orderBy = '',
-        string $limit = ''
+        string $limit = '',
+        array $whereHas = []
     )
     {
         $query = $this->model->query();
@@ -42,6 +44,12 @@ class EmployeeRepository extends EmployeeInterface
 
         if (!empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if ($whereHas) {
+            $query->whereHas($whereHas['relation'], function (Builder $query) use ($whereHas) {
+                $query->whereRaw($whereHas['query']);
+            });
         }
 
         if ($relation) {

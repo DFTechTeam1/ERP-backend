@@ -4,7 +4,7 @@ namespace Modules\Hrd\Repository\Interface;
 
 abstract class EmployeeInterface
 {
-    abstract function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '', string $limit = '');
+    abstract function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '', string $limit = '', array $whereHas = []);
 
     abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page, string $orderBy = "");
 
