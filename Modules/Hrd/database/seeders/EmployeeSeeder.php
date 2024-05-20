@@ -17,9 +17,9 @@ class EmployeeSeeder extends Seeder
         Schema::disableForeignKeyConstraints();
         \Modules\Hrd\Models\Employee::truncate();
 
-        $range = range(0,5);
+        $range = range(0,15);
 
-        $positions = Position::selectRaw('id')->get();
+        $positions = Position::selectRaw('id')->whereIn('name', ['Marketing', 'Project Manager', 'Animator'])->get();
         $positionRange = collect($positions)->pluck('id')->toArray();
         
         $idNumberLength = 3;

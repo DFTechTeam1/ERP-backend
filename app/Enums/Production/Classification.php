@@ -20,4 +20,15 @@ enum Classification: string
             static::gradeD => __("global.graded"),
         };
     }
+
+    public function color()
+    {
+        return match ($this) {
+            static::gradeS => 'yellow-darken-2',
+            static::gradeA => 'deep-orange-lighten-3',
+            static::gradeB => 'green-lighten-3',
+            static::gradeC => 'teal-lighten-3',
+            static::gradeD => 'light-blue-lighten-4',
+        };
+    }
 }

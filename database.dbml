@@ -405,6 +405,7 @@ Table project_boards {
     id int [pk, increment]
     project_id int [ref: > projects.id]
     name varchar [not null]
+    sort varchar [not null]
     created_at timestamp
     updated_at timestamp
 }

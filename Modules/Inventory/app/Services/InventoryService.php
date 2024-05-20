@@ -189,7 +189,6 @@ class InventoryService {
                 [
                     'paginated' => $paginated,
                     'totalData' => $totalData,
-                    'where' => $where,
                 ],
             );
         } catch (\Throwable $th) {

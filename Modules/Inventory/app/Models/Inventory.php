@@ -4,6 +4,7 @@ namespace Modules\Inventory\Models;
 
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Inventory\Database\factories\InventoryFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Modules\Inventory\Observers\InventoryObserver;
 
+// #[ObservedBy([InventoryObserver::class])]
 class Inventory extends Model
 {
     use HasFactory, ModelObserver, ModelCreationObserver;
