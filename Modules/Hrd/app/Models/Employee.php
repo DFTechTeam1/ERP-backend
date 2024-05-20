@@ -4,6 +4,7 @@ namespace Modules\Hrd\Models;
 
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,10 @@ use Modules\Company\Models\Position;
 use Modules\Hrd\Database\factories\EmployeeFactory;
 use Modules\Inventory\Models\InventoryRequest;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Modules\Hrd\Observers\EmployeeObserver;
+use Modules\Hrd\Observers\EmployeeObserverObserver;
 
+// #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
 {
     use HasFactory, ModelObserver, ModelCreationObserver, SoftDeletes;

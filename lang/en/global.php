@@ -58,6 +58,12 @@ return [
     'gradeb' => 'B (Standard)',
     'gradec' => 'C (Budget)',
     'graded' => 'D (Template)',
+    'onGoing' => 'On Going',
+    'draft' => 'Draft',
+    'revise' => 'Revise',
+    'waitingApprovalClient' => "Waiting Approval Client",
+    'approvedByClient' => 'Approved by Client',
+    'completed' => 'Completed',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -113,4 +119,6 @@ return [
     'successSaveConfiguration' => 'Success store configuration',
     'successUpdateSetting' => 'Success update setting',
     'successCreateAddon' => 'Success create new addon',
+    'successCreateProject' => 'Success create project',
+    'successUpdateBasicInformation' => 'Success update basic information',
 ];

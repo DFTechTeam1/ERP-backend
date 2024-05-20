@@ -20,16 +20,7 @@ Route::get('ilham', function () {
     // $setting = $nas->folderList();
     // return response()->json($setting);
 
-    $brands = \Modules\Inventory\Models\Brand::all();
-    $brands = collect($brands)->map(function ($item) {
-        $item['name'] = strtolower($item->name);
-
-        return $item;
-    })->all();
-
-    $lg = collect($brands)->where('name', 'lg')->values()[0];
-
-    return $lg;
+    return \Illuminate\Support\Facades\Cache::get('employeesCache');
 });
 
 Route::prefix('auth')->group(function () {
