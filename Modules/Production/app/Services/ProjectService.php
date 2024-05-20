@@ -3,6 +3,7 @@
 namespace Modules\Production\Services;
 
 use App\Enums\ErrorCode\Code;
+use Illuminate\Support\Facades\DB;
 use Modules\Production\Repository\ProjectRepository;
 
 class ProjectService {
@@ -50,6 +51,48 @@ class ProjectService {
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
+
+            $eventTypes = \App\Enums\Production\EventType::cases();
+            $classes = \App\Enums\Production\Classification::cases();
+
+            $paginated = collect($paginated)->map(function ($item) use ($eventTypes, $classes) {
+                $pics = collect($item->personInCharges)->map(function ($pic) {
+                    return [
+                        'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
+                    ];
+                })->pluck('name')->values()->toArray();
+
+                $marketing = $item->marketing ? $item->marketing->name : '-';
+
+                $eventType = '-';
+                foreach ($eventTypes as $et) {
+                    if ($et->value == $item->event_type) {
+                        $eventType = $et->label();
+                    }
+                }
+
+                $eventClass = '-';
+                $eventClassColor = null;
+                foreach ($classes as $class) {
+                    if ($class->value == $item->classification) {
+                        $eventClass = $class->label();
+                        $eventClassColor = $class->color();
+                    }
+                }
+
+                return [
+                    'uid' => $item->uid,
+                    'marketing' => $marketing,
+                    'pic' => count($pics) > 0  ? implode(', ', $pics) : '-',
+                    'name' => $item->name,
+                    'project_date' => date('d F Y', strtotime($item->project_date)),
+                    'venue' => $item->venue,
+                    'event_type' => $eventType,
+                    'led_area' => $item->led_area,
+                    'event_class' => $eventClass,
+                    'event_class_color' => $eventClassColor,
+                ];
+            });
 
             return generalResponse(
                 'Success',
@@ -126,12 +169,66 @@ class ProjectService {
     public function show(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid, 'name,uid,id');
+            $data = $this->repo->show($uid, '*', [
+                'marketing:id,name,employee_id',
+                'personInCharges:id,pic_id,project_id',
+                'personInCharges.employee:id,name,employee_id',
+                'boards:id,project_id,name,sort'
+            ]);
+
+            $eventTypes = \App\Enums\Production\EventType::cases();
+            $classes = \App\Enums\Production\Classification::cases();
+
+            $pics = collect($data->personInCharges)->map(function ($pic) {
+                return [
+                    'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
+                ];
+            })->pluck('name')->values()->toArray();
+
+            $marketing = $data->marketing ? $data->marketing->name : '-';
+
+            $eventType = '-';
+            foreach ($eventTypes as $et) {
+                if ($et->value == $data->event_type) {
+                    $eventType = $et->label();
+                }
+            }
+
+            $eventClass = '-';
+            $eventClassColor = null;
+            foreach ($classes as $class) {
+                if ($class->value == $data->classification) {
+                    $eventClass = $class->label();
+                    $eventClassColor = $class->color();
+                }
+            }
+
+            $output = [
+                'uid' => $data->uid,
+                'name' => $data->name,
+                'event_type' => $eventType,
+                'event_type_raw' => $data->event_type,
+                'event_class_raw' => $data->classification,
+                'event_class' => $eventClass,
+                'event_class_color' => $eventClassColor,
+                'project_date' => date('d F Y', strtotime($data->project_date)),
+                'venue' => $data->venue,
+                'marketing' => $marketing,
+                'pic' => implode(', ', $pics),
+                'collaboration' => $data->collaboration,
+                'note' => $data->note ?? '-',
+                'led_area' => $data->led_area,
+                'led_detail' => json_decode($data->led_detail, true),
+                'client_portal' => $data->client_portal,
+                'status' => $data->status_text,
+                'status_color' => $data->status_color,
+                'boards' => $data->boards,
+            ];
 
             return generalResponse(
                 'success',
                 false,
-                $data->toArray(),
+                $output,
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -147,12 +244,86 @@ class ProjectService {
      */
     public function store(array $data): array
     {
+        DB::beginTransaction();
         try {
-            $this->repo->store($data);
+            $data['project_date'] = date('Y-m-d', strtotime($data['project_date']));
+            $data['led_detail'] = json_encode($data['led']);
+            $data['marketing_id'] = getIdFromUid($data['marketing_id'], new \Modules\Hrd\Models\Employee());
+            
+            $userRole = auth()->user()->getRoleNames()[0];
+            $data['status'] = strtolower($userRole) != 'project manager' ? \App\Enums\Production\ProjectStatus::OnGoing->value : \App\Enums\Production\ProjectStatus::Draft->value;
+
+            $project = $this->repo->store(collect($data)->except(['led'])->toArray());
+
+            $pics = collect($data['pic'])->map(function ($item) {
+                return [
+                    'pic_id' => getidFromUid($item, new \Modules\Hrd\Models\Employee()),
+                ];
+            })->toArray();
+            $project->personInCharges()->createMany($pics);
+
+            $defaultBoards = json_decode(getSettingByKey('default_boards'), true);
+            if ($defaultBoards) {
+                $project->boards()->createMany($defaultBoards);
+            }
+
+            DB::commit();
 
             return generalResponse(
-                'success',
+                __('global.successCreateProject'),
                 false,
+                $data,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update basic project information
+     *
+     * @param array $data
+     * @param string $id
+     * @return array
+     */
+    public function updateBasic(array $data, string $id)
+    {
+        try {
+            $data['project_date'] = date('Y-m-d', strtotime($data['date']));
+            
+            $this->repo->update(
+                collect($data)->except(['date'])->toArray(),
+                $id
+            );
+
+            $output = [];
+            $project = $this->repo->list('id,name,project_date,event_type,classification', "uid = '{$id}'", ['personInCharges:id,project_id,pic_id', 'personInCharges.employee:id,name,employee_id']);
+            if (count($project) > 0) {
+                $project = $project[0];
+                $pic = collect($project['personInCharges'])->map(function ($item) {
+                    return [
+                        'name' => $item->employee->name . "(" . $item->employee->employee_id . ")",
+                    ];
+                })->pluck('name')->toArray();
+
+                $output = [
+                    'name' => $project->name,
+                    'pic' => implode(', ', $pic),
+                    'event_type_raw' => $project->event_type,
+                    'event_type' => $project->event_type_text,
+                    'event_class_raw' => $project->classification,
+                    'event_class' => $project->event_class_text,
+                    'event_class_color' => $project->event_class_color,
+                    'project_date' => date('d F Y', strtotime($project->project_date)),
+                ]; 
+            }
+
+            return generalResponse(
+                __('global.successUpdateBasicInformation'),
+                false,
+                $output,
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

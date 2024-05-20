@@ -101,6 +101,10 @@ class PositionService {
      */
     public function getAll(string $select = 'id,uid,name', string $where = '')
     {
+        $search = request('search');
+        if ($search) {
+            $where = "LOWER(name) LIKE '%{$search}%'";
+        }
         $data = $this->repo->list($select, $where);
 
         $data = collect($data)->map(function ($item) {

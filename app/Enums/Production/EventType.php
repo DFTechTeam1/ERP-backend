@@ -15,13 +15,13 @@ enum EventType: string
     public function label()
     {
         return match ($this) {
-            static::Wedding => __("global." .$this),
-            static::Engagement => __("global." .$this),
-            static::Event => __("global." .$this),
-            static::Birthday => __("global." .$this),
-            static::Concert => __("global." .$this),
-            static::Corporate => __("global." .$this),
-            static::Exhibition => __("global." .$this),
+            static::Wedding => __("global.wedding"),
+            static::Engagement => __("global.engagement"),
+            static::Event => __("global.event"),
+            static::Birthday => __("global.birthday"),
+            static::Concert => __("global.concert"),
+            static::Corporate => __("global.corporate"),
+            static::Exhibition => __("global.exhibition"),
         };
     }
 }
