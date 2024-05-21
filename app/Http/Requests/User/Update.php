@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
-class Create extends FormRequest
+class Update extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -26,13 +26,11 @@ class Create extends FormRequest
     public function rules(): array
     {
         return [
-            'is_external_user' => 'boolean',
             'email' => [
                 'required_if:is_external_user,1',
-                Rule::unique('users', 'email'),
+                new \App\Rules\UniqueLowerRule(new \App\Models\User(), $this->route('user'), 'email'),
             ],
-            'employee_id' => 'required_if:is_external_user,0',
-            'password' => 'required',
+            'password' => 'nullable',
             'role' => 'required',
         ];
     }
@@ -51,7 +49,7 @@ class Create extends FormRequest
                     errorMessage(__('global.validationCheckFailed')),
                     true,
                     $validator->errors()->toArray(),
-                    Code::ValidationError->value,
+                    Code::BadRequest->value,
                 ),
             ),
         );

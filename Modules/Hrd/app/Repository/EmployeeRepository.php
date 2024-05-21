@@ -101,6 +101,8 @@ class EmployeeRepository extends EmployeeInterface
 
         if (!empty($orderBy)) {
             $query->orderByRaw($orderBy);
+        } else {
+            $query->orderBy('updated_at', 'DESC');
         }
 
         return $query->skip($page)->take($itemsPerPage)->get();

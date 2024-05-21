@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\Create;
+use App\Http\Requests\User\Update;
 use App\Services\UserService;
 use Illuminate\Http\Request;
 
@@ -42,15 +43,15 @@ class UserController extends Controller
      */
     public function show(string $id)
     {
-        //
+        return apiResponse($this->service->show($id));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Update $request, string $id)
     {
-        //
+        return apiResponse($this->service->update($request->validated(), $id));
     }
 
     /**
@@ -59,5 +60,14 @@ class UserController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        return apiResponse($this->service->bulkDelete(
+            collect($request->ids)->map(function ($item) {
+                return $item['uid'];
+            })->toArray()
+        ));
     }
 }

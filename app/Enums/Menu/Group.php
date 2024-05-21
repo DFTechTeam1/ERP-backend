@@ -9,6 +9,8 @@ enum Group: int
     case Accounting = 3;
     case Inventory = 4;
     case Dashboard = 5;
+    case Addon = 6;
+    case Production = 7;
 
     public function label()
     {
@@ -18,6 +20,8 @@ enum Group: int
             static::Accounting => __('global.accounting'),
             static::Inventory => __('global.inventory'),
             static::Dashboard => __('global.dashboard'),
+            static::Addon => __('global.addon'),
+            static::Production => __('global.production'),
         };
     }
 }

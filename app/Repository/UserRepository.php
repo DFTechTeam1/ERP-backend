@@ -2,12 +2,18 @@
 
 namespace App\Repository;
 
+use Illuminate\Support\Facades\DB;
+
 class UserRepository {
     private $model;
 
+    private $key;
+
     public function __construct()
     {
-        $this->model = new \App\Models\User();    
+        $this->model = new \App\Models\User();   
+        
+        $this->key = 'id';
     }
 
     /**
@@ -66,6 +72,8 @@ class UserRepository {
         if ($relation) {
             $query->with($relation);
         }
+
+        $query->orderBy('updated_at', 'DESC');
         
         return $query->skip($page)->take($itemsPerPage)->get();
     }
@@ -90,5 +98,37 @@ class UserRepository {
     {
         return $this->model->where($key, $value)
             ->update($data);
+    }
+
+    /**
+     * Bulk Delete Data
+     *
+     * @param array $ids
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function bulkDelete(array $ids, string $key = '')
+    {
+        if (empty($key)) {
+            $key = $this->key;
+        }
+
+        return $this->model->whereIn('uid', $ids)->delete();
+    }
+
+    public function detail(string $id = '', string $select = '*', string $where = '')
+    {
+        $query = $this->model->query();
+
+        $query->selectRaw($select);
+
+        if (!empty($where)) {
+            $query->whereRaw($where);
+        }
+
+        if (!empty($id)) {
+            $query->where('uid', $id);
+        }
+
+        return $query->first();
     }
 }

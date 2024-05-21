@@ -25,6 +25,12 @@ class RoleController extends Controller
         return apiResponse($this->service->list());
     }
 
+    public function getAll()
+    {
+        return apiResponse($this->service->getAll());
+        
+    }
+
     /**
      * Store a newly created resource in storage.
      */

@@ -61,10 +61,17 @@ if (!function_exists('errorMessage')) {
 if (!function_exists('apiResponse')) {
     function apiResponse(array $payload): JsonResponse
     {
-        return response()->json([
-            'message' => $payload['message'],
-            'data' => isset($payload['data']) ? $payload['data'] : [],
-        ], $payload['code']);
+        if ($payload['code'] == 422) {
+            return response()->json([
+                'message' => $payload['message'],
+                'errors' => isset($payload['data']) ? $payload['data'] : [],
+            ], $payload['code']);
+        } else {
+            return response()->json([
+                'message' => $payload['message'],
+                'data' => isset($payload['data']) ? $payload['data'] : [],
+            ], $payload['code']);
+        }
     }
 }
 
