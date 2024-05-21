@@ -60,6 +60,7 @@ class MenuService {
             }
 
             $item['children'] = $child;
+            $item['icon'] = asset($item['icon']);
 
             return $item;
         })->filter(function ($filter) {
