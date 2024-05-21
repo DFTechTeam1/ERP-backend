@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->integer('parent_id')->nullable();
             $table->string('icon')->nullable();
-            $table->enum('group', [1,2,3,4,5]);
+            $table->string('group');
             $table->string('link')->nullable();
             $table->string('permission')->nullable();
             $table->timestamps();

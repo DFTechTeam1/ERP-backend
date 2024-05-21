@@ -34,12 +34,15 @@ Route::middleware('auth:sanctum')
 
     });
     
+Route::get('users/activate/{key}', [UserController::class, 'activate']);
+
 Route::middleware('auth:sanctum')
     ->group(function () {
+        Route::post('users/bulk', [UserController::class, 'bulkDelete']);
         Route::apiResource('users', UserController::class);
-        Route::get('users/activate/{key}', [UserController::class, 'activate']);
 
         Route::post('roles/bulk', [RoleController::class, 'bulkDelete']);
+        Route::get('roles/getAll', [RoleController::class, 'getAll']);
         Route::apiResource('roles', RoleController::class);
         Route::get('permissions/getAll', [PermissionController::class, 'getAll']);
         Route::apiResource('permissions', PermissionController::class);

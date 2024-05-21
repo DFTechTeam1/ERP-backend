@@ -11,6 +11,7 @@ enum Code: int
     case Forbidden = 403;
     case NotFound = 404;
     case MethodNotAllowed = 405;
+    case ValidationError = 422;
     case InternalServerError = 500;
 
     public function label()
@@ -24,6 +25,7 @@ enum Code: int
             static::NotFound => __('global.notFound'),
             static::MethodNotAllowed => __('global.methodNotAllowed'),
             static::InternalServerError => __('global.internalServerError'),
+            static::ValidationError => __('global.validationError'),
         };
     }
 }

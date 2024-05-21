@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'uid',
         'image',
         'last_login_at',
+        'is_external_user',
     ];
 
     /**
@@ -40,6 +42,8 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    protected $appends = ['status', 'status_color'];
 
     /**
      * Get the attributes that should be cast.
@@ -57,5 +61,29 @@ class User extends Authenticatable
     public function lastLogin(): HasOne
     {
         return $this->hasOne(UserLoginHistory::class, 'user_id');
+    }
+
+    public function status(): Attribute
+    {
+        $out = __('global.notYetVerified');
+        if ($this->email_verified_at) {
+            $out = __('global.verified');
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
+
+    public function statusColor(): Attribute
+    {
+        $out = 'grey-lighten-1';
+        if ($this->email_verified_at) {
+            $out = 'green-lighten-3';
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
     }
 }
