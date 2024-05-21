@@ -71,6 +71,19 @@ class PermissionSeeder extends Seeder
             ['name' => 'request_inventory', 'group' => 'inventories'],
             ['name' => 'request_inventory_event', 'group' => 'inventories'],
             ['name' => 'create_service_inventory', 'group' => 'inventories'],
+            ['name' => 'list_addon', 'group' => 'addon'],
+            ['name' => 'create_addon', 'group' => 'addon'],
+            ['name' => 'update_addon', 'group' => 'addon'],
+            ['name' => 'list_setting', 'group' => 'setting'],
+            ['name' => 'setting_addon', 'group' => 'setting'],
+            ['name' => 'setting_general', 'group' => 'setting'],
+            ['name' => 'setting_kanban', 'group' => 'setting'],
+            ['name' => 'list_project', 'group' => 'production'],
+            ['name' => 'create_project', 'group' => 'production'],
+            ['name' => 'edit_project', 'group' => 'production'],
+            ['name' => 'delete_project', 'group' => 'production'],
+            ['name' => 'add_team_member', 'group' => 'production'],
+            ['name' => 'list_member', 'group' => 'production'],
         ];
 
         foreach ($data as $d) {

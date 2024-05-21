@@ -64,6 +64,11 @@ return [
     'waitingApprovalClient' => "Waiting Approval Client",
     'approvedByClient' => 'Approved by Client',
     'completed' => 'Completed',
+    'notYetVerified' => 'Not yet verified',
+    'verified' => 'Verified',
+    'validationError' => 'Validation error',
+    'addon' => 'Addon',
+    'production' => 'Production',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -121,4 +126,7 @@ return [
     'successCreateAddon' => 'Success create new addon',
     'successCreateProject' => 'Success create project',
     'successUpdateBasicInformation' => 'Success update basic information',
+    'successDeleteUser' => 'Success delete user',
+    'successUpdateUser' => 'Success update user',
+    'accontAlreadyActive' => 'Account is already active',
 ];

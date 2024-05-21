@@ -61,6 +61,9 @@ class LoginController extends Controller
             $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
             $token = $user->createToken($role, $permissions, now()->addHours(2));
+            
+            $menuService = new \App\Services\MenuService();
+            $menus = $menuService->getMenus($user->getAllPermissions());
 
             $payload = [
                 'token' => $token->plainTextToken,
@@ -68,6 +71,7 @@ class LoginController extends Controller
                 'user' => $user,
                 'permissions' => $permissions,
                 'role' => $role,
+                'menus' => $menus['data'],
             ];
 
             $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));

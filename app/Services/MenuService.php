@@ -12,10 +12,14 @@ class MenuService {
         $this->repo = new MenuRepository();
     }
 
-    public function getMenus()
+    public function getMenus($permissionsData = null)
     {
         $user = auth()->user();
-        $permissions = $user->getAllPermissions();
+        if ($user) {
+            $permissions = $user->getAllPermissions();
+        } else {
+            $permissions = $permissionsData;
+        }
         if (!empty($permissions)) {
             $permissions = collect($permissions)->pluck('name')->all();
         }

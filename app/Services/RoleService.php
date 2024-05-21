@@ -47,6 +47,21 @@ class RoleService {
         );
     }
 
+    public function getAll()
+    {
+        $data = $this->repo->list('id as value,name as title')->map(function ($item) {
+            $item['name'] = str_replace('_', ' ', $item->name);
+
+            return $item;
+        })->toArray();
+
+        return generalResponse(
+            'Success',
+            false,
+            $data,
+        );
+    }
+
     /**
      * Store Role
      *
