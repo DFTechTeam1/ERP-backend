@@ -273,28 +273,33 @@ class AddonService {
 
             $addonFileMime = $data['addon_file']->getClientMimeType();
             $addonFile = uploadImage($data['addon_file'], 'addons', true);
+            Log::debug('upload main file into local', [$addonFile]);
             $upload = $nasService->uploadFile(storage_path('app/public/addons/' . $addonFile), $addonFile, $addonFileMime, "{$sharedFolder}/" . $slugName);
+            Log::debug('upload main file into nas', [$upload]);
             $mainFilePayload = $slugName . '/' . $addonFile;
 
             $tutorialVideoPayload = null;
             if (!empty($data['tutorial_video'])) {
                 $tutorialVideoMime = $data['tutorial_video']->getClientMimeType();
                 $tutorialVideoFile = uploadImage($data['tutorial_video'], 'addons', true);
+                Log::debug('upload tutorial to local', [$tutorialVideoFile]);
                 $uploadTutorialVideo = $nasService->uploadFile(storage_path('app/public/addons/' . $tutorialVideoFile), $tutorialVideoFile, $tutorialVideoMime, "{$sharedFolder}/" . $slugName);
+                Log::debug('upload tutorial to nas', [$uploadTutorialVideo]);
                 $tutorialVideoPayload = $slugName . '/' . $tutorialVideoFile;
             }
 
             $perviewFileMime = $data['preview_image']->getClientMimeType();
             $previewFile = uploadImage($data['preview_image'], 'addons', true);
+            Log::debug('upload preview to local', [$previewFile]);
             $preview = $nasService->uploadFile(storage_path('app/public/addons/' . $previewFile), $previewFile, $perviewFileMime, "{$sharedFolder}/" . $slugName);
+            Log::debug('upload preview to nas', [$preview]);
 
-            Log::debug('main file upload result: ', [$upload]);
             if ($upload['success'] != FALSE) {
                 if (file_exists(storage_path('app/public/addons/' . $addonFile))) {
                     unlink(storage_path('app/public/addons/' . $addonFile));
                 }
             }
-            Log::debug('tutorial file upload result: ', [$uploadTutorialVideo]);
+            
             if ($uploadTutorialVideo['success'] != FALSE) {
                 if (file_exists(storage_path('app/public/addons/' . $tutorialVideoFile))) {
                     unlink(storage_path('app/public/addons/' . $tutorialVideoFile));
@@ -314,6 +319,12 @@ class AddonService {
                 false,
             );
         } catch (\Throwable $th) {
+            Log::debug('failed store addons', [
+                'file' => $th->getFile(),
+                'message' => $th->getMessage(),
+                'line' => $th->getLine(),
+            ]);
+
             return errorResponse($th);
         }
     }
