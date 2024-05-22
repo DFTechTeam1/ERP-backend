@@ -253,6 +253,7 @@ class AddonService {
              */
             $nasService = new NasConnectionService();
             $init = $nasService->initAddonsFolder();
+            Log::debug('init nas', [$init]);
             if ($init['error']) {
                 return errorResponse($init['message']);
             }
