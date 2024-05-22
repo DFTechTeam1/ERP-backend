@@ -16,15 +16,16 @@ use Modules\Addon\Http\Controllers\AddonController;
 
 Route::post('addon/askDeveloper', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'askDeveloper']);
 
+Route::get('addon/f/updates', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'getUpdatedAddons']);
+Route::get('addon', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'index']);
+Route::get('addon/download/{id}/{type}', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'download']);
+Route::get('addon/f/getAll', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'getAll']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('addon', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'index']);
     Route::post('addon/nas', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'store']);
     Route::get('addon/{id}',[\Modules\Addon\Http\Controllers\Api\AddonController::class, 'show']);
     Route::post('addon/bulk', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'bulkDelete']);
     
     Route::post('addon/upgrades/{id}', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'upgrades']);
-    Route::get('addon/f/updates', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'getUpdatedAddons']);
-    Route::get('addon/f/getAll', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'getAll']);
     Route::get('addon/nas/validate', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'validate']);
-    Route::get('addon/download/{id}/{type}', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'download']);
 });
