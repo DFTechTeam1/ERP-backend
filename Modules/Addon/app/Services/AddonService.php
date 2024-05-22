@@ -116,7 +116,7 @@ class AddonService {
 
             // dummy
             $paginated = collect($paginated)->map(function ($item) {
-                $item['preview_img'] = asset('storage/addons/' . $item->preview_img);
+                $item['preview_img'] = env("APP_URL") . '/storage/addons/' . $item->preview_img;
 
                 return $item;
             })->toArray();
@@ -141,8 +141,9 @@ class AddonService {
 
     public function getUpdatedAddons()
     {
-        $data = $this->historyRepo->list('id as uid,addon_id,updated_at', '', ['addon:id,name'], 5, true);
-        $data = collect($data)->sortByDesc('updated_at')->values();
+        $data = $this->historyRepo->list('id as uid,addon_id,updated_at', '', ['addon:id,name,preview_img'], 5, true);
+        $data = collect($data)
+            ->sortByDesc('updated_at')->values();
 
         return generalResponse(
             'Success',

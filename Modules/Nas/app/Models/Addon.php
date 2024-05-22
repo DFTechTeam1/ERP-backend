@@ -2,6 +2,7 @@
 
 namespace Modules\Nas\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Modules\Nas\Database\Factories\AddonFactory;
@@ -20,6 +21,20 @@ class Addon extends Model
         'tutorial_video',
         'main_file',
     ];
+
+    protected $appends = ['preview_img_path'];
+
+    public function previewImgPath(): Attribute
+    {
+        $out = '';
+        if ($this->preview_img) {
+            $out = env('APP_URL') . '/storage/addons/' . $this->preview_img;
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
 
     // protected static function newFactory(): AddonFactory
     // {
