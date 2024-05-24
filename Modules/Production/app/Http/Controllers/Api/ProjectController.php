@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\Create;
+use Modules\Production\Http\Requests\Project\MoreDetailUpdate;
+use Modules\Production\Http\Requests\Project\StoreReferences;
 use Modules\Production\Services\ProjectService;
 
 class ProjectController extends Controller
@@ -41,6 +43,16 @@ class ProjectController extends Controller
     public function getEventTypes()
     {
         return apiResponse($this->service->getEventTypes());
+    }
+
+    /**
+     * Get available project status
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProjectStatus()
+    {
+        return apiResponse($this->service->getProjectStatus());
     }
 
     /**
@@ -90,6 +102,35 @@ class ProjectController extends Controller
     public function updateBasic(BasicUpdate $request, string $uid)
     {
         return apiResponse($this->service->updateBasic($request->validated(), $uid));
+    }
+
+    /**
+     * Update more detail
+     *
+     * @param MoreDetailUpdate $request
+     * @param string $uid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateMoreDetail(MoreDetailUpdate $request, string $uid)
+    {
+        return apiResponse($this->service->updateMoreDetail($request->validated(), $uid));
+    }
+
+    /**
+     * Store project references
+     *
+     * @param StoreReferences $request
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeReferences(StoreReferences $request, string $id)
+    {
+        return apiResponse($this->service->storeReferences($request->validated(), $id));
+    }
+
+    public function deleteReference(Request $request, string $id)
+    {
+        return apiResponse($this->service->deleteReference($request->image_ids, $id));
     }
 
     /**

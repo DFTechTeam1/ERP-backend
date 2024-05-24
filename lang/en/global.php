@@ -129,4 +129,6 @@ return [
     'successDeleteUser' => 'Success delete user',
     'successUpdateUser' => 'Success update user',
     'accontAlreadyActive' => 'Account is already active',
+    'successCreateReferences' => 'Success create references',
+    'successDeleteReference' => 'Success delete reference',
 ];

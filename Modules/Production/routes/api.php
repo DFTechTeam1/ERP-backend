@@ -18,9 +18,13 @@ use Modules\Production\Http\Controllers\ProductionController;
 Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('eventTypes', [ProjectController::class, 'getEventTypes']);
     Route::get('classList', [ProjectController::class, 'getClassList']);
+    Route::get('status', [ProjectController::class, 'getProjectStatus']);
 
     Route::post('project', [ProjectController::class, 'store']);
     Route::get('project', [ProjectController::class, 'index']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
+    Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
     Route::put('project/basic/{id}', [ProjectController::class, 'updateBasic']);
+    Route::put('project/moreDetail/{id}', [ProjectController::class, 'updateMoreDetail']);
+    Route::post('project/{id}/references/delete', [ProjectController::class, 'deleteReference']);
 });

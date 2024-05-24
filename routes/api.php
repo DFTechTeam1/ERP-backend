@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
 use App\Services\NasConnectionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
@@ -16,11 +17,63 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::get('ilham', function () {
-    // $nas = new NasConnectionService();
-    // $setting = $nas->folderList();
-    // return response()->json($setting);
+    $url = env('NAS_URL');
 
-    return \Illuminate\Support\Facades\Cache::get('employeesCache');
+    // $folderList = Http::get($url);
+    // $body = json_decode($folderList->body(), true);
+
+    // return response()->json($body);
+
+    $ch = curl_init($url . '/ilham');    // initialize curl handle
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_setopt($ch, CURLOPT_PROXY, "https://bright-huge-gopher.ngrok-free.app"); //your proxy url
+    $data = curl_exec($ch);
+
+    return response()->json($data);
+});
+
+Route::get('nasTestConnection', function (Request $request) {
+    try {
+        $data = $request->all();
+        $http = 'http://' . $data['server'] . ':5000/webapi';
+        $login = Http::get($http . '/auth.cgi', [
+            'api' => 'SYNO.API.Auth',
+            'version' => '3',
+            'method' => 'login',
+            'account' => $data['user'],
+            'passwd' => $data['password'],
+            'session' => 'FileStation',
+            'format' => 'sid',
+        ]);
+
+        $login = json_decode($login->body(), true);
+
+        if ($login['success'] == FALSE) {
+            return errorResponse('Account is not valid');
+        }
+
+        // get the folder detail
+        $folder = HTTP::get($http . '/entry.cgi', [
+            'api' => 'SYNO.FileStation.List',
+            'version' => '2',
+            'method' => 'list',
+            'folder_path' => $data['folder'],
+            '_sid' => $login['data']['sid'],
+        ]);
+
+        $response = json_decode($folder->body(), true);
+
+        if ($response['success'] == FALSE) {
+            return errorResponse('Cannot get folder information');
+        }
+
+        return generalResponse(
+            __('global.connectionIsSecure'),
+            false,
+        );
+    } catch (\Throwable $th) {
+        return errorResponse('Cannot get to the given server');
+    }
 });
 
 Route::prefix('auth')->group(function () {
