@@ -1,24 +1,19 @@
 <?php
 
-namespace Modules\Hrd\Repository;
+namespace Modules\Production\Repository;
 
-use Illuminate\Database\Eloquent\Builder;
-use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Repository\Interface\EmployeeInterface;
+use Modules\Production\Models\ProjectReference;
+use Modules\Production\Repository\Interface\ProjectReferenceInterface;
 
-class EmployeeRepository extends EmployeeInterface
-{
+class ProjectReferenceRepository extends ProjectReferenceInterface {
     private $model;
+
     private $key;
 
-    /**
-     * @param $model
-     * @param $key
-     */
     public function __construct()
     {
-        $this->model = new Employee();
-        $this->key = 'uid';
+        $this->model = new ProjectReference();
+        $this->key = 'id';
     }
 
     /**
@@ -29,15 +24,7 @@ class EmployeeRepository extends EmployeeInterface
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function list(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
-        string $orderBy = '',
-        string $limit = '',
-        array $whereHas = [],
-        array $whereIn = []
-    )
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
@@ -47,49 +34,27 @@ class EmployeeRepository extends EmployeeInterface
             $query->whereRaw($where);
         }
 
-        if ($whereHas) {
-            $query->whereHas($whereHas['relation'], function (Builder $query) use ($whereHas) {
-                $query->whereRaw($whereHas['query']);
-            });
-        }
-
-        if ($whereIn) {
-            $query->whereIn($whereIn['key'], $whereIn['value']);
-        }
-
         if ($relation) {
             $query->with($relation);
         }
 
-        if (!empty($orderBy)) {
-            $query->orderByRaw($orderBy);
-        }
-
-        if (!empty($limit)) {
-            $query->limit($limit);
-        }
-        
         return $query->get();
     }
 
-
     /**
-     * Make paginated data
+     * Paginated data for datatable
      *
      * @param string $select
      * @param string $where
      * @param array $relation
-     * @param int $itemsPerPage
-     * @param int $page
-     * @return \Illuminate\Database\Eloquent\Builder[]|\Illuminate\Database\Eloquent\Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
         string $select = '*',
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page,
-        string $orderBy = ''
+        int $page
     )
     {
         $query = $this->model->query();
@@ -103,13 +68,7 @@ class EmployeeRepository extends EmployeeInterface
         if ($relation) {
             $query->with($relation);
         }
-
-        if (!empty($orderBy)) {
-            $query->orderByRaw($orderBy);
-        } else {
-            $query->orderBy('updated_at', 'DESC');
-        }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -121,19 +80,26 @@ class EmployeeRepository extends EmployeeInterface
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function show(string $uid, string $select = '*', array $relation = [])
+    public function show(
+        string $uid, 
+        string $key = 'id', 
+        string $select = '*', 
+        array $relation = []
+    )
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
+        $query->where($key, $uid);
+        
         if ($relation) {
             $query->with($relation);
         }
 
-        $data = $query->where('uid', $uid);
+        $data = $query->first();
 
-        return $data->first();
+        return $data;
     }
 
     /**
@@ -142,44 +108,43 @@ class EmployeeRepository extends EmployeeInterface
      * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function store(array $data)
+    public function store(array $data)
     {
         return $this->model->create($data);
     }
-
 
     /**
      * Update Data
      *
      * @param array $data
-     * @param string $uid
-     * @param string $where
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function update(array $data, string $uid='', string $where='')
+    public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
         if (!empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('uid', $uid);
+            $query->where('uid', $id);
         }
 
         $query->update($data);
 
-        return $query->get();
+        return $query;
     }
 
     /**
      * Delete Data
      *
-     * @param string $uid
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function delete(string $uid)
+    public function delete(int $id)
     {
-        return $this->model->where('uid', $uid)->delete();
+        return $this->model->where('id', $id)
+            ->delete();
     }
 
     /**
@@ -188,14 +153,12 @@ class EmployeeRepository extends EmployeeInterface
      * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function bulkDelete(array $ids, string $key = '')
+    public function bulkDelete(array $ids, string $key = '')
     {
         if (empty($key)) {
             $key = $this->key;
         }
 
-        return $this->model->whereIn($key, $ids)
-            ->delete();
+        return $this->model->whereIn($key, $ids)->delete();
     }
-
 }
