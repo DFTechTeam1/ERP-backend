@@ -16,7 +16,7 @@ enum ProjectStatus: int
         return match ($this) {
             static::OnGoing => __("global.onGoing"),
             static::Draft => __("global.draft"),
-            static::Revise => __("global.Revise"),
+            static::Revise => __("global.revise"),
             static::WaitingApprovalClient => __("global.waitingApprovalClient"),
             static::ApprovedByClient => __("global.approvedByClient"),
             static::Completed => __("global.completed"),

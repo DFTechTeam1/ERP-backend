@@ -126,6 +126,18 @@ if (!function_exists('getSlug')) {
     }
 }
 
+if (!function_exists('uploadFile')) {
+    function uploadFile(string $path, $file) {
+        $ext = $file->getClientOriginalExtension();
+        $datetime = date('YmdHis');
+        $name = "uploaded_file_{$datetime}.{$ext}";
+
+        Storage::putFile($path, $file);
+
+        return $name;
+    }
+}
+
 if (!function_exists('uploadImage')) {
     function uploadImage(
         $image,
@@ -164,9 +176,10 @@ if (!function_exists('uploadImageandCompress')) {
         $path = storage_path("app/public/{$path}");
 
         $ext = $image->getClientOriginalExtension();
+        $originalName = $image->getClientOriginalName();
         $datetime = date('YmdHis');
         
-        $name = "uploaded_{$datetime}.{$extTarget}";
+        $name = "{$originalName}_{$datetime}.{$extTarget}";
 
         // create file
         if (!is_dir($path)) {
@@ -185,6 +198,22 @@ if (!function_exists('deleteImage')) {
     function deleteImage($path) {
         if (File::exists($path)) {
             unlink($path);
+        }
+    }
+}
+
+if (!function_exists('deleteFolder')) {
+    function deleteFolder(string $path)
+    {
+        if (is_dir($path)) {
+            $files = glob($path . '/*', GLOB_MARK);
+            if (count($files) > 0) {
+                foreach ($files as $file) {
+                    unlink($file);
+                }
+            }
+
+            rmdir($path);
         }
     }
 }

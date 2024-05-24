@@ -62,6 +62,16 @@ class Project extends Model
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'marketing_id');
     }
 
+    /**
+     * Get all of the references for the Project
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function references(): HasMany
+    {
+        return $this->hasMany(ProjectReference::class, 'project_id');
+    }
+
     public function statusText(): Attribute
     {
         $output = '-';

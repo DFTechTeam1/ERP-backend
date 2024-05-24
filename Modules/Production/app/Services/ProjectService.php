@@ -5,9 +5,15 @@ namespace Modules\Production\Services;
 use App\Enums\ErrorCode\Code;
 use Illuminate\Support\Facades\DB;
 use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Repository\ProjectReferenceRepository;
+use Modules\Hrd\Repository\EmployeeRepository;
 
 class ProjectService {
     private $repo;
+
+    private $referenceRepo;
+
+    private $employeeRepo;
 
     /**
      * Construction Data
@@ -15,6 +21,10 @@ class ProjectService {
     public function __construct()
     {
         $this->repo = new ProjectRepository;
+
+        $this->referenceRepo = new ProjectReferenceRepository;
+
+        $this->employeeRepo = new EmployeeRepository;
     }
 
     /**
@@ -161,6 +171,24 @@ class ProjectService {
     }
 
     /**
+     * Formating references response 
+     *
+     * @param object $references
+     * @return array
+     */
+    protected function formatingReferenceFiles(object $references)
+    {
+        return collect($references)->map(function ($reference) {
+            return [
+                'id' => $reference->id,
+                'media_path' => $reference->media_path_text,
+                'name' => $reference->name,
+                'type' => $reference->type,
+            ];
+        })->toArray();
+    }
+
+    /**
      * Get detail data
      *
      * @param string $uid
@@ -173,17 +201,39 @@ class ProjectService {
                 'marketing:id,name,employee_id',
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id',
-                'boards:id,project_id,name,sort'
+                'boards:id,project_id,name,sort',
+                'references:id,project_id,media_path,name,type',
             ]);
 
             $eventTypes = \App\Enums\Production\EventType::cases();
             $classes = \App\Enums\Production\Classification::cases();
 
-            $pics = collect($data->personInCharges)->map(function ($pic) {
-                return [
-                    'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
-                ];
-            })->pluck('name')->values()->toArray();
+            $pics = [];
+            $teams = [];
+            $picIds = [];
+            foreach ($data->personInCharges as $key => $pic) {
+                $pics[] = $pic->employee->name . '('. $pic->employee->employee_id .')';   
+                $picIds[] = $pic->pic_id;
+            }
+
+            $teams = $this->employeeRepo->list(
+                'id,uid,name,email',
+                '',
+                [],
+                '',
+                '',
+                [],
+                [
+                    'key' => 'boss_id',
+                    'value' => $picIds,
+                ]
+            );
+            $teams = collect($teams)->map(function ($team) {
+                $team['last_update'] = '-';
+                $team['current_task'] = '-';
+
+                return $team;
+            })->toArray();
 
             $marketing = $data->marketing ? $data->marketing->name : '-';
 
@@ -222,7 +272,10 @@ class ProjectService {
                 'client_portal' => $data->client_portal,
                 'status' => $data->status_text,
                 'status_color' => $data->status_color,
+                'status_raw' => $data->status,
+                'references' => $this->formatingReferenceFiles($data->references),
                 'boards' => $data->boards,
+                'teams' => $teams,
             ];
 
             return generalResponse(
@@ -282,6 +335,41 @@ class ProjectService {
     }
 
     /**
+     * Update more detail section
+     *
+     * @param array $data
+     * @param string $id
+     * @return array
+     */
+    public function updateMoreDetail(array $data, string $id)
+    {
+        try {
+            $this->repo->update($data, $id);
+
+            $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue');
+
+            $output = [
+                'venue' => $project->venue,
+                'event_type' => $project->event_type_text,
+                'event_type_raw' => $project->event_type,
+                'collaboration' => $project->collaboration,
+                'status' => $project->status_text,
+                'status_raw' => $project->status,
+                'note' => $project->note ?? '-',
+                'client_portal' => $project->client_portal,
+            ];
+
+            return generalResponse(
+                __('global.successUpdateBasicInformation'),
+                false,
+                $output,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Update basic project information
      *
      * @param array $data
@@ -324,6 +412,82 @@ class ProjectService {
                 __('global.successUpdateBasicInformation'),
                 false,
                 $output,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function storeReferences(array $data, string $id)
+    {
+        $fileImageType = ['jpg', 'jpeg', 'png', 'webp'];
+        $project = $this->repo->show($id);
+        try {
+            $output = [];
+            foreach ($data['files'] as $file) {
+                $type = $file['path']->getClientOriginalExtension();
+                
+                if (gettype(array_search($type, $fileImageType)) != 'boolean') {
+                    $fileData = uploadImageandCompress(
+                        'projects/references/' . $project->id,
+                        10,
+                        $file['path']
+                    );
+                } else {
+                    $fileData = uploadFile(
+                        'projects/references/' . $project->id,
+                        $file['path']
+                    );
+                }
+
+                $output[] = [
+                    'media_path' => $fileData,
+                    'name' => $fileData,
+                    'type' => $type,
+                ];
+            }
+
+            $project->references()->createMany($output);
+
+            return generalResponse(
+                __("global.successCreateReferences"),
+                false,
+                $this->formatingReferenceFiles($project->references),
+            );
+        } catch(\Throwable $th) {
+            // delete all files in folder
+            // deleteFolder(storage_path('app/public/projects/references/' . $project->id));
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete reference image
+     *
+     * @param array $ids
+     * @return array
+     */
+    public function deleteReference(array $ids, string $projectId)
+    {
+        try {
+            foreach ($ids as $id) {
+                $reference = $this->referenceRepo->show($id);
+                $path = $reference->media_path;
+
+                deleteImage(storage_path('app/public/projects/references/' . $reference->project_id . '/' . $path));
+
+                $this->referenceRepo->delete($id);
+            }
+            
+
+            $project = $this->repo->show($projectId, 'id,name,uid');
+            $references = $this->formatingReferenceFiles($project->references);
+
+            return generalResponse(
+                __('global.successDeleteReference'),
+                false,
+                $references,
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -396,5 +560,30 @@ class ProjectService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Get Available project status
+     *
+     * @return array
+     */
+    public function getProjectStatus()
+    {
+        $statuses = \App\Enums\Production\ProjectStatus::cases();
+
+        $out = [];
+
+        foreach ($statuses as $status) {
+            $out[] = [
+                'value' => $status->value,
+                'title' => $status->label(),
+            ];
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $out,
+        );
     }
 }
