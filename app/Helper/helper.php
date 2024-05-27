@@ -6,6 +6,7 @@ use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
@@ -138,6 +139,35 @@ if (!function_exists('uploadFile')) {
     }
 }
 
+if (!function_exists('uploadAddon')) {
+    function uploadAddon($file) {
+        $mime = $file->getClientMimeType();
+
+        if (
+            $mime == 'image/png' ||
+            $mime == 'image/jpg' ||
+            $mime == 'image/jpeg' ||
+            $mime == 'image/webp'
+        ) {
+            $uploadedFile = uploadImageandCompress(
+                'addons',
+                10,
+                $file
+            );
+        } else {
+            $uploadedFile = uploadFile(
+                'addons',
+                $file
+            );
+        }
+
+        return [
+            'mime' => $mime,
+            'file' => $uploadedFile,
+        ];
+    }
+}
+
 if (!function_exists('uploadImage')) {
     function uploadImage(
         $image,
@@ -251,6 +281,38 @@ if (!function_exists('getSettingByKey')) {
 
         $data = collect($data)->where('key', $key)->values();
 
-        return !empty($data) ? $data[0]['value'] : null;
+        return count($data) > 0 ? $data[0]['value'] : null;
+    }
+}
+
+if (!function_exists('cachingSetting')) {
+    function cachingSetting() {
+        $setting = Cache::get('setting');
+    
+        if (!$setting) {
+            Cache::rememberForever('setting', function () {
+                $data = \Modules\Company\Models\Setting::get();
+
+                return $data->toArray();
+            });
+        }
+    }
+}
+
+if (!function_exists('storeCache')) {
+    function storeCache(string $key, $value, $ttl = 60 * 60 * 6) {
+        Cache::put($key, $value, $ttl);
+    }
+}
+
+if (!function_exists('clearCache')) {
+    function clearCache(string $cacheId) {
+        Cache::forget($cacheId);
+    }
+}
+
+if (!function_exists('getCache')) {
+    function getCache(string $cacheId) {
+        return Cache::get($cacheId);
     }
 }

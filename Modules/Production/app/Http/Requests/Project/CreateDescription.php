@@ -4,7 +4,7 @@ namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreReferences extends FormRequest
+class CreateDescription extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -12,7 +12,7 @@ class StoreReferences extends FormRequest
     public function rules(): array
     {
         return [
-            'files.*.path' => 'required',
+            'description' => 'required',
         ];
     }
 

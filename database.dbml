@@ -436,14 +436,14 @@ Table team_members {
 
 Table project_tasks {
     id int [pk, increment]
+    uid varchar
     project_id int [ref: > projects.id]
+    project_board_id int [ref: >project_boards.id]
     start_date date
     end_date date
     description text
     name varchar [not null]
-    status tinyint
     start_working_at datetime
-    position_on_board int [ref: > project_boards.id]
     created_at timestamp
     updated_at timestamp
     created_by int

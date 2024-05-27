@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
+use App\Services\LocalNasService;
 use App\Services\NasConnectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -17,19 +18,11 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::get('ilham', function () {
-    $url = env('NAS_URL');
+    $localService = new LocalNasService();
 
-    // $folderList = Http::get($url);
-    // $body = json_decode($folderList->body(), true);
+    $check = $localService->checkConnection();
 
-    // return response()->json($body);
-
-    $ch = curl_init($url . '/ilham');    // initialize curl handle
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_PROXY, "https://bright-huge-gopher.ngrok-free.app"); //your proxy url
-    $data = curl_exec($ch);
-
-    return response()->json($data);
+    return response()->json($check);
 });
 
 Route::get('nasTestConnection', function (Request $request) {
@@ -122,6 +115,12 @@ Route::get('indonesia/districts', function () {
     return response()->json([
         'data' => $districts,
     ]);
+});
+
+// LOCAL NAS CONNECTION
+Route::prefix('local')->group(function () {
+    Route::get('sharedFolders', [\App\Http\Controllers\Api\Nas\LocalNasController::class, 'sharedFolders']);
+    Route::post('upload', [\App\Http\Controllers\Api\Nas\LocalNasController::class, 'upload']);
 });
 
 Route::get('notification', function () {

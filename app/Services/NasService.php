@@ -26,8 +26,6 @@ class NasService {
     public function testConnection(array $data)
     {
         try {
-            $res = Http::get('https://bright-huge-gopher.ngrok-free.app/api/nasTestConnection');
-            return json_decode($res->body(), true);
             $http = 'http://' . $data['server'] . ':5000/webapi';
             $login = Http::get($http . '/auth.cgi', [
                 'api' => 'SYNO.API.Auth',
