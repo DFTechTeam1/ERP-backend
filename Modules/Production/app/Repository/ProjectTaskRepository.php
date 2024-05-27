@@ -2,17 +2,17 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\Project;
-use Modules\Production\Repository\Interface\ProjectInterface;
+use Modules\Production\Models\ProjectTask;
+use Modules\Production\Repository\Interface\ProjectTaskInterface;
 
-class ProjectRepository extends ProjectInterface {
+class ProjectTaskRepository extends ProjectTaskInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Project();
+        $this->model = new ProjectTask();
         $this->key = 'id';
     }
 
@@ -80,22 +80,13 @@ class ProjectRepository extends ProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(
-        string $uid = '', 
-        string $select = '*', 
-        array $relation = [], 
-        string $where = ''
-    )
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where("uid", $uid);
-        } else {
-            $query->whereRaw($where);
-        }
+        $query->where("uid", $uid);
         
         if ($relation) {
             $query->with($relation);

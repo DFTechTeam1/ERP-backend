@@ -14,7 +14,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        if ($this->app->environment('local')) {
+            $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
+            $this->app->register(TelescopeServiceProvider::class);
+        }
     }
 
     /**
@@ -24,15 +27,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // CACHING ALL SETTING
         if (\Illuminate\Support\Facades\DB::connection()->getDatabaseName() && Schema::hasTable('cache')) { // avoid failing down when start in the first time
-            $setting = Cache::get('setting');
-    
-            if (!$setting) {
-                Cache::rememberForever('setting', function () {
-                    $data = \Modules\Company\Models\Setting::get();
-    
-                    return $data->toArray();
-                });
-            }
+            cachingSetting();
 
 
             // caching all data

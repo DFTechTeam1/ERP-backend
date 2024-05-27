@@ -3,6 +3,7 @@
 namespace Modules\Addon\Services;
 
 use App\Enums\ErrorCode\Code;
+use App\Services\LocalNasService;
 use App\Services\NasConnectionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -248,6 +249,42 @@ class AddonService {
     public function store(array $data): array
     {
         try {
+            $localService = new LocalNasService();
+            $isConnect = $localService->checkConnection();
+            
+            // Check connection
+            if (!$isConnect) {
+                return errorResponse('Unable to connect to the server. recheck the configuration in the settings menu');
+            }
+
+            /**
+             * Upload files to local,
+             * Then upload to nas
+             * Then delete files in local
+             */
+            if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
+                \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
+            }
+
+            $slugName = str_replace(' ', '_', $data['name']);
+
+            $sharedFolder = getSettingByKey('folder'); // define shared folders
+
+            $mainAddon = uploadAddon($data['addon_file']);
+            $uploadMainAddon = \Illuminate\Support\Facades\Http::post(env('NAS_URL_LOCAL') . '/local/upload', [
+                'path' => storage_path('app/public/addons/' . $mainAddon['file']),
+                'name' => $mainAddon['file'],
+                'mime' => $mainAddon['mime'],
+                'targetPath' => "{$sharedFolder}/" . $slugName,
+            ]);
+
+            return generalResponse(
+                'success',
+                false,
+                json_decode($uploadMainAddon, true) ?? ['path' => env('NAS_URL_LOCAL') . '/local/upload'],
+            );
+
+
             /**
              * create folder in the NAS
              */

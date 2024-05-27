@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\Create;
+use Modules\Production\Http\Requests\Project\CreateDescription;
+use Modules\Production\Http\Requests\Project\CreateTask;
 use Modules\Production\Http\Requests\Project\MoreDetailUpdate;
 use Modules\Production\Http\Requests\Project\StoreReferences;
 use Modules\Production\Services\ProjectService;
@@ -128,6 +130,62 @@ class ProjectController extends Controller
         return apiResponse($this->service->storeReferences($request->validated(), $id));
     }
 
+    /**
+     * Create new task on selected board
+     *
+     * @param CreateTask $request
+     * @param int $boardId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeTask(CreateTask $request, $boardId)
+    {
+        return apiResponse($this->service->storeTask($request->validated(), (int) $boardId));
+    }
+
+    /**
+     * Add task description
+     *
+     * @param CreateDescription $request
+     * @param string $taskId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeDescription(CreateDescription $request, $taskId)
+    {
+        return apiResponse($this->service->storeDescription($request->validated(), (string) $taskId));
+    }
+
+    /**
+     * Get teams of selected project
+     *
+     * @param string $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProjectMembers($projectId)
+    {
+        return apiResponse($this->service->getProjectMembers((int) $projectId));
+    }
+
+    /**
+     * Assign members / employees to selected task
+     *
+     * @param Request $request
+     * @param string $taskId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function assignMemberToTask(Request $request, $taskId)
+    {
+        return apiResponse(
+            $this->service->assignMemberToTask($request->all(), (string) $taskId)
+        );
+    }
+
+    /**
+     * Delete selected image reference
+     *
+     * @param Request $request
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function deleteReference(Request $request, string $id)
     {
         return apiResponse($this->service->deleteReference($request->image_ids, $id));

@@ -131,4 +131,7 @@ return [
     'accontAlreadyActive' => 'Account is already active',
     'successCreateReferences' => 'Success create references',
     'successDeleteReference' => 'Success delete reference',
+    'taskCreated' => 'Task has been created',
+    'descriptionAdded' => 'Description has been added',
+    'memberAdded' => 'Members has been assign to task',
 ];
