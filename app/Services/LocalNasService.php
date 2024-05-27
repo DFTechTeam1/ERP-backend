@@ -167,7 +167,7 @@ class LocalNasService {
 
             $finalResponse = json_decode($response, true);
 
-            Log::debug('result response upload to nas: ', $finalResponse);
+            Log::debug('result response upload to nas: ', [$finalResponse]);
 
             if ($finalResponse['success']) {
                 if (file_exists($path)) {
