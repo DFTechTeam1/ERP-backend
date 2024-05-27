@@ -161,7 +161,15 @@ class LocalNasService {
    
            curl_close($curl);
 
-           Log::debug('result response upload to nas: ', [$response]);
+           $finalResponse = json_decode($response, true);
+
+           Log::debug('result response upload to nas: ', $finalResponse);
+
+           if ($finalResponse['success']) {
+            if (file_exists($path)) {
+                unlink($path);
+            }
+           }
    
            return json_decode($response, true);
         } catch (\Throwable $th) {
