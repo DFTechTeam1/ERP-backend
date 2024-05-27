@@ -112,48 +112,59 @@ class LocalNasService {
 
     public function uploadFile($file, string $targetPath)
     {
-         /**
-         * Upload files to local,
-         * Then upload to nas
-         * Then delete files in local
-         */
-        if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
-            \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
+        try {
+            /**
+            * Upload files to local,
+            * Then upload to nas
+            * Then delete files in local
+            */
+           if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
+               \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
+           }
+           
+           $mainAddon = uploadAddon($file);
+           Log::debug('main addon upload res: ', $mainAddon);
+   
+           $name = $mainAddon['file'];
+           $mime = $mainAddon['mime'];
+           $path = storage_path('app/public/addons/' . $mainAddon['file']);
+   
+           $this->createUrl('filestation');
+   
+           $curl = curl_init();
+   
+           $sid = Cache::get('NAS_SID');
+   
+           $this->fullUrl .= "?api=SYNO.FileStation.Upload&version=2&method=upload&path={$targetPath}&create_parents=true&_sid={$sid}&overwrite=true&mtime";;
+   
+           curl_setopt_array($curl, array(
+           CURLOPT_URL => $this->fullUrl,
+           CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
+           CURLOPT_RETURNTRANSFER => true,
+           CURLOPT_ENCODING => '',
+           CURLOPT_MAXREDIRS => 10,
+           CURLOPT_TIMEOUT => 0,
+           CURLOPT_FOLLOWLOCATION => true,
+           CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+           CURLOPT_CUSTOMREQUEST => 'GET',
+           CURLOPT_POSTFIELDS => array('filename'=> new CURLFile($path, $mime, $name)),
+           ));
+   
+           $response = curl_exec($curl);
+   
+           curl_close($curl);
+   
+           return json_decode($response, true);
+        } catch (\Throwable $th) {
+            return [
+                'error' => true,
+                'message' => $th->getMessage(),
+                'data' => [
+                    'file' => $th->getFile(),
+                    'line' => $th->getLine(),
+                ],
+            ];
         }
-        
-        $mainAddon = uploadAddon($file);
-        Log::debug('main addon upload res: ', $mainAddon);
-        
-        $name = $mainAddon['file'];
-        $mime = $mainAddon['mime'];
-        $path = storage_path('app/public/addons/' . $mainAddon['file']);
-
-        $this->createUrl('filestation');
-
-        $curl = curl_init();
-
-        $sid = Cache::get('NAS_SID');
-
-        $this->fullUrl .= "?api=SYNO.FileStation.Upload&version=2&method=upload&path={$targetPath}&create_parents=true&_sid={$sid}&overwrite=true&mtime";;
-
-        curl_setopt_array($curl, array(
-        CURLOPT_URL => $this->fullUrl,
-        CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'GET',
-        CURLOPT_POSTFIELDS => array('filename'=> new CURLFile($path, $mime, $name)),
-        ));
-
-        $response = curl_exec($curl);
-
-        curl_close($curl);
-
-        return json_decode($response, true);
     }
 
     /**
