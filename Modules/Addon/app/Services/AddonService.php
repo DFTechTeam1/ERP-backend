@@ -296,8 +296,8 @@ class AddonService {
              * Then upload to nas
              * Then delete files in local
              */
-            if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
-                \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
+            if (!\Illuminate\Support\Facades\Storage::exists('addons')) {
+                \Illuminate\Support\Facades\Storage::makeDirectory('addons');
             }
 
             $slugName = str_replace(' ', '_', $data['name']);

@@ -119,10 +119,11 @@ class LocalNasService {
             * Then upload to nas
             * Then delete files in local
             */
-            if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
-                \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
+            if (!\Illuminate\Support\Facades\Storage::exists('addons')) {
+                \Illuminate\Support\Facades\Storage::makeDirectory('addons');
             }
            
+            $mime = $file->getClientMimeType();
             $ext = $file->getClientOriginalExtension();
             $datetime = date('YmdHis');
             $name = "uploaded_file_{$datetime}.{$ext}";
@@ -130,8 +131,6 @@ class LocalNasService {
             $mainAddon = Storage::putFileAs('addons', $file, $name);
             Log::debug('main addon upload res: ', $mainAddon);
     
-            $name = $mainAddon['file'];
-            $mime = $mainAddon['mime'];
             $path = storage_path('app/public/addons/' . $mainAddon['file']);
     
             $this->createUrl('filestation');
@@ -178,6 +177,12 @@ class LocalNasService {
     
             return json_decode($response, true);
         } catch (\Throwable $th) {
+            Log::debug('error nasService upload file: ', [
+                'file' => $th->getFile(),
+                'line' => $th->getLine(),
+                'message' => $th->getMessage(),
+            ]);
+
             return [
                 'error' => true,
                 'message' => $th->getMessage(),
