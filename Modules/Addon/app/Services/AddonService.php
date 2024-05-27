@@ -253,11 +253,15 @@ class AddonService {
         Log::debug('function uploadToLocalNas mime: ', [$mime]);
         Log::debug('function uploadToLocalNas size: ', [$size]);
 
+        $dummy = uploadFile('tmp', $file);
+
+        Log::debug('dummy file', [$dummy]);
+
         $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Content-Length' => $size 
             ])
             ->attach(
-                'filedata', file_get_contents($file), $name,
+                'filedata', file_get_contents(storage_path('app/public/tmp/' . $dummy)), $name,
             )
             ->post(
                 env('NAS_URL_LOCAL') . '/local/upload',
@@ -301,7 +305,7 @@ class AddonService {
             $sharedFolder = getSettingByKey('folder'); // define shared folders
 
             // main addon file
-            $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
+            $this->uploadToLocalNas($data['preview_image'], $sharedFolder . '/' . $slugName);
             
             // tutorial video file
             // $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
