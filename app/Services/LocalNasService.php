@@ -110,8 +110,23 @@ class LocalNasService {
         return $response->json();
     }
 
-    public function uploadFile(string $path, string $name, string $mime, string $targetPath)
+    public function uploadFile($file, string $targetPath)
     {
+         /**
+         * Upload files to local,
+         * Then upload to nas
+         * Then delete files in local
+         */
+        if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
+            \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
+        }
+        
+        $mainAddon = uploadAddon($file);
+
+        $name = $mainAddon['file'];
+        $mime = $mainAddon['mime'];
+        $path = storage_path('app/public/addons/' . $mainAddon['file']);
+
         $this->createUrl('filestation');
 
         $curl = curl_init();

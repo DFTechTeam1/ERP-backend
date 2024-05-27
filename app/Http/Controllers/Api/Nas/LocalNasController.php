@@ -22,10 +22,10 @@ class LocalNasController extends Controller
 
     public function upload(Request $request)
     {
+        \Illuminate\Support\Facades\Log::debug('REQUEST UPLOAD ADDON: ', $request->all());
+        
         return $this->service->uploadFile(
-            $request->path, 
-            $request->name, 
-            $request->mime, 
+            $request->file,
             $request->targetPath
         );
     }
