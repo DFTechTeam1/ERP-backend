@@ -125,6 +125,7 @@ class LocalNasService {
            
             $mime = $file->getClientMimeType();
             $ext = $file->getClientOriginalExtension();
+            Log::debug('addon ext: ', [$ext]);
             $datetime = date('YmdHis');
             $name = "uploaded_file_{$datetime}.{$ext}";
 
