@@ -249,12 +249,15 @@ class AddonService {
         $mime = $file->getClientMimeType();
         $size = $file->getSize();
 
-        $response = \Illuminate\Support\Facades\Http::timeout(120)
-            ->withHeaders([
+        Log::debug('function uploadToLocalNas name: ', [$name]);
+        Log::debug('function uploadToLocalNas mime: ', [$mime]);
+        Log::debug('function uploadToLocalNas size: ', [$size]);
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Content-Length' => $size 
             ])
             ->attach(
-                'filedata', file_get_contents($file), $name, ['Content-Type' => $mime]
+                'filedata', file_get_contents($file), $name,
             )
             ->post(
                 env('NAS_URL_LOCAL') . '/local/upload',
@@ -277,12 +280,12 @@ class AddonService {
     {
         try {
             $localService = new LocalNasService();
-            $isConnect = $localService->checkConnection();
-            
-            // Check connection
-            if (!$isConnect) {
-                return errorResponse('Unable to connect to the server. recheck the configuration in the settings menu');
-            }
+            // $isConnect = $localService->checkConnection();
+            // Log::debug('check connection', [$isConnect]);
+            // // Check connection
+            // if (!$isConnect) {
+            //     return errorResponse('Unable to connect to the server. recheck the configuration in the settings menu');
+            // }
 
             /**
              * Upload files to local,
@@ -298,13 +301,13 @@ class AddonService {
             $sharedFolder = getSettingByKey('folder'); // define shared folders
 
             // main addon file
-            $this->uploadToLocalNas($data['addon_file'], $sharedFolder . '/' . $slugName);
+            $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
             
             // tutorial video file
-            $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
+            // $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
 
-            // preview image
-            $this->uploadToLocalNas($data['preview_image'], $sharedFolder . '/' . $slugName);
+            // // preview image
+            // $this->uploadToLocalNas($data['preview_image'], $sharedFolder . '/' . $slugName);
 
             return generalResponse(
                 'success',
