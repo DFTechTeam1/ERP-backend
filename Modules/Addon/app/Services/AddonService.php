@@ -248,7 +248,6 @@ class AddonService {
      */
     public function store(array $data): array
     {
-        Log::debug('store addon resource data: ', $data);
         try {
             $localService = new LocalNasService();
             $isConnect = $localService->checkConnection();
@@ -272,7 +271,7 @@ class AddonService {
             $sharedFolder = getSettingByKey('folder'); // define shared folders
 
             $uploadMainAddon = \Illuminate\Support\Facades\Http::post(env('NAS_URL_LOCAL') . '/local/upload', [
-                'file' => $data['addon_file'],
+                'file' => request()->addon_file,
                 'targetPath' => "{$sharedFolder}/" . $slugName,
             ]);
 

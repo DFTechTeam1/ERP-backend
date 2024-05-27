@@ -13,9 +13,7 @@ class Create extends FormRequest
     public function rules(): array
     {
         return [
-            'addon_file' => [
-                'required',
-            ],
+            'addon_file' => 'required',
             'tutorial_video' => 'nullable',
             'preview_image' => 'required',
             'name' => 'required',
