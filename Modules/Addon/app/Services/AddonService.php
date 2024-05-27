@@ -240,6 +240,32 @@ class AddonService {
         }
     }
 
+    protected function uploadToLocalNas(
+        $file,
+        string $targetFolder
+    )
+    {
+        $name = $file->getClientOriginalName();
+        $mime = $file->getClientMimeType();
+        $size = $file->getSize();
+
+        $response = \Illuminate\Support\Facades\Http::timeout(120)
+            ->withHeaders([
+                'Content-Length' => $size 
+            ])
+            ->attach(
+                'filedata', file_get_contents($file), $name, ['Content-Type' => $mime]
+            )
+            ->post(
+                env('NAS_URL_LOCAL') . '/local/upload',
+                [
+                    'targetPath' => $targetFolder,
+                ]
+            );
+
+        return json_decode($response->body(), true);
+    }
+
     /**
      * Store data
      *
@@ -271,29 +297,19 @@ class AddonService {
 
             $sharedFolder = getSettingByKey('folder'); // define shared folders
 
-            $mainAddonName = $data['addon_file']->getClientOriginalName();
-            $mainAddonMime = $data['addon_file']->getClientMimeType();
-            $size = request()->file('addon_file')->getSize();
+            // main addon file
+            $this->uploadToLocalNas($data['addon_file'], $sharedFolder . '/' . $slugName);
+            
+            // tutorial video file
+            $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
 
-            $mainAddonUpload = \Illuminate\Support\Facades\Http::withHeaders([
-                'Content-Length' => $size 
-            ])
-            ->attach(
-                'filedata', file_get_contents($data['addon_file']), $mainAddonName, ['Content-Type' => $mainAddonMime]
-            )
-            ->post(
-                env('NAS_URL_LOCAL') . '/local/upload',
-                [
-                    'targetPath' => '/apitesting/' . $slugName,
-                ]
-            );
+            // preview image
+            $this->uploadToLocalNas($data['preview_image'], $sharedFolder . '/' . $slugName);
 
             return generalResponse(
                 'success',
                 false,
-                json_decode($mainAddonUpload, true),
             );
-
 
             /**
              * create folder in the NAS
