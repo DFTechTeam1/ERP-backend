@@ -130,43 +130,59 @@ if (!function_exists('getSlug')) {
 
 if (!function_exists('uploadFile')) {
     function uploadFile(string $path, $file) {
-        $ext = $file->getClientOriginalExtension();
-        $datetime = date('YmdHis');
-        $name = "uploaded_file_{$datetime}.{$ext}";
-
-        Storage::putFileAs($path, $file, $name);
-
-        return $name;
+        try {
+            $ext = $file->getClientOriginalExtension();
+            $datetime = date('YmdHis');
+            $name = "uploaded_file_{$datetime}.{$ext}";
+    
+            Storage::putFileAs($path, $file, $name);
+    
+            return $name;
+        } catch (\Throwable $th) {
+            Log::debug('uploadFile Error', [
+                'file' => $th->getFile(),
+                'message' => $th->getMessage(),
+                'line' => $th->getLine(),
+            ]);
+        }
     }
 }
 
 if (!function_exists('uploadAddon')) {
     function uploadAddon($file) {
-        $mime = $file->getClientMimeType();
-        Log::debug('mime in uploadAddon function: ', [$mime]);
-
-        // if (
-        //     $mime == 'image/png' ||
-        //     $mime == 'image/jpg' ||
-        //     $mime == 'image/jpeg' ||
-        //     $mime == 'image/webp'
-        // ) {
-        //     $uploadedFile = uploadImageandCompress(
-        //         'addons',
-        //         10,
-        //         $file
-        //     );
-        // } else {
-        // }
-        $uploadedFile = uploadFile(
-            'addons',
-            $file
-        );
-
-        return [
-            'mime' => $mime,
-            'file' => $uploadedFile,
-        ];
+        try {
+            $mime = $file->getClientMimeType();
+            Log::debug('mime in uploadAddon function: ', [$mime]);
+    
+            // if (
+            //     $mime == 'image/png' ||
+            //     $mime == 'image/jpg' ||
+            //     $mime == 'image/jpeg' ||
+            //     $mime == 'image/webp'
+            // ) {
+            //     $uploadedFile = uploadImageandCompress(
+            //         'addons',
+            //         10,
+            //         $file
+            //     );
+            // } else {
+            // }
+            $uploadedFile = uploadFile(
+                'addons',
+                $file
+            );
+    
+            return [
+                'mime' => $mime,
+                'file' => $uploadedFile,
+            ];
+        } catch (\Throwable $th) {
+            Log::debug('uploadAddon Error', [
+                'file' => $th->getFile(),
+                'message' => $th->getMessage(),
+                'line' => $th->getLine(),
+            ]);
+        }
     }
 }
 
