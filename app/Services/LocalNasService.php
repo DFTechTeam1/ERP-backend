@@ -131,7 +131,7 @@ class LocalNasService {
             $mainAddon = Storage::putFileAs('addons', $file, $name);
             Log::debug('main addon upload res: ', [$mainAddon]);
     
-            $path = storage_path('app/public/addons/' . $mainAddon);
+            $path = storage_path('app/public/addons/' . $name);
     
             $this->createUrl('filestation');
     
