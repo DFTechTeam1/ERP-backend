@@ -248,6 +248,7 @@ class AddonService {
      */
     public function store(array $data): array
     {
+        Log::debug('store addon resource data: ', $data);
         try {
             $localService = new LocalNasService();
             $isConnect = $localService->checkConnection();
