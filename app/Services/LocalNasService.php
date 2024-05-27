@@ -6,6 +6,7 @@ use CURLFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class LocalNasService {
     /**
@@ -118,60 +119,64 @@ class LocalNasService {
             * Then upload to nas
             * Then delete files in local
             */
-           if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
-               \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
-           }
-           
-           $mainAddon = uploadAddon($file);
-           Log::debug('main addon upload res: ', $mainAddon);
-   
-           $name = $mainAddon['file'];
-           $mime = $mainAddon['mime'];
-           $path = storage_path('app/public/addons/' . $mainAddon['file']);
-   
-           $this->createUrl('filestation');
-   
-           $curl = curl_init();
-   
-           $sid = Cache::get('NAS_SID');
-   
-           $this->fullUrl .= "?api=SYNO.FileStation.Upload&version=2&method=upload&_sid={$sid}";
-
-           Log::debug('URL UPLOAD FILE TO NAS: ', [$this->fullUrl]);
-   
-           curl_setopt_array($curl, array(
-           CURLOPT_URL => $this->fullUrl,
-           CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
-           CURLOPT_RETURNTRANSFER => true,
-           CURLOPT_ENCODING => '',
-           CURLOPT_MAXREDIRS => 10,
-           CURLOPT_TIMEOUT => 0,
-           CURLOPT_FOLLOWLOCATION => true,
-           CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-           CURLOPT_CUSTOMREQUEST => 'GET',
-           CURLOPT_POSTFIELDS => array(
-            'path' => $targetPath,
-            'create_parents' => 'true',
-            'mtime' => '',
-            'overwrite' => 'true',
-            'filename'=> new CURLFile($path, $mime, $name)),
-           ));
-   
-           $response = curl_exec($curl);
-   
-           curl_close($curl);
-
-           $finalResponse = json_decode($response, true);
-
-           Log::debug('result response upload to nas: ', $finalResponse);
-
-           if ($finalResponse['success']) {
-            if (file_exists($path)) {
-                unlink($path);
+            if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
+                \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
             }
-           }
-   
-           return json_decode($response, true);
+           
+            $ext = $file->getClientOriginalExtension();
+            $datetime = date('YmdHis');
+            $name = "uploaded_file_{$datetime}.{$ext}";
+
+            $mainAddon = Storage::putFileAs('addons', $file, $name);
+            Log::debug('main addon upload res: ', $mainAddon);
+    
+            $name = $mainAddon['file'];
+            $mime = $mainAddon['mime'];
+            $path = storage_path('app/public/addons/' . $mainAddon['file']);
+    
+            $this->createUrl('filestation');
+    
+            $curl = curl_init();
+    
+            $sid = Cache::get('NAS_SID');
+    
+            $this->fullUrl .= "?api=SYNO.FileStation.Upload&version=2&method=upload&_sid={$sid}";
+
+            Log::debug('URL UPLOAD FILE TO NAS: ', [$this->fullUrl]);
+    
+            curl_setopt_array($curl, array(
+            CURLOPT_URL => $this->fullUrl,
+            CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_POSTFIELDS => array(
+                'path' => $targetPath,
+                'create_parents' => 'true',
+                'mtime' => '',
+                'overwrite' => 'true',
+                'filename'=> new CURLFile($path, $mime, $name)),
+            ));
+    
+            $response = curl_exec($curl);
+    
+            curl_close($curl);
+
+            $finalResponse = json_decode($response, true);
+
+            Log::debug('result response upload to nas: ', $finalResponse);
+
+            if ($finalResponse['success']) {
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+    
+            return json_decode($response, true);
         } catch (\Throwable $th) {
             return [
                 'error' => true,
