@@ -270,8 +270,10 @@ class AddonService {
 
             $sharedFolder = getSettingByKey('folder'); // define shared folders
 
-            $uploadMainAddon = \Illuminate\Support\Facades\Http::post(env('NAS_URL_LOCAL') . '/local/upload', [
-                'file' => request()->addon_file,
+            $uploadMainAddon = \Illuminate\Support\Facades\Http::attach(
+                'file', $data['addon_file']
+            )
+            ->post(env('NAS_URL_LOCAL') . '/local/upload', [
                 'targetPath' => "{$sharedFolder}/" . $slugName,
             ]);
 
