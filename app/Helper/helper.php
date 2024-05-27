@@ -351,7 +351,7 @@ if (!function_exists('curlRequest')) {
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'GET',
             CURLOPT_POSTFIELDS => $payload,
-        );
+        ));
 
         $response = curl_exec($curl);
 
