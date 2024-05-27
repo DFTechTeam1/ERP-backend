@@ -305,7 +305,7 @@ class AddonService {
             $sharedFolder = getSettingByKey('folder'); // define shared folders
 
             // main addon file
-            $this->uploadToLocalNas($data['preview_image'], $sharedFolder . '/' . $slugName);
+            $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
             
             // tutorial video file
             // $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
