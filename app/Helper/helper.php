@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Intervention\Image\Laravel\Facades\Image;
 
 if (!function_exists('successResponse')) {
@@ -142,7 +143,8 @@ if (!function_exists('uploadFile')) {
 if (!function_exists('uploadAddon')) {
     function uploadAddon($file) {
         $mime = $file->getClientMimeType();
-
+        Log::debug('mime in uploadAddon function: ', [$mime]);
+        
         if (
             $mime == 'image/png' ||
             $mime == 'image/jpg' ||
