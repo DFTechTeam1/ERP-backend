@@ -122,7 +122,8 @@ class LocalNasService {
         }
         
         $mainAddon = uploadAddon($file);
-
+        Log::debug('main addon upload res: ', $mainAddon);
+        
         $name = $mainAddon['file'];
         $mime = $mainAddon['mime'];
         $path = storage_path('app/public/addons/' . $mainAddon['file']);
