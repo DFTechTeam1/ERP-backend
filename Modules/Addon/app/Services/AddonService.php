@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Modules\Addon\Repository\AddonRepository;
+use CURLFile;
 
 class AddonService {
     private $repo;
@@ -272,18 +273,25 @@ class AddonService {
 
             $mainAddonName = $data['addon_file']->getClientOriginalName();
             $mainAddonMime = $data['addon_file']->getClientMimeType();
-            $uploadMainAddon = \Illuminate\Support\Facades\Http::timeout(120)
+            $size = request()->file('addon_file')->getSize();
+
+            $mainAddonUpload = \Illuminate\Support\Facades\Http::withHeaders([
+                'Content-Length' => $size 
+            ])
             ->attach(
                 'filedata', file_get_contents($data['addon_file']), $mainAddonName, ['Content-Type' => $mainAddonMime]
             )
-            ->post(env('NAS_URL_LOCAL') . '/local/upload', [
-                'targetPath' => "{$sharedFolder}/" . $slugName,
-            ]);
+            ->post(
+                env('NAS_URL_LOCAL') . '/local/upload',
+                [
+                    'targetPath' => '/apitesting/' . $slugName,
+                ]
+            );
 
             return generalResponse(
                 'success',
                 false,
-                json_decode($uploadMainAddon, true) ?? ['path' => env('NAS_URL_LOCAL') . '/local/upload'],
+                json_decode($mainAddonUpload, true),
             );
 
 
