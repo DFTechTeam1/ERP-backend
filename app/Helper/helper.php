@@ -168,7 +168,7 @@ if (!function_exists('uploadAddon')) {
             // } else {
             // }
             $uploadedFile = uploadFile(
-                'addons',
+                storage_path('app/public/addons'),
                 $file
             );
     
