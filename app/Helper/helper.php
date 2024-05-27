@@ -134,7 +134,7 @@ if (!function_exists('uploadFile')) {
         $datetime = date('YmdHis');
         $name = "uploaded_file_{$datetime}.{$ext}";
 
-        Storage::putFile($path, $file);
+        Storage::putFileAs($path, $file, $name);
 
         return $name;
     }
