@@ -291,88 +291,38 @@ class AddonService {
     public function store(array $data): array
     {
         try {
-            $localService = new LocalNasService();
-            // $isConnect = $localService->checkConnection();
-            // Log::debug('check connection', [$isConnect]);
-            // // Check connection
-            // if (!$isConnect) {
-            //     return errorResponse('Unable to connect to the server. recheck the configuration in the settings menu');
-            // }
-
-            $slugName = str_replace(' ', '_', $data['name']);
-
-            $sharedFolder = getSettingByKey('folder'); // define shared folders
-
-            /**
-             * create folder in the NAS
-             */
-            $nasService = new NasConnectionService();
-            $init = $nasService->initAddonsFolder();
-            Log::debug('init nas', [$init]);
-            if ($init['error']) {
-                return errorResponse($init['message']);
-            }
-            $slugName = str_replace(' ', '_', $data['name']);
-            $folder = ['name' => $data['name'], 'path' => '/apitesting/' . $data['name']];
-
-            // $create = $nasService->createNASFolder($folder['path'], $folder['name']);
-
-            // if ($create['success'] == FALSE) {
-            //     return errorResponse('Failed to create folder');
-            // }
-
-            if (!\Illuminate\Support\Facades\Storage::exists('app/public/addons')) {
-                \Illuminate\Support\Facades\Storage::makeDirectory('app/public/addons');
-            }
-
             $sharedFolder = getSettingByKey('folder');
+            $username = getSettingByKey('user');
+            $password = getSettingByKey('password');
+            $url = getSettingByKey('server');
 
-            $addonFileMime = $data['addon_file']->getClientMimeType();
-            $addonFile = uploadImage($data['addon_file'], 'addons', true);
-            Log::debug('upload main file into local', [$addonFile]);
-            $upload = $nasService->uploadFile(storage_path('app/public/addons/' . $addonFile), $addonFile, $addonFileMime, "{$sharedFolder}/" . $slugName);
-            Log::debug('upload main file into nas', [$upload]);
-            $mainFilePayload = $slugName . '/' . $addonFile;
+            $slugName = str_replace(' ', '_', $data['name']);
 
-            $tutorialVideoPayload = null;
-            if (!empty($data['tutorial_video'])) {
-                $tutorialVideoMime = $data['tutorial_video']->getClientMimeType();
-                $tutorialVideoFile = uploadImage($data['tutorial_video'], 'addons', true);
-                Log::debug('upload tutorial to local', [$tutorialVideoFile]);
-                $uploadTutorialVideo = $nasService->uploadFile(storage_path('app/public/addons/' . $tutorialVideoFile), $tutorialVideoFile, $tutorialVideoMime, "{$sharedFolder}/" . $slugName);
-                Log::debug('upload tutorial to nas', [$uploadTutorialVideo]);
-                $tutorialVideoPayload = $slugName . '/' . $tutorialVideoFile;
-            }
+            $targetPath = $sharedFolder . '/' . $slugName;
 
-            $perviewFileMime = $data['preview_image']->getClientMimeType();
-            $previewFile = uploadImage($data['preview_image'], 'addons', true);
-            Log::debug('upload preview to local', [$previewFile]);
-            $preview = $nasService->uploadFile(storage_path('app/public/addons/' . $previewFile), $previewFile, $perviewFileMime, "{$sharedFolder}/" . $slugName);
-            Log::debug('upload preview to nas', [$preview]);
+            // upload file in local
+            $mime = $data['preview_image']->getClientMimeType();
+            $ext = $data['preview_image']->getClientOriginalExtension();
+            Log::debug('addon ext: ', [$ext]);
+            $datetime = date('YmdHis');
+            $name = "uploaded_file_{$datetime}.{$ext}";
+            $previewImage = Storage::putFileAs('addons', $data['preview_image'], $name);
+            $path = storage_path('app/public/addons/' . $name);
 
-            if ($upload['success'] != FALSE) {
-                if (file_exists(storage_path('app/public/addons/' . $addonFile))) {
-                    unlink(storage_path('app/public/addons/' . $addonFile));
-                }
-            }
-            
-            if ($uploadTutorialVideo['success'] != FALSE) {
-                if (file_exists(storage_path('app/public/addons/' . $tutorialVideoFile))) {
-                    unlink(storage_path('app/public/addons/' . $tutorialVideoFile));
-                }
-            }
+            $payload = [
+                'path' => $targetPath,
+                'create_parents' => 'true',
+                'mtime' => '',
+                'overwrite' => 'true',
+                'filename'=> new CURLFile($path, $mime, $name),
+            ];
 
-            $this->repo->store([
-                'name' => $data['name'],
-                'description' => $data['description'],
-                'preview_img' => $previewFile ?? 'preview',
-                'tutorial_video' => $tutorialVideoPayload ?? 'tutorial',
-                'main_file' => $mainFilePayload ?? 'main file',
-            ]);
+            $response = curlRequest(env('NAS_URL_LOCAL') . '/local/upload', $payload);
 
             return generalResponse(
-                __('global.successCreateAddon'),
+                'success',
                 false,
+                $response,
             );
         } catch (\Throwable $th) {
             Log::debug('failed store addons', [
