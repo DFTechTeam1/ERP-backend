@@ -272,7 +272,8 @@ class AddonService {
 
             $mainAddonName = $data['addon_file']->getClientOriginalName();
             $mainAddonMime = $data['addon_file']->getClientMimeType();
-            $uploadMainAddon = \Illuminate\Support\Facades\Http::attach(
+            $uploadMainAddon = \Illuminate\Support\Facades\Http::timeout(120)
+            ->attach(
                 'filedata', file_get_contents($data['addon_file']), $mainAddonName, ['Content-Type' => $mainAddonMime]
             )
             ->post(env('NAS_URL_LOCAL') . '/local/upload', [
