@@ -129,7 +129,7 @@ class LocalNasService {
             $datetime = date('YmdHis');
             $name = "uploaded_file_{$datetime}.{$ext}";
 
-            $mainAddon = Storage::putFileAs('addons', $file, $name);
+            $mainAddon = Storage::putFile('addons', $file);
             Log::debug('main addon upload res: ', [$mainAddon]);
     
             $path = storage_path('app/public/addons/' . $name);
