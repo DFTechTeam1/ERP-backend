@@ -25,7 +25,7 @@ class LocalNasController extends Controller
         \Illuminate\Support\Facades\Log::debug('REQUEST UPLOAD ADDON: ', $request->all());
 
         return $this->service->uploadFile(
-            $request->filedata,
+            $request->file('filedata'),
             $request->targetPath
         );
     }
