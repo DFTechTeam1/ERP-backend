@@ -257,20 +257,28 @@ class AddonService {
 
         Log::debug('dummy file', [$dummy]);
 
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Content-Length' => $size 
-            ])
-            ->attach(
-                'filedata', file_get_contents(storage_path('app/public/tmp/' . $dummy)), $name,
-            )
-            ->post(
-                env('NAS_URL_LOCAL') . '/local/upload',
-                [
-                    'targetPath' => $targetFolder,
-                ]
-            );
+        $curl = curl_init();
 
-        return json_decode($response->body(), true);
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => 'https://bright-huge-gopher.ngrok-free.app/api/local/upload',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => array(
+                'targetPath' => $targetFolder,
+                'filedata'=> new CURLFILE(storage_path('app/public/tmp/' . $dummy))),
+            )
+        );
+
+        $response = curl_exec($curl);
+
+        curl_close($curl);
+
+        return json_decode($response, true);
     }
 
     /**
@@ -291,32 +299,9 @@ class AddonService {
             //     return errorResponse('Unable to connect to the server. recheck the configuration in the settings menu');
             // }
 
-            /**
-             * Upload files to local,
-             * Then upload to nas
-             * Then delete files in local
-             */
-            if (!\Illuminate\Support\Facades\Storage::exists('addons')) {
-                \Illuminate\Support\Facades\Storage::makeDirectory('addons');
-            }
-
             $slugName = str_replace(' ', '_', $data['name']);
 
             $sharedFolder = getSettingByKey('folder'); // define shared folders
-
-            // main addon file
-            $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
-            
-            // tutorial video file
-            // $this->uploadToLocalNas($data['tutorial_video'], $sharedFolder . '/' . $slugName);
-
-            // // preview image
-            // $this->uploadToLocalNas($data['preview_image'], $sharedFolder . '/' . $slugName);
-
-            return generalResponse(
-                'success',
-                false,
-            );
 
             /**
              * create folder in the NAS
