@@ -273,7 +273,7 @@ class AddonService {
             $mainAddonName = $data['addon_file']->getClientOriginalName();
             $mainAddonMime = $data['addon_file']->getClientMimeType();
             $uploadMainAddon = \Illuminate\Support\Facades\Http::attach(
-                'file', $data['addon_file'], $mainAddonName, ['Content-Type' => $mainAddonMime]
+                'file', file_get_contents($data['addon_file']), $mainAddonName, ['Content-Type' => $mainAddonMime]
             )
             ->post(env('NAS_URL_LOCAL') . '/local/upload', [
                 'targetPath' => "{$sharedFolder}/" . $slugName,
