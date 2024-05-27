@@ -144,24 +144,24 @@ if (!function_exists('uploadAddon')) {
     function uploadAddon($file) {
         $mime = $file->getClientMimeType();
         Log::debug('mime in uploadAddon function: ', [$mime]);
-        
-        if (
-            $mime == 'image/png' ||
-            $mime == 'image/jpg' ||
-            $mime == 'image/jpeg' ||
-            $mime == 'image/webp'
-        ) {
-            $uploadedFile = uploadImageandCompress(
-                'addons',
-                10,
-                $file
-            );
-        } else {
-            $uploadedFile = uploadFile(
-                'addons',
-                $file
-            );
-        }
+
+        // if (
+        //     $mime == 'image/png' ||
+        //     $mime == 'image/jpg' ||
+        //     $mime == 'image/jpeg' ||
+        //     $mime == 'image/webp'
+        // ) {
+        //     $uploadedFile = uploadImageandCompress(
+        //         'addons',
+        //         10,
+        //         $file
+        //     );
+        // } else {
+        // }
+        $uploadedFile = uploadFile(
+            'addons',
+            $file
+        );
 
         return [
             'mime' => $mime,
