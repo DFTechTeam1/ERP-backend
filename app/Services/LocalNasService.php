@@ -135,7 +135,9 @@ class LocalNasService {
    
            $sid = Cache::get('NAS_SID');
    
-           $this->fullUrl .= "?api=SYNO.FileStation.Upload&version=2&method=upload&path={$targetPath}&create_parents=true&_sid={$sid}&overwrite=true&mtime";;
+           $this->fullUrl .= "?api=SYNO.FileStation.Upload&version=2&method=upload&path={$targetPath}&create_parents=true&_sid={$sid}&overwrite=true&mtime";
+
+           Log::debug('URL UPLOAD FILE TO NAS: ', [$this->fullUrl]);
    
            curl_setopt_array($curl, array(
            CURLOPT_URL => $this->fullUrl,
