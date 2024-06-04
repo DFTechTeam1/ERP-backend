@@ -18,11 +18,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::get('ilham', function () {
-    $localService = new LocalNasService();
-
-    $check = $localService->checkConnection();
-
-    return response()->json($check);
+    $user = \App\Models\User::latest()->first();
+    \Modules\Hrd\Jobs\SendEmailActivationJob::dispatch($user);
 });
 
 Route::get('nasTestConnection', function (Request $request) {
@@ -96,13 +93,21 @@ Route::middleware('auth:sanctum')
         Route::apiResource('menus', MenuController::class);
     });
 
-Route::post('line-webhook', function (Request $request) {
-    Log::debug('Webhook line: ', json_encode($request->all()));
+Route::post('line-webhook', [\Modules\LineMessaging\Http\Controllers\Api\LineController::class, 'webhook']);
 
-    return response()->json([
-        'status' => 200,
-        'message' => 'success',
-    ], 200);
+Route::get('line-message', function () {
+    $lineId = request()->get('line_id');
+
+    $service = new \Modules\LineMessaging\Services\LineConnectionService();
+
+    $messages = [
+        [
+            'type' => 'text',
+            'text' => 'Testing',
+        ],
+    ];
+
+    $service->sendMessage($messages, $lineId);
 });
 
 // override indoneia district API

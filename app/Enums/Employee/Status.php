@@ -13,6 +13,17 @@ enum Status: int
     case WaitingHR = 7;
     case Probation = 8;
 
+    public static function generateStatus(string $data)
+    {
+        if ($data == 'Permanent') {
+            return self::Permanent;
+        } else if ($data == 'Inactive') {
+            return self::Inactive;
+        } else if ($data == 'Part Time') {
+            return self::PartTime;
+        }
+    }
+
     public function label()
     {
         return match ($this) {

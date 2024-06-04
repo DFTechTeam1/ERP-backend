@@ -72,6 +72,11 @@ class Project extends Model
         return $this->hasMany(ProjectReference::class, 'project_id');
     }
 
+    public function equipments(): HasMany
+    {
+        return $this->hasMany(ProjectEquipment::class, 'project_id');
+    }
+
     public function statusText(): Attribute
     {
         $output = '-';

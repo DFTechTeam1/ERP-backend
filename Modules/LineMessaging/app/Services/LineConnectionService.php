@@ -27,20 +27,95 @@ class LineConnectionService {
         return $response;
     }
 
+    /**
+     * Register employee line ID
+     *
+     * @param any $event
+     * @return void
+     */
+    protected function handleRegisterUser($event)
+    {
+        $textRaw = $event['message']['text'];
+        $exp = explode(' ', $textRaw);
+
+        // check userid format
+        $split = str_split($exp[1]);
+
+        if (strtolower($split[0]) != 'd' || strtolower($split[1]) != 'f') {
+            // send wrong response message
+            $wrongUserFormatMessage = [
+                [
+                    'type' => 'text',
+                    'text' => 'Format user ID yang kamu ketik salah, coba lagi ya :)',
+                ],
+            ];
+            $this->sendMessage($wrongUserFormatMessage, $event['source']['userId']);
+        } else if (strtolower($split[0]) == 'd' || strtolower($split[1]) == 'f') {
+            // check user id in database first
+            $employee = \Modules\Hrd\Models\Employee::select('id')->whereRaw("LOWER(employee_id) = '" . strtolower($exp[1]) . "'")->first();
+
+            if (!$employee) {
+                $userNotFoundMsg = [
+                    [
+                        'type' => 'text',
+                        'text' => 'User ID tidak ditemukan pada database, coba cek lagi ya dan masukan dengan benar',
+                    ],
+                ];
+                $this->sendMessage($userNotFoundMsg, $event['source']['userId']);
+            } else { // REGISTER USER ID
+                $checkLineId = \Modules\Hrd\Models\Employee::select('id')
+                    ->where('line_id', $event['source']['userId'])
+                    ->first();
+                
+                if ($checkLineId) {
+                    $alreadRegisterMsg = [
+                        [
+                            'type' => 'text',
+                            'text' => 'Akun kamu sudah terdaftar, silahkan melanjutkan pekerjaan kamu :)',
+                        ],
+                    ];
+                    $this->sendMessage($alreadRegisterMsg, $event['source']['userId']);
+                } else {
+                    \Modules\Hrd\Models\Employee::whereRaw("LOWER(employee_id) = '" . strtolower($exp[1]) . "'")
+                        ->update(['line_id' => $event['source']['userId']]);
+
+                    $successMsg = [
+                        [
+                            'type' => 'text',
+                            'text' => 'Selamat! User id telah terdaftar pada akun anda. Anda akan menerima pesan jika ada notifikasi pada sistem ini. Selamat bekerja :)',
+                        ],
+                    ];
+
+                    $this->sendMessage($successMsg, $event['source']['userId']);
+                }
+
+            }
+        }
+    }
+
+    protected function handleUpdateLineID($event)
+    {
+        
+    }
+
     public function webhook(array $data)
     {
         if (isset($data['events'])) {
-            $message = $data['events'][0]['message'];
+            foreach ($data['events'] as $event) {
+                if ($event['type'] == 'message') {
+                    $textRaw = $event['message']['text'];
+                    $exp = explode(' ', $textRaw);
 
-            if ($message['text'] == '/register-line-addon') {
-                $lineId = $message['id'];
-
-                \Modules\Company\Models\Setting::create([
-                    'code' => 'addon',
-                    'key' => 'lineId',
-                    'value' => $lineId,
-                ]);
+                    if (count($exp) == 2 && strtolower($exp[0]) == 'register') {
+                        $this->handleRegisterUser($event);
+                    }
+                }
             }
         }
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'success',
+        ], 200);
     }
 }

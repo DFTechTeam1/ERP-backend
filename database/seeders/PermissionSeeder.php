@@ -84,6 +84,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'delete_project', 'group' => 'production'],
             ['name' => 'add_team_member', 'group' => 'production'],
             ['name' => 'list_member', 'group' => 'production'],
+            ['name' => 'move_task', 'group' => 'production'],
         ];
 
         foreach ($data as $d) {

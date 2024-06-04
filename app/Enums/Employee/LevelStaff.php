@@ -18,4 +18,17 @@ enum LevelStaff: string
             self::Junior
         ];
     }
+
+    public static function generateLevel(string $data)
+    {
+        if ($data == 'Lead') {
+            return self::Lead;
+        } else if ($data == 'Manager') {
+            return self::Manager;
+        } else if ($data == 'Staff') {
+            return self::Staff;
+        } else if ($data == 'Junior Staff') {
+            return self::Junior;
+        }
+    }
 }

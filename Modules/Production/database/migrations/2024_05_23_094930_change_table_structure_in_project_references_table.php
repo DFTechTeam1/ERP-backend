@@ -24,7 +24,7 @@ return new class extends Migration
     {
         Schema::table('project_references', function (Blueprint $table) {
             $table->dropColumn('name');
-            $table->dropColumn('type', 100);
+            $table->dropColumn('type');
         });
     }
 };

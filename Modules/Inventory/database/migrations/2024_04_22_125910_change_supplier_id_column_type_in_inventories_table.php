@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table("inventories", function (Blueprint $table) {
-            $table->integer('supplier_id')->change(); 
+            $table->integer('supplier_id')->nullable()->change(); 
         });
     }
 };

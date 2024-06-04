@@ -393,8 +393,7 @@ class InventoryService {
 
             return generalResponse(
                 __('global.successCreateInventory'),
-                false,
-                $itemLoactions
+                false
             );
         } catch (\Throwable $th) {
             // rollback image

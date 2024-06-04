@@ -18,7 +18,7 @@ $namespace = 'Modules\Inventory\Http\Controllers\Api';
 
 Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::post('inventories/bulk', "{$namespace}\InventoryController@bulkDelete");
-    Route::geT('inventories/getAll', "{$namespace}\InventoryController@getAll");
+    Route::get('inventories/getAll', "{$namespace}\InventoryController@getAll");
     Route::apiResource('inventories', "{$namespace}\InventoryController")->names('inventories');
     Route::get('inventories/addStock/{uid}', "{$namespace}\InventoryController@addStock");
     Route::get('inventories/{uid}/items', "{$namespace}\InventoryController@itemList");

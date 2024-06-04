@@ -48,9 +48,11 @@ class EmployeeRepository extends EmployeeInterface
         }
 
         if ($whereHas) {
-            $query->whereHas($whereHas['relation'], function (Builder $query) use ($whereHas) {
-                $query->whereRaw($whereHas['query']);
-            });
+            foreach ($whereHas as $wh) {
+                $query->whereHas($wh['relation'], function (Builder $query) use ($wh) {
+                    $query->whereRaw($wh['query']);
+                });
+            }
         }
 
         if ($whereIn) {

@@ -20,7 +20,19 @@ class RoleSeeder extends Seeder
         $roles = [
             [
                 'name' => 'root',
-            ]
+            ],
+            [
+                'name' => 'marketing',
+            ],
+            [
+                'name' => 'project manager',
+            ],
+            [
+                'name' => 'production',
+            ],
+            [
+                'name' => 'it support',
+            ],
         ];
 
         foreach ($roles as $role) {
@@ -31,9 +43,11 @@ class RoleSeeder extends Seeder
 
             $roleData = Role::create(['name' => $role['name'], 'guard_name' => 'sanctum']);
 
-            $permissions = Permission::all();
-            foreach ($permissions as $permission) {
-                $roleData->givePermissionTo($permission);
+            if ($role['name'] == 'root') {
+                $permissions = Permission::all();
+                foreach ($permissions as $permission) {
+                    $roleData->givePermissionTo($permission);
+                }
             }
 
         }

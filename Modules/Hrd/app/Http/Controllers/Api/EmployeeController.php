@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
 use Modules\Hrd\Services\EmployeeService;
@@ -34,6 +35,12 @@ class EmployeeController extends Controller
                 ]
             )
         );
+    }
+
+    public function import(Request $request)
+    {
+        return apiResponse($this->employeeService->import($request->file('excel')));
+        // return apiResponse($this->employeeService->import('static_file/employee.xlsx'));
     }
 
     /**
@@ -83,8 +90,7 @@ class EmployeeController extends Controller
      */
     public function show(string $uid)
     {
-        return apiResponse($this->employeeService
-            ->show($uid, '*'));
+        return apiResponse($this->employeeService->show($uid));
     }
 
     /**
