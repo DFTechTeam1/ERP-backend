@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserPermissionGroupSeeder::class,
-            IndonesiaDatabaseSeeder::class,
+            // IndonesiaDatabaseSeeder::class,
             AddonConfigurationSeeder::class,
             MenuSeeder::class,
             KanbanSettingSeeder::class,
