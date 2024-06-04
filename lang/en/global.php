@@ -69,6 +69,10 @@ return [
     'validationError' => 'Validation error',
     'addon' => 'Addon',
     'production' => 'Production',
+    'ready' => 'Ready',
+    'requested' => 'Requested',
+    'decline' => 'Decline',
+    'canceled' => 'Canceled',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

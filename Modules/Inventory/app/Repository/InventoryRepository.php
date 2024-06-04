@@ -77,6 +77,8 @@ class InventoryRepository extends InventoryInterface {
                 });
             }
         }
+
+        $query->orderBy('created_at', 'DESC');
         
         return $query->skip($page)->take($itemsPerPage)->get();
     }

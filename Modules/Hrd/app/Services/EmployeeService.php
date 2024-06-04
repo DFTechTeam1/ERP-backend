@@ -16,6 +16,7 @@ use Intervention\Image\Laravel\Facades\Image;
 use Modules\Company\Models\Position;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use \PhpOffice\PhpSpreadsheet\Reader\Xlsx as Reader;
 
 class EmployeeService
 {
@@ -61,7 +62,7 @@ class EmployeeService
             $where = '';
             if (!empty($search)) {
                 if (!empty($search['name']) && empty($where)) {
-                    $name = $search['name'];
+                    $name = strtolower($search['name']);
                     $where = "lower(name) LIKE '%{$name}%'";
                 } else if (!empty($search['name']) && !empty($where)) {
                     $name = $search['name'];
@@ -69,7 +70,7 @@ class EmployeeService
                 }
 
                 if (!empty($search['employee_id']) && empty($where)) {
-                    $employee_id = $search['employee_id'];
+                    $employee_id = strtolower($search['employee_id']);
                     $where = "lower(employee_id) = '{$employee_id}'";
                 } else if (!empty($search['employee_id']) && !empty($where)) {
                     $employee_id = $search['employee_id'];
@@ -374,20 +375,13 @@ class EmployeeService
     ): array
     {
         try {
+            $relation = [
+                'position:id,name'
+            ];
+
             $data = $this->repo->show($uid, $select, $relation);
-
-            $data->makeHidden('id','position_id', 'boss_id');
-
-            if ($data->position) $data->position->makeHidden('id');
-            if ($data->employee_signs) $data->employee_signs->makeHidden('employee_id');
-            if ($data->boss) $data->boss->makeHidden('id');
-
-            if ($data->bank_detail) {
-                $data['bank_detail'] = json_decode($data->bank_detail, true);
-            }
-            if ($data->relation_contact) {
-                $data['relation_contact'] = json_decode($data->relation_contact, true);
-            }
+            $data['bank_detail'] = json_decode($data->bank_detail, true);
+            $data['emergency_contact'] = json_decode($data->relation_contact, true);
             
             return generalResponse(
                 'Success',
@@ -431,7 +425,10 @@ class EmployeeService
                 $data['boss_id'] = getIdFromUid($data['boss_id'], new \Modules\Hrd\Models\Employee());
             }
 
-            if ($data['id_number_photo']) {
+            if (
+                (isset($data['id_number_photo'])) &&
+                ($data['id_number_photo'])
+            ) {
                 $this->idCardPhotoTmp = uploadImageandCompress(
                     'employees',
                     10,
@@ -440,7 +437,10 @@ class EmployeeService
                 $data['id_number_photo'] = $this->idCardPhotoTmp;
             }
 
-            if ($data['npwp_photo']) {
+            if (
+                (isset($data['npwp_photo'])) && 
+                ($data['npwp_photo'])
+            ) {
                 $this->npwpPhotoTmp = uploadImageandCompress(
                     'employees',
                     10,
@@ -449,7 +449,10 @@ class EmployeeService
                 $data['npwp_photo'] = $this->npwpPhotoTmp;
             }
 
-            if ($data['bpjs_photo']) {
+            if (
+                (isset($data['bpjs_photo'])) &&
+                ($data['bpjs_photo'])
+            ) {
                 $this->bpjsPhotoTmp = uploadImageandCompress(
                     'employees',
                     10,
@@ -458,7 +461,10 @@ class EmployeeService
                 $data['bpjs_photo'] = $this->bpjsPhotoTmp;
             }
 
-            if ($data['kk_photo']) {
+            if (
+                (isset($data['kk_photo'])) &&
+                ($data['kk_photo'])
+            ) {
                 $this->kkPhotoTmp = uploadImageandCompress(
                     'employees',
                     10,
@@ -736,15 +742,139 @@ class EmployeeService
 
     public function getProjectManagers()
     {
-        $data = $this->repo->list('id, uid as value, name as title', '', [], '', '', [
-            'relation' => 'position',
-            'query' => "LOWER(name) like 'project manager'",
+        $date = request('date') ? date('Y-m-d', strtotime(request('date'))) : '';
+
+        $data = $this->repo->list('id, uid as value, name as title', '', [
+            'projects:id,pic_id,project_id',
+            'projects.project:id,name,project_date'
+        ], '', '', [
+            [
+                'relation' => 'position',
+                'query' => "(LOWER(name) like '%project manager%' OR LOWER(name) like '%lead project manager%')",
+            ],
         ]);
+
+        $employees = collect($data)->map(function ($item) use ($date) {
+            $projects = collect($item->projects)->pluck('project.project_date')->values();
+            $item['workload_on_date'] = 0;
+            if (!empty($date)) {
+                $filter = collect($projects)->filter(function ($filter) use ($date) {
+                    return $filter == $date;
+                })->values();
+
+                $item['workload_on_date'] = count($filter);
+            }
+
+            return [
+                'value' => $item->value,
+                'title' => $item->title,
+                'workload_on_date' => $item->workload_on_date,
+            ];
+        })->sortBy('workload_on_date', SORT_NATURAL)->toArray();
 
         return generalResponse(
             'success',
             false, 
-            $data->toArray(),
+            $employees,
+        );
+    }
+
+    public function readFile($file)
+    {
+        $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\EmployeeImport, $file);
+
+        $response = $data['Fulltime Compile'];
+
+        [
+            $nipKey, $nameKey, $nicknameKey, $companyKey, $jobNameKey, $levelKey, $statusKey, $joinDateKey, $startReviewProbationKey, 
+            $probationStatusKey, $endProbationKey, $exitDate, $genderKey, $phoneKey, $emailKey, $educationKey, $schoolNameKey, $majorKey, 
+            $graduationYearKey, $idNumberKey, $bankNameKey, $bankAccountKey, $accountHolderNameKey, $pobKey, $dobKey, $religionKey, $martialKey, 
+            $addressKey, $postalCodeKey, $currentAddressKey, $bloodTypeKey, $contactNumberKey, $contactNameKey, $contactRelationKey, $placementKey, $referalKey, $bossIdKey] = [
+            2, 4, 5, 6, 7, 8, 9, 10, 11,
+            13, 14, 19, 20, 21, 22, 23, 24, 25,
+            26, 27, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 49, 50, 51
+        ];
+
+        $employees = [];
+        foreach ($response as $key => $row) {
+            $jobName = ltrim(rtrim($row[$jobNameKey]));
+            $positionData = \Modules\Company\Models\Position::select('id')
+                ->where('name', $jobName)
+                ->first();
+
+            if ($row[$nameKey]) {
+                $employees[] = [
+                    'employee_id' => $row[$nipKey],
+                    'name' => $row[$nameKey],
+                    'nickname' => $row[$nicknameKey],
+                    'email' => $row[$emailKey],
+                    'phone' => $row[$phoneKey] ?? 0,
+                    'id_number' => $row[$idNumberKey] ?? 0,
+                    'religion_raw' => $row[$religionKey],
+                    'religion' => $row[$religionKey] ? \App\Enums\Employee\Religion::generateReligion($row[$religionKey]) : \App\Enums\Employee\Religion::Islam->value,
+                    'martial_status_raw' => $row[$martialKey],
+                    'martial_status' => $row[$martialKey] ? \App\Enums\Employee\MartialStatus::generateMartial($row[$martialKey]) : null,
+                    'address' => $row[$addressKey] ?? 'belum diisi',
+                    'postal_code' => $row[$postalCodeKey] ?? 0,
+                    'current_address' => $row[$currentAddressKey],
+                    'blood_type' => $row[$bloodTypeKey],
+                    'date_of_birth' => $row[$dobKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$dobKey])->format('Y-m-d') : '1970-01-01',
+                    'place_of_birth' => $row[$pobKey] ?? 'belum diisi',
+                    'dependant' => '',
+                    'gender_raw' => $row[$genderKey],
+                    'gender' => $row[$genderKey] ? \App\Enums\Employee\Gender::generateGender($row[$genderKey]) : null,
+                    'bank_detail' => [
+                        [
+                            'bank_name' => $row[$bankNameKey],
+                            'account_number' => $row[$bankAccountKey],
+                            'account_holder_name' => $row[$accountHolderNameKey],
+                            'is_active' => true,
+                        ],
+                    ],
+                    'relation_contact' => [
+                        'name' => $row[$contactNameKey],
+                        'phone' => $row[$contactNumberKey],
+                        'relation' => $row[$contactRelationKey],
+                    ],
+                    'education_raw' => $row[$educationKey],
+                    'education' => $row[$educationKey] ? \App\Enums\Employee\Education::generateEducation($row[$educationKey]) : null,
+                    'education_name' => $row[$schoolNameKey],
+                    'education_major' => $row[$majorKey],
+                    'education_year' => $row[$graduationYearKey],
+                    'position_raw' => $row[$jobNameKey],
+                    'position_id' => $positionData->id ?? $row[$jobNameKey],
+                    'boss_id' => $row[$bossIdKey],
+                    'level_staff_raw' => $row[$levelKey],
+                    'level_staff' => $row[$levelKey] ? \App\Enums\Employee\LevelStaff::generateLevel($row[$levelKey]) : null,
+                    'status_raw' => $row[$statusKey],
+                    'status' => $row[$statusKey] ? \App\Enums\Employee\Status::generateStatus($row[$statusKey]) : null,
+                    'placement' => $row[$placementKey],
+                    'join_date' => $row[$joinDateKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$joinDateKey])->format('Y-m-d') : null,
+                    'start_review_probation_date' => $row[$startReviewProbationKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$startReviewProbationKey])->format('Y-m-d') : null,
+                    'probation_status_raw' => $row[$probationStatusKey],
+                    'probation_status' => $row[$probationStatusKey] ? \App\Enums\Employee\ProbationStatus::generateStatus($row[$probationStatusKey]) : null,
+                    'end_probation_date' => $row[$endProbationKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$endProbationKey])->format('Y-m-d') : null,
+                    'company_name' => $row[$companyKey],
+                ];
+            }
+        }
+
+        unset($employees[0]);
+
+        return array_values(array_filter($employees));
+    }
+
+    public function import($file)
+    {
+        $reader = new Reader();
+        
+        $response = $this->readFile($file);
+
+        return generalResponse(
+            "Success",
+            false,
+            $response
         );
     }
 }

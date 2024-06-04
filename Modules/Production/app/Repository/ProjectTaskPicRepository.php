@@ -80,13 +80,17 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(int $id, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
+        if (!empty($where)) {
+            $query->whereRaw($where);
+        } else {
+            $query->where("id", $id);
+        }
         
         if ($relation) {
             $query->with($relation);
@@ -155,5 +159,16 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface {
         }
 
         return $this->model->whereIn($key, $ids)->delete();
+    }
+
+    public function deleteWithCondition(string $where)
+    {
+        return $this->model->whereRaw($where)
+            ->delete();
+    }
+
+    public function upsert(array $data, array $unique, array $updatedColumn)
+    {
+        return $this->model->upsert($data, $unique, $updatedColumn);
     }
 }
