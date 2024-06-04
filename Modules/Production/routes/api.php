@@ -26,9 +26,12 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
     Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask']);
     Route::post('project/{taskId}/description', [ProjectController::class, 'storeDescription']);
-    Route::get('project/{projectId}/getProjectMembers', [ProjectController::class, 'getProjectMembers']);
-    Route::put('project/basic/{id}', [ProjectController::class, 'updateBasic']);
+    Route::put('project/basic/{projectId}', [ProjectController::class, 'updateBasic']);
     Route::put('project/moreDetail/{id}', [ProjectController::class, 'updateMoreDetail']);
+    Route::post('project/{projectId}/equipment', [ProjectController::class, 'requestEquipment']);
+    Route::get('project/{projectId}/equipment', [ProjectController::class, 'listEquipment']);
+    Route::put('project/{projectId}/equipment', [ProjectController::class, 'updateEquipment']);
     Route::post('project/{taskId}/task/assignMember', [ProjectController::class, 'assignMemberToTask']);
     Route::post('project/{id}/references/delete', [ProjectController::class, 'deleteReference']);
+    Route::get('project/{projectId}/getProjectMembers/{taskId}', [ProjectController::class, 'getProjectMembers']);
 });

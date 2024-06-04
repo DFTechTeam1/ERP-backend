@@ -24,9 +24,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('inventories', function (Blueprint $table) {
-            $table->string('inventory_code', 20);
+            $table->string('inventory_code', 20)->nullable();
             $table->string('qrcode')->nullable();
             $table->tinyInteger('status')
+                ->nullable()
                 ->comment('1 for in use, 2 for in repair, 3 for broke, 4 for disposal');
         });
     }

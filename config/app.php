@@ -125,4 +125,6 @@ return [
 
     'pagination_length' => 10,
 
+    'frontend_url' => env('FRONTEND_URL', ''),
+
 ];

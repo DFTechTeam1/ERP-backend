@@ -27,6 +27,7 @@ class UserSeeder extends Seeder
             [
                 'email' => 'admin@admin.com',
                 'password' => Hash::make('password'),
+                'email_verified_at' => date('Y-m-d H:i:s'),
                 'uid' => Uuid::uuid4(),
             ]
         ];

@@ -28,8 +28,9 @@ return new class extends Migration
         Schema::table('menus', function (Blueprint $table) {
             $table->dropColumn('group');
         });
+
         Schema::table('menus', function (Blueprint $table) {
-            $table->string('group');
+            $table->string('group')->nullable();
         });
     }
 };

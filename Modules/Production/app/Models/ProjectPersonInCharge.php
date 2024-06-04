@@ -24,6 +24,11 @@ class ProjectPersonInCharge extends Model
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'pic_id');
     }
 
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Production\Models\Project::class, 'project_id');
+    }
+
     // protected static function newFactory(): ProjectPersonInChargeFactory
     // {
     //     //return ProjectPersonInChargeFactory::new();

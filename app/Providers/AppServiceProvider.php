@@ -31,13 +31,13 @@ class AppServiceProvider extends ServiceProvider
 
 
             // caching all data
-            if (!\Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::InventoryList->value)) {
-                \App\Jobs\Cache\InventoriesCacheJob::dispatch();
-            }
+            // if (!\Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::InventoryList->value)) {
+            //     \App\Jobs\Cache\InventoriesCacheJob::dispatch();
+            // }
 
-            if (!\Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::EmployeeList->value)) {
-                \App\Jobs\Cache\EmployeerCacheJob::dispatch();
-            }
+            // if (!\Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::EmployeeList->value)) {
+            //     \App\Jobs\Cache\EmployeerCacheJob::dispatch();
+            // }
         }
     }
 }
