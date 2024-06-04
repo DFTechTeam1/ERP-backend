@@ -32,7 +32,9 @@ class UserEmailActivation extends Notification
      */
     public function via($notifiable): array
     {
-        return ['mail'];
+        return [
+            'mail',
+        ];
     }
 
     /**
@@ -54,5 +56,12 @@ class UserEmailActivation extends Notification
     public function toArray($notifiable): array
     {
         return [];
+    }
+
+    public function toLine(object $notifiable)
+    {
+        return [
+            'message' => 'Message LINE',
+        ];
     }
 }

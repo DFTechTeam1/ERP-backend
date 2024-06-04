@@ -10,6 +10,7 @@ use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectTaskPicRepository;
+use Modules\Production\Repository\ProjectEquipmentRepository;
 
 class ProjectService {
     private $repo;
@@ -23,6 +24,8 @@ class ProjectService {
     private $boardRepo;
 
     private $taskPicRepo;
+
+    private $projectEquipmentRepo;
 
     /**
      * Construction Data
@@ -40,6 +43,8 @@ class ProjectService {
         $this->boardRepo = new ProjectBoardRepository;
 
         $this->taskPicRepo = new ProjectTaskPicRepository;
+
+        $this->projectEquipmentRepo = new ProjectEquipmentRepository;
     }
 
     /**
@@ -225,7 +230,16 @@ class ProjectService {
             [],
             '',
             '',
-            [],
+            [
+                [
+                    'relation' => 'position',
+                    'query' => "(LOWER(name) not like '%project manager%')",
+                ],
+                [
+                    'relation' => 'position.division',
+                    'query' => "LOWER(name) like '%production%'"
+                ]
+            ],
             [
                 'key' => 'boss_id',
                 'value' => $picIds,
@@ -245,6 +259,59 @@ class ProjectService {
         ];
     }
 
+    protected function formattedBoards(string $projectUid)
+    {
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+        $data = $this->boardRepo->list('id,project_id,name,sort', 'project_id = ' . $projectId, [
+            'tasks',
+            'tasks.pics:id,project_task_id,employee_id',
+            'tasks.pics.employee:id,name,email,uid',
+        ]);
+
+        return $data;
+    }
+
+    protected function formattedBasicData(string $projectUid)
+    {
+        $project = $this->repo->show($projectUid, 'id,uid,event_type,classification,name,project_date');
+
+        $projectTeams = $this->getProjectTeams($project);
+        $teams = $projectTeams['teams'];
+        $pics = $projectTeams['pics'];
+
+        $eventTypes = \App\Enums\Production\EventType::cases();
+        $classes = \App\Enums\Production\Classification::cases();
+
+        $eventType = '-';
+        foreach ($eventTypes as $et) {
+            if ($et->value == $project->event_type) {
+                $eventType = $et->label();
+            }
+        }
+
+        $eventClass = '-';
+        $eventClassColor = null;
+        foreach ($classes as $class) {
+            if ($class->value == $project->classification) {
+                $eventClass = $class->label();
+                $eventClassColor = $class->color();
+            }
+        }
+
+        return [
+            'pics' => $pics,
+            'teams' => $teams,
+            'name' => $project->name,
+            'project_date' => date('d F Y', strtotime($project->project_date)),
+            'event_type' => $eventType,
+            'event_type_raw' => $project->event_type,
+            'event_class_raw' => $project->classification,
+            'event_class' => $eventClass,
+            'event_class_color' => $eventClassColor,
+        ];
+    }
+
     /**
      * Get detail data
      *
@@ -261,10 +328,6 @@ class ProjectService {
                     'marketing:id,name,employee_id',
                     'personInCharges:id,pic_id,project_id',
                     'personInCharges.employee:id,name,employee_id',
-                    'boards:id,project_id,name,sort',
-                    'boards.tasks',
-                    'boards.tasks.pics:id,project_task_id,employee_id',
-                    'boards.tasks.pics.employee:id,name,email,uid',
                     'references:id,project_id,media_path,name,type',
                 ]);
     
@@ -293,6 +356,8 @@ class ProjectService {
                         $eventClassColor = $class->color();
                     }
                 }
+
+                $boardsData = $this->formattedBoards($uid);
     
                 $output = [
                     'uid' => $data->uid,
@@ -315,17 +380,24 @@ class ProjectService {
                     'status_color' => $data->status_color,
                     'status_raw' => $data->status,
                     'references' => $this->formatingReferenceFiles($data->references),
-                    'boards' => $data->boards,
+                    'boards' => $boardsData,
                     'teams' => $teams,
                 ];
     
                 storeCache('detailProject' . $data->id, $output);
             }
 
+            $serviceEncrypt = new \App\Services\EncryptionService();
+            $encrypts = $serviceEncrypt->encrypt(json_encode($output), env('SALT_KEY'));
+
+            $outputData = [
+                'detail' => $encrypts,
+            ];
+
             return generalResponse(
                 'success',
                 false,
-                $output,
+                $outputData
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -392,21 +464,22 @@ class ProjectService {
 
             $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue');
 
-            $output = [
-                'venue' => $project->venue,
-                'event_type' => $project->event_type_text,
-                'event_type_raw' => $project->event_type,
-                'collaboration' => $project->collaboration,
-                'status' => $project->status_text,
-                'status_raw' => $project->status,
-                'note' => $project->note ?? '-',
-                'client_portal' => $project->client_portal,
-            ];
+            $currentData = getCache('detailProject' . $project->id);
+            $currentData['venue'] = $project->venue;
+            $currentData['event_type'] = $project->event_type_text;
+            $currentData['event_type_raw'] = $project->event_type;
+            $currentData['collaboration'] = $project->collaboration;
+            $currentData['status'] = $project->status_text;
+            $currentData['status_raw'] = $project->status;
+            $currentData['note'] = $project->note ?? '-';
+            $currentData['client_portal'] = $project->client_portal;
+
+            storeCache('detailProject' . $project->id, $currentData);
 
             return generalResponse(
                 __('global.successUpdateBasicInformation'),
                 false,
-                $output,
+                $currentData
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -420,44 +493,51 @@ class ProjectService {
      * @param string $id
      * @return array
      */
-    public function updateBasic(array $data, string $id)
+    public function updateBasic(array $data, string $projectUid)
     {
+        DB::beginTransaction();
         try {
             $data['project_date'] = date('Y-m-d', strtotime($data['date']));
             
             $this->repo->update(
                 collect($data)->except(['date'])->toArray(),
-                $id
+                $projectUid
             );
 
-            $output = [];
-            $project = $this->repo->list('id,name,project_date,event_type,classification', "uid = '{$id}'", ['personInCharges:id,project_id,pic_id', 'personInCharges.employee:id,name,employee_id']);
-            if (count($project) > 0) {
-                $project = $project[0];
-                $pic = collect($project['personInCharges'])->map(function ($item) {
-                    return [
-                        'name' => $item->employee->name . "(" . $item->employee->employee_id . ")",
-                    ];
-                })->pluck('name')->toArray();
+            /**
+             * This function will return
+             * 'name' => $project->name,
+             * 'project_date',
+             * 'event_type' => $eventType,
+             * 'event_type_raw' => $project->event_type,
+             * 'event_class_raw' => $project->classification,
+             * 'event_class' => $eventClass,
+             * 'event_class_color' => $eventClassColor,
+             */
+            $format = $this->formattedBasicData($projectUid);
 
-                $output = [
-                    'name' => $project->name,
-                    'pic' => implode(', ', $pic),
-                    'event_type_raw' => $project->event_type,
-                    'event_type' => $project->event_type_text,
-                    'event_class_raw' => $project->classification,
-                    'event_class' => $project->event_class_text,
-                    'event_class_color' => $project->event_class_color,
-                    'project_date' => date('d F Y', strtotime($project->project_date)),
-                ]; 
-            }
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+            $currentData = getCache('detailProject' . $projectId);
+            $currentData['name'] = $format['name'];
+            $currentData['event_type'] = $format['event_type'];
+            $currentData['project_date'] = $format['project_date'];
+            $currentData['event_type_raw'] = $format['event_type_raw'];
+            $currentData['event_class_raw'] = $format['event_class_raw'];
+            $currentData['event_class'] = $format['event_class'];
+            $currentData['event_class_color'] = $format['event_class_color'];
+
+            storeCache('detailProject' . $projectId, $currentData);
+
+            DB::commit();
 
             return generalResponse(
                 __('global.successUpdateBasicInformation'),
                 false,
-                $output,
+                $currentData
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -523,109 +603,100 @@ class ProjectService {
     public function storeDescription(array $data, string $taskId)
     {
         try {
-            $task = $this->taskRepo->show($taskId, 'id,uid,project_board_id,project_id', ['project:id,uid']);
-
-            \Illuminate\Support\Facades\Log::debug('task detail in store description: ', $task->toArray());
-
             $this->taskRepo->update($data, $taskId);
 
-            $projectDetail = getCache('detailProject' . $task->project_id);
-            if (!$projectDetail) {
-                $projectDetail = $this->reninitDetailCache($task->project);
-            }
+            $task = $this->taskRepo->show($taskId, '*', [
+                'project:id,uid',
+                'pics:id,project_task_id,employee_id',
+                'pics.employee:id,name,email,uid',
+            ]);
+            
+            $currentData = getCache('detailProject' . $task->project_id);
 
-            $currentBoards = $projectDetail['boards'];
-            $newBoards = collect($currentBoards)->map(function ($item) use ($task, $data) {
-                $tasks = collect($item->tasks)->map(function ($taskItem) use ($task, $data) {
-                    if ($taskItem->id == $task->id) {
-                        $taskItem['description'] = $data['description'];
-                    }
+            $boards = $this->formattedBoards($task->project->uid);
+            $currentData['boards'] = $boards;
 
-                    return $taskItem;
-                });
+            $currentData['boards'] = $boards;
 
-                $item['tasks'] = $tasks;
-
-                return $item;
-            });
-
-            \Illuminate\Support\Facades\Log::debug('new boards store description: ', $newBoards->toArray());
-
-            $projectDetail['boards'] = $newBoards;
-
-            storeCache('detailProject' . $task->project->id, $projectDetail);
+            storeCache('detailProject' . $task->project_id, $currentData);
 
             return generalResponse(
                 __('global.descriptionAdded'),
                 false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }
 
-    public function assignMemberToTask(array $data, string $taskId)
+    /**
+     * Assign member to selected task
+     *
+     * @param array $data
+     * @param string $taskId
+     * @return array
+     */
+    public function assignMemberToTask(array $data, string $taskUid)
     {
         DB::beginTransaction();
         try {
-            $payload = [];
+            $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
+
+            $notifiedNewTask = [];
             foreach ($data['users'] as $user) {
-                $payload[] = [
-                    'employee_id' => getIdFromUid($user, new \Modules\Hrd\Models\Employee()),
-                ];
+                $employeeId = getIdFromUid($user, new \Modules\Hrd\Models\Employee());
+
+                $checkPic = $this->taskPicRepo->show(0, 'id', [], 'project_task_id = ' . $taskId . ' AND employee_id = ' . $employeeId);
+                if (!$checkPic) {
+                    $payload = [
+                        'employee_id' => $employeeId,
+                        'project_task_id' => $taskId,
+                    ];
+
+                    $this->taskPicRepo->store($payload);
+                    $notifiedNewTask[] = $employeeId;
+                }
             }
 
-            $task = $this->taskRepo->show($taskId, '*', ['project:uid,id']);
-            $task->pics()->createMany($payload);
+            foreach ($data['removed'] as $removedUser) {
+                $employeeId = getIdFromUid($removedUser, new \Modules\Hrd\Models\Employee());
 
-            $assignedMembers = $this->taskPicRepo->list('id,project_task_id,employee_id', 'project_task_id = ' . $task->id, ['employee:id,uid,name,email']);
-            $assignedMembers = collect($assignedMembers)->map(function ($member) {
-                return [
-                    'uid' => $member->employee->uid,
-                    'name' => $member->employee->name,
-                    'email' => $member->employee->email,
-                    'image' => $member->image ? $member->image : asset('images/user.png'),
-                ];
-            })->toArray();
-
-            \Illuminate\Support\Facades\Log::debug('new assigned members', $assignedMembers);
-
-            // update cache
-            $projectDetail = getCache('detailProject' . $task->project_id);
-            if (!$projectDetail) {
-                $projectDetail = $this->reninitDetailCache($task->project);
+                $this->taskPicRepo->deleteWithCondition('employee_id = ' . $employeeId . ' AND project_task_id = ' . $taskId);
             }
 
-            $boards = $projectDetail['boards'];
-            $newBoards = collect($boards)->map(function ($item) use ($assignedMembers, $task) {
-                $tasks = collect($item['tasks'])->map(function ($taskItem) use ($assignedMembers, $task) {
-                    if ($task->id == $taskItem['id']) {
-                        $taskItem['pics'] = $assignedMembers;
-                    }
+            logging('notifiedNewTask', $notifiedNewTask);
 
-                    return $taskItem;
-                });
+            $task = $this->taskRepo->show($taskUid, '*', [
+                'project:id,uid',
+                'pics:id,project_task_id,employee_id',
+                'pics.employee:id,name,email,uid',
+            ]);
 
-                $item['tasks'] = $tasks;
+            $currentData = getCache('detailProject' . $task->project->id);
+            if (!$currentData) {
+                $this->show($task->project->uid);
+                $currentData = getCache('detailProject' . $task->project->id);
+            }
+            $boards = $this->formattedBoards($task->project->uid);
+            $currentData['boards'] = $boards;
 
-                return $item;
-            })->toArray();
+            storeCache('detailProject' . $task->project_id, $currentData);
 
-            \Illuminate\Support\Facades\Log::debug('>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<');
-            \Illuminate\Support\Facades\Log::debug('>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<');
-
-            \Illuminate\Support\Facades\Log::debug('assign member new board: ', $newBoards);
-
-            $projectDetail['boards'] = $newBoards;
-
-            storeCache('detailProject' . $task->project_id, $projectDetail);
+            \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
 
             DB::commit();
 
             return generalResponse(
                 __('global.memberAdded'),
                 false,
-                $assignedMembers,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData
+                ]
             );
         } catch(\Throwable $th) {
             DB::rollBack();
@@ -652,37 +723,16 @@ class ProjectService {
 
             \Illuminate\Support\Facades\Log::debug('res store task: ', $task->toArray());
 
-            // append new task
-            $projectDetail = getCache('detailProject' . $board->project_id);
+            $boards = $this->formattedBoards($board->project->uid);
+            $currentData = getCache('detailProject' . $board->project->id);
+            $currentData['boards'] = $boards;
 
-            // re init cache if needed
-            if (!$projectDetail) {
-                $projectDetail = $this->reninitDetailCache($board->project);
-            }
-
-            $currentBoards = $projectDetail['boards'];
-
-            $newBoards = collect($currentBoards)->map(function ($item) use ($task) {
-                if ($task->project_board_id == $item['id']) {
-                    $currentTask = collect($item['tasks'])->toArray();
-                    array_push($currentTask, $task->toArray());
-
-                    $item['tasks'] = $currentTask;
-                }
-
-                return $item;
-            })->toArray();
-
-            \Illuminate\Support\Facades\Log::debug('new boards from store task: ', $newBoards);
-
-            $projectDetail['boards'] = $newBoards;
-
-            storeCache('detailProject' . $board->project_id, $projectDetail);
+            storeCache('detailProject' . $board->project_id, $currentData);
 
             return generalResponse(
                 __('global.taskCreated'),
                 false,
-                $projectDetail
+                $currentData
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -734,7 +784,7 @@ class ProjectService {
      * @param string $projectId
      * @return array
      */
-    public function getProjectMembers(int $projectId)
+    public function getProjectMembers(int $projectId, string $taskId)
     {
         try {
             $project = $this->repo->show('', '*', [
@@ -745,10 +795,59 @@ class ProjectService {
             $projectTeams = $this->getProjectTeams($project);
             $teams = $projectTeams['teams'];
 
+            $task = $this->taskRepo->show($taskId, 'id,project_id,project_board_id', [
+                'pics:id,project_task_id,employee_id',
+                'pics.employee:id,uid,name,email'
+            ]);
+            // $currentTaskPics = collect($task->pics)->map(function ($item) {
+            //     return [
+            //         'uid' => $item->employee->uid,
+            //         'name' => $item->employee->name,
+            //         'email' => $item->employee->email,
+            //         'image' => $item->employee->image ? asset('storage/employees/' . $item->employee->image) : asset('images/user.png'),
+            //     ];
+            // })->all();
+            $currentTaskPics = $task->pics->toArray();
+            $outSelected = collect($currentTaskPics)->map(function ($item) {
+                return [
+                    'selected' => true,
+                    'email' => $item['employee']['email'],
+                    'name' => $item['employee']['name'],
+                    'uid' => $item['employee']['uid'],
+                    'id' => $item['employee']['id'],
+                    'intital' => $item['employee']['initial'],
+                ];
+            });
+
+            $selectedKeys = [];
+            foreach ($currentTaskPics as $c) {
+                $selectedKeys[] = $c['employee']['uid'];
+            }
+            
+            $memberKeys = array_column($teams, 'uid');
+
+            $diff = array_diff($memberKeys, $selectedKeys);
+
+            $availableKeys = [];
+            $available = [];
+            if (count($diff) > 0) {
+                $availableKeys = array_values($diff);
+                foreach ($teams as $key => $member) {
+                    if (in_array($member['uid'], $availableKeys)) {
+                        array_push($available, $member);
+                    }
+                }
+            }
+
+            $out = [
+                'selected' => $outSelected,
+                'available' => $available,
+            ];
+
             return generalResponse(
                 'success',
                 false,
-                $teams,
+                $out,
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -796,6 +895,102 @@ class ProjectService {
                 'Success',
                 false,
                 $this->repo->delete($id)->toArray(),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Store new equipment request to INVENTORY
+     *
+     * @param array $data
+     * @param string $projectUid
+     * @return array
+     */
+    public function requestEquipment(array $data, string $projectUid)
+    {
+        try {
+            $project = $this->repo->show($projectUid);
+            foreach ($data['items'] as $item) {
+                $inventoryId = getIdFromUid($item['id'], new \Modules\Inventory\Models\Inventory());
+                
+                $check = $this->projectEquipmentRepo->show('', '*', "project_id = " . $project->id . " AND inventory_id = " . $inventoryId);
+                
+                if (!$check) {
+                    $this->projectEquipmentRepo->store([
+                        'project_id' => $project->id,
+                        'inventory_id' => $inventoryId,
+                        'qty' => $item['qty'],
+                        'status' => \App\Enums\Production\RequestEquipmentStatus::Requested->value,
+                        'project_date' => $project->project_date,
+                    ]);
+                }
+            }
+
+            \Modules\Production\Jobs\RequestEquipmentJob::dispatch($project);
+            
+            return generalResponse(
+                'success',
+                false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get list of project equipments
+     *
+     * @param string $projectUid
+     * @return array
+     */
+    public function listEquipment(string $projectUid)
+    {
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+        $data = $this->projectEquipmentRepo->list('id,uid,project_id,inventory_id,qty,status', 'project_id = ' . $projectId, [
+            'inventory:id,name,stock',
+            'inventory.image',
+        ]);
+
+        $data = collect($data)->map(function ($item) {
+            return [
+                'uid' => $item->uid,
+                'inventory_name' => $item->inventory->name,
+                'inventory_image' => $item->inventory->display_image,
+                'inventory_stock' => $item->inventory->stock,
+                'qty' => $item->qty,
+                'status' => $item->status_text,
+                'status_color' => $item->status_color,
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'Success',
+            false,
+            $data,
+        );
+    }
+
+    public function updateEquipment(array $data, string $projectId)
+    {
+        try {
+            foreach ($data['items'] as $item) {
+                $requestEquipmentId = getIdFromUid($item['id'], new \Modules\Production\Models\ProjectEquipment());
+
+                // $this->projectEquipmentRepo->update([
+                //     'status' => $item['status']
+                // ], $requestEquipmentId);
+            }
+
+            $userCanAcceptRequest = auth()->user()->can('request_inventory'); // if TRUE than he is INVENTARIS
+
+            \Modules\Production\Jobs\PostEquipmentUpdateJob::dispatch($projectId, $data, $userCanAcceptRequest);
+
+            return generalResponse(
+                'success',
+                false,
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

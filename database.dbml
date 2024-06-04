@@ -393,6 +393,19 @@ Table projects {
     updated_by int
 }
 
+Table project_equipments {
+    id int [pk, increment]
+    project_id int [ref: > projects.id]
+    inventory_id int [ref: > inventories.id]
+    qty int [not null]
+    status tinyint [note: '1 for ready, 2 for requested, 3 for decline']
+    project_date date [not null]
+    created_by int
+    updated_by int
+    created_at timestamp
+    updated_at timestamp
+}
+
 Table project_person_in_charge {
     id int [pk, increment]
     project_id int [ref: > projects.id]

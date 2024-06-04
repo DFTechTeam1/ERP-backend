@@ -81,7 +81,6 @@ class ProjectController extends Controller
     public function show($id)
     {
         return apiResponse($this->service->show($id));
-
     }
 
     /**
@@ -101,9 +100,9 @@ class ProjectController extends Controller
      * @param string $uid
      * @return \Illuminate\Http\JsonResponse
      */
-    public function updateBasic(BasicUpdate $request, string $uid)
+    public function updateBasic(BasicUpdate $request, string $projectId)
     {
-        return apiResponse($this->service->updateBasic($request->validated(), $uid));
+        return apiResponse($this->service->updateBasic($request->validated(), $projectId));
     }
 
     /**
@@ -160,9 +159,9 @@ class ProjectController extends Controller
      * @param string $projectId
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getProjectMembers($projectId)
+    public function getProjectMembers($projectId, string $taskId)
     {
-        return apiResponse($this->service->getProjectMembers((int) $projectId));
+        return apiResponse($this->service->getProjectMembers((int) $projectId, $taskId));
     }
 
     /**
@@ -199,5 +198,40 @@ class ProjectController extends Controller
         //
 
         return response()->json([]);
+    }
+
+    /**
+     * Store new request equipment
+     *
+     * @param \Modules\Production\Http\Requests\Project\RequestEquipment $request
+     * @param string $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function requestEquipment(\Modules\Production\Http\Requests\Project\RequestEquipment $request, string $projectId)
+    {
+        return apiResponse($this->service->requestEquipment($request->validated(), $projectId));
+    }
+
+    /**
+     * List of project equipments
+     *
+     * @param string $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function listEquipment(string $projectId)
+    {
+        return apiResponse($this->service->listEquipment($projectId));
+    }
+
+    /**
+     * Update selected equipment
+     *
+     * @param \Modules\Production\Http\Requests\Project\UpdateEquipment $request
+     * @param string $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateEquipment(\Modules\Production\Http\Requests\Project\UpdateEquipment $request, string $projectId)
+    {
+        return apiResponse($this->service->updateEquipment($request->validated(), $projectId));
     }
 }

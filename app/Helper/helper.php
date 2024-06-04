@@ -360,3 +360,42 @@ if (!function_exists('curlRequest')) {
         return json_decode($response, true);
     }
 }
+
+if (!function_exists('logging')) {
+    function logging($key, $value) {
+        \Illuminate\Support\Facades\Log::debug($key, $value);
+    }
+}
+
+if (!function_exists('getUserByRole')) {
+    function getUserByRole(string $roleName) {
+        $users = \App\Models\User::whereHas('roles', function (\Illuminate\Database\Eloquent\Builder $query) use ($roleName) {
+            $query->whereRaw("LOWER(name) = '" . $roleName . "'");
+        })->get();
+
+        return $users;
+    }
+}
+
+if (!function_exists('getPicOfInventory')) {
+    function getPicOfInventory() {
+        $users = getUserByRole('it support');
+        // check permission
+        logging('user data: ', $users->toArray());
+        
+        $employees = [];
+        foreach ($users as $user) {
+            $permissions = $user->getPermissionsViaRoles();
+            $permissionNames = collect($permissions)->pluck('name')->toArray();
+            logging('permissions data: ', $permissionNames);
+            if (in_array('request_inventory', $permissionNames)) {
+                logging('is have permission: ', [$user]);
+                $employees[] = \Modules\Hrd\Models\Employee::selectRaw('id,uid,name,line_id,user_id')
+                    ->where('user_id', $user->id)
+                    ->first();
+            }
+        }
+
+        return $employees;
+    }
+}
