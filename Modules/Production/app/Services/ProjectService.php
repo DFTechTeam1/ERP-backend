@@ -312,6 +312,47 @@ class ProjectService {
         ];
     }
 
+    protected function formattedProjectProgress(object $tasks)
+    {
+        $grouping = collect($tasks)->groupBy('task_type')->all();
+
+        $default = [];
+        $types = \App\Enums\Production\TaskType::cases();
+        foreach ($types as $type) {
+            $default[] = [
+                'text' => $type->label(),
+                'id' => $type->value,
+                'total' => 0,
+                'completed' => 0,
+                'percentage' => 0,
+            ];
+        }
+        
+        $out = [];
+        foreach ($default as $key => $def) {
+            $out[$key] = $def;
+
+            foreach ($grouping as $taskType => $taskGroup) {
+                if ($taskType == $def['id']) {
+                    $completed = collect($taskGroup)->filter(function ($filter) {
+                        return $filter->board->name == 'On Progress';
+                    })->count();
+        
+                    $total = count($taskGroup);
+                    $percentage = ceil($completed / $total * 100);
+        
+                    $out[$key]['total'] = $total;
+                    $out[$key]['completed'] = $completed;
+                    $out[$key]['percentage'] = $percentage;
+                }
+            }
+        }
+
+        logging('grouping task', $out);
+
+        return $out;
+    }
+
     /**
      * Get detail data
      *
@@ -321,6 +362,7 @@ class ProjectService {
     public function show(string $uid): array
     {
         try {
+            // clearCache('detailProject' . getIdFromUid($uid, new \Modules\Production\Models\Project()));
             $output = getCache('detailProject' . getIdFromUid($uid, new \Modules\Production\Models\Project()));
 
             if (!$output) {
@@ -329,7 +371,13 @@ class ProjectService {
                     'personInCharges:id,pic_id,project_id',
                     'personInCharges.employee:id,name,employee_id',
                     'references:id,project_id,media_path,name,type',
+                    'tasks',
+                    'tasks.board:id,name,project_id',
+                    'equipments.inventory:id,name',
+                    'equipments.inventory.image'
                 ]);
+
+                $progress = $this->formattedProjectProgress($data->tasks);
     
                 $eventTypes = \App\Enums\Production\EventType::cases();
                 $classes = \App\Enums\Production\Classification::cases();
@@ -382,6 +430,10 @@ class ProjectService {
                     'references' => $this->formatingReferenceFiles($data->references),
                     'boards' => $boardsData,
                     'teams' => $teams,
+                    'task_type' => $data->task_type,
+                    'task_type_text' => $data->task_type_text,
+                    'task_type_color' => $data->task_type_color,
+                    'progress' => $progress,
                 ];
     
                 storeCache('detailProject' . $data->id, $output);
@@ -706,6 +758,64 @@ class ProjectService {
     }
 
     /**
+     * Delete selected task
+     *
+     * @param string $taskUid
+     * @return array
+     */
+    public function deleteTask(string $taskUid)
+    {
+        try {
+            $task = $this->taskRepo->show($taskUid, 'id,project_id', [
+                'project:id,uid'
+            ]);
+
+            $projectUid = $task->project->uid;
+            $projectId = $task->project->id;
+
+            $this->taskRepo->bulkDelete([$taskUid], 'uid');
+
+            $boards = $this->formattedBoards($projectUid);
+            $currentData = getCache('detailProject' . $projectId);
+            $currentData['boards'] = $boards;
+
+            storeCache('detailProject' . $projectId, $currentData);
+
+            return generalResponse(
+                __('global.successDeleteTask'),
+                false,
+                $currentData,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get all task types
+     *
+     * @return array
+     */
+    public function getTaskTypes()
+    {
+        $types = \App\Enums\Production\TaskType::cases();
+
+        $out = [];
+        foreach ($types as $type) {
+            $out[] = [
+                'value' => $type->value,
+                'title' => $type->label(),
+            ];
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $out,
+        );
+    }
+
+    /**
      * Store task on selected board
      *
      * @param array $data
@@ -726,6 +836,12 @@ class ProjectService {
             $boards = $this->formattedBoards($board->project->uid);
             $currentData = getCache('detailProject' . $board->project->id);
             $currentData['boards'] = $boards;
+
+            $projectTasks = $this->taskRepo->list('*', 'project_id = ' . $board->project_id, [
+                'board:id,name,project_id'
+            ]);
+            $progress = $this->formattedProjectProgress($projectTasks);
+            $currentData['progress'] = $progress;
 
             storeCache('detailProject' . $board->project_id, $currentData);
 
@@ -910,10 +1026,22 @@ class ProjectService {
      */
     public function requestEquipment(array $data, string $projectUid)
     {
+        DB::beginTransaction();
         try {
-            $project = $this->repo->show($projectUid);
-            foreach ($data['items'] as $item) {
-                $inventoryId = getIdFromUid($item['id'], new \Modules\Inventory\Models\Inventory());
+            // handle duplicate items
+            $groupBy = collect($data['items'])->groupBy('inventory_id')->all();
+            $out = [];
+            foreach ($groupBy as $key => $group) {
+                $qty = collect($group)->pluck('qty')->sum();
+                $out[] = [
+                    'inventory_id' => $key,
+                    'qty' => $qty,
+                ];
+            }
+
+            $project = $this->repo->show($projectUid, 'id,project_date,uid');
+            foreach ($out as $item) {
+                $inventoryId = getIdFromUid($item['inventory_id'], new \Modules\Inventory\Models\Inventory());
                 
                 $check = $this->projectEquipmentRepo->show('', '*', "project_id = " . $project->id . " AND inventory_id = " . $inventoryId);
                 
@@ -928,13 +1056,32 @@ class ProjectService {
                 }
             }
 
+            $equipments = $this->projectEquipmentRepo->list('*', 'project_id = ' . $project->id, [
+                'inventory:id,name',
+                'inventory.image'
+            ]);
+            $currentData = getCache('detailProject' . $project->id);
+            if (!$currentData) {
+                $this->show($project->uid);
+
+                $currentData = getCache('detailProject' . $project->id);
+            }
+            $currentData['equipments'] = $equipments;
+
+            storeCache('detailProject' . $project->id, $currentData);
+
             \Modules\Production\Jobs\RequestEquipmentJob::dispatch($project);
+
+            DB::commit();
             
             return generalResponse(
                 'success',
                 false,
+                $currentData
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }

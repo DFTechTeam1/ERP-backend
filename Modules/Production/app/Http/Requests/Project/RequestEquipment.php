@@ -12,7 +12,7 @@ class RequestEquipment extends FormRequest
     public function rules(): array
     {
         return [
-            'items.*.id' => 'required',
+            'items.*.inventory_id' => 'required',
             'items.*.qty' => 'required',
         ];
     }

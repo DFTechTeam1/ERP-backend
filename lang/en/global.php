@@ -73,6 +73,10 @@ return [
     'requested' => 'Requested',
     'decline' => 'Decline',
     'canceled' => 'Canceled',
+    'asset3d' => 'Asset 3D',
+    'compositing' => 'Compositing',
+    'animating' => 'Animating',
+    'finalize' => 'Finalize',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -138,4 +142,5 @@ return [
     'taskCreated' => 'Task has been created',
     'descriptionAdded' => 'Description has been added',
     'memberAdded' => 'Members has been assign to task',
+    'successDeleteTask' => 'Success delete task',
 ];

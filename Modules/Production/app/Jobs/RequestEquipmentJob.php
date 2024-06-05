@@ -65,6 +65,6 @@ class RequestEquipmentJob implements ShouldQueue
             'text' => 'Untuk menyetujui permintaan ini, klik link berikut ya',
         ];
 
-        Notification::send($users, new \Modules\Production\Notifications\RequestEquipmentNotification($employees, $messages));
+        Notification::send($employees, new \Modules\Production\Notifications\RequestEquipmentNotification($employees, $messages));
     }
 }

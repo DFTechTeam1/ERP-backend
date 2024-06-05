@@ -4,6 +4,7 @@ namespace Modules\Production\Models;
 
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,7 +29,10 @@ class ProjectTask extends Model
         'start_working_at',
         'created_by',
         'updated_by',
+        'task_type',
     ];
+
+    protected $appends = ['task_type_text', 'task_type_color'];
 
     public function project(): BelongsTo
     {
@@ -43,5 +47,39 @@ class ProjectTask extends Model
     public function pics(): HasMany
     {
         return $this->hasMany(ProjectTaskPic::class, 'project_task_id');
+    }
+
+    public function taskTypeText(): Attribute
+    {
+        $out = '';
+        if ($this->task_type) {
+            $cases = \App\Enums\Production\TaskType::cases();
+            foreach ($cases as $case) {
+                if ($case->value == $this->task_type) {
+                    $out = $case->label();
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
+
+    public function taskTypeColor(): Attribute
+    {
+        $out = '';
+        if ($this->task_type) {
+            $cases = \App\Enums\Production\TaskType::cases();
+            foreach ($cases as $case) {
+                if ($case->value == $this->task_type) {
+                    $out = $case->color();
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
     }
 }
