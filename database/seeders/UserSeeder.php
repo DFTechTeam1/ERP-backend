@@ -21,7 +21,9 @@ class UserSeeder extends Seeder
         User::truncate();
         Schema::enableForeignKeyConstraints();
 
-        $root = \Illuminate\Support\Facades\DB::table('roles')->where('name', 'root')->first();
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $root = Role::findByName('root');
         
         $users = [
             [
@@ -37,5 +39,7 @@ class UserSeeder extends Seeder
 
             $userData->assignRole($root);
         }
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
     }
 }
