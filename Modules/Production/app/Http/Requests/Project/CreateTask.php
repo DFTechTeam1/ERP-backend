@@ -13,6 +13,7 @@ class CreateTask extends FormRequest
     {
         return [
             'name' => 'required',
+            'task_type' => 'required',
         ];
     }
 

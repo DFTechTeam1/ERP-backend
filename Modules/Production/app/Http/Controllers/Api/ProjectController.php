@@ -142,6 +142,27 @@ class ProjectController extends Controller
     }
 
     /**
+     * Delete selected task
+     *
+     * @param string $taskUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteTask(string $taskUid)
+    {
+        return apiResponse($this->service->deleteTask($taskUid));
+    }
+
+    /**
+     * Get all task types
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTaskTypes()
+    {
+        return apiResponse($this->service->getTaskTypes());
+    }
+
+    /**
      * Add task description
      *
      * @param CreateDescription $request

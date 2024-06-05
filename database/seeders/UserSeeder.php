@@ -21,7 +21,7 @@ class UserSeeder extends Seeder
         User::truncate();
         Schema::enableForeignKeyConstraints();
 
-        $root = Role::findByName('root');
+        $root = \Illuminate\Support\Facades\DB::table('roles')->where('name', 'root')->first();
         
         $users = [
             [

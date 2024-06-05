@@ -47,6 +47,11 @@ class Project extends Model
         return $this->hasMany(ProjectPersonInCharge::class, 'project_id');
     }
 
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(ProjectTask::class, 'project_id');
+    }
+
     /**
      * Get all of the boards for the Project
      *
