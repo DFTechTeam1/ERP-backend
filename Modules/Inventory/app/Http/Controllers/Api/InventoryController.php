@@ -115,4 +115,9 @@ class InventoryController extends Controller
             })->toArray()
         ));
     }
+
+    public function requestEquipmentList()
+    {
+        
+    }
 }

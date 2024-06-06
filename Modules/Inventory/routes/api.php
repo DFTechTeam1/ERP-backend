@@ -23,6 +23,8 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::get('inventories/addStock/{uid}', "{$namespace}\InventoryController@addStock");
     Route::get('inventories/{uid}/items', "{$namespace}\InventoryController@itemList");
 
+    Route::get('request-equipments', "{$namespace}\InventoryController@requestEquipmentList");
+
     Route::post('suppliers/bulk', "{$namespace}\SupplierController@bulkDelete");
     Route::get('suppliers/all', "{$namespace}\SupplierController@allList");
     Route::apiResource('suppliers', "{$namespace}\SupplierController");

@@ -14,6 +14,7 @@ use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Inventory\Repository\InventoryRepository;
 use Modules\Inventory\Repository\InventoryTypeRepository;
 use Modules\Inventory\Repository\InventoryImageRepository;
+use Modules\Production\Repository\ProjectEquipmentRepository;
 
 class InventoryService {
     private $repo;
@@ -23,6 +24,8 @@ class InventoryService {
     private $inventoryItemRepo;
 
     private $inventoryImageRepo;
+
+    private $projectEquipmentRepo;
 
     private string $imageFolder = 'inventory';
 
@@ -38,6 +41,13 @@ class InventoryService {
         $this->inventoryItemRepo = new InventoryItemRepository;
 
         $this->inventoryImageRepo = new InventoryImageRepository;
+
+        $this->projectEquipmentRepo = new ProjectEquipmentRepository;
+    }
+
+    public function requestEquipmentList()
+    {
+        
     }
 
     /**
