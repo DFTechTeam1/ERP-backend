@@ -434,6 +434,7 @@ class ProjectService {
                     'task_type_text' => $data->task_type_text,
                     'task_type_color' => $data->task_type_color,
                     'progress' => $progress,
+                    'equipments' => $data->equipments,
                 ];
     
                 storeCache('detailProject' . $data->id, $output);
@@ -1120,20 +1121,35 @@ class ProjectService {
         );
     }
 
-    public function updateEquipment(array $data, string $projectId)
+    public function updateEquipment(array $data, string $projectUid)
     {
         try {
-            foreach ($data['items'] as $item) {
-                $requestEquipmentId = getIdFromUid($item['id'], new \Modules\Production\Models\ProjectEquipment());
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
-                // $this->projectEquipmentRepo->update([
-                //     'status' => $item['status']
-                // ], $requestEquipmentId);
+            foreach ($data['items'] as $item) {
+
+                $this->projectEquipmentRepo->update([
+                    'status' => $item['status']
+                ], $item['id']);
             }
+
+            $currentData = getCache('detailProject' . $projectId);
+            if (!$currentData) {
+                $this->show($projectUid);
+
+                $currentData = getCache('detailProject' . $projectId);
+            }
+            $equipments = $this->projectEquipmentRepo->list('*', 'project_id = ' . $projectId, [
+                'inventory:id,name',
+                'inventory.image'
+            ]);
+            $currentData['equipments'] = $equipments;
+
+            storeCache('detailProject' . $projectId, $currentData);
 
             $userCanAcceptRequest = auth()->user()->can('request_inventory'); // if TRUE than he is INVENTARIS
 
-            \Modules\Production\Jobs\PostEquipmentUpdateJob::dispatch($projectId, $data, $userCanAcceptRequest);
+            \Modules\Production\Jobs\PostEquipmentUpdateJob::dispatch($projectUid, $data, $userCanAcceptRequest);
 
             return generalResponse(
                 'success',
