@@ -353,6 +353,22 @@ class ProjectService {
         return $out;
     }
 
+    public function formattedEquipments(int $projectId)
+    {
+        $equipments = $this->projectEquipmentRepo->list('*', 'project_id = ' . $projectId, [
+            'inventory:id,name',
+            'inventory.image'
+        ]);
+
+        $equipments = collect($equipments)->map(function ($item) {
+            $item['is_cancel'] = $item->status == \App\Enums\Production\RequestEquipmentStatus::Cancel->value ? true : false;
+
+            return $item;
+        })->all();
+
+        return $equipments;
+    }
+
     /**
      * Get detail data
      *
@@ -406,6 +422,8 @@ class ProjectService {
                 }
 
                 $boardsData = $this->formattedBoards($uid);
+
+                $equipments = $this->formattedEquipments($data->id);
     
                 $output = [
                     'uid' => $data->uid,
@@ -434,7 +452,7 @@ class ProjectService {
                     'task_type_text' => $data->task_type_text,
                     'task_type_color' => $data->task_type_color,
                     'progress' => $progress,
-                    'equipments' => $data->equipments,
+                    'equipments' => $equipments,
                 ];
     
                 storeCache('detailProject' . $data->id, $output);
@@ -1057,10 +1075,7 @@ class ProjectService {
                 }
             }
 
-            $equipments = $this->projectEquipmentRepo->list('*', 'project_id = ' . $project->id, [
-                'inventory:id,name',
-                'inventory.image'
-            ]);
+            $equipments = $this->formattedEquipments($project->id);
             $currentData = getCache('detailProject' . $project->id);
             if (!$currentData) {
                 $this->show($project->uid);
@@ -1097,7 +1112,7 @@ class ProjectService {
     {
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
-        $data = $this->projectEquipmentRepo->list('id,uid,project_id,inventory_id,qty,status', 'project_id = ' . $projectId, [
+        $data = $this->projectEquipmentRepo->list('id,uid,project_id,inventory_id,qty,status,is_checked_pic', 'project_id = ' . $projectId, [
             'inventory:id,name,stock',
             'inventory.image',
         ]);
@@ -1111,6 +1126,8 @@ class ProjectService {
                 'qty' => $item->qty,
                 'status' => $item->status_text,
                 'status_color' => $item->status_color,
+                'is_checked_pic' => $item->is_checked_pic,
+                'is_cancel' => $item->status == \App\Enums\Production\RequestEquipmentStatus::Cancel->value ? true : false,
             ];
         })->toArray();
 
@@ -1124,26 +1141,41 @@ class ProjectService {
     public function updateEquipment(array $data, string $projectUid)
     {
         try {
-            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+            $picPermission = auth()->user()->can('accept_request_equipment');
 
             foreach ($data['items'] as $item) {
+                $payload = [
+                    'status' => $item['status'],
+                    'is_checked_pic' => false,
+                ];
 
-                $this->projectEquipmentRepo->update([
-                    'status' => $item['status']
-                ], $item['id']);
+                if ($picPermission) {
+                    $payload['is_checked_pic'] = true;
+                }
+
+                $this->projectEquipmentRepo->update($payload, '', "is_checked_pic = FALSE and uid = '" . $item['id'] . "'");
             }
 
-            $currentData = getCache('detailProject' . $projectId);
-            if (!$currentData) {
-                $this->show($projectUid);
+            $cache = $this->getDetailProjectCache($projectUid);
+            $currentData = $cache['cache'];
+            $projectId = $cache['projectId'];
 
-                $currentData = getCache('detailProject' . $projectId);
-            }
-            $equipments = $this->projectEquipmentRepo->list('*', 'project_id = ' . $projectId, [
-                'inventory:id,name',
-                'inventory.image'
-            ]);
+            $equipments = $equipments = $this->formattedEquipments($projectId);
             $currentData['equipments'] = $equipments;
+
+            // set data for update state
+            $output = collect($equipments)->map(function ($item) {
+                return [
+                    'uid' => $item->uid,
+                    'inventory_name' => $item->inventory->name,
+                    'inventory_image' => $item->inventory->display_image,
+                    'inventory_stock' => $item->inventory->stock,
+                    'qty' => $item->qty,
+                    'status' => $item->status_text,
+                    'status_color' => $item->status_color,
+                    'is_checked_pic' => $item->is_checked_pic,
+                ];
+            })->toArray();
 
             storeCache('detailProject' . $projectId, $currentData);
 
@@ -1154,6 +1186,7 @@ class ProjectService {
             return generalResponse(
                 'success',
                 false,
+                $output,
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -1204,5 +1237,95 @@ class ProjectService {
             false,
             $out,
         );
+    }
+
+    public function cancelRequestEquipment(array $data, string $projectUid)
+    {
+        try {
+            $this->projectEquipmentRepo->update([
+                'status' => \App\Enums\Production\RequestEquipmentStatus::Cancel->value,
+            ], $data['id']);
+
+            $cache = $this->getDetailProjectCache($projectUid);
+            $currentData = $cache['cache'];
+            $projectId = $cache['projectId'];
+
+            $equipments = $this->formattedEquipments($projectId);
+
+            $currentData['equipments'] = $equipments;
+
+            storeCache('detailProject' . $projectId, $currentData);
+
+            return generalResponse(
+                __("global.equipmentCanceled"),
+                false,
+                $currentData
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * get current datail project in the cache
+     *
+     * @param string $projectUid
+     * @return array
+     */
+    protected function getDetailProjectCache(string $projectUid)
+    {
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+        $currentData = getCache('detailProject' . $projectId);
+        if (!$currentData) {
+            $this->show($projectUid);
+
+            $currentData = getCache('detailProject' . $projectId);
+        }
+
+        return [
+            'cache' => $currentData,
+            'projectId' => $projectId,
+        ];
+    }
+
+    public function updateDeadline(array $data, string $projectUid)
+    {
+        try {
+            logging('payload update deadline', $data);
+            $this->taskRepo->update(
+                [
+                    'start_date' => date('Y-m-d', strtotime($data['start_date'])),
+                    'end_date' => date('Y-m-d', strtotime($data['end_date'])),
+                ],
+                $data['task_id']
+            );
+
+            $task = $this->taskRepo->show($data['task_id'], '*', [
+                'project:id,uid',
+                'pics:id,project_task_id,employee_id',
+                'pics.employee:id,name,email,uid',
+            ]);
+
+            $cache = $this->getDetailProjectCache($projectUid);
+            $currentData = $cache['cache'];
+            $projectId = $cache['projectId'];
+
+            $boards = $this->formattedBoards($projectUid);
+            $currentData['boards'] = $boards;
+
+            storeCache('detailProject' . $projectId, $currentData);
+
+            return generalResponse(
+                __("global.deadlineAdded"),
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

@@ -116,8 +116,13 @@ class InventoryController extends Controller
         ));
     }
 
+    /**
+     * Gel related project with request equipments
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function requestEquipmentList()
     {
-        
+        return apiResponse($this->service->requestEquipmentList());
     }
 }

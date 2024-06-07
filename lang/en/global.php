@@ -143,4 +143,6 @@ return [
     'descriptionAdded' => 'Description has been added',
     'memberAdded' => 'Members has been assign to task',
     'successDeleteTask' => 'Success delete task',
+    'equipmentCanceled' => 'Equipment is canceled',
+    'deadlineAdded' => 'Deadline is added'
 ];
