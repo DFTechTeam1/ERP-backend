@@ -32,7 +32,7 @@ class ProjectTask extends Model
         'task_type',
     ];
 
-    protected $appends = ['task_type_text', 'task_type_color'];
+    protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text'];
 
     public function project(): BelongsTo
     {
@@ -76,6 +76,30 @@ class ProjectTask extends Model
                     $out = $case->color();
                 }
             }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
+
+    public function startDateText(): Attribute
+    {
+        $out = '-';
+        if ($this->start_date) {
+            $out = date('d F Y', strtotime($this->start_date));
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
+    
+    public function endDateText(): Attribute
+    {
+        $out = '-';
+        if ($this->end_date) {
+            $out = date('d F Y', strtotime($this->end_date));
         }
 
         return Attribute::make(

@@ -15,6 +15,7 @@ use Modules\Inventory\Repository\InventoryRepository;
 use Modules\Inventory\Repository\InventoryTypeRepository;
 use Modules\Inventory\Repository\InventoryImageRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
+use Modules\Production\Repository\ProjectRepository;
 
 class InventoryService {
     private $repo;
@@ -26,6 +27,8 @@ class InventoryService {
     private $inventoryImageRepo;
 
     private $projectEquipmentRepo;
+
+    private $projectRepo;
 
     private string $imageFolder = 'inventory';
 
@@ -43,11 +46,64 @@ class InventoryService {
         $this->inventoryImageRepo = new InventoryImageRepository;
 
         $this->projectEquipmentRepo = new ProjectEquipmentRepository;
+
+        $this->projectRepo = new ProjectRepository;
     }
 
     public function requestEquipmentList()
     {
-        
+        try {
+            $select = 'id,name,uid,project_date';
+            $where = '';
+            $relation = ['equipments:id,project_id,inventory_id,qty,status'];
+
+            $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $search = request('search');
+            $whereHas = [
+                [
+                    'relation' => 'equipments',
+                    'query' => 'status = ' . \App\Enums\Production\RequestEquipmentStatus::Requested->value,
+                ]
+            ];
+
+            if (!empty($search)) { // array
+                if (!empty($search['name']) && empty($where)) {
+                    $name = strtolower($search['name']);
+                    $where = "LOWER(name) LIKE '%{$name}%'";
+                } else if (!empty($search['name']) && !empty($where)) {
+                    $name = strtolower($search['name']);
+                    $where .= " AND LOWER(name) LIKE '%{$name}%'";
+                }
+            }
+
+            $paginated = $this->projectRepo->list(
+                $select,
+                $where,
+                $relation,
+                $whereHas
+            );
+
+            $paginated = collect($paginated)->map(function ($item) {
+                return [
+                    'uid' => $item->uid,
+                    'project_date' => date('d F Y', strtotime($item->project_date)),
+
+                    'name' => $item->name,
+                    'equipment_total' => count($item->equipments),
+                ];
+            })->all();
+
+            return generalResponse(
+                'Success',
+                false,
+                $paginated,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 
     /**

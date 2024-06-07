@@ -10,6 +10,7 @@ use Modules\Production\Http\Requests\Project\CreateDescription;
 use Modules\Production\Http\Requests\Project\CreateTask;
 use Modules\Production\Http\Requests\Project\MoreDetailUpdate;
 use Modules\Production\Http\Requests\Project\StoreReferences;
+use Modules\Production\Http\Requests\Project\UpdateDeadline;
 use Modules\Production\Services\ProjectService;
 
 class ProjectController extends Controller
@@ -254,5 +255,29 @@ class ProjectController extends Controller
     public function updateEquipment(\Modules\Production\Http\Requests\Project\UpdateEquipment $request, string $projectId)
     {
         return apiResponse($this->service->updateEquipment($request->validated(), $projectId));
+    }
+
+    /**
+     * Cancel request equipment
+     *
+     * @param Request $request
+     * @param string $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cancelRequestEquipment(Request $request, string $projectId)
+    {
+        return apiResponse($this->service->cancelRequestEquipment($request->toArray(), $projectId));
+    }
+
+    /**
+     * Add project deadline
+     *
+     * @param UpdateDeadline $request
+     * @param string $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateDeadline(UpdateDeadline $request, string $projectId)
+    {
+        return apiResponse($this->service->updateDeadline($request->validated(), $projectId));
     }
 }
