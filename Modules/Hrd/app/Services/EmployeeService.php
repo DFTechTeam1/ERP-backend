@@ -658,22 +658,16 @@ class EmployeeService
     public function delete(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid,'id,name', [
-                'employee_signs:id,employee_id,sign',
-//                'inventory_requests:id,request_by,uid',
+            $data = $this->repo->show($uid,'id,name,uid', [
+                'projects:id,project_id,pic_id'
             ]);
 
             $employeeErrorStatus = false;
 
-            if ($data->employee_signs->count() > 0) {
-                $employeeErrorRelation[] = 'employee signs';
+            if (count($data->projects) > 0) {
+                $employeeErrorRelation[] = 'projects';
                 $employeeErrorStatus = true;
             }
-
-//            if ($data->inventory_requests->count() > 0) {
-//                $employeeErrorRelation[] = 'inventory requests';
-//                $employeeErrorStatus = true;
-//            }
 
             if ($employeeErrorStatus) {
                 throw new EmployeeException(__("global.employeeRelationFound", [
@@ -708,10 +702,28 @@ class EmployeeService
      */
     public function bulkDelete(array $ids): array
     {
+        DB::beginTransaction();
         try {
             $images = [];
             foreach ($ids as $id) {
-                $employee = $this->repo->show($id, 'id,id_number_photo,npwp_photo,kk_photo,bpjs_photo');
+                $employee = $this->repo->show($id, 'id,id_number_photo,npwp_photo,kk_photo,bpjs_photo', [
+                    'projects:id,project_id,pic_id'
+                ]);
+
+                $employeeErrorStatus = false;
+
+                if (count($employee->projects) > 0) {
+                    $employeeErrorRelation[] = 'projects';
+                    $employeeErrorStatus = true;
+                }
+
+                if ($employeeErrorStatus) {
+                    DB::rollBack();
+                    throw new EmployeeException(__("global.employeeRelationFound", [
+                        'name' => $employee->name,
+                        'relation' => implode(' and ',$employeeErrorRelation)
+                    ]));
+                }
 
                 if ($employee->id_number_photo) {
                     $images[] = $employee->id_number_photo;
@@ -729,13 +741,17 @@ class EmployeeService
 
             $this->repo->bulkDelete($ids, 'uid');
 
-            \Modules\Hrd\Jobs\DeleteImageJob::dispatch($images);
+            \Modules\Hrd\Jobs\DeleteImageJob::dispatch($images)->afterCommit();
+
+            DB::commit();
 
             return generalResponse(
                 __('global.successDeleteEmployee'),
                 false,
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }

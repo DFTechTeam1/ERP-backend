@@ -243,18 +243,12 @@ class PositionService {
         try {
             $data = $this->repo->show($uid,'id,name',[
                 'employees:id,position_id,name',
-                'jobs:id,position_id,name',
             ]);
 
             $positionErrorStatus = false;
 
             if ($data->employees->count() > 0) {
                 $positionErrorRelation[] = 'employees';
-                $positionErrorStatus = true;
-            }
-
-            if ($data->jobs->count() > 0) {
-                $positionErrorRelation[] = 'jobs';
                 $positionErrorStatus = true;
             }
 
@@ -298,18 +292,11 @@ class PositionService {
             foreach ($uids as $uid) {
                 $data = $this->repo->show($uid,'id,name',[
                     'employees:id,position_id,name',
-                    'jobs:id,position_id,name',
                 ]);
 
                 if ($data->employees->count() > 0) {
                     $positionErrorName[] = $data->name;
                     $positionErrorRelation[] = 'employees';
-                    $positionErrorStatus = true;
-                }
-
-                if ($data->jobs->count() > 0) {
-                    $positionErrorName[] = $data->name;
-                    $positionErrorRelation[] = 'jobs';
                     $positionErrorStatus = true;
                 }
             }

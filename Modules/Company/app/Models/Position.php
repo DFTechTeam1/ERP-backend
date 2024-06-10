@@ -7,7 +7,6 @@ use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Models\Job;
 
 // use Modules\Company\Database\factories\PositionFactory;
 
@@ -43,15 +42,6 @@ class Position extends Model
     {
         return $this->hasMany(Employee::class, 'position_id', 'id');
     }
-
-    /**
-     * Position has many jobs
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    // public function jobs()
-    // {
-    //     return $this->hasMany(Job::class, 'position_id', 'id');
-    // }
 
     // protected static function newFactory(): PositionFactory
     // {

@@ -20,6 +20,12 @@ class AppendPermissionSeeder extends Seeder
             ['name' => 'reject_request_equipment', 'group' => 'inventories'],
             ['name' => 'accept_request_equipment', 'group' => 'inventories'],
             ['name' => 'list_request_equipment', 'group' => 'inventories'],
+            ['name' => 'move_task_to_progress', 'group' => 'production'],
+            ['name' => 'move_task_to_review_pm', 'group' => 'production'],
+            ['name' => 'move_task_to_review_client', 'group' => 'production'],
+            ['name' => 'move_task_to_revise', 'group' => 'production'],
+            ['name' => 'move_task_to_completed', 'group' => 'production'],
+            ['name' => 'add_task', 'group' => 'production'],
         ];
 
         foreach ($permissions as $permission) {

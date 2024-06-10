@@ -87,7 +87,7 @@ class Project extends Model
         $output = '-';
 
         if ($this->status) {
-            $statuses = \App\enums\Production\ProjectStatus::cases();
+            $statuses = \App\Enums\Production\ProjectStatus::cases();
             foreach ($statuses as $status) {
                 if ($status->value == $this->status) {
                     $output = $status->label();
@@ -105,7 +105,7 @@ class Project extends Model
         $output = '-';
 
         if ($this->status) {
-            $statuses = \App\enums\Production\ProjectStatus::cases();
+            $statuses = \App\Enums\Production\ProjectStatus::cases();
             foreach ($statuses as $status) {
                 if ($status->value == $this->status) {
                     $output = $status->color();
@@ -123,7 +123,7 @@ class Project extends Model
         $output = '-';
 
         if ($this->event_type) {
-            $statuses = \App\enums\Production\EventType::cases();
+            $statuses = \App\Enums\Production\EventType::cases();
             foreach ($statuses as $status) {
                 if ($status->value == $this->event_type) {
                     $output = $status->label();
@@ -141,7 +141,7 @@ class Project extends Model
         $output = '-';
 
         if ($this->classification) {
-            $statuses = \App\enums\Production\Classification::cases();
+            $statuses = \App\Enums\Production\Classification::cases();
             foreach ($statuses as $status) {
                 if ($status->value == $this->classification) {
                     $output = $status->label();
@@ -159,7 +159,7 @@ class Project extends Model
         $output = '-';
 
         if ($this->classification) {
-            $statuses = \App\enums\Production\Classification::cases();
+            $statuses = \App\Enums\Production\Classification::cases();
             foreach ($statuses as $status) {
                 if ($status->value == $this->classification) {
                     $output = $status->color();
