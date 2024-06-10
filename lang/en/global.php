@@ -77,6 +77,10 @@ return [
     'compositing' => 'Compositing',
     'animating' => 'Animating',
     'finalize' => 'Finalize',
+    'media' => 'Media',
+    'taskLink' => 'Task Link',
+    'externalLink' => 'External Link',
+    'at' => 'at',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -144,5 +148,7 @@ return [
     'memberAdded' => 'Members has been assign to task',
     'successDeleteTask' => 'Success delete task',
     'equipmentCanceled' => 'Equipment is canceled',
-    'deadlineAdded' => 'Deadline is added'
+    'deadlineAdded' => 'Deadline is added',
+    'successUploadAttachment' => 'Success upload attachment',
+    'successDeleteAttachment' => 'Success delete attachment',
 ];

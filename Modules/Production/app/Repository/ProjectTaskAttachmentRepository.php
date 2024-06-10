@@ -2,17 +2,17 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\Project;
-use Modules\Production\Repository\Interface\ProjectInterface;
+use Modules\Production\Models\ProjectTaskAttachment;
+use Modules\Production\Repository\Interface\ProjectTaskAttachmentInterface;
 
-class ProjectRepository extends ProjectInterface {
+class ProjectTaskAttachmentRepository extends ProjectTaskAttachmentInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Project();
+        $this->model = new ProjectTaskAttachment();
         $this->key = 'id';
     }
 
@@ -24,7 +24,7 @@ class ProjectRepository extends ProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
@@ -32,14 +32,6 @@ class ProjectRepository extends ProjectInterface {
 
         if (!empty($where)) {
             $query->whereRaw($where);
-        }
-
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                    $qd->whereRaw($queryItem['query']);
-                });
-            }
         }
 
         if ($relation) {
@@ -62,8 +54,7 @@ class ProjectRepository extends ProjectInterface {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page,
-        array $whereHas = []
+        int $page
     )
     {
         $query = $this->model->query();
@@ -74,19 +65,9 @@ class ProjectRepository extends ProjectInterface {
             $query->whereRaw($where);
         }
 
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                    $qd->whereRaw($queryItem['query']);
-                });
-            }
-        }
-
         if ($relation) {
             $query->with($relation);
         }
-
-        $query->orderBy('project_date', 'ASC');
         
         return $query->skip($page)->take($itemsPerPage)->get();
     }
@@ -99,12 +80,7 @@ class ProjectRepository extends ProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(
-        string $uid = '', 
-        string $select = '*', 
-        array $relation = [], 
-        string $where = ''
-    )
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
@@ -166,7 +142,7 @@ class ProjectRepository extends ProjectInterface {
      */
     public function delete(int $id)
     {
-        return $this->model->whereIn('id', $id)
+        return $this->model->where('id', $id)
             ->delete();
     }
 

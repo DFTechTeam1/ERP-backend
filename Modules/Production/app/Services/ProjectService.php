@@ -11,6 +11,7 @@ use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
+use Modules\Production\Repository\ProjectTaskAttachmentRepository;
 
 class ProjectService {
     private $repo;
@@ -26,6 +27,8 @@ class ProjectService {
     private $taskPicRepo;
 
     private $projectEquipmentRepo;
+
+    private $projectTaskAttachmentRepo;
 
     /**
      * Construction Data
@@ -45,6 +48,8 @@ class ProjectService {
         $this->taskPicRepo = new ProjectTaskPicRepository;
 
         $this->projectEquipmentRepo = new ProjectEquipmentRepository;
+
+        $this->projectTaskAttachmentRepo = new ProjectTaskAttachmentRepository;
     }
 
     /**
@@ -63,7 +68,7 @@ class ProjectService {
     ): array
     {
         try {
-            $itemsPerPage = request('itemsPerPage') ?? 2;
+            $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
@@ -259,6 +264,24 @@ class ProjectService {
         ];
     }
 
+    protected function defaultTaskRelation()
+    {
+        return [
+            'project:id,uid',
+            'pics:id,project_task_id,employee_id',
+            'pics.employee:id,name,email,uid',
+            'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
+            'taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type'
+        ];
+    }
+
+    protected function formattedDetailTask(string $taskUid)
+    {
+        $task = $this->taskRepo->show($taskUid, '*', $this->defaultTaskRelation());
+
+        return $task;
+    }
+
     protected function formattedBoards(string $projectUid)
     {
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
@@ -267,6 +290,8 @@ class ProjectService {
             'tasks',
             'tasks.pics:id,project_task_id,employee_id',
             'tasks.pics.employee:id,name,email,uid',
+            'tasks.medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
+            'tasks.taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type',
         ]);
 
         return $data;
@@ -387,8 +412,6 @@ class ProjectService {
                     'personInCharges:id,pic_id,project_id',
                     'personInCharges.employee:id,name,employee_id',
                     'references:id,project_id,media_path,name,type',
-                    'tasks',
-                    'tasks.board:id,name,project_id',
                     'equipments.inventory:id,name',
                     'equipments.inventory.image'
                 ]);
@@ -454,6 +477,7 @@ class ProjectService {
                     'progress' => $progress,
                     'equipments' => $equipments,
                 ];
+                logging('output', $output);
     
                 storeCache('detailProject' . $data->id, $output);
             }
@@ -676,11 +700,7 @@ class ProjectService {
         try {
             $this->taskRepo->update($data, $taskId);
 
-            $task = $this->taskRepo->show($taskId, '*', [
-                'project:id,uid',
-                'pics:id,project_task_id,employee_id',
-                'pics.employee:id,name,email,uid',
-            ]);
+            $task = $this->taskRepo->show($taskId, '*', $this->defaultTaskRelation());
             
             $currentData = getCache('detailProject' . $task->project_id);
 
@@ -741,11 +761,7 @@ class ProjectService {
 
             logging('notifiedNewTask', $notifiedNewTask);
 
-            $task = $this->taskRepo->show($taskUid, '*', [
-                'project:id,uid',
-                'pics:id,project_task_id,employee_id',
-                'pics.employee:id,name,email,uid',
-            ]);
+            $task = $this->taskRepo->show($taskUid, '*', $this->defaultTaskRelation());
 
             $currentData = getCache('detailProject' . $task->project->id);
             if (!$currentData) {
@@ -1301,11 +1317,7 @@ class ProjectService {
                 $data['task_id']
             );
 
-            $task = $this->taskRepo->show($data['task_id'], '*', [
-                'project:id,uid',
-                'pics:id,project_task_id,employee_id',
-                'pics.employee:id,name,email,uid',
-            ]);
+            $task = $this->taskRepo->show($data['task_id'], '*', $this->defaultTaskRelation());
 
             $cache = $this->getDetailProjectCache($projectUid);
             $currentData = $cache['cache'];
@@ -1323,6 +1335,251 @@ class ProjectService {
                     'task' => $task,
                     'full_detail' => $currentData,
                 ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Upload attachment in selected task
+     *
+     * @param array $data
+     * @param string $taskUid
+     * @param string $projectUid
+     * @return array
+     */
+    public function uploadTaskAttachment(array $data, string $taskUid, string $projectUid)
+    {
+        try {
+            $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            $output = [];
+            if ((isset($data['media'])) && (count($data['media']) > 0)) {
+                return $this->uploadTaskMedia($data, $taskId, $projectId, $projectUid, $taskUid);
+            } else if ((isset($data['task_id'])) && (count($data['task_id']) > 0)) {
+                return $this->uploadTaskLink($data, $taskId, $projectId, $projectUid, $taskUid);
+            } else {
+                return $this->uploadLinkAttachment($data, $taskId, $projectId, $projectUid, $taskUid);
+            }
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    protected function uploadTaskLink(array $data, int $taskId, int $projectId, string $projectUid, string $taskUid)
+    {
+        $type = \App\Enums\Production\ProjectTaskAttachment::TaskLink->value;
+
+        foreach ($data['task_id'] as $task) {
+            $targetTask = getIdFromUid($task, new \Modules\Production\Models\ProjectTask());
+
+            $check = $this->projectTaskAttachmentRepo->show('dummy', 'id', [], "media = '{$targetTask}' and project_id = {$projectId} and project_task_id = {$taskId}");
+
+            if (!$check) {
+                $this->projectTaskAttachmentRepo->store([
+                    'project_task_id' => $taskId,
+                    'project_id' => $projectId,
+                    'media' => $targetTask,
+                    'type' => $type,
+                ]);
+            }
+        }
+
+        $task = $this->formattedDetailTask($taskUid);
+
+        $cache = $this->getDetailProjectCache($projectUid);
+        $currentData = $cache['cache'];
+        $projectId = $cache['projectId'];
+
+        $boards = $this->formattedBoards($projectUid);
+        $currentData['boards'] = $boards;
+
+        storeCache('detailProject' . $projectId, $currentData);
+
+        return generalResponse(
+            __('global.successUploadAttachment'),
+            false,
+            [
+                'task' => $task,
+                'full_detail' => $currentData,
+            ]
+        );
+    }
+
+    protected function uploadLinkAttachment(array $data, int $taskId, int $projectId, string $projectUid, string $taskUid)
+    {
+        $type = \App\Enums\Production\ProjectTaskAttachment::ExternalLink->value;
+
+        $this->projectTaskAttachmentRepo->store([
+            'project_task_id' => $taskId,
+            'project_id' => $projectId,
+            'media' => $data['link'],
+            'display_name' => $data['display_name'] ?? null,
+            'type' => $type,
+        ]);
+
+        $task = $this->formattedDetailTask($taskUid);
+
+        $cache = $this->getDetailProjectCache($projectUid);
+        $currentData = $cache['cache'];
+        $projectId = $cache['projectId'];
+
+        $boards = $this->formattedBoards($projectUid);
+        $currentData['boards'] = $boards;
+
+        storeCache('detailProject' . $projectId, $currentData);
+
+        return generalResponse(
+            __('global.successUploadAttachment'),
+            false,
+            [
+                'task' => $task,
+                'full_detail' => $currentData,
+            ]
+        );
+    }
+
+    protected function uploadTaskMedia(array $data, int $taskId, int $projectId, string $projectUid, string $taskUid)
+    {
+        $imagesMime = [
+            'image/png',
+            'image/jpg',
+            'image/jpeg',
+            'image/webp',
+        ];
+
+        $type = \App\Enums\Production\ProjectTaskAttachment::Media->value;
+
+        foreach ($data['media'] as $file) {
+            $mime = $file->getClientMimeType();
+
+            if ($mime == 'application/pdf') {
+                $name = uploadFile(
+                    'projects/' . $projectId . '/task/' . $taskId,
+                    $file, 
+                );
+            } else if (in_array($mime, $imagesMime)) {
+                $name = uploadImageandCompress(
+                    'projects/' . $projectId . '/task/' . $taskId,
+                    10,
+                    $file
+                );
+            }
+
+            $this->projectTaskAttachmentRepo->store([
+                'project_task_id' => $taskId,
+                'project_id' => $projectId,
+                'media' => $name,
+                'type' => $type,
+            ]);
+        }
+
+        $task = $this->formattedDetailTask($taskUid);
+
+        $cache = $this->getDetailProjectCache($projectUid);
+        $currentData = $cache['cache'];
+        $projectId = $cache['projectId'];
+
+        $boards = $this->formattedBoards($projectUid);
+        $currentData['boards'] = $boards;
+
+        storeCache('detailProject' . $projectId, $currentData);
+
+        return generalResponse(
+            __('global.successUploadAttachment'),
+            false,
+            [
+                'task' => $task,
+                'full_detail' => $currentData,
+            ]
+        );
+    }
+
+    /**
+     * Search task by name
+     *
+     * @param string $search
+     * @param string $taskUid
+     * @return array
+     */
+    public function searchTask(string $projectUid, string $taskUid, string $search = '')
+    {
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            $search = strtolower($search);
+            if (!$search) {
+                $where = "project_id = '{$projectId}' and uid != '{$taskUid}'";
+            } else {
+                $where = "LOWER(name) LIKE '%{$search}%' and project_id = '{$projectId}' and uid != '{$taskUid}'";
+            }
+            $task = $this->taskRepo->list('id,name,uid', $where);
+
+            return generalResponse(
+                'success',
+                false,
+                $task->toArray(),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function getRelatedTask(string $projectUid, string $taskUid)
+    {
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+        $data = $this->taskRepo->list('id,name,uid', "project_id = {$projectId} and uid != '{$taskUid}'");
+
+        return generalResponse(
+            'success',
+            false,
+            $data->toArray(),
+        );
+    }
+
+    public function downloadAttachment(string $taskId, int $attachmentId)
+    {
+        try {
+            $data = $this->projectTaskAttachmentRepo->show('dummy', 'media,project_id,project_task_id', [], "id = {$attachmentId}");
+
+            return \Illuminate\Support\Facades\Storage::download('projects/' . $data->project_id . '/task/' . $data->project_task_id . '/' . $data->media);
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function deleteAttachment(string $projectUid, string $taskUid, int $attachmentId)
+    {
+        try {
+            $data = $this->projectTaskAttachmentRepo->show('dummy', 'media,project_id,project_task_id,type', [], "id = {$attachmentId}");
+
+            if ($data->type == \App\Enums\Production\ProjectTaskAttachment::Media->value) {
+                deleteImage(storage_path("app/public/projects/{$data->project_id}/task/{$data->project_task_id}/{$data->media}"));
+            }
+
+            $this->projectTaskAttachmentRepo->delete($attachmentId);
+
+            $task = $this->formattedDetailTask($taskUid);
+
+            $cache = $this->getDetailProjectCache($projectUid);
+            $currentData = $cache['cache'];
+            $projectId = $cache['projectId'];
+
+            $boards = $this->formattedBoards($projectUid);
+            $currentData['boards'] = $boards;
+
+            storeCache('detailProject' . $projectId, $currentData);
+
+            return generalResponse(
+                __('global.successDeleteAttachment'),
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ],
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

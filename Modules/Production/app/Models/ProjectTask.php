@@ -49,6 +49,19 @@ class ProjectTask extends Model
         return $this->hasMany(ProjectTaskPic::class, 'project_task_id');
     }
 
+    public function medias(): HasMany
+    {
+        return $this->hasMany(ProjectTaskAttachment::class, 'project_task_id')
+            ->where('type', \App\Enums\Production\ProjectTaskAttachment::Media->value)
+            ->orWhere('type', \App\Enums\Production\ProjectTaskAttachment::ExternalLink->value);
+    }
+
+    public function taskLink(): HasMany
+    {
+        return $this->hasMany(ProjectTaskAttachment::class, 'project_task_id')
+            ->where('type', \App\Enums\Production\ProjectTaskAttachment::TaskLink->value);
+    }
+
     public function taskTypeText(): Attribute
     {
         $out = '';
