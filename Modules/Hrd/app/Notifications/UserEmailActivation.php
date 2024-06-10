@@ -20,11 +20,13 @@ class UserEmailActivation extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct($user, $encryptedData)
+    public function __construct($user, $encryptedData, $password)
     {
         $this->user = $user;
 
         $this->encrypted = $encryptedData;
+
+        $this->password = $password;
     }
 
     /**
@@ -46,6 +48,7 @@ class UserEmailActivation extends Notification
             ->subject('Email Activation')
             ->markdown('mail.user.EmailActivation', [
                 'user' => $this->user,
+                'password' => $this->password,
                 'urlActivate' => env('FRONTEND_URL') . '/activate/' . $this->encrypted
             ]);
     }

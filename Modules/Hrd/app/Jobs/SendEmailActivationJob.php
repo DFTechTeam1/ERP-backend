@@ -19,9 +19,11 @@ class SendEmailActivationJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct($user)
+    public function __construct($user, $password)
     {
         $this->user = $user;
+
+        $this->password = $password;
     }
 
     /**
@@ -34,6 +36,6 @@ class SendEmailActivationJob implements ShouldQueue
         $service = new \App\Services\EncryptionService();
         $encrypt = $service->encrypt($this->user->email, env('SALT_KEY'));
 
-        Notification::send($this->user, new \Modules\Hrd\Notifications\UserEmailActivation($this->user, $encrypt));
+        Notification::send($this->user, new \Modules\Hrd\Notifications\UserEmailActivation($this->user, $encrypt, $this->password));
     }
 }

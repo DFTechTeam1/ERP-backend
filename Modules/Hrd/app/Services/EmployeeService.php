@@ -770,12 +770,12 @@ class EmployeeService
                 'title' => $item->title,
                 'workload_on_date' => $item->workload_on_date,
             ];
-        })->sortBy('workload_on_date', SORT_NATURAL)->toArray();
+        })->sortBy('workload_on_date', SORT_NATURAL)->values();
 
         return generalResponse(
             'success',
             false, 
-            $employees,
+            $employees->toArray(),
         );
     }
 

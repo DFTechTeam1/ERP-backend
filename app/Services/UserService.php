@@ -146,7 +146,7 @@ class UserService {
                 ], $data['employee_id']);
             }
 
-            SendEmailActivationJob::dispatch($user)->afterCommit();
+            SendEmailActivationJob::dispatch($user, $data['password'])->afterCommit();
             
             DB::commit();
 

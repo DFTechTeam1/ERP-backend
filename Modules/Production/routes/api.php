@@ -38,4 +38,10 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{taskId}/task/assignMember', [ProjectController::class, 'assignMemberToTask']);
     Route::post('project/{id}/references/delete', [ProjectController::class, 'deleteReference']);
     Route::get('project/{projectId}/getProjectMembers/{taskId}', [ProjectController::class, 'getProjectMembers']);
+    Route::post('project/{projectId}/searchTask/{taskUid}', [ProjectController::class, 'searchTask']);
+    Route::get('project/{projectId}/getRelatedTask/{taskUid}', [ProjectController::class, 'getRelatedTask']);
+    Route::post('project/{projectId}/uploadTaskAttachment/{taskId}', [ProjectController::class, 'uploadTaskAttachment']);
+    Route::delete('project/{projectUid}/task/{taskUid}/deleteAttachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 });
+
+Route::get('production/project/{taskId}/downloadAttachment/{attachmentId}', [ProjectController::class, 'downloadAttachment']);

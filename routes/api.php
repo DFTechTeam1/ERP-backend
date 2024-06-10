@@ -19,7 +19,8 @@ Route::get('/user', function (Request $request) {
 
 Route::get('ilham', function () {
     $user = \App\Models\User::latest()->first();
-    \Modules\Hrd\Jobs\SendEmailActivationJob::dispatch($user);
+    return (new \Modules\Hrd\Notifications\UserEmailActivation($user, 'iiejrkejrer', 'password'))
+        ->toMail($user);
 });
 
 Route::get('nasTestConnection', function (Request $request) {

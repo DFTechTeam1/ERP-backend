@@ -474,6 +474,7 @@ Table project_task_pic {
 Table project_task_attachments {
     id int [pk, increment]
     project_task_id int [ref: > project_tasks.id]
+    project_id int
     media varchar
     display_name varchar
     related_task_id int [ref: > project_tasks.id]

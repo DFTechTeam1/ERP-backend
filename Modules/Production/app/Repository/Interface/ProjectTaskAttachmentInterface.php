@@ -2,7 +2,7 @@
 
 namespace Modules\Production\Repository\Interface;
 
-abstract class ProjectTaskInterface {
+abstract class ProjectTaskAttachmentInterface {
     abstract function list(string $select = '*', string $where = "", array $relation = []);
 
     abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);

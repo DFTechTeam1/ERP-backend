@@ -280,4 +280,29 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->updateDeadline($request->validated(), $projectId));
     }
+
+    public function uploadTaskAttachment(\Modules\Production\Http\Requests\Project\TaskAttachment $request, string $projectId, string $taskId)
+    {
+        return apiResponse($this->service->uploadTaskAttachment($request->validated(), $taskId, $projectId));
+    }
+
+    public function searchTask(Request $request, string $projectUid, string $taskUid)
+    {
+        return apiResponse($this->service->searchTask($projectUid, $taskUid, $request->search ?? ''));
+    }
+
+    public function getRelatedTask(string $projectUid, string $taskUid)
+    {
+        return apiResponse($this->service->getRelatedTask($projectUid, $taskUid));
+    }
+
+    public function downloadAttachment(string $taskId, int $attachmentId)
+    {
+        return $this->service->downloadAttachment($taskId, $attachmentId);
+    }
+
+    public function deleteAttachment(string $projectUid, string $taskUid, int $attachmentId)
+    {
+        return apiResponse($this->service->deleteAttachment($projectUid, $taskUid, $attachmentId));
+    }
 }
