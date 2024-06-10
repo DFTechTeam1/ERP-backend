@@ -73,17 +73,77 @@ class ProjectService {
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
+            $whereHas = [];
 
-            if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+            if (
+                ($search) &&
+                (count($search) > 0)
+            ) {
+                if (!empty($search['name']) && empty($where)) {
+                    $name = strtolower($search['name']);
+                    $where = "lower(name) LIKE '%{$name}%'";
+                } else if (!empty($search['name']) && !empty($where)) {
+                    $name = $search['name'];
+                    $where .= " AND lower(name) LIKE '%{$name}%'";
+                }
+
+                if (!empty($search['event_type']) && empty($where)) {
+                    $eventType = strtolower($search['event_type']);
+                    $where = "event_type = '{$eventType}'";
+                } else if (!empty($search['event_type']) && !empty($where)) {
+                    $eventType = $search['event_type'];
+                    $where .= " AND event_type = '{$eventType}'";
+                }
+
+                if (!empty($search['classification']) && empty($where)) {
+                    $classification = strtolower($search['classification']);
+                    $where = "classification = '{$classification}'";
+                } else if (!empty($search['classification']) && !empty($where)) {
+                    $classification = $search['classification'];
+                    $where .= " AND classification = '{$classification}'";
+                }
+
+                if (!empty($search['start_date']) && empty($where)) {
+                    $start = date('Y-m-d', strtotime($search['start_date']));
+                    $where = "project_date >= '{$start}'";
+                } else if (!empty($search['start_date']) && !empty($where)) {
+                    $start = date('Y-m-d', strtotime($search['start_date']));
+                    $where .= " AND project_date >= '{$start}'";
+                }
+
+                if (!empty($search['end_date']) && empty($where)) {
+                    $end = date('Y-m-d', strtotime($search['end_date']));
+                    $where = "project_date <= '{$end}'";
+                } else if (!empty($search['end_date']) && !empty($where)) {
+                    $end = date('Y-m-d', strtotime($search['end_date']));
+                    $where .= " AND project_date <= '{$end}'";
+                }
+
+                if (!empty($search['pic']) && empty($whereHas)) {
+                    $pics = $search['pic'];
+                    $pics = collect($pics)->map(function ($pic) {
+                        $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
+                        return $picId;
+                    })->toArray();
+                    $picData = implode(',', $pics);
+                    $whereHas = [
+                        [
+                            'relation' => 'personInCharges',
+                            'query' => "pic_id IN ({$picData})",
+                        ],
+                    ];
+                }
             }
+
+            logging('whereHas', $whereHas);
 
             $paginated = $this->repo->pagination(
                 $select,
                 $where,
                 $relation,
                 $itemsPerPage,
-                $page
+                $page,
+                $whereHas
             );
             $totalData = $this->repo->list('id', $where)->count();
 
