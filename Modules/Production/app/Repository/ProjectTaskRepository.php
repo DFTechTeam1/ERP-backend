@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Repository;
 
+use Illuminate\Database\Eloquent\Builder;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\Interface\ProjectTaskInterface;
 
@@ -24,7 +25,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -32,6 +33,14 @@ class ProjectTaskRepository extends ProjectTaskInterface {
 
         if (!empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $wh) {
+                $query->whereHas($wh['relation'], function (Builder $query) use ($wh) {
+                    $query->whereRaw($wh['query']);
+                });
+            }
         }
 
         if ($relation) {

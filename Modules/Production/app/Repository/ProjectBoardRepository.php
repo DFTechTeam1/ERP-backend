@@ -80,7 +80,7 @@ class ProjectBoardRepository extends ProjectBoardInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(int $uid, string $select = '*', array $relation = [])
+    public function show(int $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 

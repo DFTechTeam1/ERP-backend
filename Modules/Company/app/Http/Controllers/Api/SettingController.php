@@ -34,6 +34,11 @@ class SettingController extends Controller
         return apiResponse($this->service->store($request->all(), $code));
     }
 
+    public function getSettingByKeyAndCode(string $code, string $key)
+    {
+        return apiResponse($this->service->getSettingByKeyAndCode($key, $code));
+    }
+
     /**
      * Store a newly created resource in storage.
      */

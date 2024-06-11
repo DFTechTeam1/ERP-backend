@@ -25,6 +25,15 @@ class SettingService {
 
             if ($code == 'kanban') {
                 $settings = $this->formatKanbanSetting($selected);
+            } else {
+                $selected = collect($selected)->map(function ($item) {
+                    if ($item['key'] == 'production_staff_role') {
+                        $item['value'] = json_decode($item['value'], true);
+                    }
+                    
+                    return $item;
+                })->toArray();
+                $settings = $selected;
             }
         }
 
@@ -32,6 +41,28 @@ class SettingService {
             'success',
             false,
             $settings,
+        );
+    }
+
+    public function getSettingByKeyAndCode(string $key, string $code)
+    {
+        $settings = \Illuminate\Support\Facades\Cache::get('setting');
+
+        $selected = collect($settings)->filter(function ($filter) use ($key) {
+            return $filter['key'] == $key;
+        })->values()->toArray();
+
+        $out = null;
+        if (count($selected) > 0) {
+            $out = $selected[0];
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'email' => $out,
+            ],
         );
     }
 
@@ -45,6 +76,7 @@ class SettingService {
         return [
             'key' => $out['key'],
             'boards' => $kanban,
+            'id' => $out['id'],
         ];
     }
 
@@ -134,15 +166,63 @@ class SettingService {
         try {
             if ($code == 'kanban') {
                 $this->storeKanban($data);
+            } else if ($code == 'email') {
+                $this->storeEmail($data);
+            } else if ($code == 'general') {
+                $this->storeGeneral($data);
             }
 
             return generalResponse(
                 __("global.successUpdateSetting"),
-                false
+                false,
+                $data
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    protected function storeGeneral(array $data)
+    {
+        foreach ($data as $key => $value) {
+            $valueData = gettype($key) == 'array' ? json_encode($value) : $value;
+
+            $this->repo->updateOrInsert(
+                ['code' => 'general'],
+                [
+                    'key' => $key,
+                    'value' => $valueData,
+                ],
+            );
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('setting');
+    }
+
+    protected function storeEmail(array $data)
+    {
+        foreach ($data as $key => $value) {
+            // change config
+            if ($key == 'email_host') {
+                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.host", $value);
+            } else if ($key == 'email_port') {
+                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.port", $value);
+            } else if ($key == 'username') {
+                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.username", $value);
+            } else if ($key == 'password') {
+                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.password", $value);
+            }
+
+            $this->repo->updateOrInsert(
+                ['code' => 'email'],
+                [
+                    'key' => $key,
+                    'value' => $value,
+                ],
+            );
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('setting');
     }
 
     /**
@@ -153,11 +233,18 @@ class SettingService {
      */
     protected function storeKanban(array $data)
     {
+        $boards = [];
+        foreach ($data['boards'] as $key => $board) {
+            $boards[] = $board;
+
+            $boards[$key]['id'] = $key + 1;
+        }
+        
         $this->repo->updateOrInsert(
             ['code' => 'kanban'],
             [
                 'key' => 'default_boards',
-                'value' => json_encode($data['boards']),
+                'value' => json_encode($boards),
             ]
         );
 

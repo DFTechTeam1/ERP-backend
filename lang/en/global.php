@@ -81,6 +81,8 @@ return [
     'taskLink' => 'Task Link',
     'externalLink' => 'External Link',
     'at' => 'at',
+    'asPicProject' => 'As PIC Project',
+    'haveCountTask' => 'Have :countTask task in this project',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

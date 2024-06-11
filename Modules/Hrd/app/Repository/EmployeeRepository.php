@@ -47,7 +47,7 @@ class EmployeeRepository extends EmployeeInterface
             $query->whereRaw($where);
         }
 
-        if ($whereHas) {
+        if (count($whereHas) > 0) {
             foreach ($whereHas as $wh) {
                 $query->whereHas($wh['relation'], function (Builder $query) use ($wh) {
                     $query->whereRaw($wh['query']);
@@ -123,7 +123,7 @@ class EmployeeRepository extends EmployeeInterface
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function show(string $uid, string $select = '*', array $relation = [])
+    function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
@@ -133,9 +133,13 @@ class EmployeeRepository extends EmployeeInterface
             $query->with($relation);
         }
 
-        $data = $query->where('uid', $uid);
+        if (empty($where)) {
+            $query->where('uid', $uid);
+        } else {
+            $query->whereRaw($where);
+        }
 
-        return $data->first();
+        return $query->first();
     }
 
     /**

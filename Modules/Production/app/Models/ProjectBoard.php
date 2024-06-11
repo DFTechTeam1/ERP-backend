@@ -18,7 +18,8 @@ class ProjectBoard extends Model
     protected $fillable = [
         'project_id',
         'name',
-        'sort'
+        'sort',
+        'based_board_id'
     ];
 
     public function tasks(): HasMany

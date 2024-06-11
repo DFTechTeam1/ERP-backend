@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             AddonConfigurationSeeder::class,
             MenuSeeder::class,
             KanbanSettingSeeder::class,
+            EmailSettingSeeder::class,
+            GeneralSettingSeeder::class,
         ]);
     }
 }
