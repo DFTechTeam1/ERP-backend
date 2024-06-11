@@ -29,8 +29,10 @@ class SettingService {
                 $selected = collect($selected)->map(function ($item) {
                     if ($item['key'] == 'production_staff_role') {
                         $item['value'] = json_decode($item['value'], true);
+                    } else if ($item['key'] == 'super_user_role' || $item['key'] == 'board_start_calcualted') {
+                        $item['value'] = (int) $item['value'];
                     }
-                    
+
                     return $item;
                 })->toArray();
                 $settings = $selected;
