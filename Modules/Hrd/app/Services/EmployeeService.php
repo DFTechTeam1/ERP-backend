@@ -23,6 +23,8 @@ class EmployeeService
     private $repo;
     private $positionRepo;
     private $userRepo;
+    private $taskRepo;
+    private $projectRepo;
 
     private $idCardPhotoTmp;
     private $npwpPhotoTmp;
@@ -35,6 +37,10 @@ class EmployeeService
         $this->positionRepo = new PositionRepository;
 
         $this->userRepo = new \App\Repository\UserRepository();
+
+        $this->taskRepo = new \Modules\Production\Repository\ProjectTaskRepository();
+
+        $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
     }
 
     /**
@@ -376,10 +382,63 @@ class EmployeeService
     {
         try {
             $relation = [
-                'position:id,name'
+                'position:id,name',
             ];
 
             $data = $this->repo->show($uid, $select, $relation);
+
+            // get projects and tasks if any
+            $projects = [];
+            $asPicProjects = $this->projectRepo->list('id,name,uid,project_date,created_at', '', [], [
+                [
+                    'relation' => 'personInCharges',
+                    'query' => "pic_id = " . $data->id,
+                ],
+            ]);
+            $asPicProjects = collect($asPicProjects)->map(function ($item) {
+                return [
+                    'id' => $item->uid,
+                    'name' => $item->name,
+                    'position' => __("global.asPicProject"),
+                    'project_date' => date('d F Y', strtotime($item->project_date)),
+                    'assign_at' => date('d F Y', strtotime($item->created_at)),
+                    'detail_task' => [],
+                ];
+            })->toArray();
+            $projects = array_merge($projects, $asPicProjects);
+
+            $asPicTaskRaw = $this->taskRepo->list('id,project_id,name,created_at,start_working_at,uid,created_at', '', ['project:id,name,uid,project_date'], [
+                [
+                    'relation' => 'pics',
+                    'query' => 'employee_id = ' . $data->id,
+                ]
+            ])->groupBy('project_id')->all();
+            $asPicTask = [];
+            $a = 0;
+            foreach ($asPicTaskRaw as $projectId => $value) {
+                foreach ($value as $task) {
+                    $asPicTask[$a] = [
+                        'name' => $task->project->name,
+                        'id' => $task->project->uid,
+                        'position' => __('global.haveCountTask', ['countTask' => $value->count()]),
+                        'project_date' => date('d F Y', strtotime($task->project->project_date)),
+                        'assign_at' => date('d F Y', strtotime($task->created_at)),
+                        'detail_task' => collect($value)->map(function ($detailTask) {
+                            return [
+                                'name' => $detailTask->name,
+                                'id' => $detailTask->uid,
+                                'start_working_at' => $detailTask->start_working_at ? date('d F Y, H:i', strtotime($detailTask->start_working_at)) : null,
+                                'assign_at' => date('d F Y', strtotime($detailTask->created_at)),
+                            ];
+                        })->toArray(),
+                    ];
+                }
+
+                $a++;
+            }
+            $projects = array_merge($projects, $asPicTask);
+            $data['project_detail'] = $projects;
+
             $data['bank_detail'] = json_decode($data->bank_detail, true);
             $data['emergency_contact'] = json_decode($data->relation_contact, true);
             

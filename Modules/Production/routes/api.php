@@ -27,6 +27,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
     Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask']);
     Route::post('project/{taskId}/description', [ProjectController::class, 'storeDescription']);
+    Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
     Route::delete('project/{taskUid}/task', [ProjectController::class, 'deleteTask']);
     Route::put('project/basic/{projectId}', [ProjectController::class, 'updateBasic']);
     Route::put('project/moreDetail/{id}', [ProjectController::class, 'updateMoreDetail']);

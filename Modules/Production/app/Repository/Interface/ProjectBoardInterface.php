@@ -7,7 +7,7 @@ abstract class ProjectBoardInterface {
 
     abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
 
-    abstract function show(int $uid, string $select = '*', array $relation = []);
+    abstract function show(int $uid, string $select = '*', array $relation = [], string $where = '');
 
     abstract function store(array $data);
 

@@ -5,6 +5,7 @@ namespace Modules\Production\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
+use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\Create;
 use Modules\Production\Http\Requests\Project\CreateDescription;
 use Modules\Production\Http\Requests\Project\CreateTask;
@@ -304,5 +305,17 @@ class ProjectController extends Controller
     public function deleteAttachment(string $projectUid, string $taskUid, int $attachmentId)
     {
         return apiResponse($this->service->deleteAttachment($projectUid, $taskUid, $attachmentId));
+    }
+
+    /**
+     * Change board of task (When user move a task)
+     *
+     * @param ChangeTaskBoard $request
+     * @param string $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function changeTaskBoard(ChangeTaskBoard $request, string $projectId)
+    {
+        return apiResponse($this->service->changeTaskBoard($request->validated(), $projectId));
     }
 }

@@ -75,6 +75,13 @@ class ProjectService {
             $search = request('search');
             $whereHas = [];
 
+            $superAdminRole = getSettingByKey('super_user_role');
+            $roles = auth()->user()->roles;
+            $isSuperAdmin = $roles[0]->id == $superAdminRole ? true : false;
+
+            $productionRoles = json_decode(getSettingByKey('production_staff_role'), true);
+            $isProductionRole = in_array($roles[0]->id, $productionRoles);
+
             if (
                 ($search) &&
                 (count($search) > 0)
@@ -120,18 +127,39 @@ class ProjectService {
                 }
 
                 if (!empty($search['pic']) && empty($whereHas)) {
-                    $pics = $search['pic'];
-                    $pics = collect($pics)->map(function ($pic) {
-                        $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
-                        return $picId;
-                    })->toArray();
-                    $picData = implode(',', $pics);
-                    $whereHas = [
+                    if ($isSuperAdmin) {
+                        $pics = $search['pic'];
+                        $pics = collect($pics)->map(function ($pic) {
+                            $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
+                            return $picId;
+                        })->toArray();
+                        $picData = implode(',', $pics);
+                        $whereHas = [
+                            [
+                                'relation' => 'personInCharges',
+                                'query' => "pic_id IN ({$picData})",
+                            ],
+                        ];
+                    }
+                }
+            }
+
+            // get project that only related to authorized user
+            if ($isProductionRole) {
+                $employeeId = $this->employeeRepo->show('dummy', 'id', [], 'user_id = ' . auth()->id());
+
+                if ($employeeId) {
+                    $taskIds = $this->taskPicRepo->list('id,project_task_id', 'employee_id = ' . $employeeId->id);
+                    $taskIds = collect($taskIds)->pluck('project_task_id')->toArray();
+
+                    $newWhereHas = [
                         [
-                            'relation' => 'personInCharges',
-                            'query' => "pic_id IN ({$picData})",
-                        ],
+                            'relation' => 'tasks',
+                            'query' => 'id IN ('. implode(',', $taskIds) .')'
+                        ]
                     ];
+
+                    $whereHas = array_merge($whereHas, $newWhereHas);
                 }
             }
 
@@ -587,6 +615,13 @@ class ProjectService {
             $project->personInCharges()->createMany($pics);
 
             $defaultBoards = json_decode(getSettingByKey('default_boards'), true);
+            $defaultBoards = collect($defaultBoards)->map(function ($item) {
+                return [
+                    'based_board_id' => $item['id'],
+                    'sort' => $item['sort'],
+                    'name' => $item['name'],
+                ];
+            })->values()->toArray();
             if ($defaultBoards) {
                 $project->boards()->createMany($defaultBoards);
             }
@@ -1640,6 +1675,49 @@ class ProjectService {
                     'task' => $task,
                     'full_detail' => $currentData,
                 ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Change board of task (When user move a task)
+     *
+     * @param array $data
+     * @param string $projectUid
+     * @return array
+     */
+    public function changeTaskBoard(array $data, string $projectUid)
+    {
+        try {
+            // Init Worktime
+            $startCalculatedBoard = getSettingByKey('board_start_calcualted');
+            $boardData = $this->boardRepo->show($data['board_id'], 'based_board_id');
+
+            $startWorkTime = null;
+            if ($boardData->based_board_id == $startCalculatedBoard) {
+                $startWorkTime = date('Y-m-d H:i:s');
+            }
+
+            $this->taskRepo->update([
+                'project_board_id' => $data['board_id'],
+                'start_working_at' => $startWorkTime
+            ], '', "id = " . $data['task_id']);
+
+            $cache = $this->getDetailProjectCache($projectUid);
+            $currentData = $cache['cache'];
+            $projectId = $cache['projectId'];
+
+            $boards = $this->formattedBoards($projectUid);
+            $currentData['boards'] = $boards;
+
+            storeCache('detailProject' . $projectId, $currentData);
+            
+            return generalResponse(
+                'success',
+                false,
+                $currentData,
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
