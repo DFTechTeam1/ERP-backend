@@ -17,7 +17,8 @@ class MoreDetailUpdate extends FormRequest
             'event_type' => 'required',
             'note' => 'nullable',
             'status' => 'required',
-            'venue' => 'required'
+            'venue' => 'required',
+            'pic' => 'required',
         ];
     }
 

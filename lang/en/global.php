@@ -146,11 +146,12 @@ return [
     'successCreateReferences' => 'Success create references',
     'successDeleteReference' => 'Success delete reference',
     'taskCreated' => 'Task has been created',
-    'descriptionAdded' => 'Description has been added',
+    'descriptionAdded' => 'Description has been modified',
     'memberAdded' => 'Members has been assign to task',
     'successDeleteTask' => 'Success delete task',
     'equipmentCanceled' => 'Equipment is canceled',
     'deadlineAdded' => 'Deadline is added',
     'successUploadAttachment' => 'Success upload attachment',
     'successDeleteAttachment' => 'Success delete attachment',
+    'successDeleteProject' => 'Success delete project',
 ];

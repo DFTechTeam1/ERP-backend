@@ -224,6 +224,20 @@ class ProjectController extends Controller
     }
 
     /**
+     * Delete multiple data
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function bulkDelete(Request $request)
+    {
+        return apiResponse($this->service->bulkDelete(
+            collect($request->ids)->map(function ($item) {
+                return $item['uid'];
+            })->toArray()
+        ));
+    }
+
+    /**
      * Store new request equipment
      *
      * @param \Modules\Production\Http\Requests\Project\RequestEquipment $request
@@ -317,5 +331,10 @@ class ProjectController extends Controller
     public function changeTaskBoard(ChangeTaskBoard $request, string $projectId)
     {
         return apiResponse($this->service->changeTaskBoard($request->validated(), $projectId));
+    }
+
+    public function updateTaskName(Request $request, string $projectUid, string $taskId)
+    {
+        return apiResponse($this->service->updateTaskName($request->all(), $projectUid, $taskId));
     }
 }

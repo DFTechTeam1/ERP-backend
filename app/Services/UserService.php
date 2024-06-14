@@ -63,7 +63,13 @@ class UserService {
 
         $paginated = collect($paginated)->map(function ($item) {
             $roles = $item->getRoleNames();
+            $is_deleteable = true;
+            $is_editable = true;
 
+            // if user see himself on the list, then user cannot delete the data
+            if ($item->id == auth()->id()) {
+                $is_deleteable = false;
+            }
 
             return [
                 'last_login_at' => $item->lastLogin ? date('Y-m-d H:i:s', strtotime($item->lastLogin->login_at)) : null,
@@ -72,6 +78,8 @@ class UserService {
                 'role_name' => count($roles) > 0 ? $roles[0] : null,
                 'status' => $item->status,
                 'status_color' => $item->status_color,
+                'is_deleteable' => $is_deleteable,
+                'is_editable' => $is_editable,
             ];
         })->toArray();
         $totalData = $this->repo->list('id', $where)->count();

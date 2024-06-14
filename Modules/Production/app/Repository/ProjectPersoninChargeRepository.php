@@ -1,18 +1,18 @@
 <?php
 
-namespace Modules\Company\Repository;
+namespace Modules\Production\Repository;
 
-use Modules\Company\Models\Setting;
-use Modules\Company\Repository\Interface\SettingInterface;
+use Modules\Production\Models\ProjectPersoninCharge;
+use Modules\Production\Repository\Interface\ProjectPersoninChargeInterface;
 
-class SettingRepository extends SettingInterface {
+class ProjectPersoninChargeRepository extends ProjectPersoninChargeInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Setting();
+        $this->model = new ProjectPersoninCharge();
         $this->key = 'id';
     }
 
@@ -80,17 +80,13 @@ class SettingRepository extends SettingInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where("uid", $uid);
-        } else {
-            $query->whereRaw($where);
-        }
+        $query->where("uid", $uid);
         
         if ($relation) {
             $query->with($relation);
@@ -140,32 +136,17 @@ class SettingRepository extends SettingInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(int $id, string $where = '')
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
-    }
+        $query = $this->model->query();
+        
+        if (empty($where)) {
+            $query->where('id', $id);
+        } else {
+            $query->whereRaw($where);
+        }
 
-    /**
-     * Delete setting by code
-     *
-     * @param string $code
-     */
-    public function deleteByCode(string $code)
-    {
-        return $this->model->where('code', $code)
-            ->delete();
-    }
-
-    /**
-     * Function to update or insert setting
-     *
-     * @param array $condition
-     * @param array $updatedColumn
-     */
-    public function updateOrInsert(array $condition, array $updatedColumn)
-    {
-        return $this->model->updateOrInsert($condition, $updatedColumn);
+        return $query->delete();
     }
 
     /**

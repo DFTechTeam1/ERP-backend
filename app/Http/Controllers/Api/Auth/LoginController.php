@@ -43,6 +43,7 @@ class LoginController extends Controller
             $validated = $request->validated();
 
             $user = User::where('email', $validated['email'])
+                ->with(['employee.position', 'roles'])
                 ->first();
 
             if (!$user) {
@@ -58,6 +59,11 @@ class LoginController extends Controller
             }
 
             $role = $user->getRoleNames()[0];
+            $roles = $user->roles;
+            $roleId = null;
+            if (count($roles) > 0) {
+                $roleId = $roles[0]->id;
+            }
             $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
             $token = $user->createToken($role, $permissions, now()->addHours(2));
@@ -72,6 +78,9 @@ class LoginController extends Controller
                 'permissions' => $permissions,
                 'role' => $role,
                 'menus' => $menus['data'],
+                'role_id' => $roleId,
+                'app_name' => getSettingByKey('app_name'),
+                'board_start_calcualted' => getSettingByKey('board_start_calcualted'),
             ];
 
             $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
