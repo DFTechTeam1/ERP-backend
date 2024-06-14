@@ -118,11 +118,21 @@ class RoleService {
                 $role->givePermissionTo($permission);
             }
 
+            // if actor is the owner of this role, then suggest to logout
+            $userRoles = auth()->user()->roles;
+            $hasToLogout = false;
+            if ($userRoles[0]->id == $role->id) {
+                $hasToLogout = true;
+            }
+
             DB::commit();
 
             return generalResponse(
                 __('global.successUpdateRole'),
                 false,
+                [
+                    'has_to_logout' => $hasToLogout
+                ]
             );
         } catch (\Throwable $th) {
             DB::rollBack();

@@ -12,6 +12,7 @@ use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectTaskAttachmentRepository;
+use Modules\Production\Repository\ProjectPersoninChargeRepository;
 
 class ProjectService {
     private $repo;
@@ -29,6 +30,8 @@ class ProjectService {
     private $projectEquipmentRepo;
 
     private $projectTaskAttachmentRepo;
+
+    private $projectPicRepository;
 
     /**
      * Construction Data
@@ -50,6 +53,102 @@ class ProjectService {
         $this->projectEquipmentRepo = new ProjectEquipmentRepository;
 
         $this->projectTaskAttachmentRepo = new ProjectTaskAttachmentRepository;
+
+        $this->projectPicRepository = new ProjectPersoninChargeRepository;
+    }
+
+    /**
+     * Delete bulk data
+     *
+     * @param array $ids
+     * 
+     * @return array
+     */
+    public function bulkDelete(array $ids): array
+    {
+        DB::beginTransaction();
+        try {
+            foreach ($ids as $id) {
+                $projectId = getIdFromUid($id, new \Modules\Production\Models\Project());
+
+                // delete all related data with this project
+                $this->deleteProjectReference($projectId);
+                $this->deleteProjectTasks($projectId);
+                $this->deleteProjectEquipmentRequest($projectId);
+                $this->deleteProjectPic($projectId);
+                $this->deleteProjectBoard($projectId);
+            }
+
+            $this->repo->bulkDelete($ids, 'uid');
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successDeleteProject'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    protected function deleteProjectBoard(int $projectId)
+    {
+        $this->boardRepo->delete(0, 'project_id = ' . $projectId);
+    }
+
+    protected function deleteProjectPic(int $projectId)
+    {
+        $this->projectPicRepository->delete(0, 'project_id = ' . $projectId);
+    }
+
+    protected function deleteProjectEquipmentRequest(int $projectId)
+    {
+        $data = $this->projectEquipmentRepo->list('id,project_id', 'project_id = ' . $projectId);
+
+        if (count($data) > 0) {
+            // send notification
+        }
+
+        $this->projectEquipmentRepo->delete(0, 'project_id = ' . $projectId);
+    }
+
+    protected function deleteProjectTasks(int $projectId)
+    {
+        $data = $this->taskRepo->list('id,project_id', 'project_id = ' . $projectId);
+        
+        foreach ($data as $task) {
+            // delete task attachments
+            $taskAttachments = $this->projectTaskAttachmentRepo->list('id,media', 'project_task_id = ' . $task->id);
+
+            if (count($taskAttachments) > 0) {
+                foreach ($taskAttachments as $attachment) {
+                    $path = storage_path("app/public/projects/{$projectId}/task/{$task->id}/{$attachment->media}");
+                    deleteImage($path);
+                    
+                    $this->projectTaskAttachmentRepo->delete($attachment->id);
+                }
+            }
+
+            $this->taskRepo->delete($task->id);
+        }
+    }
+
+    protected function deleteProjectReference(int $projectId)
+    {
+        $data = $this->referenceRepo->list('id,project_id,media_path', 'project_id = ' . $projectId);
+
+        foreach ($data as $reference) {
+            // delete image
+            $path = storage_path("app/public/projects/references/{$projectId}/{$reference->media_path}");
+            logging('path', [$path]);
+
+            deleteImage($path);
+
+            $this->referenceRepo->delete($reference->id);
+        }
     }
 
     /**
@@ -312,9 +411,11 @@ class ProjectService {
         $pics = [];
         $teams = [];
         $picIds = [];
+        $picUids = [];
         foreach ($project->personInCharges as $key => $pic) {
             $pics[] = $pic->employee->name . '('. $pic->employee->employee_id .')';   
             $picIds[] = $pic->pic_id;
+            $picUids[] = $pic->employee->uid;
         }
 
         $teams = $this->employeeRepo->list(
@@ -349,6 +450,7 @@ class ProjectService {
         return [
             'pics' => $pics,
             'teams' => $teams,
+            'picUids' => $picUids,
         ];
     }
 
@@ -498,7 +600,7 @@ class ProjectService {
                 $data = $this->repo->show($uid, '*', [
                     'marketing:id,name,employee_id',
                     'personInCharges:id,pic_id,project_id',
-                    'personInCharges.employee:id,name,employee_id',
+                    'personInCharges.employee:id,name,employee_id,uid',
                     'references:id,project_id,media_path,name,type',
                     'equipments.inventory:id,name',
                     'equipments.inventory.image'
@@ -513,6 +615,7 @@ class ProjectService {
                 $projectTeams = $this->getProjectTeams($data);
                 $teams = $projectTeams['teams'];
                 $pics = $projectTeams['pics'];
+                $picIds = $projectTeams['picUids'];
     
                 $marketing = $data->marketing ? $data->marketing->name : '-';
     
@@ -548,6 +651,7 @@ class ProjectService {
                     'venue' => $data->venue,
                     'marketing' => $marketing,
                     'pic' => implode(', ', $pics),
+                    'pic_ids' => $picIds,
                     'collaboration' => $data->collaboration,
                     'note' => $data->note ?? '-',
                     'led_area' => $data->led_area,
@@ -649,10 +753,31 @@ class ProjectService {
      */
     public function updateMoreDetail(array $data, string $id)
     {
+        DB::beginTransaction();
         try {
-            $this->repo->update($data, $id);
+            $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
+            $projectId = getIdFromUid($id, new \Modules\Production\Models\Project());
 
-            $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue');
+            foreach ($data['pic'] as $pic) {
+                $employeeId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
+
+                $this->projectPicRepository->delete(0, 'project_id = ' . $projectId);
+
+                $this->projectPicRepository->store([
+                    'pic_id' => $employeeId,
+                    'project_id' => $projectId,
+                ]);
+            }
+
+            $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue', [
+                'personInCharges:id,pic_id,project_id',
+                'personInCharges.employee:id,name,employee_id,uid',
+            ]);
+
+            $projectTeams = $this->getProjectTeams($project);
+            $teams = $projectTeams['teams'];
+            $pics = $projectTeams['pics'];
+            $picIds = $projectTeams['picUids'];
 
             $currentData = getCache('detailProject' . $project->id);
             $currentData['venue'] = $project->venue;
@@ -663,8 +788,13 @@ class ProjectService {
             $currentData['status_raw'] = $project->status;
             $currentData['note'] = $project->note ?? '-';
             $currentData['client_portal'] = $project->client_portal;
+            $currentData['pic'] = implode(', ', $pics);
+            $currentData['pic_ids'] = $picIds;
+            $currentData['teams'] = $teams;
 
             storeCache('detailProject' . $project->id, $currentData);
+
+            DB::commit();
 
             return generalResponse(
                 __('global.successUpdateBasicInformation'),
@@ -672,6 +802,8 @@ class ProjectService {
                 $currentData
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -1305,27 +1437,6 @@ class ProjectService {
     }
 
     /**
-     * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
-     */
-    public function bulkDelete(array $ids): array
-    {
-        try {
-            $this->repo->bulkDelete($ids, 'uid');
-
-            return generalResponse(
-                'success',
-                false,
-            );
-        } catch (\Throwable $th) {
-            return errorResponse($th);
-        }
-    }
-
-    /**
      * Get Available project status
      *
      * @return array
@@ -1406,8 +1517,8 @@ class ProjectService {
             logging('payload update deadline', $data);
             $this->taskRepo->update(
                 [
-                    'start_date' => date('Y-m-d', strtotime($data['start_date'])),
-                    'end_date' => date('Y-m-d', strtotime($data['end_date'])),
+                    'start_date' => empty($data['start_date']) ? null : date('Y-m-d', strtotime($data['start_date'])),
+                    'end_date' => empty($data['end_date']) ? null : date('Y-m-d', strtotime($data['end_date'])),
                 ],
                 $data['task_id']
             );
@@ -1700,10 +1811,10 @@ class ProjectService {
                 $startWorkTime = date('Y-m-d H:i:s');
             }
 
-            $this->taskRepo->update([
-                'project_board_id' => $data['board_id'],
-                'start_working_at' => $startWorkTime
-            ], '', "id = " . $data['task_id']);
+            // $this->taskRepo->update([
+            //     'project_board_id' => $data['board_id'],
+            //     'start_working_at' => $startWorkTime
+            // ], '', "id = " . $data['task_id']);
 
             $cache = $this->getDetailProjectCache($projectUid);
             $currentData = $cache['cache'];
@@ -1718,6 +1829,43 @@ class ProjectService {
                 'success',
                 false,
                 $currentData,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update task name
+     *
+     * @param array $data
+     * @param string $projectUid
+     * @param string $taskId
+     * @return array
+     */
+    public function updateTaskName(array $data, string $projectUid, string $taskId)
+    {
+        try {
+            $this->taskRepo->update($data, $taskId);
+
+            $task = $this->formattedDetailTask($taskId);
+
+            $cache = $this->getDetailProjectCache($projectUid);
+            $currentData = $cache['cache'];
+            $projectId = $cache['projectId'];
+
+            $boards = $this->formattedBoards($projectUid);
+            $currentData['boards'] = $boards;
+
+            storeCache('detailProject' . $projectId, $currentData);
+
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

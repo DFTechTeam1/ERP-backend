@@ -145,10 +145,17 @@ class ProjectEquipmentRepository extends ProjectEquipmentInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(int $id = 0, string $where = '')
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
+        $query = $this->model->query();
+        
+        if (empty($where)) {
+            $query->where('id', $id);
+        } else {
+            $query->whereRaw($where);
+        }
+
+        return $query->delete();
     }
 
     /**

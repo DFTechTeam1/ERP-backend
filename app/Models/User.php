@@ -63,6 +63,11 @@ class User extends Authenticatable
         return $this->hasOne(UserLoginHistory::class, 'user_id');
     }
 
+    public function employee(): HasOne
+    {
+        return $this->hasOne(\Modules\Hrd\Models\Employee::class, 'user_id');
+    }
+
     public function status(): Attribute
     {
         $out = __('global.notYetVerified');

@@ -16,7 +16,7 @@ class SettingService {
         $this->repo = new SettingRepository;
     }
 
-    public function getSetting($code = null)
+    protected function formattedGlobalSetting($code = null)
     {
         $settings = \Illuminate\Support\Facades\Cache::get('setting');
 
@@ -37,7 +37,24 @@ class SettingService {
                 })->toArray();
                 $settings = $selected;
             }
+        } else {
+            $settings = collect($settings)->map(function ($item) {
+                if ($item['key'] == 'production_staff_role') {
+                    $item['value'] = json_decode($item['value'], true);
+                } else if ($item['key'] == 'default_boards') {
+                    $item['value'] = $this->formatKanbanSetting($item);
+                }
+
+                return $item;
+            })->groupBy('code')->toArray();
         }
+
+        return $settings;
+    }
+
+    public function getSetting($code = null)
+    {
+        $settings = $this->formattedGlobalSetting($code);
 
         return generalResponse(
             'success',
@@ -70,7 +87,7 @@ class SettingService {
 
     protected function formatKanbanSetting($setting)
     {
-        $out = $setting[0];
+        $out = isset($setting[0]) ? $setting[0] : $setting;
 
         $kanban = json_decode($out['value'], true);
         $kanban = collect($kanban)->sortBy('sort')->values();
@@ -174,10 +191,14 @@ class SettingService {
                 $this->storeGeneral($data);
             }
 
+            cachingSetting();
+
+            $settings = $this->formattedGlobalSetting();
+
             return generalResponse(
                 __("global.successUpdateSetting"),
                 false,
-                $data
+                $settings
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -187,15 +208,20 @@ class SettingService {
     protected function storeGeneral(array $data)
     {
         foreach ($data as $key => $value) {
-            $valueData = gettype($key) == 'array' ? json_encode($value) : $value;
+            $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $this->repo->updateOrInsert(
-                ['code' => 'general'],
-                [
+            $check = $this->repo->show('dummy', 'id', [], "key = '" . $key . "'");
+            if ($check) {
+                $this->repo->update([
+                    'value' => $valueData
+                ], 'dummy', 'id = ' . $check->id);
+            } else {
+                $this->repo->store([
                     'key' => $key,
                     'value' => $valueData,
-                ],
-            );
+                    'code' => 'general',
+                ]);
+            }
         }
 
         \Illuminate\Support\Facades\Cache::forget('setting');
@@ -215,13 +241,9 @@ class SettingService {
                 \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.password", $value);
             }
 
-            $this->repo->updateOrInsert(
-                ['code' => 'email'],
-                [
-                    'key' => $key,
-                    'value' => $value,
-                ],
-            );
+            $this->repo->update([
+                'value' => $value
+            ], '', "key = '" . $key . "'");
         }
 
         \Illuminate\Support\Facades\Cache::forget('setting');
