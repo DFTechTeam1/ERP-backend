@@ -382,7 +382,7 @@ class EmployeeService
     {
         try {
             $relation = [
-                'position:id,name',
+                'position:id,name,uid',
             ];
 
             $data = $this->repo->show($uid, $select, $relation);
@@ -442,6 +442,12 @@ class EmployeeService
             $data['bank_detail'] = json_decode($data->bank_detail, true);
             $data['emergency_contact'] = json_decode($data->relation_contact, true);
             
+            $data['boss_uid'] = null;
+            if ($data->boss_id) {
+                $bossData = $this->repo->show('dummy', 'id,uid', [], 'id = ' . $data->boss_id);
+                $data['boss_uid'] = $bossData->uid;
+            }
+            
             return generalResponse(
                 'Success',
                 false,
@@ -480,6 +486,12 @@ class EmployeeService
             $data['company_name'] = $data['company'];
             $data['date_of_birth'] = $data['date_of_birth'] != 'null' ? date('Y-m-d', strtotime($data['date_of_birth'])) : null;
             $data['position_id'] = getIdFromUid($data['position_id'], new Position());
+            $data['province_id'] = isset($data['province_id']) ? $data['province_id'] : null;
+            $data['city_id'] = isset($data['city_id']) ? $data['city_id'] : null;
+            $data['district_id'] = isset($data['district_id']) ? $data['district_id'] : null;
+            $data['village_id'] = isset($data['village_id']) ? $data['village_id'] : null;
+            $data['dependant'] = $data['dependents'] != null ? $data['dependents'] : null;
+
             if (isset($data['boss_id'])) {
                 $data['boss_id'] = getIdFromUid($data['boss_id'], new \Modules\Hrd\Models\Employee());
             }
@@ -585,7 +597,7 @@ class EmployeeService
     {
         try {
             $deletedImages = $data['deleted_image'] ?? [];
-            $employee = $this->repo->show($uid, 'id,id_number_photo,npwp_photo,kk_photo,bpjs_photo');
+            // $employee = $this->repo->show($uid, 'id,id_number_photo,npwp_photo,kk_photo,bpjs_photo');
 
             $data['bank_detail'] = json_encode($data['banks']);
             $data['relation_contact'] = json_encode($data['relation']);
@@ -658,6 +670,8 @@ class EmployeeService
                 );
                 $data['kk_photo'] = $this->kkPhotoTmp;
             }
+
+            logging('employee payload', $data);
 
             $payloadUpdate = collect($data)->except([
                 'banks',

@@ -377,6 +377,7 @@ class InventoryService {
                 'purchase_price' => $data->purchase_price ? config('company.currency') . ' ' . number_format($data->purchase_price, 0, config('company.pricing_divider'), config('company.pricing_divider')) : '-',
                 'price_raw' => $data->purchase_price ? $data->purchase_price : '',
                 'last_update' => date('d F Y H:i', strtotime($data->updated_at)),
+                'warranty' => $data->warranty,
                 'items' => collect($data->items)->map(function ($item) {
                     return [
                         'inventory_code' => $item->inventory_code,

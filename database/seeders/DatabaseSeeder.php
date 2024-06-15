@@ -14,9 +14,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(IndonesiaDatabaseSeeder::class);
+
         $this->call([
             UserPermissionGroupSeeder::class,
-            // IndonesiaDatabaseSeeder::class,
             AddonConfigurationSeeder::class,
             MenuSeeder::class,
             KanbanSettingSeeder::class,
