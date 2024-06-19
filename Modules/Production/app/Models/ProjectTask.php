@@ -56,6 +56,16 @@ class ProjectTask extends Model
             ->orWhere('type', \App\Enums\Production\ProjectTaskAttachment::ExternalLink->value);
     }
 
+    public function proofOfWorks(): HasMany
+    {
+        return $this->hasMany(ProjectTaskProofOfWork::class, 'project_task_id');
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(ProjectTaskLog::class, 'project_task_id');
+    }
+
     public function taskLink(): HasMany
     {
         return $this->hasMany(ProjectTaskAttachment::class, 'project_task_id')
@@ -118,5 +128,18 @@ class ProjectTask extends Model
         return Attribute::make(
             get: fn() => $out,
         );
+    }
+
+    public function haveTaskPic()
+    {
+        if (isset($this->attributes['id'])) {
+        }
+        $out = false;
+
+        if ($this->pics()->count() > 0) {
+            $out = true;
+        }
+
+        return $out;
     }
 }

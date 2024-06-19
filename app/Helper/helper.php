@@ -31,27 +31,27 @@ if (!function_exists('successResponse')) {
 
 if (!function_exists('errorMessage')) {
     function errorMessage($message) {
-        if (($message instanceof Throwable) && App::environment('local')) {
+
+        if (($message instanceof Throwable) && config('app.env') == 'local') {
             $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
-        } else if (($message instanceof Throwable) && !App::environment('local')) {
+        } else if (($message instanceof Throwable) && config('app.env') != 'local') {
             $out = __('global.failedProcessingData');
         } else if (!$message instanceof Throwable) {
             $out = $message;
         }
-
-        $class = "UserNotFound";
         
         if (file_exists(base_path('exceptions.json'))) {
             $exceptions = File::get(base_path('exceptions.json'));
             $exceptionArray = json_decode($exceptions, true);
             $arrayKeys = array_keys($exceptionArray);
+
             
             foreach ($arrayKeys as $exception) {
                 $check = "\\App\\Exceptions\\{$exception}";
                 if ($message instanceof $check) {
                     $out = $message->getMessage();
                     break;
-                }{}
+                }
             }
         }
 

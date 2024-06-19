@@ -491,3 +491,25 @@ Table project_task_comments {
     created_at timestamp
     updated_at timestamp
 }
+
+Table project_task_log {
+    id int [pk, increment]
+    project_task_id int
+    type varchar
+    text varchar
+    user_id int
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table project_task_proof_of_work {
+    id int [pk, increment]
+    project_task_id int
+    project_id int
+    nas_link varchar
+    preview_image longtext
+    created_by int
+    updated_by int
+    created_at timestamp
+    updated_at timestamp
+}

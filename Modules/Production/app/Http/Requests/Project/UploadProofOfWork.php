@@ -4,7 +4,7 @@ namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ChangeTaskBoard extends FormRequest
+class UploadProofOfWork extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -12,9 +12,10 @@ class ChangeTaskBoard extends FormRequest
     public function rules(): array
     {
         return [
+            'nas_link' => 'nullable',
+            'preview' => 'nullable',
             'board_id' => 'nullable',
-            'task_id' => 'nullable',
-            'board_source_id' => 'nullable'
+            'source_board_id' => 'nullable',
         ];
     }
 

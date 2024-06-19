@@ -12,6 +12,7 @@ use Modules\Production\Http\Requests\Project\CreateTask;
 use Modules\Production\Http\Requests\Project\MoreDetailUpdate;
 use Modules\Production\Http\Requests\Project\StoreReferences;
 use Modules\Production\Http\Requests\Project\UpdateDeadline;
+use Modules\Production\Http\Requests\Project\UploadProofOfWork;
 use Modules\Production\Services\ProjectService;
 
 class ProjectController extends Controller
@@ -331,6 +332,11 @@ class ProjectController extends Controller
     public function changeTaskBoard(ChangeTaskBoard $request, string $projectId)
     {
         return apiResponse($this->service->changeTaskBoard($request->validated(), $projectId));
+    }
+
+    public function proofOfWork(UploadProofOfWork $request, string $projectId, string $taskId)
+    {
+        return apiResponse($this->service->proofOfWork($request->validated(), $projectId, $taskId));
     }
 
     public function updateTaskName(Request $request, string $projectUid, string $taskId)

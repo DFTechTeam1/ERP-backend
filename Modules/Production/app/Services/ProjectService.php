@@ -13,6 +13,8 @@ use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectTaskAttachmentRepository;
 use Modules\Production\Repository\ProjectPersoninChargeRepository;
+use Modules\Production\Repository\ProjectTaskLogRepository;
+use Modules\Production\Repository\ProjectTaskProofOfWorkRepository;
 
 class ProjectService {
     private $repo;
@@ -32,6 +34,10 @@ class ProjectService {
     private $projectTaskAttachmentRepo;
 
     private $projectPicRepository;
+
+    private $projectTaskLogRepository;
+
+    private $proofOfWorkRepo;
 
     /**
      * Construction Data
@@ -55,6 +61,10 @@ class ProjectService {
         $this->projectTaskAttachmentRepo = new ProjectTaskAttachmentRepository;
 
         $this->projectPicRepository = new ProjectPersoninChargeRepository;
+
+        $this->projectTaskLogRepository = new ProjectTaskLogRepository;
+
+        $this->proofOfWorkRepo = new ProjectTaskProofOfWorkRepository;
     }
 
     /**
@@ -476,13 +486,28 @@ class ProjectService {
     {
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
-        $data = $this->boardRepo->list('id,project_id,name,sort', 'project_id = ' . $projectId, [
+        $data = $this->boardRepo->list('id,project_id,name,sort,based_board_id', 'project_id = ' . $projectId, [
             'tasks',
+            'tasks.proofOfWorks',
             'tasks.pics:id,project_task_id,employee_id',
             'tasks.pics.employee:id,name,email,uid',
             'tasks.medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
             'tasks.taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type',
         ]);
+
+        $boardAsBacklog = getSettingByKey('board_as_backlog');
+        $boardStartCheckByPm = getSettingByKey('board_to_check_by_pm');
+        $boardStartCalculated = getSettingByKey('board_start_calculated');
+        $boardCompleted = getSettingByKey('board_completed');
+
+        $data = collect($data)->map(function ($item) use ($boardAsBacklog, $boardStartCheckByPm, $boardStartCalculated, $boardCompleted) {
+            $item['board_as_backlog'] = $boardAsBacklog == $item->based_board_id ? true : false;
+            $item['board_to_check_by_pm'] = $boardStartCheckByPm == $item->based_board_id ? true : false;
+            $item['board_start_calculated'] = $boardStartCalculated == $item->based_board_id ? true : false;
+            $item['board_completed'] = $boardCompleted == $item->based_board_id ? true : false;
+
+            return $item;
+        });
 
         return $data;
     }
@@ -1792,6 +1817,84 @@ class ProjectService {
         }
     }
 
+    public function proofOfWork(array $data, string $projectUid, string $taskUid)
+    {
+        DB::beginTransaction();
+        $image = [];
+        $selectedProjectId = null;
+        $selectedTaskId = null;
+        $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
+        try {
+            if ($data['nas_link'] && $data['preview']) {
+                $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());;
+                $selectedProjectId = $projectId;
+                $selectedTaskId = $taskId;
+                
+                foreach ($data['preview'] as $img) {
+                    $image[] = uploadImageandCompress(
+                        "projects/{$projectId}/task/{$taskId}/proofOfWork",
+                        10,
+                        $img
+                    );
+                }
+
+                logging('image', $image);
+
+                $this->proofOfWorkRepo->store([
+                    'project_task_id' => $taskId,
+                    'project_id' => $projectId,
+                    'nas_link' => $data['nas_link'],
+                    'preview_image' => json_encode($image),
+                    'created_by' => auth()->id(),
+                ]);
+
+                $this->taskRepo->update([
+                    'project_board_id' => $data['board_id'],
+                ], $taskUid);
+
+                $task = $this->formattedDetailTask($taskUid);
+
+                // notified project manager
+                \Modules\Production\Jobs\ProofOfWorkJob::dispatch($projectId, $taskId, auth()->id())->afterCommit();
+
+                $cache = $this->getDetailProjectCache($projectUid);
+                $currentData = $cache['cache'];
+
+                $boards = $this->formattedBoards($projectUid);
+                $currentData['boards'] = $boards;
+
+                storeCache('detailProject' . $projectId, $currentData);
+            } else {
+                $task = $this->formattedDetailTask($taskUid);
+                $cache = $this->getDetailProjectCache($projectUid);
+                $currentData = $cache['cache'];
+                $projectId = $cache['projectId'];
+            }
+
+            DB::commit();
+            
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            // delete image if any
+            if (count($image) > 0) {
+                foreach ($image as $img) {
+                    deleteImage(storage_path("app/public/projects/{$selectedProjectId}/task/{$selectedTaskId}/proofOfWork/{$img}"));
+                }
+            }
+
+            return errorResponse($th);
+        }
+    }
+
     /**
      * Change board of task (When user move a task)
      *
@@ -1801,29 +1904,49 @@ class ProjectService {
      */
     public function changeTaskBoard(array $data, string $projectUid)
     {
+        $cache = $this->getDetailProjectCache($projectUid);
+        $currentData = $cache['cache'];
+        $projectId = $cache['projectId'];
+
+        DB::beginTransaction();
         try {
             // Init Worktime
             $startCalculatedBoard = getSettingByKey('board_start_calcualted');
-            $boardData = $this->boardRepo->show($data['board_id'], 'based_board_id');
+
+            $boardIds = [$data['board_id'], $data['board_source_id']];
+            $boards = $this->boardRepo->list('id,name,based_board_id', "id IN (". implode(',', $boardIds) .")");
+            $boardData = collect($boards)->filter(function ($filter) use ($data) {
+                return $filter->id == $data['board_id'];
+            })->values();
 
             $startWorkTime = null;
-            if ($boardData->based_board_id == $startCalculatedBoard) {
+            /**
+             * Only set worktime when task is have PIC
+             */
+            if (
+                $boardData[0]->based_board_id == $startCalculatedBoard && 
+                $this->taskPicRepo->list('id', 'project_task_id = ' . $data['task_id'])->count() > 0
+            ) {
                 $startWorkTime = date('Y-m-d H:i:s');
             }
 
-            // $this->taskRepo->update([
-            //     'project_board_id' => $data['board_id'],
-            //     'start_working_at' => $startWorkTime
-            // ], '', "id = " . $data['task_id']);
+            $this->taskRepo->update([
+                'project_board_id' => $data['board_id'],
+                'start_working_at' => $startWorkTime
+            ], '', "id = " . $data['task_id']);
 
-            $cache = $this->getDetailProjectCache($projectUid);
-            $currentData = $cache['cache'];
-            $projectId = $cache['projectId'];
+            // logging
+            $this->loggingTask(
+                collect($data)->merge(['boards' => $boards])->toArray(),
+                'moveTask'
+            );
 
             $boards = $this->formattedBoards($projectUid);
             $currentData['boards'] = $boards;
 
             storeCache('detailProject' . $projectId, $currentData);
+
+            DB::commit();
             
             return generalResponse(
                 'success',
@@ -1831,7 +1954,9 @@ class ProjectService {
                 $currentData,
             );
         } catch (\Throwable $th) {
-            return errorResponse($th);
+            DB::rollBack();
+
+            return errorResponse($th, $currentData);
         }
     }
 
@@ -1870,5 +1995,55 @@ class ProjectService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Create task log in every event
+     *
+     * @param array $payload
+     * @param string $type
+     * Type will be:
+     * 1. moveTask
+     * 2. addUser
+     * 3. addNewTask
+     * 4. addAttachment
+     * 5. deleteAttachment
+     * @return void
+     */
+    public function loggingTask($payload, string $type)
+    {
+        $type .= "Log";
+        return $this->{$type}($payload);
+    }
+
+    /**
+     * Add log when moving a task
+     *
+     * @param array $payload
+     * $payload will have
+     * [array boards, collection task, int|string board_id, int|string task_id, int|string board_source_id]
+     * @return void
+     */
+    protected function moveTaskLog($payload)
+    {
+        // get source board
+        $sourceBoard = collect($payload['boards'])->filter(function ($filter) use ($payload) {
+            return $filter['id'] == $payload['board_source_id'];
+        })->values();
+
+        $boardTarget = collect($payload['boards'])->filter(function ($filter) use ($payload) {
+            return $filter['id'] == $payload['board_id'];
+        })->values();
+
+        $text = __('global.moveTaskLogText', [
+            'name' => auth()->user()->username, 'boardSource' => $sourceBoard[0]['name'], 'boardTarget' => $boardTarget[0]['name']
+        ]);
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task_id'],
+            'type' => 'moveTask',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
     }
 }
