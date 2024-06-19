@@ -84,6 +84,14 @@ return [
     'asPicProject' => 'As PIC Project',
     'haveCountTask' => 'Have :countTask task in this project',
     'moveTaskLogText' => ':name moved this task from :boardSource to :boardTarget',
+    'addTaskText' => ':name add this task to :boardTarget',
+    'changeTaskNameLogText' => ':name change task name',
+    'updateDescriptionLogText' => ':name update task description',
+    'updateDeadlineLogText' => ':name update task deadline',
+    'assignMemberLogText' => ':assignedUser joinned this task',
+    'removedMemberLogText' => ':removedUser removed from this task',
+    'addAttachmentLogText' => ':name attached :media to this task',
+    'deleteAttachmentLogText' => ':name deleted :media attachment from this task',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

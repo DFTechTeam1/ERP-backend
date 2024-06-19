@@ -63,7 +63,8 @@ class ProjectTask extends Model
 
     public function logs(): HasMany
     {
-        return $this->hasMany(ProjectTaskLog::class, 'project_task_id');
+        return $this->hasMany(ProjectTaskLog::class, 'project_task_id')
+            ->orderBy('created_at', 'DESC');
     }
 
     public function taskLink(): HasMany

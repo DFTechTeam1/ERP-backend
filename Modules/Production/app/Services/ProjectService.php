@@ -471,7 +471,9 @@ class ProjectService {
             'pics:id,project_task_id,employee_id',
             'pics.employee:id,name,email,uid',
             'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
-            'taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type'
+            'taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type',
+            'proofOfWorks',
+            'logs',
         ];
     }
 
@@ -489,6 +491,7 @@ class ProjectService {
         $data = $this->boardRepo->list('id,project_id,name,sort,based_board_id', 'project_id = ' . $projectId, [
             'tasks',
             'tasks.proofOfWorks',
+            'tasks.logs',
             'tasks.pics:id,project_task_id,employee_id',
             'tasks.pics.employee:id,name,email,uid',
             'tasks.medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
@@ -497,12 +500,14 @@ class ProjectService {
 
         $boardAsBacklog = getSettingByKey('board_as_backlog');
         $boardStartCheckByPm = getSettingByKey('board_to_check_by_pm');
+        $boardStartCheckByClient = getSettingByKey('board_to_check_by_client');
         $boardStartCalculated = getSettingByKey('board_start_calculated');
         $boardCompleted = getSettingByKey('board_completed');
 
-        $data = collect($data)->map(function ($item) use ($boardAsBacklog, $boardStartCheckByPm, $boardStartCalculated, $boardCompleted) {
+        $data = collect($data)->map(function ($item) use ($boardAsBacklog, $boardStartCheckByPm, $boardStartCalculated, $boardCompleted, $boardStartCheckByClient) {
             $item['board_as_backlog'] = $boardAsBacklog == $item->based_board_id ? true : false;
             $item['board_to_check_by_pm'] = $boardStartCheckByPm == $item->based_board_id ? true : false;
+            $item['board_to_check_by_client'] = $boardStartCheckByClient == $item->based_board_id ? true : false;
             $item['board_start_calculated'] = $boardStartCalculated == $item->based_board_id ? true : false;
             $item['board_completed'] = $boardCompleted == $item->based_board_id ? true : false;
 
@@ -949,8 +954,11 @@ class ProjectService {
      */
     public function storeDescription(array $data, string $taskId)
     {
+        DB::beginTransaction();
         try {
             $this->taskRepo->update($data, $taskId);
+
+            $this->loggingTask(['task_uid' => $taskId], 'addDescription');
 
             $task = $this->taskRepo->show($taskId, '*', $this->defaultTaskRelation());
             
@@ -963,6 +971,8 @@ class ProjectService {
 
             storeCache('detailProject' . $task->project_id, $currentData);
 
+            DB::commit();
+
             return generalResponse(
                 __('global.descriptionAdded'),
                 false,
@@ -972,6 +982,8 @@ class ProjectService {
                 ]
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -1002,13 +1014,24 @@ class ProjectService {
 
                     $this->taskPicRepo->store($payload);
                     $notifiedNewTask[] = $employeeId;
+
+                    $this->loggingTask([
+                        'task_id' => $taskId,
+                        'employee_uid' => $user
+                    ], 'assignMemberTask');
                 }
+
             }
 
             foreach ($data['removed'] as $removedUser) {
-                $employeeId = getIdFromUid($removedUser, new \Modules\Hrd\Models\Employee());
+                $removedEmployeeId = getIdFromUid($removedUser, new \Modules\Hrd\Models\Employee());
 
-                $this->taskPicRepo->deleteWithCondition('employee_id = ' . $employeeId . ' AND project_task_id = ' . $taskId);
+                $this->taskPicRepo->deleteWithCondition('employee_id = ' . $removedEmployeeId . ' AND project_task_id = ' . $taskId);
+
+                $this->loggingTask([
+                    'task_id' => $taskId,
+                    'employee_uid' => $removedUser
+                ], 'removeMemberTask');
             }
 
             logging('notifiedNewTask', $notifiedNewTask);
@@ -1111,14 +1134,22 @@ class ProjectService {
      */
     public function storeTask(array $data, int $boardId)
     {
+        DB::beginTransaction();
         try {
-            $board = $this->boardRepo->show($boardId, 'project_id', ['project:id,uid']);
+            $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid']);
             $data['project_id'] = $board->project_id;
             $data['project_board_id'] = $boardId;
             $task = $this->taskRepo->store($data);
             $task = $this->taskRepo->show($task->uid);
 
             \Illuminate\Support\Facades\Log::debug('res store task: ', $task->toArray());
+
+            // task log
+            $this->loggingTask([
+                'board_id' => $boardId, 
+                'board' => $board,
+                'task' => $task,
+            ], 'addNewTask');
 
             $boards = $this->formattedBoards($board->project->uid);
             $currentData = getCache('detailProject' . $board->project->id);
@@ -1132,12 +1163,16 @@ class ProjectService {
 
             storeCache('detailProject' . $board->project_id, $currentData);
 
+            DB::commit();
+
             return generalResponse(
                 __('global.taskCreated'),
                 false,
                 $currentData
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -1538,6 +1573,7 @@ class ProjectService {
 
     public function updateDeadline(array $data, string $projectUid)
     {
+        DB::beginTransaction();
         try {
             logging('payload update deadline', $data);
             $this->taskRepo->update(
@@ -1547,6 +1583,10 @@ class ProjectService {
                 ],
                 $data['task_id']
             );
+
+            $this->loggingTask([
+                'task_uid' => $data['task_id']
+            ], 'updateDeadline');
 
             $task = $this->taskRepo->show($data['task_id'], '*', $this->defaultTaskRelation());
 
@@ -1559,6 +1599,8 @@ class ProjectService {
 
             storeCache('detailProject' . $projectId, $currentData);
 
+            DB::commit();
+
             return generalResponse(
                 __("global.deadlineAdded"),
                 false,
@@ -1568,6 +1610,8 @@ class ProjectService {
                 ]
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -1582,19 +1626,28 @@ class ProjectService {
      */
     public function uploadTaskAttachment(array $data, string $taskUid, string $projectUid)
     {
+        DB::beginTransaction();
         try {
             $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
             $output = [];
             if ((isset($data['media'])) && (count($data['media']) > 0)) {
+                DB::commit();
+
                 return $this->uploadTaskMedia($data, $taskId, $projectId, $projectUid, $taskUid);
             } else if ((isset($data['task_id'])) && (count($data['task_id']) > 0)) {
+                DB::commit();
+
                 return $this->uploadTaskLink($data, $taskId, $projectId, $projectUid, $taskUid);
             } else {
+                DB::commit();
+
                 return $this->uploadLinkAttachment($data, $taskId, $projectId, $projectUid, $taskUid);
             }
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -1705,6 +1758,11 @@ class ProjectService {
                 'media' => $name,
                 'type' => $type,
             ]);
+
+            $this->loggingTask([
+                'task_id' => $taskId,
+                'media_name' => $name
+            ], 'addAttachment');
         }
 
         $task = $this->formattedDetailTask($taskUid);
@@ -1784,14 +1842,21 @@ class ProjectService {
 
     public function deleteAttachment(string $projectUid, string $taskUid, int $attachmentId)
     {
+        DB::beginTransaction();
         try {
             $data = $this->projectTaskAttachmentRepo->show('dummy', 'media,project_id,project_task_id,type', [], "id = {$attachmentId}");
 
             if ($data->type == \App\Enums\Production\ProjectTaskAttachment::Media->value) {
                 deleteImage(storage_path("app/public/projects/{$data->project_id}/task/{$data->project_task_id}/{$data->media}"));
+
+                $this->loggingTask([
+                    'task_uid' => $taskUid,
+                    'media_name' => $data->media
+                ], 'deleteAttachment');
             }
 
             $this->projectTaskAttachmentRepo->delete($attachmentId);
+
 
             $task = $this->formattedDetailTask($taskUid);
 
@@ -1804,6 +1869,8 @@ class ProjectService {
 
             storeCache('detailProject' . $projectId, $currentData);
 
+            DB::commit();
+
             return generalResponse(
                 __('global.successDeleteAttachment'),
                 false,
@@ -1813,6 +1880,8 @@ class ProjectService {
                 ],
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -1825,7 +1894,7 @@ class ProjectService {
         $selectedTaskId = null;
         $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
         try {
-            if ($data['nas_link'] && $data['preview']) {
+            if ($data['nas_link'] && isset($data['preview'])) {
                 $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());;
                 $selectedProjectId = $projectId;
                 $selectedTaskId = $taskId;
@@ -1913,6 +1982,8 @@ class ProjectService {
             // Init Worktime
             $startCalculatedBoard = getSettingByKey('board_start_calcualted');
 
+            $taskId = getIdFromUid($data['task_id'], new \Modules\Production\Models\ProjectTask());
+
             $boardIds = [$data['board_id'], $data['board_source_id']];
             $boards = $this->boardRepo->list('id,name,based_board_id', "id IN (". implode(',', $boardIds) .")");
             $boardData = collect($boards)->filter(function ($filter) use ($data) {
@@ -1925,7 +1996,7 @@ class ProjectService {
              */
             if (
                 $boardData[0]->based_board_id == $startCalculatedBoard && 
-                $this->taskPicRepo->list('id', 'project_task_id = ' . $data['task_id'])->count() > 0
+                $this->taskPicRepo->list('id', 'project_task_id = ' . $taskId)->count() > 0
             ) {
                 $startWorkTime = date('Y-m-d H:i:s');
             }
@@ -1933,11 +2004,17 @@ class ProjectService {
             $this->taskRepo->update([
                 'project_board_id' => $data['board_id'],
                 'start_working_at' => $startWorkTime
-            ], '', "id = " . $data['task_id']);
+            ], '', "id = " . $taskId);
 
             // logging
             $this->loggingTask(
-                collect($data)->merge(['boards' => $boards])->toArray(),
+                // collect($data)->merge(['boards' => $boards])->toArray(),
+                [
+                    'task_id' => $taskId,
+                    'boards' => $boards,
+                    'board_id' => $data['board_id'],
+                    'board_source_id' => $data['board_source_id'],
+                ],
                 'moveTask'
             );
 
@@ -1970,8 +2047,11 @@ class ProjectService {
      */
     public function updateTaskName(array $data, string $projectUid, string $taskId)
     {
+        DB::beginTransaction();
         try {
             $this->taskRepo->update($data, $taskId);
+
+            $this->loggingTask(['task_uid' => $taskId], 'changeTaskName');
 
             $task = $this->formattedDetailTask($taskId);
 
@@ -1984,6 +2064,8 @@ class ProjectService {
 
             storeCache('detailProject' . $projectId, $currentData);
 
+            DB::commit();
+
             return generalResponse(
                 'success',
                 false,
@@ -1993,6 +2075,8 @@ class ProjectService {
                 ]
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -2008,12 +2092,209 @@ class ProjectService {
      * 3. addNewTask
      * 4. addAttachment
      * 5. deleteAttachment
+     * 6. changeTaskName
+     * 7. addDescription
+     * 8. updateDeadline
+     * 9. assignMemberTask
+     * 10. removeMemberTask
+     * 11. deleteAttachment
      * @return void
      */
     public function loggingTask($payload, string $type)
     {
         $type .= "Log";
         return $this->{$type}($payload);
+    }
+
+    /**
+     * Add log when user add attachment
+     *
+     * @param array $payload
+     * $payload will have
+     * [int task_id, string media_name]
+     * @return void
+     */
+    protected function addAttachmentLog($payload)
+    {
+        $text = __('global.addAttachmentLogText', [
+            'name' => auth()->user()->username,
+            'media' => $payload['media_name']
+        ]);
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task_id'],
+            'type' => 'addAttachment',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Add log when user delete attachment
+     *
+     * @param array $payload
+     * $payload will have
+     * [string task_uid, string media_name]
+     * @return void
+     */
+    protected function deleteAttachmentLog($payload)
+    {
+        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask());
+
+        $text = __('global.deleteAttachmentLogText', [
+            'name' => auth()->user()->username,
+            'media' => $payload['media_name']
+        ]);
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $taskId,
+            'type' => 'addAttachment',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Add log when remove member from selected task
+     *
+     * @param array $payload
+     * $payload will have
+     * [int task_id, string employee_uid]
+     * @return void
+     */
+    protected function removeMemberTaskLog($payload)
+    {
+        $employee = $this->employeeRepo->show($payload['employee_uid'], 'id,name,nickname');
+        $text = __('global.removedMemberLogText', [
+            'removedUser' => $employee->nickname
+        ]);
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task_id'],
+            'type' => 'assignMemberTask',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Add log when add new member to task
+     *
+     * @param array $payload
+     * $payload will have
+     * [int task_id, string employee_uid]
+     * @return void
+     */
+    protected function assignMemberTaskLog($payload)
+    {
+        $employee = $this->employeeRepo->show($payload['employee_uid'], 'id,name,nickname');
+        $text = __('global.assignMemberLogText', [
+            'assignedUser' => $employee->nickname
+        ]);
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task_id'],
+            'type' => 'assignMemberTask',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Add log when change task deadline
+     *
+     * @param array $payload
+     * $payload will have
+     * [string task_uid]
+     * @return void
+     */
+    protected function updateDeadlineLog($payload)
+    {
+        $text = __('global.updateDeadlineLogText', [
+            'name' => auth()->user()->username
+        ]);
+
+        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask());
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $taskId,
+            'type' => 'updateDeadline',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Add log when change task description
+     *
+     * @param array $payload
+     * $payload will have
+     * [string task_uid]
+     * @return void
+     */
+    protected function addDescriptionLog($payload)
+    {
+        $text = __('global.updateDescriptionLogText', [
+            'name' => auth()->user()->username
+        ]);
+
+        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask());
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $taskId,
+            'type' => 'addDescription',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Add log when change task name
+     *
+     * @param array $payload
+     * $payload will have
+     * [string task_uid]
+     * @return void
+     */
+    protected function changeTaskNameLog($payload)
+    {
+        $text = __('global.changeTaskNameLogText', [
+            'name' => auth()->user()->username
+        ]);
+
+        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask());
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $taskId,
+            'type' => 'changeTaskName',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Add log when create new task
+     *
+     * @param array $payload
+     * $payload will have
+     * [array board, int board_id, array task]
+     * @return void
+     */
+    protected function addNewTaskLog($payload)
+    {
+        $board = $payload['board'];
+
+        $text = __('global.addTaskText', [
+            'name' => auth()->user()->username, 
+            'boardTarget' => $board['name']
+        ]);
+
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task']['id'],
+            'type' => 'addNewTask',
+            'text' => $text,
+            'user_id' => auth()->id(),
+        ]);
     }
 
     /**
