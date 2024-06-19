@@ -210,7 +210,7 @@ class SettingService {
         foreach ($data as $key => $value) {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $check = $this->repo->show('dummy', 'id', [], "key = '" . $key . "'");
+            $check = $this->repo->show('dummy', 'id', [], "`key` = '" . $key . "'");
             if ($check) {
                 $this->repo->update([
                     'value' => $valueData
