@@ -83,6 +83,7 @@ return [
     'at' => 'at',
     'asPicProject' => 'As PIC Project',
     'haveCountTask' => 'Have :countTask task in this project',
+    'moveTaskLogText' => ':name moved this task from :boardSource to :boardTarget',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

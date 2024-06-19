@@ -18,10 +18,11 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::get('ilham', function () {
-    $user = \App\Models\User::latest()->first();
-    return (new \Modules\Hrd\Notifications\UserEmailActivation($user, 'iiejrkejrer', 'password'))
-        ->toMail($user);
-});
+    // $user = \App\Models\User::latest()->first();
+    // return (new \Modules\Hrd\Notifications\UserEmailActivation($user, 'iiejrkejrer', 'password'))
+    //     ->toMail($user);
+    return auth()->user()->username;
+})->middleware('auth:sanctum');
 
 Route::get('nasTestConnection', function (Request $request) {
     try {

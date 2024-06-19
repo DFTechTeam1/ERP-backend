@@ -2,24 +2,18 @@
 
 namespace Modules\Production\Repository;
 
-use Illuminate\Database\Eloquent\Builder;
-use Modules\Production\Models\ProjectTask;
-use Modules\Production\Repository\Interface\ProjectTaskInterface;
+use Modules\Production\Models\ProjectTaskProofOfWork;
+use Modules\Production\Repository\Interface\ProjectTaskProofOfWorkInterface;
 
-class ProjectTaskRepository extends ProjectTaskInterface {
+class ProjectTaskProofOfWorkRepository extends ProjectTaskProofOfWorkInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectTask();
+        $this->model = new ProjectTaskProofOfWork();
         $this->key = 'id';
-    }
-
-    public function modelClass()
-    {
-        return $this->model;
     }
 
     /**
@@ -30,7 +24,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
@@ -38,14 +32,6 @@ class ProjectTaskRepository extends ProjectTaskInterface {
 
         if (!empty($where)) {
             $query->whereRaw($where);
-        }
-
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $wh) {
-                $query->whereHas($wh['relation'], function (Builder $query) use ($wh) {
-                    $query->whereRaw($wh['query']);
-                });
-            }
         }
 
         if ($relation) {
@@ -94,18 +80,13 @@ class ProjectTaskRepository extends ProjectTaskInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
-        logging('where', [$where]);
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where("uid", $uid);
-        } else {
-            $query->whereRaw($where);
-        }
+        $query->where("uid", $uid);
         
         if ($relation) {
             $query->with($relation);
@@ -155,17 +136,10 @@ class ProjectTaskRepository extends ProjectTaskInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-        
-        if (empty($where)) {
-            $query->where('id', $id);
-        } else {
-            $query->whereRaw($where);
-        }
-
-        return $query->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**
