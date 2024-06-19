@@ -3,9 +3,9 @@
 namespace Modules\Production\Services;
 
 use App\Enums\ErrorCode\Code;
-use Modules\Production\Repository\ProjectPersoninChargeRepository;
+use Modules\Production\Repository\ProjectPersonInChargeRepository;
 
-class ProjectPersoninChargeService {
+class ProjectPersonInChargeService {
     private $repo;
 
     /**
@@ -13,7 +13,7 @@ class ProjectPersoninChargeService {
      */
     public function __construct()
     {
-        $this->repo = new ProjectPersoninChargeRepository;
+        $this->repo = new ProjectPersonInChargeRepository;
     }
 
     /**
