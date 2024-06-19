@@ -2,17 +2,17 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\ProjectPersoninCharge;
-use Modules\Production\Repository\Interface\ProjectPersoninChargeInterface;
+use Modules\Production\Models\ProjectPersonInCharge;
+use Modules\Production\Repository\Interface\ProjectPersonInChargeInterface;
 
-class ProjectPersoninChargeRepository extends ProjectPersoninChargeInterface {
+class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectPersoninCharge();
+        $this->model = new ProjectPersonInCharge();
         $this->key = 'id';
     }
 

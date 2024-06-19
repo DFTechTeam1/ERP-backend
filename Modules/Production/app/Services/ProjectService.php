@@ -12,7 +12,7 @@ use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectTaskAttachmentRepository;
-use Modules\Production\Repository\ProjectPersoninChargeRepository;
+use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectTaskLogRepository;
 use Modules\Production\Repository\ProjectTaskProofOfWorkRepository;
 
@@ -60,7 +60,7 @@ class ProjectService {
 
         $this->projectTaskAttachmentRepo = new ProjectTaskAttachmentRepository;
 
-        $this->projectPicRepository = new ProjectPersoninChargeRepository;
+        $this->projectPicRepository = new ProjectPersonInChargeRepository;
 
         $this->projectTaskLogRepository = new ProjectTaskLogRepository;
 
