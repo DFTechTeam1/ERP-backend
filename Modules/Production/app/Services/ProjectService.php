@@ -15,6 +15,9 @@ use Modules\Production\Repository\ProjectTaskAttachmentRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectTaskLogRepository;
 use Modules\Production\Repository\ProjectTaskProofOfWorkRepository;
+use Modules\Production\Repository\ProjectTaskWorktimeRepository;
+use Modules\Company\Repository\PositionRepository;
+use DateTime;
 
 class ProjectService {
     private $repo;
@@ -38,6 +41,10 @@ class ProjectService {
     private $projectTaskLogRepository;
 
     private $proofOfWorkRepo;
+
+    private $taskWorktimeRepo;
+
+    private $positionRepo;
 
     /**
      * Construction Data
@@ -65,6 +72,10 @@ class ProjectService {
         $this->projectTaskLogRepository = new ProjectTaskLogRepository;
 
         $this->proofOfWorkRepo = new ProjectTaskProofOfWorkRepository;
+
+        $this->taskWorktimeRepo = new ProjectTaskWorktimeRepository;
+
+        $this->positionRepo = new PositionRepository;
     }
 
     /**
@@ -477,9 +488,13 @@ class ProjectService {
         ];
     }
 
-    protected function formattedDetailTask(string $taskUid)
+    protected function formattedDetailTask(string $taskUid, string $where = '')
     {
-        $task = $this->taskRepo->show($taskUid, '*', $this->defaultTaskRelation());
+        if (empty($where))  {
+            $task = $this->taskRepo->show($taskUid, '*', $this->defaultTaskRelation());
+        } else {
+            $task = $this->taskRepo->show('dummy', '*', $this->defaultTaskRelation(), $where);
+        }
 
         return $task;
     }
@@ -510,6 +525,8 @@ class ProjectService {
             $item['board_to_check_by_client'] = $boardStartCheckByClient == $item->based_board_id ? true : false;
             $item['board_start_calculated'] = $boardStartCalculated == $item->based_board_id ? true : false;
             $item['board_completed'] = $boardCompleted == $item->based_board_id ? true : false;
+
+            // format proof of works
 
             return $item;
         });
@@ -668,6 +685,11 @@ class ProjectService {
                 $boardsData = $this->formattedBoards($uid);
 
                 $equipments = $this->formattedEquipments($data->id);
+
+                // days to go
+                $projectData = new DateTime($data->project_date);
+                $diff = date_diff($projectData, new DateTime('now'));
+                $daysToGo = $diff->d;
     
                 $output = [
                     'uid' => $data->uid,
@@ -678,6 +700,7 @@ class ProjectService {
                     'event_class' => $eventClass,
                     'event_class_color' => $eventClassColor,
                     'project_date' => date('d F Y', strtotime($data->project_date)),
+                    'days_to_go' => $daysToGo,
                     'venue' => $data->venue,
                     'marketing' => $marketing,
                     'pic' => implode(', ', $pics),
@@ -1002,6 +1025,7 @@ class ProjectService {
             $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
 
             $notifiedNewTask = [];
+            $employeeIds = [];
             foreach ($data['users'] as $user) {
                 $employeeId = getIdFromUid($user, new \Modules\Hrd\Models\Employee());
 
@@ -1015,12 +1039,14 @@ class ProjectService {
                     $this->taskPicRepo->store($payload);
                     $notifiedNewTask[] = $employeeId;
 
+                    // variables for task worktime
+                    $employeeIds[] = $employeeId;
+
                     $this->loggingTask([
                         'task_id' => $taskId,
                         'employee_uid' => $user
                     ], 'assignMemberTask');
                 }
-
             }
 
             foreach ($data['removed'] as $removedUser) {
@@ -1034,9 +1060,11 @@ class ProjectService {
                 ], 'removeMemberTask');
             }
 
-            logging('notifiedNewTask', $notifiedNewTask);
-
             $task = $this->taskRepo->show($taskUid, '*', $this->defaultTaskRelation());
+
+            // update task worktime if meet the requirements
+            $board = $this->boardRepo->show($task->project_board_id);
+            $this->setTaskWorkingtime($board, $taskId, $employeeIds);
 
             $currentData = getCache('detailProject' . $task->project->id);
             if (!$currentData) {
@@ -1917,9 +1945,16 @@ class ProjectService {
                     'created_by' => auth()->id(),
                 ]);
 
-                $this->taskRepo->update([
-                    'project_board_id' => $data['board_id'],
-                ], $taskUid);
+                // $this->taskRepo->update([
+                //     'project_board_id' => $data['board_id'],
+                // ], $taskUid);
+
+                // move task
+                $this->changeTaskBoard([
+                    'board_id' => $data['board_id'],
+                    'task_id' => $taskUid,
+                    'board_source_id' => $data['source_board_id'],
+                ], $projectUid);
 
                 $task = $this->formattedDetailTask($taskUid);
 
@@ -1968,6 +2003,10 @@ class ProjectService {
      * Change board of task (When user move a task)
      *
      * @param array $data
+     * Data will be
+     * 1. int board_id
+     * 2. int board_source_id
+     * 3. string task_id
      * @param string $projectUid
      * @return array
      */
@@ -1981,6 +2020,7 @@ class ProjectService {
         try {
             // Init Worktime
             $startCalculatedBoard = getSettingByKey('board_start_calcualted');
+            $reviewByPmBoard = getSettingByKey('board_to_check_by_pm');
 
             $taskId = getIdFromUid($data['task_id'], new \Modules\Production\Models\ProjectTask());
 
@@ -1991,20 +2031,14 @@ class ProjectService {
             })->values();
 
             $startWorkTime = null;
-            /**
-             * Only set worktime when task is have PIC
-             */
-            if (
-                $boardData[0]->based_board_id == $startCalculatedBoard && 
-                $this->taskPicRepo->list('id', 'project_task_id = ' . $taskId)->count() > 0
-            ) {
-                $startWorkTime = date('Y-m-d H:i:s');
-            }
-
-            $this->taskRepo->update([
+            $currentPerformance = null;
+            $payloadUpdate = [
                 'project_board_id' => $data['board_id'],
-                'start_working_at' => $startWorkTime
-            ], '', "id = " . $taskId);
+            ];
+
+            $this->setTaskWorkingTime($boardData[0], $taskId);
+
+            $this->taskRepo->update($payloadUpdate, '', "id = " . $taskId);
 
             // logging
             $this->loggingTask(
@@ -2032,9 +2066,89 @@ class ProjectService {
             );
         } catch (\Throwable $th) {
             DB::rollBack();
-
+            
             return errorResponse($th, $currentData);
         }
+    }
+
+    /**
+     * Set working time on each task
+     *
+     * @param [type] $boardData
+     * @param integer $taskId
+     * @param array $pics -> this will be only PIC TASK ids
+     * @return void
+     */
+    protected function setTaskWorkingTime($boardData, int $taskId, array $pics = [])
+    {
+        $startCalculatedBoard = getSettingByKey('board_start_calcualted');
+        $reviewByPmBoard = getSettingByKey('board_to_check_by_pm');
+
+        if (
+            $boardData->based_board_id == $startCalculatedBoard ||
+            $boardData->based_board_id == $reviewByPmBoard
+        ) {
+            if (empty($pics)) {
+                $picsRaw = $this->taskPicRepo->list('id,employee_id', 'project_task_id = ' . $taskId);
+                if (count($picsRaw) > 0) {
+                    $pics = collect($picsRaw)->pluck('employee_id')->toArray();
+                }
+            }
+
+            $type = \App\Enums\Production\WorktimeType::OnProgress->value;
+            if ($boardData->based_board_id == $reviewByPmBoard) {
+                $type = \App\Enums\Production\WorktimeType::ReviewByPm->value;
+
+                // update end time for production staff
+                foreach ($pics as $currentPic) {
+                    $this->taskWorktimeRepo->update([
+                        'end_at' => date('Y-m-d H:i:s'),
+                    ], '', 'project_task_id = ' . $taskId . ' and employee_id = ' . $currentPic);
+                }
+
+                // change employee pics to project managers
+                $taskDetail = $this->taskRepo->show('dummy', 'id,project_id', [], 'id = ' . $taskId);
+                $projectPics = $this->projectPicRepository->list('id,pic_id', 'project_id = ' . $taskDetail->project_id);
+                $pics = collect($projectPics)->pluck('pic_id')->toArray();
+            }
+            
+            foreach ($pics as $pic) {
+                $this->taskWorktimeRepo->store([
+                    'project_task_id' => $taskId,
+                    'employee_id' => $pic,
+                    'user_id' => null,
+                    'project_id' => null,
+                    'start_at' => date('Y-m-d H:i:s'),
+                    'end_at' => null,
+                    'work_type' => $type,
+                ]);
+            }
+        }
+
+        // /**
+        //  * Only set worktime when task is have PIC
+        //  */
+        // $havePic = $this->taskPicRepo->list('id', 'project_task_id = ' . $taskId)->count() > 0;
+        // if (
+        //     (
+        //         $boardData->based_board_id == $startCalculatedBoard ||
+        //         $boardData->based_board_id == $reviewByPmBoard
+        //     ) &&
+        //     $havePic
+        // ) {
+        //     $currentTask = $this->taskRepo->show($taskUid, 'id,performance_time');
+        //     $performance = ['type' => 'on_progress', 'start_at' => date('Y-m-d H:i:s'), 'end_at' => null];
+        //     if ($currentTask->performance_time) {
+        //         $currentPerformance = json_decode($currentTask->performance_time, true);
+        //         array_push($currentPerformance, $performance);
+        //     } else {
+        //         $currentPerformance = [$performance];
+        //     }
+
+        //     $output = json_encode($currentPerformance);
+        // }
+
+        // return $output ?? null;
     }
 
     /**
@@ -2326,5 +2440,247 @@ class ProjectService {
             'text' => $text,
             'user_id' => auth()->id(),
         ]);
+    }
+
+    /**
+     * Get list of boards to use in 'move to' action
+     *
+     * @param integer $boardId
+     * @param string $projectUid
+     * @return array
+     */
+    public function getMoveToBoards(int $boardId, string $projectUid)
+    {
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+        $data = $this->boardRepo->list('id,name', 'project_id = ' . $projectId . ' and id != ' . $boardId);
+
+        $data = collect($data)->map(function ($board) {
+            return [
+                'title' => $board->name,
+                'value' => $board->id,
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            $data,
+        );
+    }
+
+    /**
+     * Function to manual change task board
+     *
+     * @param array $data
+     * @param string $projectId
+     * @return array
+     */
+    public function manualChangeTaskBoard(array $data, string $projectId): array
+    {
+        // if task is move from progress to review by client, tell user to upload proof of work
+        $onProcess = getSettingByKey('board_start_calculated');
+        $checkByPm = getSettingByKey('board_to_check_by_pm');
+
+        $targetBoard = \Modules\Production\Models\ProjectBoard::select('based_board_id')->find($data['board_id']);
+        $targetBasedBoard = $targetBoard->based_board_id;
+        $valueBoard = \Modules\Production\Models\ProjectBoard::select('based_board_id')->find($data['board_source_id']);
+        $valueBasedBoard = $valueBoard->based_board_id;
+
+        if ($valueBasedBoard == $onProcess && $targetBasedBoard == $checkByPm) {
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'show_proof_of_work' => true,
+                ],
+            );
+        }
+
+        return $this->changeTaskBoard($data, $projectId);
+    }
+
+    /**
+     * Get venues
+     *
+     * @return array
+     */
+    public function autocompleteVenue(): array
+    {
+        $search = request('search');
+        $where = '';
+        if ($search) {
+            $where = "venue LIKE '%{$search}%'";
+        }
+
+        $data = $this->repo->list(
+            'DISTINCT venue',
+            $where
+        );
+
+        $data = collect($data)->map(function ($item) {
+
+            return [
+                'title' => ucfirst($item->venue),
+                'value' => strtolower($item->venue),
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            $data,
+        );
+    }
+
+    /**
+     * Get all assigned task
+     * If admin is logged in, show all task from all employee
+     * If employee is logged in, only show assigned task
+     *
+     * @return array
+     */
+    public function getAllTasks(): array
+    {
+        try {
+            // check role
+            $su = getSettingByKey('super_user_role');
+            $userId = auth()->id();
+            $roles = auth()->user()->roles;
+            $roleId = $roles[0]->id;
+            $employeeId = $this->employeeRepo->show('dummy', 'id', [], 'user_id = ' . $userId);
+
+            $showPic = false;
+
+            $where = '';
+            $whereHas = [];
+            if ($roleId != $su) { // only show assigned task
+                $whereHas[] = [
+                    'relation' => 'pics',
+                    'query' => 'employee_id = ' . $employeeId->id,
+                ];
+
+                $showPic = true;
+            }
+
+            $data = $this->taskRepo->list(
+                'id,uid,project_id,project_board_id,name,task_type,end_date',
+                $where,
+                [
+                    'project:id,name,project_date',
+                    'medias',
+                    'taskLink',
+                    'board:id,name,based_board_id',
+                    'pics:id,project_task_id,employee_id',
+                    'pics.employee:id,name,nickname'
+                ],
+                $whereHas
+            );
+
+            $onProgress = getSettingByKey('board_start_calculated');
+            $backlog = getSettingByKey('board_as_backlog');
+            $checkByPm = getSettingByKey('board_to_check_by_pm');
+            $checkByClient = getSettingByKey('board_to_check_by_client');
+            $revise = getSettingByKey('board_revise');
+            $completed = getSettingByKey('board_completed');
+
+            $output = [];
+            foreach ($data as $task) {
+                $attachments = $task->medias->count();
+                $comments = 0;
+                $statusColor = 'success'; // on progress
+                if ($task->board->based_board_id == $backlog) {
+                    $statusColor = 'grey-lighten-1';
+                } else if ($task->board->based_board_id == $checkByPm) {
+                    $statusColor = 'primary';
+                } else if ($task->board->based_board_id == $checkByClient) {
+                    $statusColor = 'light-blue-lighten-3';
+                } else if ($task->board->based_board_id == $revise) {
+                    $statusColor = 'red-darken-1';
+                } else if ($task->board->based_board_id == $completed) {
+                    $statusColor = 'blue-darken-2';
+                }
+
+                $projectDate = new DateTime($task->project->project_date);
+                $diff = date_diff($projectDate, new DateTime('now'));
+                $daysToGo = $diff->d . ' ' . __('global.day');
+                
+                $pics = collect($task->pics)->map(function ($pic) {
+                    return [
+                        'name' => $pic->employee->nickname,
+                    ];
+                })->toArray();
+                
+                $output[] = [
+                    'uid' => $task->uid,
+                    'task_name' => $task->name,
+                    'attachments' => $attachments,
+                    'comments' => $comments,
+                    'project' => $task->project->name,
+                    'project_date' => date('d F Y', strtotime($task->project->project_date)),
+                    'status_text' => $task->board->name,
+                    'status_color' => $statusColor,
+                    'days_to_go' => $daysToGo,
+                    'pics' => $pics,
+                    'due_date' => $task->end_date ? date('d F Y', strtotime($task->end_date)) : '-',
+                    'show_pic' => $showPic,
+                ];
+            }
+
+            return generalResponse(
+                'success',
+                false,
+                $output,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function detailTask(string $uid)
+    {
+        $data = $this->formattedDetailTask($uid);
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'task' => $data->toArray()
+            ],
+        );
+    }
+
+    /**
+     * Function to get marketing list
+     * This is used in project form
+     * Result should have marketing position + directors
+     *
+     * @return array
+     */
+    public function getMarketingListForProject(): array
+    {
+        $positionAsMarketing = getSettingByKey('position_as_marketing');
+        $positionAsDirectors = json_decode(getSettingByKey('position_as_directors'), true);
+
+        if ($positionAsDirectors) {
+            $combine = array_merge($positionAsDirectors, [$positionAsMarketing]);
+        } else {
+            $combine = [$positionAsMarketing];
+        }
+
+        $combine = implode("','", $combine);
+        $condition = "'" . $combine;
+        $condition .= "'";
+        
+        $positions = $this->positionRepo->list('id', "uid in ({$condition})");
+
+        $positionIds = collect($positions)->pluck('id')->all();
+        $combinePositionIds = implode(',', $positionIds);
+        $marketings = $this->employeeRepo->list('id,uid,name', "position_id in ({$combinePositionIds})");
+
+        return generalResponse(
+            'success',
+            false,
+            $marketings->toArray(),
+        );
     }
 }

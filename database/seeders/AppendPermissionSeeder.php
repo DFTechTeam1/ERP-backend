@@ -26,6 +26,7 @@ class AppendPermissionSeeder extends Seeder
             ['name' => 'move_task_to_revise', 'group' => 'production'],
             ['name' => 'move_task_to_completed', 'group' => 'production'],
             ['name' => 'add_task', 'group' => 'production'],
+            ['name' => 'list_task', 'group' => 'production'],
         ];
 
         foreach ($permissions as $permission) {

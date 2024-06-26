@@ -43,6 +43,8 @@ class SettingService {
                     $item['value'] = json_decode($item['value'], true);
                 } else if ($item['key'] == 'default_boards') {
                     $item['value'] = $this->formatKanbanSetting($item);
+                } else if ($item['key'] == 'position_as_directors') {
+                    $item['value'] = json_decode($item['value'], true);
                 }
 
                 return $item;
@@ -189,6 +191,8 @@ class SettingService {
                 $this->storeEmail($data);
             } else if ($code == 'general') {
                 $this->storeGeneral($data);
+            } else if ($code == 'variables') {
+                $this->storeVariables($data);
             }
 
             cachingSetting();
@@ -210,7 +214,7 @@ class SettingService {
         foreach ($data as $key => $value) {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $check = $this->repo->show('dummy', 'id', [], "`key` = '" . $key . "'");
+            $check = $this->repo->show('dummy', 'id', [], "key = '" . (string) $key . "'");
             if ($check) {
                 $this->repo->update([
                     'value' => $valueData
@@ -220,6 +224,28 @@ class SettingService {
                     'key' => $key,
                     'value' => $valueData,
                     'code' => 'general',
+                ]);
+            }
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('setting');
+    }
+
+    protected function storeVariables(array $data)
+    {
+        foreach ($data as $key => $value) {
+            $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
+
+            $check = $this->repo->show('dummy', 'id', [], "key = '" . (string) $key . "'");
+            if ($check) {
+                $this->repo->update([
+                    'value' => $valueData
+                ], 'dummy', 'id = ' . $check->id);
+            } else {
+                $this->repo->store([
+                    'key' => $key,
+                    'value' => $valueData,
+                    'code' => 'variables',
                 ]);
             }
         }

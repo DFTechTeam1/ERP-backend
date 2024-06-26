@@ -30,6 +30,13 @@ class ProjectTaskProofOfWork extends Model
         $out = [];
         if (isset($this->attributes['preview_image'])) {
             $out = json_decode($this->attributes['preview_image'], true);
+            $projectId = $this->attributes['project_id'];
+            $taskId = $this->attributes['project_task_id'];
+            $out = collect($out)->map(function ($item) use ($projectId, $taskId) {
+                $item = asset("storage/projects/{$projectId}/task/{$taskId}/proofOfWork/{$item}");
+
+                return $item;
+            })->toArray();
         }
 
         return Attribute::make(

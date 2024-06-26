@@ -513,3 +513,16 @@ Table project_task_proof_of_work {
     created_at timestamp
     updated_at timestamp
 }
+
+Table project_task_worktime {
+    id int [pk, increment]
+    project_task_id int
+    employee_id int
+    user_id int
+    project_id int
+    start_at timestamp
+    end_at timestamp
+    work_type enum [note: 'on_progress, review_by_pm, review_by_client']
+    created_at timestamp
+    updated_at timestamp
+}
