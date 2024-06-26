@@ -92,6 +92,10 @@ return [
     'removedMemberLogText' => ':removedUser removed from this task',
     'addAttachmentLogText' => ':name attached :media to this task',
     'deleteAttachmentLogText' => ':name deleted :media attachment from this task',
+    'day' => 'Day',
+    'minutes' => 'Minutes',
+    'hours' => 'Hour',
+    'and' => 'and',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -163,4 +167,6 @@ return [
     'successUploadAttachment' => 'Success upload attachment',
     'successDeleteAttachment' => 'Success delete attachment',
     'successDeleteProject' => 'Success delete project',
+    'doNotHavePermissionMovingTask' => "Cannot move task from :board to :targetBoard. You don't have the permission",
+    'cannotMoveToTargetBoard' => "Cannot move task. It's not allowed",
 ];

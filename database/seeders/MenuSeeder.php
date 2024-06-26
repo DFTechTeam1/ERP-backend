@@ -35,6 +35,7 @@ class MenuSeeder extends Seeder
             ['name' => 'Addon List', 'parent_id' => null, 'icon' => 'menus/addon.png', 'group' => \App\Enums\Menu\Group::Addon->value, 'link' => '/panel/addons', 'permission' => 'list_addon'],
             ['name' => 'Setting', 'parent_id' => null, 'icon' => 'menus/setting.png', 'group' => \App\Enums\Menu\Group::Dashboard->value, 'link' => '/admin/setting', 'permission' => 'list_setting'],
             ['name' => 'Projects', 'parent_id' => null, 'icon' => 'menus/projects.png', 'group' => \App\Enums\Menu\Group::Production->value, 'link' => '/admin/production/projects', 'permission' => 'list_project'],
+            ['name' => 'Tasks', 'parent_id' => null, 'icon' => 'menus/task.png', 'group' => \App\Enums\Menu\Group::Production->value, 'link' => '/admin/production/tasks', 'permission' => 'list_task'],
         ];
 
         foreach ($menus as $menu) {
