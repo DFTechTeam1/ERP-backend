@@ -215,7 +215,11 @@ class SettingService {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
             $key = config('app.env') == 'production' ? "`key` =" : "key =";
-            $check = $this->repo->show('dummy', 'id', [], "{$key} '" . (string) $key . "'");
+            $where = "key = '" . (string) $key . "'";
+            if (config('app.env') == 'production') {
+                $where = "`key` = '" . (string) $key . "'";
+            }
+            $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
                 $this->repo->update([
                     'value' => $valueData
@@ -238,7 +242,11 @@ class SettingService {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
             $key = config('app.env') == 'production' ? "`key` =" : "key =";
-            $check = $this->repo->show('dummy', 'id', [], "{$key} '" . (string) $key . "'");
+            $where = "key = '" . (string) $key . "'";
+            if (config('app.env') == 'production') {
+                $where = "`key` = '" . (string) $key . "'";
+            }
+            $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
                 $this->repo->update([
                     'value' => $valueData
@@ -270,9 +278,13 @@ class SettingService {
             }
 
             $key = config('app.env') == 'production' ? "`key` =" : "key =";
+            $where = "key = '" . (string) $key . "'";
+            if (config('app.env') == 'production') {
+                $where = "`key` = '" . (string) $key . "'";
+            }
             $this->repo->update([
                 'value' => $value
-            ], '', "{$key} '" . $key . "'");
+            ], '', $where);
         }
 
         \Illuminate\Support\Facades\Cache::forget('setting');
