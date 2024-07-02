@@ -30,16 +30,43 @@ class DashboardService {
             $searchDate = date('Y-m-d');
         }
 
+        $superUserRole = getSettingByKey('super_user_role');
+        $projectManagerRole = getSettingByKey('project_manager_role');
+        $user = auth()->user();
+        $roles = $user->roles;
+        $roleId = $roles[0]->id;
+        $employeeId = $user->employee_id;
+
         $year = date('Y', strtotime($searchDate));
         $month = date('m', strtotime($searchDate));
         $start = $year . '-' . $month . '-01';
         $end = $year . '-' . $month . '-30';
         $where = "project_date >= '" . $start . "' and project_date <= '" . $end . "'";
 
+        $whereHas = [];
+
+        if ($roleId != $superUserRole && $roleId == $projectManagerRole) {
+            $whereHas[] = [
+                'relation' => 'personInCharges',
+                'query' => 'pic_id = ' . $employeeId,
+            ];
+        } else if ($roleId != $superUserRole && $roleId != $projectManagerRole) {
+            $projectTaskPic = $this->taskPicRepo->list('id,project_task_id', 'employee_id = ' . $employeeId);
+            $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
+            $projectTaskIds = implode("','", $projectTasks);
+            $projectTaskIds = "'" . $projectTaskIds;
+            $projectTaskIds .= "'";
+
+            $whereHas[] = [
+                'relation' => 'tasks',
+                'query' => "id IN (" . $projectTaskIds . ")"
+            ];
+        }
+
         $data = $this->projectRepo->list('id,uid,name,project_date,venue', $where, [
             'personInCharges:id,project_id,pic_id',
             'personInCharges.employee:id,uid,name',
-        ], [], 'project_date ASC');
+        ], $whereHas, 'project_date ASC');
 
         $out = [];
         foreach ($data as $projectKey => $project) {
