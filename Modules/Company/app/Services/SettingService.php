@@ -214,10 +214,10 @@ class SettingService {
         foreach ($data as $key => $value) {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $key = config('app.env') == 'production' ? "`key` =" : "key =";
-            $where = "key = '" . (string) $key . "'";
+            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $where = "key = '" . (string) $keyQuery . "'";
             if (config('app.env') == 'production') {
-                $where = "`key` = '" . (string) $key . "'";
+                $where = "`key` = '" . (string) $keyQuery . "'";
             }
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
@@ -241,10 +241,10 @@ class SettingService {
         foreach ($data as $key => $value) {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $key = config('app.env') == 'production' ? "`key` =" : "key =";
-            $where = "key = '" . (string) $key . "'";
+            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $where = "key = '" . (string) $keyQuery . "'";
             if (config('app.env') == 'production') {
-                $where = "`key` = '" . (string) $key . "'";
+                $where = "`key` = '" . (string) $keyQuery . "'";
             }
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
@@ -277,10 +277,10 @@ class SettingService {
                 \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.password", $value);
             }
 
-            $key = config('app.env') == 'production' ? "`key` =" : "key =";
-            $where = "key = '" . (string) $key . "'";
+            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $where = "key = '" . (string) $keyQuery . "'";
             if (config('app.env') == 'production') {
-                $where = "`key` = '" . (string) $key . "'";
+                $where = "`key` = '" . (string) $keyQuery . "'";
             }
             $this->repo->update([
                 'value' => $value
