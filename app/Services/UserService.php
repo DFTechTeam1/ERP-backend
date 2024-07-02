@@ -135,13 +135,16 @@ class UserService {
             if (!$data['is_external_user']) {
                 $employee = $this->employeeRepo->show($data['employee_id'], 'id,uid,email');
                 $email = $employee->email;
+                $employeeId = $employee->id;
             } else {
                 $email = $data['email'];
+                $employeeId = 0;
             }
 
             $user = $this->repo->store([
                 'email' => $email,
                 'password' => $data['password'],
+                'employee_id' => $employeeId,
             ]);
 
             // assign role

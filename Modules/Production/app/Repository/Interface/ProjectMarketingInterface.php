@@ -2,12 +2,12 @@
 
 namespace Modules\Production\Repository\Interface;
 
-abstract class ProjectInterface {
-    abstract function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [], string $orderBy = '', int $limit = 0);
+abstract class ProjectMarketingInterface {
+    abstract function list(string $select = '*', string $where = "", array $relation = []);
 
     abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
 
-    abstract function show(string $uid, string $select = '*', array $relation = [], string $where = '');
+    abstract function show(string $uid, string $select = '*', array $relation = []);
 
     abstract function store(array $data);
 
