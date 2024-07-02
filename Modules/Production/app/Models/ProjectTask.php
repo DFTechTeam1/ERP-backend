@@ -33,6 +33,8 @@ class ProjectTask extends Model
         'updated_by',
         'task_type',
         'performance_time',
+        'status',
+        'current_pics'
     ];
 
     protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail'];
@@ -69,6 +71,11 @@ class ProjectTask extends Model
     {
         return $this->hasMany(ProjectTaskLog::class, 'project_task_id')
             ->orderBy('created_at', 'DESC');
+    }
+
+    public function times(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectTaskPicLog::class, 'project_task_id');
     }
 
     public function taskLink(): HasMany

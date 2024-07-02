@@ -96,6 +96,16 @@ return [
     'minutes' => 'Minutes',
     'hours' => 'Hour',
     'and' => 'and',
+    'approved' => 'Approved',
+    'waitingApproval' => 'Waiting Approval',
+    'employeeStartWorking' => ':name start working',
+    'employeeAssignedTask' => ':name has just been assigned',
+    'employeeCheckByPmTask' => ':name start review the task',
+    'employeeReviseTask' => 'Task need to be revise',
+    'employeeFinishTask' => ':name has just finished the task',
+    'onProgress' => 'On Progress',
+    'checkByPm' => 'Check by PM',
+    'dateCount' => ':day days to go',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -169,4 +179,6 @@ return [
     'successDeleteProject' => 'Success delete project',
     'doNotHavePermissionMovingTask' => "Cannot move task from :board to :targetBoard. You don't have the permission",
     'cannotMoveToTargetBoard' => "Cannot move task. It's not allowed",
+    'taskHasBeenApproved' => 'Task has been approved',
+    'taskIsCompletedAndContinue' => 'Task is completed and continue to next step',
 ];

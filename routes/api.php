@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use KodePandai\Indonesia\Models\District;
+use App\Http\Controllers\Api\DashboardController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -93,6 +94,9 @@ Route::middleware('auth:sanctum')
         Route::apiResource('permissions', PermissionController::class);
 
         Route::apiResource('menus', MenuController::class);
+
+        Route::get('dashboard/projectCalendar', [DashboardController::class, 'getProjectCalendar']);
+        Route::get('dashboard/projectDeadline', [DashboardController::class, 'getProjectDeadline']);
     });
 
 Route::post('line-webhook', [\Modules\LineMessaging\Http\Controllers\Api\LineController::class, 'webhook']);

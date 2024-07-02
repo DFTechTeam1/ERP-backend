@@ -393,6 +393,14 @@ Table projects {
     updated_by int
 }
 
+Table project_marketings {
+    id int [pk, increment]
+    project_id int [ref: > projects.id]
+    marketing_id int [ref: > employees.id]
+    created_at timestamp
+    updated_at timestamp
+}
+
 Table project_equipments {
     id int [pk, increment]
     project_id int [ref: > projects.id]
@@ -461,14 +469,8 @@ Table project_tasks {
     updated_at timestamp
     created_by int
     updated_by int
-}
-
-Table project_task_pic {
-    id int [pk, increment]
-    project_task_id int [ref: > project_tasks.id]
-    employee_id int
-    created_at timestamp
-    updated_at timestamp
+    status int [note: '1 for on progress, 2 for check by pm, 3 fo revise, 4 for completed, 5 for waiting approval']
+    current_pics longtext [note: 'This column will be update in every task movement']
 }
 
 Table project_task_attachments {
@@ -514,7 +516,26 @@ Table project_task_proof_of_work {
     updated_at timestamp
 }
 
-Table project_task_worktime {
+Table project_task_pics {
+    id int [pk, increment]
+    project_task_id int [ref: > project_tasks.id]
+    employee_id int
+    status tinyint [note: '1 for approved, 2 for waiting approval']
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table project_task_pic_logs {
+    id int [pk, increment]
+    project_task_id int
+    employee_id int
+    work_type varchar [note: 'will be: assigned, on_progress, check_by_pm, revise, finish']
+    time_added timestamp
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table project_task_worktimes {
     id int [pk, increment]
     project_task_id int
     employee_id int
@@ -522,7 +543,10 @@ Table project_task_worktime {
     project_id int
     start_at timestamp
     end_at timestamp
-    work_type enum [note: 'on_progress, review_by_pm, review_by_client']
+    assigned_at timestamp
+    work_type enum [note: 'on_progress, revise, waiting_approval']
+    task_type varchar [note: 'will be: 3D asset, compositing, animating, finalize']
+    time_detail longtext
     created_at timestamp
     updated_at timestamp
 }
