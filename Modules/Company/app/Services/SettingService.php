@@ -214,7 +214,8 @@ class SettingService {
         foreach ($data as $key => $value) {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $check = $this->repo->show('dummy', 'id', [], "key = '" . (string) $key . "'");
+            $key = config('app.env') == 'production' ? "`key` =" : "key =";
+            $check = $this->repo->show('dummy', 'id', [], "{$key} '" . (string) $key . "'");
             if ($check) {
                 $this->repo->update([
                     'value' => $valueData
@@ -236,7 +237,8 @@ class SettingService {
         foreach ($data as $key => $value) {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $check = $this->repo->show('dummy', 'id', [], "key = '" . (string) $key . "'");
+            $key = config('app.env') == 'production' ? "`key` =" : "key =";
+            $check = $this->repo->show('dummy', 'id', [], "{$key} '" . (string) $key . "'");
             if ($check) {
                 $this->repo->update([
                     'value' => $valueData
@@ -267,9 +269,10 @@ class SettingService {
                 \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.password", $value);
             }
 
+            $key = config('app.env') == 'production' ? "`key` =" : "key =";
             $this->repo->update([
                 'value' => $value
-            ], '', "key = '" . $key . "'");
+            ], '', "{$key} '" . $key . "'");
         }
 
         \Illuminate\Support\Facades\Cache::forget('setting');

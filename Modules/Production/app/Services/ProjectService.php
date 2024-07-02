@@ -208,6 +208,9 @@ class ProjectService {
             $productionRoles = json_decode(getSettingByKey('production_staff_role'), true);
             $isProductionRole = in_array($roles[0]->id, $productionRoles);
 
+            $projectManagerRole = getSettingByKey('project_manager_role');
+            $isPMRole = $roles[0]->id == $projectManagerRole;
+
             if (
                 ($search) &&
                 (count($search) > 0)
@@ -287,6 +290,13 @@ class ProjectService {
 
                     $whereHas = array_merge($whereHas, $newWhereHas);
                 }
+            }
+
+            if ($isPMRole) {
+                $whereHas[] = [
+                    'relation' => 'personInCharges',
+                    'query' => 'pic_id = ' . auth()->user()->employee_id,
+                ];
             }
 
             logging('whereHas', $whereHas);
