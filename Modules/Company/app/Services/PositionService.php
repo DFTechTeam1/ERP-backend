@@ -43,7 +43,14 @@ class PositionService {
 
             $search = request('search');
             if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+                $search = strtolower($search);
+                // if search value seperated with ',', then user WHERE IN
+                $nameExplode = explode(',', $search);
+                if (count($nameExplode) > 1) {
+                    $where = "lower(name) WHERE IN ({$search})";
+                } else {
+                    $where = "lower(name) LIKE '%{$search}%'";
+                }
             }
 
             $order = '';

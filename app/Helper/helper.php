@@ -399,3 +399,19 @@ if (!function_exists('getPicOfInventory')) {
         return $employees;
     }
 }
+
+if (!function_exists('isSuperUserRole')) {
+    function isSuperUserRole() {
+        $role = getSettingByKey('super_user_role');
+
+        $userRoles = auth()->user()->roles;
+        $out = false;
+        foreach ($userRoles as $userRole) {
+            if ($userRole->id == $role) {
+                $out = true;
+            }
+        }
+
+        return $out;
+    }
+}

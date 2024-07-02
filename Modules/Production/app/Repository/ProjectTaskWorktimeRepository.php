@@ -2,17 +2,17 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\ProjectTaskPic;
-use Modules\Production\Repository\Interface\ProjectTaskPicInterface;
+use Modules\Production\Models\ProjectTaskWorktime;
+use Modules\Production\Repository\Interface\ProjectTaskWorktimeInterface;
 
-class ProjectTaskPicRepository extends ProjectTaskPicInterface {
+class ProjectTaskWorktimeRepository extends ProjectTaskWorktimeInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectTaskPic();
+        $this->model = new ProjectTaskWorktime();
         $this->key = 'id';
     }
 
@@ -24,7 +24,7 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '', int $limit = 0)
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
@@ -36,14 +36,6 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface {
 
         if ($relation) {
             $query->with($relation);
-        }
-
-        if (!empty($orderBy)) {
-            $query->orderByRaw($orderBy);
-        }
-
-        if ($limit > 0) {
-            $query->limit($limit);
         }
 
         return $query->get();
@@ -88,17 +80,13 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(int $id, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where("id", $id);
-        }
+        $query->where("uid", $uid);
         
         if ($relation) {
             $query->with($relation);
@@ -148,17 +136,10 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id = 0, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-        
-        if (empty($where)) {
-            $query->where('id', $id);
-        } else {
-            $query->whereRaw($where);
-        }
-
-        return $query->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**
@@ -174,16 +155,5 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface {
         }
 
         return $this->model->whereIn($key, $ids)->delete();
-    }
-
-    public function deleteWithCondition(string $where)
-    {
-        return $this->model->whereRaw($where)
-            ->delete();
-    }
-
-    public function upsert(array $data, array $unique, array $updatedColumn)
-    {
-        return $this->model->upsert($data, $unique, $updatedColumn);
     }
 }

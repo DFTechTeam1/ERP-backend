@@ -13,7 +13,10 @@ class CreateTask extends FormRequest
     {
         return [
             'name' => 'required',
-            'task_type' => 'required',
+            'task_type' => 'nullable',
+            'end_date' => 'nullable',
+            'pic' => 'nullable',
+            'media' => 'nullable|array',
         ];
     }
 

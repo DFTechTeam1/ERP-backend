@@ -20,15 +20,23 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('classList', [ProjectController::class, 'getClassList']);
     Route::get('status', [ProjectController::class, 'getProjectStatus']);
 
+    Route::get('tasks', [ProjectController::class, 'getAllTasks']);
+    Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
+
     Route::post('project', [ProjectController::class, 'store']);
     Route::get('project', [ProjectController::class, 'index']);
+    Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
+    Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
+    Route::get('project/marketings', [ProjectController::class, 'getMarketingListForProject']);
     Route::get('project/taskType', [ProjectController::class, 'getTaskTypes']);
     Route::post('project/bulk', [ProjectController::class, 'bulkDelete']);
+    Route::get('project/venues', [ProjectController::class, 'autocompleteVenue']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
     Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask']);
     Route::post('project/{taskId}/description', [ProjectController::class, 'storeDescription']);
     Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
+    Route::post('project/{projectId}/manualChangeTaskBoard', [ProjectController::class, 'manualChangeTaskBoard']);
     Route::post('project/{projectId}/proofOfWork/{taskId}', [ProjectController::class, 'proofOfWork']);
     Route::delete('project/{taskUid}/task', [ProjectController::class, 'deleteTask']);
     Route::put('project/basic/{projectId}', [ProjectController::class, 'updateBasic']);
@@ -40,11 +48,14 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::put('project/{projectId}/equipment', [ProjectController::class, 'updateEquipment']);
     Route::post('project/{taskId}/task/assignMember', [ProjectController::class, 'assignMemberToTask']);
     Route::post('project/{id}/references/delete', [ProjectController::class, 'deleteReference']);
+    Route::get('project/{projectId}/moveToBoards/{boardId}', [ProjectController::class, 'moveToBoards']);
     Route::get('project/{projectId}/getProjectMembers/{taskId}', [ProjectController::class, 'getProjectMembers']);
     Route::post('project/{projectUid}/updateTaskName/{taskId}', [ProjectController::class, 'updateTaskName']);
     Route::post('project/{projectId}/searchTask/{taskUid}', [ProjectController::class, 'searchTask']);
     Route::get('project/{projectId}/getRelatedTask/{taskUid}', [ProjectController::class, 'getRelatedTask']);
     Route::post('project/{projectId}/uploadTaskAttachment/{taskId}', [ProjectController::class, 'uploadTaskAttachment']);
+    Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask']);
+    Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
     Route::delete('project/{projectUid}/task/{taskUid}/deleteAttachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 });
 

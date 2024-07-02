@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Production\database\seeders;
+namespace Modules\Production\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
@@ -11,6 +11,8 @@ class ProductionDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            ProjectSeeder::class,
+        ]);
     }
 }

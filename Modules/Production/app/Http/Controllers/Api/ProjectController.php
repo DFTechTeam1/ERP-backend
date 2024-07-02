@@ -3,6 +3,7 @@
 namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
@@ -14,6 +15,7 @@ use Modules\Production\Http\Requests\Project\StoreReferences;
 use Modules\Production\Http\Requests\Project\UpdateDeadline;
 use Modules\Production\Http\Requests\Project\UploadProofOfWork;
 use Modules\Production\Services\ProjectService;
+use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 
 class ProjectController extends Controller
 {
@@ -38,6 +40,16 @@ class ProjectController extends Controller
                 'personInCharges.employee:id,name,employee_id'
             ]
         ));
+    }
+
+    /**
+     * Get all project based on user role
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllProjects()
+    {
+        return apiResponse($this->service->getAllProjects());
     }
 
     /**
@@ -334,6 +346,17 @@ class ProjectController extends Controller
         return apiResponse($this->service->changeTaskBoard($request->validated(), $projectId));
     }
 
+    /**
+     * * Change board of task (When user move a task)
+     *
+     * @param \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard $request
+     * @param string $projectId
+     */
+    public function manualChangeTaskBoard(ManualChangeTaskBoard $request, string $projectId)
+    {
+        return apiResponse($this->service->manualChangeTaskBoard($request->validated(), $projectId));
+    }
+
     public function proofOfWork(UploadProofOfWork $request, string $projectId, string $taskId)
     {
         return apiResponse($this->service->proofOfWork($request->validated(), $projectId, $taskId));
@@ -342,5 +365,52 @@ class ProjectController extends Controller
     public function updateTaskName(Request $request, string $projectUid, string $taskId)
     {
         return apiResponse($this->service->updateTaskName($request->all(), $projectUid, $taskId));
+    }
+
+    public function moveToBoards(string $projectId, int $boardId)
+    {
+        return apiResponse($this->service->getMoveToBoards($boardId, $projectId));
+    }
+
+    public function autocompleteVenue()
+    {
+        return apiResponse($this->service->autocompleteVenue());
+    }
+
+    public function getAllTasks()
+    {
+        return apiResponse($this->service->getAllTasks());
+    }
+
+    public function detailTask(string $taskUid)
+    {
+        return apiResponse($this->service->detailTask($taskUid));
+    }
+
+    /**
+     * Function to get marketing list
+     * This is used in project form
+     * Result should have marketing position + directors
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getMarketingListForProject()
+    {
+        return apiResponse($this->service->getMarketingListForProject());
+    }
+
+    public function approveTask(string $projectUid, string $taskUid)
+    {
+        return apiResponse($this->service->approveTask($projectUid, $taskUid));
+    }
+
+    public function markAsCompleted(string $projectUid, string $taskUid)
+    {
+        return apiResponse($this->service->markAsCompleted($projectUid, $taskUid));
+    }
+
+    public function getProjectCalendars()
+    {
+        return apiResponse($this->service->getProjectCalendars());
     }
 }

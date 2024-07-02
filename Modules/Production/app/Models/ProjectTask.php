@@ -4,6 +4,8 @@ namespace Modules\Production\Models;
 
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
+use Carbon\Carbon;
+use DateTime;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,9 +32,12 @@ class ProjectTask extends Model
         'created_by',
         'updated_by',
         'task_type',
+        'performance_time',
+        'status',
+        'current_pics'
     ];
 
-    protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text'];
+    protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail'];
 
     public function project(): BelongsTo
     {
@@ -58,7 +63,8 @@ class ProjectTask extends Model
 
     public function proofOfWorks(): HasMany
     {
-        return $this->hasMany(ProjectTaskProofOfWork::class, 'project_task_id');
+        return $this->hasMany(ProjectTaskProofOfWork::class, 'project_task_id')
+            ->orderBy('created_at', 'DESC');
     }
 
     public function logs(): HasMany
@@ -67,10 +73,27 @@ class ProjectTask extends Model
             ->orderBy('created_at', 'DESC');
     }
 
+    public function times(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectTaskPicLog::class, 'project_task_id');
+    }
+
     public function taskLink(): HasMany
     {
         return $this->hasMany(ProjectTaskAttachment::class, 'project_task_id')
             ->where('type', \App\Enums\Production\ProjectTaskAttachment::TaskLink->value);
+    }
+
+    public function proofOfWorksDetail(): Attribute
+    {
+        $out = null;
+        if (count($this->proofOfWorks) > 0) {
+            $out = collect($this->proofOfWorks)->groupBy('created_at')->all();
+        }
+
+        return Attribute::make(
+            get: fn () => $out,
+        );
     }
 
     public function taskTypeText(): Attribute
@@ -128,6 +151,44 @@ class ProjectTask extends Model
 
         return Attribute::make(
             get: fn() => $out,
+        );
+    }
+
+    public function performanceRecap(): Attribute
+    {
+        $out = null;
+        if ((isset($this->attributes['performance_time'])) && ($this->attributes['performance_time'])) {
+            $performance = json_decode($this->attributes['performance_time'], true);
+            logging('performance', $performance);
+            if (count($performance) > 0) {
+                $out = [];
+                foreach ($performance as $report) {
+                    $start = new DateTime($report['start_at']);
+                    $end = $report['end_at'] ? new DateTime($report['end_at']) : new DateTime('now');
+                    $diff = date_diff($start, $end);
+                    $day = $diff->d > 0 ? $diff->d . ' ' . __('global.day') : null;
+                    $hour = $diff->h > 0 ? $diff->h . ' ' . __('global.hours') : null;
+                    $minute = $diff->i > 0 ? $diff->i . ' ' . __('global.minutes') : null;
+                    $workTime = $minute;
+                    if ($hour) {
+                        $workTime = $hour . ' ' . __('global.and') . ' ' . $minute;
+                    }
+                    if ($day) {
+                        $workTime = $day . ' ' . $hour . ' ' . __('global.and') . ' ' . $minute;
+                    }
+
+                    $out[] = [
+                        'type' => $report['type'],
+                        'start' => date('d F Y H:i', strtotime($report['start_at'])),
+                        'end' => date('d F Y H:i', strtotime($report['end_at'])),
+                        'worktime' => $workTime
+                    ]; 
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out
         );
     }
 
