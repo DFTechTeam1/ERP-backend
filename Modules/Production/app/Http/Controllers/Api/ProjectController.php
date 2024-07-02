@@ -43,6 +43,16 @@ class ProjectController extends Controller
     }
 
     /**
+     * Get all project based on user role
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllProjects()
+    {
+        return apiResponse($this->service->getAllProjects());
+    }
+
+    /**
      * Get Event Types
      *
      * @return \Illuminate\Http\JsonResponse
@@ -387,5 +397,20 @@ class ProjectController extends Controller
     public function getMarketingListForProject()
     {
         return apiResponse($this->service->getMarketingListForProject());
+    }
+
+    public function approveTask(string $projectUid, string $taskUid)
+    {
+        return apiResponse($this->service->approveTask($projectUid, $taskUid));
+    }
+
+    public function markAsCompleted(string $projectUid, string $taskUid)
+    {
+        return apiResponse($this->service->markAsCompleted($projectUid, $taskUid));
+    }
+
+    public function getProjectCalendars()
+    {
+        return apiResponse($this->service->getProjectCalendars());
     }
 }

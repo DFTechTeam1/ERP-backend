@@ -24,7 +24,7 @@ class ProjectRepository extends ProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [], string $orderBy = '', int $limit = 0)
     {
         $query = $this->model->query();
 
@@ -44,6 +44,14 @@ class ProjectRepository extends ProjectInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
+        }
+
+        if ($limit > 0) {
+            $query->limit($limit);
         }
 
         return $query->get();

@@ -31,7 +31,8 @@ class User extends Authenticatable
         'image',
         'last_login_at',
         'is_external_user',
-        'username'
+        'username',
+        'employee_id',
     ];
 
     /**
