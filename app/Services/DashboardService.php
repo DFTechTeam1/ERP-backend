@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use DateTime;
+use Carbon\Carbon;
 
 class DashboardService {
     private $projectRepo;
@@ -24,11 +25,14 @@ class DashboardService {
     public function getProjectCalendars(): array
     {
         $where = '';
-        if (request('search_date')) {
-            $searchDate = date('Y-m-d', strtotime(request('search_date')));
-        } else {
-            $searchDate = date('Y-m-d');
-        }
+
+        $month = request('month') == 0 ? date('m') : request('month');
+        $year = request('year') == 0 ? date('Y') : request('year');
+        $startDate = $year . '-' . $month . '-01';
+        $getLastDay = Carbon::createFromDate((int) $year, (int) $month, 1)
+            ->endOfMonth()
+            ->format('d');
+        $endDate = $year . '-' . $month . '-' . $getLastDay;
 
         $superUserRole = getSettingByKey('super_user_role');
         $projectManagerRole = getSettingByKey('project_manager_role');
@@ -37,11 +41,7 @@ class DashboardService {
         $roleId = $roles[0]->id;
         $employeeId = $user->employee_id;
 
-        $year = date('Y', strtotime($searchDate));
-        $month = date('m', strtotime($searchDate));
-        $start = $year . '-' . $month . '-01';
-        $end = $year . '-' . $month . '-30';
-        $where = "project_date >= '" . $start . "' and project_date <= '" . $end . "'";
+        $where = "project_date >= '" . $startDate . "' and project_date <= '" . $endDate . "'";
 
         $whereHas = [];
 
@@ -98,6 +98,8 @@ class DashboardService {
             [
                 'events' => $out,
                 'group' => $grouping,
+                'month' => $month,
+                'year' => $year,
             ],
         );
     }
