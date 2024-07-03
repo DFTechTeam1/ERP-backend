@@ -96,7 +96,6 @@ class ProjectTaskRepository extends ProjectTaskInterface {
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
-        logging('where', [$where]);
         $query = $this->model->query();
 
         $query->selectRaw($select);

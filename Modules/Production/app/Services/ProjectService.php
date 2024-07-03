@@ -553,31 +553,27 @@ class ProjectService {
     protected function formattedDetailTask(string $taskUid, string $where = '')
     {
         if (empty($where))  {
-            $task = $this->taskRepo->show($taskUid, '*', $this->defaultTaskRelation());
+            $taskDetail = $this->taskRepo->show($taskUid, '*', $this->defaultTaskRelation());
         } else {
-            $task = $this->taskRepo->show('dummy', '*', $this->defaultTaskRelation(), $where);
+            $taskDetail = $this->taskRepo->show('dummy', '*', $this->defaultTaskRelation(), $where);
         }
 
         // format time tracker
+        logging('formattedDetailTask', [
+            $taskDetail
+        ]);
 
-        $task = $this->formatSingleTaskPermission($task);
+        $task = $this->formatSingleTaskPermission($taskDetail);
 
         return $task;
     }
 
     protected function formatTimeTracker(array $times)
     {
-        $out = [];
-        
-        $newTimes = [];
-        foreach ($times as $key => $time) {
-            $newTimes[$key] = $time;
-
-            $newTimes[$key]['is_completed'] = $key != (count($times) - 1) ? true : false;
-        }
-
         // chunk each 3 item
-        $chunks = array_chunk($newTimes, 3);
+        $chunks = array_chunk($times, 3);
+
+        logging('chunks', $times);
 
         return $chunks;
     }
@@ -606,12 +602,21 @@ class ProjectService {
         $projectPics = $this->projectPicRepository->list('id,pic_id', 'project_id = ' . $projectId);
         $isProjectPic = in_array($employeeId, collect($projectPics)->pluck('pic_id')->toArray()) || $superUserRole ? true : false;
 
-        $data = collect($data)->map(function ($item) use ($employeeId, $superUserRole, $isProjectPic) {
-            $item['is_project_pic'] = $isProjectPic;
+        $out = [];
 
-            // check if task already active or not, if not show activating button
-            $employeeId = auth()->user()->employee_id;
-            $tasks = collect($item->tasks)->map(function ($task) use ($employeeId, $superUserRole, $isProjectPic) {
+        foreach ($data as $keyBoard => $board) {
+            $out[$keyBoard] = $board;
+
+            $out[$keyBoard]['is_project_pic'] = $isProjectPic;
+
+            $tasks = $board->tasks;
+
+            $outputTask = [];
+            foreach ($tasks as $keyTask => $task) {
+                $outputTask[$keyTask] = $task;
+
+                unset($outputTask[$keyTask]['time_tracker']);
+                
                 // check if task already active or not, if not show activating button
                 $isActive = false;
                 foreach ($task->pics as $pic) {
@@ -620,9 +625,9 @@ class ProjectService {
                     }
                 }
 
-                $task['time_tracker'] = $this->formatTimeTracker($task->times->toArray());
+                $outputTask[$keyTask]['time_tracker'] = $this->formatTimeTracker($task->times->toArray());
 
-                $task['is_project_pic'] = $isProjectPic;
+                $outputTask[$keyTask]['is_project_pic'] = $isProjectPic;
 
                 if ($superUserRole || $isProjectPic) {
                     $isActive = true;
@@ -636,20 +641,15 @@ class ProjectService {
                         $haveTaskAccess = false;
                     }
                 }
-                $task['has_task_access'] = $haveTaskAccess;
+                $outputTask[$keyTask]['has_task_access'] = $haveTaskAccess;
 
-                $task['is_active'] = $isActive;
+                $outputTask[$keyTask]['is_active'] = $isActive;
+            }
 
-                return $task;
-            });
-            $item['tasks'] = $tasks;
+            $out[$keyBoard]['tasks'] = $outputTask;
+        }
 
-            // format proof of works
-
-            return $item;
-        });
-
-        return $data;
+        return $out;
     }
 
     protected function formattedBasicData(string $projectUid)
@@ -875,6 +875,7 @@ class ProjectService {
 
     protected function formatSingleTaskPermission($task)
     {
+        logging('format single task', [$task]);
         $employeeId = auth()->user()->employee_id;
         $superUserRole = isSuperUserRole();
         
@@ -893,7 +894,7 @@ class ProjectService {
             }
         }
 
-        $task['time_tracker'] = $this->formatTimeTracker((array) $task['times']);
+        $task['time_tracker'] = $this->formatTimeTracker(collect($task['times'])->toArray());
 
         // check the ownership of task
         $picIds = collect($task['pics'])->pluck('employee_id')->toArray();
@@ -952,7 +953,7 @@ class ProjectService {
                 // define task need approval from project manager or not
                 $task['need_approval_pm'] = $isProjectPic && $task['status'] == \App\Enums\Production\TaskStatus::CheckByPm->value;
 
-                $task['time_tracker'] = $this->formatTimeTracker((array) $task['times']);
+                $task['time_tracker'] = $this->formatTimeTracker(collect($task['times'])->toArray());
 
                 // check the ownership of task
                 $picIds = collect($task['pics'])->pluck('employee_id')->toArray();
@@ -1474,9 +1475,9 @@ class ProjectService {
                 $data['status'] = \App\Enums\Production\TaskStatus::WaitingApproval->value;
             }
 
-            $task = $this->taskRepo->store(collect($data)->except(['pic', 'media'])->toArray());
+            $taskStore = $this->taskRepo->store(collect($data)->except(['pic', 'media'])->toArray());
 
-            $task = $this->taskRepo->show($task->uid);
+            $task = $this->formattedDetailTask($taskStore->uid);
 
             // task log
             $this->loggingTask([
@@ -3184,11 +3185,7 @@ class ProjectService {
             $boards = $this->formattedBoards($task->project->uid);
             $currentData['boards'] = $boards;
 
-            $currentData['boards'] = $boards;
-
             $currentData = $this->formatTasksPermission($currentData, $projectId);
-
-            storeCache('detailProject' . $projectId, $currentData);
 
             DB::commit();
 
