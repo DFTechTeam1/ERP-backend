@@ -17,6 +17,7 @@ use Modules\Production\Repository\ProjectTaskLogRepository;
 use Modules\Production\Repository\ProjectTaskProofOfWorkRepository;
 use Modules\Production\Repository\ProjectTaskWorktimeRepository;
 use Modules\Production\Repository\ProjectTaskPicLogRepository;
+use Modules\Production\Repository\ProjectTaskReviseHistoryRepository;
 use Modules\Company\Repository\PositionRepository;
 use DateTime;
 use Carbon\Carbon;
@@ -50,6 +51,8 @@ class ProjectService {
 
     private $taskPicLogRepo;
 
+    private $taskReviseHistoryRepo;
+
     /**
      * Construction Data
      */
@@ -82,6 +85,8 @@ class ProjectService {
         $this->positionRepo = new PositionRepository;
 
         $this->taskPicLogRepo = new ProjectTaskPicLogRepository;
+
+        $this->taskReviseHistoryRepo = new ProjectTaskReviseHistoryRepository;
     }
 
     /**
@@ -367,6 +372,16 @@ class ProjectService {
     }
 
     /**
+     * Get all board based related logged user project
+     *
+     * @return array
+     */
+    public function getAllBoards(): array
+    {
+        
+    }
+
+    /**
      * Get all project based on user role
      *
      * @return array
@@ -621,9 +636,14 @@ class ProjectService {
                 $isActive = false;
                 foreach ($task->pics as $pic) {
                     if ($pic->employee_id == $employeeId) {
+
                         $isActive = $pic->is_active;
+                        
+                        break;
                     }
                 }
+
+                logging('TESTING PIC FROM BOARD ACTIVE', [$isActive]);
 
                 $outputTask[$keyTask]['time_tracker'] = $this->formatTimeTracker($task->times->toArray());
 
@@ -816,8 +836,25 @@ class ProjectService {
                 $projectData = new DateTime($data->project_date);
                 $diff = date_diff($projectData, new DateTime('now'));
                 $daysToGo = $diff->d;
+
+                // check time to upload showreels
+                $allowedUploadShowreels = false;
+                $currentTasks = [];
+                foreach ($boardsData as $board) {
+                    foreach ($board['tasks'] as $task) {
+                        $currentTasks[] = $task;
+                    }
+                }
+                $currentTaskStatusses = collect($currentTasks)->pluck('status')->count();
+                $completedStatus = collect($currentTasks)->filter(function ($filter) {
+                    return $filter['status'] == \App\Enums\Production\TaskStatus::Completed->value;
+                })->values()->count();
+                if ($currentTaskStatusses == $completedStatus) {
+                    $allowedUploadShowreels = true;
+                }
     
                 $output = [
+                    'allowed_upload_showreels' => $allowedUploadShowreels,
                     'uid' => $data->uid,
                     'name' => $data->name,
                     'event_type' => $eventType,
@@ -916,14 +953,10 @@ class ProjectService {
         return $task;
     }
 
-    /**
-     * Function to mapping tasks when user go to detail project
-     * Check task status, active or not based role or approval
-     *
-     * @return void
-     */
     protected function formatTasksPermission($project, int $projectId)
     {
+        $output = [];
+
         $employeeId = auth()->user()->employee_id;
         $superUserRole = isSuperUserRole();
 
@@ -934,18 +967,104 @@ class ProjectService {
         $isProjectPic = in_array($employeeId, collect($projectPics)->pluck('pic_id')->toArray()) || $superUserRole ? true : false;
         $project['is_project_pic'] = $isProjectPic;
 
+        foreach ($project['boards'] as $keyBoard => $board) {
+            $output[$keyBoard] = $board;
+
+            $outputTask = [];
+
+            foreach ($board['tasks'] as $keyTask => $task) {
+                $outputTask[$keyTask] = $task;
+
+                // check if task already active or not, if not show activating button
+                
+                if (in_array($employeeId, collect($task['pics'])->pluck('employee_id')->toArray())) {
+                    $search = collect($task['pics'])->filter(function ($filterEmployee) use ($employeeId) {
+                        return $filterEmployee['employee_id'] == $employeeId;
+                    })->values();
+                    $search = $search->toArray()[0];
+                    logging('SEARCH', $search);
+                    $outputTask[$keyTask]['is_active'] = $search['is_active'];
+                }
+                // foreach ($task['pics'] as $pic) {
+                //     if ($pic['employee_id'] == $employeeId) {
+                //         logging('TESTING PIC', $pic);
+
+                //         $outputTask[$keyTask]['is_active'] = $pic['is_active'];
+                        
+                //         break;
+                //     } else {
+                //         $outputTask[$keyTask]['is_active'] = false;
+                //     }
+                // }
+
+                // push 'is_project_pic' to task collection
+                $outputTask[$keyTask]['is_project_pic'] = $isProjectPic;
+
+                // define task need approval from project manager or not
+                $outputTask[$keyTask]['need_approval_pm'] = $isProjectPic && $task['status'] == \App\Enums\Production\TaskStatus::CheckByPm->value;
+
+                $outputTask[$keyTask]['time_tracker'] = $this->formatTimeTracker(collect($task['times'])->toArray());
+
+                // check the ownership of task
+                $picIds = collect($task['pics'])->pluck('employee_id')->toArray();
+                $haveTaskAccess = true;
+                if (!$superUserRole && !$isProjectPic) {
+                    if (!in_array($employeeId, $picIds)) { // where logged user is not a in task pic except the project manager
+                        $haveTaskAccess = false;
+                    }
+                }
+                $outputTask[$keyTask]['picIds'] = $picIds;
+                $outputTask[$keyTask]['has_task_access'] = $haveTaskAccess;
+
+                if ($superUserRole || $isProjectPic) {
+                    $outputTask[$keyTask]['is_active'] = true;
+                }
+
+            }
+
+            $output[$keyBoard]['tasks'] = $outputTask;
+        }
+
+        $project['boards'] = $output;
+
+        storeCache('detailProject' . $projectId, $project);
+        return $project;
+    }
+
+    /**
+     * Function to mapping tasks when user go to detail project
+     * Check task status, active or not based role or approval
+     *
+     * @return void
+     */
+    protected function formatTasksPermissionBackup($project, int $projectId)
+    {
+        $employeeId = auth()->user()->employee_id;
+        $superUserRole = isSuperUserRole();
+
+        $project['is_super_user'] = $superUserRole;
+
+        // if logged user is pic or super user role, set as is_project_pic
+        $projectPics = $this->projectPicRepository->list('id,pic_id', 'project_id = ' . $projectId);
+        $isProjectPic = in_array($employeeId, collect($projectPics)->pluck('pic_id')->toArray()) || $superUserRole ? true : false;
+        $project['is_project_pic'] = $isProjectPic;
+        
         $boards = collect($project['boards'])->map(function ($board) use ($employeeId, $superUserRole, $isProjectPic) {
             // check if task already active or not, if not show activating button
-            $employeeId = auth()->user()->employee_id;
             $tasks = collect($board['tasks'])->map(function ($task) use ($employeeId, $superUserRole, $isProjectPic) {
+
                 // check if task already active or not, if not show activating button
                 $isActive = false;
                 foreach ($task['pics'] as $pic) {
                     if ($pic['employee_id'] == $employeeId) {
+                        logging('TESTING PIC', $pic);
                         
                         $isActive = $pic['is_active'];
+
+                        break;
                     }
                 }
+                logging('TESTING PIC ACTIVE', [$isActive]);
 
                 // push 'is_project_pic' to task collection
                 $task['is_project_pic'] = $isProjectPic;
@@ -983,7 +1102,6 @@ class ProjectService {
 
         // store again to cache
         storeCache('detailProject' . $projectId, $project);
-        logging('format permission', $project);
         return $project;
     }
 
@@ -1277,13 +1395,16 @@ class ProjectService {
      * 
      * Every assigned member need to approved it before do any action. Bcs of this sytem will take a note about 'IDLE TASK'
      * IDLE TASK is the idle time between assigned time and approved time
+     * 
+     * If $isRevise is TRUE, no need to change task status (Already handle in parent function)
      *
      * @param array $data
      * @param string $taskId
      * @param boolean $isForProjectManager
+     * @param boolean $isRevise
      * @return array
      */
-    public function assignMemberToTask(array $data, string $taskUid, bool $isForProjectManager = false)
+    public function assignMemberToTask(array $data, string $taskUid, bool $isForProjectManager = false, bool $isRevise = false)
     {
         DB::beginTransaction();
         try {
@@ -1304,6 +1425,10 @@ class ProjectService {
                         'assigned_at' => Carbon::now(),
                     ];
 
+                    if ($isRevise) {
+                        $payload['status'] = \App\Enums\Production\TaskPicStatus::Revise->value;
+                    }
+
                     logging('payload assign', $payload);
 
                     $this->taskPicRepo->store($payload);
@@ -1314,6 +1439,13 @@ class ProjectService {
                         $this->setTaskWorkingTime($taskId, $employeeId, \App\Enums\Production\WorkType::CheckByPm->value);
                     } else { // check to assigned
                         $this->setTaskWorkingTime($taskId, $employeeId, \App\Enums\Production\WorkType::Assigned->value);
+                    }
+
+                    // change task status
+                    if (!$isRevise) { // see PHPDOC
+                        $this->taskRepo->update([
+                            'status' => !$isForProjectManager ? \App\Enums\Production\TaskStatus::WaitingApproval->value : \App\Enums\Production\TaskStatus::CheckByPm->value,
+                        ], $taskUid);
                     }
 
                     $this->loggingTask([
@@ -2261,6 +2393,11 @@ class ProjectService {
         }
     }
 
+    protected function storeCurrentBoards(int $taskId): void
+    {
+        // 
+    }
+
     /**
      * Function to upload proof of work, and change task to next task and assign PM to check employee work
      *
@@ -2377,7 +2514,7 @@ class ProjectService {
     }
 
     /**
-     * Detach current pic and then assign project manager to selected task
+     * Detach current pic and then assign project manager to selected task (This step PM will check proof of work)
      * 
      * $ids array will be have array of pic id (int)
      *
@@ -2421,6 +2558,7 @@ class ProjectService {
 
         $payloadUpdate = [
             'project_board_id' => $data['board_id'],
+            'current_board' => $data['board_source_id'],
         ];
 
         if (!empty($nextTaskStatus)) {
@@ -2509,6 +2647,8 @@ class ProjectService {
      * This function only running with 2 scenarios like:
      * 1. When employee approved task
      * 2. When task is moved to next step (Auto assign to PM)
+     * 
+     * $type will refer to \App\Enums\Production\WorkType.php
      *
      * @param collection $task
      * @return void
@@ -3153,7 +3293,131 @@ class ProjectService {
         }
     }
 
-    public function markAsCompleted(string $projectUid, string $taskUid)
+    /**
+     * Revise given task
+     * Change task status to revise (refer \App\Enums\Production\TaskStatus.php)
+     * Notify current user
+     * Upload revise reason
+     * Send task to current board
+     * 
+     * $data will have information like:
+     * string reason -> required
+     * blob file -> nullable
+     *
+     * @param array $data
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return array
+     */
+    public function reviseTask(array $data, string $projectUid, string $taskUid): array
+    {
+        $tmpFile = null;
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+        $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
+
+        DB::beginTransaction();
+        try {
+            $tmpFile = uploadImageandCompress(
+                "projects/{$projectId}/task/{$taskId}/revise",
+                10,
+                $data['file']
+            );
+
+            $this->taskReviseHistoryRepo->store([
+                'project_task_id' => $taskId,
+                'project_id' => $projectId,
+                'reason' => $data['reason'],
+                'file' => $tmpFile,
+                'revise_by' => auth()->user()->employee_id,
+            ]);
+
+            // this variable is to alert current pics
+            $currentTaskData = $this->taskRepo->show($taskUid, 'current_pics,current_board,project_board_id');
+            $currentPics = json_decode($currentTaskData->current_pics, true);
+            $currentPicUids = [];
+            foreach ($currentPics as $currentPic) {
+                $employee = $this->employeeRepo->show('dummy', 'id,uid', [], 'id = ' . $currentPic);
+                $currentPicUids[] = $employee->uid;
+            }
+
+            $currentTaskPics = $this->taskPicRepo->list('employee_id', 'project_task_id = ' . $taskId, ['employee:id,uid']);
+
+            $this->taskRepo->update([
+                'status' => \App\Enums\Production\TaskStatus::Revise->value,
+                'project_board_id' => $currentTaskData->current_board,
+                'current_board' => null,
+            ], $taskUid);
+
+            // update worktime log for project manager
+            foreach ($currentTaskPics as $currentPM) {
+                $this->setTaskWorkingTime($taskId, $currentPM->employee_id, \App\Enums\Production\WorkType::Finish->value);
+            }
+
+            // detach project manager
+            $this->detachTaskPic(
+                collect($currentTaskPics)->pluck('employee.uid')->toArray(),
+                $taskId
+            );
+
+            // assign current employee pic to task
+            $this->assignMemberToTask(
+                [
+                    'users' => $currentPicUids,
+                    'removed' => [],
+                ],
+                $taskUid,
+                false,
+                true,
+            );
+
+            // update worktime for employee
+            foreach ($currentPics as $currentPic) {
+                $this->setTaskWorkingTime($taskId, $currentPic, \App\Enums\Production\WorkType::Assigned->value);
+            }
+
+            //update cache and finishing process
+            $task = $this->formattedDetailTask($taskUid);
+            
+            $currentData = getCache('detailProject' . $projectId);
+
+            $boards = $this->formattedBoards($task->project->uid);
+            $currentData['boards'] = $boards;
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            DB::commit();
+
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ],
+            );
+        } catch (\Throwable $th) {
+            if ($tmpFile) {
+                $path = storage_path("app/public/projects/{$projectId}/task/{$taskId}/revise/{$tmpFile}");
+                deleteImage($path);
+            }
+
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to complete the task
+     * Project task status will be complete (refer to \App\Enums\Production\TaskStatus.php)
+     * Set working time to finish (refer to \App\Enums\Production\WorkType.php)
+     * Detach ALL PIC
+     *
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return array
+     */
+    public function markAsCompleted(string $projectUid, string $taskUid): array
     {
         DB::beginTransaction();
         try {

@@ -57,8 +57,9 @@ class ProjectTaskPic extends Model
     public function isActive(): Attribute
     {
         $out = false;
+        logging('YOLO', [$this->attributes['status']]);
         if (isset($this->attributes['status'])) {
-            $out = $this->attributes['status'] == \App\Enums\Production\TaskPicStatus::Approved->value ? true : false;
+            $out = $this->attributes['status'] == \App\Enums\Production\TaskPicStatus::Approved->value || $this->attributes['status'] == \App\Enums\Production\TaskPicStatus::Revise->value ? true : false;
         }
 
         return Attribute::make(

@@ -362,7 +362,7 @@ if (!function_exists('curlRequest')) {
 }
 
 if (!function_exists('logging')) {
-    function logging($key, $value) {
+    function logging($key, array $value) {
         \Illuminate\Support\Facades\Log::debug($key, $value);
     }
 }

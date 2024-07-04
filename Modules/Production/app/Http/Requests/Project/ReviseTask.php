@@ -4,7 +4,7 @@ namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class CreateTask extends FormRequest
+class ReviseTask extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -12,11 +12,8 @@ class CreateTask extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required',
-            'task_type' => 'nullable',
-            'end_date' => 'nullable',
-            'pic' => 'nullable',
-            'media' => 'nullable|array'
+            'reason' => 'required',
+            'file' => 'nullable',
         ];
     }
 
