@@ -34,10 +34,11 @@ class ProjectTask extends Model
         'task_type',
         'performance_time',
         'status',
-        'current_pics'
+        'current_pics',
+        'current_board',
     ];
 
-    protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail'];
+    protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail', 'task_status', 'task_status_color'];
 
     public function project(): BelongsTo
     {
@@ -52,6 +53,11 @@ class ProjectTask extends Model
     public function pics(): HasMany
     {
         return $this->hasMany(ProjectTaskPic::class, 'project_task_id');
+    }
+
+    public function revises(): HasMany
+    {
+        return $this->hasMany(ProjectTaskReviseHistory::class, 'project_task_id');
     }
 
     public function medias(): HasMany
@@ -75,7 +81,8 @@ class ProjectTask extends Model
 
     public function times(): HasMany
     {
-        return $this->hasMany(\Modules\Production\Models\ProjectTaskPicLog::class, 'project_task_id');
+        return $this->hasMany(\Modules\Production\Models\ProjectTaskPicLog::class, 'project_task_id')
+            ->orderBy('created_at', 'ASC');
     }
 
     public function taskLink(): HasMany
@@ -203,5 +210,47 @@ class ProjectTask extends Model
         }
 
         return $out;
+    }
+
+    public function taskStatus(): Attribute
+    {
+        $out = null;
+
+        if (isset($this->attributes['status'])) {
+            $taskStatus = \App\Enums\Production\TaskStatus::cases();
+            
+            foreach ($taskStatus as $status) {
+                if ($status->value == $this->attributes['status']) {
+                    $out = $status->label();
+
+                    break;
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
+
+    public function taskStatusColor(): Attribute
+    {
+        $out = null;
+
+        if (isset($this->attributes['status'])) {
+            $taskStatus = \App\Enums\Production\TaskStatus::cases();
+
+            foreach ($taskStatus as $status) {
+                if ($status->value == $this->attributes['status']) {
+                    $out = $status->color();
+
+                    break;
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
     }
 }

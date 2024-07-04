@@ -550,3 +550,15 @@ Table project_task_worktimes {
     created_at timestamp
     updated_at timestamp
 }
+
+Table project_task_revise_histories {
+    id int [pk, increment]
+    project_task_id int
+    project_id int
+    selected_user longtext [note: 'who is working on this revise task']
+    reason varchar
+    file varchar
+    revise_by int [note: 'who is create this revise reason']
+    created_at timestamp
+    updated_at timestamp
+}

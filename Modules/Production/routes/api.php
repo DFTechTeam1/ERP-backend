@@ -26,6 +26,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project', [ProjectController::class, 'store']);
     Route::get('project', [ProjectController::class, 'index']);
     Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
+    Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
     Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
     Route::get('project/marketings', [ProjectController::class, 'getMarketingListForProject']);
     Route::get('project/taskType', [ProjectController::class, 'getTaskTypes']);
@@ -56,6 +57,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{projectId}/uploadTaskAttachment/{taskId}', [ProjectController::class, 'uploadTaskAttachment']);
     Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask']);
     Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
+    Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask']);
     Route::delete('project/{projectUid}/task/{taskUid}/deleteAttachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 });
 

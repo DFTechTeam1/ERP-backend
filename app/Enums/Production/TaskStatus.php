@@ -20,4 +20,15 @@ enum TaskStatus: int
             static::WaitingApproval => __("global.waitingApproval"),
         };
     }
+
+    public function color()
+    {
+        return match ($this) {
+            static::OnProgress => 'light-blue-lighten-3',
+            static::CheckByPm => 'deep-purple-lighten-1',
+            static::Revise => 'orange-darken-1',
+            static::Completed => 'success',
+            static::WaitingApproval => 'grey-lighten-1',
+        };
+    }
 }

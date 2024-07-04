@@ -14,6 +14,7 @@ use Modules\Production\Http\Requests\Project\MoreDetailUpdate;
 use Modules\Production\Http\Requests\Project\StoreReferences;
 use Modules\Production\Http\Requests\Project\UpdateDeadline;
 use Modules\Production\Http\Requests\Project\UploadProofOfWork;
+use Modules\Production\Http\Requests\Project\ReviseTask;
 use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 
@@ -407,6 +408,23 @@ class ProjectController extends Controller
     public function markAsCompleted(string $projectUid, string $taskUid)
     {
         return apiResponse($this->service->markAsCompleted($projectUid, $taskUid));
+    }
+
+    /**
+     * Revise task
+     *
+     * $request data will be:
+     * 1. string reason -> required
+     * 2. blob file -> nullable
+     * 
+     * @param ReviseTask $request
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function reviseTask(ReviseTask $request, string $projectUid, string $taskUid)
+    {
+        return apiResponse($this->service->reviseTask($request->validated(), $projectUid, $taskUid));
     }
 
     public function getProjectCalendars()
