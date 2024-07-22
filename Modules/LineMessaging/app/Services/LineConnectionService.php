@@ -152,24 +152,35 @@ class LineConnectionService {
     {
         $exp = explode("\nalasan:", $text);
 
+        $reason = ltrim($exp[1]);
+
         $tokenExp = explode('tokenId=', $exp[0]);
 
-        $token = $tokenExp[0];
+        $token = $tokenExp[1];
+
+        logging('token', [$token]);
 
         $token = Hashids::decode($token);
 
-        if (count($token) > 0) {
-            $divider = 007;
-    
-            $breakToken = explode($divider, $token[0]);
-    
-            logging('token', [$breakToken]);
+        logging('token decode', $token);
 
+        if (count($token) > 0) {
+            $divider = '107';
+    
+            $breakToken = explode($divider, (string) $token[0]);
+    
+            $transferId = array_pop($breakToken);
+
+            $transfer = \Modules\Production\Models\TransferTeamMember::find($transferId);
+
+            $service = new \Modules\Production\Services\TransferTeamMemberService;
+
+            $reject = $service->rejectRequest([
+                'reason' => $reason,
+            ], $transfer->uid);
+
+            logging('reject from line: ', $reject);
         }
 
-
-        logging('text reject: ' . $text, []);
-
-        logging('source reject', [$source]);
     }
 }

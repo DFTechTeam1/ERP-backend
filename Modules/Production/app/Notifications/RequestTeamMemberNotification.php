@@ -80,7 +80,7 @@ class RequestTeamMemberNotification extends Notification
     {
         $playerData = $this->player['nickname'];
 
-        $divider = 007;
+        $divider = 107;
 
         $tokenData = Hashids::encode(
              $this->player['id'] . $divider . $this->project->id . $divider . $this->requestedBy->id . $divider . $this->transferId
