@@ -2,6 +2,7 @@
 
 namespace Modules\LineMessaging\Services;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Vinkla\Hashids\Facades\Hashids;
 
@@ -140,11 +141,20 @@ class LineConnectionService {
         $data = json_decode($exp[1], true);
 
         if ($data) {
-            $transfer = \Modules\Production\Models\TransferTeamMember::find($data['tfid']);
-
-            $service = new \Modules\Production\Services\TransferTeamMemberService;
-
-            $service->approveRequest($transfer->uid, 'line');
+            // auto login
+            $user = \App\Models\User::where('employee_id', $data['rid'])->first();
+            logging('auto loggin user', [$user]);
+            if ($user) {
+                Auth::login($user);
+    
+                $transfer = \Modules\Production\Models\TransferTeamMember::find($data['tfid']);
+    
+                $service = new \Modules\Production\Services\TransferTeamMemberService;
+    
+                $service->approveRequest($transfer->uid, 'line');
+    
+                Auth::logout();
+            }
         }
     }
 
