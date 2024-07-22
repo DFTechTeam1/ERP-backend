@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'hashSalt' => env('HASH_SALT', 's3cr3t.@'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
+use Modules\Production\Http\Requests\Project\LoanTeamMember;
+use Modules\Production\Http\Requests\Project\ChangeStatus;
 use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\Create;
 use Modules\Production\Http\Requests\Project\CreateDescription;
@@ -430,5 +432,52 @@ class ProjectController extends Controller
     public function getProjectCalendars()
     {
         return apiResponse($this->service->getProjectCalendars());
+    }
+
+    public function getProjectBoards(string $projectId)
+    {
+        return apiResponse($this->service->getProjectBoards($projectId));
+    }
+
+    public function getProjectTeams(string $projectUid)
+    {
+        return apiResponse($this->service->getProjectTeamsForTask($projectUid));
+    }
+
+    public function getProjectStatusses()
+    {
+        return apiResponse($this->service->getProjectStatusses());
+    }
+
+    public function changeStatus(ChangeStatus $request, string $projectUid)
+    {
+        return apiResponse($this->service->changeStatus($request->toArray(), $projectUid));
+    }
+
+    /**
+     * Get PIC for request team member component
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTargetPicsAndTaskList(string $projectUid)
+    {
+        return apiResponse($this->service->getTargetPicsAndTaskList($projectUid));
+    }
+
+    /**
+     * Function to get pic teams for request team member
+     *
+     * @param string $projectUid
+     * @param string $picUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPicTeams(string $projectUid, string $picUid)
+    {
+        return apiResponse($this->service->getPicTeams($projectUid, $picUid));
+    }
+
+    public function loadTeamMember(LoanTeamMember $request, string $projectUid)
+    {
+        return apiResponse($this->service->loadTeamMember($request->validated(), $projectUid));
     }
 }

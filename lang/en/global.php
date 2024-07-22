@@ -97,6 +97,7 @@ return [
     'hours' => 'Hour',
     'and' => 'and',
     'approved' => 'Approved',
+    'approve' => 'Approve',
     'waitingApproval' => 'Waiting Approval',
     'employeeStartWorking' => ':name start working',
     'employeeAssignedTask' => ':name has just been assigned',
@@ -106,6 +107,8 @@ return [
     'onProgress' => 'On Progress',
     'checkByPm' => 'Check by PM',
     'dateCount' => ':day days to go',
+    'countTaskOnSelectedDate' => 'Have :count tasks on selected date - :date.',
+    'reject' => 'Reject',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -181,4 +184,11 @@ return [
     'cannotMoveToTargetBoard' => "Cannot move task. It's not allowed",
     'taskHasBeenApproved' => 'Task has been approved',
     'taskIsCompletedAndContinue' => 'Task is completed and continue to next step',
+    'statusIsChanged' => 'Status is changed',
+    'teamRequestIsSent' => 'Team request is sent.',
+    'successCancelRequest' => 'Team request has been canceled',
+    'transferTeamApproved' => 'Transfer team is approved',
+    'transferIsCompleted' => 'Transfer is complete. Now :name is focusing on the his boss event',
+    'requestIsRejected' => 'Team request is being rejected',
+    'teamRequestIsDelete' => 'Team request is deleted',
 ];

@@ -14,7 +14,9 @@ class LineChannel {
 
         $line_ids = $message['line_ids'];
         foreach ($line_ids as $line_id) {
-            $service->sendMessage($message['messages'], $line_id);
+            $sendLine = $service->sendMessage($message['messages'], $line_id);
+
+            logging('result send line message', [$sendLine]);
         }
 
         logging('message line: ', $message);

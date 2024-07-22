@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\ProjectController;
+use Modules\Production\Http\Controllers\Api\TeamTransferController;
 use Modules\Production\Http\Controllers\ProductionController;
 
 /*
@@ -28,12 +29,18 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
     Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
     Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
+    Route::get('project/statusses', [ProjectController::class, 'getProjectStatusses']);
     Route::get('project/marketings', [ProjectController::class, 'getMarketingListForProject']);
     Route::get('project/taskType', [ProjectController::class, 'getTaskTypes']);
     Route::post('project/bulk', [ProjectController::class, 'bulkDelete']);
     Route::get('project/venues', [ProjectController::class, 'autocompleteVenue']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
+    Route::get('project/getTargetPicsAndTaskList/{projectUid}', [ProjectController::class, 'getTargetPicsAndTaskList']); // get pic list for request team member (exclude logged accont)
+    Route::post('project/{projectUid}/loadTeamMember', [ProjectController::class, 'loadTeamMember']);
+    Route::post('project/{projectUid}/changeStatus', [ProjectController::class, 'changeStatus']);
+    Route::get('project/{id}/getBoards', [ProjectController::class, 'getProjectBoards']);
+    Route::get('project/{id}/getProjectTeams', [ProjectController::class, 'getProjectTeams']);
     Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask']);
     Route::post('project/{taskId}/description', [ProjectController::class, 'storeDescription']);
     Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
@@ -50,6 +57,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{taskId}/task/assignMember', [ProjectController::class, 'assignMemberToTask']);
     Route::post('project/{id}/references/delete', [ProjectController::class, 'deleteReference']);
     Route::get('project/{projectId}/moveToBoards/{boardId}', [ProjectController::class, 'moveToBoards']);
+    Route::get('project/{projectUid}/getPicTeams/{picUid}', [ProjectController::class, 'getPicTeams']);
     Route::get('project/{projectId}/getProjectMembers/{taskId}', [ProjectController::class, 'getProjectMembers']);
     Route::post('project/{projectUid}/updateTaskName/{taskId}', [ProjectController::class, 'updateTaskName']);
     Route::post('project/{projectId}/searchTask/{taskUid}', [ProjectController::class, 'searchTask']);
@@ -59,6 +67,13 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
     Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask']);
     Route::delete('project/{projectUid}/task/{taskUid}/deleteAttachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
+
+    Route::get('team-transfers', [TeamTransferController::class, 'index']);
+    Route::post('team-transfers/cancel', [TeamTransferController::class, 'cancelRequest']);
+    Route::get('team-transfers/complete/{transferUid}', [TeamTransferController::class, 'completeRequest']);
+    Route::delete('team-transfers/delete/{transferUid}', [TeamTransferController::class, 'destroy']);
+    Route::post('team-transfers/reject/{transferUid}', [TeamTransferController::class, 'rejectRequest']);
+    Route::get('team-transfers/approve/{transferUid}/{deviceAction}', [TeamTransferController::class, 'approveRequest']);
 });
 
 Route::get('production/project/{taskId}/downloadAttachment/{attachmentId}', [ProjectController::class, 'downloadAttachment']);

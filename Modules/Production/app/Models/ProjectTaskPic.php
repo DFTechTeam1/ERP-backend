@@ -31,6 +31,11 @@ class ProjectTaskPic extends Model
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'employee_id');
     }
 
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Production\Models\ProjectTask::class, 'project_task_id');
+    }
+
     public function logs(): HasMany
     {
         return $this->hasMany(\Modules\Production\Models\ProjectTaskPicLog::class, 'employee_id', 'employee_id');
@@ -57,7 +62,6 @@ class ProjectTaskPic extends Model
     public function isActive(): Attribute
     {
         $out = false;
-        logging('YOLO', [$this->attributes['status']]);
         if (isset($this->attributes['status'])) {
             $out = $this->attributes['status'] == \App\Enums\Production\TaskPicStatus::Approved->value || $this->attributes['status'] == \App\Enums\Production\TaskPicStatus::Revise->value ? true : false;
         }

@@ -24,6 +24,7 @@ class Create extends FormRequest
             'pic' => 'required',
             'led_area' => 'required',
             'led' => 'required',
+            'status' => 'required',
         ];
     }
 

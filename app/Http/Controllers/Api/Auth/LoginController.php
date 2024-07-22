@@ -71,6 +71,40 @@ class LoginController extends Controller
             $menuService = new \App\Services\MenuService();
             $menus = $menuService->getMenus($user->getAllPermissions());
 
+            $isProjectManager = false;
+
+            $isEmployee = false;
+
+            $isDirector = false;
+
+            $isSuperUser = false;
+
+            $positionAsDirectors = json_decode(getSettingByKey('position_as_directors'), true);
+
+            $positionAsProjectManager = json_decode(getSettingByKey('position_as_project_manager'), true);
+
+            $superUserRole = getSettingByKey('super_user_role');
+
+            if ($roleId == $superUserRole) {
+                $isSuperUser = true;
+            }
+
+            if (
+                ($positionAsDirectors) &&
+                ($user->employee) &&
+                (in_array($user->employee->position->uid, $positionAsDirectors))
+            ) {
+                $isDirector = true;
+            }
+
+            if (
+                ($positionAsProjectManager) &&
+                ($user->employee) &&
+                (in_array($user->employee->position->uid, $positionAsProjectManager))
+            ) {
+                $isProjectManager = true;
+            }
+
             $payload = [
                 'token' => $token->plainTextToken,
                 'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
@@ -81,6 +115,9 @@ class LoginController extends Controller
                 'role_id' => $roleId,
                 'app_name' => getSettingByKey('app_name'),
                 'board_start_calcualted' => getSettingByKey('board_start_calcualted'),
+                'is_director' => $isDirector,
+                'is_project_manager' => $isProjectManager,
+                'is_super_user' => $isSuperUser,
             ];
 
             $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));

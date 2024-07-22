@@ -562,3 +562,32 @@ Table project_task_revise_histories {
     created_at timestamp
     updated_at timestamp
 }
+
+Table custom_inventories {
+    id int [pk, increment]
+    name varchar
+    type varchar
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table custom_inventories_detail {
+    id int [pk, increment]
+    custom_inventory_id int [ref: > custom_inventories.id]
+    inventory_id int
+    stock int
+    price double
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table transfer_team_members {
+    id int [pk, increment]
+    project_id int
+    employee_id int
+    reason varchar
+    project_date date
+    status tinyint [note: '1 for requested, 2 for approved, 3 for reject, 4 completed']
+    created_at timestamp
+    updated_at timestamp
+}
