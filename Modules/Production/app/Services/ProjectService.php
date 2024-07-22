@@ -531,7 +531,15 @@ class ProjectService
         }
 
         // get another teams from approved transfer team
-        $transfers = $this->transferTeamRepo->list('id, employee_id', 'status = ' . \App\Enums\Production\TransferTeamStatus::Approved->value . ' and requested_by = ' . auth()->user()->employee_id, ['employee:id,name,uid,email,employee_id']);
+        $user = auth()->user();
+        $roles = $user->roles;
+        $roleId = $roles[0]->id;
+        $superUserRole = getSettingByKey('super_user_role');
+        $transferCondition = 'status = ' . \App\Enums\Production\TransferTeamStatus::Approved->value;
+        if ($roleId != $superUserRole) {
+            $transferCondition .= ' and requested_by = ' . $user->employee_id; 
+        }
+        $transfers = $this->transferTeamRepo->list('id,employee_id', $transferCondition, ['employee:id,name,uid,email,employee_id']);
 
         $transfers = collect($transfers)->map(function ($transfer) {
             return [
