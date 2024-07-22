@@ -97,12 +97,15 @@ class RequestTeamMemberNotification extends Notification
 
         $messages = [
             [
+                'type' => 'text',
+                'text' => 'Hai ' . $this->pic->nickname . ', ' . $this->requestedBy->nickname . ' request untuk meminjam ' . $playerData . ' untuk sementara dalam pengerjaan event ' . $this->project->name . ' (' . date('d F Y', strtotime($this->project->project_date)) . ') dengan alasan ' . $transfer->reason,
+            ],
+            [
                 'type' => 'template',
                 'altText' => 'Request Member Message',
                 'template' => [
                     'type' => 'buttons',
-                    // 'title' => 'Request Team dari ' . $this->requestedBy->nickname,
-                    'text' => 'Hai ' . $this->pic->nickname . ', ' . $this->requestedBy->nickname . ' request untuk meminjam ' . $playerData . ' untuk sementara dalam pengerjaan event ' . $this->project->name . ' (' . date('d F Y', strtotime($this->project->project_date)) . ') dengan alasan ' . $transfer->reason,
+                    'text' => 'Apakah kamu setuju untuk meminjamkan ' . $playerData . ' untuk sementara waktu?',
                     'actions' => [
                         [
                             'type' => 'postback',
