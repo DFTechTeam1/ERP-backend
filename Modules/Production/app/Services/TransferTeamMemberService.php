@@ -326,7 +326,7 @@ class TransferTeamMemberService {
             $transfer = $this->repo->show($transferUid);
 
             if ($transfer->status == \App\Enums\Production\TransferTeamStatus::Requested->value) {
-                $this->cancelRequest(['ids' => $transferUid]);
+                $this->cancelRequest(['ids' => [$transferUid]]);
             }
 
             $this->repo->delete(getIdFromUid($transferUid, new \Modules\Production\Models\TransferTeamMember()));
