@@ -105,7 +105,7 @@ class RequestTeamMemberNotification extends Notification
                 'altText' => 'Request Member Message',
                 'template' => [
                     'type' => 'buttons',
-                    'text' => 'Apakah kamu setuju untuk meminjamkan ' . $playerData . ' untuk sementara waktu?',
+                    'text' => 'Apakah kamu setuju meminjamkan ' . $playerData . ' untuk sementara waktu?',
                     'actions' => [
                         [
                             'type' => 'postback',

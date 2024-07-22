@@ -204,13 +204,18 @@ class LineConnectionService {
 
             $transfer = \Modules\Production\Models\TransferTeamMember::find($transferId);
 
-            $service = new \Modules\Production\Services\TransferTeamMemberService;
+            $user = \App\Models\User::where('employee_id', $transfer->request_to)->first();
 
-            $reject = $service->rejectRequest([
-                'reason' => $reason,
-            ], $transfer->uid);
-
-            logging('reject from line: ', $reject);
+            if ($user) {
+                $this->autoLogin($user);
+    
+                $resp = Http::withTOken($this->bearerToken)
+                    ->get(config('app.url') . "/api/production/team-transfers/reject/{$transfer->uid}");
+    
+                logging('resp reject from line', [$resp]);
+    
+                $this->autoLogout($user);
+            }
         }
 
     }
