@@ -40,4 +40,6 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::post('inventory-types/bulk', "{$namespace}\InventoryTypeController@bulkDelete");
     Route::get('inventory-types/all', "{$namespace}\InventoryTypeController@allList");
     Route::apiResource('inventory-types', "{$namespace}\InventoryTypeController");
+
+    Route::post('custom-inventories', "{$namespace}\CustomInventoryController@store");
 });

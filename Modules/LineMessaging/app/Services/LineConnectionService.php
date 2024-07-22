@@ -3,6 +3,7 @@
 namespace Modules\LineMessaging\Services;
 
 use Illuminate\Support\Facades\Http;
+use Vinkla\Hashids\Facades\Hashids;
 
 class LineConnectionService {
     private $url;
@@ -109,6 +110,19 @@ class LineConnectionService {
                     if (count($exp) == 2 && strtolower($exp[0]) == 'register') {
                         $this->handleRegisterUser($event);
                     }
+
+                    $containRejectRequestMember = str_contains($textRaw, 'alasan:');
+                    if ($containRejectRequestMember) {
+                        $this->handleRejectRequestMember($textRaw, $event['source']);
+                    }
+
+                } else if ($event['type'] == 'postback') {
+                    $textRaw = $event['postback']['data'];
+
+                    $containApproveRequestTeam = str_contains($textRaw, 'type=approveRequestTeam');
+                    if ($containApproveRequestTeam) {
+                        $this->handleApproveRequestMember($textRaw);
+                    }
                 }
             }
         }
@@ -117,5 +131,45 @@ class LineConnectionService {
             'status' => 200,
             'message' => 'success',
         ], 200);
+    }
+
+    protected function handleApproveRequestMember($text)
+    {
+        $exp = explode('type=approveRequestTeam&data=', $text);
+        
+        $data = json_decode($exp[1], true);
+
+        if ($data) {
+            $transfer = \Modules\Production\Models\TransferTeamMember::find($data['tfid']);
+
+            $service = new \Modules\Production\Services\TransferTeamMemberService;
+
+            $service->approveRequest($transfer->uid, 'line');
+        }
+    }
+
+    protected function handleRejectRequestMember($text, $source)
+    {
+        $exp = explode("\nalasan:", $text);
+
+        $tokenExp = explode('tokenId=', $exp[0]);
+
+        $token = $tokenExp[0];
+
+        $token = Hashids::decode($token);
+
+        if (count($token) > 0) {
+            $divider = 007;
+    
+            $breakToken = explode($divider, $token[0]);
+    
+            logging('token', [$breakToken]);
+
+        }
+
+
+        logging('text reject: ' . $text, []);
+
+        logging('source reject', [$source]);
     }
 }

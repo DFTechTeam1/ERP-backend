@@ -27,7 +27,7 @@ enum ProjectStatus: int
     {
         return match ($this) {
             static::OnGoing => 'deep-purple-lighten-3',
-            static::Draft => 'grey-lighten-3',
+            static::Draft => 'gray-lighten-3',
             static::Revise => 'deep-orange-lighten-2',
             static::WaitingApprovalClient => 'teal-lighten-3',
             static::ApprovedByClient => 'cyan-lighten-3',

@@ -18,12 +18,7 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::get('ilham', function () {
-    // $user = \App\Models\User::latest()->first();
-    // return (new \Modules\Hrd\Notifications\UserEmailActivation($user, 'iiejrkejrer', 'password'))
-    //     ->toMail($user);
-    return auth()->user()->username;
-})->middleware('auth:sanctum');
+Route::get('ilham', [\App\Http\Controllers\Api\TestingController::class, 'testing'])->middleware('auth:sanctum');
 
 Route::get('nasTestConnection', function (Request $request) {
     try {

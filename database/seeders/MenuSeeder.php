@@ -31,11 +31,13 @@ class MenuSeeder extends Seeder
             ['name' => 'Units', 'parent_id' => null, 'icon' => 'menus/unit.png', 'group' => \App\Enums\Menu\Group::Inventory->value, 'link' => '/admin/inventories/units', 'permission' => 'list_unit'],
             ['name' => 'Inventory Types', 'parent_id' => null, 'icon' => 'menus/inventory_type.png', 'group' => \App\Enums\Menu\Group::Inventory->value, 'link' => '/admin/inventories/inventory-types', 'permission' => 'list_inventory_type'],
             ['name' => 'Inventories', 'parent_id' => null, 'icon' => 'menus/inventory.png', 'group' => \App\Enums\Menu\Group::Inventory->value, 'link' => '/admin/inventories/list', 'permission' => 'list_inventory'],
+            ['name' => 'Custom Inventories', 'parent_id' => null, 'icon' => 'menus/custom-inventory.png', 'group' => \App\Enums\Menu\Group::Inventory->value, 'link' => '/admin/inventories/custom', 'permission' => 'list_inventory'],
             ['name' => 'Request Equipment', 'parent_id' => null, 'icon' => 'menus/inventory.png', 'group' => \App\Enums\Menu\Group::Inventory->value, 'link' => '/admin/inventories/request-equipment', 'permission' => 'list_request_equipment'],
             ['name' => 'Addon List', 'parent_id' => null, 'icon' => 'menus/addon.png', 'group' => \App\Enums\Menu\Group::Addon->value, 'link' => '/panel/addons', 'permission' => 'list_addon'],
             ['name' => 'Setting', 'parent_id' => null, 'icon' => 'menus/setting.png', 'group' => \App\Enums\Menu\Group::Dashboard->value, 'link' => '/admin/setting', 'permission' => 'list_setting'],
             ['name' => 'Projects', 'parent_id' => null, 'icon' => 'menus/projects.png', 'group' => \App\Enums\Menu\Group::Production->value, 'link' => '/admin/production/projects', 'permission' => 'list_project'],
             ['name' => 'Tasks', 'parent_id' => null, 'icon' => 'menus/task.png', 'group' => \App\Enums\Menu\Group::Production->value, 'link' => '/admin/production/tasks', 'permission' => 'list_task'],
+            ['name' => 'Team Transfer', 'parent_id' => null, 'icon' => 'menus/transfer.png', 'group' => \App\Enums\Menu\Group::Production->value, 'link' => '/admin/production/team-transfer', 'permission' => 'list_team_transfer'],
         ];
 
         foreach ($menus as $menu) {
