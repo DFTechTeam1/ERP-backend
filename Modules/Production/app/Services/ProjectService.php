@@ -639,7 +639,7 @@ class ProjectService
     protected function formattedBoards(string $projectUid)
     {
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
-        $employeeId = auth()->user()->employee_id;
+        $employeeId = auth()->user()->employee_id ?? 0;
         $superUserRole = isSuperUserRole();
 
         $data = $this->boardRepo->list('id,project_id,name,sort,based_board_id', 'project_id = ' . $projectId, [
