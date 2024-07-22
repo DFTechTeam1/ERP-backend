@@ -80,6 +80,8 @@ if (!function_exists('apiResponse')) {
 if (!function_exists('errorResponse')) {
     function errorResponse($message, array $data = [], $code = null)
     {
+        logging('error processing: ', [$message]);
+
         $code = !$code ? Code::BadRequest->value : $code;
 
         return generalResponse(
