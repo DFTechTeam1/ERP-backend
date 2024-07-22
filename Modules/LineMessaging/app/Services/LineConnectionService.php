@@ -9,6 +9,7 @@ use Vinkla\Hashids\Facades\Hashids;
 class LineConnectionService {
     private $url;
     private $token;
+    private $bearerToken;
 
     public function __construct()
     {
@@ -134,6 +135,26 @@ class LineConnectionService {
         ], 200);
     }
 
+    protected function autoLogin($user) 
+    {
+        $role = $user->getRoleNames()[0];
+        $roles = $user->roles;
+        $roleId = null;
+        if (count($roles) > 0) {
+            $roleId = $roles[0]->id;
+        }
+        $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
+        
+        $token = $user->createToken($role, $permissions, now()->addHours(2));
+
+        $this->bearerToken = $token;
+    }
+
+    protected function autoLogout($user)
+    {
+        $user->tokens()->delete();
+    }
+
     protected function handleApproveRequestMember($text)
     {
         $exp = explode('type=approveRequestTeam&data=', $text);
@@ -143,17 +164,17 @@ class LineConnectionService {
         if ($data) {
             // auto login
             $user = \App\Models\User::where('employee_id', $data['rid'])->first();
-            logging('auto loggin user', [$user]);
             if ($user) {
-                auth()->login($user);
-    
+                $this->autoLogin($user);
+
                 $transfer = \Modules\Production\Models\TransferTeamMember::find($data['tfid']);
+
+                $resp = Http::withToken($this->bearerToken)
+                    ->get(config('app.url') . "/api/production/team-transfers/approve/{$transfer->uid}/line");
+
+                logging('resp approve', [$resp]);
     
-                $service = new \Modules\Production\Services\TransferTeamMemberService;
-    
-                $service->approveRequest($transfer->uid, 'line');
-    
-                Auth::logout();
+                $this->autoLogout($user);
             }
         }
     }
