@@ -145,7 +145,7 @@ class LineConnectionService {
             $user = \App\Models\User::where('employee_id', $data['rid'])->first();
             logging('auto loggin user', [$user]);
             if ($user) {
-                Auth::login($user);
+                auth()->login($user);
     
                 $transfer = \Modules\Production\Models\TransferTeamMember::find($data['tfid']);
     
