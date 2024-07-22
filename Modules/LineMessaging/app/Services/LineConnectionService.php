@@ -147,7 +147,7 @@ class LineConnectionService {
         
         $token = $user->createToken($role, $permissions, now()->addHours(2));
 
-        $this->bearerToken = $token;
+        $this->bearerToken = $token->plainTextToken;
     }
 
     protected function autoLogout($user)
