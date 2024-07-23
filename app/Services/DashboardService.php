@@ -144,6 +144,8 @@ class DashboardService {
             ];
         }
 
+        $where = "project_date >= '" . date('Y-m-d') . "' and status = " . \App\Enums\Production\ProjectStatus::OnGoing->value;
+
         $data = $this->projectRepo->list('id,uid,name,project_date', $where, [], $whereHas, 'project_date ASC', 8);
 
         $out = [];
