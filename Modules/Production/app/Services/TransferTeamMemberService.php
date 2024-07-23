@@ -203,7 +203,7 @@ class TransferTeamMemberService {
                 'completed_at' => Carbon::now(),
             ], $transferUid);
 
-            $transfer = $this->repo->show($transferUid, 'id,project_id', ['project:id,uid', 'employee:id,nickname']);
+            $transfer = $this->repo->show($transferUid, 'id,project_id,employee_id', ['project:id,uid', 'employee:id,nickname']);
 
             $this->projectService->updateDetailProjectFromOtherService($transfer->project->uid);
 
