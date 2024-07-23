@@ -149,11 +149,13 @@ class DashboardService {
         $out = [];
         foreach ($data as $project) {
             // set deadline color
-            $deadline = new DateTime($project->project_date);
-            $now = new DateTime('now');
-            $diff = date_diff($now, $deadline);
-            $d = $diff->d;
             $color = 'red';
+
+            $now = time(); // or your date as well
+            $your_date = strtotime($project->project_date);
+            $datediff = $your_date - $now;
+
+            $d = round($datediff / (60 * 60 * 24));
 
             if ($d <= 7) {
                 $color = 'red';
@@ -162,8 +164,6 @@ class DashboardService {
             } else if ($d > 31) {
                 $color = 'green-accent-3';
             }
-
-            
 
             $out[] = [
                 'uid' => $project->uid,

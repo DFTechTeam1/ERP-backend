@@ -33,9 +33,10 @@ class Project extends Model
         'led_detail',
         'created_by',
         'updated_by',
+        'showreels'
     ];
 
-    protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color'];
+    protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
 
     /**
      * Get all of the personInCharges for the Project
@@ -116,6 +117,19 @@ class Project extends Model
                     $output = $status->color();
                 }
             }
+        }
+
+        return Attribute::make(
+            get: fn () => $output,
+        );
+    }
+
+    public function showreelsPath(): Attribute
+    {
+        $output = '';
+
+        if (isset($this->attributes['showreels'])) {
+            $output = asset('storage/projects/' . $this->attributes['id'] . '/showreels/' . $this->attributes['showreels']);
         }
 
         return Attribute::make(

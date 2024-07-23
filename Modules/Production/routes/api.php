@@ -38,6 +38,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
     Route::get('project/getTargetPicsAndTaskList/{projectUid}', [ProjectController::class, 'getTargetPicsAndTaskList']); // get pic list for request team member (exclude logged accont)
     Route::post('project/{projectUid}/loadTeamMember', [ProjectController::class, 'loadTeamMember']);
+    Route::post('project/{projectUid}/uploadShowreels', [ProjectController::class, 'uploadShowreels']);
     Route::post('project/{projectUid}/changeStatus', [ProjectController::class, 'changeStatus']);
     Route::get('project/{id}/getBoards', [ProjectController::class, 'getProjectBoards']);
     Route::get('project/{id}/getProjectTeams', [ProjectController::class, 'getProjectTeams']);

@@ -19,6 +19,7 @@ use Modules\Production\Http\Requests\Project\UploadProofOfWork;
 use Modules\Production\Http\Requests\Project\ReviseTask;
 use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
+use Modules\Production\Http\Requests\Project\UploadShowreels;
 
 class ProjectController extends Controller
 {
@@ -479,5 +480,10 @@ class ProjectController extends Controller
     public function loadTeamMember(LoanTeamMember $request, string $projectUid)
     {
         return apiResponse($this->service->loadTeamMember($request->validated(), $projectUid));
+    }
+
+    public function uploadShowreels(UploadShowreels $request, string $projectUid)
+    {
+        return apiResponse($this->service->uploadShowreels($request->validated(), $projectUid));
     }
 }
