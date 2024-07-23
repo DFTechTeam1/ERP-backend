@@ -31,6 +31,7 @@ class ApproveRequestTeamMemberJob implements ShouldQueue
                 'employee:id,name,email,nickname',
                 'requestToPerson:id,name,email,nickname',
                 'requestByPerson:id,name,email,nickname',
+                'project:id,name'
             ])
             ->where('uid', $this->uid)->first();
 
@@ -38,6 +39,12 @@ class ApproveRequestTeamMemberJob implements ShouldQueue
 
         $lineIds = [$requested->line_id];
 
+        $employee = \Modules\Hrd\Models\Employee::find($transfer->employee_id);
+
+        $employeeLineIds = [$employee->line_id];
+
         \Illuminate\Support\Facades\Notification::send($requested, new \Modules\Production\Notifications\ApproveRequestTeamMemberNotification($transfer, $lineIds));
+
+        \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\PlayerApproveRequestTeamNotification($transfer, $employeeLineIds));
     }
 }

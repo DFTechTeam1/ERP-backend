@@ -759,48 +759,42 @@ class ProjectService
         ];
     }
 
-    protected function formattedProjectProgress($tasks)
+    protected function formattedProjectProgress($tasks, int $projectId)
     {
         $grouping = [];
         foreach ($tasks as $task) {
             $grouping[$task['project_board_id']][] = $task;
         }
 
-        logging('grouping', $grouping);
+        $groupData = collect($tasks)->groupBy('project_board_id')->toArray();
 
-        $default = [];
-        $types = \App\Enums\Production\TaskType::cases();
-        foreach ($types as $type) {
-            $default[] = [
-                'text' => $type->label(),
-                'id' => $type->value,
-                'total' => 0,
-                'completed' => 0,
-                'percentage' => 0,
-            ];
-        }
+        $projectBoards = $this->boardRepo->list('id,project_id,name,based_board_id', 'project_id = ' . $projectId);
 
-        $out = [];
-        foreach ($default as $key => $def) {
-            $out[$key] = $def;
+        $output = [];
+        foreach ($projectBoards as $key => $board) {
+            $output[$key] = $board;
+            $output[$key]['total'] = 0;
+            $output[$key]['completed'] = 0;
+            $output[$key]['percentage'] = 0;
+            $output[$key]['text'] = $board->name;
 
-            foreach ($grouping as $taskType => $taskGroup) {
-                if ($taskType == $def['id']) {
-                    $completed = collect($taskGroup)->filter(function ($filter) {
-                        return $filter->board->name == 'On Progress';
-                    })->count();
-
-                    $total = count($taskGroup);
-                    $percentage = ceil($completed / $total * 100);
-
-                    $out[$key]['total'] = $total;
-                    $out[$key]['completed'] = $completed;
-                    $out[$key]['percentage'] = $percentage;
+            if (count($groupData) > 0) {
+                foreach ($groupData as $boardId => $value) {
+                    if ($boardId == $board->id) {
+                        $total = count($value);
+                        $completed = collect($value)->where('status', '=', \App\Enums\Production\TaskStatus::Completed->value)->count();;
+    
+                        $output[$key]['total'] = $total;
+                        $output[$key]['completed'] = $completed;
+    
+                        $percentage = ceil($completed / $total * 100);
+                        $output[$key]['percentage'] = $percentage;
+                    }
                 }
             }
         }
 
-        return $out;
+        return $output;
     }
 
     public function formattedEquipments(int $projectId)
@@ -866,7 +860,7 @@ class ProjectService
                     'marketings.marketing:id,name'
                 ]);
 
-                $progress = $this->formattedProjectProgress($data->tasks);
+                $progress = $this->formattedProjectProgress($data->tasks, $projectId);
 
                 $eventTypes = \App\Enums\Production\EventType::cases();
                 $classes = \App\Enums\Production\Classification::cases();
@@ -951,6 +945,7 @@ class ProjectService
                     'task_type_color' => $data->task_type_color,
                     'progress' => $progress,
                     'equipments' => $equipments,
+                    'showreels' => $data->showreels_path,
                     'person_in_charges' => $data->personInCharges
                 ];
 
@@ -1036,6 +1031,16 @@ class ProjectService
             unset($project['personInCharges']);
         }
 
+        // define show alert coming soon
+        $now = time(); // or your date as well
+        $projectDateTime = strtotime($project['project_date']);
+        $datediff = $projectDateTime - $now;
+        $d = round($datediff / (60 * 60 * 24));
+        $project['show_alert_coming_soon'] = false;
+        if ($d == 1 || $d == 2) {
+            $project['show_alert_coming_soon'] = true;
+        }
+
         $project['teams'] = $teams;
 
         $project['is_super_user'] = $superUserRole;
@@ -1048,7 +1053,7 @@ class ProjectService
         $projectId = getIdFromUid($project['uid'], new \Modules\Production\Models\Project());
         $projectTasks = $this->taskRepo->list('*', 'project_id = ' . $projectId, ['board']);
 
-        $project['progress'] = $this->formattedProjectProgress($projectTasks);
+        $project['progress'] = $this->formattedProjectProgress($projectTasks, $projectId);
 
         foreach ($project['boards'] as $keyBoard => $board) {
             $output[$keyBoard] = $board;
@@ -1108,6 +1113,10 @@ class ProjectService
         }
 
         $project['boards'] = $output;
+
+        // showreels
+        $showreels = $this->repo->show($project['uid'], 'id,showreels');
+        $project['showreels'] = $showreels->showreels_path;
 
         $allowedUploadShowreels = false;
         $currentTasks = [];
@@ -1752,7 +1761,7 @@ class ProjectService
             $projectTasks = $this->taskRepo->list('*', 'project_id = ' . $board->project_id, [
                 'board:id,name,project_id'
             ]);
-            $progress = $this->formattedProjectProgress($projectTasks);
+            $progress = $this->formattedProjectProgress($projectTasks, $board->project->id);
             $currentData['progress'] = $progress;
 
             storeCache('detailProject' . $board->project_id, $currentData);
@@ -2591,7 +2600,7 @@ class ProjectService
             DB::commit();
 
             return generalResponse(
-                'success',
+                __('global.proofOfWorkUploaded'),
                 false,
                 [
                     'task' => $task,
@@ -3877,6 +3886,43 @@ class ProjectService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function uploadShowreels(array $data, string $projectUid)
+    {
+        $tmpFile = null;
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+        try {
+
+            $tmpFile = uploadFile(
+                'projects/' . $projectId . '/showreels',
+                $data['file']
+            );
+
+            $this->repo->update([
+                'showreels' => $tmpFile,
+            ], $projectUid);
+
+            $currentData = getCache('detailProject' . $projectId);
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            return generalResponse(
+                __('global.showreelsIsUploaded'),
+                false,
+                [
+                    'full_detail' => $currentData,
+                ],
+            );
+        } catch (\Throwable $th) {
+            if ($tmpFile) {
+                if (is_file(storage_path("app/public/projects/{$projectId}/showreels/$tmpFile"))) {
+                    unlink(storage_path("app/public/projects/{$projectId}/showreels/$tmpFile"));
+                }
+            }
 
             return errorResponse($th);
         }

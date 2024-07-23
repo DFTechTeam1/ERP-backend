@@ -191,4 +191,6 @@ return [
     'transferIsCompleted' => 'Transfer is complete. Now :name is focusing on the his boss event',
     'requestIsRejected' => 'Team request is being rejected',
     'teamRequestIsDelete' => 'Team request is deleted',
+    'showreelsIsUploaded' => 'Showreels is successfully uploaded',
+    'proofOfWorkUploaded' => 'Proof of work is uploaded'
 ];
