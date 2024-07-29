@@ -166,6 +166,7 @@ class AutoStartApp extends Command
 
     protected function truncateProjectTabel()
     {
+        Schema::disableForeignKeyConstraints();
         if (\Illuminate\Support\Facades\Schema::hasTable('projects')) {
             \Modules\Production\Models\ProjectTaskWorktime::truncate();
             \Modules\Production\Models\ProjectTaskReviseHistory::truncate();
@@ -183,10 +184,12 @@ class AutoStartApp extends Command
 
             \Modules\Production\Models\Project::truncate();
         }
+        Schema::enableForeignKeyConstraints();
     }
 
     protected function positionSeeder()
     {
+        Schema::disableForeignKeyConstraints();
         Position::truncate();
 
         $hr = Division::findByName('hr');
@@ -238,6 +241,8 @@ class AutoStartApp extends Command
         foreach ($out as $o) {
             Position::create($o);
         }
+
+        Schema::enableForeignKeyConstraints();
 
         return true;
     }
