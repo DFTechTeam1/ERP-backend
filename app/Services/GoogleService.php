@@ -20,8 +20,7 @@ class GoogleService {
         $client = new \Google\Client();
         $client->setScopes([\Google\Service\Sheets::SPREADSHEETS, \Google\Service\Sheets::DRIVE]);
 
-        // $client->setAuthConfig('client_credential.json');
-        $client->setDeveloperKey('AIzaSyDw_fNzawWGdsgJcQGfH7_ovqQAf3GnYs4');
+        $client->setDeveloperKey(config('app.googleApiKey'));
 
         $service = new \Google\Service\Sheets($client);
 
