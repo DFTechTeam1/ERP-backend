@@ -30,7 +30,7 @@ class PositionSeeder extends Seeder
         $service = new \Modules\Hrd\Services\EmployeeService();
         $response = $service->readFile(public_path('static_file/employee.xlsx'));
         
-        $positions = collect(array_values($response))->pluck('position_id')->unique()->filter(function ($item) {
+        $positions = collect(array_values($response))->pluck('position_raw')->unique()->filter(function ($item) {
             return $item != null;
         })->values()->toArray();
 
@@ -65,6 +65,8 @@ class PositionSeeder extends Seeder
         foreach ($out as $o) {
             Position::create($o);
         }
+
+        $this->command->info('success seed');
 
         // $positions = [
         //     [
