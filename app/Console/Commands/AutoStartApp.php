@@ -108,6 +108,8 @@ class AutoStartApp extends Command
         \App\MOdels\User::where('email', '!=', 'admin@admin.com')
             ->delete();
 
+        Artisan::call('db:seeder --class=RoleSeeder');
+
         $this->registerVariables();
 
         $directorPosition = json_decode(getSettingByKey('position_as_directors'), true);
