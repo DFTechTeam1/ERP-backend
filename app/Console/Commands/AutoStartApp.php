@@ -286,6 +286,7 @@ class AutoStartApp extends Command
         $productionRole = Role::findByName('production');
         $directorRole = Role::findByName('director');
         $marketingRole = Role::findByName('marketing');
+        $suRole = Role::findByName('root');
 
         foreach ($employees as $employee) {
             $payload = [
