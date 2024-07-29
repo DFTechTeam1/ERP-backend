@@ -132,10 +132,48 @@ class UserService {
     {
         DB::beginTransaction();
         try {
+            $isDirector = null;
+            $isEmployee = null;
+            $isPM = null;
+
             if (!$data['is_external_user']) {
-                $employee = $this->employeeRepo->show($data['employee_id'], 'id,uid,email');
+                $employee = $this->employeeRepo->show($data['employee_id'], 'id,uid,email,position_id');
                 $email = $employee->email;
                 $employeeId = $employee->id;
+
+                // define a role position (is_employee, is_director or is_project_manager)
+                $positionAsDirector = json_decode(getSettingByKey('position_as_directors'), true);
+                if ($positionAsDirector) {
+                    $positionAsDirector = collect($positionAsDirector)->map(function ($director) {
+                        return getIdFromUid($director, new \Modules\Company\Models\Position());
+                    })->toArray();
+
+                    if (in_array($employee->position_id, $positionAsDirector)) {
+                        $isDirector = true;
+                    }
+                }
+
+                $positionAsProjectManager = json_decode(getSettingByKey('position_as_project_manager'), true);
+                if ($positionAsProjectManager) {
+                    $positionAsProjectManager = collect($positionAsProjectManager)->map(function ($pm) {
+                        return getIdFromUid($pm, new \Modules\Company\Models\Position());
+                    })->toArray();
+
+                    if (in_array($employee->position_id, $positionAsProjectManager)) {
+                        $isPM = true;
+                    }
+                }
+
+                logging('positionAsProjectManager', $positionAsProjectManager);
+                logging('positionAsDirector', $positionAsDirector);
+
+                if ($positionAsProjectManager && $positionAsDirector) {
+                    $combine = array_merge($positionAsDirector, $positionAsProjectManager);
+                    
+                    if (!in_array($employee->position_id, $combine)) {
+                        $isEmployee = true;
+                    }
+                }
             } else {
                 $email = $data['email'];
                 $employeeId = 0;
@@ -145,6 +183,9 @@ class UserService {
                 'email' => $email,
                 'password' => $data['password'],
                 'employee_id' => $employeeId,
+                'is_employee' => $isEmployee,
+                'is_project_manager' => $isPM,
+                'is_director' => $isDirector,
             ]);
 
             // assign role

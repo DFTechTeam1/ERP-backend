@@ -23,6 +23,8 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/activate/{key}', 'activateAccount');
     });
 
+Route::get('employees/downloadTemplate', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'downloadTemplate']);
+
 Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
     ->middleware(['auth:sanctum'])
     ->group(function() {
@@ -38,6 +40,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::delete('employees/{uid}','delete');
         Route::post('employees/bulk', "bulkDelete");
         Route::post('employees/addAsUser', 'addAsUser');
+        Route::post('employees/submitImport', 'submitImport');
 
         Route::post('employees/import', 'import');
     });

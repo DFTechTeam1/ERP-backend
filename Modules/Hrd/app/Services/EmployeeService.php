@@ -554,6 +554,8 @@ class EmployeeService
                 'id_card_photo'
             ])->toArray());
 
+            \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
+
             return generalResponse(
                 __("global.successCreateEmployee"),
                 false,
@@ -688,6 +690,8 @@ class EmployeeService
 
             $this->repo->update($payloadUpdate, $uid);
 
+            \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
+
             \Modules\Hrd\Jobs\DeleteImageJob::dispatch($deletedImages);
 
             return generalResponse(
@@ -750,6 +754,8 @@ class EmployeeService
             }
 
             $this->repo->delete($uid);
+
+            \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
 
             return generalResponse(
                 __("global.successDeletePosition"),
@@ -814,6 +820,8 @@ class EmployeeService
 
             $this->repo->bulkDelete($ids, 'uid');
 
+            \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
+
             \Modules\Hrd\Jobs\DeleteImageJob::dispatch($images)->afterCommit();
 
             DB::commit();
@@ -829,35 +837,120 @@ class EmployeeService
         }
     }
 
+    /**
+     * Get total project manager in company
+     * And stored to cache
+     */
+    protected function getMaximumProjectPerPM()
+    {
+        $data = \Illuminate\Support\Facades\Cache::get('maximumProjectPerPM');
+
+        if (!$data) {
+            $projectManagerPosition = json_decode(getSettingByKey('position_as_project_manager'), true);
+
+            $projectManagerPosition = collect($projectManagerPosition)->map(function ($item ) {
+                return getIdFromUid($item, new \Modules\Company\Models\Position());
+            })->toArray();
+
+            $condition = implode("','", $projectManagerPosition);
+            $condition = "('" . $condition . "')";
+
+            $employees = $this->repo->list('id,name', "position_id in " . $condition);
+
+            $data = \Illuminate\Support\Facades\Cache::rememberForever('maximumProjectPerPM', function () use ($employees) {
+                return count($employees);
+            });
+        }
+
+        return $data;
+    }
+
     public function getProjectManagers()
     {
-        $date = request('date') ? date('Y-m-d', strtotime(request('date'))) : '';
+        $whereHas = [];
 
-        $data = $this->repo->list('id, uid as value, name as title', '', [
+        $date = request('date') ? date('Y-m-d', strtotime(request('date'))) : '';
+        $month = request('date') ? date('Y-m', strtotime(request('date'))) : '';
+
+        $projectManagerCount = $this->getMaximumProjectPerPM();
+        $maximumProjectPerPM = $projectManagerCount -1;
+
+        $relation = [
             'projects:id,pic_id,project_id',
             'projects.project:id,name,project_date'
-        ], '', '', [
-            [
-                'relation' => 'position',
-                'query' => "(LOWER(name) like '%project manager%' OR LOWER(name) like '%lead project manager%')",
-            ],
-        ]);
+        ];
 
-        $employees = collect($data)->map(function ($item) use ($date) {
+        if (!empty($month)) {
+            $endDateOfMonth = Carbon::createFromDate((int) date('Y', strtotime(request('date'))), (int) date('m', strtotime(request('date'))), 1)
+            ->endOfMonth()
+            ->format('d');
+
+            $startDate = date('Y-m', strtotime(request('date'))) . '-01';
+            $endDate = date('Y-m', strtotime(request('date'))) . '-' . $endDateOfMonth;
+
+            $relation = [
+                'projects' => function ($query) use ($startDate, $endDate) {
+                    $query->selectRaw('id,pic_id,project_id')
+                        ->whereHas('project', function($q) use ($startDate, $endDate) {
+                            $q->whereRaw("project_date >= '" . $startDate . "' and project_date <= '" . $endDate . "'");
+                        });
+                }
+            ];
+        }
+
+        $positionAsProjectManager = json_decode(getSettingByKey('position_as_project_manager'), true);
+        
+        if ($positionAsProjectManager) {
+            $positionCondition = implode("','", $positionAsProjectManager);
+            $positionCondition = "('" . $positionCondition . "')";
+            $whereHas[] = [
+                'relation' => 'position',
+                'query' => "uid IN " . $positionCondition,
+            ];
+        }
+
+        $data = $this->repo->list(
+            'id, uid as value, name as title', 
+            'status != ' . \App\Enums\Employee\Status::Inactive->value, 
+            $relation, 
+            '', 
+            '', 
+            $whereHas
+        );
+
+        $employees = collect($data)->map(function ($item) use ($date, $month, $maximumProjectPerPM) {
             $projects = collect($item->projects)->pluck('project.project_date')->values();
             $item['workload_on_date'] = 0;
             if (!empty($date)) {
-                $filter = collect($projects)->filter(function ($filter) use ($date) {
+                $filter = collect($projects)->filter(function ($filter) use ($date, $month) {
+                    $dateStart = date('Y-m-d', strtotime($month . '-01'));
                     return $filter == $date;
                 })->values();
-
-                $item['workload_on_date'] = count($filter);
             }
+
+            $totalProject = $item->projects->count();
+
+            // coloring options based on project manager maximum project
+            if ($totalProject > $maximumProjectPerPM) {
+                $coloring = 'red';
+            } else if ($totalProject == $maximumProjectPerPM) {
+                $coloring = 'orange-darken-4';
+            } else if (
+                ($totalProject - $maximumProjectPerPM) &&
+                ($totalProject - $maximumProjectPerPM == 1) 
+            ) {
+                $coloring = 'red-lighten-2';
+            } else {
+                $coloring = 'green-accent-3';
+            }
+
+            $item['workload_on_date'] = $totalProject;
 
             return [
                 'value' => $item->value,
                 'title' => $item->title,
                 'workload_on_date' => $item->workload_on_date,
+                'coloring' => $coloring,
             ];
         })->sortBy('workload_on_date', SORT_NATURAL)->values();
 
@@ -889,64 +982,62 @@ class EmployeeService
         foreach ($response as $key => $row) {
             $jobName = ltrim(rtrim($row[$jobNameKey]));
             $positionData = \Modules\Company\Models\Position::select('id')
-                ->where('name', $jobName)
+                ->whereRaw("lower(name) = '" . strtolower($jobName) . "'")
                 ->first();
 
-            if ($row[$nameKey]) {
-                $employees[] = [
-                    'employee_id' => $row[$nipKey],
-                    'name' => $row[$nameKey],
-                    'nickname' => $row[$nicknameKey],
-                    'email' => $row[$emailKey],
-                    'phone' => $row[$phoneKey] ?? 0,
-                    'id_number' => $row[$idNumberKey] ?? 0,
-                    'religion_raw' => $row[$religionKey],
-                    'religion' => $row[$religionKey] ? \App\Enums\Employee\Religion::generateReligion($row[$religionKey]) : \App\Enums\Employee\Religion::Islam->value,
-                    'martial_status_raw' => $row[$martialKey],
-                    'martial_status' => $row[$martialKey] ? \App\Enums\Employee\MartialStatus::generateMartial($row[$martialKey]) : null,
-                    'address' => $row[$addressKey] ?? 'belum diisi',
-                    'postal_code' => $row[$postalCodeKey] ?? 0,
-                    'current_address' => $row[$currentAddressKey],
-                    'blood_type' => $row[$bloodTypeKey],
-                    'date_of_birth' => $row[$dobKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$dobKey])->format('Y-m-d') : '1970-01-01',
-                    'place_of_birth' => $row[$pobKey] ?? 'belum diisi',
-                    'dependant' => '',
-                    'gender_raw' => $row[$genderKey],
-                    'gender' => $row[$genderKey] ? \App\Enums\Employee\Gender::generateGender($row[$genderKey]) : null,
-                    'bank_detail' => [
-                        [
-                            'bank_name' => $row[$bankNameKey],
-                            'account_number' => $row[$bankAccountKey],
-                            'account_holder_name' => $row[$accountHolderNameKey],
-                            'is_active' => true,
-                        ],
+            $employees[] = [
+                'employee_id' => $row[$nipKey],
+                'name' => $row[$nameKey],
+                'nickname' => $row[$nicknameKey],
+                'email' => $row[$emailKey],
+                'phone' => $row[$phoneKey] ?? 0,
+                'id_number' => $row[$idNumberKey] ?? 0,
+                'religion_raw' => $row[$religionKey],
+                'religion' => $row[$religionKey] ? \App\Enums\Employee\Religion::generateReligion($row[$religionKey]) : \App\Enums\Employee\Religion::Islam->value,
+                'martial_status_raw' => $row[$martialKey],
+                'martial_status' => $row[$martialKey] ? \App\Enums\Employee\MartialStatus::generateMartial($row[$martialKey]) : null,
+                'address' => $row[$addressKey] ?? 'belum diisi',
+                'postal_code' => $row[$postalCodeKey] ?? 0,
+                'current_address' => $row[$currentAddressKey],
+                'blood_type' => $row[$bloodTypeKey],
+                'date_of_birth' => $row[$dobKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$dobKey])->format('Y-m-d') : '1970-01-01',
+                'place_of_birth' => $row[$pobKey] ?? 'belum diisi',
+                'dependant' => '',
+                'gender_raw' => $row[$genderKey],
+                'gender' => $row[$genderKey] ? \App\Enums\Employee\Gender::generateGender($row[$genderKey]) : null,
+                'bank_detail' => [
+                    [
+                        'bank_name' => $row[$bankNameKey],
+                        'account_number' => $row[$bankAccountKey],
+                        'account_holder_name' => $row[$accountHolderNameKey],
+                        'is_active' => true,
                     ],
-                    'relation_contact' => [
-                        'name' => $row[$contactNameKey],
-                        'phone' => $row[$contactNumberKey],
-                        'relation' => $row[$contactRelationKey],
-                    ],
-                    'education_raw' => $row[$educationKey],
-                    'education' => $row[$educationKey] ? \App\Enums\Employee\Education::generateEducation($row[$educationKey]) : null,
-                    'education_name' => $row[$schoolNameKey],
-                    'education_major' => $row[$majorKey],
-                    'education_year' => $row[$graduationYearKey],
-                    'position_raw' => $row[$jobNameKey],
-                    'position_id' => $positionData->id ?? $row[$jobNameKey],
-                    'boss_id' => $row[$bossIdKey],
-                    'level_staff_raw' => $row[$levelKey],
-                    'level_staff' => $row[$levelKey] ? \App\Enums\Employee\LevelStaff::generateLevel($row[$levelKey]) : null,
-                    'status_raw' => $row[$statusKey],
-                    'status' => $row[$statusKey] ? \App\Enums\Employee\Status::generateStatus($row[$statusKey]) : null,
-                    'placement' => $row[$placementKey],
-                    'join_date' => $row[$joinDateKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$joinDateKey])->format('Y-m-d') : null,
-                    'start_review_probation_date' => $row[$startReviewProbationKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$startReviewProbationKey])->format('Y-m-d') : null,
-                    'probation_status_raw' => $row[$probationStatusKey],
-                    'probation_status' => $row[$probationStatusKey] ? \App\Enums\Employee\ProbationStatus::generateStatus($row[$probationStatusKey]) : null,
-                    'end_probation_date' => $row[$endProbationKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$endProbationKey])->format('Y-m-d') : null,
-                    'company_name' => $row[$companyKey],
-                ];
-            }
+                ],
+                'relation_contact' => [
+                    'name' => $row[$contactNameKey],
+                    'phone' => $row[$contactNumberKey],
+                    'relation' => $row[$contactRelationKey],
+                ],
+                'education_raw' => $row[$educationKey],
+                'education' => $row[$educationKey] ? \App\Enums\Employee\Education::generateEducation($row[$educationKey]) : null,
+                'education_name' => $row[$schoolNameKey],
+                'education_major' => $row[$majorKey],
+                'education_year' => $row[$graduationYearKey],
+                'position_raw' => $row[$jobNameKey],
+                'position_id' => $positionData->id ?? 0,
+                'boss_id' => $row[$bossIdKey],
+                'level_staff_raw' => $row[$levelKey],
+                'level_staff' => $row[$levelKey] ? \App\Enums\Employee\LevelStaff::generateLevel($row[$levelKey]) : null,
+                'status_raw' => $row[$statusKey],
+                'status' => $row[$statusKey] ? \App\Enums\Employee\Status::generateStatus($row[$statusKey]) : null,
+                'placement' => $row[$placementKey],
+                'join_date' => $row[$joinDateKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$joinDateKey])->format('Y-m-d') : null,
+                'start_review_probation_date' => $row[$startReviewProbationKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$startReviewProbationKey])->format('Y-m-d') : null,
+                'probation_status_raw' => $row[$probationStatusKey],
+                'probation_status' => $row[$probationStatusKey] ? \App\Enums\Employee\ProbationStatus::generateStatus($row[$probationStatusKey]) : null,
+                'end_probation_date' => $row[$endProbationKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$endProbationKey])->format('Y-m-d') : null,
+                'company_name' => $row[$companyKey],
+            ];
         }
 
         unset($employees[0]);
@@ -954,16 +1045,194 @@ class EmployeeService
         return array_values(array_filter($employees));
     }
 
+    protected function employeeRequirementList()
+    {
+        return [
+            'employee_id',
+            'name',
+            'email',
+            'phone',
+            'id_number',
+            'religion',
+            'martial_status',
+            'address',
+            'postal_code',
+            'date_of_birth',
+            'place_of_birth',
+            'gender',
+            'education',
+            'education_name',
+            'education_major',
+            'education_year',
+            'position_id',
+            'level_staff',
+            'status',
+            'join_date',
+        ];
+    }
+
+    /**
+     * Function to handle import data
+     * Create a new one if not exists
+     * And edit if exists
+     * 
+     * Handle Boss id in the last process
+     * 
+     * @param array $response
+     * 
+     * @return array
+     */
+    public function submitImport(array $response): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $response = collect($response)->map(function ($item) {
+                $item['bank_detail'] = json_encode($item['bank_detail']);
+                $item['relation_contact'] = json_encode($item['relation_contact']);
+    
+                return $item;
+            })->filter(function ($filter) {
+                return !$filter['wrong_format'];
+            })->values()->toArray();
+    
+            foreach ($response as $employee) {
+                unset($employee['level_staff_raw']);
+                unset($employee['probation_status_raw']);
+                unset($employee['status_raw']);
+                unset($employee['levet_staff_raw']);
+                unset($employee['gender_raw']);
+                unset($employee['martial_status_raw']);
+                unset($employee['religion_raw']);
+                unset($employee['education_raw']);
+                unset($employee['position_raw']);
+    
+                $employee['boss_id'] = null;
+
+                $check = $this->repo->show('dummy', 'id', [], "lower(employee_id) = '" . strtolower($employee['employee_id']) . "'");
+
+                if ($check) {
+                    $this->repo->update(collect($employee)->except(['boss_id', 'wrong_format', 'wrong_data'])->toArray(), '', "lower(employee_id) = '" . strtolower($employee['employee_id']) . "'");
+                } else {
+                    $this->repo->store(collect($employee)->except(['boss_id', 'wrong_format', 'wrong_data'])->toArray());
+                }
+            }
+    
+            // handle boss id
+            foreach ($response as $employee) {
+                if ($employee['boss_id']) {
+                    $bossId = $this->repo->show('dummy', 'id,employee_id', [], "lower(employee_id) = '" . strtolower($employee['boss_id']) . "'");
+    
+                    if ($bossId) {
+                        $this->repo->update(
+                            ['boss_id' => $bossId->id],
+                            'dummy',
+                            "lower(employee_id) = '" . strtolower($employee['employee_id']) . "'"
+                        );
+                    }
+                }
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                __("global.successImportData"),
+                false,
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
     public function import($file)
     {
-        $reader = new Reader();
-        
         $response = $this->readFile($file);
+
+        // validate data
+        $output = [];
+        foreach ($response as $key => $employee) {
+            $output[$key] = $employee;
+            $output[$key]['wrong_format'] = false;
+
+            $wrong = [];
+
+            foreach ($this->employeeRequirementList() as $requirement) {
+                if (
+                    (isset($employee[$requirement])) &&
+                    (
+                        !$employee[$requirement] ||
+                        empty($employee[$requirement]) ||
+                        $employee[$requirement] == null ||
+                        $employee[$requirement] == 'null'
+                    )
+                ) {
+                    $output[$key]['wrong_format'] = true;
+                    $message = "global." . snakeToCamel($requirement) . 'Required';
+                    array_push($wrong, trans($message));
+                }
+
+                if (!isset($employee[$requirement])) {
+                    $output[$key]['wrong_format'] = true;
+                    $message = "global." . snakeToCamel($requirement) . 'Required';
+                    array_push($wrong, trans($message));
+                }
+            }
+
+            // position validation
+            if (
+                (isset($employee['position_id'])) &&
+                ($employee['position_id'] == 0)
+            ) {
+                $output[$key]['wrong_format'] = true;
+                array_push($wrong, __('global.positionNotRegistered'));
+            }
+
+            // banks validation
+            if (
+                (isset($employee['bank_detail'])) &&
+                (count($employee['bank_detail']) > 0) &&
+                (
+                    empty($employee['bank_detail'][0]['bank_name']) ||
+                    empty($employee['bank_detail'][0]['account_number']) ||
+                    empty($employee['bank_detail'][0]['account_holder_name'])
+                )
+            ) {
+                $output[$key]['wrong_format'] = true;
+                array_push($wrong, __('global.bankRequired'));
+            }
+    
+            // relation validation
+            if (
+                (isset($employee['relation_contact'])) &&
+                (count($employee['relation_contact']) > 0) &&
+                (
+                    empty($employee['relation_contact']['phone']) ||
+                    empty($employee['relation_contact']['name']) ||
+                    empty($employee['relation_contact']['relation'])
+                )
+            ) {
+                $output[$key]['wrong_format'] = true;
+                array_push($wrong, __('global.relationContactRequired'));
+            }
+
+            $output[$key]['wrong_data'] = $wrong;
+        }
+
 
         return generalResponse(
             "Success",
             false,
-            $response
+            $output
         );
+    }
+
+    public function downloadTemplate()
+    {
+        try {
+            return \Illuminate\Support\Facades\Storage::download('static-file/employee.xlsx');
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

@@ -44,3 +44,7 @@ Route::controller(\Modules\Company\Http\Controllers\Api\DivisionController::clas
 Route::get('setting/{code?}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getSetting']);
 Route::post('setting/{code}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'storeSetting']);
 Route::get('setting/{code}/{key}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getSettingByKeyAndCode']);
+
+Route::get('world/countries', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getCountries']);
+Route::get('world/states', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getStates']);
+Route::get('world/cities', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getCities']);

@@ -52,15 +52,18 @@ class DashboardService {
             ];
         } else if ($roleId != $superUserRole && $roleId != $projectManagerRole) {
             $projectTaskPic = $this->taskPicRepo->list('id,project_task_id', 'employee_id = ' . $employeeId);
-            $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
-            $projectTaskIds = implode("','", $projectTasks);
-            $projectTaskIds = "'" . $projectTaskIds;
-            $projectTaskIds .= "'";
 
-            $whereHas[] = [
-                'relation' => 'tasks',
-                'query' => "id IN (" . $projectTaskIds . ")"
-            ];
+            if ($projectTaskPic->count() > 0) {
+                $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
+                $projectTaskIds = implode("','", $projectTasks);
+                $projectTaskIds = "'" . $projectTaskIds;
+                $projectTaskIds .= "'";
+    
+                $whereHas[] = [
+                    'relation' => 'tasks',
+                    'query' => "id IN (" . $projectTaskIds . ")"
+                ];
+            }
         }
 
         $data = $this->projectRepo->list('id,uid,name,project_date,venue', $where, [
@@ -133,15 +136,17 @@ class DashboardService {
         } else if ($roleId != $projectManagerRole && $roleId != $superUserRole) {
             // get based on user task pic
             $projectTaskPic = $this->taskPicRepo->list('id,project_task_id', 'employee_id = ' . $employeeId);
-            $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
-            $projectTaskIds = implode("','", $projectTasks);
-            $projectTaskIds = "'" . $projectTaskIds;
-            $projectTaskIds .= "'";
-
-            $whereHas[] = [
-                'relation' => 'tasks',
-                'query' => "id IN (" . $projectTaskIds . ")"
-            ];
+            if ($projectTaskPic->count() > 0) {
+                $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
+                $projectTaskIds = implode("','", $projectTasks);
+                $projectTaskIds = "'" . $projectTaskIds;
+                $projectTaskIds .= "'";
+    
+                $whereHas[] = [
+                    'relation' => 'tasks',
+                    'query' => "id IN (" . $projectTaskIds . ")"
+                ];
+            }
         }
 
         $where = "project_date >= '" . date('Y-m-d') . "' and status = " . \App\Enums\Production\ProjectStatus::OnGoing->value;

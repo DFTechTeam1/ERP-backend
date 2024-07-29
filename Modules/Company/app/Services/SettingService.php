@@ -236,15 +236,16 @@ class SettingService {
         \Illuminate\Support\Facades\Cache::forget('setting');
     }
 
-    protected function storeVariables(array $data)
+    public function storeVariables(array $data)
     {
         foreach ($data as $key => $value) {
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
             $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
-            $where = "key = '" . (string) $keyQuery . "'";
+
+            $where = "key = '" . (string) $key . "'";
             if (config('app.env') == 'production') {
-                $where = "`key` = '" . (string) $keyQuery . "'";
+                $where = "`key` = '" . (string) $key . "'";
             }
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {

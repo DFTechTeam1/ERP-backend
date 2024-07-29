@@ -104,6 +104,19 @@ class LoginController extends Controller
             ) {
                 $isProjectManager = true;
             }
+            
+            $emailShow = trim(
+                strip_tags(
+                    html_entity_decode(
+                        $user->email, ENT_QUOTES, 'UTF-8')
+                    )
+                );
+            if (strlen($user->email) > 15) {
+                $emailShow = mb_substr($emailShow, 0, 15) . ' ...';
+            } else {
+                $emailShow = $user->email;
+            }
+            $user['email_show'] = $emailShow;
 
             $payload = [
                 'token' => $token->plainTextToken,

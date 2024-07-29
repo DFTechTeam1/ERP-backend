@@ -17,6 +17,8 @@ return [
 
     'hashSalt' => env('HASH_SALT', 's3cr3t.@'),
 
+    'googleApiKey' => env('GOOGLE_CONSOLE_API_KEY'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
@@ -121,7 +123,7 @@ return [
     */
 
     'maintenance' => [
-        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
+        'driver' => env('APP_MAINTENANCE_DRIVER', 'cache'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 

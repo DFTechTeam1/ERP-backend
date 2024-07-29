@@ -33,6 +33,10 @@ class User extends Authenticatable
         'is_external_user',
         'username',
         'employee_id',
+        'is_employee',
+        'is_director',
+        'is_project_manager',
+        'email_verified_at'
     ];
 
     /**

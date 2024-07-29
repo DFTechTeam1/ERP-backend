@@ -3,7 +3,7 @@
 namespace Modules\Inventory\Repository\Interface;
 
 abstract class InventoryInterface {
-    abstract function list(string $select = '*', string $where = "", array $relation = []);
+    abstract function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '');
 
     abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page, array $whereHas = []);
 

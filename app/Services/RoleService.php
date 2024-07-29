@@ -50,7 +50,7 @@ class RoleService {
     public function getAll()
     {
         $data = $this->repo->list('id as value,name as title')->map(function ($item) {
-            $item['name'] = str_replace('_', ' ', $item->name);
+            $item['name'] = str_replace('_', ' ', $item->title);
 
             return $item;
         })->toArray();

@@ -23,6 +23,7 @@ class Create extends FormRequest
             'brand_id' => 'required',
             'unit_id' => 'nullable',
             'supplier_id' => 'nullable',
+            'warehouse_id' => 'required',
             'unit_id' => 'nullable',
             'description' => 'required',
             'stock' => 'nullable',
