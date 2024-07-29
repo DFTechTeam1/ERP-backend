@@ -266,6 +266,7 @@ Table inventories {
     warranty tinyint [note: 'In years']
     year_of_purchase year
     purchase_price double
+    warehouse_id tinyint [note: 'Static id. 1 for office, 2 for entertaint']
     created_at timestamp
     updated_at timestamp
     created_by int
@@ -565,8 +566,12 @@ Table project_task_revise_histories {
 
 Table custom_inventories {
     id int [pk, increment]
+    uid varchar
+    build_series varchar
     name varchar
     type varchar
+    location tinyint [note: '1 for is user, 2 for in warehouse, 3 is outgoing / in project']
+    default_request_item bool
     created_at timestamp
     updated_at timestamp
 }
@@ -574,8 +579,8 @@ Table custom_inventories {
 Table custom_inventories_detail {
     id int [pk, increment]
     custom_inventory_id int [ref: > custom_inventories.id]
-    inventory_id int
-    stock int
+    inventory_id int [ref: > inventories.id]
+    qty int
     price double
     created_at timestamp
     updated_at timestamp
@@ -588,6 +593,28 @@ Table transfer_team_members {
     reason varchar
     project_date date
     status tinyint [note: '1 for requested, 2 for approved, 3 for reject, 4 completed']
+    created_at timestamp
+    updated_at timestamp
+}
+
+Table employee_task_points {
+    id int [pk, increment]
+    employee_id int
+    point float
+    additional_point float
+    total_point float
+    total_task float
+    project_id int
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+}
+
+Table project_task_pic_histories {
+    id int [pk, increment]
+    project_id int
+    project_task_id int
+    employee_id int
     created_at timestamp
     updated_at timestamp
 }

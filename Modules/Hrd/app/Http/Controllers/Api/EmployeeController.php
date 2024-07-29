@@ -37,10 +37,20 @@ class EmployeeController extends Controller
         );
     }
 
+    public function submitImport(Request $request)
+    {
+        return apiResponse($this->employeeService->submitImport($request->toArray()));
+    }
+
     public function import(Request $request)
     {
         return apiResponse($this->employeeService->import($request->file('excel')));
         // return apiResponse($this->employeeService->import('static_file/employee.xlsx'));
+    }
+
+    public function downloadTemplate()
+    {
+        return $this->employeeService->downloadTemplate();
     }
 
     /**

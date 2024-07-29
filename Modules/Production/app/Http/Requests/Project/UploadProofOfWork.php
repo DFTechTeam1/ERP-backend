@@ -16,6 +16,7 @@ class UploadProofOfWork extends FormRequest
             'preview' => 'nullable',
             'board_id' => 'nullable',
             'source_board_id' => 'nullable',
+            'manual_approve' => 'nullable',
         ];
     }
 

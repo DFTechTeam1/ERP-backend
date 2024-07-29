@@ -20,6 +20,7 @@ use Modules\Production\Http\Requests\Project\ReviseTask;
 use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
+use Modules\Production\Http\Requests\Project\CompleteProject;
 
 class ProjectController extends Controller
 {
@@ -41,7 +42,8 @@ class ProjectController extends Controller
             [
                 'marketing:id,name,employee_id',
                 'personInCharges:id,pic_id,project_id',
-                'personInCharges.employee:id,name,employee_id'
+                'personInCharges.employee:id,name,employee_id',
+                'marketings.marketing:id,name,employee_id'
             ]
         ));
     }
@@ -479,11 +481,21 @@ class ProjectController extends Controller
 
     public function loadTeamMember(LoanTeamMember $request, string $projectUid)
     {
-        return apiResponse($this->service->loadTeamMember($request->validated(), $projectUid));
+        return apiResponse($this->service->loanTeamMember($request->validated(), $projectUid));
     }
 
     public function uploadShowreels(UploadShowreels $request, string $projectUid)
     {
         return apiResponse($this->service->uploadShowreels($request->validated(), $projectUid));
+    }
+
+    public function completeProject(CompleteProject $request, string $projectUid)
+    {
+        return apiResponse($this->service->completeProject($request->validated(), $projectUid));
+    }
+
+    public function getTaskTeamForReview(string $projectUid)
+    {
+        return apiResponse($this->service->getTaskTeamForReview($projectUid));
     }
 }

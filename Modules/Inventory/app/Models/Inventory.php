@@ -36,6 +36,7 @@ class Inventory extends Model
         'created_by',
         'updated_by',
         'stock',
+        'warehouse_id'
     ];
 
     protected $appends = ['display_image'];

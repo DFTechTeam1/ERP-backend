@@ -33,7 +33,11 @@ class Project extends Model
         'led_detail',
         'created_by',
         'updated_by',
-        'showreels'
+        'showreels',
+        'country_id',
+        'state_id',
+        'city_id',
+        'city_name'
     ];
 
     protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
@@ -46,6 +50,21 @@ class Project extends Model
     public function personInCharges(): HasMany
     {
         return $this->hasMany(ProjectPersonInCharge::class, 'project_id');
+    }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Company\Models\Country::class, 'country_id');
+    }
+
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Company\Models\State::class, 'state_id');
+    }
+    
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Company\Models\City::class, 'city_id');
     }
 
     public function marketings(): HasMany

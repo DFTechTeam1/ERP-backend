@@ -8,6 +8,8 @@ enum InventoryStatus: int
     case InRepair = 2;
     case Broke = 3;
     case Disposal = 4;
+    case OnSite = 5;
+    case OnWarehouse = 6;
 
     public function label()
     {
@@ -16,6 +18,8 @@ enum InventoryStatus: int
             static::InRepair => __('global.inRepair'),
             static::Broke => __('global.broke'),
             static::Disposal => __('global.disposal'),
+            static::OnSite => __('global.onSite'),
+            static::OnWarehouse => __('global.onWarehouse'),
         };
     }
 
@@ -26,6 +30,8 @@ enum InventoryStatus: int
             static::InRepair => 'bg-light-yellow',
             static::Broke => 'bg-black',
             static::Disposal => 'bg-light-red',
+            static::OnSite => 'bg-teal-darken-4',
+            static::OnWarehouse => 'bg-green-darken-2'
         };
     }
 }

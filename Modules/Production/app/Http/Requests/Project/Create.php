@@ -25,6 +25,9 @@ class Create extends FormRequest
             'led_area' => 'required',
             'led' => 'required',
             'status' => 'required',
+            'country_id' => 'required',
+            'state_id' => 'required',
+            'city_id' => 'required',
         ];
     }
 
