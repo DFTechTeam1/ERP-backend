@@ -108,7 +108,7 @@ class AutoStartApp extends Command
         \App\MOdels\User::where('email', '!=', 'admin@admin.com')
             ->delete();
 
-        Artisan::call('db:seeder --class=RoleSeeder');
+        Artisan::call('db:seed --class=RoleSeeder');
 
         $this->registerVariables();
 
