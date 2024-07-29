@@ -452,6 +452,13 @@ class ProjectController extends Controller
         return apiResponse($this->service->getProjectStatusses());
     }
 
+    /**
+     * Function to change status of selected project
+     *
+     * @param ChangeStatus $request
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function changeStatus(ChangeStatus $request, string $projectUid)
     {
         return apiResponse($this->service->changeStatus($request->toArray(), $projectUid));
