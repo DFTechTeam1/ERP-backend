@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ManualTruncateTable extends Command
 {
@@ -26,6 +27,7 @@ class ManualTruncateTable extends Command
      */
     public function handle()
     {
+        Schema::disableForeignKeyConstraints();
         if (\Illuminate\Support\Facades\Schema::hasTable('projects')) {
             \Modules\Production\Models\ProjectTaskWorktime::truncate();
             \Modules\Production\Models\ProjectTaskReviseHistory::truncate();
@@ -43,5 +45,6 @@ class ManualTruncateTable extends Command
 
             \Modules\Production\Models\Project::truncate();
         }
+        Schema::enableForeignKeyConstraints();
     }
 }
