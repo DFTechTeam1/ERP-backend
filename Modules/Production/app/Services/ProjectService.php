@@ -1005,6 +1005,8 @@ class ProjectService
                 storeCache('detailProject' . $data->id, $output);
             }
 
+            logging('detail project', $output);
+
             $output = $this->formatTasksPermission($output, $projectId);
 
             $serviceEncrypt = new \App\Services\EncryptionService();
