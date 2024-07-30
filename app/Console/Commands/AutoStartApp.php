@@ -40,6 +40,7 @@ class AutoStartApp extends Command
             'migration',
             'caching',
             'addEmployeeAsUser',
+            'clearCache'
         ];
 
         $bar = $this->output->createProgressBar(count($todos));
@@ -47,15 +48,17 @@ class AutoStartApp extends Command
         $bar->start();
 
         foreach ($todos as $key => $todo) {
+            $this->{$todo}();
+
             if ($key == 0) {
                 $bar->setMessage('Running migration and seed default data ...');
             } else if ($key == 1) {
                 $bar->setMessage('Prepare all application configuration ...');
             } else if ($key == 2) {
                 $bar->setMessage('Create user for each employee ...');
+            } else if ($key == 3) {
+                $bar->setMessage('Delete all cache ...');
             }
-
-            $this->{$todo}();
 
             $bar->advance();
         }
@@ -66,9 +69,18 @@ class AutoStartApp extends Command
 
     }
 
+    protected function clearCache()
+    {
+        Artisan::call('optimize:clear');
+
+        Artisan::call('config:clear');
+
+        Artisan::call('cache:clear');
+    }
+
     protected function migration()
     {
-        Artisan::call('migrate:fresh --seed');
+        Artisan::call('migrate:refresh --seed');
     }
 
     protected function caching()
