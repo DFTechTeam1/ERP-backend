@@ -6,6 +6,9 @@ use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use KodePandai\Indonesia\IndonesiaDatabaseSeeder;
+use Modules\Company\Database\Seeders\DivisionSeeder;
+use Modules\Company\Database\Seeders\PositionSeeder;
+use Modules\Hrd\Database\Seeders\EmployeeSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -14,15 +17,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(IndonesiaDatabaseSeeder::class);
-
         $this->call([
-            UserPermissionGroupSeeder::class,
-            AddonConfigurationSeeder::class,
+            IndonesiaDatabaseSeeder::class,
+            WorldRegionSeeder::class,
+            RolePermissionSeeder::class,
+            DivisionSeeder::class,
+            PositionSeeder::class,
+            UserSeeder::class,
             MenuSeeder::class,
             KanbanSettingSeeder::class,
-            EmailSettingSeeder::class,
             GeneralSettingSeeder::class,
+            EmailSettingSeeder::class,
+            VariableSettingSeeder::class,
+            EmployeeSeeder::class,
         ]);
     }
 }

@@ -32,7 +32,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::create('project_task_revise_histories', function (Blueprint $table) {
+        Schema::table('project_task_revise_histories', function (Blueprint $table) {
             $table->dropForeign(['project_task_id']);
         });
         

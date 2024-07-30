@@ -46,7 +46,7 @@ class RoleSeeder extends Seeder
 
             $roleData = Role::create(['name' => $role['name'], 'guard_name' => 'sanctum']);
 
-            if ($role['name'] == 'root') {
+            if ($role['name'] == 'root' || $role['name'] == 'director') {
                 $permissions = Permission::all();
                 foreach ($permissions as $permission) {
                     $roleData->givePermissionTo($permission);

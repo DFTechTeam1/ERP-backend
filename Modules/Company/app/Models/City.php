@@ -15,5 +15,10 @@ class City extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = [];
+    protected $fillable = [
+        'country_id',
+        'state_id',
+        'name',
+        'country_code',
+    ];
 }

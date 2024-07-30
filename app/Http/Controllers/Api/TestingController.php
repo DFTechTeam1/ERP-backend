@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\GoogleService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class TestingController extends Controller
 {
@@ -56,10 +57,9 @@ class TestingController extends Controller
 
         // $reader = $employeeService->readFile($request->file('file'));
 
-        return response()->json([
-            'data' => __('global.failedProcessingData'),
-            'env' => config('app.locale')
-        ]);
+        $countries = json_decode(File::get(storage_path('app/public/static-file/region/json/countries.json')), true);
+
+        return response()->json($countries);
     }
 
     public function spreadsheet()
