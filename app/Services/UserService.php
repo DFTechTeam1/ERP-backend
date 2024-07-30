@@ -53,6 +53,13 @@ class UserService {
 
         $where = '';
 
+        if (!empty($search)) {
+            $where = "lower(username) like '%" . strtolower($search) . "%'";
+            $where .= " or lower(email) like '%" . strtolower($search) . "%'";
+        }
+
+        logging('where user', [$where]);
+
         $paginated = $this->repo->pagination(
             'id,uid,email,email_verified_at',
             $where,
