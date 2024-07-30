@@ -15,5 +15,9 @@ class State extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = [];
+    protected $fillable = [
+        'country_id',
+        'name',
+        'country_code',
+    ];
 }

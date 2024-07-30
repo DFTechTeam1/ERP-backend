@@ -20,13 +20,10 @@ class KanbanSettingSeeder extends Seeder
             'code' => 'kanban',
             'key' => 'default_boards',
             'value' => json_encode([
-                ['name' => 'Backlog', 'sort' => 0],
-                ['name' => 'To Do', 'sort' => 1],
-                ['name' => 'On Progress', 'sort' => 2],
-                ['name' => 'Review By PM', 'sort' => 3],
-                ['name' => 'Review By Client', 'sort' => 4],
-                ['name' => 'Revise', 'sort' => 5],
-                ['name' => 'Completed', 'sort' => 6],
+                ['name' => 'Asset 3D', 'sort' => 0, 'id' => 1],
+                ['name' => 'Compositing', 'sort' => 1, 'id' => 2],
+                ['name' => 'Animating', 'sort' => 2, 'id' => 3],
+                ['name' => 'Finalize', 'sort' => 3, 'id' => 4],
             ])
         ]);
     }

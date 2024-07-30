@@ -15,5 +15,11 @@ class Country extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = [];
+    protected $fillable = [
+        'name',
+        'iso3',
+        'iso2',
+        'phone_code',
+        'currency',
+    ];
 }
