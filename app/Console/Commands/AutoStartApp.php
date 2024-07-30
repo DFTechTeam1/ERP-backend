@@ -86,7 +86,7 @@ class AutoStartApp extends Command
         $employees = \Modules\Hrd\Models\Employee::where('status', '!=', \App\Enums\Employee\Status::Inactive->value)
             ->get();
 
-        \App\MOdels\User::where('email', '!=', 'admin@admin.com')
+        \App\Models\User::where('email', '!=', 'admin@admin.com')
             ->delete();
 
         $directorPosition = json_decode(getSettingByKey('position_as_directors'), true);
