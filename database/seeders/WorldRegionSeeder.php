@@ -38,7 +38,7 @@ class WorldRegionSeeder extends Seeder
 
         DB::table('countries')->insert($countries);
 
-        $states = json_decode(File::get(public_path('static-file/region/json/states.json')), true);
+        $states = json_decode(File::get(public_path('static_file/region/json/states.json')), true);
         $states = collect($states)->map(function ($item) {
             return [
                 'id' => $item['id'],
@@ -50,7 +50,7 @@ class WorldRegionSeeder extends Seeder
 
         DB::table('states')->insert($states);
 
-        $cities = json_decode(File::get(public_path('static-file/region/json/cities.json')), true);
+        $cities = json_decode(File::get(public_path('static_file/region/json/cities.json')), true);
         $cities = collect($cities)->map(function ($item) {
             return [
                 'id' => $item['id'],
