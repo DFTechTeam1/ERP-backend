@@ -54,11 +54,33 @@ class AssignTaskNotification extends Notification
 
     public function toLine($notifiable)
     {
+        $postbackApprove = 'approveTask&taskUid=' . $this->task->uid . '&projectUid=' . $this->task->project->uid;
+
         $messages = [
             [
                 'type' => 'text',
                 'text' => 'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya.",
-            ]
+            ],
+            [
+                'type' => 'template',
+                'altText' => 'Tugas Baru',
+                'template' => [
+                    'type' => 'buttons',
+                    'text' => 'Apakah kamu ingin menerima tugas ini?',
+                    'actions' => [
+                        [
+                            'type' => 'postback',
+                            'label' => __('global.approve'),
+                            'data' => $postbackApprove,
+                        ],
+                        [
+                            'type' => 'postback',
+                            'label' => __('global.reject'),
+                            'data' => 'action=reject',
+                        ],
+                    ]
+                ]
+            ],
         ];
 
         return [

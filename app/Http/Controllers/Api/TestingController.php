@@ -53,13 +53,10 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        // $service = new \Modules\Production\Services\ProjectService();
+        $taskId = 5;
+        $lineIds = [10];
 
-        // $project = \Modules\Production\Models\Project::where('id', 1)->first();
-
-        // $data = $service->getProjectStatistic($project);
-
-        // return response()->json($data);
+        \Modules\Production\Jobs\AssignTaskJob::dispatch($lineIds, $taskId);
     }
 
     public function spreadsheet()

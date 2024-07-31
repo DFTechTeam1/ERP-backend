@@ -18,7 +18,7 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::post('ilham', [\App\Http\Controllers\Api\TestingController::class, 'testing']);
+Route::post('ilham', [\App\Http\Controllers\Api\TestingController::class, 'testing'])->middleware('auth:sanctum');
 
 Route::get('nasTestConnection', function (Request $request) {
     try {
