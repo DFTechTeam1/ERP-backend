@@ -19,6 +19,7 @@ class GeneralSettingSeeder extends Seeder
 
         $productionRole = Role::findByName('production');
         $pmRole = Role::findByName('project manager');
+        $suRole = Role::findByName('root');
 
         $data = [
             [
@@ -28,7 +29,7 @@ class GeneralSettingSeeder extends Seeder
             ],
             [
                 'key' => 'super_user_role',
-                'value' => '1',
+                'value' => $suRole->id,
                 'code' => 'general',
             ],
             [

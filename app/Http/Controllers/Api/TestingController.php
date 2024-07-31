@@ -53,13 +53,13 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        // $employeeService = new \Modules\Hrd\Services\EmployeeService;
+        // $service = new \Modules\Production\Services\ProjectService();
 
-        // $reader = $employeeService->readFile($request->file('file'));
+        // $project = \Modules\Production\Models\Project::where('id', 1)->first();
 
-        $countries = json_decode(File::get(storage_path('app/public/static-file/region/json/countries.json')), true);
+        // $data = $service->getProjectStatistic($project);
 
-        return response()->json($countries);
+        // return response()->json($data);
     }
 
     public function spreadsheet()
