@@ -32,8 +32,8 @@ class AssignTaskJob implements ShouldQueue
     public function handle(): void
     {
         // TODO: CHECK AGAIN ACTION WHEN ASSIGN TO PROJECT MANAGER
-        $task = \Modules\Production\Models\ProjectTask::selectRaw('name,project_id')
-            ->with(['project:id,name'])
+        $task = \Modules\Production\Models\ProjectTask::selectRaw('name,project_id,id,uid')
+            ->with(['project:id,name,uid'])
             ->find($this->taskId);
 
         $employees = [];

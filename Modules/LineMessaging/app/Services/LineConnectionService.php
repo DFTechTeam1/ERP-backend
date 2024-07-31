@@ -4,6 +4,7 @@ namespace Modules\LineMessaging\Services;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Modules\Production\Models\ProjectTask;
 use Vinkla\Hashids\Facades\Hashids;
 
 class LineConnectionService {
@@ -125,6 +126,12 @@ class LineConnectionService {
                     if ($containApproveRequestTeam) {
                         $this->handleApproveRequestMember($textRaw);
                     }
+
+                    // handle approve task postback
+                    $containApproveTask = str_contains($textRaw, 'approveTask&uid');
+                    if ($containApproveTask) {
+                        $this->handleApproveTask($textRaw);
+                    }
                 }
             }
         }
@@ -133,6 +140,15 @@ class LineConnectionService {
             'status' => 200,
             'message' => 'success',
         ], 200);
+    }
+
+    protected function handleApproveTask($text)
+    {
+        $raw = explode('projectUid=', $text);
+
+        if (isset($raw[1])) {
+            $text = str_replace('&projectUid=' . $raw[1], '', $text);
+        }
     }
 
     protected function autoLogin($user) 
