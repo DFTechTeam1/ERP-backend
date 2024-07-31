@@ -17,6 +17,8 @@ class RoleSeeder extends Seeder
     {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
+        DB::table('roles')->truncate();
+
         $roles = [
             [
                 'name' => 'root',
