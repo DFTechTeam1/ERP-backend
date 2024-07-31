@@ -6,6 +6,7 @@ use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\Interface\ProjectPersonInChargeInterface;
 
 class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
+    
     private $model;
 
     private $key;
