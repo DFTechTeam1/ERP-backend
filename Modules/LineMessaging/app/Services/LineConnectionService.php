@@ -128,7 +128,7 @@ class LineConnectionService {
                     }
 
                     // handle approve task postback
-                    $containApproveTask = str_contains($textRaw, 'approveTask&uid');
+                    $containApproveTask = str_contains($textRaw, 'approveTask=');
                     if ($containApproveTask) {
                         $this->handleApproveTask($textRaw);
                     }
@@ -144,10 +144,16 @@ class LineConnectionService {
 
     protected function handleApproveTask($text)
     {
-        $raw = explode('projectUid=', $text);
+        $main = explode('=', $text);
 
-        if (isset($raw[1])) {
-            $text = str_replace('&projectUid=' . $raw[1], '', $text);
+        if (isset($main[1])) {
+            $textRaw = explode(\App\Enums\CodeDivider::assignTaskJobDivider->value, $main[1]);
+
+            $taskId = $textRaw[0];
+            $employeeId = $textRaw[1];
+            $projectId = $textRaw[2];
+
+            logging('break token approve', $textRaw);
         }
     }
 

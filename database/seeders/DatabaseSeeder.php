@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             IndonesiaDatabaseSeeder::class,
-            WorldRegionSeeder::class,
+            // WorldRegionSeeder::class,
             RolePermissionSeeder::class,
             DivisionSeeder::class,
             PositionSeeder::class,

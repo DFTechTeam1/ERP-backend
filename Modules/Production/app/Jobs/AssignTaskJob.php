@@ -45,9 +45,10 @@ class AssignTaskJob implements ShouldQueue
             if ($data->line_id) {
                 $employees[] = $data;
                 $lineIds[] = $data->line_id;
-            }
-        }
 
-        \Illuminate\Support\Facades\Notification::send($employees, new \Modules\Production\Notifications\AssignTaskNotification($lineIds, $task));
+                \Illuminate\Support\Facades\Notification::send($employees, new \Modules\Production\Notifications\AssignTaskNotification([$data->line_id], $task, $employee));
+            }
+
+        }
     }
 }
