@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Vinkla\Hashids\Facades\Hashids;
 
 class AssignTaskNotification extends Notification
 {
@@ -15,14 +16,18 @@ class AssignTaskNotification extends Notification
 
     public $task;
 
+    public $employeeId;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct($lineIds, $task)
+    public function __construct($lineIds, $task, $employeeId)
     {
         $this->lineIds = $lineIds;
 
         $this->task = $task;
+
+        $this->employeeId = $employeeId;
     }
 
     /**
@@ -54,8 +59,12 @@ class AssignTaskNotification extends Notification
 
     public function toLine($notifiable)
     {
-        $postbackApprove = 'approveTask&taskUid=' . $this->task->uid . '&projectUid=' . $this->task->project->uid;
+        $divider = \App\Enums\CodeDivider::assignTaskJobDivider->value;
 
+        $postbackApprove = $this->task->id . $divider . $this->employeeId . $divider . $this->task->project->id;
+
+        $postbackApprove = 'approveTask=' . Hashids::encode($postbackApprove);
+        
         $messages = [
             [
                 'type' => 'text',
@@ -87,5 +96,6 @@ class AssignTaskNotification extends Notification
             'line_ids' => $this->lineIds,
             'messages' => $messages,
         ];
+
     }
 }
