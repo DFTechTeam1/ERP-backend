@@ -56,7 +56,7 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        $project = \Modules\Production\Models\Project::find(3);
+        $project = \Modules\Production\Models\Project::latest()->first();
 
         NewProjectJob::dispatch($project->toArray());
 
