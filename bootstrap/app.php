@@ -10,11 +10,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
-        using: function () {
-            Route::prefix('api')
-                ->namespace('App\Http\Controllers\Api')
-                ->group(base_path('routes/api.php'));
-        },
+        channels: __DIR__.'/../routes/channels.php',
+        api: __DIR__.'/../routes/api.php',
+        // using: function () {
+        //     Route::prefix('api')
+        //         ->namespace('App\Http\Controllers\Api')
+        //         ->group(base_path('routes/api.php'));
+        // },
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {

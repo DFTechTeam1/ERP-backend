@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Company\Http\Controllers\Api\ProjectClassController;
 use Modules\Company\Http\Controllers\CompanyController;
 
 /*
@@ -48,3 +49,8 @@ Route::get('setting/{code}/{key}', [\Modules\Company\Http\Controllers\Api\Settin
 Route::get('world/countries', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getCountries']);
 Route::get('world/states', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getStates']);
 Route::get('world/cities', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getCities']);
+
+// project class
+Route::get('projectClass/getAll', [ProjectClassController::class, 'getAll']);
+Route::resource('projectClass', ProjectClassController::class);
+Route::post('projectClass/bulk', [ProjectClassController::class, 'bulkDelete']);
