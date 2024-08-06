@@ -44,3 +44,12 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
 
         Route::post('employees/import', 'import');
     });
+
+Route::middleware('auth:sanctum')
+    ->prefix('performanceReport')
+    ->group(function () {
+    Route::get('/{employeeId}', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'performanceDetail']);
+    Route::get('getTeams', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'getTeams']);
+    Route::get('getMembers/{leaderId}', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'getMembers']);
+    Route::get('getMembers/filterMember', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'filterMember']);
+});

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Production\Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
@@ -37,7 +38,8 @@ class Project extends Model
         'country_id',
         'state_id',
         'city_id',
-        'city_name'
+        'city_name',
+        'project_class_id',
     ];
 
     protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
@@ -50,6 +52,11 @@ class Project extends Model
     public function personInCharges(): HasMany
     {
         return $this->hasMany(ProjectPersonInCharge::class, 'project_id');
+    }
+
+    public function projectClass(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Company\Models\ProjectClass::class, 'project_class_id');
     }
 
     public function country(): BelongsTo

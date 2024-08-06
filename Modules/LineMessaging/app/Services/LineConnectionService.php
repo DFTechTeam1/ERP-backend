@@ -147,13 +147,35 @@ class LineConnectionService {
         $main = explode('=', $text);
 
         if (isset($main[1])) {
-            $textRaw = explode(\App\Enums\CodeDivider::assignTaskJobDivider->value, $main[1]);
+            $decode = Hashids::decode($main[1]);
 
-            $taskId = $textRaw[0];
-            $employeeId = $textRaw[1];
-            $projectId = $textRaw[2];
+            logging('decode', $decode);
 
-            logging('break token approve', $textRaw);
+            if (count($decode) > 0) {
+                $textRaw = explode(\App\Enums\CodeDivider::assignTaskJobDivider->value, $decode[0]);
+
+                $taskId = $textRaw[0];
+                $employeeId = $textRaw[1];
+                $projectId = $textRaw[2];
+
+                // based on task status
+                $task = \Modules\Production\Models\ProjectTask::selectRaw('id,status,is_approved')
+                    ->find($taskId);
+                if (!$task->is_approved) {
+                    $taskPic = \Modules\Production\Models\ProjectTaskPic::with(['task:id,name', 'employee'])
+                        ->where('project_task_id', $taskId)
+                        ->where('employee_id', $employeeId)
+                        ->first();
+    
+                    if ($taskPic) {
+                        
+
+                        \Illuminate\Support\Facades\Notification::send($taskPic->employee, new \Modules\Production\Notifications\WebhookApproveTaskNotification($taskPic));
+                    }
+                } else {
+
+                }
+            }
         }
     }
 
