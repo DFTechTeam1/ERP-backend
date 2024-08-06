@@ -113,6 +113,8 @@ return [
     'onWarehouse' => 'On Warehouse',
     'office' => 'Office',
     'entertaintment' => "Entertainment",
+    'newProject' => 'New Project',
+    'newProjectNotification' => 'You just assigned to event :event',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -201,6 +203,10 @@ return [
     'projectIsCompleted' => 'Project is completed and point already distribute to each teams member',
     'customInventoryCreated' => 'Custom item is created',
     'customInventoryUpdated' => 'Custom item is updated',
+    'projectClassCreated' => 'Success create new project class',
+    'projectClassUpdated' => 'Success update current project class',
+    'successDeleteProjectClass' => 'Success delete project class',
+    'point' => 'point',
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',
@@ -225,4 +231,5 @@ return [
     'statusRequired' => 'Status is required',
     'joinDateRequired' => 'Join date is required',
     'positionNotRegistered' => 'Position is not registered yet in database',
+    'failedDeleteProjectClassBcsRelation' => 'Failed to delete selected project class. Please check relation to projects menu',
 ];

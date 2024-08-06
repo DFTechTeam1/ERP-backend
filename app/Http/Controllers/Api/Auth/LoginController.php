@@ -118,6 +118,14 @@ class LoginController extends Controller
             }
             $user['email_show'] = $emailShow;
 
+            $employee = \Modules\Hrd\Models\Employee::select("id")
+                ->find($user->employee_id);
+
+            $notifications = [];
+            if ($employee) {
+                $notifications = formatNotifications($employee->unreadNotifications->toArray());
+            }
+
             $payload = [
                 'token' => $token->plainTextToken,
                 'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
@@ -131,6 +139,7 @@ class LoginController extends Controller
                 'is_director' => $isDirector,
                 'is_project_manager' => $isProjectManager,
                 'is_super_user' => $isSuperUser,
+                'notifications' => $notifications,
             ];
 
             $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));

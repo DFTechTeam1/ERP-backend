@@ -14,13 +14,17 @@ class UniqueLowerRule implements ValidationRule
 
     private $column;
 
-    public function __construct($model, string $uid = '', string $column = 'name')
+    private $justId;
+
+    public function __construct($model, string $uid = '', string $column = 'name', bool $justId = false)
     {
         $this->model = $model;
 
         $this->uid = $uid;
 
         $this->column = $column;
+
+        $this->justId = $justId;
     }
 
     /**
@@ -30,13 +34,20 @@ class UniqueLowerRule implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
+        logging('uid', [$this->uid]);
+
         $column = $this->column;
 
         $query = $this->model->query();
-        if (!empty($this->uid)) {
-            $query->where('uid', '!=', $this->uid);
+
+        if ($this->justId) {
+            $query->where('id', '!=', $this->uid);
+        } else {
+            if (!empty($this->uid)) {
+                $query->where('uid', '!=', $this->uid);
+            }
         }
-        $query->where(DB::raw("lower({$column})"), strtolower($value));
+        $query->whereRaw("lower({$column}) = '" . strtolower($value) . "'");
 
         if ($query->count() > 0) {
             $fail('global.attributeAlreadyExists')->translate();

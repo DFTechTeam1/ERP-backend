@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
@@ -13,12 +14,17 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use KodePandai\Indonesia\Models\District;
 use App\Http\Controllers\Api\DashboardController;
+use Illuminate\Support\Facades\Broadcast;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
 Route::post('ilham', [\App\Http\Controllers\Api\TestingController::class, 'testing'])->middleware('auth:sanctum');
+
+Route::get('notification/markAsRead/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
+
+// Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 Route::get('nasTestConnection', function (Request $request) {
     try {
@@ -65,13 +71,13 @@ Route::get('nasTestConnection', function (Request $request) {
 });
 
 Route::prefix('auth')->group(function () {
-    Route::post('login', 'Auth\LoginController@login');
+    Route::post('login', [LoginController::class, 'login']);
 });
 
 Route::middleware('auth:sanctum')
     ->prefix('auth')
     ->group(function () {
-        Route::post('logout', 'Auth\LoginController@logout');
+        Route::post('logout', [LoginController::class, 'logout']);
 
     });
     

@@ -25,6 +25,7 @@ class MenuSeeder extends Seeder
             ['name' => 'Employees', 'parent_id' => null, 'icon' => 'menus/employee.png', 'group' => \App\Enums\Menu\Group::Hrd->value, 'link' => '/admin/employees/list', 'permission' => 'list_employee'],
             ['name' => 'Master', 'parent_id' => null, 'icon' => 'menus/master.png', 'group' => \App\Enums\Menu\Group::Master->value, 'link' => '', 'permission' => ''],
             ['name' => 'Divisions', 'parent_id' => 6, 'icon' => '', 'group' => \App\Enums\Menu\Group::Master->value, 'link' => '/admin/master/divisions', 'permission' => 'list_division'],
+            ['name' => 'Project Class', 'parent_id' => 6, 'icon' => '', 'group' => \App\Enums\Menu\Group::Master->value, 'link' => '/admin/master/projectClass', 'permission' => 'list_division'],
             ['name' => 'Positions', 'parent_id' => 6, 'icon' => '', 'group' => \App\Enums\Menu\Group::Master->value, 'link' => '/admin/master/positions', 'permission' => 'list_position'],
             ['name' => 'Suppliers', 'parent_id' => null, 'icon' => 'menus/supplier.png', 'group' => \App\Enums\Menu\Group::Inventory->value, 'link' => '/admin/inventories/suppliers', 'permission' => 'list_supplier'],
             ['name' => 'Brands', 'parent_id' => null, 'icon' => 'menus/brand.png', 'group' => \App\Enums\Menu\Group::Inventory->value, 'link' => '/admin/inventories/brands', 'permission' => 'list_brand'],
@@ -38,6 +39,7 @@ class MenuSeeder extends Seeder
             ['name' => 'Projects', 'parent_id' => null, 'icon' => 'menus/projects.png', 'group' => \App\Enums\Menu\Group::Production->value, 'link' => '/admin/production/projects', 'permission' => 'list_project'],
             ['name' => 'Tasks', 'parent_id' => null, 'icon' => 'menus/task.png', 'group' => \App\Enums\Menu\Group::Production->value, 'link' => '/admin/production/tasks', 'permission' => 'list_task'],
             ['name' => 'Team Transfer', 'parent_id' => null, 'icon' => 'menus/transfer.png', 'group' => \App\Enums\Menu\Group::Production->value, 'link' => '/admin/production/team-transfer', 'permission' => 'list_team_transfer'],
+            ['name' => 'Performance Report', 'parent_id' => null, 'icon' => 'menus/performance-report.png', 'group' => \App\Enums\Menu\Group::Hrd->value, 'link' => '/admin/employees/performanceReport', 'permission' => 'list_performance_report'],
         ];
 
         foreach ($menus as $menu) {

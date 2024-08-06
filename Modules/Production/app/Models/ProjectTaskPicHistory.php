@@ -26,6 +26,11 @@ class ProjectTaskPicHistory extends Model
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'employee_id');
     }
 
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Production\Models\Project::class, 'project_id');
+    }
+
     public function task(): BelongsTo
     {
         return $this->belongsTo(\Modules\Production\Models\ProjectTask::class, 'project_task_id');

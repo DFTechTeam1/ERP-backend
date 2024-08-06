@@ -258,6 +258,14 @@ class EmployeeService
 
         }
 
+        if (!empty(request('name'))) {
+            if (empty($where)) {
+                $where = "lower(name) like '%". strtolower(request('name')) ."%'";
+            } else {
+                $where .= " and lower(name) like '%". strtolower(request('name')) ."%'";
+            }
+        }
+
         $data = $this->repo->list(
             'uid,id,name',
             $where
