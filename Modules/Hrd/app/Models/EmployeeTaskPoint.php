@@ -4,6 +4,7 @@ namespace Modules\Hrd\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Database\Factories\EmployeeTaskPointFactory;
 
 class EmployeeTaskPoint extends Model
@@ -17,8 +18,16 @@ class EmployeeTaskPoint extends Model
         'employee_id',
         'point',
         'additional_point',
+        'total_point',
         'total_task',
         'project_id',
         'created_by',
     ];
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Production\Models\Project::class, 'project_id');
+    }
+
+    
 }

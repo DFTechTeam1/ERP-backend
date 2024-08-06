@@ -20,6 +20,7 @@ use Modules\Production\Repository\ProjectTaskPicLogRepository;
 use Modules\Production\Repository\ProjectTaskReviseHistoryRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
+use Modules\Company\Repository\ProjectClassRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use DateTime;
@@ -65,11 +66,15 @@ class ProjectService
 
     private $customItemRepo;
 
+    private $projectClassRepo;
+
     /**
      * Construction Data
      */
     public function __construct()
     {
+        $this->projectClassRepo = new ProjectClassRepository;
+
         $this->repo = new ProjectRepository;
 
         $this->referenceRepo = new ProjectReferenceRepository;
@@ -387,7 +392,7 @@ class ProjectService
                     'venue' => $item->venue,
                     'event_type' => $eventType,
                     'led_area' => $item->led_area,
-                    'event_class' => $eventClass,
+                    'event_class' => $item->projectClass->name,
                     'status' => $status,
                     'status_color' => $statusColor,
                     'status_raw' => $item->status,
@@ -716,6 +721,13 @@ class ProjectService
                     }
                 }
 
+                $needUserApproval = false;
+                if ($task->status == \App\Enums\Production\TaskStatus::WaitingApproval->value) {
+                    $needUserApproval = true;
+                }
+
+                $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
+
                 // override is_active where task status is ON PROGRESS
                 if ($task->status == \App\Enums\Production\TaskStatus::OnProgress->value) {
                     $isActive = true;
@@ -767,7 +779,7 @@ class ProjectService
 
     protected function formattedBasicData(string $projectUid)
     {
-        $project = $this->repo->show($projectUid, 'id,uid,event_type,classification,name,project_date');
+        $project = $this->repo->show($projectUid, 'id,uid,event_type,classification,name,project_date,project_class_id', ['projectClass:id,name,maximal_point']);
 
         $projectTeams = $this->getProjectTeams($project);
         $teams = $projectTeams['teams'];
@@ -783,15 +795,6 @@ class ProjectService
             }
         }
 
-        $eventClass = '-';
-        $eventClassColor = null;
-        foreach ($classes as $class) {
-            if ($class->value == $project->classification) {
-                $eventClass = $class->label();
-                $eventClassColor = $class->color();
-            }
-        }
-
         return [
             'pics' => $pics,
             'teams' => $teams,
@@ -799,9 +802,10 @@ class ProjectService
             'project_date' => date('d F Y', strtotime($project->project_date)),
             'event_type' => $eventType,
             'event_type_raw' => $project->event_type,
-            'event_class_raw' => $project->classification,
-            'event_class' => $eventClass,
-            'event_class_color' => $eventClassColor,
+            'event_class_raw' => $project->project_class_id,
+            'event_class' => $project->classification,
+            'event_class_color' => '',
+            'project_maximal_point' => $project->projectClass->maximal_point,
         ];
     }
 
@@ -906,7 +910,8 @@ class ProjectService
                     'marketings.marketing:id,name',
                     'country:id,name',
                     'state:id,name',
-                    'city:id,name'
+                    'city:id,name',
+                    'projectClass:id,name,maximal_point'
                 ]);
 
                 $progress = $this->formattedProjectProgress($data->tasks, $projectId);
@@ -972,8 +977,8 @@ class ProjectService
                     'city_id' => $data->city_id,
                     'event_type' => $eventType,
                     'event_type_raw' => $data->event_type,
-                    'event_class_raw' => $data->classification,
-                    'event_class' => $eventClass,
+                    'event_class_raw' => $data->project_class_id,
+                    'event_class' => $data->projectClass->name,
                     'event_class_color' => $eventClassColor,
                     'project_date' => date('d F Y', strtotime($data->project_date)),
                     'days_to_go' => $daysToGo,
@@ -999,7 +1004,8 @@ class ProjectService
                     'progress' => $progress,
                     'equipments' => $equipments,
                     'showreels' => $data->showreels_path,
-                    'person_in_charges' => $data->personInCharges
+                    'person_in_charges' => $data->personInCharges,
+                    'project_maximal_point' => $data->projectClass->maximal_point,
                 ];
 
                 storeCache('detailProject' . $data->id, $output);
@@ -1284,6 +1290,15 @@ class ProjectService
                     }
                 }
 
+                $needUserApproval = false;
+                if (
+                    $task['status'] == \App\Enums\Production\TaskStatus::WaitingApproval->value && 
+                    (in_array($employeeId, $picIds) || $isDirector)
+                ) {
+                    $needUserApproval = true;
+                }
+                $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
+
                 if (
                     in_array($employeeId, $picIds) &&
                     $project['status_raw'] == \App\Enums\Production\ProjectStatus::OnGoing->value &&
@@ -1353,6 +1368,12 @@ class ProjectService
             }
 
             $city = \Modules\Company\Models\City::select('name')->find($data['city_id']);
+
+            $data['project_class_id'] = $data['classification'];
+
+            $classification = $this->projectClassRepo->show($data['classification'], 'id,name');
+
+            $data['classification'] = $classification->name;
 
             $data['city_name'] = $city->name;
 
@@ -1510,6 +1531,12 @@ class ProjectService
         try {
             $data['project_date'] = date('Y-m-d', strtotime($data['date']));
 
+            $projectClass = $this->projectClassRepo->show($data['classification'], 'id,name');
+
+            $data['classification'] = $projectClass->name;
+
+            $data['project_class_id'] = $projectClass->id;
+
             $this->repo->update(
                 collect($data)->except(['date'])->toArray(),
                 $projectUid
@@ -1534,7 +1561,7 @@ class ProjectService
             $currentData['project_date'] = $format['project_date'];
             $currentData['event_type_raw'] = $format['event_type_raw'];
             $currentData['event_class_raw'] = $format['event_class_raw'];
-            $currentData['event_class'] = $format['event_class'];
+            $currentData['event_class'] = $projectClass->name;
             $currentData['event_class_color'] = $format['event_class_color'];
 
             storeCache('detailProject' . $projectId, $currentData);
@@ -3578,6 +3605,12 @@ class ProjectService
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
             $employeeId = auth()->user()->employee_id;
 
+            $isDirector = isDirector();
+            if ($isDirector) { // get the real employee id
+                $realPic = $this->taskPicRepo->show(0, 'employee_id', [], 'project_task_id = ' . $taskId);
+                $employeeId = $realPic->employee_id;
+            }
+
             $this->taskPicRepo->update([
                 'status' => \App\Enums\Production\TaskPicStatus::Approved->value,
                 'approved_at' => Carbon::now(),
@@ -4252,9 +4285,9 @@ class ProjectService
                 $this->employeeTaskPoint->store([
                     'employee_id' => getIdFromUid($point['uid'], new \Modules\Hrd\Models\Employee()),
                     'project_id' => $projectId,
-                    'point' => $point['point'],
+                    'point' => $point['point'] - $point['additional_point'],
                     'additional_point' => $point['additional_point'],
-                    'total_point' => $point['additional_point'] + $point['point'],
+                    'total_point' => $point['point'],
                     'total_task' => $point['total_task'],
                     'created_by' => auth()->user()->employee_id ?? 0,
                 ]);

@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\TestingEvent;
 use App\Http\Controllers\Controller;
 use App\Services\GoogleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Modules\Production\Jobs\NewProjectJob;
+use Pusher\Pusher;
 
 class TestingController extends Controller
 {
@@ -53,10 +56,11 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        $taskId = 5;
-        $lineIds = [10];
+        $project = \Modules\Production\Models\Project::find(3);
 
-        \Modules\Production\Jobs\AssignTaskJob::dispatch($lineIds, $taskId);
+        NewProjectJob::dispatch($project->toArray());
+
+        return $project;
     }
 
     public function spreadsheet()

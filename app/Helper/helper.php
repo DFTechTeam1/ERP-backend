@@ -488,3 +488,23 @@ if (!function_exists('generateSequenceNumber')) {
         return str_pad($number, $length, 0, STR_PAD_LEFT);
     }
 }
+
+if (!function_exists('formatNotifications')) {
+    function formatNotifications(array $payload)
+    {
+        $output = [];
+        foreach ($payload as $notification) {
+            if (!$notification['read_at']) {
+                $output[] = [
+                    'id' => $notification['id'],
+                    'message' => $notification['data']['message'],
+                    'title' => $notification['data']['title'],
+                    'time' => date('d F Y, H:i', strtotime($notification['created_at'])),
+                    'link' => $notification['data']['link'] ?? null,
+                ];
+            }
+        }
+
+        return $output;
+    }
+}

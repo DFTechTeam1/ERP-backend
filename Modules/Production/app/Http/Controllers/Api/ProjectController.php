@@ -37,13 +37,14 @@ class ProjectController extends Controller
     public function index()
     {
         return apiResponse($this->service->list(
-            'id,uid,name,project_date,venue,event_type,collaboration,note,marketing_id,status,classification,led_area,led_detail',
+            'id,uid,name,project_date,venue,event_type,collaboration,note,marketing_id,status,classification,led_area,led_detail,project_class_id',
             '',
             [
                 'marketing:id,name,employee_id',
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id',
-                'marketings.marketing:id,name,employee_id'
+                'marketings.marketing:id,name,employee_id',
+                'projectClass:id,name'
             ]
         ));
     }
