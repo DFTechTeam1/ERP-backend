@@ -115,6 +115,12 @@ return [
     'entertaintment' => "Entertainment",
     'newProject' => 'New Project',
     'newProjectNotification' => 'You just assigned to event :event',
+    'totalEquipmentPrice' => 'Total Equipment Price',
+    'totalIncome' => 'Total Income',
+    'totalProject' => 'Total Project',
+    'totalEmployee' => 'Total Employee',
+    'upcomingProject' => 'Upcoming Project',
+    'totalTeamMember' => 'Total Team Member'
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
