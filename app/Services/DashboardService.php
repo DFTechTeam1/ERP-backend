@@ -10,11 +10,307 @@ class DashboardService {
 
     private $taskPicRepo;
 
+    private $inventoryRepo;
+
+    private $employeeRepo;
+
+    private $positionRepo;
+
+    private $isEmployee;
+
+    private $isDirector;
+
+    private $isProjectManager;
+
     public function __construct()
     {
         $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
 
         $this->taskPicRepo = new \Modules\Production\Repository\ProjectTaskPicRepository();
+
+        $this->inventoryRepo = new \Modules\Inventory\Repository\InventoryRepository();
+
+        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
+
+        $this->positionRepo = new \Modules\Company\Repository\PositionRepository();
+    }
+
+    public function getReport()
+    {
+        $output = [
+            'left' => [
+                [
+                    'total' => 0,
+                    'text' => '',
+                ],
+                [
+                    'total' => 0,
+                    'text' => '',
+                ],
+            ],
+            'right' => [
+                [
+                    'total' => 0,
+                    'series' => [],
+                    'text' => '',
+                ],
+                [
+                    'total' => 0,
+                    'series' => [],
+                    'text' => '',
+                ],
+            ]
+        ];
+
+        $user = auth()->user();
+        
+        $this->isEmployee = $user->is_employee;
+        $this->isProjectManager = $user->is_project_manager;
+        $this->isDirector = $user->is_director;
+
+        $output = [];
+        if ($this->isDirector) {
+            $output = $this->getReportDirector();
+        } else if ($this->isProjectManager) {
+            $output = $this->getReportProjectManager();
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $output,
+        );
+    }
+
+    protected function getProjectReport()
+    {
+        $relation = [];
+        if ($this->isProjectManager) {
+            $relation = [
+                'personInCharges' => function ($query) {
+                    $query->selectRaw('id,project_id,pic_id')
+                        ->where('pic_id', auth()->user()->employee_id);
+                }
+            ];
+        }
+        $projects = $this->projectRepo->list('id,status', '', $relation);
+        $projectsGroup = collect($projects)->groupBy('status_text')->toArray();
+        $projectLabels = array_keys($projectsGroup);
+        $projectSeries = [];
+        foreach ($projectsGroup as $projectGroup) {
+            $projectSeries[] = count($projectGroup);
+        }
+        $projectOptions = [
+            'dataLabels' => [
+                'enabled' => false,
+            ],
+            'legend' => [
+                'show' => false,
+            ],
+            'responsive' => [
+                [
+                    'breakpoint' => 600,
+                    'options' => [],
+                ],
+            ],
+            'plotOptions' => [
+                'pie' => [
+                    'expandOnClick' => true,
+                    'donut' => [
+                        'labels' => [
+                            'show' => true,
+                        ],
+                    ],
+                ],
+            ],
+            'labels' => $projectLabels,
+        ];
+        
+        return [
+            'options' => $projectOptions,
+            'total' => $projects->count(),
+            'series' => $projectSeries,
+        ];
+    }
+
+    protected function getReportProjectManager()
+    {
+        $projects = $this->getProjectReport();
+
+        // get upcomoing event (2 weeks for now)
+        $startDate = date('Y-m-d', strtotime('-14 days'));
+        $endDate = date('Y-m-d');
+        $upcomingProject = $this->projectRepo->list('id,classification,name,project_date', "project_date >= {$startDate} and project_date <= {$endDate}");
+        $upcomingGroup = collect($upcomingProject)->groupBy('projet_date')->toArray();
+        $upcomingSeries = [];
+        foreach ($upcomingGroup as $group) {
+            $upcomingSeries[] = count($group);
+        }
+        $upcomingLabels = collect(array_keys($upcomingGroup))->map(function ($item) {
+            return date('d F Y', strtotime($item));
+        })->toArray();
+        $upcomingOptions = [
+            'dataLabels' => [
+                'enabled' => false,
+            ],
+            'legend' => [
+                'show' => false,
+            ],
+            'responsive' => [
+                [
+                    'breakpoint' => 600,
+                    'options' => [],
+                ],
+            ],
+            'plotOptions' => [
+                'pie' => [
+                    'expandOnClick' => true,
+                    'donut' => [
+                        'labels' => [
+                            'show' => true,
+                        ],
+                    ],
+                ],
+            ],
+            'labels' => $upcomingLabels,
+        ];
+
+        // get total team member
+        $member = $this->employeeRepo->list('id', 'boss_id = ' . auth()->user()->employee_id);
+
+        // get awaiting assesed project
+        $waitingProject = $this->projectRepo->list('id', 'status = ' . \App\Enums\Production\ProjectStatus::OnGoing->value . " and project_date > '" . date('Y-m-d') . "'");
+
+        return [
+            'left' => [
+                [
+                    'text' => __("global.totalEquipmentPrice"),
+                    'value' => 'Rp. ' . number_format($totalInventoryPrice, 2),
+                ],
+                [
+                    'text' => __("global.totalTeamMember"),
+                    'value' => $member->count(),
+                ],
+            ],
+            'right' => [
+                [
+                    'text' => __('global.totalProject'),
+                    'series' => $projects['series'],
+                    'options' => $projects['options'],
+                    'value' => $projects['total'],
+                ],
+                [
+                    'text' => __('global.upcomingProject'),
+                    'series' => $upcomingSeries,
+                    'options' => $upcomingOptions,
+                    'value' => $upcomingProject->count(),
+                ],
+            ]
+        ];
+    }
+
+    protected function getReportDirector()
+    {
+        $totalIncome = 0;
+
+        // get equipment price
+        $inventories = $this->inventoryRepo->list('purchase_price,stock');
+        $totalInventoryPrice = collect($inventories)->map(function ($item) {
+            return $item->stock * $item->purchase_price;
+        })->sum();
+
+        $employees = $this->employeeRepo->list('id,position_id', 'status != ' . \App\Enums\Employee\Status::Inactive->value, ['position:id,name']);
+        $employeesGroup = collect($employees)->groupBy('position.name')->toArray();
+        $positionLabels = array_keys($employeesGroup);
+        $positionSeries = [];
+        foreach ($employeesGroup as $employeeGroup) {
+            $positionSeries[] = count($employeeGroup);
+        }
+        $positionOptions = [
+            'dataLabels' => [
+                'enabled' => false,
+            ],
+            'legend' => [
+                'show' => false,
+            ],
+            'responsive' => [
+                [
+                    'breakpoint' => 600,
+                    'options' => [],
+                ],
+            ],
+            'plotOptions' => [
+                'pie' => [
+                    'expandOnClick' => true,
+                    'donut' => [
+                        'labels' => [
+                            'show' => true,
+                        ],
+                    ],
+                ],
+            ],
+            'labels' => $positionLabels,
+        ];
+
+        $projects = $this->projectRepo->list('id,status');
+        $projectsGroup = collect($projects)->groupBy('status_text')->toArray();
+        $projectLabels = array_keys($projectsGroup);
+        $projectSeries = [];
+        foreach ($projectsGroup as $projectGroup) {
+            $projectSeries[] = count($projectGroup);
+        }
+        $projectOptions = [
+            'dataLabels' => [
+                'enabled' => false,
+            ],
+            'legend' => [
+                'show' => false,
+            ],
+            'responsive' => [
+                [
+                    'breakpoint' => 600,
+                    'options' => [],
+                ],
+            ],
+            'plotOptions' => [
+                'pie' => [
+                    'expandOnClick' => true,
+                    'donut' => [
+                        'labels' => [
+                            'show' => true,
+                        ],
+                    ],
+                ],
+            ],
+            'labels' => $projectLabels,
+        ];
+
+        return [
+            'left' => [
+                [
+                    'text' => __("global.totalEquipmentPrice"),
+                    'value' => 'Rp. ' . number_format($totalInventoryPrice, 2),
+                ],
+                [
+                    'text' => __("global.totalIncome"),
+                    'value' => 'Rp. ' . number_format($totalIncome, 2),
+                ],
+            ],
+            'right' => [
+                [
+                    'text' => __('global.totalProject'),
+                    'series' => $projectSeries,
+                    'options' => $projectOptions,
+                    'value' => $projects->count(),
+                ],
+                [
+                    'text' => __('global.totalEmployee'),
+                    'series' => $positionSeries,
+                    'options' => $positionOptions,
+                    'value' => $employees->count(),
+                ],
+            ]
+        ];
     }
 
     /**
