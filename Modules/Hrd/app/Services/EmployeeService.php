@@ -266,6 +266,12 @@ class EmployeeService
             }
         }
 
+        if (!empty($where)) {
+            $where .= " and status != " . \App\Enums\Employee\Status::Inactive->value;
+        } else {
+            $where = "status != " . \App\Enums\Employee\Status::Inactive->value;
+        }
+
         $data = $this->repo->list(
             'uid,id,name',
             $where
