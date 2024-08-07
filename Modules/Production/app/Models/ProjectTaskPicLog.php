@@ -24,7 +24,7 @@ class ProjectTaskPicLog extends Model
 
     protected $appends = ['status_text'];
 
-    public function project(): BelongsTo
+    public function task(): BelongsTo
     {
         return $this->belongsTo(ProjectTask::class, 'project_task_id');
     }

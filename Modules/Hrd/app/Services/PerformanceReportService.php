@@ -68,12 +68,21 @@ class PerformanceReportService {
                 'project_id = ' . $point->project_id . ' and employee_id = ' . $employeeId, 
                 [
                     'task:id,name',
-                    'project' => function ($query) {
-                        $query->select('id')
-                            ->whereBetween('project_date', [$this->startDate, $this->endDate]);
+                    'taskLog' => function ($logQuery) {
+                        $logQuery
+                            ->with('task:id,name')
+                            ->where('work_type', \App\Enums\Production\WorkType::Assigned->value);
                     }
                 ]
             );
+
+            $task = collect($task)->map(function ($mapping) {
+                
+                return [
+                    'name' => $mapping->taskLog[0]->task->name,
+                    'assigned_at' => $mapping->taskLog[0]->time_added,
+                ];
+            })->all();
 
             $output[] = [
                 'project_name' => $point->project->name,
@@ -100,12 +109,6 @@ class PerformanceReportService {
 
             if ($diff->days > $daysInMonth) {
                 return errorResponse(__('global.oneMonthMaxDateFilter'));
-                return generalResponse(
-                    __('global.oneMonthMaxDateFilter'),
-                    true,
-                    [],
-                    500,
-                );
             }
 
             $this->startDate = date('Y-m-d', strtotime(request('start_date')));
