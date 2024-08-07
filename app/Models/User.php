@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -69,9 +70,9 @@ class User extends Authenticatable
         return $this->hasOne(UserLoginHistory::class, 'user_id');
     }
 
-    public function employee(): HasOne
+    public function employee(): BelongsTo
     {
-        return $this->hasOne(\Modules\Hrd\Models\Employee::class, 'user_id');
+        return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'employee_id');
     }
 
     public function status(): Attribute
