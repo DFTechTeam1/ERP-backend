@@ -207,6 +207,7 @@ return [
     'projectClassUpdated' => 'Success update current project class',
     'successDeleteProjectClass' => 'Success delete project class',
     'point' => 'point',
+    'oneMonthMaxDateFilter' => 'Unable to display data for more than 1 month',
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',

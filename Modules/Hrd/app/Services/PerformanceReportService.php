@@ -2,6 +2,8 @@
 
 namespace Modules\Hrd\Services;
 
+use DateTime;
+
 class PerformanceReportService {
     private $repo;
 
@@ -49,12 +51,29 @@ class PerformanceReportService {
     protected function getEmployeePoint(int $employeeId)
     {
         $data = $this->employeePointRepo->list('point,additional_point,total_point,project_id', 'employee_id = ' . $employeeId, [
-            'project:id,name'
+            'project' => function ($q) {
+                $q->selectRaw('id,name')
+                    ->whereBetween('project_date', [$this->startDate, $this->endDate]);
+            }
         ]);
+
+        $data = collect($data)->filter(function ($filter) {
+            return $filter->project;
+        })->all();
 
         $output = [];
         foreach ($data as $point) {
-            $task = $this->taskPicHistoryRepo->list('id,project_task_id', 'project_id = ' . $point->project_id . ' and employee_id = ' . $employeeId, ['task:id,name']);
+            $task = $this->taskPicHistoryRepo->list(
+                'id,project_task_id', 
+                'project_id = ' . $point->project_id . ' and employee_id = ' . $employeeId, 
+                [
+                    'task:id,name',
+                    'project' => function ($query) {
+                        $query->select('id')
+                            ->whereBetween('project_date', [$this->startDate, $this->endDate]);
+                    }
+                ]
+            );
 
             $output[] = [
                 'project_name' => $point->project->name,
@@ -70,6 +89,29 @@ class PerformanceReportService {
 
     public function performanceDetail(string $employeeUid)
     {
+        // validate date filter
+        $this->startDate = date('Y-m-d', strtotime('-7 days'));
+        $this->endDate = date('Y-m-d');
+        if (request('start_date') && request('end_date')) {
+            $start = new DateTime(request('start_date'));
+            $end = new DateTime(request('end_date'));
+            $diff = date_diff($end, $start);
+            $daysInMonth = \Carbon\Carbon::parse(request('start_date'))->daysInMonth;
+
+            if ($diff->days > $daysInMonth) {
+                return errorResponse(__('global.oneMonthMaxDateFilter'));
+                return generalResponse(
+                    __('global.oneMonthMaxDateFilter'),
+                    true,
+                    [],
+                    500,
+                );
+            }
+
+            $this->startDate = date('Y-m-d', strtotime(request('start_date')));
+            $this->endDate = date('Y-m-d', strtotime(request('end_date')));
+        }
+
         $employee = $this->repo->show(
             $employeeUid, 
             'id,name,nickname,employee_id,email,position_id,boss_id', 
@@ -78,13 +120,6 @@ class PerformanceReportService {
                 'boss:id,nickname'
             ]
         );
-
-        $this->startDate = date('Y-m-d', strtotime('-7 days'));
-        $this->endDate = date('Y-m-d');
-        if (request('start_date') && request('end_date')) {
-            $this->startDate = date('Y-m-d', strtotime(request('start_date')));
-            $this->endDate = date('Y-m-d', strtotime(request('end_date')));
-        }
         
         $totalProject = $this->getTotalProjectEmployee($employee->id);
 
