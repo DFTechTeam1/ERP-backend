@@ -158,6 +158,7 @@ class LoginController extends Controller
                     'Success',
                     false,
                     [
+                        'data' => $payload,
                         'token' => $encryptedPayload,
                     ],
                 ),
