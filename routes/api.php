@@ -98,6 +98,7 @@ Route::middleware('auth:sanctum')
 
         Route::get('dashboard/projectCalendar', [DashboardController::class, 'getProjectCalendar']);
         Route::get('dashboard/projectDeadline', [DashboardController::class, 'getProjectDeadline']);
+        Route::get('dashboard/getReport', [DashboardController::class, 'getReport']);
     });
 
 Route::post('line-webhook', [\Modules\LineMessaging\Http\Controllers\Api\LineController::class, 'webhook']);
