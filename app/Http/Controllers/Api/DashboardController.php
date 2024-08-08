@@ -22,6 +22,11 @@ class DashboardController extends Controller
         //
     }
 
+    public function getReport()
+    {
+        return apiResponse($this->service->getReport());
+    }
+
     public function getProjectCalendar()
     {
         return apiResponse($this->service->getProjectCalendars());
