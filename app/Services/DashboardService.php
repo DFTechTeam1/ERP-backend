@@ -8,11 +8,15 @@ use Carbon\Carbon;
 class DashboardService {
     private $projectRepo;
 
-    private $taskPicRepo;
-
     private $inventoryRepo;
 
     private $employeeRepo;
+
+    private $taskPic;
+
+    private $taskPicHistory;
+
+    private $taskPicLog;
 
     private $positionRepo;
 
@@ -22,21 +26,33 @@ class DashboardService {
 
     private $isProjectManager;
 
+    private $startDate;
+
+    private $endDate;
+
     public function __construct()
     {
         $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
-
-        $this->taskPicRepo = new \Modules\Production\Repository\ProjectTaskPicRepository();
 
         $this->inventoryRepo = new \Modules\Inventory\Repository\InventoryRepository();
 
         $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
 
         $this->positionRepo = new \Modules\Company\Repository\PositionRepository();
+
+        $this->taskPic = new \Modules\Production\Repository\ProjectTaskPicRepository();
+
+        $this->taskPicHistory = new \Modules\Production\Repository\ProjectTaskPicHistoryRepository();
+
+        $this->taskPicLog = new \Modules\Production\Repository\ProjectTaskPicLogRepository();
     }
 
     public function getReport()
     {
+        $now = Carbon::parse('now');
+        $this->startDate = $now->startOfMonth()->format('Y-m-d');
+        $this->endDate = $now->endOfMonth()->format('Y-m-d');
+
         $output = [
             'left' => [
                 [
@@ -69,31 +85,34 @@ class DashboardService {
         $this->isDirector = $user->is_director;
 
         $output = [];
-        if ($this->isDirector) {
+        if ($this->isDirector || auth()->user()->email == 'admin@admin.com') {
             $output = $this->getReportDirector();
         } else if ($this->isProjectManager) {
             $output = $this->getReportProjectManager();
+        } else if ($this->isEmployee) {
+            $output = $this->getReportProduction();
         }
 
         return generalResponse(
             'success',
             false,
-            $output,
+            $output
         );
     }
 
     protected function getProjectReport()
     {
-        $relation = [];
+        $whereHas = [];
         if ($this->isProjectManager) {
-            $relation = [
-                'personInCharges' => function ($query) {
-                    $query->selectRaw('id,project_id,pic_id')
-                        ->where('pic_id', auth()->user()->employee_id);
-                }
+            $whereHas = [
+                [
+                    'relation' => 'personInCharges',
+                    'query' => "pic_id = " . auth()->user()->employee_id,
+                ],
             ];
         }
-        $projects = $this->projectRepo->list('id,status', '', $relation);
+
+        $projects = $this->projectRepo->list('id,status', '', [], $whereHas);
         $projectsGroup = collect($projects)->groupBy('status_text')->toArray();
         $projectLabels = array_keys($projectsGroup);
         $projectSeries = [];
@@ -133,6 +152,34 @@ class DashboardService {
         ];
     }
 
+    // all in a month
+    protected function getReportProduction()
+    {
+        $tasks = $this->taskPicHistory->list('id,project_task_id,project_id,employee_id', 'employee_id = ' . auth()->user()->employee_id);
+
+        $group = collect($tasks)->groupBy("project_id")->toArray();
+
+        $keys = array_keys($group);
+
+        $totalTask = [];
+        foreach ($group as $detail) {
+            $totalTask[] = count($detail);
+        }
+
+        return [
+            'left' => [
+                [
+                    'text' => __("global.totalTaskInMonth"),
+                    'value' => array_sum($totalTask),
+                ],
+                [
+                    'text' => __('global.totalProjectInMonth'),
+                    'value' => count($keys),
+                ]
+            ],
+        ];
+    }
+
     protected function getReportProjectManager()
     {
         $projects = $this->getProjectReport();
@@ -140,7 +187,17 @@ class DashboardService {
         // get upcomoing event (2 weeks for now)
         $startDate = date('Y-m-d', strtotime('-14 days'));
         $endDate = date('Y-m-d');
-        $upcomingProject = $this->projectRepo->list('id,classification,name,project_date', "project_date >= {$startDate} and project_date <= {$endDate}");
+        $upcomingProject = $this->projectRepo->list(
+            'id,classification,name,project_date', 
+            "project_date >= '{$startDate}' and project_date <= '{$endDate}'",
+            [],
+            [
+                [
+                    'relation' => 'personInCharges',
+                    'query' => "pic_id = " . auth()->user()->employee_id,
+                ]
+            ]
+        );
         $upcomingGroup = collect($upcomingProject)->groupBy('projet_date')->toArray();
         $upcomingSeries = [];
         foreach ($upcomingGroup as $group) {
@@ -178,14 +235,14 @@ class DashboardService {
         // get total team member
         $member = $this->employeeRepo->list('id', 'boss_id = ' . auth()->user()->employee_id);
 
-        // get awaiting assesed project
-        $waitingProject = $this->projectRepo->list('id', 'status = ' . \App\Enums\Production\ProjectStatus::OnGoing->value . " and project_date > '" . date('Y-m-d') . "'");
+        // get task to be checked
+        $tasks = $this->taskPic->list('id', 'employee_id = ' . auth()->user()->employee_id);
 
         return [
             'left' => [
                 [
-                    'text' => __("global.totalEquipmentPrice"),
-                    'value' => 'Rp. ' . number_format($totalInventoryPrice, 2),
+                    'text' => __("global.taskToDo"),
+                    'value' => $tasks->count(),
                 ],
                 [
                     'text' => __("global.totalTeamMember"),
@@ -194,7 +251,7 @@ class DashboardService {
             ],
             'right' => [
                 [
-                    'text' => __('global.totalProject'),
+                    'text' => __('global.totalProjectInMonth'),
                     'series' => $projects['series'],
                     'options' => $projects['options'],
                     'value' => $projects['total'],
@@ -252,7 +309,7 @@ class DashboardService {
             'labels' => $positionLabels,
         ];
 
-        $projects = $this->projectRepo->list('id,status');
+        $projects = $this->projectRepo->list('id,status', "project_date >= '" . $this->startDate . "' and project_date <= '" . $this->endDate . "'");
         $projectsGroup = collect($projects)->groupBy('status_text')->toArray();
         $projectLabels = array_keys($projectsGroup);
         $projectSeries = [];
@@ -298,7 +355,7 @@ class DashboardService {
             ],
             'right' => [
                 [
-                    'text' => __('global.totalProject'),
+                    'text' => __('global.totalProjectInMonth'),
                     'series' => $projectSeries,
                     'options' => $projectOptions,
                     'value' => $projects->count(),
@@ -347,7 +404,7 @@ class DashboardService {
                 'query' => 'pic_id = ' . $employeeId,
             ];
         } else if ($roleId != $superUserRole && $roleId != $projectManagerRole) {
-            $projectTaskPic = $this->taskPicRepo->list('id,project_task_id', 'employee_id = ' . $employeeId);
+            $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
 
             if ($projectTaskPic->count() > 0) {
                 $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
@@ -431,7 +488,7 @@ class DashboardService {
             ];
         } else if ($roleId != $projectManagerRole && $roleId != $superUserRole) {
             // get based on user task pic
-            $projectTaskPic = $this->taskPicRepo->list('id,project_task_id', 'employee_id = ' . $employeeId);
+            $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
             if ($projectTaskPic->count() > 0) {
                 $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
                 $projectTaskIds = implode("','", $projectTasks);

@@ -117,10 +117,12 @@ return [
     'newProjectNotification' => 'You just assigned to event :event',
     'totalEquipmentPrice' => 'Total Equipment Price',
     'totalIncome' => 'Total Income',
-    'totalProject' => 'Total Project',
+    'totalProjectInMonth' => 'Total Project in Month',
     'totalEmployee' => 'Total Employee',
     'upcomingProject' => 'Upcoming Project',
-    'totalTeamMember' => 'Total Team Member'
+    'totalTeamMember' => 'Total Team Member',
+    'taskToDo' => 'Task ToDo',
+    'totalTaskInMonth' => 'Total Task in Month',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
