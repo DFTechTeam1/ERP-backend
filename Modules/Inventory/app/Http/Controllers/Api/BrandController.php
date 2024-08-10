@@ -42,6 +42,11 @@ class BrandController extends Controller
         return apiResponse($this->service->store($request->validated()));
     }
 
+    public function import(Request $request)
+    {
+        return apiResponse($this->service->import($request->toArray()));
+    }
+
     /**
      * Show the specified resource.
      */

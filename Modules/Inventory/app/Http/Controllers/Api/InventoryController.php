@@ -18,6 +18,36 @@ class InventoryController extends Controller
         $this->service = new InventoryService;
     }
 
+    public function downloadBrandTemplate()
+    {
+        return $this->service->createBrandTemplate();
+    }
+
+    public function downloadSupplierTemplate()
+    {
+        return $this->service->createSupplierTemplate();
+    }
+
+    public function downloadUnitTemplate()
+    {
+        return $this->service->createUnitTemplate();
+    }
+
+    public function downloadInventoryTypeTemplate()
+    {
+        return $this->service->createInventoryTypeTemplate();
+    }
+
+    public function downloadInventoryTemplate()
+    {
+        return $this->service->createExcelTemplate();
+    }
+
+    public function import(Request $request)
+    {
+        return apiResponse($this->service->import($request->toArray()));
+    }
+
     /**
      * Display a listing of the resource.
      */

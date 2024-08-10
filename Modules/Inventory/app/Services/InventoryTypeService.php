@@ -4,6 +4,7 @@ namespace Modules\Inventory\Services;
 
 use App\Enums\ErrorCode\Code;
 use Modules\Inventory\Repository\InventoryTypeRepository;
+use \Illuminate\Support\Facades\DB;
 
 class InventoryTypeService {
     private $repo;
@@ -14,6 +15,56 @@ class InventoryTypeService {
     public function __construct()
     {
         $this->repo = new InventoryTypeRepository;
+    }
+
+    /**
+     * Import excel and store to database
+     *
+     * $data will have
+     * File 'excel'
+     * @param array $data
+     * @return array
+     */
+    public function import(array $data): array
+    {
+        DB::beginTransaction();
+        try {
+            $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\BrandImport, $data['excel']);
+            
+            $output = [];
+    
+            $error = [];
+            
+            foreach ($data as $value) {
+                unset($value[0]);
+                unset($value[1]);
+    
+                foreach (array_values($value) as $val) {
+                    $check = $this->repo->show('dummy', 'id', [], "lower(name) = '" . strtolower($val[0]) . "'");
+    
+                    if (!$check) {
+                        $slug = strtolower(implode('_', explode(' ', $val[0])));
+                        $this->repo->store(['name' => $val[0], 'slug' => $slug]);
+                    } else {
+                        $error[] = $val[0] . __('global.alreadyRegistered');
+                    }
+                }
+            }
+
+            DB::commit();
+    
+            return generalResponse(
+                __("global.importInventoryTypeSuccess"),
+                false,
+                [
+                    'error' => $error,
+                ],
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
     }
 
     /**
