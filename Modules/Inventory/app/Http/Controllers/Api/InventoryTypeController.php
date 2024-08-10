@@ -17,6 +17,11 @@ class InventoryTypeController extends Controller
         $this->service = new InventoryTypeService;
     }
 
+    public function import(Request $request)
+    {
+        return apiResponse($this->service->import($request->toArray()));
+    }
+
     /**
      * Display a listing of the resource.
      */

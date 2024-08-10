@@ -343,7 +343,7 @@ class ProjectService
             $classes = \App\Enums\Production\Classification::cases();
             $statusses = \App\Enums\Production\ProjectStatus::cases();
 
-            $paginated = collect($paginated)->map(function ($item) use ($eventTypes, $classes, $statusses) {
+            $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses) {
                 $pics = collect($item->personInCharges)->map(function ($pic) {
                     return [
                         'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
@@ -420,6 +420,7 @@ class ProjectService
      */
     public function getAllBoards(): array
     {
+        return [];
     }
 
     /**
@@ -451,7 +452,7 @@ class ProjectService
             $whereHas
         );
 
-        $data = collect($data)->map(function ($project) {
+        $data = collect((object) $data)->map(function ($project) {
             return [
                 'title' => $project->title,
                 'value' => $project->value,
@@ -566,7 +567,7 @@ class ProjectService
         }
         $transfers = $this->transferTeamRepo->list('id,employee_id', $transferCondition, ['employee:id,name,uid,email,employee_id']);
 
-        $transfers = collect($transfers)->map(function ($transfer) {
+        $transfers = collect((object) $transfers)->map(function ($transfer) {
             return [
                 'id' => $transfer->employee->id,
                 'uid' => $transfer->employee->uid,
@@ -854,7 +855,7 @@ class ProjectService
             'inventory.image'
         ]);
 
-        $equipments = collect($equipments)->map(function ($item) {
+        $equipments = collect((object) $equipments)->map(function ($item) {
             $item['is_cancel'] = $item->status == \App\Enums\Production\RequestEquipmentStatus::Cancel->value ? true : false;
 
             return $item;
@@ -2220,7 +2221,7 @@ class ProjectService
             'inventory.image',
         ]);
 
-        $data = collect($data)->map(function ($item) {
+        $data = collect((object) $data)->map(function ($item) {
             return [
                 'uid' => $item->uid,
                 'inventory_name' => $item->inventory->name,
@@ -2877,7 +2878,7 @@ class ProjectService
 
         $boardIds = [$data['board_id'], $data['board_source_id']];
         $boards = $this->boardRepo->list('id,name,based_board_id', "id IN (" . implode(',', $boardIds) . ")");
-        $boardData = collect($boards)->filter(function ($filter) use ($data) {
+        $boardData = collect((object) $boards)->filter(function ($filter) use ($data) {
             return $filter->id == $data['board_id'];
         })->values();
 

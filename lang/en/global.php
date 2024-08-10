@@ -123,7 +123,13 @@ return [
     'totalTeamMember' => 'Total Team Member',
     'taskToDo' => 'Task ToDo',
     'totalTaskInMonth' => 'Total Task in Month',
-
+    'alreadyRegistered' => ' already register in database. Process will be skipped',
+    'importBrandSuccess' => 'Brand imported successfully',
+    'importSupplierSuccess' => 'Supplier imported successfully',
+    'importUnitSuccess' => 'Unit imported successfully',
+    'importInventoryTypeSuccess' => 'Inventory type imported successfully',
+    'templateNotValid' => 'Template not valid',
+    
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
     'credentialDoesNotMatch' => 'The credential provided does not match our database',
@@ -216,6 +222,10 @@ return [
     'successDeleteProjectClass' => 'Success delete project class',
     'point' => 'point',
     'oneMonthMaxDateFilter' => 'Unable to display data for more than 1 month',
+    'rowInventoryTemplateNotValid' => 'Row :row is not valid. Please check the required column',
+    'itemIsAlreadyExists' => ':name is already exists in database',
+    'inventoryShouldHaveAEmployeeName' => 'Item :name should have a related user',
+    'importInventorySuccess' => 'Inventory imported successfully',
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',

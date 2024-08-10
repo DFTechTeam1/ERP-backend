@@ -31,8 +31,31 @@ if (!function_exists('successResponse')) {
 
 if (!function_exists('errorMessage')) {
     function errorMessage($message) {
+        $arr = ['App\Exceptions\TemplateNotValid'];
 
-        if (($message instanceof Throwable) && config('app.env') == 'local') {
+        if ($message instanceof Throwable) {
+            $files = scandir(app_path('Exceptions'));
+
+            $outputFiles = [];
+            foreach ($files as $file) {
+                if ($file != '.' && $file != '..') {
+                    $name = explode('.php', $file);
+
+                    $path = "App\Exceptions\\" . $name[0];
+                    $outputFiles[] = $path;
+                }
+            }
+
+            if (in_array(get_class($message), $outputFiles)) {
+                $out = $message->getMessage();
+            } else {
+                if (config('app.env') == 'local') {
+                    $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();        
+                } else {
+                    $out = __('global.failedProcessingData');        
+                }
+            }
+        } else if (($message instanceof Throwable) && config('app.env') == 'local') {
             $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
         } else if (($message instanceof Throwable) && config('app.env') != 'local') {
             $out = __('global.failedProcessingData');
@@ -40,20 +63,20 @@ if (!function_exists('errorMessage')) {
             $out = $message;
         }
         
-        if (file_exists(base_path('exceptions.json'))) {
-            $exceptions = File::get(base_path('exceptions.json'));
-            $exceptionArray = json_decode($exceptions, true);
-            $arrayKeys = array_keys($exceptionArray);
+        // if (file_exists(base_path('exceptions.json'))) {
+        //     $exceptions = File::get(base_path('exceptions.json'));
+        //     $exceptionArray = json_decode($exceptions, true);
+        //     $arrayKeys = array_keys($exceptionArray);
 
             
-            foreach ($arrayKeys as $exception) {
-                $check = "\\App\\Exceptions\\{$exception}";
-                if ($message instanceof $check) {
-                    $out = $message->getMessage();
-                    break;
-                }
-            }
-        }
+        //     foreach ($arrayKeys as $exception) {
+        //         $check = "\\App\\Exceptions\\{$exception}";
+        //         if ($message instanceof $check) {
+        //             $out = $message->getMessage();
+        //             break;
+        //         }
+        //     }
+        // }
 
         logging('error processing: ', [$out]);
 
