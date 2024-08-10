@@ -56,11 +56,19 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        $project = \Modules\Production\Models\Project::latest()->first();
+        $files = scandir(app_path('Exceptions'));
 
-        NewProjectJob::dispatch($project->toArray());
+        $out = [];
+        foreach ($files as $file) {
+            if ($file != '.' && $file != '..') {
+                $name = explode('.php', $file);
 
-        return $project;
+                $path = "App\Exceptions\\" . $name[0];
+                $out[] = $path;
+            }
+        }
+
+        return response()->json($out);
     }
 
     public function spreadsheet()

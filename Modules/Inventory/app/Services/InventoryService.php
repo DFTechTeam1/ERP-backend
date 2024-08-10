@@ -11,6 +11,7 @@ use Modules\Inventory\Models\Supplier;
 use Modules\Inventory\Models\Unit;
 use Modules\Inventory\Models\Inventory;
 use Modules\Inventory\Repository\InventoryItemRepository;
+use Modules\Inventory\Repository\SupplierRepository;
 use Modules\Inventory\Repository\InventoryRepository;
 use Modules\Inventory\Repository\InventoryTypeRepository;
 use Modules\Inventory\Repository\InventoryImageRepository;
@@ -18,9 +19,12 @@ use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use Modules\Inventory\Repository\CustomInventoryDetailRepository;
+use Modules\Inventory\Repository\UnitRepository;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Company\Services\SettingService;
 use Carbon\Carbon;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class InventoryService {
     private $repo;
@@ -31,6 +35,10 @@ class InventoryService {
 
     private $inventoryImageRepo;
 
+    private $brandRepo;
+
+    private $supplierRepo;
+
     private $projectEquipmentRepo;
 
     private $projectRepo;
@@ -39,9 +47,13 @@ class InventoryService {
 
     private $customItemDetailRepo;
 
+    private $unitRepo;
+
     private $settingRepo;
 
     private $settingService;
+
+    private $employeeRepo;
 
     private string $imageFolder = 'inventory';
 
@@ -54,6 +66,8 @@ class InventoryService {
     {
         $this->repo = new InventoryRepository;
 
+        $this->unitRepo = new UnitRepository;
+
         $this->inventoryTypeRepo = new InventoryTypeRepository;
 
         $this->inventoryItemRepo = new InventoryItemRepository;
@@ -61,6 +75,12 @@ class InventoryService {
         $this->inventoryImageRepo = new InventoryImageRepository;
 
         $this->projectEquipmentRepo = new ProjectEquipmentRepository;
+
+        $this->brandRepo = new \Modules\Inventory\Repository\BrandRepository();
+
+        $this->supplierRepo = new SupplierRepository;
+
+        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
 
         $this->projectRepo = new ProjectRepository;
 
@@ -71,6 +91,313 @@ class InventoryService {
         $this->settingRepo = new SettingRepository;
 
         $this->settingService = new SettingService;
+    }
+
+    /**
+     * Import excel and store to database
+     *
+     * $data will have
+     * File 'excel'
+     * @param array $data
+     * @return array
+     */
+    public function import(array $data): array
+    {
+        DB::beginTransaction();
+        try {
+            $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\InventoryImport, $data['excel']);
+            
+            $output = [];
+
+            $data = $data[0];
+
+            // validate template
+            if ($data[0][0] != \App\Enums\ExcelTemplate\Inventory::InventoryTemplate->value) {
+                throw new \App\Exceptions\TemplateNotValid();
+            }
+
+            unset($data[0]);
+            unset($data[1]);
+
+            $data = array_values($data);
+
+            $groupBy = [];
+            foreach ($data as $key => $val) {
+                $groupBy[$val[0]][] = $val;
+            }
+
+            $error = [];
+            $payload = [];
+            $row = 0;
+            foreach ($groupBy as $name => $value) {
+                $errorRow = false;
+
+                foreach ($value as $inventory) {
+                    if (
+                        empty($inventory[0]) || 
+                        empty($inventory[1]) ||
+                        empty($inventory[2]) ||
+                        empty($inventory[3]) ||
+                        empty($inventory[4])
+                    ) {
+                        $errorRow = true;
+                        $error[] = __('global.rowInventoryTemplateNotValid', ['row' => $row + 1]);
+                    }
+                }
+
+                // validate unique item
+                if (!$errorRow) {
+                    $check = $this->repo->show('dummy', 'id', [], "lower(name) = '" . strtolower($name) . "'");
+
+                    if ($check) {
+                        $errorRow = true;
+                        $error[] = __('global.itemIsAlreadyExists', ['name' => $name]);
+                    }
+                }
+
+                // validate user id
+                foreach ($value as $userData) {
+                    if ($userData[9] == 'User' && empty($userData[10])) {
+                        $errorRow = true;
+                        $error[] = __('global.inventoryShouldHaveAEmployeeName', ['name' => $name]);
+                    }
+                }
+
+                if (!$errorRow) {
+                    $brand = $this->brandRepo->show('dummy', 'id', [], "lower(name) = '" . strtolower($value[0][4]) . "'");
+                    $type = $this->inventoryTypeRepo->show('dummy', 'id,slug', [], "lower(name) = '" . strtolower($value[0][3]) . "'");
+                    $supplier = $this->supplierRepo->show('dummy', 'id', [], "lower(name) = '" . strtolower($value[0][5]) . "'");
+                    $unit = $this->unitRepo->show('dummy', 'id', [], "lower(name) = 'pcs'");
+
+                    $items = [];
+                    foreach ($value as $itemDetail) {
+                        if ($itemDetail[9] == 'User') {
+                            $employee = $this->employeeRepo->show('dummy', 'id', [], "lower(employee_id) = '" . strtolower($itemDetail[10]) . "'");
+                        }
+
+                        $dividerCode = '-';
+
+                        $countItems = 0;
+
+                        $inventoryCode = rand(100,900) . $dividerCode . $type->slug . $dividerCode . $countItems + 1;
+
+                        $items[] = [
+                            'current_location' => $itemDetail[9] == 'User' ? 1 : 2,
+                            'user_id' => $itemDetail[9] == 'User' ? $employee->id : null,
+                            'inventory_id' => '',
+                            'inventory_code' => $inventoryCode,
+                            'status' => 1,
+                        ];
+                    }
+
+                    $payload[] = [
+                        'name' => $name,
+                        'purchase_price' => $value[0][1],
+                        // 'brand' => $value[0][4],
+                        'brand_id' => $brand->id,
+                        'unit_id' => $unit->id,
+                        // 'item_type_raw' => $value[0][3],
+                        'item_type' => $type->id,
+                        'warehouse_id' => $value[0][2] == 'Office' ? 1 : 2,
+                        'year_of_purchase' => $value[0][7],
+                        'warranty' => $value[0][8],
+                        // 'supplier_raw' => $value[0][5],
+                        'supplier_id' => $supplier->id,
+                        'items' => $items,
+                    ];
+                }
+
+                $row++;
+            }
+
+            foreach ($payload as $item) {
+                $inventory = $this->repo->store(collect($item)->except(['items'])->toArray());
+
+                $inventory->items()->createMany($item['items']);
+            }
+
+            DB::commit();
+    
+            return generalResponse(
+                __("global.importInventorySuccess"),
+                false,
+                [
+                    'error' => $error,
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function createBrandTemplate()
+    {
+        $excel = new \App\Services\ExcelService();
+
+        $excel->setValue('A1', 'TEMPLATE BRAND');
+        $excel->mergeCells('A1:F1');
+        $excel->alignCenter('A1:F1');
+        $excel->setAsBold('A1');
+
+        $excel->setValue('A5', "Nama");
+        $excel->setAsBold('A5');
+
+        $excel->save('static_file/template_brand.xlsx');
+
+        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_brand.xlsx');
+    }
+
+    public function createSupplierTemplate()
+    {
+        $excel = new \App\Services\ExcelService();
+
+        $excel->setValue('A1', 'TEMPLATE SUPPLIER');
+        $excel->mergeCells('A1:F1');
+        $excel->alignCenter('A1:F1');
+        $excel->setAsBold('A1');
+
+        $excel->setValue('A5', "Nama");
+        $excel->setAsBold('A5');
+
+        $excel->save('static_file/template_supplier.xlsx');
+
+        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_supplier.xlsx');
+    }
+
+    public function createUnitTemplate()
+    {
+        $excel = new \App\Services\ExcelService();
+
+        $excel->setValue('A1', 'TEMPLATE UNIT');
+        $excel->mergeCells('A1:F1');
+        $excel->alignCenter('A1:F1');
+        $excel->setAsBold('A1');
+
+        $excel->setValue('A5', "Nama");
+        $excel->setAsBold('A5');
+
+        $excel->save('static_file/template_unit.xlsx');
+
+        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_unit.xlsx');
+    }
+
+    public function createInventoryTypeTemplate()
+    {
+        $excel = new \App\Services\ExcelService();
+
+        $excel->setValue('A1', 'TEMPLATE INVENTORY TYPE');
+        $excel->mergeCells('A1:F1');
+        $excel->alignCenter('A1:F1');
+        $excel->setAsBold('A1');
+
+        $excel->setValue('A5', "Nama");
+        $excel->setAsBold('A5');
+
+        $excel->save('static_file/template_inventory_type.xlsx');
+
+        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_inventory_type.xlsx');
+    }
+
+    /**
+     * Generate inventory excel template
+     */
+    public function createExcelTemplate()
+    {
+        $excel = new \App\Services\ExcelService();
+
+        $excel->createSheet('Template', 0);
+        $excel->setActiveSheet('Template');
+
+        $excel->setValue('A1', 'TEMPLATE INVENTORY LIST');
+        $excel->mergeCells('A1:F1');
+        $excel->alignCenter('A1:F1');
+        
+        $excel->setAsBold('A1');
+        $excel->setValue('A4', "Nama Barang");
+        $excel->setValue('B4', "Harga Barang");
+        $excel->setValue('C4', "Lokasi Gudang");
+        $excel->setValue('D4', 'Pilih Tipe');
+        $excel->setValue('E4', 'Pilih Merek');
+        $excel->setValue('F4', 'Pilih Supplier');
+        $excel->setValue('G4', 'Model');
+        $excel->setValue('H4', 'Tahun Pembelian');
+        $excel->setValue('I4', 'Garansi');
+        $excel->setValue('J4', 'Lokasi Unit');
+        $excel->setValue('K4', 'Nama karyawan pemegang unit (Jika diperlukan saja)');
+        
+        $excel->autoSize(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']);
+
+        $excel->setAsBold('A4');
+        $excel->setAsBold('B4');
+        $excel->setAsBold('C4');
+        $excel->setAsBold('D4');
+        $excel->setAsBold('E4');
+        $excel->setAsBold('F4');
+        $excel->setAsBold('G4');
+        $excel->setAsBold('H4');
+        $excel->setAsBold('I4');
+        $excel->setAsBold('J4');
+        $excel->setAsBold('K4');
+
+        $typeList = $this->inventoryTypeRepo->list('id,name');
+        $typeList = implode(',', collect($typeList)->pluck('name')->toArray());
+
+        $brands = $this->brandRepo->list('id,name');
+        $brands = implode(',', collect($brands)->pluck('name')->toArray());
+
+        $suppliers = $this->supplierRepo->list('id,name');
+        $suppliers = implode(',', collect($suppliers)->pluck('name')->toArray());
+
+        $warehouseData = \App\Enums\Inventory\Warehouse::cases();
+        $warehouseList = [];
+        foreach ($warehouseData as $warehouse) {
+            $warehouseList[] = $warehouse->label();
+        }
+        $warehouseList = implode(',', $warehouseList);
+
+        $locations = "User, Warehouse";
+
+        $bulkSheet = 100;
+
+        for ($a = 5; $a < $bulkSheet; $a++) {
+            $excel->setAsTypeList($warehouseList, "C{$a}", 'STOP! Ada Error', 'Pilih gudang kawan', 'Pilih Gudang');
+            $excel->setAsTypeList($typeList, "D{$a}", 'STOP! Ada Error', 'Pilih tipe dulu kawan', 'Pilih Tipe');
+            $excel->setAsTypeList($brands, "E{$a}", 'STOP! Ada Error', 'Pilih brand nya kawan', 'Pilih Brand');
+            $excel->setAsTypeList($suppliers, "F{$a}", 'STOP! Ada Error', 'Pilih brand nya kawan', 'Pilih Brand');
+            $excel->setAsTypeList($locations, "J{$a}", 'STOP! Ada Error', 'Pilih lokasi nya kawan', 'Pilih Lokasi');
+        }
+
+        $employees = $this->employeeRepo->list('id,name,employee_id', 'status != ' . \App\Enums\Employee\Status::Inactive->value);
+
+        $excel->createSheet('Employee List', 1);
+        $excel->setActiveSheet('Employee List');
+
+        $excel->setValue('A1', 'Employee List');
+        $excel->setAsBold('A1');
+        $excel->mergeCells('A1:B1');
+        $excel->alignCenter('A1:B1');
+
+        $excel->setValue('A4', 'ID');
+        $excel->setValue('B4', 'Name');
+        $excel->setAsBold('B4');
+        $excel->setAsBold('A4');
+
+        $startCell = '5';
+        foreach($employees->toArray() as $employee) {
+            $excel->setValue("A{$startCell}", $employee['employee_id']);
+            $excel->setValue("B{$startCell}", $employee['name']);
+
+            $startCell++;
+        }
+        $excel->autoSize(['A', 'B']);
+
+        $excel->setActiveSheet('Template');
+
+        $excel->save('static_file/template_inventory.xlsx');
+
+        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_inventory.xlsx');
     }
 
     public function requestEquipmentList()
@@ -109,7 +436,7 @@ class InventoryService {
                 $whereHas
             );
 
-            $paginated = collect($paginated)->map(function ($item) {
+            $paginated = collect((object) $paginated)->map(function ($item) {
                 return [
                     'uid' => $item->uid,
                     'project_date' => date('d F Y', strtotime($item->project_date)),
@@ -236,7 +563,7 @@ class InventoryService {
 
             $inventoryStatuses = InventoryStatus::cases();
 
-            $paginated = collect($paginated)->map(function ($item) use ($inventoryStatuses) {
+            $paginated = collect((object) $paginated)->map(function ($item) use ($inventoryStatuses) {
                 $item['stock'] = count($item->items);
                 $unit = $item->unit ? $item->unit->name : '';
 
@@ -324,7 +651,7 @@ class InventoryService {
     {
         $data = $this->repo->list('id,uid as value,name as title', '', ['items', 'image']);
 
-        $data = collect($data)->map(function ($item) {
+        $data = collect((object) $data)->map(function ($item) {
             $locationGroup = collect($item->items)->groupBy('current_location');
             $location = [];
             foreach ($locationGroup as $locationId => $loc) {
@@ -678,7 +1005,7 @@ class InventoryService {
 
             $locations = \App\Enums\Inventory\Location::cases();
 
-            $paginated = collect($paginated)->map(function ($item) use ($locations) {
+            $paginated = collect((object) $paginated)->map(function ($item) use ($locations) {
                 $location = '-';
                 foreach ($locations as $loc) {
                     if ($loc->value == $item->location) {
@@ -888,7 +1215,7 @@ class InventoryService {
                 ]
             );
 
-            $data = collect($data)->map(function ($item) {
+            $data = collect((object) $data)->map(function ($item) {
                 return [
                     'inventory_code' => $item->inventory_code,
                     'status' => $item->status,
