@@ -414,11 +414,11 @@ class InventoryService {
 
         $excel->setActiveSheet('Template');
 
-        $excel->save('static_file/template_inventory.xlsx');
+        $excel->save(storage_path('app/public/static-file/template_inventory.xlsx'));
 
-        logging('fil exists', [\Illuminate\Support\Facades\Storage::disk('public_path')->exists('static_file/template_inventory.xlsx')]);
+        logging('fil exists', [\Illuminate\Support\Facades\Storage::disk('public_path')->exists('static-file/template_inventory.xlsx')]);
 
-        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_inventory.xlsx');
+        return \Illuminate\Support\Facades\Storage::download('static-file/template_inventory.xlsx');
     }
 
     public function requestEquipmentList()
