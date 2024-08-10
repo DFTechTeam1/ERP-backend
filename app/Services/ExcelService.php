@@ -72,11 +72,6 @@ class ExcelService {
 
     public function save(string $path)
     {
-        // delete current file
-        if (file_exists(public_path('static_file/template_inventory.xlsx'))) {
-            unlink(public_path('static_file/template_inventory.xlsx'));
-        }
-
         $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($this->spreadsheet, "Xlsx");
         $writer->save($path);
     }
