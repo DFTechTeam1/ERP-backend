@@ -309,7 +309,9 @@ class InventoryService {
         if (file_exists(public_path('static_file/template_inventory.xlsx'))) {
             unlink(public_path('static_file/template_inventory.xlsx'));
         }
-        
+
+        sleep(1);
+
         $excel = new \App\Services\ExcelService();
 
         $excel->createSheet('Template', 0);
