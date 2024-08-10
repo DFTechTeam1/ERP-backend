@@ -416,6 +416,8 @@ class InventoryService {
 
         $excel->save('static_file/template_inventory.xlsx');
 
+        logging('fil exists', [\Illuminate\Support\Facades\Storage::disk('public_path')->exists('static_file/template_inventory.xlsx')]);
+
         return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_inventory.xlsx');
     }
 
