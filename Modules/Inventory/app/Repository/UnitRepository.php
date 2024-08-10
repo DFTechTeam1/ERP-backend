@@ -80,13 +80,17 @@ class UnitRepository extends UnitInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
+        if (!empty($where)) {
+            $query->whereRaw($where);
+        } else {
+            $query->where("uid", $uid);
+        }
         
         if ($relation) {
             $query->with($relation);
@@ -154,6 +158,6 @@ class UnitRepository extends UnitInterface {
             $key = $this->key;
         }
 
-        return $this->model->whereIn($key, $ids)->delete();
+        return $this->model->whereIn($key, $ids)->whereRaw("lower(name) != 'pcs'")->delete();
     }
 }

@@ -17,6 +17,11 @@ class UnitController extends Controller
         $this->service = new UnitService;
     }
 
+    public function import(Request $request)
+    {
+        return apiResponse($this->service->import($request->toArray()));
+    }
+
     /**
      * Display a listing of the resource.
      */
