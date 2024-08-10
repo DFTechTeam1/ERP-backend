@@ -344,6 +344,8 @@ class InventoryService {
         $typeListRaw = $this->inventoryTypeRepo->list('id,name');
         $typeList = implode(',', collect($typeListRaw)->pluck('name')->toArray());
 
+        logging('typelist', [$typeList]);
+
         $brandsRaw = $this->brandRepo->list('id,name');
         $brands = implode(',', collect($brandsRaw)->pluck('name')->toArray());
 
