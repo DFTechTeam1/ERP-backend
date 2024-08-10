@@ -244,9 +244,9 @@ class InventoryService {
         $excel->setValue('A5', "Nama");
         $excel->setAsBold('A5');
 
-        $excel->save('static_file/template_brand.xlsx');
+        $excel->save(storage_path('app/public/static-file/template_brand.xlsx'));
 
-        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_brand.xlsx');
+        return \Illuminate\Support\Facades\Storage::download('static-file/template_brand.xlsx');
     }
 
     public function createSupplierTemplate()
@@ -261,9 +261,9 @@ class InventoryService {
         $excel->setValue('A5', "Nama");
         $excel->setAsBold('A5');
 
-        $excel->save('static_file/template_supplier.xlsx');
+        $excel->save(storage_path('app/public/static-file/template_supplier.xlsx'));
 
-        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_supplier.xlsx');
+        return \Illuminate\Support\Facades\Storage::download('static-file/template_supplier.xlsx');
     }
 
     public function createUnitTemplate()
@@ -278,9 +278,9 @@ class InventoryService {
         $excel->setValue('A5', "Nama");
         $excel->setAsBold('A5');
 
-        $excel->save('static_file/template_unit.xlsx');
+        $excel->save(storage_path('app/public/static-file/template_unit.xlsx'));
 
-        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_unit.xlsx');
+        return \Illuminate\Support\Facades\Storage::download('static-file/template_unit.xlsx');
     }
 
     public function createInventoryTypeTemplate()
@@ -295,9 +295,9 @@ class InventoryService {
         $excel->setValue('A5', "Nama");
         $excel->setAsBold('A5');
 
-        $excel->save('static_file/template_inventory_type.xlsx');
+        $excel->save(storage_path('app/public/static-file/template_inventory_type.xlsx'));
 
-        return \Illuminate\Support\Facades\Storage::disk('public_path')->download('static_file/template_inventory_type.xlsx');
+        return \Illuminate\Support\Facades\Storage::download('static-file/template_inventory_type.xlsx');
     }
 
     /**
@@ -415,8 +415,6 @@ class InventoryService {
         $excel->setActiveSheet('Template');
 
         $excel->save(storage_path('app/public/static-file/template_inventory.xlsx'));
-
-        logging('fil exists', [\Illuminate\Support\Facades\Storage::disk('public_path')->exists('static-file/template_inventory.xlsx')]);
 
         return \Illuminate\Support\Facades\Storage::download('static-file/template_inventory.xlsx');
     }
