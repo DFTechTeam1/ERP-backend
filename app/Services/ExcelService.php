@@ -72,6 +72,10 @@ class ExcelService {
 
     public function save(string $path)
     {
+        if (!\Illuminate\Support\Facades\Storage::directoryExists('static-file')) {
+            \Illuminate\Support\Facades\Storage::makeDirectory('static-file');
+        }
+
         $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($this->spreadsheet, "Xlsx");
         $writer->save($path);
     }
