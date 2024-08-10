@@ -341,14 +341,14 @@ class InventoryService {
         $excel->setAsBold('J4');
         $excel->setAsBold('K4');
 
-        $typeList = $this->inventoryTypeRepo->list('id,name');
-        $typeList = implode(',', collect($typeList)->pluck('name')->toArray());
+        $typeListRaw = $this->inventoryTypeRepo->list('id,name');
+        $typeList = implode(',', collect($typeListRaw)->pluck('name')->toArray());
 
-        $brands = $this->brandRepo->list('id,name');
-        $brands = implode(',', collect($brands)->pluck('name')->toArray());
+        $brandsRaw = $this->brandRepo->list('id,name');
+        $brands = implode(',', collect($brandsRaw)->pluck('name')->toArray());
 
-        $suppliers = $this->supplierRepo->list('id,name');
-        $suppliers = implode(',', collect($suppliers)->pluck('name')->toArray());
+        $suppliersRaw = $this->supplierRepo->list('id,name');
+        $suppliers = implode(',', collect($suppliersRaw)->pluck('name')->toArray());
 
         $warehouseData = \App\Enums\Inventory\Warehouse::cases();
         $warehouseList = [];
@@ -363,9 +363,19 @@ class InventoryService {
 
         for ($a = 5; $a < $bulkSheet; $a++) {
             $excel->setAsTypeList($warehouseList, "C{$a}", 'STOP! Ada Error', 'Pilih gudang kawan', 'Pilih Gudang');
-            $excel->setAsTypeList($typeList, "D{$a}", 'STOP! Ada Error', 'Pilih tipe dulu kawan', 'Pilih Tipe');
-            $excel->setAsTypeList($brands, "E{$a}", 'STOP! Ada Error', 'Pilih brand nya kawan', 'Pilih Brand');
-            $excel->setAsTypeList($suppliers, "F{$a}", 'STOP! Ada Error', 'Pilih brand nya kawan', 'Pilih Brand');
+            
+            if (count($typeListRaw) > 0) {
+                $excel->setAsTypeList($typeList, "D{$a}", 'STOP! Ada Error', 'Pilih tipe dulu kawan', 'Pilih Tipe');
+            }
+
+            if (count($brandsRaw) > 0) {
+                $excel->setAsTypeList($brands, "E{$a}", 'STOP! Ada Error', 'Pilih brand nya kawan', 'Pilih Brand');
+            }
+
+            if (count($suppliersRaw) > 0) {
+                $excel->setAsTypeList($suppliers, "F{$a}", 'STOP! Ada Error', 'Pilih brand nya kawan', 'Pilih Brand');
+            }
+            
             $excel->setAsTypeList($locations, "J{$a}", 'STOP! Ada Error', 'Pilih lokasi nya kawan', 'Pilih Lokasi');
         }
 
