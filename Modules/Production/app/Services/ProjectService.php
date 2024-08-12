@@ -1411,6 +1411,9 @@ class ProjectService
                 $this->autoAssignRequestItem($project);   
             }
 
+            // send notification
+            \Modules\Production\Jobs\NewProjectJob::dispatch($project)->afterCommit();
+
             DB::commit();
 
             return generalResponse(
