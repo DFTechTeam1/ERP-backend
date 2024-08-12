@@ -35,6 +35,9 @@ class AppendPermissionSeeder extends Seeder
             ['name' => 'change_project_status', 'group' => 'production'],
             ['name' => 'list_team_transfer', 'group' => 'production'],
             ['name' => 'list_performance_report', 'group' => 'user_management'],
+            ['name' => 'add_references', 'group' => 'production'],
+            ['name' => 'add_shoreels', 'group' => 'production'],
+            ['name' => 'assign_vj', 'group' => 'production'],
         ];
 
         foreach ($permissions as $permission) {

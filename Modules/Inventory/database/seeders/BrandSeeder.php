@@ -63,6 +63,10 @@ class BrandSeeder extends Seeder
             ['name' => 'D-LINK'],
             ['name' => 'HP'],
             ['name' => 'Sony'],
+            ['name' => 'Acasis'],
+            ['name' => 'ROG'],
+            ['name' => 'Xiaomi'],
+            ['name' => 'Native Instrument'],
         ];
 
         foreach ($brands as $brand) {
