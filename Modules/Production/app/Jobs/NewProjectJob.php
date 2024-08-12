@@ -31,17 +31,21 @@ class NewProjectJob implements ShouldQueue
     public function handle(): void
     {
         $this->pusher = new PusherNotification();
-        
-        $employee = \Modules\Hrd\Models\Employee::where('email', 'wesleywiyadi@gmail.com')->first();
-        
-        \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\NewProjectNotification($this->project));
-        
-        $user = \App\Models\User::select('id')
-            ->where('employee_id', $employee->id)
-            ->first();
 
-        $output = formatNotifications($employee->unreadNotifications->toArray());
+        $projectPic = \Modules\Production\Models\ProjectPersonInCharge::select('pic_id')->where('project_id', $this->project->id)->get();
 
-        $this->pusher->send('my-channel-' . $user->id, 'notification-event', $output);
+        foreach ($projectPic as $pic) {
+            $employee = \Modules\Hrd\Models\Employee::find($pic->pic_id);
+
+            \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\NewProjectNotification($this->project, $employee));
+
+            $user = \App\Models\User::select('id')
+                ->where('employee_id', $employee->id)
+                ->first();
+    
+            $output = formatNotifications($employee->unreadNotifications->toArray());
+
+            $this->pusher->send('my-channel-' . $user->id, 'notification-event', $output);
+        }
     }
 }
