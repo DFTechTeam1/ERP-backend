@@ -36,6 +36,15 @@ class InventoryTypeSeeder extends Seeder
             ['name' => 'Networking'],
             ['name' => 'Printer'],
             ['name' => 'Kamera'],
+            ['name' => 'Capture Card'],
+            ['name' => 'Stand Laptop'],
+            ['name' => 'Keyboard Mouse Set'],
+            ['name' => 'Peripheral'],
+            ['name' => 'Stop Kontak'],
+            ['name' => 'Kabel'],
+            ['name' => 'Converter'],
+            ['name' => 'Koper'],
+            ['name' => 'Traktor'],
         ];
 
         foreach ($data as $d) {

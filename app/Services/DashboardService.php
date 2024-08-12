@@ -422,6 +422,7 @@ class DashboardService {
         $data = $this->projectRepo->list('id,uid,name,project_date,venue', $where, [
             'personInCharges:id,project_id,pic_id',
             'personInCharges.employee:id,uid,name',
+            'vjs.employee:id,nickname'
         ], $whereHas, 'project_date ASC');
 
         $out = [];
@@ -430,6 +431,7 @@ class DashboardService {
             $pic = implode(', ', $pics);
             $project['pic'] = $pic;
             $project['project_date_text'] = date('d F Y', strtotime($project->project_date));
+            $project['vj'] = $project->vjs->count() > 0 ? implode(',', collect($project->vjs)->pluck('employee.nickname')->toArray()) : '-';
 
             $out[] = [
                 'key' => $project->uid,
