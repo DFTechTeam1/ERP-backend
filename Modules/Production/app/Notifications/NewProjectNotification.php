@@ -13,12 +13,20 @@ class NewProjectNotification extends Notification
 
     public $project;
 
+    public $employee;
+
+    public $lineIds;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct($project)
+    public function __construct($project, $employee)
     {
         $this->project = $project;
+
+        $this->employee = $employee;
+
+        $this->lineIds = [$this->employee->line_id];
     }
 
     /**
@@ -28,7 +36,7 @@ class NewProjectNotification extends Notification
     {
         return [
             'database',
-            // \App\Notifications\LineChannel::class
+            \App\Notifications\LineChannel::class
         ];
     }
 
@@ -55,6 +63,21 @@ class NewProjectNotification extends Notification
             'title' => __('global.newProject'),
             'message' => __('global.newProjectNotification', ['event' => $this->project['name']]),
             'link' => $link,
+        ];
+    }
+
+    public function toLine($notifiable)
+    {
+        $messages = [
+            [
+                'type' => 'text',
+                'text' => 'Halo ' . $this->employee->nickname . ". Ada event baru nih buat kamu. Event " . $this->project->name . " di tanggal " . date('d F Y', strtotime($this->project->project_date)) . ' akan kamu handle.'
+            ]
+        ];
+
+        return [
+            'line_ids' => $this->lineIds,
+            'messages' => $messages,
         ];
     }
 }
