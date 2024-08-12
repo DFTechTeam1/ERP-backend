@@ -394,6 +394,15 @@ Table projects {
     updated_by int
 }
 
+Table project_vj {
+    id int [pk, increment]
+    project_id int [ref: > projects.id]
+    employee_id int [ref: > employees.id]
+    created_at timestamp
+    updated_at timestamp
+    created_by int
+}
+
 Table project_marketings {
     id int [pk, increment]
     project_id int [ref: > projects.id]

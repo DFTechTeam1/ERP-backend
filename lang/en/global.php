@@ -226,6 +226,9 @@ return [
     'itemIsAlreadyExists' => ':name is already exists in database',
     'inventoryShouldHaveAEmployeeName' => 'Item :name should have a related user',
     'importInventorySuccess' => 'Inventory imported successfully',
+    'vjHasBeenAssigned' => 'VJ has been assigned for this project',
+    'assignedVjToProject' => 'You just been assigned by :creator for event :event. Please prepare your kits',
+    'allVjisRemoved' => 'All VJ has beed removed from selected project',
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',

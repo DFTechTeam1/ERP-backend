@@ -41,6 +41,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::post('employees/bulk', "bulkDelete");
         Route::post('employees/addAsUser', 'addAsUser');
         Route::post('employees/submitImport', 'submitImport');
+        Route::get('employees/getVJ/{projectUid}','getVJ');
 
         Route::post('employees/import', 'import');
     });

@@ -25,6 +25,7 @@ class EmployeeService
     private $userRepo;
     private $taskRepo;
     private $projectRepo;
+    private $projectVjRepo;
 
     private $idCardPhotoTmp;
     private $npwpPhotoTmp;
@@ -34,6 +35,7 @@ class EmployeeService
     public function __construct()
     {
         $this->repo = new EmployeeRepository;
+
         $this->positionRepo = new PositionRepository;
 
         $this->userRepo = new \App\Repository\UserRepository();
@@ -41,6 +43,8 @@ class EmployeeService
         $this->taskRepo = new \Modules\Production\Repository\ProjectTaskRepository();
 
         $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
+
+        $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
     }
 
     /**
@@ -136,6 +140,12 @@ class EmployeeService
                 }
             }
 
+            if (empty($where)) {
+                $where = 'status != ' . \App\Enums\Employee\Status::Inactive->value;
+            } else {
+                $where .= " and status != " . \App\Enums\Employee\Status::Inactive->value;
+            }
+
             $order = '';
             $sortBy = request('sortBy');
             if(!empty($sortBy)) {
@@ -222,6 +232,54 @@ class EmployeeService
             [
                 'employee_id' => $numbering,
             ],
+        );
+    }
+
+    public function getVJ(string $projectUid)
+    {
+        $positionAsVJ = json_decode(getSettingByKey('position_as_visual_jokey'), true);
+
+        $output = [];
+        
+        if ($positionAsVJ) {
+            $positionAsVJ = collect($positionAsVJ)->map(function ($item) {
+                return getIdFromUid($item, new \Modules\Company\Models\Position());
+            })->toArray();
+
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            $project = $this->projectRepo->show($projectUid, 'id,project_date');
+
+            $position = implode(',', $positionAsVJ);
+
+            $data = $this->repo->list('uid,name,id', "position_id IN (" . $position . ") and status != " . \App\Enums\Employee\Status::Inactive->value)->toArray();
+
+            $output = collect($data)->map(function ($employee) use ($project) {
+                // check the calendar
+                $calendar = $this->projectVjRepo->list('id,project_id', 'employee_id = ' . $employee['id'], [
+                    'project:id,project_date'
+                ]);
+                $projectDate = [];
+                foreach ($calendar as $projectList) {
+                    $projectDate[] = $projectList->project->project_date;
+                }
+
+                $selectedDate = collect($projectDate)->filter(function ($filter) use ($project) {
+                    return $filter == $project->project_date;
+                })->values();
+
+                return [
+                    'value' => $employee['uid'],
+                    'title' => $employee['name'],
+                    'date' => count($selectedDate)
+                ];
+            })->toArray();
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $output,
         );
     }
 

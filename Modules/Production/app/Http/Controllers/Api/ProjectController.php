@@ -44,7 +44,8 @@ class ProjectController extends Controller
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id',
                 'marketings.marketing:id,name,employee_id',
-                'projectClass:id,name'
+                'projectClass:id,name',
+                'vjs.employee:id,nickname'
             ]
         ));
     }
@@ -255,6 +256,16 @@ class ProjectController extends Controller
                 return $item['uid'];
             })->toArray()
         ));
+    }
+
+    /**
+     * Delete multiple data
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function removeAllVJ(string $projectUid)
+    {
+        return apiResponse($this->service->removeAllVJ($projectUid));
     }
 
     /**
@@ -505,5 +516,10 @@ class ProjectController extends Controller
     public function getTaskTeamForReview(string $projectUid)
     {
         return apiResponse($this->service->getTaskTeamForReview($projectUid));
+    }
+
+    public function assignVJ(\Modules\Production\Http\Requests\Project\AssignVj $request, string $projectUid)
+    {
+        return apiResponse($this->service->assignVJ($request->validated(), $projectUid));
     }
 }
