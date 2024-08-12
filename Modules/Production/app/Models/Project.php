@@ -54,6 +54,16 @@ class Project extends Model
         return $this->hasMany(ProjectPersonInCharge::class, 'project_id');
     }
 
+    public function vjs(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectVj::class, 'project_id');
+    }
+
+    public function vj(): HasOne
+    {
+        return $this->hasOne(\Modules\Production\Models\ProjectVj::class, 'project_id');
+    }
+
     public function projectClass(): BelongsTo
     {
         return $this->belongsTo(\Modules\Company\Models\ProjectClass::class, 'project_class_id');

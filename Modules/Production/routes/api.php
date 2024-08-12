@@ -36,8 +36,10 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/venues', [ProjectController::class, 'autocompleteVenue']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
+    Route::delete('project/{projectUid}/removeAllVJ', [ProjectController::class, 'removeAllVJ']);
     Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
     Route::post('project/{projectUid}/completeProject', [ProjectController::class, 'completeProject']);
+    Route::post('project/{projectUid}/assignVj', [ProjectController::class, 'assignVJ']);
     Route::get('project/getTargetPicsAndTaskList/{projectUid}', [ProjectController::class, 'getTargetPicsAndTaskList']); // get pic list for request team member (exclude logged accont)
     Route::post('project/{projectUid}/loadTeamMember', [ProjectController::class, 'loadTeamMember']);
     Route::post('project/{projectUid}/uploadShowreels', [ProjectController::class, 'uploadShowreels']);

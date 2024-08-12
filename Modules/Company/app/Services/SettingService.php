@@ -43,7 +43,7 @@ class SettingService {
                     $item['value'] = json_decode($item['value'], true);
                 } else if ($item['key'] == 'default_boards') {
                     $item['value'] = $this->formatKanbanSetting($item);
-                } else if ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production') {
+                } else if ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey') {
                     $item['value'] = json_decode($item['value'], true);
                 }
 

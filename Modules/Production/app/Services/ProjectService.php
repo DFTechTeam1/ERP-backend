@@ -68,11 +68,15 @@ class ProjectService
 
     private $projectClassRepo;
 
+    private $projectVjRepo;
+
     /**
      * Construction Data
      */
     public function __construct()
     {
+        $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
+
         $this->projectClassRepo = new ProjectClassRepository;
 
         $this->repo = new ProjectRepository;
@@ -142,6 +146,32 @@ class ProjectService
 
             return generalResponse(
                 __('global.successDeleteProject'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete bulk data
+     *
+     * @param array $ids
+     * 
+     * @return array
+     */
+    public function removeAllVJ(string $projectUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $this->projectVjRepo->delete(0, 'project_id = ' . getIdFromUid($projectUid, new \Modules\Production\Models\Project()));
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.allVjisRemoved'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -383,6 +413,12 @@ class ProjectService
                     }
                 }
 
+                $vj = '-';
+
+                if ($item->vjs->count() > 0) {
+                    $vj = implode(',', collect($item->vjs)->pluck('employee.nickname')->toArray());
+                }
+
                 return [
                     'uid' => $item->uid,
                     'marketing' => $marketing,
@@ -397,6 +433,9 @@ class ProjectService
                     'status_color' => $statusColor,
                     'status_raw' => $item->status,
                     'event_class_color' => $eventClassColor,
+                    'project_is_complete' => $item->status == \App\Enums\production\ProjectStatus::Completed->value,
+                    'vj' => $vj,
+                    'have_vj' => $item->vjs->count() > 0 ? true : false,
                 ];
             });
 
@@ -4319,6 +4358,38 @@ class ProjectService
                 [
                     'full_detail' => $currentData,
                 ],
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function assignVJ(array $data, string $projectUid)
+    {
+        DB::beginTransaction();
+        try {
+            DB::commit();
+
+            $project = $this->repo->show($projectUid, 'id');
+
+            $project->vjs()->createMany(
+                collect($data['employee_id'])->map(function ($item) {
+                    return [
+                        'employee_id' => getIdFromUid($item, new \Modules\Hrd\Models\Employee()),
+                        'created_by' => auth()->user()->employee_id ?? 0,
+                    ];
+                })->toArray()
+            );
+
+            \Modules\Production\Jobs\AssignVjJob::dispatch($project, $data)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __("global.vjHasBeenAssigned"),
+                false,
             );
         } catch (\Throwable $th) {
             DB::rollBack();

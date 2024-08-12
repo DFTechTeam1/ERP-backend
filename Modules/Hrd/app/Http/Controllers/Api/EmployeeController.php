@@ -48,6 +48,11 @@ class EmployeeController extends Controller
         // return apiResponse($this->employeeService->import('static_file/employee.xlsx'));
     }
 
+    public function getVJ(string $projectUid)
+    {
+        return apiResponse($this->employeeService->getVJ($projectUid));
+    }
+
     public function downloadTemplate()
     {
         return $this->employeeService->downloadTemplate();
