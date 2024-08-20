@@ -135,7 +135,7 @@ class InventoryService {
                 foreach ($value as $inventory) {
                     if (
                         empty($inventory[0]) || 
-                        empty($inventory[1]) ||
+                        ($inventory[1] < 0) ||
                         empty($inventory[2]) ||
                         empty($inventory[3]) ||
                         empty($inventory[4])
