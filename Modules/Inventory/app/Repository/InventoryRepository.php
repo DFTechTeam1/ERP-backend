@@ -84,7 +84,11 @@ class InventoryRepository extends InventoryInterface {
 
         $query->orderBy('created_at', 'DESC');
         
-        return $query->skip($page)->take($itemsPerPage)->get();
+        if ($itemsPerPage < 0) {
+            return $query->get();
+        } else {
+            return $query->skip($page)->take($itemsPerPage)->get();
+        }
     }
 
     /**
