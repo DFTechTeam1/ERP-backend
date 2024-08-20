@@ -40,6 +40,7 @@ class Project extends Model
         'city_id',
         'city_name',
         'project_class_id',
+        'showreels_status',
     ];
 
     protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];

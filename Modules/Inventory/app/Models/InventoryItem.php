@@ -22,7 +22,8 @@ class InventoryItem extends Model
         'inventory_code',
         'status',
         'current_location',
-        'user_id'
+        'user_id',
+        'qrcode',
     ];
     
     protected static function newFactory(): InventoryItemFactory

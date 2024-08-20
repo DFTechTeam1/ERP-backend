@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\Laravel\Facades\Image;
+use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
 if (!function_exists('successResponse')) {
     function generalResponse(
@@ -126,6 +127,37 @@ if (!function_exists('createQr')) {
         $qrcode = (new QRCode($option))->render($payload);
 
         return $qrcode;
+    }
+}
+
+if (!function_exists('generateQrcode')) {
+    function generateQrcode($payload, string $filename) {
+        $explode = explode('/', $filename);
+        
+        array_pop($explode);
+
+        $path = implode('/', $explode);
+
+        logging('path', [$path]);
+
+        // if (!is_dir(storage_path("app/public/{$filename}"))) {
+        // }
+        \Illuminate\Support\Facades\Storage::makeDirectory($path);
+
+        $fullpath = storage_path('app/public/' . $filename);
+
+        $from = [255, 0, 0];
+        $to = [0, 0, 255];
+
+        FacadesQrCode::format('png')
+            ->size(512)
+            ->style('dot')
+            ->eye('circle')
+            ->gradient($from[0], $from[1], $from[2], $to[0], $to[1], $to[2], 'diagonal')
+            ->margin(1)
+            ->generate($payload, $fullpath);
+
+        return $filename;
     }
 }
 

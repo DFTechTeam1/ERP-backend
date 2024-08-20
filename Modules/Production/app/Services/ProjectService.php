@@ -70,12 +70,16 @@ class ProjectService
 
     private $projectVjRepo;
 
+    private $inventoryItemRepo;
+
     /**
      * Construction Data
      */
     public function __construct()
     {
         $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
+
+        $this->inventoryItemRepo = new \Modules\Inventory\Repository\InventoryItemRepository();
 
         $this->projectClassRepo = new ProjectClassRepository;
 
@@ -419,6 +423,16 @@ class ProjectService
                     $vj = implode(',', collect($item->vjs)->pluck('employee.nickname')->toArray());
                 }
 
+                $needReturnEquipment = false;
+                if ($item->status == \App\Enums\production\ProjectStatus::Completed->value && $item->equipments->count() > 0) {
+                    $needReturnEquipment = true;
+                }
+                if ($item->equipments->count() > 0) {
+                    if ($item->equipments[0]->is_returned) {
+                        $needReturnEquipment = false;
+                    }
+                }
+
                 return [
                     'uid' => $item->uid,
                     'marketing' => $marketing,
@@ -436,6 +450,8 @@ class ProjectService
                     'project_is_complete' => $item->status == \App\Enums\production\ProjectStatus::Completed->value,
                     'vj' => $vj,
                     'have_vj' => $item->vjs->count() > 0 ? true : false,
+                    'is_final_check' => $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false,
+                    'need_return_equipment' => $needReturnEquipment,
                 ];
             });
 
@@ -1227,7 +1243,8 @@ class ProjectService
         if (
             (
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::OnGoing->value ||
-                $project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value
+                $project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value ||
+                $project['status_raw'] == \App\Enums\Production\ProjectStatus::ReadyToGo->value
             ) &&
             $diff->invert > 0
         ) {
@@ -2218,6 +2235,13 @@ class ProjectService
                         'status' => \App\Enums\Production\RequestEquipmentStatus::Requested->value,
                         'project_date' => $project->project_date,
                     ]);
+                } else {
+                    if ($check->status == \App\Enums\Production\RequestEquipmentStatus::Cancel->value) {
+                        $this->projectEquipmentRepo->update([
+                            'status' => \App\Enums\Production\RequestEquipmentStatus::Requested->value,
+                            'is_checked_pic' => 0,
+                        ], '', 'inventory_id = ' . $inventoryId . ' AND project_id = ' . $project->id);
+                    }
                 }
             }
 
@@ -2261,6 +2285,7 @@ class ProjectService
         $data = $this->projectEquipmentRepo->list('id,uid,project_id,inventory_id,qty,status,is_checked_pic', 'project_id = ' . $projectId, [
             'inventory:id,name,stock',
             'inventory.image',
+            'inventory.items:id,inventory_id,inventory_code'
         ]);
 
         $data = collect((object) $data)->map(function ($item) {
@@ -2269,6 +2294,7 @@ class ProjectService
                 'inventory_name' => $item->inventory->name,
                 'inventory_image' => $item->inventory->display_image,
                 'inventory_stock' => $item->inventory->stock,
+                'items' => collect($item->inventory->items)->pluck('inventory_code')->toArray(),
                 'qty' => $item->qty,
                 'status' => $item->status_text,
                 'status_color' => $item->status_color,
@@ -2284,19 +2310,42 @@ class ProjectService
         );
     }
 
-    public function updateEquipment(array $data, string $projectUid)
+    /**
+     * Update request equipment list
+     * 
+     * @param array $data
+     * @param string $projectUid
+     * 
+     * @return array
+     */
+    public function updateEquipment(array $data, string $projectUid): array
     {
+        DB::beginTransaction();
         try {
             $picPermission = auth()->user()->can('accept_request_equipment');
 
             foreach ($data['items'] as $item) {
+                $inventoryCode = $item['selected_code'];
+                if (empty($inventoryCode)) {
+                    $projectEquipment = $this->projectEquipmentRepo->show($item['id'], 'id,inventory_id');
+
+                    $inventoryItems = $this->inventoryItemRepo->list('id,inventory_code', 'inventory_id = ' . $projectEquipment->inventory_id);
+                    $inventoryCode = $inventoryItems[0]->inventory_code;
+                }
+
                 $payload = [
                     'status' => $item['status'],
                     'is_checked_pic' => false,
+                    'inventory_code' => $inventoryCode,
                 ];
 
                 if ($picPermission) {
                     $payload['is_checked_pic'] = true;
+                }
+
+                // update stock
+                if ($item['status'] == \App\Enums\Production\RequestEquipmentStatus::Ready->value) {
+                    
                 }
 
                 $this->projectEquipmentRepo->update($payload, '', "is_checked_pic = FALSE and uid = '" . $item['id'] . "'");
@@ -2327,7 +2376,9 @@ class ProjectService
 
             $userCanAcceptRequest = auth()->user()->can('request_inventory'); // if TRUE than he is INVENTARIS
 
-            \Modules\Production\Jobs\PostEquipmentUpdateJob::dispatch($projectUid, $data, $userCanAcceptRequest);
+            \Modules\Production\Jobs\PostEquipmentUpdateJob::dispatch($projectUid, $data, $userCanAcceptRequest)->afterCommit();
+
+            DB::commit();
 
             return generalResponse(
                 'success',
@@ -2335,6 +2386,8 @@ class ProjectService
                 $output,
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -4340,6 +4393,11 @@ class ProjectService
                 'status' => \App\Enums\Production\ProjectStatus::Completed->value
             ], $projectUid);
 
+            // update project equipment
+            $this->projectEquipmentRepo->update([
+                'status' => \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn->value
+            ], 'dummy', 'project_id = ' . $projectId);
+
             // update project status cache
             $project = $this->repo->show($projectUid, 'id,status');
 
@@ -4389,6 +4447,147 @@ class ProjectService
 
             return generalResponse(
                 __("global.vjHasBeenAssigned"),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to get all items for final check
+     *
+     * @param string $projectUid
+     * @return array
+     */
+    public function prepareFinalCheck(string $projectUid): array
+    {
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            $project = $this->repo->show($projectUid, 'id,name,showreels,showreels_status', [
+                'vjs.employee:id,nickname',
+                'equipments:id,project_id,inventory_id,qty,status',
+                'equipments.inventory:id,name'
+            ]);
+
+            // get tasks information
+            $tasks = $this->taskRepo->list('id,project_id,status', 'project_id = ' . $projectId . ' and status is not null');
+            $completedTask = collect($tasks)->where('status', '=', \App\Enums\Production\TaskStatus::Completed->value)->count();
+            $unfinished = $tasks->count() - $completedTask;
+            $taskData = [
+                'total' => $tasks->count(),
+                'completed' => $completedTask,
+                'unfinished' => $tasks->count() - $completedTask,
+                'text' => __("global.reviewTaskData", ['total' => $tasks->count(), 'unfinished' => $unfinished]),
+            ];
+
+            // get showreels status
+            $showreels = [
+                'text' => __("global.doesNotHaveShowreels"),
+            ];
+            if ($project->showreels) {
+                $showreelsStatus = \App\Enums\Production\ShowreelsStatus::cases();
+                foreach ($showreelsStatus as $st) {
+                    if ($st->value == $project->showreels_status) {
+                        $showreels['text'] = $st->label();
+                        break;
+                    }
+                }
+            }
+
+            // Get vj
+            $vj = [
+                'text' => __('global.doesNotHaveVJ'),
+            ];
+            if ($project->vjs->count()) {
+                $inchargeVj = collect($project->vjs)->pluck('employee.nickname')->toArray();
+                $vj['text'] = __('global.inchargeVJAre', ['name' => implode(',', $inchargeVj)]);
+            }
+
+            // Get equipment
+            $inventories = [];
+            foreach ($project->equipments as $equipment) {
+                $inventories[] = [
+                    'name' => $equipment->inventory->name,
+                    'status' => $equipment->status_text,
+                    'status_color' => $equipment->status_color,
+                    'qty' => $equipment->qty,
+                ];
+            }
+
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'tasks' => $taskData,
+                    'showreels' => $showreels,
+                    'vj' => $vj,
+                    'inventories' => $inventories,
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function readyToGo(string $projectUid)
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            $equipments = $this->projectEquipmentRepo->list('id,inventory_id,inventory_code', 'project_id = ' . $projectId);
+
+            foreach ($equipments as $equipment) {
+                $this->inventoryItemRepo->update([
+                    'status' => \App\Enums\Inventory\InventoryStatus::OnSite->value,
+                    'current_location' => \App\Enums\Inventory\Location::Outgoing->value,
+                ], 'dummy', "inventory_code = '" . $equipment->inventory_code . "'");
+            }
+
+            // update equipment status
+            $this->projectEquipmentRepo->update([
+                'status' => \App\Enums\Production\RequestEquipmentStatus::OnEvent->value
+            ], 'dummy', 'project_id = ' . $projectId);
+
+            $this->repo->update([
+                'status' => \App\Enums\Production\ProjectStatus::ReadyToGo->value,
+            ], $projectUid);
+
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.projectIsGoodToGo'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function returnEquipment(string $projectUid, array $payload)
+    {
+        DB::beginTransaction();
+        try {
+            foreach ($payload['equipment'] as $item) {
+                $this->projectEquipmentRepo->update([
+                    'status' => \App\Enums\Production\RequestEquipmentStatus::Return->value,
+                    'is_good_condition' => $item['return_condition']['is_good_condition'],
+                    'detail_condition' => !$item['return_condition']['is_good_condition'] ? $item['return_condition']['detail_condition'] : null,
+                    'is_returned' => true,
+                ], $item['uid']);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.equipmentHasBeenReturned'),
                 false,
             );
         } catch (\Throwable $th) {

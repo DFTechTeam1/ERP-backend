@@ -4,7 +4,7 @@ namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateEquipment extends FormRequest
+class ReturnEquipment extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -12,9 +12,8 @@ class UpdateEquipment extends FormRequest
     public function rules(): array
     {
         return [
-            'items.*.id' => 'required',
-            'items.*.status' => 'required',
-            'items.*.selected_code' => 'nullable',
+            'equipment.*.uid' => 'required',
+            'equipment.*.return_condition' => 'required',
         ];
     }
 
