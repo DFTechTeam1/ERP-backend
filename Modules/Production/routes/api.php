@@ -36,6 +36,8 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/venues', [ProjectController::class, 'autocompleteVenue']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
+    Route::get('project/{projectUid}/prepareFinalCheck', [ProjectController::class, 'prepareFinalCheck']);
+    Route::get('project/{projectUid}/readyToGo', [ProjectController::class, 'readyToGo']);
     Route::delete('project/{projectUid}/removeAllVJ', [ProjectController::class, 'removeAllVJ']);
     Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
     Route::post('project/{projectUid}/completeProject', [ProjectController::class, 'completeProject']);
@@ -49,6 +51,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask']);
     Route::post('project/{taskId}/description', [ProjectController::class, 'storeDescription']);
     Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
+    Route::post('project/{taskId}/returnEquipment', [ProjectController::class, 'returnEquipment']);
     Route::post('project/{projectId}/manualChangeTaskBoard', [ProjectController::class, 'manualChangeTaskBoard']);
     Route::post('project/{projectId}/proofOfWork/{taskId}', [ProjectController::class, 'proofOfWork']);
     Route::delete('project/{taskUid}/task', [ProjectController::class, 'deleteTask']);

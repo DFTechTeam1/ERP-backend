@@ -45,7 +45,8 @@ class ProjectController extends Controller
                 'personInCharges.employee:id,name,employee_id',
                 'marketings.marketing:id,name,employee_id',
                 'projectClass:id,name',
-                'vjs.employee:id,nickname'
+                'vjs.employee:id,nickname',
+                'equipments:id,project_id,inventory_id,status,is_returned'
             ]
         ));
     }
@@ -521,5 +522,26 @@ class ProjectController extends Controller
     public function assignVJ(\Modules\Production\Http\Requests\Project\AssignVj $request, string $projectUid)
     {
         return apiResponse($this->service->assignVJ($request->validated(), $projectUid));
+    }
+
+    /**
+     * Function to get all item for final check
+     *
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function prepareFinalCheck(string $projectUid)
+    {
+        return apiResponse($this->service->prepareFinalCheck($projectUid));
+    }
+
+    public function readyToGo(string $projectUid)
+    {
+        return apiResponse($this->service->readyToGo($projectUid));
+    }
+
+    public function returnEquipment(\Modules\Production\Http\Requests\Project\ReturnEquipment $request, string $projectUid)
+    {
+        return apiResponse($this->service->returnEquipment($projectUid, $request->validated()));
     }
 }

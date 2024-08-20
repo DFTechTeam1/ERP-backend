@@ -56,19 +56,7 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        $files = scandir(app_path('Exceptions'));
-
-        $out = [];
-        foreach ($files as $file) {
-            if ($file != '.' && $file != '..') {
-                $name = explode('.php', $file);
-
-                $path = "App\Exceptions\\" . $name[0];
-                $out[] = $path;
-            }
-        }
-
-        return response()->json($out);
+        return response()->json(generateQrcode('ilhammeru', 'inventory/qrcode/testing.png'));
     }
 
     public function spreadsheet()

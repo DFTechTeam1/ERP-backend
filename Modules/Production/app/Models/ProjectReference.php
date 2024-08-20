@@ -19,6 +19,7 @@ class ProjectReference extends Model
         'media_path',
         'name',
         'type',
+        'folder',
     ];
 
     protected $appends = ['media_path_text'];

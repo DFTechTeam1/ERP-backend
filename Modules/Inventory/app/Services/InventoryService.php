@@ -181,12 +181,15 @@ class InventoryService {
 
                         $inventoryCode = rand(100,900) . $dividerCode . $type->slug . $dividerCode . $countItems + 1;
 
+                        $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr' . rand(100,900) . date('Yhs') . '.png');
+
                         $items[] = [
                             'current_location' => $itemDetail[9] == 'User' ? 1 : 2,
                             'user_id' => $itemDetail[9] == 'User' ? $employee->id : null,
                             'inventory_id' => '',
                             'inventory_code' => $inventoryCode,
                             'status' => 1,
+                            'qrcode' => $qrcode,
                         ];
                     }
 
@@ -203,6 +206,7 @@ class InventoryService {
                         'warranty' => $value[0][8],
                         // 'supplier_raw' => $value[0][5],
                         'supplier_id' => $supplier->id,
+                        'stock' => count($items),
                         'items' => $items,
                     ];
                 }
@@ -434,7 +438,7 @@ class InventoryService {
             $whereHas = [
                 [
                     'relation' => 'equipments',
-                    'query' => 'status = ' . \App\Enums\Production\RequestEquipmentStatus::Requested->value,
+                    'query' => 'status > 0',
                 ]
             ];
 
@@ -456,11 +460,36 @@ class InventoryService {
             );
 
             $paginated = collect((object) $paginated)->map(function ($item) {
+                $equipmentStatuses = collect($item->equipments)->pluck('status')->toArray();
+
+                $statusText = __('global.requested');
+                $statusColor = 'primary';
+                $unique = array_values(array_unique($equipmentStatuses));
+                if (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::Ready->value) {
+                    $statusText = __('global.equipmentReady');
+                    $statusColor = 'success';
+                } else if (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::Return->value) {
+                    $statusText = __('global.needToCheckAfterReturn');
+                    $statusColor = 'red';
+                } else if (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::Cancel->value) {
+                    $statusText = __('global.canceled');
+                    $statusColor = 'orange-darken-3';
+                } else if (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn->value) {
+                    $statusText = __('global.completeAndNotYetReturned');
+                    $statusColor = 'lime-darken-2';
+                }
+                if (in_array(\App\Enums\Production\RequestEquipmentStatus::OnEvent->value, $equipmentStatuses)) {
+                    $statusText = __('global.onEvent');
+                    $statusColor = 'info';
+                }
+
+
                 return [
                     'uid' => $item->uid,
                     'project_date' => date('d F Y', strtotime($item->project_date)),
-
                     'name' => $item->name,
+                    'status' => $statusText,
+                    'status_color' => $statusColor,
                     'equipment_total' => count($item->equipments),
                 ];
             })->all();
@@ -719,7 +748,7 @@ class InventoryService {
                     'brand:id,uid,name',
                     'unit:id,uid,name',
                     'supplier:id,uid,name',
-                    'items:id,inventory_id,inventory_code,status,current_location,user_id',
+                    'items:id,inventory_id,inventory_code,status,current_location,user_id,qrcode',
                     'items.employee:id,uid,name',
                     'items.employee:id,uid',
                     'images:id,image,inventory_id',
@@ -803,7 +832,7 @@ class InventoryService {
                         'id' => $item->id,
                         'user_id' => $item->employee ? $item->employee->uid : null,
                         'user' => $item->employee ? $item->employee->name : null,
-                        'qrcode' => createQr($item->inventory_code),
+                        'qrcode' => asset('storage/' . $item->qrcode),
                     ];
                 })
             ];
@@ -1207,11 +1236,14 @@ class InventoryService {
                 $userId = getIdFromUid($itemLocation['user_id'], new \Modules\Hrd\Models\Employee());
             }
 
+            $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr' . rand(100,900) . date('Yhs') . '.png');
+
             $itemLoactions[] = [
                 'inventory_code' => $inventoryCode,
                 'status' => InventoryStatus::InUse->value,
                 'current_location' => $itemLocation['location'],
                 'user_id' => $userId,
+                'qrcode' => $qrcode,
             ];
 
             $countItems++;
@@ -1367,12 +1399,15 @@ class InventoryService {
                     $userId = getIdFromUid($itemLocation['user_id'], new \Modules\Hrd\Models\Employee());
                 }
 
+                $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr' . rand(100,999) . date('Yhs') . '.png');
+
                 $payloadItemLocation = [
                     'current_location' => $itemLocation['location'],
                     'inventory_id' => $inventoryId,
                     'inventory_code' => $inventoryCode,
                     'status' => InventoryStatus::InUse->value,
                     'user_id' => $userId,
+                    'qrcode' => $qrcode,
                 ];
 
                 if (empty($itemLocation['id'])) { // create

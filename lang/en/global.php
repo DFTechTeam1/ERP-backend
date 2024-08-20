@@ -129,6 +129,14 @@ return [
     'importUnitSuccess' => 'Unit imported successfully',
     'importInventoryTypeSuccess' => 'Inventory type imported successfully',
     'templateNotValid' => 'Template not valid',
+    'onEvent' => 'On Event',
+    'doesNotHaveShowreels' => 'Project does not have any showreels',
+    'doesNotHaveVJ' => 'Project does not have any VJ',
+    'inchargeVJAre' => "The VJs in charge of this event are :name",
+    'reviewTaskData' => ':total Tasks is completed and :unfinished tasks is unfinished',
+    'readyToGo' => 'Ready To Go',
+    'returned' => 'Returned',
+    'completeAndNotYetReturned' => 'Event Complete and Not Yet Returned',
     
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -229,6 +237,11 @@ return [
     'vjHasBeenAssigned' => 'VJ has been assigned for this project',
     'assignedVjToProject' => 'You just been assigned by :creator for event :event. Please prepare your kits',
     'allVjisRemoved' => 'All VJ has beed removed from selected project',
+    'equipmentReady' => 'Equipment is ready',
+    'equipmentReturnAndNeedToCheck' => 'Equipments is returned',
+    'needToCheckAfterReturn' => 'Need to be checked after returned',
+    'projectIsGoodToGo' => 'All preparations are complete, and ready to go',
+    'equipmentHasBeenReturned' => "Equipment has been returned and will be check by inventory's PIC",
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',

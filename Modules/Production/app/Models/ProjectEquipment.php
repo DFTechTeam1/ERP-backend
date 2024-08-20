@@ -26,7 +26,10 @@ class ProjectEquipment extends Model
         'created_by',
         'updated_by',
         'uid',
-        'is_checked_pic'
+        'is_checked_pic',
+        'inventory_code',
+        'is_good_condition',
+        'detail_condition',
     ];
 
     protected $appends = ['status_text', 'status_color'];
