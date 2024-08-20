@@ -193,9 +193,12 @@ class InventoryService {
                         ];
                     }
 
+                    $price = str_replace(',','',$value[0][1]);
+                    $price = str_replace('.', '', $price);
+
                     $payload[] = [
                         'name' => $name,
-                        'purchase_price' => $value[0][1],
+                        'purchase_price' => $price,
                         // 'brand' => $value[0][4],
                         'brand_id' => $brand->id,
                         'unit_id' => $unit->id,
