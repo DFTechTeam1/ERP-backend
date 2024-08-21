@@ -56,7 +56,7 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        return response()->json(generateQrcode('ilhammeru', 'inventory/qrcode/testing.png'));
+        return response()->json(['yes']);
     }
 
     public function spreadsheet()
