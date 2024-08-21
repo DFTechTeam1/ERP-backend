@@ -26,9 +26,16 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot()
     {
         Broadcast::routes(['prefix' => 'api']);
+
+        if (request()->header('App-Language')) {
+            // avoid repetitive setting
+            if (!\Illuminate\Support\Facades\App::isLocal(request()->header('App-Language'))) {
+            }
+            \Illuminate\Support\Facades\App::setLocale(request()->header('App-Language'));
+        }
 
         // CACHING ALL SETTING
         if (\Illuminate\Support\Facades\DB::connection()->getDatabaseName() && Schema::hasTable('cache')) { // avoid failing down when start in the first time

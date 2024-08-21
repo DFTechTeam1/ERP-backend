@@ -27,9 +27,20 @@ class MenuService {
         $data = $this->repo->list();
         $menuGroups = \App\Enums\Menu\Group::cases();
 
+        $headerLang = request()->header('App-Language');
+        if (!$headerLang) {
+            $headerLang = 'en';
+        }
+
         $parent = collect($data)->where('parent_id', null)->values();
-        $parent = collect($parent)->map(function ($item) use ($data, $menuGroups, $permissions) {
+        $parent = collect((object) $parent)->map(function ($item) use ($data, $menuGroups, $permissions, $headerLang) {
             $child = [];
+
+            if ($headerLang == 'en') {
+                $item['name'] = $item['lang_en'];
+            } else if ($headerLang == 'id') {
+                $item['name'] = $item['lang_id'];
+            }
 
             foreach ($menuGroups as $menuGroup) {
                 if ($menuGroup->value == $item->group) {
@@ -41,6 +52,12 @@ class MenuService {
                 if ($item->id == $d->parent_id) {
                     if (!empty($d->permission)) {
                         if (gettype(array_search($d->permission, $permissions)) != 'boolean') {
+                            if ($headerLang == 'en') {
+                                $d['name'] = $d['lang_en'];
+                            } else if ($headerLang == 'id') {
+                                $d['name'] = $d['lang_id'];
+                            }
+
                             $child[] = $d;
                         }
                     }
