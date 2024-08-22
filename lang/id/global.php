@@ -262,6 +262,11 @@ return [
     'needToCheckAfterReturn' => 'Perlu Pengecekan Setelah di Kembalikan',
     'projectIsGoodToGo' => 'Semua persiapan sudah selesai. Siap Berangkat!',
     'equipmentHasBeenReturned' => "Equipment berhasil di kembalikan, dan akan di cek oleh PIC",
+    'forgotPasswordLinkSent' => 'Tautan pengaturan ulang kata sandi telah dikirimkan ke email Anda. Jika Anda tidak menerima tautan pengaturan ulang kata sandi, coba masuk dengan login sosial.',
+    'resetPasswordSuccess' => 'Kata Sandi berhasil di ganti. Silahkan login untuk melanjutkan',
+    'invalidToken' => 'Token tidak valid',
+    'expToken' => 'Token sudah expired',
+    'tokenResetPasswordClaimed' => 'Token sudah sudah dignakan, Ulangi lagi proses dari awal ya!',
 
     'nameRequired' => 'Nama harus diisi!',
     'employeeIdRequired' => 'ID Karyawan harus diisi!',
