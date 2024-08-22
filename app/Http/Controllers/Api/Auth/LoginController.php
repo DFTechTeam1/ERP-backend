@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Enums\ErrorCode\Code;
+use DateTime;
 use App\Exceptions\UserNotFound;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\Login;
@@ -226,5 +227,74 @@ class LoginController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        try {
+            $email = $request->email;
+    
+            $user = \App\MOdels\User::where('email', $email)->first();
+    
+            if (!$user) {
+                throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
+            }
+
+            $user->notify(new \App\Notifications\ForgotPasswordNotification($user));
+
+            return apiResponse(
+                generalResponse(
+                    __('global.forgotPasswordLinkSent'),
+                    false,
+                )
+            );
+        } catch (\Throwable $th) {
+            return apiResponse(errorResponse($th));
+        }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        try {
+            $password = \Illuminate\Support\Facades\Hash::make($request->password);
+            $userData = json_decode($this->service->decrypt($request->encrypted, config('app.saltKey')), true);
+
+            if (!$userData) {
+                throw new \App\Exceptions\InvalidResetPasswordToken(__('global.invalidToken'));
+            }
+
+            // validate token claim
+            $user = \App\Models\User::select('reset_password_token_claim')->where('email', $userData['email'])->first();
+            if ($user->reset_password_token_claim) {
+                throw new \App\Exceptions\ClaimedTokenResetPassword(__("global.tokenResetPasswordClaimed"));
+            }
+
+            // validate token expiration
+            $exp = new DateTime($userData['exp']);
+            $now = new DateTime('now');
+            $diff = date_diff($now, $exp);
+            if ($diff->invert > 0) {
+                throw new \App\Exceptions\ExpTokenResetPassword(__('global.expToken'));
+            }
+
+            // update data
+            \App\Models\User::where('email', $userData['email'])
+                ->update([
+                    'password' => $password,
+                    'reset_password_token_claim' => true,
+                ]);
+
+            return apiResponse(
+                generalResponse(
+                    __("global.resetPasswordSuccess"),
+                    false,
+                    [
+                        'user' => $userData,
+                    ],
+                ),
+            );
+        } catch (\Throwable $th) {
+            return apiResponse(errorResponse($th));
+        }
     }
 }
