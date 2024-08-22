@@ -21,6 +21,8 @@ if (!function_exists('setEmailConfiguration')) {
             'mail.mailers.smtp.port' => getSettingByKey('email_port'),
             'mail.mailers.smtp.username' => getSettingByKey('username'),
             'mail.mailers.smtp.password' => getSettingByKey('password'),
+            'mail.from.addrress' => getSettingByKey('sender_email'),
+            'mail.from.name' => getSettingByKey('sender_name'),
             'mail.mailers.smtp.encryption' => 'tls',
         ]);
     }
