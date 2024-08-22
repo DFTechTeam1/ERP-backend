@@ -38,6 +38,8 @@ class ForgotPasswordNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
+        setEmailConfiguration();
+
         $service = new \App\Services\EncryptionService();
 
         $exp = date('Y-m-d H:i:s', strtotime('+1 Hour'));
@@ -55,10 +57,6 @@ class ForgotPasswordNotification extends Notification
             ]);
 
         $this->url = config('app.frontend_url') . '/auth/a/reset-password?d=' . $encryptedPayload;
-
-        logging('email configuration', [
-            'port' => config('mail.mailers.smtp'),
-        ]);
 
         return (new MailMessage)
                     ->subject('Ubah Password')

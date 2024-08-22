@@ -13,6 +13,18 @@ use Illuminate\Support\Facades\Log;
 use Intervention\Image\Laravel\Facades\Image;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
+if (!function_exists('setEmailConfiguration')) {
+    function setEmailConfiguration()
+    {
+        config([
+            'mail.mailers.smtp.host' => getSettingByKey('email_host'),
+            'mail.mailers.smtp.port' => getSettingByKey('email_port'),
+            'mail.mailers.smtp.username' => getSettingByKey('username'),
+            'mail.mailers.smtp.password' => getSettingByKey('password'),
+        ]);
+    }
+}
+
 if (!function_exists('successResponse')) {
     function generalResponse(
         string $message,
