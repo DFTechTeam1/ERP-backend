@@ -33,6 +33,8 @@ class ForgotPasswordJob implements ShouldQueue
             throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
         }
 
+        setEmailConfiguration();
+
         $user->notify(new \App\Notifications\ForgotPasswordNotification($user));
     }
 }

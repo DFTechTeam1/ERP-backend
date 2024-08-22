@@ -38,8 +38,6 @@ class ForgotPasswordNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        setEmailConfiguration();
-
         $service = new \App\Services\EncryptionService();
 
         $exp = date('Y-m-d H:i:s', strtotime('+1 Hour'));
