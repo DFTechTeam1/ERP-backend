@@ -12,14 +12,14 @@ class ForgotPasswordJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private $email;
+    private $user;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $email)
+    public function __construct(object $user)
     {
-        $this->email = $email;
+        $this->user = $user;
     }
 
     /**
@@ -27,14 +27,8 @@ class ForgotPasswordJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $user = \App\Models\User::where('email', $this->email)->first();
-    
-        if (!$user) {
-            throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
-        }
-
         setEmailConfiguration();
 
-        $user->notify(new \App\Notifications\ForgotPasswordNotification($user));
+        $this->user->notify(new \App\Notifications\ForgotPasswordNotification($this->user));
     }
 }

@@ -234,7 +234,13 @@ class LoginController extends Controller
         try {
             $email = $request->email;
 
-            \App\Jobs\ForgotPasswordJob::dispatch($email);
+            $user = \App\Models\User::where('email', $email)->first();
+    
+            if (!$user) {
+                throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
+            }
+
+            \App\Jobs\ForgotPasswordJob::dispatch($user);
 
             return apiResponse(
                 generalResponse(
