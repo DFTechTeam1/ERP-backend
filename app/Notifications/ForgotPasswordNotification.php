@@ -58,6 +58,8 @@ class ForgotPasswordNotification extends Notification
 
         $this->url = config('app.frontend_url') . '/auth/a/reset-password?d=' . $encryptedPayload;
 
+        logging('mail', [config('mail.mailers.smtp')]);
+
         return (new MailMessage)
                     ->subject('Ubah Password')
                     ->markdown('mail.user.forgotPassword', ['url' => $this->url]);
