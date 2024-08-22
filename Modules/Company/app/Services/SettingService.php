@@ -279,9 +279,9 @@ class SettingService {
             }
 
             $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
-            $where = "key = '" . (string) $keyQuery . "'";
+            $where = "key = '" . (string) $key . "'";
             if (config('app.env') == 'production') {
-                $where = "`key` = '" . (string) $keyQuery . "'";
+                $where = "`key` = '" . (string) $key . "'";
             }
             logging('where store email', [$where]);
             $this->repo->update([
