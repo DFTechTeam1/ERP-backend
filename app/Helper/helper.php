@@ -23,6 +23,7 @@ if (!function_exists('setEmailConfiguration')) {
             'mail.mailers.smtp.password' => getSettingByKey('password'),
             'mail.from.addrress' => getSettingByKey('sender_email'),
             'mail.from.name' => getSettingByKey('sender_name'),
+            'mail.default' => 'smtp',
             'mail.mailers.smtp.encryption' => 'tls',
         ]);
     }
