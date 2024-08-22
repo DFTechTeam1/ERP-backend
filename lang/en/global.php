@@ -261,6 +261,11 @@ return [
     'needToCheckAfterReturn' => 'Need to be checked after returned',
     'projectIsGoodToGo' => 'All preparations are complete, and ready to go',
     'equipmentHasBeenReturned' => "Equipment has been returned and will be check by inventory's PIC",
+    'forgotPasswordLinkSent' => 'A password reset link has been sent to your email. If you did not receive the password reset link, try logging in with social login.',
+    'resetPasswordSuccess' => 'Password is now reset. Please login to continue',
+    'invalidToken' => 'Invalid Token',
+    'expToken' => 'Token has been expired',
+    'tokenResetPasswordClaimed' => 'Token already used.',
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',
