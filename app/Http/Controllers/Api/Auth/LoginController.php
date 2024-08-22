@@ -233,14 +233,8 @@ class LoginController extends Controller
     {
         try {
             $email = $request->email;
-    
-            $user = \App\MOdels\User::where('email', $email)->first();
-    
-            if (!$user) {
-                throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
-            }
 
-            $user->notify(new \App\Notifications\ForgotPasswordNotification($user));
+            \App\Jobs\ForgotPasswordJob::dispatch($email);
 
             return apiResponse(
                 generalResponse(
