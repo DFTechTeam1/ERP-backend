@@ -283,6 +283,7 @@ class SettingService {
             if (config('app.env') == 'production') {
                 $where = "`key` = '" . (string) $keyQuery . "'";
             }
+            logging('where store email', [$where]);
             $this->repo->update([
                 'value' => $value
             ], '', $where);
