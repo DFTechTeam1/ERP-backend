@@ -27,7 +27,7 @@ class ForgotPasswordJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $user = \App\MOdels\User::where('email', $this->email)->first();
+        $user = \App\Models\User::where('email', $this->email)->first();
     
         if (!$user) {
             throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
