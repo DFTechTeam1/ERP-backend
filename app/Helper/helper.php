@@ -105,6 +105,34 @@ if (!function_exists('errorMessage')) {
 if (!function_exists('apiResponse')) {
     function apiResponse(array $payload): JsonResponse
     {
+        // handle different devices
+        $errorDevice = false;
+        $user = auth()->user();
+        if ($user) {
+            $userLogin = \Illuminate\Support\Facades\Cache::get('userLogin' . $user->id);
+            logging('cache login', [$userLogin]);
+            if ($userLogin) {
+                $currentIp = $userLogin['ip'];
+                $currentBrowser = $userLogin['browser'];
+    
+                $ip = getClientIp();
+                $browser = parseUserAgent(getUserAgentInfo());
+    
+                if ($ip != $currentIp || $browser != $currentBrowser) {
+                    $errorDevice = true;
+                }
+            }
+            if ($errorDevice) {
+                // logout
+                if ($ip == $currentIp || $browser == $currentBrowser) {
+                    $user = request()->user();
+                    if ($user) {
+                        $user->tokens()->delete();
+                    }
+                }
+            }
+        }
+
         if ($payload['code'] == 422) {
             return response()->json([
                 'message' => $payload['message'],
@@ -153,8 +181,6 @@ if (!function_exists('generateQrcode')) {
         array_pop($explode);
 
         $path = implode('/', $explode);
-
-        logging('path', [$path]);
 
         // if (!is_dir(storage_path("app/public/{$filename}"))) {
         // }
@@ -577,5 +603,61 @@ if (!function_exists('formatNotifications')) {
         }
 
         return $output;
+    }
+}
+
+if (!function_exists('parseUserAgent')) {
+    function parseUserAgent($userAgent) {
+        $browser = 'Unknown';
+        $os = 'Unknown';
+    
+        // Detect browser
+        if (strpos($userAgent, 'Firefox') !== false) {
+            $browser = 'Firefox';
+        } elseif (strpos($userAgent, 'Chrome') !== false) {
+            $browser = 'Chrome';
+        } elseif (strpos($userAgent, 'Safari') !== false) {
+            $browser = 'Safari';
+        } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
+            $browser = 'Internet Explorer';
+        }
+    
+        // Detect OS
+        if (strpos($userAgent, 'Windows NT') !== false) {
+            $os = 'Windows';
+        } elseif (strpos($userAgent, 'Mac OS X') !== false) {
+            $os = 'Mac OS';
+        } elseif (strpos($userAgent, 'Linux') !== false) {
+            $os = 'Linux';
+        } elseif (strpos($userAgent, 'Android') !== false) {
+            $os = 'Android';
+        } elseif (strpos($userAgent, 'iPhone') !== false || strpos($userAgent, 'iPad') !== false) {
+            $os = 'iOS';
+        }
+    
+        return ['browser' => $browser, 'os' => $os];
+    }
+}
+
+if (!function_exists('getUserAgentInfo')) {
+    function getUserAgentInfo() {
+        return $_SERVER['HTTP_USER_AGENT'];
+    }
+}
+
+if (!function_exists('getClientIp')) {
+    function getClientIp() {
+        $ip = '';
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            // Check for IP from shared internet
+            $ip = $_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            // Check for IP from a proxy
+            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        } else {
+            // Fallback to REMOTE_ADDR
+            $ip = $_SERVER['REMOTE_ADDR'];
+        }
+        return $ip;
     }
 }

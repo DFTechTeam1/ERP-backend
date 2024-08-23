@@ -148,8 +148,18 @@ class LoginController extends Controller
             // store histories
             $this->loginHistoryRepo->store([
                 'user_id' => $user->id,
+                'ip' => getClientIp(),
+                'browser' => parseUserAgent(getUserAgentInfo())['browser'],
                 'login_at' => Carbon::now(),
             ]);
+
+            // store to cache for user device information
+            \Illuminate\Support\Facades\Cache::rememberForever('userLogin' . $user->id, function () {
+                return [
+                    'ip' => getClientIp(),
+                    'browser' => parseUserAgent(getUserAgentInfo()),
+                ];
+            });
 
             // TODO: further development
             // $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
@@ -184,6 +194,10 @@ class LoginController extends Controller
     {
         try {
             $user = $request->user();
+
+            // delete cache
+            \Illuminate\Support\Facades\Cache::forget('userLogin' . $user->id);
+
             $user->tokens()->delete();
 
             return apiResponse(

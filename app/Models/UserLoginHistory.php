@@ -12,6 +12,7 @@ class UserLoginHistory extends Model
     protected $fillable = [
         'user_id',
         'login_at',
-        'ip'
+        'ip',
+        'browser'
     ];
 }
