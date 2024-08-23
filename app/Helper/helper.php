@@ -105,34 +105,6 @@ if (!function_exists('errorMessage')) {
 if (!function_exists('apiResponse')) {
     function apiResponse(array $payload): JsonResponse
     {
-        // handle different devices
-        $errorDevice = false;
-        $user = auth()->user();
-        if ($user) {
-            $userLogin = \Illuminate\Support\Facades\Cache::get('userLogin' . $user->id);
-            logging('cache login', [$userLogin]);
-            if ($userLogin) {
-                $currentIp = $userLogin['ip'];
-                $currentBrowser = $userLogin['browser'];
-    
-                $ip = getClientIp();
-                $browser = parseUserAgent(getUserAgentInfo());
-    
-                if ($ip != $currentIp || $browser != $currentBrowser) {
-                    $errorDevice = true;
-                }
-            }
-            if ($errorDevice) {
-                // logout
-                if ($ip == $currentIp || $browser == $currentBrowser) {
-                    $user = request()->user();
-                    if ($user) {
-                        $user->tokens()->delete();
-                    }
-                }
-            }
-        }
-
         if ($payload['code'] == 422) {
             return response()->json([
                 'message' => $payload['message'],
