@@ -56,7 +56,11 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        return response()->json(['yes']);
+        return response()->json([
+            'ip' => getClientIp(),
+            'browser' => parseUserAgent(getUserAgentInfo()),
+            'ori' => getUserAgentInfo()
+        ]);
     }
 
     public function spreadsheet()
