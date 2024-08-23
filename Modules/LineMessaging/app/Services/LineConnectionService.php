@@ -56,13 +56,13 @@ class LineConnectionService {
             $this->sendMessage($wrongUserFormatMessage, $event['source']['userId']);
         } else if (strtolower($split[0]) == 'd' || strtolower($split[1]) == 'f') {
             // check user id in database first
-            $employee = \Modules\Hrd\Models\Employee::select('id')->whereRaw("LOWER(employee_id) = '" . strtolower($exp[1]) . "'")->first();
+            $employee = \Modules\Hrd\Models\Employee::select('id')->whereRaw("LOWER(employee_id) = '" . strtolower($exp[1]) . "' and status != " . \App\Enums\Employee\Status::Inactive->value)->first();
 
             if (!$employee) {
                 $userNotFoundMsg = [
                     [
                         'type' => 'text',
-                        'text' => 'User ID tidak ditemukan pada database, coba cek lagi ya dan masukan dengan benar',
+                        'text' => 'User ID gak ada di database, cek lagi ya :)',
                     ],
                 ];
                 $this->sendMessage($userNotFoundMsg, $event['source']['userId']);
