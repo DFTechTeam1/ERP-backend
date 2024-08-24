@@ -42,6 +42,16 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::post('employees/addAsUser', 'addAsUser');
         Route::post('employees/submitImport', 'submitImport');
         Route::get('employees/getVJ/{projectUid}','getVJ');
+        Route::put('employees/{uid}/basicInfo','updateBasicInfo');
+        Route::put('employees/{uid}/identity','updateIdentity');
+        Route::post('employees/{employeeUid}/storeFamily','storeFamily');
+        Route::put('employees/{familyUid}/updateFamily','updateFamily');
+        Route::get('employees/{employeeUid}/initFamily','initFamily');
+        Route::delete('employees/{familyUid}/deleteFamily','deleteFamily');
+        Route::post('employees/{employeeUid}/storeEmergency','storeEmergency');
+        Route::put('employees/{emergencyUid}/updateEmergency','updateEmergency');
+        Route::get('employees/{employeeUid}/initEmergency','initEmergency');
+        Route::delete('employees/{emergencyUid}/deleteEmergency','deleteEmergency');
 
         Route::post('employees/import', 'import');
     });

@@ -26,6 +26,10 @@ class EmployeeService
     private $taskRepo;
     private $projectRepo;
     private $projectVjRepo;
+    private $projectPicRepo;
+    private $projectTaskHistoryRepo;
+    private $employeeFamilyRepo;
+    private $employeeEmergencyRepo;
 
     private $idCardPhotoTmp;
     private $npwpPhotoTmp;
@@ -45,6 +49,14 @@ class EmployeeService
         $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
 
         $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
+
+        $this->projectPicRepo = new \Modules\Production\Repository\ProjectPersonInChargeRepository();
+
+        $this->projectTaskHistoryRepo = new \Modules\Production\Repository\ProjectTaskPicHistoryRepository();
+
+        $this->employeeFamilyRepo = new \Modules\Hrd\Repository\EmployeeFamilyRepository();
+
+        $this->employeeEmergencyRepo = new \Modules\Hrd\Repository\EmployeeEmergencyContactRepository();
     }
 
     /**
@@ -132,19 +144,22 @@ class EmployeeService
                         $where .= " AND join_date {$accessor} '{$search['join_date']}'";
                     }
                 }
-
-                if (!empty($search['status']) && empty($where)) {
+            }
+            
+            if (!empty($search['status'])) {
+                if (empty($where)) {
                     $where = "status = {$search['status']}";
-                } else if (!empty($search['status']) && !empty($where)) {
+                } else {
                     $where .= " AND status = {$search['status']}";
+                }
+            } else {
+                if (empty($where)) {
+                    $where = 'status != ' . \App\Enums\Employee\Status::Inactive->value;
+                } else {
+                    $where .= " and status != " . \App\Enums\Employee\Status::Inactive->value;
                 }
             }
 
-            if (empty($where)) {
-                $where = 'status != ' . \App\Enums\Employee\Status::Inactive->value;
-            } else {
-                $where .= " and status != " . \App\Enums\Employee\Status::Inactive->value;
-            }
 
             $order = '';
             $sortBy = request('sortBy');
@@ -437,6 +452,78 @@ class EmployeeService
         );
     }
 
+    protected function getDetailEmployee(string $uid, string $select)
+    {
+        $relation = [
+            'position:id,name,uid',
+        ];
+
+        $data = $this->repo->show($uid, $select, $relation);
+
+        // get projects and tasks if any
+        $projects = [];
+        $asPicProjects = $this->projectRepo->list('id,name,uid,project_date,created_at', '', [], [
+            [
+                'relation' => 'personInCharges',
+                'query' => "pic_id = " . $data->id,
+            ],
+        ]);
+        $asPicProjects = collect((object) $asPicProjects)->map(function ($item) {
+            return [
+                'id' => $item->uid,
+                'name' => $item->name,
+                'position' => __("global.asPicProject"),
+                'project_date' => date('d F Y', strtotime($item->project_date)),
+                'assign_at' => date('d F Y', strtotime($item->created_at)),
+                'detail_task' => [],
+            ];
+        })->toArray();
+        $projects = array_merge($projects, $asPicProjects);
+
+        $asPicTaskRaw = $this->taskRepo->list('id,project_id,name,created_at,start_working_at,uid,created_at', '', ['project:id,name,uid,project_date'], [
+            [
+                'relation' => 'pics',
+                'query' => 'employee_id = ' . $data->id,
+            ]
+        ])->groupBy('project_id')->all();
+        $asPicTask = [];
+        $a = 0;
+        foreach ($asPicTaskRaw as $projectId => $value) {
+            foreach ($value as $task) {
+                $asPicTask[$a] = [
+                    'name' => $task->project->name,
+                    'id' => $task->project->uid,
+                    'position' => __('global.haveCountTask', ['countTask' => $value->count()]),
+                    'project_date' => date('d F Y', strtotime($task->project->project_date)),
+                    'assign_at' => date('d F Y', strtotime($task->created_at)),
+                    'detail_task' => collect($value)->map(function ($detailTask) {
+                        return [
+                            'name' => $detailTask->name,
+                            'id' => $detailTask->uid,
+                            'start_working_at' => $detailTask->start_working_at ? date('d F Y, H:i', strtotime($detailTask->start_working_at)) : null,
+                            'assign_at' => date('d F Y', strtotime($detailTask->created_at)),
+                        ];
+                    })->toArray(),
+                ];
+            }
+
+            $a++;
+        }
+        $projects = array_merge($projects, $asPicTask);
+        $data['project_detail'] = $projects;
+
+        $data['bank_detail'] = json_decode($data->bank_detail, true);
+        $data['emergency_contact'] = json_decode($data->relation_contact, true);
+        
+        $data['boss_uid'] = null;
+        if ($data->boss_id) {
+            $bossData = $this->repo->show('dummy', 'id,uid', [], 'id = ' . $data->boss_id);
+            $data['boss_uid'] = $bossData->uid;
+        }
+
+        return $data->toArray();
+    }
+
     /**
      * Get specific data by id
      *
@@ -453,77 +540,12 @@ class EmployeeService
     ): array
     {
         try {
-            $relation = [
-                'position:id,name,uid',
-            ];
-
-            $data = $this->repo->show($uid, $select, $relation);
-
-            // get projects and tasks if any
-            $projects = [];
-            $asPicProjects = $this->projectRepo->list('id,name,uid,project_date,created_at', '', [], [
-                [
-                    'relation' => 'personInCharges',
-                    'query' => "pic_id = " . $data->id,
-                ],
-            ]);
-            $asPicProjects = collect($asPicProjects)->map(function ($item) {
-                return [
-                    'id' => $item->uid,
-                    'name' => $item->name,
-                    'position' => __("global.asPicProject"),
-                    'project_date' => date('d F Y', strtotime($item->project_date)),
-                    'assign_at' => date('d F Y', strtotime($item->created_at)),
-                    'detail_task' => [],
-                ];
-            })->toArray();
-            $projects = array_merge($projects, $asPicProjects);
-
-            $asPicTaskRaw = $this->taskRepo->list('id,project_id,name,created_at,start_working_at,uid,created_at', '', ['project:id,name,uid,project_date'], [
-                [
-                    'relation' => 'pics',
-                    'query' => 'employee_id = ' . $data->id,
-                ]
-            ])->groupBy('project_id')->all();
-            $asPicTask = [];
-            $a = 0;
-            foreach ($asPicTaskRaw as $projectId => $value) {
-                foreach ($value as $task) {
-                    $asPicTask[$a] = [
-                        'name' => $task->project->name,
-                        'id' => $task->project->uid,
-                        'position' => __('global.haveCountTask', ['countTask' => $value->count()]),
-                        'project_date' => date('d F Y', strtotime($task->project->project_date)),
-                        'assign_at' => date('d F Y', strtotime($task->created_at)),
-                        'detail_task' => collect($value)->map(function ($detailTask) {
-                            return [
-                                'name' => $detailTask->name,
-                                'id' => $detailTask->uid,
-                                'start_working_at' => $detailTask->start_working_at ? date('d F Y, H:i', strtotime($detailTask->start_working_at)) : null,
-                                'assign_at' => date('d F Y', strtotime($detailTask->created_at)),
-                            ];
-                        })->toArray(),
-                    ];
-                }
-
-                $a++;
-            }
-            $projects = array_merge($projects, $asPicTask);
-            $data['project_detail'] = $projects;
-
-            $data['bank_detail'] = json_decode($data->bank_detail, true);
-            $data['emergency_contact'] = json_decode($data->relation_contact, true);
-            
-            $data['boss_uid'] = null;
-            if ($data->boss_id) {
-                $bossData = $this->repo->show('dummy', 'id,uid', [], 'id = ' . $data->boss_id);
-                $data['boss_uid'] = $bossData->uid;
-            }
+            $data = $this->getDetailEmployee($uid, $select);
             
             return generalResponse(
                 'Success',
                 false,
-                $data->toArray(),
+                $data
             );
         } catch (\Throwable $th) {
             return generalResponse(
@@ -653,6 +675,56 @@ class EmployeeService
                 [],
                 Code::BadRequest->value,
             );
+        }
+    }
+
+    /**
+     * Update personal data - basic info
+     *
+     * @param array $payload
+     * @param string $employeeUid
+     * @return array
+     */
+    public function updateBasicInfo(array $payload, string $employeeUid): array
+    {
+        try {
+            $this->repo->update($payload, $employeeUid);
+
+            // get detail to refresh data in the front page
+            $data = $this->getDetailEmployee($employeeUid, '*');
+
+            return generalResponse(
+                __("global.successEditEmployeeData"),
+                false,
+                $data
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update personal data - identity & address
+     *
+     * @param array $payload
+     * @param string $employeeUid
+     * @return array
+     */
+    public function updateIdentity(array $payload, string $employeeUid): array
+    {
+        try {
+            $this->repo->update($payload, $employeeUid);
+
+            // get detail to refresh data in the front page
+            $data = $this->getDetailEmployee($employeeUid, '*');
+
+            return generalResponse(
+                __("global.successEditEmployeeData"),
+                false,
+                $data
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
         }
     }
 
@@ -857,13 +929,16 @@ class EmployeeService
         try {
             $images = [];
             foreach ($ids as $id) {
-                $employee = $this->repo->show($id, 'id,id_number_photo,npwp_photo,kk_photo,bpjs_photo', [
-                    'projects:id,project_id,pic_id'
-                ]);
+                $employee = $this->repo->show($id, 'id,id_number_photo,npwp_photo,kk_photo,bpjs_photo');
+                // get relation to project
+                $asPic = $this->projectPicRepo->show('dummy', 'id', [], 'pic_id = ' . $employee->id);
+
+                // get as task pic
+                $asTaskPic = $this->projectTaskHistoryRepo->show('dummy', 'id', [], 'employee_id = ' . $employee->id);
 
                 $employeeErrorStatus = false;
 
-                if (count($employee->projects) > 0) {
+                if ($asPic || $asTaskPic) {
                     $employeeErrorRelation[] = 'projects';
                     $employeeErrorStatus = true;
                 }
@@ -890,7 +965,7 @@ class EmployeeService
                 }
             }
 
-            $this->repo->bulkDelete($ids, 'uid');
+            // $this->repo->bulkDelete($ids, 'uid');
 
             \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
 
@@ -1291,7 +1366,6 @@ class EmployeeService
             $output[$key]['wrong_data'] = $wrong;
         }
 
-
         return generalResponse(
             "Success",
             false,
@@ -1303,6 +1377,224 @@ class EmployeeService
     {
         try {
             return \Illuminate\Support\Facades\Storage::download('static-file/employee.xlsx');
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to store employee family membet
+     *
+     * @param array $payload
+     * @param string $employeeUid
+     * @return array
+     */
+    public function storeFamily(array $payload, string $employeeUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+
+            $payload['employee_id'] = $employeeId;
+            logging('payload', $payload);
+            $this->employeeFamilyRepo->store($payload);
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successAddFamily'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to store employee family membet
+     *
+     * @param array $payload
+     * @param string $employeeUid
+     * @return array
+     */
+    public function updateFamily(array $payload, string $familyUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $this->employeeFamilyRepo->update($payload, $familyUid,);
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successUpdateFamily'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get family list of each employee
+     *
+     * @param string $employeeUid
+     * @return array
+     */
+    public function initFamily(string $employeeUid): array
+    {
+        $data = $this->employeeFamilyRepo->list('*', 'employee_id = ' . getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee()));
+
+        $family = \App\Enums\Employee\RelationFamily::cases();
+
+        $output = collect((object) $data)->map(function ($item) use ($family) {
+            $relation = '-';
+            foreach ($family as $f) {
+                if ($item->relation == $f->value) {
+                    $relation = $f->label();
+                }
+            }
+
+            return [
+                'uid' => $item->uid,
+                'name' => $item->name,
+                'relation' => $relation,
+                'relation_raw' => $item->relation,
+                'id_number' => $item->id_number,
+                'date_of_birth' => $item->date_of_birth ? date('d F Y', strtotime($item->date_of_birth)) : '-',
+                'date_of_birth_raw' => $item->date_of_birth,
+                'gender' => $item->gender,
+                'job' => $item->job,
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            $output,
+        );
+    }
+
+    /**
+     * Delete family data
+     *
+     * @param string $familyUid
+     * @return array
+     */
+    public function deleteFamily(string $familyUid): array
+    {
+        try {
+            $this->employeeFamilyRepo->delete($familyUid);
+
+            return generalResponse(
+                __("global.successDeleteFamily"),
+                false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get family list of each employee
+     *
+     * @param string $employeeUid
+     * @return array
+     */
+    public function initEmergency(string $employeeUid): array
+    {
+        $data = $this->employeeEmergencyRepo->list('*', 'employee_id = ' . getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee()));
+
+        $output = collect((object) $data)->map(function ($item) {
+            return [
+                'uid' => $item->uid,
+                'name' => $item->name,
+                'relation' => $item->relation,
+                'phone' => $item->phone,
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            $output,
+        );
+    }
+
+    /**
+     * Function to store employee emergency contact
+     *
+     * @param array $payload
+     * @param string $employeeUid
+     * @return array
+     */
+    public function storeEmergency(array $payload, string $employeeUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+
+            $payload['employee_id'] = $employeeId;
+            logging('payload', $payload);
+            $this->employeeEmergencyRepo->store($payload);
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successAddEmergencyContact'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to store employee emergency contact
+     *
+     * @param array $payload
+     * @param string $employeeUid
+     * @return array
+     */
+    public function updateEmergency(array $payload, string $emergencyUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $this->employeeEmergencyRepo->update($payload, $emergencyUid);
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successUpdateEmergencyContact'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete emergency contact
+     *
+     * @param string $familyUid
+     * @return array
+     */
+    public function deleteEmergency(string $emergencyUid): array
+    {
+        try {
+            $this->employeeEmergencyRepo->delete($emergencyUid);
+
+            return generalResponse(
+                __("global.successDeleteEmergencyContact"),
+                false,
+            );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }

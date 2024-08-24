@@ -84,8 +84,44 @@ class Employee extends Model
         'status_color', 
         'date_of_birth_text', 
         'full_address',
-        'initial'
+        'initial',
+        'gender_text',
+        'martial_text',
     ];
+
+    public function genderText(): Attribute
+    {
+        $out = '-';
+        if ($this->gender) {
+            $cases = \App\Enums\Employee\Gender::cases();
+            foreach ($cases as $case) {
+                if ($case->value == $this->gender) {
+                    $out = $case->label();
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
+
+    public function martialText(): Attribute
+    {
+        $out = '-';
+        if ($this->martial_status) {
+            $cases = \App\Enums\Employee\MartialStatus::cases();
+            foreach ($cases as $case) {
+                if ($case->value == $this->martial_status) {
+                    $out = $case->label();
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
 
     public function initial(): Attribute
     {
@@ -146,6 +182,11 @@ class Employee extends Model
     public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class, 'position_id', 'id');
+    }
+
+    public function families(): HasMany
+    {
+        return $this->hasMany(EmployeeFamily::class, 'employee_id');
     }
 
     public function user(): BelongsTo
