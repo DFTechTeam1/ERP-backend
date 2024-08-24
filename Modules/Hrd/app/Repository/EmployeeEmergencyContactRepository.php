@@ -1,18 +1,18 @@
 <?php
 
-namespace Modules\Production\Repository;
+namespace Modules\Hrd\Repository;
 
-use Modules\Production\Models\ProjectTaskPicHistory;
-use Modules\Production\Repository\Interface\ProjectTaskPicHistoryInterface;
+use Modules\Hrd\Models\EmployeeEmergencyContact;
+use Modules\Hrd\Repository\Interface\EmployeeEmergencyContactInterface;
 
-class ProjectTaskPicHistoryRepository extends ProjectTaskPicHistoryInterface {
+class EmployeeEmergencyContactRepository extends EmployeeEmergencyContactInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectTaskPicHistory();
+        $this->model = new EmployeeEmergencyContact();
         $this->key = 'id';
     }
 
@@ -37,6 +37,8 @@ class ProjectTaskPicHistoryRepository extends ProjectTaskPicHistoryInterface {
         if ($relation) {
             $query->with($relation);
         }
+
+        $query->orderBy('id', 'desc');
 
         return $query->get();
     }
@@ -80,17 +82,13 @@ class ProjectTaskPicHistoryRepository extends ProjectTaskPicHistoryInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where("uid", $uid);
-        }
+        $query->where("uid", $uid);
         
         if ($relation) {
             $query->with($relation);
@@ -140,15 +138,9 @@ class ProjectTaskPicHistoryRepository extends ProjectTaskPicHistoryInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(string $id)
     {
-        return $this->model->where('id', $id)
-            ->delete();
-    }
-
-    public function deleteWithCondition(string $where = '')
-    {
-        return $this->model->whereRaw($where)
+        return $this->model->where('uid', $id)
             ->delete();
     }
 

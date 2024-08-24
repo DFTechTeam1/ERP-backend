@@ -74,6 +74,7 @@ class Update extends FormRequest
             'educations.education_major' => 'required',
             'relation.name' => 'required',
             'relation.phone' => 'required',
+            'relation.relation' => 'required',
             'position_id' => 'required',
             'level' => [
                 'required',

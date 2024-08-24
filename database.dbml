@@ -635,3 +635,17 @@ Table project_classes {
     created_at timestamp
     updated_at timestamp
 }
+
+Table employee_families {
+    id int [pk, increment]
+    uid varchar
+    employee_id int [ref: > employees.id]
+    name varchar
+    relation varchar
+    date_of_birth varchar
+    id_number varchar
+    gender varchar
+    job varchar
+    created_at timestamp
+    updated_at timestamp
+}
