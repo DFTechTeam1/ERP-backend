@@ -4199,7 +4199,13 @@ class ProjectService
 
             $taskDateCondition = "project_date >= '" . $startDate . "' and project_date <= '" . $projectDate . "'";
 
-            $data = $this->employeeRepo->list('id,uid,name,email', 'boss_id = ' . $bossId);
+            $where = "boss_id = {$bossId}";
+            $userApp = auth()->user();
+            if (($userApp) && ($userApp->employee_id)) {
+                $where .= " and id != " . $userApp->employee_id;
+            }
+
+            $data = $this->employeeRepo->list('id,uid,name,email', $where);
 
             $output = collect($data)->map(function ($item) use ($projectDate, $taskDateCondition) {
                 $taskOnProjectDate = $this->taskPicRepo->list(
