@@ -15,4 +15,12 @@ enum MartialStatus: string
             return self::Married;
         }
     }
+
+    public function label()
+    {
+        return match ($this) {
+            static::Single => __('global.single'),
+            static::Married => __('global.married'),
+        };
+    }
 }

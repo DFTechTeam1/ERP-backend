@@ -31,4 +31,17 @@ enum LevelStaff: string
             return self::Junior;
         }
     }
+
+    public static function generateLabel(string $data)
+    {
+        if ($data == self::Lead->value) {
+            return 'Lead';
+        } else if ($data == self::Manager->value) {
+            return 'Manager';
+        } else if ($data == self::Staff->value) {
+            return 'Staff';
+        } else if ($data == self::Junior->value) {
+            return 'Junior Staff';
+        }
+    }
 }

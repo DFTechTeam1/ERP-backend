@@ -15,4 +15,12 @@ enum Gender: string
             return self::Male;
         }
     }
+
+    public function label()
+    {
+        return match ($this) {
+            static::Female => __('global.female'),
+            static::Male => __('global.male'),
+        };
+    }
 }

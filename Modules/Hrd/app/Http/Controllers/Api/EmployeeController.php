@@ -9,6 +9,8 @@ use Illuminate\Http\Response;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
+use Modules\Hrd\Http\Requests\Employee\UpdateBasicInfo;
+use Modules\Hrd\Http\Requests\Employee\UpdateIdentity;
 use Modules\Hrd\Services\EmployeeService;
 
 class EmployeeController extends Controller
@@ -162,6 +164,28 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->update($data, $uid));
     }
 
+    /**
+     * Update selected data
+     * @param Update $request
+     * @param string $uid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateBasicInfo(UpdateBasicInfo $request, string $uid)
+    {
+        return apiResponse($this->employeeService->updateBasicInfo($request->validated(), $uid));
+    }
+
+    /**
+     * Update selected data
+     * @param Update $request
+     * @param string $uid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateIdentity(UpdateIdentity $request, string $uid)
+    {
+        return apiResponse($this->employeeService->updateIdentity($request->validated(), $uid));
+    }
+
 
     /**
      * Delete specific data
@@ -185,5 +209,85 @@ class EmployeeController extends Controller
                 return $item['uid'];
             })->toArray()
         ));
+    }
+
+    /**
+     * Store employee family member
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeFamily(\Modules\Hrd\Http\Requests\Employee\Family $request, string $employeeUid)
+    {
+        return apiResponse($this->employeeService->storeFamily($request->validated(), $employeeUid));
+    }
+
+    /**
+     * Update employee family member
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateFamily(\Modules\Hrd\Http\Requests\Employee\Family $request, string $familyUid)
+    {
+        return apiResponse($this->employeeService->updateFamily($request->validated(), $familyUid));
+    }
+
+    /**
+     * Get family of each employee
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function initFamily(string $employeeUid)
+    {
+        return apiResponse($this->employeeService->initFamily($employeeUid));
+    }
+
+    /**
+     * Get family of each employee
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteFamily(string $familyUid)
+    {
+        return apiResponse($this->employeeService->deleteFamily($familyUid));
+    }
+
+    /**
+     * Get emergency contact of each employee
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function initEmergency(string $employeeUid)
+    {
+        return apiResponse($this->employeeService->initEmergency($employeeUid));
+    }
+
+    /**
+     * Store employee family member
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeEmergency(\Modules\Hrd\Http\Requests\Employee\EmergencyContact $request, string $employeeUid)
+    {
+        return apiResponse($this->employeeService->storeEmergency($request->validated(), $employeeUid));
+    }
+
+    /**
+     * Update employee emergency contact
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateEmergency(\Modules\Hrd\Http\Requests\Employee\EmergencyContact $request, string $familyUid)
+    {
+        return apiResponse($this->employeeService->updateEmergency($request->validated(), $familyUid));
+    }
+
+    /**
+     * delete emergency contact
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteEmergency(string $emergencyUid)
+    {
+        return apiResponse($this->employeeService->deleteEmergency($emergencyUid));
     }
 }

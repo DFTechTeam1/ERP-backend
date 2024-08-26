@@ -7,22 +7,26 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class RequestEquipmentNotification extends Notification
+class RemoveUserFromTaskNotification extends Notification
 {
     use Queueable;
 
-    public $users;
+    public $employee;
 
-    public $messages;
+    public $task;
+
+    public $lineIds;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct($users, $messages)
+    public function __construct($employee, $task)
     {
-        $this->users = $users;
+        $this->employee = $employee;
 
-        $this->messages = $messages;
+        $this->task = $task;
+
+        $this->lineIds = [$employee->line_id];
     }
 
     /**
@@ -54,14 +58,18 @@ class RequestEquipmentNotification extends Notification
         return [];
     }
 
-    public function toLine($notifiable): array
+    public function toLine($notifiable)
     {
-        $lineIds = collect($this->users)->pluck('line_id')->toArray();
-        $lineIds = array_values(array_filter($lineIds));
+        $messages = [
+            [
+                'type' => 'text',
+                'text' => "Halo " . $this->employee->nickname . ", Tugas " . $this->task->name . " tidak jadi kamu kerjakan nih. Tunggu notifikasi lain untuk tugas yang akan kamu kerjakan ya :)",
+            ],
+        ];
 
         return [
-            'line_ids' => $lineIds,
-            'messages' => $this->messages,
+            'line_ids' => $this->lineIds,
+            'messages' => $messages,
         ];
     }
 }

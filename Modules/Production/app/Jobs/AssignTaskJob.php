@@ -19,7 +19,7 @@ class AssignTaskJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct($employeeIds, $taskId)
+    public function __construct(array $employeeIds, int $taskId)
     {
         $this->employeeIds = $employeeIds;
 
