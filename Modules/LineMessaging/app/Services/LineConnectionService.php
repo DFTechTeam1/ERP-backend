@@ -42,8 +42,29 @@ class LineConnectionService {
         $textRaw = $event['message']['text'];
         $exp = explode(' ', $textRaw);
 
+        // validate format
+        if ($exp[0] != 'register') {
+            $formatWrongMsg = [
+                [
+                    'type' => 'text',
+                    'text' => 'Wah format pesanmu salah kawan :) Nice try',
+                ],
+            ];
+            return $this->sendMessage($formatWrongMsg, $event['source']['userId']);
+        }
+
         // check userid format
         $split = str_split($exp[1]);
+
+        if (count($split) != 5) {
+            $formatWrongMsg = [
+                [
+                    'type' => 'text',
+                    'text' => 'Wah format pesanmu salah kawan :) Nice try',
+                ],
+            ];
+            return $this->sendMessage($formatWrongMsg, $event['source']['userId']);
+        }
 
         if (strtolower($split[0]) != 'd' || strtolower($split[1]) != 'f') {
             // send wrong response message
