@@ -139,6 +139,15 @@ class LineConnectionService {
                     if (count($exp) == 2 && strtolower($exp[0]) == 'register') {
                         $this->handleRegisterUser($event);
                     }
+                    if (count($exp) > 2 && strtolower($exp[0]) == 'register') {
+                        $wrongUserFormatMessage = [
+                            [
+                                'type' => 'text',
+                                'text' => 'Format user ID yang kamu ketik salah, coba lagi ya :)',
+                            ],
+                        ];
+                        $this->sendMessage($wrongUserFormatMessage, $event['source']['userId']);
+                    }
 
                     $containRejectRequestMember = str_contains($textRaw, 'alasan:');
                     if ($containRejectRequestMember) {
