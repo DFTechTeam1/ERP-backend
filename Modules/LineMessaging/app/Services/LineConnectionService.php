@@ -131,7 +131,10 @@ class LineConnectionService {
             foreach ($data['events'] as $event) {
                 if ($event['type'] == 'message') {
                     $textRaw = $event['message']['text'];
+                    logging('text raw line', [$textRaw]);
                     $exp = explode(' ', $textRaw);
+
+                    logging('exp raw line', $exp);
 
                     if (count($exp) == 2 && strtolower($exp[0]) == 'register') {
                         $this->handleRegisterUser($event);
