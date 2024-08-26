@@ -45,7 +45,7 @@ class LineConnectionService {
         logging('exp line', $exp);
 
         // validate format
-        if ($exp[0] != 'register') {
+        if (strtolower($exp[0]) != 'register') {
             $formatWrongMsg = [
                 [
                     'type' => 'text',
