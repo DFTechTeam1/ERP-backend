@@ -7,22 +7,26 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class RequestEquipmentNotification extends Notification
+class ReturnEquipmentNotification extends Notification
 {
     use Queueable;
 
-    public $users;
+    public $employee;
 
-    public $messages;
+    public $lineIds;
+
+    public $project;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct($users, $messages)
+    public function __construct($employee, $project)
     {
-        $this->users = $users;
+        $this->employee = $employee;
 
-        $this->messages = $messages;
+        $this->project = $project;
+
+        $this->lineIds = [$employee->line_id];
     }
 
     /**
@@ -31,6 +35,7 @@ class RequestEquipmentNotification extends Notification
     public function via($notifiable): array
     {
         return [
+            'database',
             \App\Notifications\LineChannel::class
         ];
     }
@@ -51,17 +56,27 @@ class RequestEquipmentNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-        return [];
+        $link = config('frontend_url') . '/admin/inventories/request-equipment/' . $this->project->uid;
+        
+        return [
+            'title' => __('global.returnEquipment'),
+            'message' => __('global.equipmentHasBeenReturned', ['event' => $this->project['name']]),
+            'link' => $link,
+        ];
     }
 
-    public function toLine($notifiable): array
+    public function toLine($notifiable)
     {
-        $lineIds = collect($this->users)->pluck('line_id')->toArray();
-        $lineIds = array_values(array_filter($lineIds));
+        $messages = [
+            [
+                'type' => 'text',
+                'text' => "Halo " . $this->employee->name . ". Equipment untuk event " . $this->project->name . " sudah di kembalikan dan siap untuk di cek",
+            ],
+        ];
 
         return [
-            'line_ids' => $lineIds,
-            'messages' => $this->messages,
+            'line_ids' => $this->lineIds,
+            'messages' => $messages,
         ];
     }
 }

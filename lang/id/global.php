@@ -166,6 +166,10 @@ return [
     'sibling' => 'Saudara',
     'child' => 'Anak',
     'other' => 'Lainnya',
+    'newProjectNotificationEntertainment' => "Hey! ada event baru nih di tanggal :date. Nama event nya :name",
+    'reviseTask' => 'Revisi Tugas',
+    'newReviseTask' => 'Kamu memiliki tugas untuk di revisi (:taskName)',
+    'returnEquipment' => 'Equipment dikembalikan',
     
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',
@@ -283,6 +287,8 @@ return [
     'successAddEmergencyContact' => 'Data kontak darurat berhasil di buat',
     'successUpdateEmergencyContact' => 'Data kontak darurat berhasil di ubah',
     'successDeleteEmergencyContact' => 'Data kontak darurat berhasil di hapus',
+    'reviseIsUpload' => 'Revisi sudah di upload. PIC yang bersangkutan akan menerima notifikasi',
+    'equipmentEventHasBeenReturned' => 'Equipment event :event telah dikembalik dan saatnya untuk di cek',
 
     'nameRequired' => 'Nama harus diisi!',
     'employeeIdRequired' => 'ID Karyawan harus diisi!',

@@ -514,11 +514,18 @@ class EmployeeService
 
         $data['bank_detail'] = json_decode($data->bank_detail, true);
         $data['emergency_contact'] = json_decode($data->relation_contact, true);
+
+        $data['join_date_format'] = date('d F Y', strtotime($data->join_date));
+        $data['length_of_service'] = getLengthOfService($data->join_date);
+
+        $data['level_staff_text'] = \App\Enums\Employee\LevelStaff::generateLabel('staff');
         
         $data['boss_uid'] = null;
+        $data['approval_line'] = null;
         if ($data->boss_id) {
-            $bossData = $this->repo->show('dummy', 'id,uid', [], 'id = ' . $data->boss_id);
+            $bossData = $this->repo->show('dummy', 'id,uid,name', [], 'id = ' . $data->boss_id);
             $data['boss_uid'] = $bossData->uid;
+            $data['approval_line'] = $bossData->name;
         }
 
         return $data->toArray();

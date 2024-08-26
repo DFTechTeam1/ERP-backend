@@ -165,6 +165,10 @@ return [
     'sibling' => 'sibling',
     'child' => 'Child',
     'other' => 'Other',
+    'newProjectNotificationEntertainment' => "Hey! There was a new project upcoming on :date. Event name is :name",
+    'reviseTask' => 'Revise Task',
+    'newReviseTask' => 'You have new task to revise (:taskName)',
+    'returnEquipment' => 'Return Equipment',
     
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -282,6 +286,8 @@ return [
     'successAddEmergencyContact' => 'Success add emergency contact',
     'successUpdateEmergencyContact' => 'Success update emergency contact',
     'successDeleteEmergencyContact' => 'Success delete emergency contact',
+    'reviseIsUpload' => 'Task is revise, and related user will be inform',
+    'equipmentEventHasBeenReturned' => 'Equipment for event :event has been returned and need to be checked',
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',
