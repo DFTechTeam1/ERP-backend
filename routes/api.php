@@ -20,7 +20,7 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::get('ilham', [\App\Http\Controllers\Api\TestingController::class, 'testing']);
+Route::get('ilham', [\App\Http\Controllers\Api\TestingController::class, 'testing'])->middleware('auth:sanctum');
 
 Route::get('notification/markAsRead/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
 

@@ -633,3 +633,28 @@ if (!function_exists('getClientIp')) {
         return $ip;
     }
 }
+
+if (!function_exists('getLengthOfService')) {
+    function getLengthOfService(string $startDate)
+    {
+        $start = new DateTime($startDate);
+        $now = new DateTime('now');
+
+        $diff = date_diff($now, $start);
+
+        $year = $diff->y;
+        $month = $diff->m;
+        $day = $diff->d;
+
+        $text = $day . ' ' . __("global.day");
+        if ($month != 0) {
+            $text = $month . ' ' . __('global.month') . ' ' . $text;
+        }
+
+        if ($year != 0) {
+            $text = $year . ' ' . __("global.year") . ' ' . $text;
+        }
+
+        return $text;
+    }
+}
