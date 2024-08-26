@@ -815,7 +815,8 @@ class ProjectService
                 if (
                     in_array($employeeId, $picIds) && 
                     $task->project->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
-                    $task->status == \App\Enums\Production\TaskStatus::OnProgress->value
+                    ($task->status == \App\Enums\Production\TaskStatus::OnProgress->value ||
+                    $task->status == \App\Enums\Production\TaskStatus::Revise->value)
                 ) {
                     $outputTask[$keyTask]['action_to_complete_task'] = true;
                 } else {
@@ -1131,7 +1132,8 @@ class ProjectService
         if (
             in_array($employeeId, $picIds) && 
             $task['project']->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
-            $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value
+            ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value ||
+            $task['status'] == \App\Enums\Production\TaskStatus::Revise->value)
         ) {
             $task['action_to_complete_task'] = true;
         } else {
@@ -1359,7 +1361,8 @@ class ProjectService
                 if (
                     in_array($employeeId, $picIds) &&
                     $project['status_raw'] == \App\Enums\Production\ProjectStatus::OnGoing->value &&
-                    $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value
+                    ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value ||
+                    $task['status'] == \App\Enums\Production\TaskStatus::Revise->value)
                 ) {
                     $outputTask[$keyTask]['action_to_complete_task'] = true;
                 } else {
@@ -1371,6 +1374,11 @@ class ProjectService
 
                 if ($superUserRole || $isProjectPic || $isDirector) {
                     $outputTask[$keyTask]['is_active'] = true;
+                }
+
+                // last checker
+                if ($project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value) {
+                    $outputTask[$keyTask]['is_active'] = false;
                 }
             }
 
@@ -1561,6 +1569,8 @@ class ProjectService
             $currentData['pic'] = implode(', ', $pics);
             $currentData['pic_ids'] = $picIds;
             $currentData['teams'] = $teams;
+
+            $currentData = $this->formatTasksPermission($currentData, $project->id);
 
             storeCache('detailProject' . $project->id, $currentData);
 
@@ -1813,6 +1823,11 @@ class ProjectService
             }
 
             $this->detachTaskPic($data['removed'], $taskId, true, true);
+            
+            // notify removed user
+            if (count($data['removed']) > 0) {
+                \Modules\Production\Jobs\RemoveUserFromTaskJob::dispatch($data['removed'], $taskId)->afterCommit();
+            }
 
             $task = $this->formattedDetailTask($taskUid);
 
@@ -1830,7 +1845,12 @@ class ProjectService
 
             // TODO: CHECK AGAIN ACTION WHEN ASSIGN TO PROJECT MANAGER
             if ($currentData['status_raw'] != \App\Enums\Production\ProjectStatus::Draft->value) {
-                \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+                // override notification when task is revise
+                if ($isRevise) {
+                    \Modules\Production\Jobs\ReviseTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+                } else {
+                    \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+                }
             }
 
             DB::commit();
@@ -3772,6 +3792,7 @@ class ProjectService
 
         DB::beginTransaction();
         try {
+            // upload file
             if (isset($data['file'])) {
                 $tmpFile = uploadImageandCompress(
                     "projects/{$projectId}/task/{$taskId}/revise",
@@ -3845,7 +3866,7 @@ class ProjectService
             DB::commit();
 
             return generalResponse(
-                'success',
+                __('global.reviseIsUpload'),
                 false,
                 [
                     'task' => $task,
@@ -3881,6 +3902,15 @@ class ProjectService
             $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
+            // this variable is to alert current pics which is the worker
+            $currentTaskData = $this->taskRepo->show($taskUid, 'current_pics,current_board,project_board_id');
+            $currentPics = json_decode($currentTaskData->current_pics, true);
+            $currentPicIds = [];
+            foreach ($currentPics as $currentPic) {
+                $employee = $this->employeeRepo->show('dummy', 'id,uid', [], 'id = ' . $currentPic);
+                $currentPicIds[] = $employee->id;
+            }
+
             $currentPic = $this->taskPicRepo->list('employee_id', 'project_task_id = ' . $taskId, ['employee:id,uid']);
 
             // change worktime status of Project Manager
@@ -3907,6 +3937,8 @@ class ProjectService
             $currentData['boards'] = $boards;
 
             $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            \Modules\Production\Jobs\TaskIsCompleteJob::dispatch($currentPicIds, $taskId)->afterCommit();
 
             DB::commit();
 
@@ -4571,7 +4603,14 @@ class ProjectService
         }
     }
 
-    public function returnEquipment(string $projectUid, array $payload)
+    /**
+     * Return equipment after event is completed
+     *
+     * @param string $projectUid
+     * @param array $payload
+     * @return array
+     */
+    public function returnEquipment(string $projectUid, array $payload): array
     {
         DB::beginTransaction();
         try {
@@ -4583,6 +4622,8 @@ class ProjectService
                     'is_returned' => true,
                 ], $item['uid']);
             }
+
+            \Modules\Production\Jobs\ReturnEquipmentJob::dispatch($projectUid)->afterCommit();
 
             DB::commit();
 

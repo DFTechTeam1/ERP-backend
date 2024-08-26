@@ -26,7 +26,7 @@ class NewProjectJob implements ShouldQueue
     }
 
     /**
-     * Execute the job.
+     * Notify selected project manager and current entertainment lead
      */
     public function handle(): void
     {
@@ -47,5 +47,25 @@ class NewProjectJob implements ShouldQueue
 
             $this->pusher->send('my-channel-' . $user->id, 'notification-event', $output);
         }
+
+        $this->notifyEntertainment();
+    }
+
+    protected function notifyEntertainment()
+    {
+        // get user with 'pic entertainment' role
+        $users = \App\Models\User::role('pic entertainment')->get();
+
+        foreach($users as $user) {
+            if ($user->employee_id) {
+                $employee = \Modules\Hrd\Models\Employee::find($user->employee_id);
+
+                \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\NewProjectForEntertainmentNotification($this->project, $employee));
+            }
+
+            $notif = formatNotifications($employee->unreadNotifications->toArray());
+
+            $this->pusher->send('my-channel-' . $user->id, 'notification-event', $notif);
+        } 
     }
 }
