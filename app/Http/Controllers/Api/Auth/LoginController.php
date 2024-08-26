@@ -254,7 +254,9 @@ class LoginController extends Controller
                 throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
             }
 
-            \App\Jobs\ForgotPasswordJob::dispatch($user);
+            setEmailConfiguration();
+
+            $user->notify(new \App\Notifications\ForgotPasswordNotification($user));
 
             return apiResponse(
                 generalResponse(
