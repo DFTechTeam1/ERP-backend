@@ -42,6 +42,8 @@ class LineConnectionService {
         $textRaw = $event['message']['text'];
         $exp = explode(' ', $textRaw);
 
+        logging('exp line', $exp);
+
         // validate format
         if ($exp[0] != 'register') {
             $formatWrongMsg = [
@@ -55,7 +57,7 @@ class LineConnectionService {
 
         // check userid format
         $split = str_split($exp[1]);
-
+        logging('count split line', $split);
         if (count($split) != 5) {
             $formatWrongMsg = [
                 [
