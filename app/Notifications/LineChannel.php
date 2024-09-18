@@ -12,11 +12,14 @@ class LineChannel {
 
         $service = new LineConnectionService();
 
-        $line_ids = $message['line_ids'];
-        foreach ($line_ids as $line_id) {
-            $sendLine = $service->sendMessage($message['messages'], $line_id);
+        $lineIds = $message['line_ids'];
 
-            logging('result send line message', [$sendLine]);
+        foreach ($lineIds as $lineId) {
+            if ($lineId) {
+                $sendLine = $service->sendMessage($message['messages'], $lineId);
+
+                logging('result send line message', [$sendLine]);
+            }
         }
 
         logging('message line: ', $message);

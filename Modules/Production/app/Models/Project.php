@@ -41,6 +41,8 @@ class Project extends Model
         'city_name',
         'project_class_id',
         'showreels_status',
+        'longitude',
+        'latitude',
     ];
 
     protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
@@ -127,7 +129,7 @@ class Project extends Model
 
     public function statusText(): Attribute
     {
-        $output = '-';
+        $output = __('global.undetermined');
 
         if ($this->status) {
             $statuses = \App\Enums\Production\ProjectStatus::cases();
@@ -145,7 +147,7 @@ class Project extends Model
 
     public function statusColor(): Attribute
     {
-        $output = '-';
+        $output = 'grey-lighten-1';
 
         if ($this->status) {
             $statuses = \App\Enums\Production\ProjectStatus::cases();

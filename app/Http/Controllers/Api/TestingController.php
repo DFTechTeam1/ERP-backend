@@ -56,7 +56,6 @@ class TestingController extends Controller
 
     public function testing(Request $request)
     {
-        \Modules\Production\Jobs\ReturnEquipmentJob::dispatch('a048f5dd-f8bd-4c80-8be7-36e2cb03e526')->afterCommit();
     }
 
     public function spreadsheet()

@@ -24,7 +24,7 @@ class ProjectRepository extends ProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [], string $orderBy = '', int $limit = 0)
+    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [], string $orderBy = '', int $limit = 0, array $isGetDistance = [])
     {
         $query = $this->model->query();
 

@@ -169,6 +169,13 @@ return [
     'reviseTask' => 'Revise Task',
     'newReviseTask' => 'You have new task to revise (:taskName)',
     'returnEquipment' => 'Return Equipment',
+    'undetermined' => 'Undetermined',
+    'timesTraveledInWeek' => ':count times traveled this week',
+    'totalProjectInWeek' => ':count projects this week',
+    'projectClassInWeek' => ":count project with 'S' class",
+    'projectCancelation' => 'Project Cancelation',
+    'projectCancelText' => 'Project :project has been canceled',
+    'approvedWithAlternative' => 'Approved with Alternative',
     
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
@@ -288,6 +295,8 @@ return [
     'successDeleteEmergencyContact' => 'Success delete emergency contact',
     'reviseIsUpload' => 'Task is revise, and related user will be inform',
     'equipmentEventHasBeenReturned' => 'Equipment for event :event has been returned and need to be checked',
+    'successUpdateEmployment' => 'Success update employment',
+    'successAssignPIC' => 'PIC was successfully assigned to this event. The person will receive a notification about this project',
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',

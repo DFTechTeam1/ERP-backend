@@ -81,6 +81,13 @@ class AutoStartApp extends Command
     protected function migration()
     {
         Artisan::call('migrate:refresh --seed');
+
+        // running countries
+        \Illuminate\Support\Facades\Schema::dropIfExists('countries');
+        \Illuminate\Support\Facades\Schema::dropIfExists('cities');
+        \Illuminate\Support\Facades\Schema::dropIfExists('states');
+
+        \Illuminate\Support\Facades\DB::unprepared(file_get_contents(database_path('countries.sql')));
     }
 
     protected function caching()

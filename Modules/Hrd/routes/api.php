@@ -50,6 +50,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::delete('employees/{familyUid}/deleteFamily','deleteFamily');
         Route::post('employees/{employeeUid}/storeEmergency','storeEmergency');
         Route::put('employees/{emergencyUid}/updateEmergency','updateEmergency');
+        Route::put('employees/{employeeUid}/updateEmployment','updateEmployment');
         Route::get('employees/{employeeUid}/initEmergency','initEmergency');
         Route::delete('employees/{emergencyUid}/deleteEmergency','deleteEmergency');
 

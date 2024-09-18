@@ -170,6 +170,13 @@ return [
     'reviseTask' => 'Revisi Tugas',
     'newReviseTask' => 'Kamu memiliki tugas untuk di revisi (:taskName)',
     'returnEquipment' => 'Equipment dikembalikan',
+    'undetermined' => 'Belum ditentukan',
+    'timesTraveledInWeek' => ':count times traveled this week',
+    'totalProjectInWeek' => ':count projects this week',
+    'projectClassInWeek' => ":count project with 'S' class",
+    'projectCancelation' => 'Project Cancelation',
+    'projectCancelText' => 'Project :project has been canceled',
+    'approvedWithAlternative' => 'Disetujui dengan Pengganti',
     
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',
@@ -289,6 +296,8 @@ return [
     'successDeleteEmergencyContact' => 'Data kontak darurat berhasil di hapus',
     'reviseIsUpload' => 'Revisi sudah di upload. PIC yang bersangkutan akan menerima notifikasi',
     'equipmentEventHasBeenReturned' => 'Equipment event :event telah dikembalik dan saatnya untuk di cek',
+    'successUpdateEmployment' => 'Berhasil mengubah data pekerjaan',
+    'successAssignPIC' => 'PIC berhasil di tugaskan dalam project ini. PIC akan mendapat notifikasi pemberitahuan mengenai project ini',
 
     'nameRequired' => 'Nama harus diisi!',
     'employeeIdRequired' => 'ID Karyawan harus diisi!',

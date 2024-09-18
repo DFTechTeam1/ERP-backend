@@ -54,12 +54,21 @@ class RejectRequestTeamMemberNotification extends Notification
 
     public function toLine($notifiable)
     {
+        $message = 'Halo ' . $this->transfer->requestByPerson->nickname . '. Permintaan anda untuk meminjam ' . $this->transfer->employee->nickname . ' di tolak dengan alasan ' . $this->transfer->reject_reason;
+
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->transfer->requestByPerson->nickname . '. Permintaan anda untuk meminjam ' . $this->transfer->employee->nickname . ' di tolak dengan alasan ' . $this->transfer->reject_reason,
+                'text' => $message,
             ]
         ];
+
+        if ($this->transfer->alternativeEmployee) {
+            $messages[] = [
+                'type' => 'text',
+                'text' => $this->transfer->alternativeEmployee->nickname . ' sebagai penggantinya. Kamu sudah bisa mulai memberikan tugas.'
+            ];   
+        }
 
         return [
             'line_ids' => $this->lineIds,

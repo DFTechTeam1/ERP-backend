@@ -21,13 +21,14 @@ class Create extends FormRequest
             'collaboration' => 'nullable',
             'note' => 'nullable',
             'classification' => 'required',
-            'pic' => 'required',
+            'pic' => 'nullable',
             'led_area' => 'required',
-            'led' => 'required',
-            'status' => 'required',
+            'led_detail' => 'required',
+            'status' => 'nullable',
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
+            'seeder' => 'nullable',
         ];
     }
 

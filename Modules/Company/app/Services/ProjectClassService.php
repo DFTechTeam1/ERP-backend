@@ -42,7 +42,7 @@ class ProjectClassService {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
-            $select = 'id as uid,name,maximal_point';
+            $select = 'id as uid,name,maximal_point,color';
 
             $paginated = $this->repo->pagination(
                 $select,

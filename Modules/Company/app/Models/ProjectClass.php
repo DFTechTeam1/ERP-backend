@@ -16,7 +16,8 @@ class ProjectClass extends Model
      */
     protected $fillable = [
         'name',
-        'maximal_point'
+        'maximal_point',
+        'color'
     ];
 
     public function project(): HasOne
