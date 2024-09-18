@@ -21,6 +21,8 @@ return [
 
     'googleApiKey' => env('GOOGLE_CONSOLE_API_KEY'),
 
+    'geoapify' => env('GEOAPIFY_KEY'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
@@ -132,5 +134,7 @@ return [
     'pagination_length' => 10,
 
     'frontend_url' => env('FRONTEND_URL', ''),
+
+    'root_email' => env('ROOT_EMAIL'),
 
 ];

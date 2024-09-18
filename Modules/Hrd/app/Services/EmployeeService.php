@@ -547,6 +547,18 @@ class EmployeeService
     ): array
     {
         try {
+            // validate permission
+            $user = auth()->user();
+            $employeeId = getIdFromUid($uid, new \Modules\Hrd\Models\Employee());
+            if (
+                $user->email != config('app.root_email') &&
+                !$user->is_director
+            ) {
+                if ($user->employee_id != $employeeId) { // only its user can access their information
+                    return errorResponse('not allowed', ['redirect' => '/admin/dashboard'], 403);
+                }
+            }
+
             $data = $this->getDetailEmployee($uid, $select);
             
             return generalResponse(
@@ -1600,6 +1612,29 @@ class EmployeeService
 
             return generalResponse(
                 __("global.successDeleteEmergencyContact"),
+                false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * update employment data
+     *
+     * @param array $data
+     * @param string $employeeUid
+     * @return array
+     */
+    public function updateEmployment(array $payload, string $employeeUid): array
+    {
+        try {
+            $payload['level_staff'] = $payload['level'];
+
+            $this->repo->update(collect($payload)->except(['level'])->toArray(), $employeeUid);
+
+            return generalResponse(
+                __('global.successUpdateEmployment'),
                 false,
             );
         } catch (\Throwable $th) {

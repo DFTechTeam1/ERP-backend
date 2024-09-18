@@ -13,7 +13,7 @@ class ChangeStatus extends FormRequest
     {
         return [
             'status' => 'required',
-            'base_status' => 'required',
+            'base_status' => 'nullable',
         ];
     }
 

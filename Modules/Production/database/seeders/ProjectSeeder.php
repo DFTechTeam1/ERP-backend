@@ -11,7 +11,12 @@ class ProjectSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $projectService = new \Modules\Production\Services\ProjectService();
+
+        // delete current project
+        $projects = \Modules\Production\Models\Project::select('uid')->get();
+        $projectUids = collect((object)$projects)->pluck('uid')->toArray();
+        $projectService->bulkDelete($projectUids);
 
         $projectManagerPositions = json_decode(getSettingByKey('position_as_project_manager'), true);
         $marketingPositions = getSettingByKey('position_as_marketing');
@@ -37,99 +42,268 @@ class ProjectSeeder extends Seeder
                 return $item->value;
             })->toArray();
 
-            $classification = \App\Enums\Production\Classification::cases();
-            $classification = collect($classification)->map(function ($item) {
-                return $item->value;
-            })->toArray();
+            $classification = \Modules\Company\Models\ProjectClass::selectRaw('id,name')
+                ->get();
+            foreach ($classification as $class) {
+                if (strtolower($class->name) == 'a (big)') {
+                    $aClass = $class->name;
+                    $aClassId = $class->id;
+                }
+                if (strtolower($class->name) == 's (special)') {
+                    $sClass = $class->name;
+                    $sClassId = $class->id;
+                }
+                if (strtolower($class->name) == 'c (budget)') {
+                    $cClass = $class->name;
+                    $cClassId = $class->id;
+                }
+                if (strtolower($class->name) == 'b (standard)') {
+                    $bClass = $class->name;
+                    $bClassId = $class->id;
+                }
+            }
+
+            $projectDates = [
+                date('Y-m-d', strtotime('+20 days')),
+                date('Y-m-d', strtotime('+22 days')),
+                date('Y-m-d', strtotime('+24 days')),
+                date('Y-m-d', strtotime('+26 days')),
+                date('Y-m-d', strtotime('+26 days')),
+                date('Y-m-d', strtotime('+26 days')),
+                date('Y-m-d', strtotime('+26 days')),
+                date('Y-m-d', strtotime('+26 days')),
+                date('Y-m-d', strtotime('+28 days')),
+                date('Y-m-d', strtotime('+30 days')),
+                date('Y-m-d', strtotime('+32 days')),
+                date('Y-m-d', strtotime('+34 days')),
+                date('Y-m-d', strtotime('+36 days')),
+                date('Y-m-d', strtotime('+38 days')),
+                date('Y-m-d', strtotime('+40 days')),
+                date('Y-m-d', strtotime('+42 days')),
+            ];
+
+            $city = \Modules\Company\Models\City::whereRaw("lower(name) = 'surabaya'")
+                ->first();
 
             $projects = [
                 [
-                    'name' => 'Wedding Arya',
-                    'client_portal' => 'wedding-arya',
-                    'marketing_id' => $marketings,
-                    'project_date' => date('Y-m-d', strtotime('2024-07-20')),
+                    'name' => 'Andrew Cindy',
+                    'client_portal' => 'andrew-cindy',
+                    'marketing_id' => [fake()->randomElement($marketings)],
+                    'project_date' => fake()->randomElement($projectDates),
                     'event_type' => fake()->randomElement($eventTypes),
-                    'venue' => 'Hotel Samudra Makassar',
+                    'city_id' => $city->id,
+                    'state_id' => $city->state_id,
+                    'country_id' => $city->country_id,
+                    'venue' => 'JW Marriott',
                     'collaboration' => 'nuansa',
                     'note' => '',
-                    'status' => 1,
-                    'classification' => fake()->randomElement($classification),
-                    'led_area' => '37',
-                    'led' => [
-                        ['width' => 4, 'height' => 3],
-                        ['width' => 5, 'height' => 5],
-                    ],
-                    'pic' => [
-                        fake()->randomElement($projectManagers),
+                    'classification' => $cClassId,
+                    'status' => null,
+                    'led_area' => '2',
+                    'led_detail' => [
+                        [
+                            'led' => [
+                                [
+                                    'height' => 1,
+                                    'width' => 2,
+                                ],
+                            ],
+                            'name' => 'main',
+                            'textDetail' => '1 x 2 m',
+                            'total' => '2 m<sup>2</sup>',
+                            'totalRaw' => '2',
+                        ],
                     ],
                     'seeder' => true,
                 ],
                 [
-                    'name' => 'Birthday Superman',
-                    'client_portal' => 'birthday-supermane',
-                    'marketing_id' => $marketings,
-                    'project_date' => date('Y-m-d', strtotime('2024-07-22')),
+                    'name' => 'Kevin Jessica',
+                    'client_portal' => 'kevin-jessica',
+                    'marketing_id' => [fake()->randomElement($marketings)],
+                    'project_date' => fake()->randomElement($projectDates),
                     'event_type' => fake()->randomElement($eventTypes),
-                    'venue' => 'Hotel Cleo',
+                    'city_id' => $city->id,
+                    'state_id' => $city->state_id,
+                    'country_id' => $city->country_id,
+                    'venue' => 'Hotel Moda',
                     'collaboration' => 'nuansa',
                     'note' => '',
-                    'status' => 1,
-                    'classification' => fake()->randomElement($classification),
-                    'led_area' => '37',
-                    'led' => [
-                        ['width' => 4, 'height' => 3],
-                        ['width' => 5, 'height' => 5],
-                    ],
-                    'pic' => [
-                        fake()->randomElement($projectManagers),
+                    'classification' => $cClassId,
+                    'status' => null,
+                    'led_area' => '2',
+                    'led_detail' => [
+                        [
+                            'led' => [
+                                [
+                                    'height' => 1,
+                                    'width' => 2,
+                                ],
+                            ],
+                            'name' => 'main',
+                            'textDetail' => '1 x 2 m',
+                            'total' => '2 m<sup>2</sup>',
+                            'totalRaw' => '2',
+                        ],
                     ],
                     'seeder' => true,
                 ],
                 [
-                    'name' => 'Engagment Siska',
-                    'client_portal' => 'eng-siska',
-                    'marketing_id' => $marketings,
-                    'project_date' => date('Y-m-d', strtotime('2024-07-25')),
+                    'name' => 'Erline Sweet17',
+                    'client_portal' => 'erline-sweet17',
+                    'marketing_id' => [fake()->randomElement($marketings)],
+                    'project_date' => fake()->randomElement($projectDates),
                     'event_type' => fake()->randomElement($eventTypes),
-                    'venue' => 'Hotel Mutiara Malang',
+                    'city_id' => $city->id,
+                    'state_id' => $city->state_id,
+                    'country_id' => $city->country_id,
+                    'venue' => 'Hotel Grand Mercure',
                     'collaboration' => 'nuansa',
                     'note' => '',
-                    'status' => 1,
-                    'classification' => fake()->randomElement($classification),
-                    'led_area' => '37',
-                    'led' => [
-                        ['width' => 4, 'height' => 3],
-                        ['width' => 5, 'height' => 5],
-                    ],
-                    'pic' => [
-                        fake()->randomElement($projectManagers),
+                    'classification' => $aClassId,
+                    'status' => null,
+                    'led_area' => '2',
+                    'led_detail' => [
+                        [
+                            'led' => [
+                                [
+                                    'height' => 1,
+                                    'width' => 2,
+                                ],
+                            ],
+                            'name' => 'main',
+                            'textDetail' => '1 x 2 m',
+                            'total' => '2 m<sup>2</sup>',
+                            'totalRaw' => '2',
+                        ],
                     ],
                     'seeder' => true,
                 ],
                 [
-                    'name' => 'BUMN Meeting',
-                    'client_portal' => 'bumn-meeting',
-                    'marketing_id' => $marketings,
-                    'project_date' => date('Y-m-d', strtotime('2024-07-25')),
+                    'name' => 'Edward Natasha',
+                    'client_portal' => 'edward-natasha',
+                    'marketing_id' => [fake()->randomElement($marketings)],
+                    'project_date' => fake()->randomElement($projectDates),
                     'event_type' => fake()->randomElement($eventTypes),
-                    'venue' => 'Hotel Jayapura',
+                    'city_id' => $city->id,
+                    'state_id' => $city->state_id,
+                    'country_id' => $city->country_id,
+                    'venue' => 'Hotel Ramayana',
                     'collaboration' => 'nuansa',
                     'note' => '',
-                    'status' => 1,
-                    'classification' => fake()->randomElement($classification),
-                    'led_area' => '37',
-                    'led' => [
-                        ['width' => 4, 'height' => 3],
-                        ['width' => 5, 'height' => 5],
+                    'classification' => $aClassId,
+                    'status' => null,
+                    'led_area' => '2',
+                    'led_detail' => [
+                        [
+                            'led' => [
+                                [
+                                    'height' => 1,
+                                    'width' => 2,
+                                ],
+                            ],
+                            'name' => 'main',
+                            'textDetail' => '1 x 2 m',
+                            'total' => '2 m<sup>2</sup>',
+                            'totalRaw' => '2',
+                        ],
                     ],
-                    'pic' => [
-                        fake()->randomElement($projectManagers),
+                    'seeder' => true,
+                ],
+                [
+                    'name' => 'wedding anniversary',
+                    'client_portal' => 'wedding-anniversary',
+                    'marketing_id' => [fake()->randomElement($marketings)],
+                    'project_date' => fake()->randomElement($projectDates),
+                    'event_type' => fake()->randomElement($eventTypes),
+                    'city_id' => $city->id,
+                    'state_id' => $city->state_id,
+                    'country_id' => $city->country_id,
+                    'venue' => 'Shangrila',
+                    'collaboration' => 'nuansa',
+                    'note' => '',
+                    'classification' => $bClassId,
+                    'status' => null,
+                    'led_area' => '2',
+                    'led_detail' => [
+                        [
+                            'led' => [
+                                [
+                                    'height' => 1,
+                                    'width' => 2,
+                                ],
+                            ],
+                            'name' => 'main',
+                            'textDetail' => '1 x 2 m',
+                            'total' => '2 m<sup>2</sup>',
+                            'totalRaw' => '2',
+                        ],
+                    ],
+                    'seeder' => true,
+                ],
+                [
+                    'name' => 'SAAT',
+                    'client_portal' => 'saat',
+                    'marketing_id' => [fake()->randomElement($marketings)],
+                    'project_date' => fake()->randomElement($projectDates),
+                    'event_type' => fake()->randomElement($eventTypes),
+                    'city_id' => $city->id,
+                    'state_id' => $city->state_id,
+                    'country_id' => $city->country_id,
+                    'venue' => 'Hotel Malang',
+                    'collaboration' => 'nuansa',
+                    'note' => '',
+                    'classification' => $cClassId,
+                    'status' => null,
+                    'led_area' => '2',
+                    'led_detail' => [
+                        [
+                            'led' => [
+                                [
+                                    'height' => 1,
+                                    'width' => 2,
+                                ],
+                            ],
+                            'name' => 'main',
+                            'textDetail' => '1 x 2 m',
+                            'total' => '2 m<sup>2</sup>',
+                            'totalRaw' => '2',
+                        ],
+                    ],
+                    'seeder' => true,
+                ],
+                [
+                    'name' => 'Wendy Carissa',
+                    'client_portal' => 'wendy-carissa',
+                    'marketing_id' => [fake()->randomElement($marketings)],
+                    'project_date' => fake()->randomElement($projectDates),
+                    'event_type' => fake()->randomElement($eventTypes),
+                    'city_id' => $city->id,
+                    'state_id' => $city->state_id,
+                    'country_id' => $city->country_id,
+                    'venue' => 'Hotel Pekanbaru',
+                    'collaboration' => 'nuansa',
+                    'note' => '',
+                    'classification' => $aClassId,
+                    'status' => null,
+                    'led_area' => '2',
+                    'led_detail' => [
+                        [
+                            'led' => [
+                                [
+                                    'height' => 1,
+                                    'width' => 2,
+                                ],
+                            ],
+                            'name' => 'main',
+                            'textDetail' => '1 x 2 m',
+                            'total' => '2 m<sup>2</sup>',
+                            'totalRaw' => '2',
+                        ],
                     ],
                     'seeder' => true,
                 ],
             ];
-
-            $projectService = new \Modules\Production\Services\ProjectService();
 
             foreach ($projects as $project) {
                 $store = $projectService->store($project);

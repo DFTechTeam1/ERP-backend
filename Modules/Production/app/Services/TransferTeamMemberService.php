@@ -12,12 +12,16 @@ class TransferTeamMemberService {
 
     private $projectService;
 
+    private $employeeRepo;
+
     /**
      * Construction Data
      */
     public function __construct()
     {
         $this->repo = new TransferTeamMemberRepository;
+
+        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
 
         $this->projectService = new \Modules\Production\Services\ProjectService;
     }
@@ -61,6 +65,7 @@ class TransferTeamMemberService {
 
             $relation = [
                 'employee:id,uid,name,email',
+                'alternativeEmployee:id,uid,name,email',
                 'requestToPerson:id,uid,name,email',
                 'requestByPerson:id,uid,name,email',
                 'project:id,uid,name',
@@ -81,9 +86,18 @@ class TransferTeamMemberService {
 
                 $haveApproveAction = $item->request_to == $user->employee_id ? true : false;
 
-                $haveAction = $item->status == \App\Enums\Production\TransferTeamStatus::Canceled->value || $item->status == \App\Enums\Production\TransferTeamStatus::Completed->value || $item->status == \App\Enums\Production\TransferTeamStatus::Reject->value ? true : false;
+                $haveAction = $item->status == \App\Enums\Production\TransferTeamStatus::Canceled->value || $item->status == \App\Enums\Production\TransferTeamStatus::Completed->value || $item->status == \App\Enums\Production\TransferTeamStatus::Reject->value || $item->status == \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value ? true : false;
 
-                $isApproved = $item->status == \App\Enums\Production\TransferTeamStatus::Approved->value ? true : false;
+                $isApproved = $item->status == \App\Enums\Production\TransferTeamStatus::Approved->value || $item->status == \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value ? true : false;
+
+                $alternative = null;
+                if ($item->alternative_employee_id) {
+                    $alternative = [
+                        'uid' => $item->alternativeEmployee->uid,
+                        'name' => $item->alternativeEmployee->name,
+                        'email' => $item->alternativeEmployee->email,
+                    ];
+                }
 
                 return [
                     'uid' => $item->uid,
@@ -103,6 +117,7 @@ class TransferTeamMemberService {
                         'name' => $item->requestByPerson->name,
                         'email' => $item->requestByPerson->email,
                     ],
+                    'alternative' => $alternative,
                     'reason' => $item->reason,
                     'project' => $item->project->name,
                     'status' => $item->status_text,
@@ -222,9 +237,10 @@ class TransferTeamMemberService {
     {
         try {
             $this->repo->update([
-                'status' => \App\Enums\Production\TransferTeamStatus::Reject->value,
+                'status' => isset($data['alternative']) ? \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value : \App\Enums\Production\TransferTeamStatus::Reject->value,
                 'rejected_at' => Carbon::now(),
                 'reject_reason' => $data['reason'],
+                'alternative_employee_id' => isset($data['alternative']) ? getIdFromUid($data['alternative'], new \Modules\Hrd\Models\Employee()) : null,
             ], $transferUid);
 
             \Modules\Production\Jobs\RejectRequestTeamMemberJob::dispatch($transferUid, $data['reason']);
@@ -359,5 +375,32 @@ class TransferTeamMemberService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Function to get all team members except current employee id that already requested for lend
+     * 
+     * @param string $employeeUid
+     * 
+     * @return array
+     */
+    public function getMembersToLend(string $transferUid, string $employeeUid): array
+    {
+        $transfer = $this->repo->show($transferUid, 'request_to');
+
+        $data = $this->employeeRepo->list("id,uid,name,employee_id", "uid != '" . $employeeUid . "' and boss_id = {$transfer->request_to}");
+
+        $output = collect((object)$data)->map(function ($item) {
+            return [
+                'uid' => $item->uid,
+                'name' => $item->name . " ({$item->employee_id})",
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            $output,
+        );
     }
 }

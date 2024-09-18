@@ -15,14 +15,16 @@ class NewProjectJob implements ShouldQueue
 
     public $project;
 
+    public $projectUid;
+
     private $pusher;
 
     /**
      * Create a new job instance.
      */
-    public function __construct($project)
+    public function __construct(string $projectUid)
     {
-        $this->project = $project;
+        $this->projectUid = $projectUid;
     }
 
     /**
@@ -30,6 +32,8 @@ class NewProjectJob implements ShouldQueue
      */
     public function handle(): void
     {
+        $this->project = \Modules\Production\Models\Project::where('uid', $this->projectUid)->first();
+
         $this->pusher = new PusherNotification();
 
         $projectPic = \Modules\Production\Models\ProjectPersonInCharge::select('pic_id')->where('project_id', $this->project->id)->get();

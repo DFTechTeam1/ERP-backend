@@ -38,6 +38,13 @@ class AppendPermissionSeeder extends Seeder
             ['name' => 'add_references', 'group' => 'production'],
             ['name' => 'add_shoreels', 'group' => 'production'],
             ['name' => 'assign_vj', 'group' => 'production'],
+            ['name' => 'detail_permission', 'group' => 'production'],
+            ['name' => 'detail_request_equipment', 'group' => 'inventories'],
+            ['name' => 'list_custom_inventory', 'group' => 'inventories'],
+            ['name' => 'create_custom_inventory', 'group' => 'inventories'],
+            ['name' => 'edit_custom_inventory', 'group' => 'inventories'],
+            ['name' => 'detail_project', 'group' => 'production'],
+            ['name' => 'list_file_manager', 'group' => 'production'],
         ];
 
         foreach ($permissions as $permission) {

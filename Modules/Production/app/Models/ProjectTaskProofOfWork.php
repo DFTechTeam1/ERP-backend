@@ -5,6 +5,7 @@ namespace Modules\Production\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Production\Database\Factories\ProjectTaskProofOfWorkFactory;
 
 class ProjectTaskProofOfWork extends Model
@@ -21,9 +22,21 @@ class ProjectTaskProofOfWork extends Model
         'preview_image',
         'created_by',
         'updated_by',
+        'created_year',
+        'created_month',
     ];
 
     protected $appends = ['images'];
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Production\Models\ProjectTask::class, 'project_task_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by', 'id');
+    }
 
     public function images(): Attribute
     {

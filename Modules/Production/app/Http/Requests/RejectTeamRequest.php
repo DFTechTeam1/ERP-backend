@@ -13,6 +13,7 @@ class RejectTeamRequest extends FormRequest
     {
         return [
             'reason' => 'required',
+            'alternative' => 'nullable',
         ];
     }
 
