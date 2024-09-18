@@ -72,11 +72,15 @@ class ProjectService
 
     private $inventoryItemRepo;
 
+    private $geocoding;
+
     /**
      * Construction Data
      */
     public function __construct()
     {
+        $this->geocoding = new \App\Services\Geocoding();
+
         $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
 
         $this->inventoryItemRepo = new \Modules\Inventory\Repository\InventoryItemRepository();
@@ -125,7 +129,7 @@ class ProjectService
     /**
      * Delete bulk data
      *
-     * @param array $ids
+     * @param array<string> $ids
      * 
      * @return array
      */
@@ -384,6 +388,8 @@ class ProjectService
                     ];
                 })->pluck('name')->values()->toArray();
 
+                $picEid = collect($item->personInCharges)->pluck('employee.employee_id')->toArray();
+
                 $marketing = $item->marketing ? $item->marketing->name : '-';
 
                 $marketingData = collect($item->marketings)->pluck('marketing.name')->toArray();
@@ -401,11 +407,16 @@ class ProjectService
 
                 $status = '-';
                 $statusColor = '';
-                foreach ($statusses as $statusData) {
-                    if ($statusData->value == $item->status) {
-                        $status = $statusData->label();
-                        $statusColor = $statusData->color();
-                    }
+                if ($item->status) {
+                    foreach ($statusses as $statusData) {
+                        if ($statusData->value == $item->status) {
+                            $status = $statusData->label();
+                            $statusColor = $statusData->color();
+                        }
+                    }   
+                } else {
+                    $status = __('global.undetermined');
+                    $statusColor = 'grey-lighten-1';
                 }
 
                 $eventClass = '-';
@@ -436,17 +447,19 @@ class ProjectService
                 return [
                     'uid' => $item->uid,
                     'marketing' => $marketing,
-                    'pic' => count($pics) > 0  ? implode(', ', $pics) : '-',
+                    'pic' => count($pics) > 0  ? implode(', ', $pics) : __('global.undetermined'),
+                    'no_pic' => count($pics) == 0 ? true : false,
+                    'pic_eid' => $picEid,
                     'name' => $item->name,
                     'project_date' => date('d F Y', strtotime($item->project_date)),
                     'venue' => $item->venue,
                     'event_type' => $eventType,
                     'led_area' => $item->led_area,
                     'event_class' => $item->projectClass->name,
+                    'event_class_color' => $item->projectClass->color,
                     'status' => $status,
                     'status_color' => $statusColor,
                     'status_raw' => $item->status,
-                    'event_class_color' => $eventClassColor,
                     'project_is_complete' => $item->status == \App\Enums\production\ProjectStatus::Completed->value,
                     'vj' => $vj,
                     'have_vj' => $item->vjs->count() > 0 ? true : false,
@@ -476,6 +489,128 @@ class ProjectService
     public function getAllBoards(): array
     {
         return [];
+    }
+
+    /**
+     * Get all project list for scheduler (To assign a PIC to selected project)
+     * 
+     * Default filter is:
+     * - Get -7 days and +7 days based on selected project date
+     * - Sort ASC by project date
+     * 
+     */
+    public function getAllSchedulerProjects(string $projectUid)
+    {
+        $where = '';
+        $filterData = [];
+
+        $project = $this->repo->show($projectUid, 'project_date,latitude,longitude');
+
+        if (request('start_date')) {
+            $startDate = date('Y-m-d', strtotime(request('start_date')));
+        } else { // set based on selected project date
+            $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
+        }
+
+        if (empty($where)) {
+            $where = "project_date >= '{$startDate}'";
+        } else {
+            $where .= " and project_date >= '{$startDate}'";
+        }
+
+        $filterData['date']['start_date'] = date('Y, F d', strtotime($startDate));
+        $filterData['date']['enable'] = true;
+
+        if (request('end_date')) {
+            $endDate = date('Y-m-d', strtotime(request('end_date')));
+        } else { // set based on selected project date
+            $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
+        }
+
+        if (empty($where)) {
+            $where = "project_date <= '{$endDate}'";
+        } else {
+            $where .= " and project_date <= '{$endDate}'";
+        }
+
+        $filterData['date']['end_date'] = date('Y, F d', strtotime($endDate));
+        $filterData['date']['enable'] = true;
+
+        // by venue
+        $coordinate = [];
+        $orderBy = 'project_date ASC';
+        if (request('filter_venue')) {
+            $coordinate = [$project->latitude, $project->longitude, $project->latitude];
+            $orderBy = 'distance ASC, project_date ASC';
+        }
+
+        $data = $this->repo->list(
+            "id,uid,name,project_date,venue,event_type,collaboration,status,led_area,led_detail,project_class_id,classification,city_name,(
+                       6371 * acos(
+                           cos(radians({$project->latitude})) * cos(radians(latitude)) *
+                           cos(radians(longitude) - radians({$project->longitude})) +
+                           sin(radians({$project->latitude})) * sin(radians(latitude))
+                       )
+                   ) AS distance",
+            $where,
+            [
+                'projectClass:id,name,color',
+                'personInCharges:id,project_id,pic_id',
+                'personInCharges.employee:id,nickname',
+            ],
+            [],
+            $orderBy,
+            0,
+            $coordinate
+        );
+
+        $statusses = \App\Enums\Production\ProjectStatus::cases();
+        $eventTypes = \App\Enums\Production\EventType::cases();
+
+        $output = collect((object) $data)->map(function ($item) use ($projectUid, $statusses, $eventTypes) {
+            $status = __('global.undetermined');
+            $statusColor = '';
+            foreach ($statusses as $statusData) {
+                if ($item->status == $statusData->value) {
+                    $status = $statusData->label();
+                    $statusColor = $statusData->color();
+                }
+            }
+
+            foreach ($eventTypes as $type) {
+                if ($item->event_type == $type->value) {
+                    $eventType = $type->label();
+                }
+            }
+
+            return [
+                'id' => $item->uid,
+                'project' => $item->name,
+                'status' => $status,
+                'event_type' => $eventType,
+                'status_color' => $statusColor,
+                'name' => count($item->personInCharges) > 0 ? $item->personInCharges[0]->employee->nickname : '-',
+                'event_class_color' => $item->projectClass->color,
+                'event_class' => $item->projectClass->name,
+                'project_date' => $item->project_date,
+                'date' => date('Y, F d', strtotime($item->project_date)),
+                'selected_project' => $projectUid == $item->uid ? true : false,
+                'led_area' => $item->led_area . "m <sup>2</sup>",
+                'collaboration' => $item->collaboration,
+                'venue' => $item->venue . ', ' . $item->city_name,
+                'distance' => $item->distance,
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'projects' => $output,
+                'filter' => $filterData,
+                'req' => request('start_date'),
+            ]
+        );
     }
 
     /**
@@ -580,16 +715,34 @@ class ProjectService
      * @param object $references
      * @return array
      */
-    protected function formatingReferenceFiles(object $references)
+    protected function formatingReferenceFiles(object $references, int $projectId)
     {
-        return collect($references)->map(function ($reference) {
-            return [
-                'id' => $reference->id,
-                'media_path' => $reference->media_path_text,
-                'name' => $reference->name,
-                'type' => $reference->type,
-            ];
-        })->toArray();
+        $group = [];
+        $fileDocumentType = ['doc', 'docx', 'xlsx', 'pdf'];
+
+        foreach ($references as $key => $reference) {
+            if ($reference->type == 'link') {
+                $group['link'][] = [
+                    'media_path' => $reference->media_path,
+                    'id' => $reference->id,
+                ];
+            } else if (in_array($reference->type, $fileDocumentType)) {
+                $group['pdf'][] = [
+                    'id' => $reference->id,
+                    'media_path' => asset('storage/projects/references/' . $projectId) . '/' . $reference->media_path,
+                    'type' => $reference->type,
+                ];
+            } else {
+                $group['files'][] = [
+                    'id' => $reference->id,
+                    'media_path' => $reference->media_path_text,
+                    'name' => $reference->name,
+                    'type' => $reference->type,
+                ];
+            }
+        }
+
+        return $group;
     }
 
     /**
@@ -664,17 +817,20 @@ class ProjectService
                 'value' => $picIds,
             ]
         );
-        $teams = collect($teams)->map(function ($team) {
-            $team['last_update'] = '-';
-            $team['current_task'] = '-';
-            $team['image'] = asset('images/user.png');
 
-            return $team;
-        })->toArray();
+        if (count($teams) > 0) {
+            $teams = collect($teams)->map(function ($team) {
+                $team['last_update'] = '-';
+                $team['current_task'] = '-';
+                $team['image'] = asset('images/user.png');
 
-        $teams = collect($teams)->merge($transfers)->toArray();
+                return $team;
+            })->toArray();
 
-        $teams = collect($teams)->merge($specialEmployee)->toArray();
+            $teams = collect($teams)->merge($transfers)->toArray();
+
+            $teams = collect($teams)->merge($specialEmployee)->toArray();
+        }
 
         return [
             'pics' => $pics,
@@ -777,8 +933,10 @@ class ProjectService
                     }
                 }
 
+                $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+
                 $needUserApproval = false;
-                if ($task->status == \App\Enums\Production\TaskStatus::WaitingApproval->value) {
+                if ($task->status == \App\Enums\Production\TaskStatus::WaitingApproval->value && (in_array($employeeId, $picIds) || $isDirector || $isProjectPic)) {
                     $needUserApproval = true;
                 }
 
@@ -804,7 +962,7 @@ class ProjectService
                 }
 
                 // check the ownership of task
-                $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+                
                 $haveTaskAccess = true;
                 if (!$superUserRole && !$isProjectPic && !$isDirector) {
                     if (!in_array($employeeId, $picIds)) {
@@ -912,7 +1070,20 @@ class ProjectService
         ]);
 
         $equipments = collect((object) $equipments)->map(function ($item) {
+            $canTakeAction = true;
+            if (
+                $item->status == \App\Enums\Production\RequestEquipmentStatus::Cancel->value ||
+                $item->is_checked_pic ||
+                $item->status == \App\Enums\Production\RequestEquipmentStatus::Decline->value ||
+                $item->status == \App\Enums\Production\RequestEquipmentStatus::Return->value ||
+                $item->status == \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn
+            ) {
+                $canTakeAction = false;
+            }
+
             $item['is_cancel'] = $item->status == \App\Enums\Production\RequestEquipmentStatus::Cancel->value ? true : false;
+
+            $item['can_take_action'] = $canTakeAction;
 
             return $item;
         })->all();
@@ -1052,7 +1223,7 @@ class ProjectService
                     'status' => $data->status_text,
                     'status_color' => $data->status_color,
                     'status_raw' => $data->status,
-                    'references' => $this->formatingReferenceFiles($data->references),
+                    'references' => $this->formatingReferenceFiles($data->references, $data->id),
                     'boards' => $boardsData,
                     'teams' => $teams,
                     'task_type' => $data->task_type,
@@ -1074,6 +1245,7 @@ class ProjectService
             $encrypts = $serviceEncrypt->encrypt(json_encode($output), env('SALT_KEY'));
 
             $outputData = [
+                'data' => $output,
                 'detail' => $encrypts,
             ];
 
@@ -1352,7 +1524,7 @@ class ProjectService
                 $needUserApproval = false;
                 if (
                     $task['status'] == \App\Enums\Production\TaskStatus::WaitingApproval->value && 
-                    (in_array($employeeId, $picIds) || $isDirector)
+                    (in_array($employeeId, $picIds) || $isDirector || $isProjectPic)
                 ) {
                     $needUserApproval = true;
                 }
@@ -1377,7 +1549,7 @@ class ProjectService
                 }
 
                 // last checker
-                if ($project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value) {
+                if ($project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value || !$project['status_raw']) {
                     $outputTask[$keyTask]['is_active'] = false;
                 }
             }
@@ -1423,16 +1595,16 @@ class ProjectService
         DB::beginTransaction();
         try {
             $data['project_date'] = date('Y-m-d', strtotime($data['project_date']));
-            $data['led_detail'] = json_encode($data['led']);
-
-            if (isset($data['seeder'])) { // if came from seeder
-                $data['status'] = \App\Enums\Production\ProjectStatus::OnGoing->value;
-            } else {
-                $userRole = auth()->user()->getRoleNames()[0];
-                $data['status'] = strtolower($userRole) != 'project manager' ? $data['status'] : \App\Enums\Production\ProjectStatus::Draft->value;
-            }
+            $data['led_detail'] = json_encode($data['led_detail']);
 
             $city = \Modules\Company\Models\City::select('name')->find($data['city_id']);
+            $state = \Modules\Company\Models\State::select('name')->find($data['state_id']);
+
+            $coordinate = $this->geocoding->getCoordinate($city->name . ', ' . $state->name);
+            if (count($coordinate) > 0) {
+                $data['longitude'] = $coordinate['longitude'];
+                $data['latitude'] = $coordinate['latitude'];
+            }
 
             $data['project_class_id'] = $data['classification'];
 
@@ -1451,13 +1623,6 @@ class ProjectService
             })->toArray();
             $project->marketings()->createMany($marketings);
 
-            $pics = collect($data['pic'])->map(function ($item) {
-                return [
-                    'pic_id' => getidFromUid($item, new \Modules\Hrd\Models\Employee()),
-                ];
-            })->toArray();
-            $project->personInCharges()->createMany($pics);
-
             $defaultBoards = json_decode(getSettingByKey('default_boards'), true);
             $defaultBoards = collect($defaultBoards)->map(function ($item) {
                 return [
@@ -1474,9 +1639,6 @@ class ProjectService
             if (getSettingByKey('have_default_request_item')) {
                 $this->autoAssignRequestItem($project);   
             }
-
-            // send notification
-            \Modules\Production\Jobs\NewProjectJob::dispatch($project)->afterCommit();
 
             DB::commit();
 
@@ -1527,20 +1689,33 @@ class ProjectService
         DB::beginTransaction();
         try {
             $city = \Modules\Company\Models\City::select('name')->find($data['city_id']);
+            $state = \Modules\Company\Models\State::select('name')->find($data['state_id']);
+
+            $coordinate = $this->geocoding->getCoordinate($city->name . ', ' . $state->name);
+            if (count($coordinate) > 0) {
+                $data['longitude'] = $coordinate['longitude'];
+                $data['latitude'] = $coordinate['latitude'];
+            }
+
             $data['city_name'] = $city->name;
 
             $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
             $projectId = getIdFromUid($id, new \Modules\Production\Models\Project());
 
-            foreach ($data['pic'] as $pic) {
-                $employeeId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
+            if (
+                (isset($ata['pic'])) &&
+                (count($data['pic']) > 0)
+            ) {
+                foreach ($data['pic'] as $pic) {
+                    $employeeId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
 
-                $this->projectPicRepository->delete(0, 'project_id = ' . $projectId);
+                    $this->projectPicRepository->delete(0, 'project_id = ' . $projectId);
 
-                $this->projectPicRepository->store([
-                    'pic_id' => $employeeId,
-                    'project_id' => $projectId,
-                ]);
+                    $this->projectPicRepository->store([
+                        'pic_id' => $employeeId,
+                        'project_id' => $projectId,
+                    ]);
+                }
             }
 
             $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue,country_id,state_id,city_id', [
@@ -1659,39 +1834,72 @@ class ProjectService
      */
     public function storeReferences(array $data, string $id)
     {
-        $fileImageType = ['jpg', 'jpeg', 'png', 'webp'];
+        $fileImageType = ['jpg', 'jpeg', 'png'];
+        $fileDocumentType = ['doc', 'docx', 'xlsx', 'pdf'];
         $project = $this->repo->show($id);
         try {
             $output = [];
-            foreach ($data['files'] as $file) {
-                $type = $file['path']->getClientOriginalExtension();
 
-                if (gettype(array_search($type, $fileImageType)) != 'boolean') {
-                    $fileData = uploadImageandCompress(
-                        'projects/references/' . $project->id,
-                        10,
-                        $file['path']
-                    );
-                } else {
-                    $fileData = uploadFile(
-                        'projects/references/' . $project->id,
-                        $file['path']
-                    );
+            // handle link upload
+            $linkPayload = [];
+            foreach ($data['link'] as $link) {
+                if (!empty($link['href'])) {
+                    $linkPayload[] = [
+                        'media_path' => $link['href'],
+                        'type' => 'link',
+                    ];
                 }
-
-                $output[] = [
-                    'media_path' => $fileData,
-                    'name' => $fileData,
-                    'type' => $type,
-                ];
             }
 
+            // handle file upload
+            foreach ($data['files'] as $file) {
+                if ($file['path']) {
+                    $type = $file['path']->getClientOriginalExtension();
+
+                    if (gettype(array_search($type, $fileImageType)) != 'boolean') {
+                        $fileData = uploadImageandCompress(
+                            'projects/references/' . $project->id,
+                            10,
+                            $file['path']
+                        );
+                    } else { // handle document upload
+                        $fileType = array_search($type, $fileDocumentType);
+                        if (gettype($fileType) != 'boolean') {
+                            $type = $fileDocumentType[$fileType];
+                        }
+
+                        $fileData = uploadFile(
+                            'projects/references/' . $project->id,
+                            $file['path']
+                        );
+                    }
+
+                    $output[] = [
+                        'media_path' => $fileData,
+                        'name' => $fileData,
+                        'type' => $type,
+                    ];
+                }
+            }
+
+            $output = collect($output)->merge($linkPayload)->toArray();
+
             $project->references()->createMany($output);
+
+            // update cache
+            $referenceData = $this->formatingReferenceFiles($project->references, $project->id);
+            $currentData = getCache('detailProject' . $project->id);
+            $currentData['references'] = $referenceData;
+
+            $currentData = $this->formatTasksPermission($currentData, $project->id);
 
             return generalResponse(
                 __("global.successCreateReferences"),
                 false,
-                $this->formatingReferenceFiles($project->references),
+                [
+                    'full_detail' => $currentData,
+                    'references' => $referenceData,
+                ],
             );
         } catch (\Throwable $th) {
             // delete all files in folder
@@ -2085,12 +2293,21 @@ class ProjectService
 
 
             $project = $this->repo->show($projectId, 'id,name,uid');
-            $references = $this->formatingReferenceFiles($project->references);
+
+            // update cache
+            $referenceData = $this->formatingReferenceFiles($project->references, $project->id);
+            $currentData = getCache('detailProject' . $project->id);
+            $currentData['references'] = $referenceData;
+
+            $currentData = $this->formatTasksPermission($currentData, $project->id);
 
             return generalResponse(
                 __('global.successDeleteReference'),
                 false,
-                $references,
+                [
+                    'full_detail' => $currentData,
+                    'references' => $referenceData,
+                ],
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -2309,6 +2526,16 @@ class ProjectService
         ]);
 
         $data = collect((object) $data)->map(function ($item) {
+            $canTakeAction = true;
+            if (
+                $item->status == \App\Enums\Production\RequestEquipmentStatus::Cancel->value ||
+                $item->is_checked_pic ||
+                $item->status == \App\Enums\Production\RequestEquipmentStatus::Decline->value ||
+                $item->status == \App\Enums\Production\RequestEquipmentStatus::Return->value ||
+                $item->status == \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn
+            ) {
+                $canTakeAction = false;
+            }
             return [
                 'uid' => $item->uid,
                 'inventory_name' => $item->inventory->name,
@@ -2320,6 +2547,7 @@ class ProjectService
                 'status_color' => $item->status_color,
                 'is_checked_pic' => $item->is_checked_pic,
                 'is_cancel' => $item->status == \App\Enums\Production\RequestEquipmentStatus::Cancel->value ? true : false,
+                'can_take_action' => $canTakeAction,
             ];
         })->toArray();
 
@@ -2858,6 +3086,8 @@ class ProjectService
                     'nas_link' => $data['nas_link'],
                     'preview_image' => json_encode($image),
                     'created_by' => auth()->id(),
+                    'created_year' => date('Y', strtotime(Carbon::now())),
+                    'created_month' => date('m', strtotime(Carbon::now())),
                 ]);
 
                 $boardId = $data['board_id'];
@@ -3682,6 +3912,8 @@ class ProjectService
      */
     public function getMarketingListForProject(): array
     {
+        $user = auth()->user();
+
         $positionAsMarketing = getSettingByKey('position_as_marketing');
         $positionAsDirectors = json_decode(getSettingByKey('position_as_directors'), true);
 
@@ -3699,7 +3931,21 @@ class ProjectService
 
         $positionIds = collect($positions)->pluck('id')->all();
         $combinePositionIds = implode(',', $positionIds);
-        $marketings = $this->employeeRepo->list('id,uid,name', "position_id in ({$combinePositionIds}) and status != " . \App\Enums\Employee\Status::Inactive->value);
+
+        $where = "position_id in ({$combinePositionIds}) and status != " . \App\Enums\Employee\Status::Inactive->value;
+        $marketings = $this->employeeRepo->list('id,uid,name', $where);
+
+        $marketings = collect((object) $marketings)->map(function ($item) use ($user) {
+            $item['selected'] = false;
+            if (
+                ($user->employee_id) &&
+                ($user->employee_id == $item->id)
+            ) {
+                $item['selected'] = true;
+            }
+
+            return $item;
+        });
 
         return generalResponse(
             'success',
@@ -4044,16 +4290,20 @@ class ProjectService
         );
     }
 
-    public function getProjectStatusses()
+    public function getProjectStatusses(string $projectUid)
     {
+        $project = $this->repo->show($projectUid, 'status');
+
         $data = \App\Enums\Production\ProjectStatus::cases();
 
         $out = [];
         foreach ($data as $status) {
-            $out[] = [
-                'value' => $status->value,
-                'title' => $status->label(),
-            ];
+            if ($project->status != $status->value) {
+                $out[] = [
+                    'value' => $status->value,
+                    'title' => $status->label(),
+                ];
+            }
         }
 
         return generalResponse(
@@ -4065,6 +4315,7 @@ class ProjectService
 
     public function changeStatus(array $data, string $projectUid)
     {
+        DB::beginTransaction();
         try {
             $this->repo->update(['status' => $data['status']], $projectUid);
 
@@ -4094,6 +4345,8 @@ class ProjectService
                 $currentData = $this->formatTasksPermission($currentData, $projectId);
             }
 
+            DB::commit();
+
             return generalResponse(
                 __('global.statusIsChanged'),
                 false,
@@ -4102,6 +4355,8 @@ class ProjectService
                 ]
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -4196,8 +4451,9 @@ class ProjectService
             $projectDate = $project->project_date;
 
             $startDate = date('Y-m-d', strtotime('-7 days', strtotime($projectDate)));
+            $endDate = date('Y-m-d', strtotime('+7 days', strtotime($projectDate)));
 
-            $taskDateCondition = "project_date >= '" . $startDate . "' and project_date <= '" . $projectDate . "'";
+            $taskDateCondition = "project_date >= '" . $startDate . "' and project_date <= '" . $endDate . "'";
 
             $where = "boss_id = {$bossId}";
             $userApp = auth()->user();
@@ -4641,6 +4897,611 @@ class ProjectService
             DB::rollBack();
 
             return errorResponse($th);
+        }
+    }
+
+    public function downloadReferences(string $projectUid)
+    {
+        $project = $this->repo->show($projectUid, 'id,name', ['references']);
+        $projectId = $project->id;
+
+        $references = collect($project->references)->filter(function ($item) use ($projectId) {
+            return $item->type != 'link';
+        })->map(function ($mapping) use ($projectId) {
+            return storage_path('app/public/projects/references/' . $projectId . '/' . $mapping->media_path);
+        })->values();
+
+        return [
+            'files' => $references->toArray(),
+            'project' => $project,
+        ];
+    }
+
+    /**
+     * Get All PIC / Project Manager and get each workload
+     * Provide all information to user
+     * 
+     */
+    public function getPicScheduler(string $projectUid)
+    {
+        try {
+            $output = $this->mainProcessToGetPicScheduler($projectUid);
+
+            return generalResponse(
+                'success',
+                false,
+                $output,
+            );
+        } catch (\Throwable $e) {
+            return errorResponse($e);
+        }
+    }
+
+    /**
+     * Function to get PIC Scheduler, This is composeable function
+     * 
+     * @param string $projectUid
+     * 
+     * @return array
+     */
+    protected function mainProcessToGetPicScheduler(string $projectUid): array
+    {
+        $project = $this->repo->show($projectUid, 'id,name,project_date');
+        $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
+        $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
+
+        $userPics = \App\Models\User::role('project manager')->get();
+        $director = \App\Models\User::role('director')->get();
+        $pics = collect($userPics)->merge($director)->toArray();
+
+        // get all workload in each pics
+        $output = [];
+        foreach ($pics as $key => $pic) {
+            if ($pic['employee_id']) {
+                $employee = $this->employeeRepo->show('dummy', 'id,uid,name,email,employee_id', [], 'id = ' . $pic['employee_id']);
+
+                $output[$key] = [
+                    'id' => $employee->uid,
+                    'name' => $employee->name,
+                    'email' => $employee->email,
+                    'employee_id' => $employee->employee_id,
+                    'projects' => $this->getPicWorkload($employee, $projectUid),
+                    'is_recommended' => false,
+                ];
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * Get each PM workload (This data used in assign PIC dialog)
+     * 
+     * @param object $pic
+     * @param string $projectUId
+     * 
+     * @return array
+     */
+    protected function getPicWorkload($pic, $projectUid): array
+    {
+        $project = $this->repo->show($projectUid, 'id,name,project_date');
+        $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
+        $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
+
+        $surabaya = \Modules\Company\Models\City::selectRaw('id')
+            ->whereRaw("lower(name) like 'kota surabaya' or lower(name) like 'surabaya'")
+            ->get();
+
+        $projects = $this->repo->list(
+            'id,name,project_date,city_id,classification',
+            "project_date between '{$startDate}' and '{$endDate}'",
+            [],
+            [
+                [
+                    'relation' => 'personInCharges',
+                    'query' => 'pic_id = ' . $pic->id
+                ]
+            ]
+        );
+
+        // group by some data like out of town, total project and event class
+        $eventClass = 0;
+        $totalOfProject = 0;
+        $totalOutOfTown = 0;
+
+        if (count($projects) > 0) {
+            $totalOfProject = count($projects);
+
+            // get total event class
+            $eventClass = collect((object)$projects)->pluck('classification')->filter(function($itemClass) {
+                return strtolower($itemClass) == 's (special)';
+            })->count();
+            
+            foreach ($projects as $project) {
+                if (!in_array($project->city_id, collect($surabaya)->pluck('id')->toArray())) {
+                    $totalOutOfTown++;
+                }
+            }
+        }
+
+        return [
+            'traveled' => __('global.timesTraveledInWeek', ['count' => $totalOutOfTown]),
+            'projects' => __('global.totalProjectInWeek', ['count' => $totalOfProject]),
+            'event_class' => __('global.projectClassInWeek', ['count' => $eventClass]),
+        ];
+    }
+
+    /**
+     * Store assign pic to selected project
+     * 
+     * @param string $projectUid
+     * @param array<array, string> $data
+     * 
+     */
+    public function assignPic(string $projectUid, array $data)
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
+
+            $this->handleAssignPicLogic($data, $projectUid, $projectId);
+
+            // update cache
+            if ($currentData = getCache('detailProject' . $projectId)) {
+                // new pics
+                $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name']);
+
+                $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
+                $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
+
+                $currentData = $this->formatTasksPermission($currentData, $projectId);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successAssignPIC'),
+                false,
+                [
+                    'full_detail' => $currentData,
+                ],
+            );
+        } catch (\Throwable $error) {
+            DB::rollBack();
+            return errorResponse($error);
+        }
+    }
+
+    /**
+     * Main function to handle assignation PIC to selected project
+     * @param array<string, array<string>> $data
+     * @param string $projectUid
+     * @param int $projectId
+     * 
+     * @return void 
+     * 
+     */
+    protected function handleAssignPicLogic(array $data, string $projectUid, int $projectId): void
+    {
+        foreach ($data['pics'] as $pic) {
+            $employeeId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
+            $this->projectPicRepository->store(['pic_id' => $employeeId, 'project_id' => $projectId]);
+        }
+
+        \Modules\Production\Jobs\NewProjectJob::dispatch($projectUid)->afterCommit();
+    }
+
+    /**
+     * Remove all selected pic form selected project
+     * 
+     * @param araray<string> $picList
+     * @param string $projectUid
+     * 
+     * @return void
+     */
+    protected function removePicProject(array $picList, string $projectUid, int $projectId): void
+    {
+        $ids = [];
+        foreach ($picList as $list) {
+            $employeeId = getIdFromUid($list, new \Modules\Hrd\Models\Employee());
+            $ids[] = $employeeId;
+            $this->projectPicRepository->delete(0, "project_id = {$projectId} and pic_id = {$employeeId}");
+        }
+
+        // notified removed user
+        \Modules\Production\Jobs\RemovePMFromProjectJob::dispatch($ids, $projectUid)->afterCommit();
+    }
+
+    /**
+     * Assign new pic or remove current pic of project
+     * 
+     * @param string $projectUid
+     * @param array<string, array<string>> $data
+     * 
+     */
+    public function subtitutePic(string $projectUid, array $data): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
+
+            // handle new pic
+            if (count($data['pics']) > 0) {
+                $this->handleAssignPicLogic($data, $projectUid ,$projectId);
+            }
+
+            // handle removed pic
+            if (count($data['removed']) > 0) {
+                $this->removePicProject($data['removed'], $projectUid, $projectId);
+            }
+
+            // update cache
+            if ($currentData = getCache('detailProject' . $projectId)) {
+                // new pics
+                $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name']);
+
+                $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
+                $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
+
+                $currentData = $this->formatTasksPermission($currentData, $projectId);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.projectPicHasBeenChanged'),
+                false,
+                [
+                    'full_detail' => $currentData ?? [],
+                ],
+            );
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return errorResponse($e);
+        }
+    }
+
+    /**
+     * Get all available PIC and current PIC to show in dialog Subtitute PIC
+     * 
+     * @param string $projectUId
+     * @return array
+     */
+    public function getPicForSubtitute(string $projectUid): array
+    {
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            $pics = $this->mainProcessToGetPicScheduler($projectUid);
+            $selectedPic = $this->projectPicRepository->list(
+                'id,project_id,pic_id', 
+                "project_id = {$projectId}",
+                ['employee:id,uid,name,email,employee_id'],
+            );
+
+            $pics = collect($pics)->filter(function ($filter) use ($selectedPic) {
+                return !in_array(
+                    $filter['id'],
+                    collect($selectedPic)->pluck('employee.uid')->toArray()
+                );
+            })->values();
+
+            // make selected pic format same as available pic
+            $selectedPic = collect($selectedPic)->map(function ($item) use ($projectUid) {
+                return [
+                    'id' => $item->employee->uid,
+                    'current_id' => $item->id, // additional key for frontend use
+                    'name' => $item->employee->name,
+                    'email' => $item->employee->email,
+                    'employee_id' => $item->employee->employee_id,
+                    'projects' => $this->getPicWorkload($item->employee, $projectUid),
+                    'is_recommended' => false,
+                ];
+            })->toArray();
+
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'current_pic' => $selectedPic,
+                    'available_pic' => $pics
+                ],
+            );
+        } catch (\Throwable $e) {
+            return errorResponse($e);
+        }
+    }
+
+    /**
+     * Download all media in proof of work
+     * 
+     * @param int $proofOfWorkId
+     */
+    public function downloadProofOfWork(string $projectUid, int $proofOfWorkId)
+    {
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+        $works = $this->proofOfWorkRepo->show(
+            $proofOfWorkId, 
+            'preview_image,id,project_task_id', 
+            ['task:id,name']
+        );
+
+        $images = json_decode($works->preview_image, true);
+
+        $files = [];
+        foreach ($images as $image) {
+            $files[] = storage_path("app/public/projects/{$projectId}/task/{$works->project_task_id}/proofOfWork/{$image}");
+        }
+
+        return [
+            'files' => $files,
+            'task' => $works->task,
+        ];
+    }
+
+    /**
+     * Get all projects for file manager
+     */
+    public function getProjectsFolder()
+    {
+        $itemsPerPage = request('itemsPerPage') ?? 5;
+        $page = request('page') ?? 1;
+        $page = $page == 1 ? 0 : $page;
+        $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+        $year = request('year') ?? date('Y');
+        $startDate = $year . '-01-01';
+        $endDate = $year . '-12-31';
+
+        $where = "project_date between '{$startDate}' and '{$endDate}'";
+
+        if (request('name')) {
+            $where .= " and lower(name) like '%". strtolower(request('name')) ."%'";
+        }
+
+        $data = $this->repo->pagination(
+            'id,uid,name,client_portal',
+            $where,
+            ['tasks:id,project_id'],
+            $itemsPerPage,
+            $page,
+        );
+
+        $totalData = $this->repo->list('id', $where)->count();
+        $total = round($totalData / $itemsPerPage);
+
+        $output = collect($data)->map(function ($item) {
+            return [
+                'name' => $item->name,
+                'id' => $item->uid,
+                'task' => count($item->tasks),
+                'client_portal' => $item->client_portal,
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'folders' => $output,
+                'pagination' => [
+                    'total' => $total,
+                    'page' => (int)request('page'),
+                ],
+            ],
+        );
+    }
+
+    /**
+     * Get all available years in company
+     * 
+     * @return array
+     */
+    public function getProjectYears(): array
+    {
+        $year = date('Y');
+        $startYear = date('Y', strtotime('-4 years'));
+        $range = collect(range($startYear, $year))->sortDesc()->values()->map(function ($item) {
+            return ['year' => $item, 'active' => false];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            $range,
+        );
+    }
+
+    protected function getAllProjectImages(object $project, string $year)
+    {
+        $where = "project_id = '{$project->id}' and created_year = '{$year}'";
+        $relation = ['user:id,employee_id', 'user.employee:id,name'];
+
+        if (request('task')) {
+            $where .= " and project_task_id = " . request('task');
+            $relation = ['user:id,employee_id', 'user.employee:id,name', 'task:id,name'];
+        }
+
+        $user = null;
+        if (request('user')) {
+            $where .= " and created_by = " . request('user');
+
+            // search user
+            $userData = \App\Models\User::select("employee_id")
+                ->with(['employee:id,name'])
+                ->find(request('user'));
+            $user = $userData->employee->name;
+        }
+
+        $proofOfWorkAssets = $this->proofOfWorkRepo->list('id,project_task_id,project_id,nas_link,preview_image,created_by', $where, $relation);
+
+        $proofOfWorkImages = [];
+        $nasLink = [];
+        foreach ($proofOfWorkAssets as $proof) {
+            $nasLink[] = [
+                'image' => $proof->nas_link,
+                'type' => 'nas_link',
+                'owner' => $proof->user->employee->name,
+            ];
+
+            $proofImages = json_decode($proof->preview_image, true);
+            foreach ($proofImages as $image) {
+                $proofOfWorkImages[] = [
+                    'image' => asset("storage/projects/{$proof->project_id}/task/{$proof->project_task_id}/proofOfWork/{$image}"),
+                    'image_name' => $image,
+                    'type' => 'image',
+                    'owner' => $proof->user->employee->name,
+                ];
+            }
+        }
+
+        return [
+            'image' => $proofOfWorkImages,
+            'nas_link' => $nasLink,
+            'task' => request('task') ? $proofOfWorkAssets[0]->task->name : null,
+            'user' => $user,
+        ];
+    }
+
+    /**
+     * Function to get all task on selected project and show as folder
+     * 
+     * @param object $project
+     * 
+     * @return array
+     */
+    protected function getProjectTasks(object $project): array
+    {
+        $where = "project_id = {$project->id}";
+
+        if (request('name')) {
+            $where .= " and lower(name) like '%". strtolower(request('name')) ."%'";
+        }
+
+        $data = $this->taskRepo->list('id,name,project_id', $where, ['proofOfWorks:id,project_task_id,preview_image']);
+
+        $output = [];
+        foreach ($data as $task) {
+            $works = 0;
+            $allImages = [];
+            foreach ($task->proofOfWorks as $workData) {
+                $images = json_decode($workData->preview_image, true);
+
+                foreach ($images as $image) {
+                    $allImages[] = $image;
+                }
+            }
+
+            $output[] = [
+                'name' => $task->name,
+                'id' => $task->id,
+                'image' => count($allImages),
+            ];
+        }
+
+        return $output;
+    }
+
+    protected function getProjectEmployeeAssets(object $project, string $year)
+    {
+        $query = \App\Models\User::query();
+        $query->selectRaw('id,employee_id')
+            ->role('production');
+
+        if (request('name')) {
+            $query->with(['employee' => function ($q) {
+                $q->selectRaw('id,name');
+                $q->whereRaw("lower(name) like '%" . strtolower(request('name')) . "%' or lower(nickname) like '%" . strtolower(request('name')) . "%' or lower(email) like '%" . strtolower(request('name')) . "%'");
+            }]);
+        } else {
+            $query->with(['employee:id,name']);
+        }
+
+        $productionUsers = collect((object)$query->get())->filter(function ($filter) {
+            return $filter->employee;
+        });
+
+        $output = [];
+        foreach ($productionUsers as $user) {
+            $works = $this->proofOfWorkRepo->list('id,preview_image', "created_by = {$user->id} and created_year = '{$year}' and project_id = {$project->id}");
+            $images = [];
+            foreach ($works as $work) {
+                $imageData = json_decode($work->preview_image, true);
+                foreach ($imageData as $img) {
+                    $images[] = $img;
+                }
+            }
+
+            $output[] = [
+                'id' => $user->id,
+                'image' => count($images),
+                'name' => $user->employee->name,
+            ];
+        }
+
+        return $output;
+    }
+
+    public function getProjectFolderDetail()
+    {
+        $year = request('year');
+        $type = request('type');
+        $clientPortal = request('project');
+
+        $project = $this->repo->show(0, 'id,uid,name,project_date', [], "client_portal = '{$clientPortal}'");
+
+        if ($type == 'images') {
+            $output = $this->getAllProjectImages($project, $year);
+        } else if ($type == 'user') {
+            $output = $this->getProjectEmployeeAssets($project, $year);
+        } else {
+            $output = $this->getProjectTasks($project);
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $output
+        );
+    }
+
+    public function cancelProject(array $data, string $projectUid)
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            $this->deleteProjectPic($projectId);
+
+            $this->repo->update(['status' => $data['status']], 'dummy', "uid = '{$projectUid}'");
+
+            \Modules\Production\Jobs\CancelProjectWithPicJob::dispatch($data['pic_list'], $projectUid)->afterCommit();
+
+            // update cache
+            if ($currentData = getCache('detailProject' . $projectId)) {
+                // new pics
+                $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name']);
+
+                $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
+                $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
+
+                $currentData = $this->formatTasksPermission($currentData, $projectId);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'full_detail' => $currentData,
+                ]
+            );
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return errorResponse($e);
         }
     }
 }

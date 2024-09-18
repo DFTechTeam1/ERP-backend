@@ -290,4 +290,14 @@ class EmployeeController extends Controller
     {
         return apiResponse($this->employeeService->deleteEmergency($emergencyUid));
     }
+
+    /**
+     * update employment data
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateEmployment(\Modules\Hrd\Http\Requests\Employee\UpdateEmployment $request, string $employeeUid)
+    {
+        return apiResponse($this->employeeService->updateEmployment($request->validated(), $employeeUid));
+    }
 }

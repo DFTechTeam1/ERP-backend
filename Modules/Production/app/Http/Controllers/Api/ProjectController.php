@@ -44,7 +44,7 @@ class ProjectController extends Controller
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id',
                 'marketings.marketing:id,name,employee_id',
-                'projectClass:id,name',
+                'projectClass:id,name,color',
                 'vjs.employee:id,nickname',
                 'equipments:id,project_id,inventory_id,status,is_returned'
             ]
@@ -460,9 +460,9 @@ class ProjectController extends Controller
         return apiResponse($this->service->getProjectTeamsForTask($projectUid));
     }
 
-    public function getProjectStatusses()
+    public function getProjectStatusses(string $projectUid)
     {
-        return apiResponse($this->service->getProjectStatusses());
+        return apiResponse($this->service->getProjectStatusses($projectUid));
     }
 
     /**
@@ -544,4 +544,71 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->returnEquipment($projectUid, $request->validated()));
     }
+
+    public function downloadReferences(string $projectUid)
+    {
+        $references = $this->service->downloadReferences($projectUid);
+        $name = str_replace(' ', '', $references['project']->name);
+        $name .= "_references.zip";
+
+        return \STS\ZipStream\Facades\Zip::create("{$name}", $references['files']);
+    }
+
+    public function getAllSchedulerProjects(string $projectUid)
+    {
+        return apiResponse($this->service->getAllSchedulerProjects($projectUid));
+    }
+
+    public function getPicScheduler(string $projectUid)
+    {
+        return apiResponse($this->service->getPicScheduler($projectUid));        
+    }
+
+    public function assignPic(\Modules\Production\Http\Requests\Project\AssignPic $request, string $projectUid)
+    {
+        return $this->service->assignPic($projectUid, $request->validated());
+    }
+
+    public function subtitutePic(\Modules\Production\Http\Requests\Project\SubtitutePic $request, string $projectUid)
+    {
+        return $this->service->subtitutePic($projectUid, $request->validated());
+    }
+
+    public function getPicForSubtitute(string $projectUid)
+    {
+        return apiResponse($this->service->getPicForSubtitute($projectUid));
+    }
+
+    public function downloadProofOfWork(string $projectUid, int $proofOfWorkId)
+    {
+        $references = $this->service->downloadProofOfWork($projectUid, $proofOfWorkId);
+        $name = str_replace(' ', '', $references['task']->name);
+        $name .= "_proof_of_work.zip";
+
+        return \STS\ZipStream\Facades\Zip::create("{$name}", $references['files']);
+    }
+
+    /**
+     * Get all projects for file manager
+     */
+    public function getProjectsFolder()
+    {
+        return apiResponse($this->service->getProjectsFolder());
+    }
+
+    public function getProjectYears()
+    {
+        return apiResponse($this->service->getprojectyears());
+    }
+    
+    public function getProjectFolderDetail()
+    {
+        return apiResponse($this->service->getProjectFolderDetail());
+    }
+
+    public function cancelProject(\Modules\Production\Http\Requests\Project\CancelProject $request, string $projectUid)
+    {
+        return apiResponse($this->service->cancelProject($request->validated(), $projectUid));
+    }
 }
+

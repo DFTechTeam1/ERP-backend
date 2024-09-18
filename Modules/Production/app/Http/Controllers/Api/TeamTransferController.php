@@ -80,4 +80,9 @@ class TeamTransferController extends Controller
     {
         return apiResponse($this->service->delete($transferUid));
     }
+
+    public function getMembersToLend(string $transferUid, string $employeeUid)
+    {
+        return apiResponse($this->service->getMembersToLend($transferUid, $employeeUid));
+    }
 }

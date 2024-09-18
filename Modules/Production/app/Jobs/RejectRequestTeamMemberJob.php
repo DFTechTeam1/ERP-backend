@@ -35,6 +35,7 @@ class RejectRequestTeamMemberJob implements ShouldQueue
                 'employee:id,name,email,nickname',
                 'requestToPerson:id,name,email,nickname',
                 'requestByPerson:id,name,email,nickname',
+                'alternativeEmployee:id,nickname',
             ])
             ->where("uid", $this->transferUid)
             ->first();

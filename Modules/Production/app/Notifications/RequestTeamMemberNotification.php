@@ -101,27 +101,31 @@ class RequestTeamMemberNotification extends Notification
                 'text' => 'Hai ' . $this->pic->nickname . ', ' . $this->requestedBy->nickname . ' request untuk meminjam ' . $playerData . ' untuk sementara dalam pengerjaan event ' . $this->project->name . ' (' . date('d F Y', strtotime($this->project->project_date)) . ') dengan alasan ' . $transfer->reason,
             ],
             [
-                'type' => 'template',
-                'altText' => 'Request Member Message',
-                'template' => [
-                    'type' => 'buttons',
-                    'text' => 'Apakah kamu setuju meminjamkan ' . $playerData . ' untuk sementara waktu?',
-                    'actions' => [
-                        [
-                            'type' => 'postback',
-                            'label' => __('global.approve'),
-                            'data' => $postbackApprove,
-                        ],
-                        [
-                            'type' => 'postback',
-                            'label' => __('global.reject'),
-                            'data' => 'action=reject',
-                            "inputOption" => "openKeyboard",
-                            "fillInText" => "tokenId={$tokenData}\nalasan: ",
-                        ],
-                    ]
-                ]
+                'type' => 'text',
+                'text' => 'Silahkan login untuk melihat detail request'
             ],
+            // [
+            //     'type' => 'template',
+            //     'altText' => 'Request Member Message',
+            //     'template' => [
+            //         'type' => 'buttons',
+            //         'text' => 'Apakah kamu setuju meminjamkan ' . $playerData . ' untuk sementara waktu?',
+            //         'actions' => [
+            //             [
+            //                 'type' => 'postback',
+            //                 'label' => __('global.approve'),
+            //                 'data' => $postbackApprove,
+            //             ],
+            //             [
+            //                 'type' => 'postback',
+            //                 'label' => __('global.reject'),
+            //                 'data' => 'action=reject',
+            //                 "inputOption" => "openKeyboard",
+            //                 "fillInText" => "tokenId={$tokenData}\nalasan: \npengganti: ",
+            //             ],
+            //         ]
+            //     ]
+            // ],
         ];
 
         return [

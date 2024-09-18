@@ -61,35 +61,15 @@ class AssignTaskNotification extends Notification
     {
         $divider = \App\Enums\CodeDivider::assignTaskJobDivider->value;
 
-        $postbackApprove = $this->task->id . $divider . $this->employeeId . $divider . $this->task->project->id;
+        $payloadEncrypted = $this->task->id . $divider . $this->employeeId . $divider . $this->task->project->id;
 
-        $postbackApprove = 'approveTask=' . Hashids::encode($postbackApprove);
+        $postbackApprove = 'approveTask=' . Hashids::encode($payloadEncrypted);
         
         $messages = [
             [
                 'type' => 'text',
                 'text' => 'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya.",
             ],
-            // [
-            //     'type' => 'template',
-            //     'altText' => 'Tugas Baru',
-            //     'template' => [
-            //         'type' => 'buttons',
-            //         'text' => 'Apakah kamu ingin menerima tugas ini?',
-            //         'actions' => [
-            //             [
-            //                 'type' => 'postback',
-            //                 'label' => __('global.approve'),
-            //                 'data' => $postbackApprove,
-            //             ],
-            //             [
-            //                 'type' => 'postback',
-            //                 'label' => __('global.reject'),
-            //                 'data' => 'action=reject',
-            //             ],
-            //         ]
-            //     ]
-            // ],
         ];
 
         return [

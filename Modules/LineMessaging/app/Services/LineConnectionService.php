@@ -156,10 +156,11 @@ class LineConnectionService {
 
                 } else if ($event['type'] == 'postback') {
                     $textRaw = $event['postback']['data'];
+                    $sender = $event['source']['userId'];
 
                     $containApproveRequestTeam = str_contains($textRaw, 'type=approveRequestTeam');
                     if ($containApproveRequestTeam) {
-                        $this->handleApproveRequestMember($textRaw);
+                        $this->handleApproveRequestMember($textRaw, $sender);
                     }
 
                     // handle approve task postback
@@ -234,8 +235,17 @@ class LineConnectionService {
         $user->tokens()->delete();
     }
 
-    protected function handleApproveRequestMember($text)
+    protected function handleApproveRequestMember($text, $senderLineId)
     {
+        // send waiting text
+        $waitingMessage = [
+            [
+                'type' => 'text',
+                'text' => 'Sistem sendang memproses permintaan kamu'
+            ],
+        ];
+        $this->sendMessage($waitingMessage, $senderLineId);
+
         $exp = explode('type=approveRequestTeam&data=', $text);
         
         $data = json_decode($exp[1], true);

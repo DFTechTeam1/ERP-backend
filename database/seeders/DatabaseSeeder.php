@@ -30,6 +30,8 @@ class DatabaseSeeder extends Seeder
             EmailSettingSeeder::class,
             VariableSettingSeeder::class,
             EmployeeSeeder::class,
+            ProjectClassSeeder::class,
+            AppendPermissionSeeder::class,
         ]);
     }
 }
