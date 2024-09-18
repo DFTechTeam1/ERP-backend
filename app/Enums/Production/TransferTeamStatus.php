@@ -9,6 +9,7 @@ enum TransferTeamStatus: int
     case Reject = 3;
     case Completed = 4;
     case Canceled = 5;
+    case ApprovedWithAlternative = 6;
 
     public function label()
     {
@@ -18,6 +19,7 @@ enum TransferTeamStatus: int
             static::Reject => __('global.reject'),
             static::Completed => __('global.completed'),
             static::Canceled => __('global.canceled'),
+            static::ApprovedWithAlternative => __('global.approvedWithAlternative'),
         };
     }
 
@@ -29,6 +31,7 @@ enum TransferTeamStatus: int
             static::Reject => 'red-darken-1',
             static::Completed => 'light-green-lighten-1',
             static::Canceled => 'warning',
+            static::ApprovedWithAlternative => 'success',
         };
     }
 }

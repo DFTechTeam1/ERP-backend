@@ -11,6 +11,7 @@ enum ProjectStatus: int
     case ApprovedByClient = 5;
     case Completed = 6;
     case ReadyToGo = 7;
+    case Canceled = 8;
 
     public function label()
     {
@@ -22,6 +23,7 @@ enum ProjectStatus: int
             static::ApprovedByClient => __("global.approvedByClient"),
             static::Completed => __("global.completed"),
             static::ReadyToGo => __("global.readyToGo"),
+            static::Canceled => __("global.canceled"),
         };
     }
 
@@ -35,6 +37,7 @@ enum ProjectStatus: int
             static::ApprovedByClient => 'cyan-lighten-3',
             static::Completed => 'green-lighten-2',
             static::ReadyToGo => 'success',
+            static::Canceled => 'brown-darken-2',
         };
     }
 }

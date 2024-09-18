@@ -16,6 +16,8 @@ use Modules\Production\Http\Controllers\ProductionController;
  *
 */
 
+Route::get('production/project/{projectUid}/downloadReferences', [ProjectController::class, 'downloadReferences']);
+
 Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('eventTypes', [ProjectController::class, 'getEventTypes']);
     Route::get('classList', [ProjectController::class, 'getClassList']);
@@ -29,14 +31,23 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
     Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
     Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
-    Route::get('project/statusses', [ProjectController::class, 'getProjectStatusses']);
     Route::get('project/marketings', [ProjectController::class, 'getMarketingListForProject']);
     Route::get('project/taskType', [ProjectController::class, 'getTaskTypes']);
+    Route::get('project/getProjectsFolder', [ProjectController::class, 'getProjectsFolder']);
     Route::post('project/bulk', [ProjectController::class, 'bulkDelete']);
     Route::get('project/venues', [ProjectController::class, 'autocompleteVenue']);
+    Route::get('project/getProjectYears', [ProjectController::class, 'getProjectYears']);
+    Route::get('project/getProjectFolderDetail', [ProjectController::class, 'getProjectFolderDetail']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
+
+    Route::get('project/{projectUid}/statusses', [ProjectController::class, 'getProjectStatusses']);
     Route::get('project/{projectUid}/prepareFinalCheck', [ProjectController::class, 'prepareFinalCheck']);
+    Route::get('project/scheduler/{projectUid}', [ProjectController::class, 'getAllSchedulerProjects']);
+    Route::get('project/{projectUid}/getPicScheduler', [ProjectController::class, 'getPicScheduler']);
+    Route::post('project/{projectUid}/assignPic', [ProjectController::class, 'assignPic']);
+    Route::post('project/{projectUid}/subtitutePic', [ProjectController::class, 'subtitutePic']);
+    Route::get('project/{projectUid}/getPicForSubtitute', [ProjectController::class, 'getPicForSubtitute']);
     Route::get('project/{projectUid}/readyToGo', [ProjectController::class, 'readyToGo']);
     Route::delete('project/{projectUid}/removeAllVJ', [ProjectController::class, 'removeAllVJ']);
     Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
@@ -60,6 +71,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{projectId}/equipment', [ProjectController::class, 'requestEquipment']);
     Route::get('project/{projectId}/equipment', [ProjectController::class, 'listEquipment']);
     Route::post('project/{projectId}/cancelEquipment', [ProjectController::class, 'cancelRequestEquipment']);
+    Route::post('project/{projectUid}/cancelProject', [ProjectController::class, 'cancelProject']);
     Route::post('project/{projectId}/updateDeadline', [ProjectController::class, 'updateDeadline']);
     Route::put('project/{projectId}/equipment', [ProjectController::class, 'updateEquipment']);
     Route::post('project/{taskId}/task/assignMember', [ProjectController::class, 'assignMemberToTask']);
@@ -82,6 +94,8 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::delete('team-transfers/delete/{transferUid}', [TeamTransferController::class, 'destroy']);
     Route::post('team-transfers/reject/{transferUid}', [TeamTransferController::class, 'rejectRequest']);
     Route::get('team-transfers/approve/{transferUid}/{deviceAction}', [TeamTransferController::class, 'approveRequest']);
+    Route::get('team-transfers/{transferUid}/getMembersToLend/{employeeUid}', [TeamTransferController::class, 'getMembersToLend']);
 });
 
 Route::get('production/project/{taskId}/downloadAttachment/{attachmentId}', [ProjectController::class, 'downloadAttachment']);
+Route::get('production/project/{projectUid}/downloadProofOfWork/{proofOfWorkId}', [ProjectController::class, 'downloadProofOfWork']);

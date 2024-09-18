@@ -18,7 +18,6 @@ class MoreDetailUpdate extends FormRequest
             'note' => 'nullable',
             'status' => 'required',
             'venue' => 'required',
-            'pic' => 'required',
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',

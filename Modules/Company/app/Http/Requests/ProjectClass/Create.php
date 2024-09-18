@@ -14,6 +14,7 @@ class Create extends FormRequest
         return [
             'name' => 'required|unique:project_classes,name',
             'maximal_point' => 'required',
+            'color' => 'required',
         ];
     }
 

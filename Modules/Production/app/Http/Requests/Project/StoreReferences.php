@@ -12,7 +12,8 @@ class StoreReferences extends FormRequest
     public function rules(): array
     {
         return [
-            'files.*.path' => 'required',
+            'files.*.path' => 'nullable',
+            'link.*.href' => 'nullable',
         ];
     }
 

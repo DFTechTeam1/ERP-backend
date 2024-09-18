@@ -30,6 +30,7 @@ class TransferTeamMember extends Model
         'rejected_at',
         'canceled_at',
         'reject_reason',
+        'alternative_employee_id'
     ];
 
     protected $appends = ['status_text', 'status_color'];
@@ -37,6 +38,11 @@ class TransferTeamMember extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'employee_id');
+    }
+
+    public function alternativeEmployee(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'alternative_employee_id');
     }
 
     public function requestToPerson(): BelongsTo
