@@ -300,4 +300,9 @@ class EmployeeController extends Controller
     {
         return apiResponse($this->employeeService->updateEmployment($request->validated(), $employeeUid));
     }
+
+    public function resign(\Modules\Hrd\Http\Requests\Employee\Resign $request, string $employeeUid)
+    {
+        return apiResponse($this->employeeService->resign($request->validated(), $employeeUid));
+    }
 }
