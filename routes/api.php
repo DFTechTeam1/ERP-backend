@@ -20,7 +20,10 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::get('ilham', [\App\Http\Controllers\Api\TestingController::class, 'testing'])->middleware('auth:sanctum');
+Route::get('delete-projects', [\App\Http\Controllers\Api\TestingController::class, 'deleteCurrentProjects']);
+Route::post('manual-migrate-project', [\App\Http\Controllers\Api\TestingController::class, 'manualMigrateProjects']);
+Route::post('manual-assign-pm', [\App\Http\Controllers\Api\TestingController::class, 'manualAssignPM']);
+Route::post('manual-assign-status', [\App\Http\Controllers\Api\TestingController::class, 'manualAssignStatus']);
 
 Route::get('notification/markAsRead/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
 
