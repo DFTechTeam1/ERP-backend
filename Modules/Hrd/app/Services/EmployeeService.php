@@ -1641,4 +1641,30 @@ class EmployeeService
             return errorResponse($th);
         }
     }
+
+    /**
+     * Employee is resign
+     * 
+     * @param array<string, string> $data
+     * @param string employeeUid
+     * 
+     * @return array
+     */
+    public function resign(array $data, string $employeeUid)
+    {
+        $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+
+        $this->repo->update([
+            'end_date' => date('Y-m-d'),
+            'resign_reason' => $data['reason'],
+            'status' => \App\Enums\Employee\Status::Inactive->value,
+        ], $employeeUid);
+
+        \App\Models\User::where('employee_id', $employeeId)->delete();
+
+        return generalResponse(
+            __('notification.successResign'),
+            false
+        );
+    }
 }

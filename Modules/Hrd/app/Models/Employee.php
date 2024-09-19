@@ -77,6 +77,8 @@ class Employee extends Model
         'updated_by',
         'user_id',
         'line_id',
+        'end_date',
+        'resign_reason',
     ];
 
     protected $appends = [
