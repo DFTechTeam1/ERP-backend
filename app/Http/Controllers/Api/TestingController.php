@@ -397,6 +397,11 @@ class TestingController extends Controller
         );
     }
 
+    public function generateOfficialEmail()
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\OfficialEmailList, 'email_list.xlsx');   
+    }
+
     public function spreadsheet()
     {
         $service = new GoogleService();

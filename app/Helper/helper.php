@@ -351,6 +351,20 @@ if (!function_exists('generateRandomPassword')) {
     }
 }
 
+if (!function_exists('generateRandomSymbol')) {
+    function generateRandomSymbol()
+    {
+        $length = 1;
+        $char = '@$%&*()!';
+        $charLen = strlen($char);
+        $symbol = '';
+        for ($i = 0; $i < $length; $i++) {
+            $symbol .= $char[random_int(0, $charLen - 1)];
+        }
+        return $symbol;
+    }
+}
+
 if (!function_exists('getSetting')) {
     function getSetting($code = '') {
         $data = \Illuminate\Support\Facades\Cache::get('setting');
