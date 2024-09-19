@@ -365,8 +365,6 @@ class ProjectService
                 ];
             }
 
-            logging('where has condition', [auth()->user()]);
-
             $paginated = $this->repo->pagination(
                 $select,
                 $where,
@@ -375,7 +373,7 @@ class ProjectService
                 $page,
                 $whereHas
             );
-            $totalData = $this->repo->list('id', $where)->count();
+            $totalData = $this->repo->list('id', $where, [], $whereHas)->count();
 
             $eventTypes = \App\Enums\Production\EventType::cases();
             $classes = \App\Enums\Production\Classification::cases();
@@ -5245,7 +5243,7 @@ class ProjectService
      */
     public function getProjectsFolder()
     {
-        $itemsPerPage = request('itemsPerPage') ?? 5;
+        $itemsPerPage = request('itemsPerPage') ?? 25;
         $page = request('page') ?? 1;
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
