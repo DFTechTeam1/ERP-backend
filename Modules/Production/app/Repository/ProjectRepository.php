@@ -94,7 +94,7 @@ class ProjectRepository extends ProjectInterface {
             $query->with($relation);
         }
 
-        $query->orderBy('project_date', 'ASC');
+        $query->orderBy('project_date', 'DESC');
         
         return $query->skip($page)->take($itemsPerPage)->get();
     }
