@@ -5247,6 +5247,7 @@ class ProjectService
         $page = request('page') ?? 1;
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+        $isMyFile = request('is_my_file');
 
         $year = request('year') ?? date('Y');
         $startDate = $year . '-01-01';
@@ -5258,6 +5259,24 @@ class ProjectService
             $where .= " and lower(name) like '%". strtolower(request('name')) ."%'";
         }
 
+        if ($isMyFile) {
+            // identity user
+            $user = auth()->user();
+            if ($user->email != config('app.root_email')) {
+                if ($user->is_employee) {
+                    $userProjectIds = $this->taskPicHistory->list('project_id', "employee_id = " . $user->employee_id);
+                    $userProjectIds = collect($userProjectIds)->pluck('project_id')->toArray();
+                    $userProjectIds = implode(',', $userProjectIds);
+                } else if ($user->is_project_manager) {
+                    $userProjectIds = $this->projectPicRepository->list('project_id', 'pic_id = ' . $user->employee_id);
+                    $userProjectIds = collect($userProjectIds)->pluck('project_id')->toArray();
+                    $userProjectIds = implode(',', $userProjectIds);
+                }
+
+                $where .= " and id IN ({$userProjectIds})";
+            }
+        }
+
         $data = $this->repo->pagination(
             'id,uid,name,client_portal',
             $where,
@@ -5265,6 +5284,8 @@ class ProjectService
             $itemsPerPage,
             $page,
         );
+        
+        logging('where file manager', [$where]);
 
         $totalData = $this->repo->list('id', $where)->count();
         $total = round($totalData / $itemsPerPage);
@@ -5287,6 +5308,7 @@ class ProjectService
                     'total' => $total,
                     'page' => (int)request('page'),
                 ],
+                'is_my_files' => $isMyFile,
             ],
         );
     }
