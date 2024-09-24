@@ -20,6 +20,27 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::get('testing', function () {
+    $project = \Modules\Production\Models\Project::latest()->first();
+    $entertainmentPic = \App\Models\User::find(2);
+    $user = \App\Models\User::latest()->first();
+    $employeeIds = [6];
+
+    \Modules\Production\Jobs\RequestEntertainmentTeamJob::dispatch(
+        ['default_select' => true], 
+        $project, 
+        $entertainmentPic, 
+        $user, 
+        $employeeIds
+    );
+
+    return response()->json([
+        'project' => $project,
+        'enter' => $entertainmentPic,
+        'user' => $user,
+    ]);
+});
+
 Route::get('delete-projects', [\App\Http\Controllers\Api\TestingController::class, 'deleteCurrentProjects']);
 Route::post('manual-migrate-project', [\App\Http\Controllers\Api\TestingController::class, 'manualMigrateProjects']);
 Route::post('manual-assign-pm', [\App\Http\Controllers\Api\TestingController::class, 'manualAssignPM']);

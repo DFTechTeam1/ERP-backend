@@ -68,65 +68,6 @@ class PositionSeeder extends Seeder
 
         $this->command->info('success seed');
 
-        // $positions = [
-        //     [
-        //         'name' => 'HR Generalist',
-        //         'division_id' => $hr->id,
-        //     ],
-        //     [
-        //         'name' => 'Admin & Finance',
-        //         'division_id' => $finance->id,
-        //     ],
-        //     [
-        //         'name' => 'IT Technical Support',
-        //         'division_id' => $it->id,
-        //     ],
-        //     [
-        //         'name' => 'Fullstack Developer',
-        //         'division_id' => $it->id,
-        //     ],
-        //     [
-        //         'name' => 'Marketing',
-        //         'division_id' => $marketing->id,
-        //     ],
-        //     [
-        //         'name' => 'Project Manager',
-        //         'division_id' => $production->id,
-        //     ],
-        //     [
-        //         'name' => 'Lead Project Manager',
-        //         'division_id' => $production->id,
-        //     ],
-        //     [
-        //         'name' => '3D Modeller',
-        //         'division_id' => $production->id,
-        //     ],
-        //     [
-        //         'name' => 'Compositor',
-        //         'division_id' => $production->id,
-        //     ],
-        //     [
-        //         'name' => 'Generalist',
-        //         'division_id' => $production->id,
-        //     ],
-        //     [
-        //         'name' => 'Animator',
-        //         'division_id' => $production->id,
-        //     ],
-        //     [
-        //         'name' => 'Lead Entertaintment',
-        //         'division_id' => $entertainment->id,
-        //     ],
-        //     [
-        //         'name' => 'VJ',
-        //         'division_id' => $entertainment->id,
-        //     ],
-        // ];
-
-        // foreach ($positions as $position) {
-        //     Position::create($position);
-        // }
-
         Schema::enableForeignKeyConstraints();
     }
 }

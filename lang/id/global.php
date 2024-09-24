@@ -177,6 +177,9 @@ return [
     'projectCancelation' => 'Project Cancelation',
     'projectCancelText' => 'Project :project has been canceled',
     'approvedWithAlternative' => 'Disetujui dengan Pengganti',
+    'month' => 'Bulan',
+    'newRequestTeam' => 'Permintaan team baru',
+    'newRequestTeamText' => 'Kamu menerima permintaan team untuk event :event',
     
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',

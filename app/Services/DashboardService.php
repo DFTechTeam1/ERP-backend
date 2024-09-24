@@ -177,6 +177,20 @@ class DashboardService {
                     'value' => count($keys),
                 ]
             ],
+            'right' => [
+                [
+                    'text' => __('global.totalProjectInMonth'),
+                    'series' => $projects['series'],
+                    'options' => $projects['options'],
+                    'value' => $projects['total'],
+                ],
+                [
+                    'text' => __('global.upcomingProject'),
+                    'series' => $upcomingSeries,
+                    'options' => $upcomingOptions,
+                    'value' => $upcomingProject->count(),
+                ],
+            ],
         ];
     }
 
@@ -411,12 +425,16 @@ class DashboardService {
                 $projectTaskIds = implode("','", $projectTasks);
                 $projectTaskIds = "'" . $projectTaskIds;
                 $projectTaskIds .= "'";
-    
-                $whereHas[] = [
-                    'relation' => 'tasks',
-                    'query' => "id IN (" . $projectTaskIds . ")"
-                ];
+                
+                $hasQuery = "id IN (" . $projectTaskIds . ")";
+            } else {
+                $hasQuery = "id IN (0)";
             }
+
+            $whereHas[] = [
+                'relation' => 'tasks',
+                'query' => $hasQuery,
+            ];
         }
 
         $data = $this->projectRepo->list('id,uid,name,project_date,venue', $where, [
@@ -488,7 +506,7 @@ class DashboardService {
                 'relation' => 'personInCharges',
                 'query' => "pic_id = {$employeeId}",
             ];
-        } else if ($roleId != $projectManagerRole && $roleId != $superUserRole) {
+        } else if ($roleId != $projectManagerRole || $roleId != $superUserRole) {
             // get based on user task pic
             $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
             if ($projectTaskPic->count() > 0) {
@@ -496,12 +514,15 @@ class DashboardService {
                 $projectTaskIds = implode("','", $projectTasks);
                 $projectTaskIds = "'" . $projectTaskIds;
                 $projectTaskIds .= "'";
-    
-                $whereHas[] = [
-                    'relation' => 'tasks',
-                    'query' => "id IN (" . $projectTaskIds . ")"
-                ];
+                
+                $hasQuery = "id IN (" . $projectTaskIds . ")";
+            } else {
+                $hasQuery = "id IN (0)";
             }
+            $whereHas[] = [
+                'relation' => 'tasks',
+                'query' => $hasQuery,
+            ];
         }
 
         $where = "project_date >= '" . date('Y-m-d') . "' and status = " . \App\Enums\Production\ProjectStatus::OnGoing->value;
@@ -517,7 +538,7 @@ class DashboardService {
             $your_date = strtotime($project->project_date);
             $datediff = $your_date - $now;
 
-            $d = round($datediff / (60 * 60 * 24));
+            $d = number_format(ceil($datediff / (60 * 60 * 24)));
 
             if ($d <= 7) {
                 $color = 'red';

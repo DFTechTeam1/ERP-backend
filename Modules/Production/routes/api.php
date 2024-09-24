@@ -31,6 +31,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
     Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
     Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
+    Route::get('project/initEntertainmentTeam', [ProjectController::class, 'initEntertainmentTeam']);
     Route::get('project/marketings', [ProjectController::class, 'getMarketingListForProject']);
     Route::get('project/taskType', [ProjectController::class, 'getTaskTypes']);
     Route::get('project/getProjectsFolder', [ProjectController::class, 'getProjectsFolder']);
@@ -56,6 +57,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/getTargetPicsAndTaskList/{projectUid}', [ProjectController::class, 'getTargetPicsAndTaskList']); // get pic list for request team member (exclude logged accont)
     Route::post('project/{projectUid}/loadTeamMember', [ProjectController::class, 'loadTeamMember']);
     Route::post('project/{projectUid}/uploadShowreels', [ProjectController::class, 'uploadShowreels']);
+    Route::post('project/{projectUid}/requestEntertainment', [ProjectController::class, 'requestEntertainment']);
     Route::post('project/{projectUid}/changeStatus', [ProjectController::class, 'changeStatus']);
     Route::get('project/{id}/getBoards', [ProjectController::class, 'getProjectBoards']);
     Route::get('project/{id}/getProjectTeams', [ProjectController::class, 'getProjectTeams']);
@@ -90,6 +92,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
 
     Route::get('team-transfers', [TeamTransferController::class, 'index']);
     Route::post('team-transfers/cancel', [TeamTransferController::class, 'cancelRequest']);
+    Route::post('team-transfers/chooseTeam/{transferUid}', [TeamTransferController::class, 'chooseTeam']);
     Route::get('team-transfers/complete/{transferUid}', [TeamTransferController::class, 'completeRequest']);
     Route::delete('team-transfers/delete/{transferUid}', [TeamTransferController::class, 'destroy']);
     Route::post('team-transfers/reject/{transferUid}', [TeamTransferController::class, 'rejectRequest']);

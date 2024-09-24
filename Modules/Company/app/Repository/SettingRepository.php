@@ -158,6 +158,17 @@ class SettingRepository extends SettingInterface {
     }
 
     /**
+     * Delete setting by code
+     *
+     * @param string $code
+     */
+    public function deleteByKey(string $key)
+    {
+        return $this->model->where('key', $key)
+            ->delete();
+    }
+
+    /**
      * Function to update or insert setting
      *
      * @param array $condition

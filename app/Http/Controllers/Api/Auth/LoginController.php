@@ -59,8 +59,13 @@ class LoginController extends Controller
                 throw new UserNotFound(__('global.credentialDoesNotMatch'));
             }
 
+            if (!isset($user->getRoleNames()[0])) {
+                throw new \App\Exceptions\DoNotHaveAppPermission();
+            }
+
             $role = $user->getRoleNames()[0];
             $roles = $user->roles;
+
             $roleId = null;
             if (count($roles) > 0) {
                 $roleId = $roles[0]->id;

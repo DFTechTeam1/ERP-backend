@@ -20,7 +20,7 @@ class UpdateEmployment extends FormRequest
             'level' => 'required',
             'employee_id' => [
                 'required',
-                Rule::unique('employees', 'employee_id')->ignore($this->route('employeeUid')),
+                Rule::unique('employees', 'employee_id')->ignore($this->route('employeeUid'), 'uid'),
             ],
             'join_date' => 'required',
         ];

@@ -99,14 +99,19 @@ class TransferTeamMemberService {
                     ];
                 }
 
-                return [
-                    'uid' => $item->uid,
-                    'is_approved' => $isApproved,
-                    'employee' => [
+                $employeeFormat = null;
+                if ($item->employee) {
+                    $employeeFormat = [
                         'uid' => $item->employee->uid,
                         'name' => $item->employee->name,
                         'email' => $item->employee->email,
-                    ],
+                    ];
+                }
+
+                return [
+                    'uid' => $item->uid,
+                    'is_approved' => $isApproved,
+                    'employee' => $employeeFormat,
                     'requestTo' => [
                         'uid' => $item->requestToPerson->uid,
                         'name' => $item->requestToPerson->name,
@@ -195,7 +200,7 @@ class TransferTeamMemberService {
 
             $this->projectService->updateDetailProjectFromOtherService($transfer->project->uid);
 
-            \Modules\Production\Jobs\ApproveRequestTeamMemberJob::dispatch($transferUid)->afterCommit();
+            \Modules\Production\Jobs\ApproveRequestTeamMemberJob::dispatch([$transfer->id])->afterCommit();
 
             DB::commit();
 
@@ -402,5 +407,64 @@ class TransferTeamMemberService {
             false,
             $output,
         );
+    }
+
+    /**
+     * Approved and choose team member to work on selected project
+     * 
+     * @param array $payload
+     * @param string $transferUid
+     * 
+     * @return array
+     */
+    public function chooseTeam(array $payload, string $transferUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $currentData = $this->repo->show($transferUid);
+
+            // validate action
+            $user = auth()->user();
+            if (
+                (!$user->is_directory || $user->email != config('app.root_email')) &&
+                $user->employee_id != $currentData->request_to
+            ) {
+                throw new \App\Exceptions\InvalidPermissionAction();
+            }
+
+            $transferIds = [];
+            foreach ($payload['team'] as $team) {
+                $employeeId = getIdFromUid($team, new \Modules\Hrd\Models\Employee());
+
+                $transferIds[] = $this->repo->store([
+                    'is_entertainment' => true,
+                    'project_id' => $currentData->project_id,
+                    'employee_id' => $employeeId,
+                    'request_to' => $currentData->request_to,
+                    'requested_by' => $currentData->requested_by,
+                    'request_at' => $currentData->request_at,
+                    'reason' => $currentData->reason,
+                    'project_date' => $currentData->project_date,
+                    'approved_at' => Carbon::now(),
+                    'status' => \App\Enums\Production\TransferTeamStatus::Approved->value,
+                ]);
+            }
+
+            // delete current transfer id and store the new one
+            $this->repo->delete($currentData->id);
+
+            \Modules\Production\Jobs\ApproveRequestTeamMemberJob::dispatch($transferIds)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.teamHasBeenDeterminedForTransfer'),
+                false,
+            );
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return errorResponse($e);
+        }
     }
 }

@@ -167,10 +167,14 @@ class EmployeeService
                 foreach ($sortBy as $item) {
                     if($item['key'] == 'position.name') {
                         $item['key'] = 'position_id';
+                    } else if ($item['key'] == 'nip') {
+                        $item['key'] = 'employee_id';
                     }
                     $orderBy[] = $item['key']." ".$item['order'];
                 }
                 $order = implode(', ', $orderBy);
+            } else {
+                $order = 'employee_id asc';
             }
 
 
@@ -1630,6 +1634,8 @@ class EmployeeService
     {
         try {
             $payload['level_staff'] = $payload['level'];
+            $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\Position());
+            $payload['boss_id'] = getIdFromUid($payload['boss_id'], new \Modules\Hrd\Models\Employee());
 
             $this->repo->update(collect($payload)->except(['level'])->toArray(), $employeeUid);
 

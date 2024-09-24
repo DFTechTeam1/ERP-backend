@@ -12,14 +12,14 @@ class ApproveRequestTeamMemberJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private $uid;
+    private $ids;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $uid)
+    public function __construct(array $ids)
     {
-        $this->uid = $uid;
+        $this->ids = $ids;
     }
 
     /**
@@ -27,24 +27,27 @@ class ApproveRequestTeamMemberJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $transfer = \Modules\Production\Models\TransferTeamMember::with([
-                'employee:id,name,email,nickname',
-                'requestToPerson:id,name,email,nickname',
-                'requestByPerson:id,name,email,nickname',
-                'project:id,name'
-            ])
-            ->where('uid', $this->uid)->first();
+        foreach ($this->ids as $id) {
+            $transfer = \Modules\Production\Models\TransferTeamMember::with([
+                    'employee:id,name,email,nickname',
+                    'requestToPerson:id,name,email,nickname',
+                    'requestByPerson:id,name,email,nickname',
+                    'project:id,name'
+                ])
+                ->find($id);
 
-        $requested = \Modules\Hrd\Models\Employee::find($transfer->requested_by);
+            $requested = \Modules\Hrd\Models\Employee::find($transfer->requested_by);
 
-        $lineIds = [$requested->line_id];
+            $lineIds = [$requested->line_id];
 
-        $employee = \Modules\Hrd\Models\Employee::find($transfer->employee_id);
+            $employee = \Modules\Hrd\Models\Employee::find($transfer->employee_id);
 
-        $employeeLineIds = [$employee->line_id];
+            $employeeLineIds = [$employee->line_id];
 
-        \Illuminate\Support\Facades\Notification::send($requested, new \Modules\Production\Notifications\ApproveRequestTeamMemberNotification($transfer, $lineIds));
+            \Illuminate\Support\Facades\Notification::send($requested, new \Modules\Production\Notifications\ApproveRequestTeamMemberNotification($transfer, $lineIds));
 
-        \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\PlayerApproveRequestTeamNotification($transfer, $employeeLineIds));
+            \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\PlayerApproveRequestTeamNotification($transfer, $employeeLineIds));
+        }
+
     }
 }

@@ -672,3 +672,15 @@ if (!function_exists('getLengthOfService')) {
         return $text;
     }
 }
+
+if (!function_exists('removeDuplicateArray')) {
+    function removeDuplicateArray(array $arr) {
+        $serialized = array_map('serialize', $arr);
+
+        $unique = array_unique($serialized);
+
+        $unserialize = array_map('unserialize', $unique);
+
+        return $unserialize;
+    }
+}

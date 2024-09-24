@@ -71,7 +71,8 @@ class ProjectRepository extends ProjectInterface {
         array $relation = [],
         int $itemsPerPage,
         int $page,
-        array $whereHas = []
+        array $whereHas = [],
+        string $sortBy = ''
     )
     {
         $query = $this->model->query();
@@ -94,7 +95,11 @@ class ProjectRepository extends ProjectInterface {
             $query->with($relation);
         }
 
-        $query->orderBy('project_date', 'DESC');
+        if (empty($sortBy)) {
+            $query->orderBy('project_date', 'DESC');
+        } else {
+            $query->orderByRaw($sortBy);
+        }
         
         return $query->skip($page)->take($itemsPerPage)->get();
     }

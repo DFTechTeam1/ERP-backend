@@ -8,7 +8,7 @@ class OfficialEmailList implements FromArray
 {
     public function array(): array
     {
-        $employees = \Modules\Hrd\Models\Employee::selectRaw('name,id')
+        $employees = \Modules\Hrd\Models\Employee::selectRaw('name,id,employee_id')
             ->whereRaw("status != " . \App\Enums\Employee\Status::Inactive->value)
             ->get();
 
@@ -31,7 +31,7 @@ class OfficialEmailList implements FromArray
             $emailFormat = $fullname . '@dfactory.pro';
             $password = generateRandomSymbol() . generateRandomPassword() . generateRandomSymbol();
 
-            $output[] = [strtolower($fullname), $password, '', strtolower($emailFormat), ''];
+            $output[] = [strtolower($fullname), $employee->employee_id, strtolower($emailFormat)];
         }
 
         return $output;
