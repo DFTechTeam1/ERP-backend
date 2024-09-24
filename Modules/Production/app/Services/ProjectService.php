@@ -534,6 +534,10 @@ class ProjectService
             $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
         }
 
+        if (request('filter_month')) {
+            $startDate = request('filter_year') . '-' . request('filter_month') . '-01';
+        }
+
         if (empty($where)) {
             $where = "project_date >= '{$startDate}'";
         } else {
@@ -547,6 +551,11 @@ class ProjectService
             $endDate = date('Y-m-d', strtotime(request('end_date')));
         } else { // set based on selected project date
             $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
+        }
+
+        if (request('filter_month')) {
+            $endCarbon = \Carbon\Carbon::parse(request('filter_year') . '-' . request('filter_month') . '-01');
+            $endDate = request('filter_year') . '-' . request('filter_month') . '-' . $endCarbon->endOfMonth()->format('d');
         }
 
         if (empty($where)) {
@@ -630,7 +639,7 @@ class ProjectService
             [
                 'projects' => $output,
                 'filter' => $filterData,
-                'req' => request('start_date'),
+                'req' => $where,
             ]
         );
     }
@@ -814,8 +823,12 @@ class ProjectService
             $transferCondition .= ' and requested_by = ' . $user->employee_id; 
         }
 
-        $picId = implode(',', $picIds);
-        $employeeCondition = "boss_id IN ($picId)";
+        if (count($picIds) > 0) {
+            $picId = implode(',', $picIds);
+            $employeeCondition = "boss_id IN ($picId)";
+        } else {
+            $employeeCondition = "boss_id IN (0)";
+        }
 
         if (count($specialIds) > 0) {
             $specialId = implode(',', $specialIds);
@@ -878,13 +891,13 @@ class ProjectService
         foreach ($teams as $key => $team) {
             $task = $this->taskPicHistory->list('id', 'project_id = ' . $project->id . ' and employee_id = ' . $team['id'])->count();
 
-            $output[$key] = $team;
-            $output[$key]['total_task'] = $task;
+            $outputTeam[$key] = $team;
+            $outputTeam[$key]['total_task'] = $task;
         }
 
         return [
             'pics' => $pics,
-            'teams' => $output,
+            'teams' => $outputTeam,
             'picUids' => $picUids,
         ];
     }
@@ -5060,7 +5073,7 @@ class ProjectService
 
             // get total event class
             $eventClass = collect((object)$projects)->pluck('classification')->filter(function($itemClass) {
-                return strtolower($itemClass) == 's (special)';
+                return strtolower($itemClass) == 's (spesial)' || strtolower($itemClass) == 's (special)';
             })->count();
             
             foreach ($projects as $project) {
