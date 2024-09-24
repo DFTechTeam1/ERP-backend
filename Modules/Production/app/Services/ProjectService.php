@@ -275,6 +275,7 @@ class ProjectService
             $isProductionRole = in_array($roles[0]->id, $productionRoles);
 
             $projectManagerRole = getSettingByKey('project_manager_role');
+            logging('projectManagerRole', [$projectManagerRole]);
             $isPMRole = $roles[0]->id == $projectManagerRole;
 
             if (
@@ -347,11 +348,17 @@ class ProjectService
                     $taskIds = $this->taskPicLogRepo->list('id,project_task_id', 'employee_id = ' . $employeeId->id);
                     $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
 
+                    if (count($taskIds) > 0) {
+                        $queryNewHas = 'id IN (' . implode(',', $taskIds) . ')';
+                    } else {
+                        $queryNewHas = 'id = 0';
+                    }
+
                     $newWhereHas = [
                         [
                             'relation' => 'tasks',
-                            'query' => 'id IN (' . implode(',', $taskIds) . ')'
-                        ]
+                            'query' => $queryNewHas,
+                        ],
                     ];
 
                     $whereHas = array_merge($whereHas, $newWhereHas);
@@ -365,13 +372,29 @@ class ProjectService
                 ];
             }
 
+            $sorts = '';
+            if (!empty(request('sortBy'))) {
+                foreach (request('sortBy') as $sort) {
+                    if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
+                        $sorts .= $sort['key'] . ' ' . $sort['order'] . ','; 
+                    }
+                }
+
+                $sorts = rtrim($sorts, ',');
+            }
+
+            logging('list project: ', $whereHas);
+            logging('list project where: ', [$where]);
+
+
             $paginated = $this->repo->pagination(
                 $select,
                 $where,
                 $relation,
                 $itemsPerPage,
                 $page,
-                $whereHas
+                $whereHas,
+                $sorts
             );
             $totalData = $this->repo->list('id', $where, [], $whereHas)->count();
 
@@ -470,6 +493,7 @@ class ProjectService
                 'Success',
                 false,
                 [
+                    'sort' => $sorts,
                     'paginated' => $paginated,
                     'totalData' => $totalData,
                 ],
@@ -762,42 +786,64 @@ class ProjectService
             $picUids[] = $pic->employee->uid;
         }
 
+        // get special position that will be append on each project manager team members
+        $specialPosition = getSettingByKey('special_production_position');
+        $specialEmployee = [];
+        $specialIds = [];
+        if ($specialPosition) {
+            $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\Position());
+
+            $specialEmployee = $this->employeeRepo->list('id,uid,name,nickname,email,position_id', 'position_id = ' . $specialPosition, ['position:id,name'])->toArray();
+
+            $specialEmployee = collect($specialEmployee)->map(function ($employee) {
+                $employee['loan'] = false;
+
+                return $employee;
+            })->toArray();
+
+            $specialIds = collect($specialEmployee)->pluck('id')->toArray();
+        }
+
         // get another teams from approved transfer team
         $user = auth()->user();
         $roles = $user->roles;
         $roleId = $roles[0]->id;
         $superUserRole = getSettingByKey('super_user_role');
-        $transferCondition = 'status = ' . \App\Enums\Production\TransferTeamStatus::Approved->value;
+        $transferCondition = 'status = ' . \App\Enums\Production\TransferTeamStatus::Approved->value . ' and project_id = ' . $project->id;
         if ($roleId != $superUserRole) {
             $transferCondition .= ' and requested_by = ' . $user->employee_id; 
         }
-        $transfers = $this->transferTeamRepo->list('id,employee_id', $transferCondition, ['employee:id,name,uid,email,employee_id']);
+
+        $picId = implode(',', $picIds);
+        $employeeCondition = "boss_id IN ($picId)";
+
+        if (count($specialIds) > 0) {
+            $specialId = implode(',', $specialIds);
+            $transferCondition .= " and employee_id NOT IN ($specialId)";
+            $employeeCondition .= " and id NOT IN ($specialId)";
+        }
+
+        $transfers = $this->transferTeamRepo->list('id,employee_id', $transferCondition, ['employee:id,name,nickname,uid,email,employee_id,position_id', 'employee.position:id,name']);
 
         $transfers = collect((object) $transfers)->map(function ($transfer) {
             return [
                 'id' => $transfer->employee->id,
                 'uid' => $transfer->employee->uid,
                 'email' => $transfer->employee->email,
+                'nickname' => $transfer->nickname,
                 'name' => $transfer->employee->name,
+                'position' => $transfer->employee->position,
+                'loan' => true,
                 'last_update' => '-',
                 'current_task' => '-',
                 'image' => asset('images/user.png'),
             ];
         })->toArray();
 
-        // get special position that will be append on each project manager team members
-        $specialPosition = getSettingByKey('special_production_position');
-        $specialEmployee = [];
-        if ($specialPosition) {
-            $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\Position());
-
-            $specialEmployee = $this->employeeRepo->list('id,uid,name,email', 'position_id = ' . $specialPosition)->toArray();
-        }
-
         $teams = $this->employeeRepo->list(
-            'id,uid,name,email',
-            '',
-            [],
+            'id,uid,name,email,nickname,position_id',
+            $employeeCondition,
+            ['position:id,name'],
             '',
             '',
             [
@@ -809,10 +855,6 @@ class ProjectService
                     'relation' => 'position.division',
                     'query' => "LOWER(name) like '%production%'"
                 ]
-            ],
-            [
-                'key' => 'boss_id',
-                'value' => $picIds,
             ]
         );
 
@@ -820,6 +862,7 @@ class ProjectService
             $teams = collect($teams)->map(function ($team) {
                 $team['last_update'] = '-';
                 $team['current_task'] = '-';
+                $team['loan'] = false;
                 $team['image'] = asset('images/user.png');
 
                 return $team;
@@ -830,9 +873,18 @@ class ProjectService
             $teams = collect($teams)->merge($specialEmployee)->toArray();
         }
 
+        // get task on selected project
+        $outputTeam = [];
+        foreach ($teams as $key => $team) {
+            $task = $this->taskPicHistory->list('id', 'project_id = ' . $project->id . ' and employee_id = ' . $team['id'])->count();
+
+            $output[$key] = $team;
+            $output[$key]['total_task'] = $task;
+        }
+
         return [
             'pics' => $pics,
-            'teams' => $teams,
+            'teams' => $output,
             'picUids' => $picUids,
         ];
     }
@@ -1195,6 +1247,7 @@ class ProjectService
                 }
 
                 $output = [
+                    'id' => $data->id,
                     'allowed_upload_showreels' => $allowedUploadShowreels,
                     'uid' => $data->uid,
                     'name' => $data->name,
@@ -2189,7 +2242,7 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
-            $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid']);
+            $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid', 'project.personInCharges']);
             $data['project_id'] = $board->project_id;
             $data['project_board_id'] = $boardId;
             $data['start_date'] = date('Y-m-d');
@@ -2241,6 +2294,10 @@ class ProjectService
             $boards = $this->formattedBoards($board->project->uid);
             $currentData = getCache('detailProject' . $board->project->id);
             $currentData['boards'] = $boards;
+
+            // $project = $this->repo->show($board->project->uid)
+            $teams = $this->getProjectTeams((object)$board->project);
+            $currentData['teams'] = $teams['teams'];
 
             $projectTasks = $this->taskRepo->list('*', 'project_id = ' . $board->project_id, [
                 'board:id,name,project_id'
@@ -2333,14 +2390,7 @@ class ProjectService
                 'pics:id,project_task_id,employee_id',
                 'pics.employee:id,uid,name,email'
             ]);
-            // $currentTaskPics = collect($task->pics)->map(function ($item) {
-            //     return [
-            //         'uid' => $item->employee->uid,
-            //         'name' => $item->employee->name,
-            //         'email' => $item->employee->email,
-            //         'image' => $item->employee->image ? asset('storage/employees/' . $item->employee->image) : asset('images/user.png'),
-            //     ];
-            // })->all();
+
             $currentTaskPics = $task->pics->toArray();
             $outSelected = collect($currentTaskPics)->map(function ($item) {
                 return [
@@ -2351,7 +2401,7 @@ class ProjectService
                     'id' => $item['employee']['id'],
                     'intital' => $item['employee']['initial'],
                 ];
-            });
+            })->toArray();
 
             $selectedKeys = [];
             foreach ($currentTaskPics as $c) {
@@ -2364,18 +2414,16 @@ class ProjectService
 
             $availableKeys = [];
             $available = [];
-            if (count($diff) > 0) {
-                $availableKeys = array_values($diff);
-                foreach ($teams as $key => $member) {
-                    if (in_array($member['uid'], $availableKeys)) {
-                        array_push($available, $member);
-                    }
+            foreach ($teams as $team) {
+                if (!in_array($team['uid'], $outSelected)) {
+                    $available[] = $team;
                 }
             }
 
             $out = [
                 'selected' => $outSelected,
                 'available' => $available,
+                'teams' => $teams,
             ];
 
             return generalResponse(
@@ -5522,6 +5570,82 @@ class ProjectService
             DB::rollBack();
 
             return errorResponse($e);
+        }
+    }
+
+    public function initEntertainmentTeam()
+    {
+        $users = \App\Models\User::select('id', 'employee_id')->role('entertainment')->get();
+
+        $employeeIds = collect((object) $users)->pluck('employee_id')->toArray();
+        $employeeIds = implode(',', $employeeIds);
+
+        $employees = [];
+        if ($users->count() > 0) {
+            $employees = $this->employeeRepo->list('id,uid,name', "id IN ($employeeIds) and status = 1")->toArray();
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $employees,
+        );        
+    }
+
+    public function requestEntertainment(array $payload, string $projectUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            $project = $this->repo->show($projectUid, 'id,name,project_date');
+
+            $entertainmentPic = \App\Models\User::role('pic entertainment')->first();
+
+            $user = auth()->user();
+
+            $employeeIds = [];
+
+            if ($payload['default_select']) {
+                $this->transferTeamRepo->store([
+                    'project_id' => $projectId,
+                    'employee_id' => NULL,
+                    'reason' => 'Untuk event ' . $project->name,
+                    'project_date' => $project->project_date,
+                    'status' => \App\Enums\Production\TransferTeamStatus::Requested->value,
+                    'request_to' => $entertainmentPic->employee_id,
+                    'requested_by' => $user->employee_id
+                ]);
+            } else {
+                foreach ($payload['team'] as $team) {
+                    $employeeId = getIdFromUid($team, new \Modules\Hrd\Models\Employee());
+
+                    $employeeIds[] = $employeeId;
+
+                    $this->transferTeamRepo->store([
+                        'project_id' => $projectId,
+                        'employee_id' => $employeeId,
+                        'reason' => 'Untuk event ' . $project->name,
+                        'project_date' => $project->project_date,
+                        'status' => \App\Enums\Production\TransferTeamStatus::Requested->value,
+                        'request_to' => $entertainmentPic->employee_id,
+                        'requested_by' => $user->employee_id
+                    ]);
+                }
+            }
+
+            \Modules\Production\Jobs\RequestEntertainmentTeamJob::dispatch($payload, $project, $entertainmentPic, $user, $employeeIds)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.requestEntertainmentSuccess'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+           return errorResponse($th); 
         }
     }
 }

@@ -610,5 +610,15 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->cancelProject($request->validated(), $projectUid));
     }
+
+    public function initEntertainmentTeam()
+    {
+        return apiResponse($this->service->initEntertainmentTeam());
+    }
+
+    public function requestEntertainment(\Modules\Production\Http\Requests\Project\RequestEntertainment $request, string $projectUid)
+    {
+        return apiResponse($this->service->requestEntertainment($request->validated(), $projectUid));
+    }
 }
 

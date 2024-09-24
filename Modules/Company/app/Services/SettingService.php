@@ -212,13 +212,13 @@ class SettingService {
     protected function storeGeneral(array $data)
     {
         foreach ($data as $key => $value) {
+            $this->repo->deleteByKey($key);
+
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
             $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
-            $where = "key = '" . (string) $keyQuery . "'";
-            if (config('app.env') == 'production') {
-                $where = "`key` = '" . (string) $keyQuery . "'";
-            }
+
+            $where = "`key` = '" . (string) $keyQuery . "'";
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
                 $this->repo->update([
@@ -239,14 +239,13 @@ class SettingService {
     public function storeVariables(array $data)
     {
         foreach ($data as $key => $value) {
+            $this->repo->deleteByKey($key);
+
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
             $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
 
-            $where = "key = '" . (string) $key . "'";
-            if (config('app.env') == 'production') {
-                $where = "`key` = '" . (string) $key . "'";
-            }
+            $where = "`key` = '" . (string) $key . "'";
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
                 $this->repo->update([
@@ -267,6 +266,8 @@ class SettingService {
     protected function storeEmail(array $data)
     {
         foreach ($data as $key => $value) {
+            $this->repo->deleteByKey($key);
+
             // change config
             if ($key == 'email_host') {
                 \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.host", $value);
@@ -279,10 +280,8 @@ class SettingService {
             }
 
             $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
-            $where = "key = '" . (string) $key . "'";
-            if (config('app.env') == 'production') {
-                $where = "`key` = '" . (string) $key . "'";
-            }
+            
+            $where = "`key` = '" . (string) $key . "'";
             logging('where store email', [$where]);
             $this->repo->update([
                 'value' => $value

@@ -6,4 +6,7 @@ return [
 	'youAreRemovedFromProjectText' => "You just remove from event :project. Maybe you'll be given a new, bigger assignment",
 	'projectPicHasBeenChanged' => 'PIC project has been changed',
 	'successResign' => ':name is now inactive, all access has been withdrawn from the system.',
+	'requestEntertainmentSuccess' => "Success request Entertainment Team. You'll be notified when its updated",
+	'teamHasBeenDeterminedForTransfer' => 'Team has been determined and approved',
+	'doNotHaveAppPermission' => 'You do not have any permission to access this application',
 ];

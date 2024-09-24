@@ -28,7 +28,9 @@ class SyncEmployeeToUser extends Command
         $employees = \Modules\Hrd\Models\Employee::selectRaw('id,user_id,email')->get();
 
         foreach ($employees as $employee) {
-            $userData = \App\Models\User::where("email", $employee->email)->first();
+            $userData = \App\Models\User::where("email", $employee->email)
+                ->where('employee_id', null)
+                ->first();
             if (
                 ($userData) &&
                 (!$userData->employee_id)

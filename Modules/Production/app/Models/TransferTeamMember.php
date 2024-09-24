@@ -30,7 +30,8 @@ class TransferTeamMember extends Model
         'rejected_at',
         'canceled_at',
         'reject_reason',
-        'alternative_employee_id'
+        'alternative_employee_id',
+        'is_entertainment',
     ];
 
     protected $appends = ['status_text', 'status_color'];

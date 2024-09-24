@@ -85,4 +85,9 @@ class TeamTransferController extends Controller
     {
         return apiResponse($this->service->getMembersToLend($transferUid, $employeeUid));
     }
+
+    public function chooseTeam(\Modules\Production\Http\Requests\Project\ChooseTeamRequestMember $request, string $transferUid)
+    {
+        return apiResponse($this->service->chooseTeam($request->validated(), $transferUid));
+    }
 }

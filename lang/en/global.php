@@ -176,6 +176,9 @@ return [
     'projectCancelation' => 'Project Cancelation',
     'projectCancelText' => 'Project :project has been canceled',
     'approvedWithAlternative' => 'Approved with Alternative',
+    'month' => 'Month',
+    'newRequestTeam' => 'New team request',
+    'newRequestTeamText' => 'You have new team request in event :event',
     
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
