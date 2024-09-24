@@ -51,6 +51,7 @@ if (!function_exists('errorMessage')) {
         $arr = ['App\Exceptions\TemplateNotValid'];
 
         if ($message instanceof Throwable) {
+            logging('error: ', [$message]);
             $files = scandir(app_path('Exceptions'));
 
             $outputFiles = [];
@@ -74,11 +75,13 @@ if (!function_exists('errorMessage')) {
                 }
             }
         } else if (($message instanceof Throwable) && config('app.env') == 'local') {
+            logging('error: ', [$message]);
             $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
         } else if (($message instanceof Throwable) && config('app.env') != 'local') {
-            $messageError = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
+            logging('error: ', [$message]);
             $out = __('global.failedProcessingData');
         } else if (!$message instanceof Throwable) {
+            logging('error: ', [$message]);
             $out = $message;
         }
         
@@ -96,8 +99,6 @@ if (!function_exists('errorMessage')) {
         //         }
         //     }
         // }
-
-        logging('error processing: ', [isset($messageError) ? $messageError : $out]);
 
         return $out;
 
