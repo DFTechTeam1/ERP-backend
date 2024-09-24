@@ -76,6 +76,7 @@ if (!function_exists('errorMessage')) {
         } else if (($message instanceof Throwable) && config('app.env') == 'local') {
             $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
         } else if (($message instanceof Throwable) && config('app.env') != 'local') {
+            $messageError = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
             $out = __('global.failedProcessingData');
         } else if (!$message instanceof Throwable) {
             $out = $message;
