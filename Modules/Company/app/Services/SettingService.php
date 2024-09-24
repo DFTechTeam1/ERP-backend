@@ -283,9 +283,11 @@ class SettingService {
             
             $where = "`key` = '" . (string) $key . "'";
             logging('where store email', [$where]);
-            $this->repo->update([
-                'value' => $value
-            ], '', $where);
+            $this->repo->store([
+                'key' => $key,
+                'value' => $value,
+                'code' => 'email'
+            ]);
         }
 
         \Illuminate\Support\Facades\Cache::forget('setting');
