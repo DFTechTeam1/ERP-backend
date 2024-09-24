@@ -67,7 +67,8 @@ if (!function_exists('errorMessage')) {
                 $out = $message->getMessage();
             } else {
                 if (config('app.env') == 'local') {
-                    $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();        
+                    $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
+                    $messageError = $out;        
                 } else {
                     $out = __('global.failedProcessingData');        
                 }
@@ -95,7 +96,7 @@ if (!function_exists('errorMessage')) {
         //     }
         // }
 
-        logging('error processing: ', [$out]);
+        logging('error processing: ', [isset($messageError) ? $messageError : $out]);
 
         return $out;
 
