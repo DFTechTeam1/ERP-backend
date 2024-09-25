@@ -32,38 +32,39 @@ class RequestEquipmentJob implements ShouldQueue
 
         logging('request equipment employees: ', [$employees]);
 
-        $project = \Modules\Production\Models\Project::selectRaw('id,project_date')
+        $project = \Modules\Production\Models\Project::selectRaw('id,project_date,name')
             ->with([
                 'equipments:id,project_id,inventory_id,qty,created_by',
-                'equipments.userCreated:id,name',
+                'equipments.userCreated:id,employee_id',
+                'equipments.userCreated.employee:id,name',
                 'equipments.inventory:id,name'
             ])
             ->find($this->project->id);
 
         $equipments = $project->equipments;
-        logging('equipments', [$equipments]);
         $messages = [];
 
         $messages[] = [
             'type' => 'text',
-            'text' => 'Halo, ada permintaan equipment nih untuk event '. $project->name .' dari '. $project->equipments[0]->userCreated->name .' dipakai tanggal ' . date('d F Y', strtotime($project->project_date)) . '. Berikut detail nya ya'
+            'text' => 'Halo, ada permintaan equipment nih untuk event '. $project->name .' dari '. $project->equipments[0]->userCreated->employee->name .' dipakai tanggal ' . date('d F Y', strtotime($project->project_date)) . '. Berikut detail nya ya'
         ];
 
         $equipmentMessage = "";
-        foreach ($equipments as $equipment) {
-            $equipmentMessage .= "Nama: {$equipment->inventory->name} \n";
-            $equipmentMessage .= "Jumlah: {$equipment->qty} \n";
+
+        // chunk into 3
+        $equipments = array_chunk(collect($equipments)->toArray(), 3);
+        $newInventory = [];
+        foreach ($equipments as $eKey => $chunk) {
+            $messageInventory = "";
+            foreach ($chunk as $equipment) {
+                $messageInventory .= "Nama: {$equipment['inventory']['name']} \n";
+                $messageInventory .= "Jumlah: {$equipment['qty']} \n";
+            }
+
+            $newInventory[$eKey] = ['type' => 'text', 'text' => $messageInventory];
         }
 
-        $messages[] = [
-            'type' => 'text',
-            'text' => $equipmentMessage,
-        ];
-
-        $messages[] = [
-            'type' => 'text',
-            'text' => 'Untuk menyetujui permintaan ini, klik link berikut ya',
-        ];
+        $messages = array_merge($messages, $newInventory);
 
         Notification::send($employees, new \Modules\Production\Notifications\RequestEquipmentNotification($employees, $messages));
     }

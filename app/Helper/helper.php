@@ -476,7 +476,7 @@ if (!function_exists('getPicOfInventory')) {
             $permissions = $user->getPermissionsViaRoles();
             $permissionNames = collect($permissions)->pluck('name')->toArray();
             logging('permissions data: ', $permissionNames);
-            if (in_array('request_inventory', $permissionNames)) {
+            if (in_array('accept_request_equipment', $permissionNames)) {
                 logging('is have permission: ', [$user]);
                 $employees[] = \Modules\Hrd\Models\Employee::selectRaw('id,uid,name,line_id,user_id')
                     ->where('user_id', $user->id)
