@@ -4101,7 +4101,7 @@ class ProjectService
      */
     public function reviseTask(array $data, string $projectUid, string $taskUid): array
     {
-        $tmpFile = null;
+        $tmpFile = [];
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
         $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
 
@@ -4109,18 +4109,20 @@ class ProjectService
         try {
             // upload file
             if (isset($data['file'])) {
-                $tmpFile = uploadImageandCompress(
-                    "projects/{$projectId}/task/{$taskId}/revise",
-                    10,
-                    $data['file']
-                );
+                foreach ($data['file'] as $file) {
+                    $tmpFile[] = uploadImageandCompress(
+                        "projects/{$projectId}/task/{$taskId}/revise",
+                        10,
+                        $file
+                    );
+                }
             }
 
             $this->taskReviseHistoryRepo->store([
                 'project_task_id' => $taskId,
                 'project_id' => $projectId,
                 'reason' => $data['reason'],
-                'file' => $tmpFile,
+                'file' => json_encode($tmpFile),
                 'revise_by' => auth()->user()->employee_id,
             ]);
 
@@ -5301,6 +5303,34 @@ class ProjectService
         $files = [];
         foreach ($images as $image) {
             $files[] = storage_path("app/public/projects/{$projectId}/task/{$works->project_task_id}/proofOfWork/{$image}");
+        }
+
+        return [
+            'files' => $files,
+            'task' => $works->task,
+        ];
+    }
+
+    /**
+     * Download all media in proof of work
+     * 
+     * @param int $proofOfWorkId
+     */
+    public function downloadReviseMedia(string $projectUid, int $reviseId)
+    {
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+        $works = $this->taskReviseHistoryRepo->show(
+            $reviseId, 
+            'file,id,project_task_id',
+            ['task:id,name']
+        );
+
+        $images = json_decode($works->file, true);
+
+        $files = [];
+        foreach ($images as $image) {
+            $files[] = storage_path("app/public/projects/{$projectId}/task/{$works->project_task_id}/revise/{$image}");
         }
 
         return [

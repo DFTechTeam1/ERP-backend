@@ -588,6 +588,15 @@ class ProjectController extends Controller
         return \STS\ZipStream\Facades\Zip::create("{$name}", $references['files']);
     }
 
+    public function downloadReviseMedia(string $projectUid, int $reviseId)
+    {
+        $references = $this->service->downloadReviseMedia($projectUid, $reviseId);
+        $name = str_replace(' ', '', $references['task']->name);
+        $name .= "_revise.zip";
+
+        return \STS\ZipStream\Facades\Zip::create("{$name}", $references['files']);
+    }
+
     /**
      * Get all projects for file manager
      */
