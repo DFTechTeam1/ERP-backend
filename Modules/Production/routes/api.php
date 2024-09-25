@@ -102,3 +102,4 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
 
 Route::get('production/project/{taskId}/downloadAttachment/{attachmentId}', [ProjectController::class, 'downloadAttachment']);
 Route::get('production/project/{projectUid}/downloadProofOfWork/{proofOfWorkId}', [ProjectController::class, 'downloadProofOfWork']);
+Route::get('production/project/{projectUid}/downloadReviseMedia/{reviseId}', [ProjectController::class, 'downloadReviseMedia']);
