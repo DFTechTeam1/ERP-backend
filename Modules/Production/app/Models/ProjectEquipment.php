@@ -41,7 +41,7 @@ class ProjectEquipment extends Model
 
     public function userCreated(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'created_by');
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
 
     public function statusText(): Attribute
