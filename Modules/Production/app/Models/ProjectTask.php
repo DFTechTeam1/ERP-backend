@@ -39,7 +39,7 @@ class ProjectTask extends Model
         'is_approved',
     ];
 
-    protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail', 'task_status', 'task_status_color'];
+    protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail', 'task_status', 'task_status_color', 'revise_detail'];
 
     public function project(): BelongsTo
     {
@@ -97,6 +97,18 @@ class ProjectTask extends Model
         $out = null;
         if (count($this->proofOfWorks) > 0) {
             $out = collect($this->proofOfWorks)->groupBy('created_at')->all();
+        }
+
+        return Attribute::make(
+            get: fn () => $out,
+        );
+    }
+
+    public function reviseDetail(): Attribute
+    {
+        $out = null;
+        if (count($this->revises) > 0) {
+            $out = collect($this->revises)->groupBy('created_at')->all();
         }
 
         return Attribute::make(

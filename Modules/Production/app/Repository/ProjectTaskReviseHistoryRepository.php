@@ -86,7 +86,7 @@ class ProjectTaskReviseHistoryRepository extends ProjectTaskReviseHistoryInterfa
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
+        $query->where("id", $uid);
         
         if ($relation) {
             $query->with($relation);
