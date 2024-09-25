@@ -853,6 +853,16 @@ class ProjectService
             ];
         })->toArray();
 
+        if ($productionPositions = json_decode(getSettingByKey('position_as_production'), true)) {
+            $productionPositions = collect($productionPositions)->map(function ($item) {
+                return getIdFromUid($item, new \Modules\Company\Models\Position());
+            })->toArray();
+
+            $productionPositions = implode(',', $productionPositions);
+            $employeeCondition .= " and position_id in ({$productionPositions})";
+        }
+
+
         $teams = $this->employeeRepo->list(
             'id,uid,name,email,nickname,position_id',
             $employeeCondition,
