@@ -24,4 +24,9 @@ enum EventType: string
             static::Exhibition => __("global.exhibition"),
         };
     }
+
+    public static function getLabel(string $label)
+    {
+        dd($this);
+    }
 }
