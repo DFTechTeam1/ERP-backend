@@ -142,7 +142,7 @@ Route::get('line-message', function () {
         ],
     ];
 
-    $service->sendMessage($messages, $lineId);
+    return $service->sendMessage($messages, $lineId);
 });
 
 // override indoneia district API

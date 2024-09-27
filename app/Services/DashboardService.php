@@ -177,20 +177,20 @@ class DashboardService {
                     'value' => count($keys),
                 ]
             ],
-            'right' => [
-                [
-                    'text' => __('global.totalProjectInMonth'),
-                    'series' => $projects['series'],
-                    'options' => $projects['options'],
-                    'value' => $projects['total'],
-                ],
-                [
-                    'text' => __('global.upcomingProject'),
-                    'series' => $upcomingSeries,
-                    'options' => $upcomingOptions,
-                    'value' => $upcomingProject->count(),
-                ],
-            ],
+            // 'right' => [
+            //     [
+            //         'text' => __('global.totalProjectInMonth'),
+            //         'series' => $projects['series'],
+            //         'options' => $projects['options'],
+            //         'value' => $projects['total'],
+            //     ],
+            //     [
+            //         'text' => __('global.upcomingProject'),
+            //         'series' => $upcomingSeries,
+            //         'options' => $upcomingOptions,
+            //         'value' => $upcomingProject->count(),
+            //     ],
+            // ],
         ];
     }
 

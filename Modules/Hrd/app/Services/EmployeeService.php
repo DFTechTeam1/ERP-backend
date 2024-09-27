@@ -460,6 +460,7 @@ class EmployeeService
     {
         $relation = [
             'position:id,name,uid',
+            'user:id,employee_id,email'
         ];
 
         $data = $this->repo->show($uid, $select, $relation);
@@ -556,7 +557,9 @@ class EmployeeService
             $employeeId = getIdFromUid($uid, new \Modules\Hrd\Models\Employee());
             if (
                 $user->email != config('app.root_email') &&
-                !$user->is_director
+                !$user->is_director &&
+                !isSuperUserRole() &&
+                !isHrdRole()
             ) {
                 if ($user->employee_id != $employeeId) { // only its user can access their information
                     return errorResponse('not allowed', ['redirect' => '/admin/dashboard'], 403);

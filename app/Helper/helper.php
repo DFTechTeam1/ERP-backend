@@ -506,6 +506,28 @@ if (!function_exists('isSuperUserRole')) {
     }
 }
 
+if (!function_exists('isHrdRole')) {
+    function isHrdRole() {
+        $role = \Illuminate\Support\Facades\DB::table("roles")
+            ->whereRaw("lower(name) = 'hrd'")
+            ->first();
+
+        $output = false;
+        if ($role) {
+            $userRoles = auth()->user()->roles;
+
+            foreach ($userRoles as $roleData) {
+                if ($roleData->id == $role->id) {
+                    $output = true;
+                    break;
+                }
+            }
+        }
+
+        return $output;
+    }
+}
+
 if (!function_exists('isProjectPIC')) {
     function isProjectPIC($projectId, int $employeeId) {
         if (gettype($projectId) == 'string') {

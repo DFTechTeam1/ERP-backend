@@ -245,6 +245,24 @@ class ProjectService
         }
     }
 
+    protected function buildFilterResult()
+    {
+        $filter = [];
+
+        $search = request('search');
+
+        if (count($search) > 0) {
+            if (!empty($search['event_type'])) {
+                $filter[] = [
+                    'type' => 'name',
+                    'text' => \App\Enums\Production\EventType::getLabel($search['event_type']),
+                ];
+            }
+        }
+
+        return $filter;
+    }
+
     /**
      * Get list of data
      *
@@ -277,6 +295,8 @@ class ProjectService
             $projectManagerRole = getSettingByKey('project_manager_role');
             logging('projectManagerRole', [$projectManagerRole]);
             $isPMRole = $roles[0]->id == $projectManagerRole;
+
+            // $filterResult = $this->buildFilterResult();
 
             if (
                 ($search) &&

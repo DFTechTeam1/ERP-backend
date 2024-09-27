@@ -328,6 +328,11 @@ class RolePermissionSetting extends Seeder
                 $this->getHrdRole(),
                 $this->getDirectorRole(),
             ]],
+            ['name' => 'detail_other_employee', 'group' => 'employee', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
         ];
     }
 
