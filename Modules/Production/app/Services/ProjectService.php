@@ -1274,7 +1274,7 @@ class ProjectService
                 $daysToGo = $diff->d;
 
                 // check time to upload showreels
-                $allowedUploadShowreels = false;
+                $allowedUploadShowreels = true;
                 $currentTasks = [];
                 foreach ($boardsData as $board) {
                     foreach ($board['tasks'] as $task) {
@@ -1285,9 +1285,9 @@ class ProjectService
                 $completedStatus = collect($currentTasks)->filter(function ($filter) {
                     return $filter['status'] == \App\Enums\Production\TaskStatus::Completed->value;
                 })->values()->count();
-                if ($currentTaskStatusses == $completedStatus) {
-                    $allowedUploadShowreels = true;
-                }
+                // if ($currentTaskStatusses == $completedStatus) {
+                //     $allowedUploadShowreels = true;
+                // }
 
                 $output = [
                     'id' => $data->id,
@@ -1657,7 +1657,7 @@ class ProjectService
         $showreels = $this->repo->show($project['uid'], 'id,showreels');
         $project['showreels'] = $showreels->showreels_path;
 
-        $allowedUploadShowreels = false;
+        $allowedUploadShowreels = true;
         $currentTasks = [];
         foreach ($project['boards'] as $board) {
             foreach ($board['tasks'] as $task) {
@@ -1668,9 +1668,9 @@ class ProjectService
         $completedStatus = collect($currentTasks)->filter(function ($filter) {
             return $filter['status'] == \App\Enums\Production\TaskStatus::Completed->value;
         })->values()->count();
-        if ($currentTaskStatusses == $completedStatus) {
-            $allowedUploadShowreels = true;
-        }
+        // if ($currentTaskStatusses == $completedStatus) {
+        //     $allowedUploadShowreels = true;
+        // }
         $project['allowed_upload_showreels'] = $allowedUploadShowreels;
 
         storeCache('detailProject' . $projectId, $project);

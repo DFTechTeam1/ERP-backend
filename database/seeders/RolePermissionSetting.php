@@ -20,23 +20,23 @@ class RolePermissionSetting extends Seeder
 
         Schema::disableForeignKeyConstraints();
 
-        $permissions = Permission::all();
+        // $permissions = Permission::all();
 
-        $roles = Role::all();
-        foreach ($roles as $role) {
-            $role->syncPermissions([]);
-        }
+        // $roles = Role::all();
+        // foreach ($roles as $role) {
+        //     $role->syncPermissions([]);
+        // }
 
-        $users = \App\Models\User::all();
-        foreach ($users as $user) {
-            $user->syncRoles([]);
-        }
+        // $users = \App\Models\User::all();
+        // foreach ($users as $user) {
+        //     $user->syncRoles([]);
+        // }
 
-        Permission::truncate();
-        Role::truncate();
-        DB::table('role_has_permissions')->truncate();
-        DB::table('model_has_roles')->truncate();
-        DB::table('model_has_permissions')->truncate();
+        // Permission::truncate();
+        // Role::truncate();
+        // DB::table('role_has_permissions')->truncate();
+        // DB::table('model_has_roles')->truncate();
+        // DB::table('model_has_permissions')->truncate();
 
         $this->seedPermissions();
 
@@ -642,6 +642,12 @@ class RolePermissionSetting extends Seeder
     protected function projectPermission()
     {
         return [
+            ['name' => 'add_showreels', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+            ]],
             ['name' => 'list_project', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
