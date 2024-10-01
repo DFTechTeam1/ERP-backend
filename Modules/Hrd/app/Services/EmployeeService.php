@@ -1638,7 +1638,12 @@ class EmployeeService
         try {
             $payload['level_staff'] = $payload['level'];
             $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\Position());
-            $payload['boss_id'] = getIdFromUid($payload['boss_id'], new \Modules\Hrd\Models\Employee());
+            if (
+                (isset($payload['boss_id'])) &&
+                ($payload['boss_id'])
+            ) {
+                $payload['boss_id'] = getIdFromUid($payload['boss_id'], new \Modules\Hrd\Models\Employee());
+            }
 
             $this->repo->update(collect($payload)->except(['level'])->toArray(), $employeeUid);
 
