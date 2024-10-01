@@ -318,4 +318,23 @@ class LoginController extends Controller
             return apiResponse(errorResponse($th));
         }
     }
+
+    public function changePassword(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            \App\Models\User::where('id', $user->id)
+                ->update(['password' => \Illuminate\Support\Facades\Hash::make($request->password)]);
+
+            return apiResponse(
+                generalResponse(
+                    'success',
+                    false,
+                )
+            );
+        } catch (\Throwable $e) {
+            return apiResponse(errorResponse($e));
+        }
+    }
 }

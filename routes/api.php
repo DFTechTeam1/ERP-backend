@@ -99,6 +99,7 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [LoginController::class, 'login']);
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
+    Route::post('changePassword', [LoginController::class, 'changePassword']);
 });
 
 Route::middleware('auth:sanctum')
