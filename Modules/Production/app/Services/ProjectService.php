@@ -865,7 +865,7 @@ class ProjectService
                 'id' => $transfer->employee->id,
                 'uid' => $transfer->employee->uid,
                 'email' => $transfer->employee->email,
-                'nickname' => $transfer->nickname,
+                'nickname' => $transfer->employee->nickname,
                 'name' => $transfer->employee->name,
                 'position' => $transfer->employee->position,
                 'loan' => true,
@@ -927,10 +927,25 @@ class ProjectService
             $outputTeam[$key]['total_task'] = $task;
         }
 
+        // get entertainment teams
+        $entertain = $this->transferTeamRepo->list('id,employee_id,requested_by,alternative_employee_id', "project_id = " . $project->id . " and alternative_employee_id is not null and status = " . \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value, ['employee:id,uid,name,email,position_id', 'employee.position:id,name']);
+
+        $outputEntertain = collect((object) $entertain)->map(function ($item) {
+            return [
+                'id' => $item->employee->id,
+                'uid' => $item->employee->uid,
+                'name' => $item->employee->name,
+                'total_task' => 0,
+                'loan' => true,
+                'position' => $item->employee->position,
+            ];
+        })->toArray();
+
         return [
             'pics' => $pics,
             'teams' => $outputTeam,
             'picUids' => $picUids,
+            'entertain' => $outputEntertain,
         ];
     }
 
@@ -1499,6 +1514,9 @@ class ProjectService
         $personInCharges = $this->projectPicRepository->list('*', 'project_id = ' . $projectId);
         $project['personInCharges'] = $personInCharges;
         $projectTeams = $this->getProjectTeams((object) $project);
+
+        $entertainTeam = $projectTeams['entertain'];
+
         $teams = $projectTeams['teams'];
         if (isset($project['personInCharges'])) {
             unset($project['personInCharges']);
@@ -1544,6 +1562,8 @@ class ProjectService
         $project['show_alert_event_is_done'] = $d < 0 ? true : false;
 
         $project['teams'] = $teams;
+
+        $project['entertain_teams'] = $entertainTeam;
 
         $project['is_super_user'] = $superUserRole;
 
@@ -5687,7 +5707,7 @@ class ProjectService
 
             $project = $this->repo->show($projectUid, 'id,name,project_date');
 
-            $entertainmentPic = \App\Models\User::role('pic entertainment')->first();
+            $entertainmentPic = \App\Models\User::role('project manager entertainment')->first();
 
             $user = auth()->user();
 
