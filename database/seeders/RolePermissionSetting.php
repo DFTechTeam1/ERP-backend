@@ -62,6 +62,7 @@ class RolePermissionSetting extends Seeder
             ['name' => $this->getHrdRole(), 'permissions' => $this->getRolePermissions($this->getHrdRole())],
             ['name' => $this->getFinanceRole(), 'permissions' => $this->getRolePermissions($this->getFinanceRole())],
             ['name' => $this->getRegularRole(), 'permissions' => $this->getRolePermissions($this->getRegularRole())],
+            ['name' => $this->getAssistantProjectManagerRole(), 'permissions' => []],
         ];
 
         foreach ($roles as $role) {
@@ -202,6 +203,11 @@ class RolePermissionSetting extends Seeder
     protected function getProjectManagerRole()
     {
         return 'project manager';
+    }
+
+    protected function getAssistantProjectManagerRole()
+    {
+        return 'assistant manager';
     }
 
     protected function getProjectManagerEntertainmentRole()
