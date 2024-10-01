@@ -4647,6 +4647,9 @@ class ProjectService
         $tmpFile = null;
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
         try {
+            // get current showreel
+            $project = $this->repo->show($projectUid, 'id,showreels');
+            $currentShowreels = $project->showreels;
 
             $tmpFile = uploadFile(
                 'projects/' . $projectId . '/showreels',
@@ -4660,6 +4663,15 @@ class ProjectService
             $currentData = getCache('detailProject' . $projectId);
 
             $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            // delete current showreels
+            if ($currentShowreels) {
+                if (is_file(storage_path('app/public/projects/' . $projectId . '/showreels/' . $currentShowreels))) {
+                    unlink(
+                        storage_path('app/public/projects/' . $projectId . '/showreels/' . $currentShowreels)
+                    );
+                }
+            }
 
             return generalResponse(
                 __('global.showreelsIsUploaded'),
