@@ -343,20 +343,20 @@ class ProjectService
                 }
 
                 if (!empty($search['pic']) && empty($whereHas)) {
-                    if ($isSuperAdmin) {
-                        $pics = $search['pic'];
-                        $pics = collect($pics)->map(function ($pic) {
-                            $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
-                            return $picId;
-                        })->toArray();
-                        $picData = implode(',', $pics);
-                        $whereHas = [
-                            [
-                                'relation' => 'personInCharges',
-                                'query' => "pic_id IN ({$picData})",
-                            ],
-                        ];
-                    }
+                    $pics = $search['pic'];
+                    $pics = collect($pics)->map(function ($pic) {
+                        $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
+                        return $picId;
+                    })->toArray();
+                    $picData = implode(',', $pics);
+                    $whereHas = [
+                        [
+                            'relation' => 'personInCharges',
+                            'query' => "pic_id IN ({$picData})",
+                        ],
+                    ];
+                    // if ($isSuperAdmin) {
+                    // }
                 }
             }
 
