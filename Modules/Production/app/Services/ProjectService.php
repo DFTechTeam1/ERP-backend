@@ -852,6 +852,8 @@ class ProjectService
             $employeeCondition = "boss_id IN (0)";
         }
 
+        $employeeCondition .= " and status != " . \App\Enums\Employee\Status::Inactive->value;
+
         if (count($specialIds) > 0) {
             $specialId = implode(',', $specialIds);
             $transferCondition .= " and employee_id NOT IN ($specialId)";
