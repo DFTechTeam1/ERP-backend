@@ -417,6 +417,8 @@ class DashboardService {
                 'relation' => 'personInCharges',
                 'query' => 'pic_id = ' . $employeeId,
             ];
+        } else if (isDirector()) {
+            $whereHas = [];
         } else if ($roleId != $superUserRole && $roleId != $projectManagerRole) {
             $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
 
@@ -442,6 +444,8 @@ class DashboardService {
             'personInCharges.employee:id,uid,name',
             'vjs.employee:id,nickname'
         ], $whereHas, 'project_date ASC');
+
+        logging('dashboard project calendar', ['where' => $where, 'wherehas' => $whereHas]);
 
         $out = [];
         foreach ($data as $projectKey => $project) {
