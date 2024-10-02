@@ -1080,6 +1080,13 @@ class ProjectService
                     }
                 }
 
+                $havePermissionToMoveBoard = false;
+                if ($superUserRole || $isProjectPic || $isDirector || auth()->user()->hasPermissionTo('move_board', 'sanctum')) {
+                    $havePermissionToMoveBoard = true;
+                }
+
+                $outputTask[$keyTask]['have_permission_to_move_board'] = $havePermissionToMoveBoard;
+
                 if (
                     in_array($employeeId, $picIds) && 
                     $task->project->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
@@ -1428,6 +1435,13 @@ class ProjectService
             $haveTaskAccess = true;
         }
 
+        $havePermissionToMoveBoard = false;
+        if ($superUserRole || $isProjectPic || $isDirector || auth()->user()->hasPermissionTo('move_board', 'sanctum')) {
+            $havePermissionToMoveBoard = true;
+        }
+
+        $task['have_permission_to_move_board'] = $havePermissionToMoveBoard;
+
         $task['is_active'] = $isActive;
 
         $task['has_task_access'] = $haveTaskAccess;
@@ -1659,6 +1673,13 @@ class ProjectService
 
                 $outputTask[$keyTask]['picIds'] = $picIds;
                 $outputTask[$keyTask]['has_task_access'] = $haveTaskAccess;
+
+                $havePermissionToMoveBoard = false;
+                if ($superUserRole || $isProjectPic || $isDirector || auth()->user()->hasPermissionTo('move_board', 'sanctum')) {
+                    $havePermissionToMoveBoard = true;
+                }
+
+                $outputTask[$keyTask]['have_permission_to_move_board'] = $havePermissionToMoveBoard;
 
                 if ($superUserRole || $isProjectPic || $isDirector) {
                     $outputTask[$keyTask]['is_active'] = true;
@@ -3364,6 +3385,25 @@ class ProjectService
                 'board_source_id' => $data['board_source_id'],
             ],
             'moveTask'
+        );
+    }
+
+    public function manualMoveBoard(array $data, string $projectUid) {
+        $cache = $this->getDetailProjectCache($projectUid);
+        $currentData = $cache['cache'];
+        $projectId = $cache['projectId'];
+
+        $this->changeTaskBoardProcess($data, $projectUid);
+
+        $boards = $this->formattedBoards($projectUid);
+        $currentData['boards'] = $boards;
+
+        storeCache('detailProject' . $projectId, $currentData);
+
+        return generalResponse(
+            'success',
+            false,
+            $currentData,
         );
     }
 
