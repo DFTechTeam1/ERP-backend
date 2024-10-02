@@ -364,6 +364,18 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->changeTaskBoard($request->validated(), $projectId));
     }
+    
+    /**
+     * Change board of task (When user move a task)
+     *
+     * @param ChangeTaskBoard $request
+     * @param string $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function manualMoveBoard(ChangeTaskBoard $request, string $projectId)
+    {
+        return apiResponse($this->service->manualMoveBoard($request->validated(), $projectId));
+    }
 
     /**
      * * Change board of task (When user move a task)
