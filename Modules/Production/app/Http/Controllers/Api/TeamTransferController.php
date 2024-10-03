@@ -33,6 +33,11 @@ class TeamTransferController extends Controller
         return apiResponse($this->service->approveRequest($transferUid, $deviceAction));
     }
 
+    public function approveSelection(Request $request, string $transferUid)
+    {
+        return apiResponse($this->service->approveSelection($request->all(), $transferUid));
+    }
+
     public function completeRequest(string $transferUid)
     {
         return apiResponse($this->service->completeRequest($transferUid));
