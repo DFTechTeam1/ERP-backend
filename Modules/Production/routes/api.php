@@ -97,6 +97,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('team-transfers/complete/{transferUid}', [TeamTransferController::class, 'completeRequest']);
     Route::delete('team-transfers/delete/{transferUid}', [TeamTransferController::class, 'destroy']);
     Route::post('team-transfers/reject/{transferUid}', [TeamTransferController::class, 'rejectRequest']);
+    Route::post('team-transfers/approve-selection/{transferUid}', [TeamTransferController::class, 'approveSelection']);
     Route::get('team-transfers/approve/{transferUid}/{deviceAction}', [TeamTransferController::class, 'approveRequest']);
     Route::get('team-transfers/{transferUid}/getMembersToLend/{employeeUid}', [TeamTransferController::class, 'getMembersToLend']);
 });
