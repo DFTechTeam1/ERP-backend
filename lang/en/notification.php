@@ -9,4 +9,7 @@ return [
 	'requestEntertainmentSuccess' => "Success request Entertainment Team. You'll be notified when its updated",
 	'teamHasBeenDeterminedForTransfer' => 'Team has been determined and approved',
 	'doNotHaveAppPermission' => 'You do not have any permission to access this application',
+    'failedToGetTeams' => 'Failed to get teams',
+    'notRegisteredAsUser' => 'Not registered as user',
+    'successApproveAndChooseMemberTransfer' => "Request is approved with custom team member",
 ];

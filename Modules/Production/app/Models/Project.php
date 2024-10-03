@@ -81,7 +81,7 @@ class Project extends Model
     {
         return $this->belongsTo(\Modules\Company\Models\State::class, 'state_id');
     }
-    
+
     public function city(): BelongsTo
     {
         return $this->belongsTo(\Modules\Company\Models\City::class, 'city_id');
@@ -95,6 +95,11 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(ProjectTask::class, 'project_id');
+    }
+
+    public function teamTransfer(): HasMany
+    {
+        return $this->hasMany(TransferTeamMember::class, 'project_id');
     }
 
     /**

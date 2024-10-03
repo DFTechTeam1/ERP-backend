@@ -709,3 +709,16 @@ if (!function_exists('removeDuplicateArray')) {
         return $unserialize;
     }
 }
+
+if (!function_exists('isAssistantPMRole')) {
+    function isAssistantPMRole() {
+        $user = auth()->user();
+
+        $out = false;
+        if ($user->hasRole('assistant manager')) {
+            $out = true;
+        }
+
+        return $out;
+    }
+}

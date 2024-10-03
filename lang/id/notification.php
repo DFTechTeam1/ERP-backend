@@ -9,4 +9,7 @@ return [
 	'requestEntertainmentSuccess' => "Pengajuan tim Entertainment berhasil. Kamu akan menerima pemberitahuan mengenai update pengajuan ini",
 	'teamHasBeenDeterminedForTransfer' => 'Tim sudah di tentukan dan disetujui',
 	'doNotHaveAppPermission' => 'Kamu tidak memiliki akses untuk aplikasi ini',
+    'failedToGetTeams' => 'Gagal untuk mendapatkan daftar tim',
+    'notRegisteredAsUser' => 'Karyawan belum terdaftar sebagai user aplikasi',
+    'successApproveAndChooseMemberTransfer' => "Permintaan berhasil disetujui dengan custom tim member",
 ];
