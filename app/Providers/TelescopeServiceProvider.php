@@ -9,6 +9,14 @@ use Laravel\Telescope\TelescopeApplicationServiceProvider;
 
 class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 {
+    public function boot()
+    {
+        // Telescope::auth(function ($request) {
+        //     return app()->make('App\Http\Middleware\TelescopeAccessMiddleware')
+        //                 ->handle($request, function() {});
+        // });
+    }
+
     /**
      * Register any application services.
      */
@@ -57,7 +65,6 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     {
         Gate::define('viewTelescope', function ($user) {
             return in_array($user->email, [
-                //
             ]);
         });
     }

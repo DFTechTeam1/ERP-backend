@@ -16,3 +16,7 @@ Route::get('ilham', function () {
 
     return $response;
 });
+
+Route::get('login', function () {
+    return view('auth.login');
+})->name('login');

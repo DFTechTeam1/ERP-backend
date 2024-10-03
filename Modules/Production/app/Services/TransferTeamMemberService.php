@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Enums\Production\TransferTeamStatus;
 use Carbon\Carbon;
 use App\Enums\ErrorCode\Code;
 use \Illuminate\Support\Facades\DB;
@@ -32,7 +33,7 @@ class TransferTeamMemberService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(
@@ -178,7 +179,7 @@ class TransferTeamMemberService {
 
     /**
      * Function to approve team request from other PIC
-     * 
+     *
      * Step:
      * 1. Change request status
      * 2. Insert new team member to requested PIC by updating project detail cache if exists
@@ -289,7 +290,7 @@ class TransferTeamMemberService {
      * Store data
      *
      * @param array $data
-     * 
+     *
      * @return array
      */
     public function store(array $data): array
@@ -312,7 +313,7 @@ class TransferTeamMemberService {
      * @param array $data
      * @param string $id
      * @param string $where
-     * 
+     *
      * @return array
      */
     public function update(
@@ -331,13 +332,13 @@ class TransferTeamMemberService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
      * @param integer $id
-     * 
+     *
      * @return array
      */
     public function delete(string $transferUid): array
@@ -365,7 +366,7 @@ class TransferTeamMemberService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array
@@ -384,9 +385,9 @@ class TransferTeamMemberService {
 
     /**
      * Function to get all team members except current employee id that already requested for lend
-     * 
+     *
      * @param string $employeeUid
-     * 
+     *
      * @return array
      */
     public function getMembersToLend(string $transferUid, string $employeeUid): array
@@ -411,10 +412,10 @@ class TransferTeamMemberService {
 
     /**
      * Approved and choose team member to work on selected project
-     * 
+     *
      * @param array $payload
      * @param string $transferUid
-     * 
+     *
      * @return array
      */
     public function chooseTeam(array $payload, string $transferUid): array
@@ -465,6 +466,39 @@ class TransferTeamMemberService {
             DB::rollBack();
 
             return errorResponse($e);
+        }
+    }
+
+    public function approveSelection(array $payload, string $transferUid): array
+    {
+        DB::beginTransaction();
+        try {
+            // create a new record with current data
+            $currentData = $this->repo->show($transferUid);
+
+            foreach ($payload['ids'] as $id) {
+                $newData = $currentData->replicate();
+                $newData->employee_id = getIdFromUid($id, new \Modules\Hrd\Models\Employee());
+                $newData->approved_at = Carbon::now();
+                $newData->is_entertainment = 1;
+                $newData->status = TransferTeamStatus::Approved->value;
+                $newData->save();
+
+                \Modules\Production\Jobs\ApproveRequestTeamMemberJob::dispatch([$newData->id])->afterCommit();
+            }
+
+            $currentData->delete();
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.successApproveAndChooseMemberTransfer'),
+                false
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
         }
     }
 }
