@@ -17,10 +17,10 @@ class UserService {
     private $roleRepo;
 
     private $loginHistoryRepo;
-    
+
     public function __construct()
     {
-        $this->repo = new \App\Repository\UserRepository();    
+        $this->repo = new \App\Repository\UserRepository();
 
         $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
 
@@ -32,7 +32,7 @@ class UserService {
     public function addAsUser(string $userId)
     {
         try {
-            
+
         } catch(\Throwable $th) {
             return generalResponse(
                 errorMessage($th),
@@ -145,7 +145,7 @@ class UserService {
 
             if (!$data['is_external_user']) {
                 $employee = $this->employeeRepo->show($data['employee_id'], 'id,uid,email,position_id');
-                $email = $employee->email;
+                $email = $data['email'];
                 $employeeId = $employee->id;
 
                 // define a role position (is_employee, is_director or is_project_manager)
@@ -176,7 +176,7 @@ class UserService {
 
                 if ($positionAsProjectManager && $positionAsDirector) {
                     $combine = array_merge($positionAsDirector, $positionAsProjectManager);
-                    
+
                     if (!in_array($employee->position_id, $combine)) {
                         $isEmployee = true;
                     }
@@ -206,14 +206,14 @@ class UserService {
             }
 
             SendEmailActivationJob::dispatch($user, $data['password'])->afterCommit();
-            
+
             DB::commit();
 
             return generalResponse(
                 __('global.successCreateUser'),
                 false
             );
-            
+
         } catch(\Throwable $th) {
             DB::rollBack();
 
@@ -225,7 +225,7 @@ class UserService {
     {
         $data = $this->repo->detail($id);
         $data->roles;
-        
+
         return generalResponse(
             'success',
             false,
@@ -243,7 +243,7 @@ class UserService {
     {
         try {
             $service = new EncryptionService();
-    
+
             $email = $service->decrypt($key, env('SALT_KEY'));
 
             $user = $this->repo->detail('', 'id,email_verified_at', "email = '{$email}'");
@@ -255,7 +255,7 @@ class UserService {
                 ], 'email', $email);
                 $message = __('global.accountIsActive');
             }
-    
+
             return generalResponse(
                 $message,
                 false,
@@ -269,7 +269,7 @@ class UserService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array
