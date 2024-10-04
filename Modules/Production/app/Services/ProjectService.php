@@ -1177,14 +1177,14 @@ class ProjectService
 
                 $outputTask[$keyTask]['is_director'] = $isDirector;
 
-                if ($superUserRole || $isProjectPic || $isDirector) {
+                if ($superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()) {
                     $isActive = true;
                 }
 
                 // check the ownership of task
 
                 $haveTaskAccess = true;
-                if (!$superUserRole && !$isProjectPic && !$isDirector) {
+                if (!$superUserRole && !$isProjectPic && !$isDirector && !isAssistantPMRole()) {
                     if (!in_array($employeeId, $picIds)) {
                         $haveTaskAccess = false;
                     }
@@ -1540,7 +1540,7 @@ class ProjectService
             $task['action_to_complete_task'] = false;
         }
 
-        if ($superUserRole || $isProjectPic || $isDirector) {
+        if ($superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()) {
             $isActive = true;
             $haveTaskAccess = true;
         }
@@ -1755,7 +1755,7 @@ class ProjectService
                 // check the ownership of task
                 $picIds = collect($task['pics'])->pluck('employee_id')->toArray();
                 $haveTaskAccess = true;
-                if (!$superUserRole && !$isProjectPic && !$isDirector) {
+                if (!$superUserRole && !$isProjectPic && !$isDirector && !isAssistantPMRole()) {
                     if (!in_array($employeeId, $picIds)) { // where logged user is not a in task pic except the project manager
                         $haveTaskAccess = false;
                     }
@@ -1791,7 +1791,7 @@ class ProjectService
 
                 $outputTask[$keyTask]['have_permission_to_move_board'] = $havePermissionToMoveBoard;
 
-                if ($superUserRole || $isProjectPic || $isDirector) {
+                if ($superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()) {
                     $outputTask[$keyTask]['is_active'] = true;
                 }
 
