@@ -44,6 +44,8 @@ class UserEmailActivation extends Notification
      */
     public function toMail($notifiable): MailMessage
     {
+        setEmailConfiguration();
+
         return (new MailMessage)
             ->subject('Email Activation')
             ->markdown('mail.user.EmailActivation', [
