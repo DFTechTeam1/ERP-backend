@@ -138,14 +138,16 @@ class EmployeeService
                         $accessor = '>=';
                     }
 
+                    $searchJoinDate = date('Y-m-d', strtotime($search['join_date']));
+
                     if (empty($where)) {
-                        $where = "join_date {$accessor} '{$search['join_date']}'";
+                        $where = "join_date {$accessor} '{$searchJoinDate}'";
                     } else if (!empty($where)) {
-                        $where .= " AND join_date {$accessor} '{$search['join_date']}'";
+                        $where .= " AND join_date {$accessor} '{$searchJoinDate}'";
                     }
                 }
             }
-            
+
             if (!empty($search['status'])) {
                 if (empty($where)) {
                     $where = "status = {$search['status']}";
@@ -259,7 +261,7 @@ class EmployeeService
         $positionAsVJ = json_decode(getSettingByKey('position_as_visual_jokey'), true);
 
         $output = [];
-        
+
         if ($positionAsVJ) {
             $positionAsVJ = collect($positionAsVJ)->map(function ($item) {
                 return getIdFromUid($item, new \Modules\Company\Models\Position());
@@ -316,7 +318,7 @@ class EmployeeService
             "lead",
             "staff",
             "junior staff"
-        ];                             
+        ];
 
         $key = request()->min_level;
 
@@ -329,7 +331,7 @@ class EmployeeService
                 $splice = collect($splice)->map(function ($item) {
                     return "'{$item}'";
                 })->toArray();
-    
+
                 $where = "level_staff IN (". implode(',', $splice) .")";
             }
 
@@ -524,7 +526,7 @@ class EmployeeService
         $data['length_of_service'] = getLengthOfService($data->join_date);
 
         $data['level_staff_text'] = \App\Enums\Employee\LevelStaff::generateLabel('staff');
-        
+
         $data['boss_uid'] = null;
         $data['approval_line'] = null;
         if ($data->boss_id) {
@@ -567,7 +569,7 @@ class EmployeeService
             }
 
             $data = $this->getDetailEmployee($uid, $select);
-            
+
             return generalResponse(
                 'Success',
                 false,
@@ -629,7 +631,7 @@ class EmployeeService
             }
 
             if (
-                (isset($data['npwp_photo'])) && 
+                (isset($data['npwp_photo'])) &&
                 ($data['npwp_photo'])
             ) {
                 $this->npwpPhotoTmp = uploadImageandCompress(
@@ -946,7 +948,7 @@ class EmployeeService
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array
@@ -1072,7 +1074,7 @@ class EmployeeService
         }
 
         $positionAsProjectManager = json_decode(getSettingByKey('position_as_project_manager'), true);
-        
+
         if ($positionAsProjectManager) {
             $positionCondition = implode("','", $positionAsProjectManager);
             $positionCondition = "('" . $positionCondition . "')";
@@ -1083,11 +1085,11 @@ class EmployeeService
         }
 
         $data = $this->repo->list(
-            'id, uid as value, name as title', 
-            'status != ' . \App\Enums\Employee\Status::Inactive->value, 
-            $relation, 
-            '', 
-            '', 
+            'id, uid as value, name as title',
+            'status != ' . \App\Enums\Employee\Status::Inactive->value,
+            $relation,
+            '',
+            '',
             $whereHas
         );
 
@@ -1110,7 +1112,7 @@ class EmployeeService
                 $coloring = 'orange-darken-4';
             } else if (
                 ($totalProject - $maximumProjectPerPM) &&
-                ($totalProject - $maximumProjectPerPM == 1) 
+                ($totalProject - $maximumProjectPerPM == 1)
             ) {
                 $coloring = 'red-lighten-2';
             } else {
@@ -1129,7 +1131,7 @@ class EmployeeService
 
         return generalResponse(
             'success',
-            false, 
+            false,
             $employees->toArray(),
         );
     }
@@ -1141,9 +1143,9 @@ class EmployeeService
         $response = $data['Fulltime Compile'];
 
         [
-            $nipKey, $nameKey, $nicknameKey, $companyKey, $jobNameKey, $levelKey, $statusKey, $joinDateKey, $startReviewProbationKey, 
-            $probationStatusKey, $endProbationKey, $exitDate, $genderKey, $phoneKey, $emailKey, $educationKey, $schoolNameKey, $majorKey, 
-            $graduationYearKey, $idNumberKey, $bankNameKey, $bankAccountKey, $accountHolderNameKey, $pobKey, $dobKey, $religionKey, $martialKey, 
+            $nipKey, $nameKey, $nicknameKey, $companyKey, $jobNameKey, $levelKey, $statusKey, $joinDateKey, $startReviewProbationKey,
+            $probationStatusKey, $endProbationKey, $exitDate, $genderKey, $phoneKey, $emailKey, $educationKey, $schoolNameKey, $majorKey,
+            $graduationYearKey, $idNumberKey, $bankNameKey, $bankAccountKey, $accountHolderNameKey, $pobKey, $dobKey, $religionKey, $martialKey,
             $addressKey, $postalCodeKey, $currentAddressKey, $bloodTypeKey, $contactNumberKey, $contactNameKey, $contactRelationKey, $placementKey, $referalKey, $bossIdKey] = [
             2, 4, 5, 6, 7, 8, 9, 10, 11,
             13, 14, 19, 20, 21, 22, 23, 24, 25,
@@ -1248,11 +1250,11 @@ class EmployeeService
      * Function to handle import data
      * Create a new one if not exists
      * And edit if exists
-     * 
+     *
      * Handle Boss id in the last process
-     * 
+     *
      * @param array $response
-     * 
+     *
      * @return array
      */
     public function submitImport(array $response): array
@@ -1262,12 +1264,12 @@ class EmployeeService
             $response = collect($response)->map(function ($item) {
                 $item['bank_detail'] = json_encode($item['bank_detail']);
                 $item['relation_contact'] = json_encode($item['relation_contact']);
-    
+
                 return $item;
             })->filter(function ($filter) {
                 return !$filter['wrong_format'];
             })->values()->toArray();
-    
+
             foreach ($response as $employee) {
                 unset($employee['level_staff_raw']);
                 unset($employee['probation_status_raw']);
@@ -1278,7 +1280,7 @@ class EmployeeService
                 unset($employee['religion_raw']);
                 unset($employee['education_raw']);
                 unset($employee['position_raw']);
-    
+
                 $employee['boss_id'] = null;
 
                 $check = $this->repo->show('dummy', 'id', [], "lower(employee_id) = '" . strtolower($employee['employee_id']) . "'");
@@ -1289,12 +1291,12 @@ class EmployeeService
                     $this->repo->store(collect($employee)->except(['boss_id', 'wrong_format', 'wrong_data'])->toArray());
                 }
             }
-    
+
             // handle boss id
             foreach ($response as $employee) {
                 if ($employee['boss_id']) {
                     $bossId = $this->repo->show('dummy', 'id,employee_id', [], "lower(employee_id) = '" . strtolower($employee['boss_id']) . "'");
-    
+
                     if ($bossId) {
                         $this->repo->update(
                             ['boss_id' => $bossId->id],
@@ -1374,7 +1376,7 @@ class EmployeeService
                 $output[$key]['wrong_format'] = true;
                 array_push($wrong, __('global.bankRequired'));
             }
-    
+
             // relation validation
             if (
                 (isset($employee['relation_contact'])) &&
@@ -1658,10 +1660,10 @@ class EmployeeService
 
     /**
      * Employee is resign
-     * 
+     *
      * @param array<string, string> $data
      * @param string employeeUid
-     * 
+     *
      * @return array
      */
     public function resign(array $data, string $employeeUid)
