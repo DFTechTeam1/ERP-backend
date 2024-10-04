@@ -130,7 +130,7 @@ class RolePermissionSetting extends Seeder
             case 'regular employee':
                 $roleKey = $this->getRegularRole();
                 break;
-            
+
             default:
                 $roleKey = $this->getRootRole();
                 break;
@@ -158,7 +158,7 @@ class RolePermissionSetting extends Seeder
     protected function getMarketingRole()
     {
         return 'marketing';
-    } 
+    }
 
     protected function getDirectorRole()
     {
@@ -488,6 +488,11 @@ class RolePermissionSetting extends Seeder
                 $this->getItSupportRole(),
             ]],
             ['name' => 'list_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'detail_inventory', 'group' => 'inventories', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
                 $this->getItSupportRole(),
