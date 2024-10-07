@@ -20,6 +20,21 @@ class TestingController extends Controller
         //
     }
 
+    public function forms()
+    {
+        return generalResponse(
+            'success',
+            false,
+            [
+                [
+                    'uid' => 1,
+                    'name' => 'Forms 1',
+                    'field_count' => 3,
+                ]
+            ]
+        );
+    }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -53,7 +68,7 @@ class TestingController extends Controller
             ''
         ];
     }
-    
+
     protected function formatLed(string $ledString)
     {
         $exp = explode(', ', $ledString);
@@ -157,7 +172,7 @@ class TestingController extends Controller
                                 case 'rudhi':
                                     $picEmail = 'rudhisoe@gmail.com';
                                     break;
-                                
+
                                 default:
                                     $picEmail = 'wesleywiyadi@gmail.com';
                                     break;
@@ -181,7 +196,7 @@ class TestingController extends Controller
             }
 
             \Illuminate\Support\Facades\DB::commit();
-            
+
             return apiResponse(
                 generalResponse(
                     'Success assign PIC',
@@ -226,7 +241,7 @@ class TestingController extends Controller
                             case 'ready':
                                 $statusData = \App\Enums\Production\ProjectStatus::ReadyToGo->value;
                                 break;
-                            
+
                             default:
                                 $statusData = null;
                                 break;
@@ -239,7 +254,7 @@ class TestingController extends Controller
             }
 
             \Illuminate\Support\Facades\DB::commit();
-            
+
             return apiResponse(
                 generalResponse(
                     'Success assign status',
@@ -264,7 +279,7 @@ class TestingController extends Controller
             $projects = \Modules\Production\Models\Project::select('uid')->get();
             $projectUids = collect((object)$projects)->pluck('uid')->toArray();
             $projectService->bulkDelete($projectUids);
-            
+
             return apiResponse(
                 generalResponse(
                     'Delete success',
@@ -344,7 +359,7 @@ class TestingController extends Controller
                         case 'corporate':
                             $eventType = \App\Enums\Production\EventType::Corporate->value;
                             break;
-                        
+
                         default:
                             $eventType = \App\Enums\Production\EventType::Exhibition->value;
                             break;
@@ -399,7 +414,7 @@ class TestingController extends Controller
 
     public function generateOfficialEmail()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\OfficialEmailList, 'email_list.xlsx');   
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\OfficialEmailList, 'email_list.xlsx');
     }
 
     public function spreadsheet()
@@ -407,7 +422,7 @@ class TestingController extends Controller
         $service = new GoogleService();
 
         $data = $service->spreadSheet('1Rrp_0srULfoeWLlxgElMTjkxPaJMFSD6XBU_JQL0_jI');
-        
+
         $headers = $data[1];
 
         $body = array_splice($data, 2);

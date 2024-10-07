@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
 use App\Services\LocalNasService;
 use App\Services\NasConnectionService;
@@ -27,10 +28,10 @@ Route::get('testing', function () {
     $employeeIds = [6];
 
     \Modules\Production\Jobs\RequestEntertainmentTeamJob::dispatch(
-        ['default_select' => true], 
-        $project, 
-        $entertainmentPic, 
-        $user, 
+        ['default_select' => true],
+        $project,
+        $entertainmentPic,
+        $user,
         $employeeIds
     );
 
@@ -40,6 +41,8 @@ Route::get('testing', function () {
         'user' => $user,
     ]);
 });
+
+Route::get('forms', [TestingController::class, 'forms']);
 
 Route::get('delete-projects', [\App\Http\Controllers\Api\TestingController::class, 'deleteCurrentProjects']);
 Route::post('manual-migrate-project', [\App\Http\Controllers\Api\TestingController::class, 'manualMigrateProjects']);
@@ -108,7 +111,7 @@ Route::middleware('auth:sanctum')
         Route::post('logout', [LoginController::class, 'logout']);
 
     });
-    
+
 Route::get('users/activate/{key}', [UserController::class, 'activate']);
 
 Route::middleware('auth:sanctum')
