@@ -12,4 +12,5 @@ return [
     'failedToGetTeams' => 'Failed to get teams',
     'notRegisteredAsUser' => 'Not registered as user',
     'successApproveAndChooseMemberTransfer' => "Request is approved with custom team member",
+    'qrcodeError' => 'QrCode is error',
 ];
