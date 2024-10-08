@@ -12,4 +12,5 @@ return [
     'failedToGetTeams' => 'Gagal untuk mendapatkan daftar tim',
     'notRegisteredAsUser' => 'Karyawan belum terdaftar sebagai user aplikasi',
     'successApproveAndChooseMemberTransfer' => "Permintaan berhasil disetujui dengan custom tim member",
+    'qrcodeError' => 'QrCode bermasalah',
 ];
