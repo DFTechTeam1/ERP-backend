@@ -3,10 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\TestingEvent;
+use App\Exceptions\GenerateQrcodeError;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\FormInteractiveRequest;
+use App\Http\Requests\FormInteractiveUpdate;
+use App\Models\FormInteractive;
+use App\Models\FormInteractiveResponse;
 use App\Services\GoogleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Modules\Production\Jobs\NewProjectJob;
 use Pusher\Pusher;
 
@@ -20,18 +26,229 @@ class TestingController extends Controller
         //
     }
 
+    public function detailForm(string $uid)
+    {
+        try {
+            $data = FormInteractive::with('responses')
+                ->where('uid', $uid)->first();
+
+            $data->background = $data->background ? asset('storage/forms/' . $data->background) : null;
+            $data->qrcode = asset('storage/' . $data->qrcode);
+
+            $forms = json_decode($data->forms, true);
+            $data->forms = collect($forms)->map(function ($item) {
+                return [
+                    'name' => $item['name'],
+                    'id' => strtolower(preg_replace('/\s+/', '', $item['name'])),
+                ];
+            })->toArray();
+
+            $data->response_detail = [];
+            if (count($data->responses) > 0) {
+                $outputResponse = [];
+                foreach ($data->responses as $response) {
+                    $outputResponse[] = [
+                        'message' => json_decode($response->response, true),
+                    ];
+                }
+
+                $data->response_detail = $outputResponse;
+            }
+
+            return apiResponse(
+                generalResponse(
+                    'success',
+                    false,
+                    $data->toArray()
+                )
+            );
+        } catch (\Throwable $th) {
+            return apiResponse(
+                errorResponse($th)
+            );
+        }
+    }
+
+    public function updateForm(FormInteractiveUpdate $request, string $id)
+    {
+        $tmp = null;
+
+        try {
+            $data = $request->validated();
+
+            $payload = [
+                'name' => $data['name'],
+                'forms' => json_encode($data['forms'])
+            ];
+
+            if (
+                (isset($data['image'])) &&
+                ($data['image'])
+            ) {
+                $tmp = uploadImageandCompress("forms", 10, $data['image']);
+                $payload['background'] = $tmp;
+            }
+
+            $currentData = FormInteractive::select('background')->where('uid', $id)->first();
+
+            $form = FormInteractive::where('uid', $id)
+                ->update($payload);
+
+            if (
+                ($form) &&
+                $tmp &&
+                (
+                    ($currentData) &&
+                    ($currentData->background) &&
+                    is_file(storage_path('app/public/forms/' . $currentData->background))
+                )
+            ) {
+                unlink(storage_path('app/public/forms/' . $currentData->background));
+            }
+
+            return apiResponse(
+                generalResponse(
+                    'Success update interactive form',
+                    false,
+                )
+            );
+        } catch (\Throwable $th) {
+            if ($tmp) {
+                deleteImage($tmp);
+            }
+
+            return apiResponse(
+                errorResponse($th)
+            );
+        }
+    }
+
+    public function deleteForm(string $uid)
+    {
+        try {
+            $data = FormInteractive::select('*')->where('uid', $uid)->first();
+
+            if (
+                ($data->background) &&
+                (is_file(storage_path('app/public/forms/' . $data->background)))
+            ) {
+                unlink(storage_path('app/public/forms/' . $data->background));
+            }
+
+            if (is_file(storage_path('app/public/' . $data->qrcode))) {
+                unlink(storage_path('app/public/' . $data->qrcode));
+            }
+
+            $data->delete();
+
+            return apiResponse(
+                generalResponse(
+                    'Form is deleted',
+                    false,
+                )
+            );
+        } catch (\Throwable $th) {
+            return apiResponse(
+                errorResponse($th)
+            );
+        }
+    }
+
+    public function storeFormResponse(Request $request, string $uid)
+    {
+        try {
+            $all = $request->all();
+
+            FormInteractiveResponse::create([
+                'form_interactive_id' => getIdFromUid($uid, new FormInteractive()),
+                'response' => json_encode($all)
+            ]);
+
+            return apiResponse(
+                generalResponse(
+                    'success',
+                    false,
+                )
+            );
+        } catch (\Throwable $th) {
+            return apiResponse(
+                errorResponse($th)
+            );
+        }
+    }
+
+    public function storeForm(FormInteractiveRequest $request)
+    {
+        $tmp = null;
+
+        try {
+            $data = $request->validated();
+
+            if (
+                (isset($data['image'])) &&
+                ($data['image'])
+            ) {
+                $tmp = uploadImageandCompress("forms", 10, $data['image']);
+            }
+
+            $form = FormInteractive::create([
+                'name' => $data['name'],
+                'forms' => json_encode($data['forms']),
+                'background' => $tmp,
+            ]);
+
+            $qrcodeData = config('app.frontend_url') . '/forms/d/' . $form->uid;
+            $qrcode = generateQrcode($qrcodeData, 'qrcode-' . preg_replace('/\s+/', '', $form->name) . '.png');
+
+            if (!$qrcode) {
+                throw new GenerateQrcodeError();
+            }
+
+            FormInteractive::where('id', $form->id)
+                ->update(['qrcode' => $qrcode]);
+
+            return apiResponse(
+                generalResponse(
+                    'Success create new interactive form',
+                    false,
+                )
+            );
+        } catch (\Throwable $th) {
+            if ($tmp) {
+                deleteImage($tmp);
+            }
+
+            return apiResponse(
+                errorResponse($th)
+            );
+        }
+    }
+
+    /**
+     * @return array
+     */
     public function forms()
     {
+        $forms = FormInteractive::with('responses')->get();
+
+        $output = [];
+        foreach ($forms as $form) {
+            $fields = json_decode($form->forms, true);
+
+            $output[] = [
+                'qrcode' => asset('storage/' . $form->qrcode),
+                'forms' => $fields,
+                'name' => $form->name,
+                'id' => $form->uid,
+                'field_count' => count($fields),
+                'number_of_response' => count($form->responses),
+            ];
+        }
+
         return generalResponse(
             'success',
             false,
-            [
-                [
-                    'uid' => 1,
-                    'name' => 'Forms 1',
-                    'field_count' => 3,
-                ]
-            ]
+            $output,
         );
     }
 
