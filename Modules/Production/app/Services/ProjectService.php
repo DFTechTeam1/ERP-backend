@@ -106,7 +106,7 @@ class ProjectService
 
         $this->projectTaskAttachmentRepo = new ProjectTaskAttachmentRepository;
 
-        $this->projectPicRepository = new ProjectPersonInChargeRepository;
+        $this->projectPicRepository = new ProjectPersonInChargeRepository();
 
         $this->projectTaskLogRepository = new ProjectTaskLogRepository;
 
