@@ -307,9 +307,11 @@ class DashboardService {
         $totalIncome = 0;
 
         // get equipment price
-        $inventories = $this->inventoryRepo->list('purchase_price,stock');
+        $inventories = $this->inventoryRepo->list('purchase_price,stock,id', '', ['items:id,inventory_id,purchase_price']);
         $totalInventoryPrice = collect($inventories)->map(function ($item) {
-            return $item->stock * $item->purchase_price;
+            $itemsPrice = collect($item->items)->pluck('purchase_price')->sum();
+
+            return $itemsPrice;
         })->sum();
 
         $employees = $this->employeeRepo->list('id,position_id', 'status != ' . \App\Enums\Employee\Status::Inactive->value, ['position:id,name']);
@@ -439,7 +441,7 @@ class DashboardService {
                 'relation' => 'personInCharges',
                 'query' => 'pic_id = ' . $employeeId,
             ];
-        } else if (isDirector()) {
+        } else if (isDirector() || isItSupport()) {
             $whereHas = [];
         } else if ($roleId != $superUserRole && $roleId != $projectManagerRole) {
             $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
