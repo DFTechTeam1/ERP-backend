@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
 use App\Services\LocalNasService;
 use App\Services\NasConnectionService;
@@ -26,20 +27,19 @@ Route::get('testing', function () {
     $user = \App\Models\User::latest()->first();
     $employeeIds = [6];
 
-    \Modules\Production\Jobs\RequestEntertainmentTeamJob::dispatch(
-        ['default_select' => true], 
-        $project, 
-        $entertainmentPic, 
-        $user, 
-        $employeeIds
-    );
-
     return response()->json([
         'project' => $project,
         'enter' => $entertainmentPic,
         'user' => $user,
     ]);
 });
+
+Route::get('forms', [TestingController::class, 'forms']);
+Route::post('forms', [TestingController::class, 'storeForm']);
+Route::get('forms/{uid}', [TestingController::class, 'detailForm']);
+Route::put('forms/{uid}', [TestingController::class, 'updateForm']);
+Route::delete('forms/{uid}', [TestingController::class, 'deleteForm']);
+Route::post('forms/response/{uid}', [TestingController::class, 'storeFormResponse']);
 
 Route::get('delete-projects', [\App\Http\Controllers\Api\TestingController::class, 'deleteCurrentProjects']);
 Route::post('manual-migrate-project', [\App\Http\Controllers\Api\TestingController::class, 'manualMigrateProjects']);
@@ -108,7 +108,7 @@ Route::middleware('auth:sanctum')
         Route::post('logout', [LoginController::class, 'logout']);
 
     });
-    
+
 Route::get('users/activate/{key}', [UserController::class, 'activate']);
 
 Route::middleware('auth:sanctum')

@@ -69,9 +69,9 @@ if (!function_exists('errorMessage')) {
             } else {
                 if (config('app.env') == 'local') {
                     $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
-                    $messageError = $out;        
+                    $messageError = $out;
                 } else {
-                    $out = __('global.failedProcessingData');        
+                    $out = __('global.failedProcessingData');
                 }
             }
         } else if (($message instanceof Throwable) && config('app.env') == 'local') {
@@ -84,13 +84,13 @@ if (!function_exists('errorMessage')) {
             logging('error: ', [$message]);
             $out = $message;
         }
-        
+
         // if (file_exists(base_path('exceptions.json'))) {
         //     $exceptions = File::get(base_path('exceptions.json'));
         //     $exceptionArray = json_decode($exceptions, true);
         //     $arrayKeys = array_keys($exceptionArray);
 
-            
+
         //     foreach ($arrayKeys as $exception) {
         //         $check = "\\App\\Exceptions\\{$exception}";
         //         if ($message instanceof $check) {
@@ -138,7 +138,7 @@ if (!function_exists('errorResponse')) {
 
 if (!function_exists('createQr')) {
     function createQr($payload)
-    {   
+    {
         $option = new QROptions;
         $option->version      = 7;
         // $option->outputBase64 = false;
@@ -152,7 +152,7 @@ if (!function_exists('createQr')) {
 if (!function_exists('generateQrcode')) {
     function generateQrcode($payload, string $filename) {
         $explode = explode('/', $filename);
-        
+
         array_pop($explode);
 
         $path = implode('/', $explode);
@@ -208,9 +208,9 @@ if (!function_exists('uploadFile')) {
             $ext = $file->getClientOriginalExtension();
             $datetime = date('YmdHis');
             $name = "uploaded_file_{$datetime}.{$ext}";
-    
+
             Storage::putFileAs($path, $file, $name);
-    
+
             return $name;
         } catch (\Throwable $th) {
             Log::debug('uploadFile Error', [
@@ -227,7 +227,7 @@ if (!function_exists('uploadAddon')) {
         try {
             $mime = $file->getClientMimeType();
             Log::debug('mime in uploadAddon function: ', [$mime]);
-    
+
             // if (
             //     $mime == 'image/png' ||
             //     $mime == 'image/jpg' ||
@@ -245,7 +245,7 @@ if (!function_exists('uploadAddon')) {
                 'addons',
                 $file
             );
-    
+
             return [
                 'mime' => $mime,
                 'file' => $uploadedFile,
@@ -272,7 +272,7 @@ if (!function_exists('uploadImage')) {
 
         $ext = $image->getClientOriginalExtension();
         $datetime = date('YmdHis');
-        
+
         $name = "uploaded_{$folderName}_{$datetime}.{$ext}";
 
         if ($isOriginalName) {
@@ -300,7 +300,7 @@ if (!function_exists('uploadImageandCompress')) {
         $ext = $image->getClientOriginalExtension();
         $originalName = $image->getClientOriginalName();
         $datetime = date('YmdHis');
-        
+
         $name = "{$originalName}_{$datetime}.{$extTarget}";
 
         // create file
@@ -394,7 +394,7 @@ if (!function_exists('getSettingByKey')) {
 if (!function_exists('cachingSetting')) {
     function cachingSetting() {
         $setting = Cache::get('setting');
-    
+
         if (!$setting) {
             Cache::rememberForever('setting', function () {
                 $data = \Modules\Company\Models\Setting::get();
@@ -427,7 +427,7 @@ if (!function_exists('curlRequest')) {
     function curlRequest(string $url, array $payload)
     {
         $curl = curl_init();
-    
+
         curl_setopt_array($curl, array(
             CURLOPT_URL => $url,
             CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
@@ -470,7 +470,7 @@ if (!function_exists('getPicOfInventory')) {
         $users = getUserByRole('it support');
         // check permission
         logging('user data: ', $users->toArray());
-        
+
         $employees = [];
         foreach ($users as $user) {
             $permissions = $user->getPermissionsViaRoles();
@@ -585,6 +585,12 @@ if (!function_exists('isDirector')) {
     }
 }
 
+if (!function_exists('isItSupport')) {
+    function isItSupport() {
+        return auth()->user()->hasRole('it support');
+    }
+}
+
 if (!function_exists('snakeToCamel')) {
     function snakeToCamel(string $word) {
         return lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $word))));
@@ -621,7 +627,7 @@ if (!function_exists('parseUserAgent')) {
     function parseUserAgent($userAgent) {
         $browser = 'Unknown';
         $os = 'Unknown';
-    
+
         // Detect browser
         if (strpos($userAgent, 'Firefox') !== false) {
             $browser = 'Firefox';
@@ -632,7 +638,7 @@ if (!function_exists('parseUserAgent')) {
         } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
             $browser = 'Internet Explorer';
         }
-    
+
         // Detect OS
         if (strpos($userAgent, 'Windows NT') !== false) {
             $os = 'Windows';
@@ -645,7 +651,7 @@ if (!function_exists('parseUserAgent')) {
         } elseif (strpos($userAgent, 'iPhone') !== false || strpos($userAgent, 'iPad') !== false) {
             $os = 'iOS';
         }
-    
+
         return ['browser' => $browser, 'os' => $os];
     }
 }
