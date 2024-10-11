@@ -24,8 +24,11 @@ class InventoryItem extends Model
         'current_location',
         'user_id',
         'qrcode',
+        'purchase_price',
+        'warranty',
+        'year_of_purchase'
     ];
-    
+
     protected static function newFactory(): InventoryItemFactory
     {
         //return InventoryItemFactory::new();

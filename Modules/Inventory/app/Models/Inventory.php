@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Inventory\Database\factories\InventoryFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Modules\Inventory\Observers\InventoryObserver;
+use Modules\Production\Models\ProjectEquipment;
 
 // #[ObservedBy([InventoryObserver::class])]
 class Inventory extends Model
@@ -40,7 +41,7 @@ class Inventory extends Model
     ];
 
     protected $appends = ['display_image'];
-    
+
     // protected static function newFactory(): InventoryFactory
     // {
     //     //return InventoryFactory::new();
@@ -69,6 +70,11 @@ class Inventory extends Model
     public function itemTypeRelation(): BelongsTo
     {
         return $this->belongsTo(InventoryType::class, 'item_type');
+    }
+
+    public function projectEquipments(): HasMany
+    {
+        return $this->hasMany(ProjectEquipment::class, 'inventory_id');
     }
 
     public function unit(): BelongsTo

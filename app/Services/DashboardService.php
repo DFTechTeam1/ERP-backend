@@ -79,7 +79,7 @@ class DashboardService {
         ];
 
         $user = auth()->user();
-        
+
         $this->isEmployee = $user->is_employee;
         $this->isProjectManager = $user->is_project_manager;
         $this->isDirector = $user->is_director;
@@ -112,7 +112,18 @@ class DashboardService {
             ];
         }
 
-        $projects = $this->projectRepo->list('id,status', '', [], $whereHas);
+        $startDate = date('Y-m') . '-01';
+        $year = date('Y', strtotime($startDate));
+        $month = date('m', strtotime($startDate));
+        $getLastDay = Carbon::createFromDate((int) $year, (int) $month, 1)
+            ->endOfMonth()
+            ->format('d');
+        $endDate = date('Y-m') . '-' . $getLastDay;
+        $where = "project_date >= '{$startDate}' and project_date <= '{$endDate}'";
+
+        logging('where projects', [$where]);
+
+        $projects = $this->projectRepo->list('id,status', $where, [], $whereHas);
         $projectsGroup = collect($projects)->groupBy('status_text')->toArray();
         $projectLabels = array_keys($projectsGroup);
         $projectSeries = [];
@@ -144,7 +155,7 @@ class DashboardService {
             ],
             'labels' => $projectLabels,
         ];
-        
+
         return [
             'options' => $projectOptions,
             'total' => $projects->count(),
@@ -155,11 +166,22 @@ class DashboardService {
     // all in a month
     protected function getReportProduction()
     {
-        $tasks = $this->taskPicHistory->list('id,project_task_id,project_id,employee_id', 'employee_id = ' . auth()->user()->employee_id);
+        $tasks = $this->taskPicHistory->list('id,project_task_id,project_id,employee_id', 'employee_id = ' . auth()->user()->employee_id, [
+            'project' => function ($q) {
+                $q->whereBetween('project_date', [$this->startDate, $this->endDate]);
+            }
+        ]);
+
+        $tasks = collect($tasks)->filter(function ($filter) {
+            return $filter->project;
+        });
 
         $group = collect($tasks)->groupBy("project_id")->toArray();
 
         $keys = array_keys($group);
+
+        logging('task production', $tasks->toArray());
+        logging('group production', $group);
 
         $totalTask = [];
         foreach ($group as $detail) {
@@ -202,7 +224,7 @@ class DashboardService {
         $startDate = date('Y-m-d', strtotime('-14 days'));
         $endDate = date('Y-m-d');
         $upcomingProject = $this->projectRepo->list(
-            'id,classification,name,project_date', 
+            'id,classification,name,project_date',
             "project_date >= '{$startDate}' and project_date <= '{$endDate}'",
             [],
             [
@@ -212,7 +234,7 @@ class DashboardService {
                 ]
             ]
         );
-        $upcomingGroup = collect($upcomingProject)->groupBy('projet_date')->toArray();
+        $upcomingGroup = collect($upcomingProject)->groupBy('project_date')->toArray();
         $upcomingSeries = [];
         foreach ($upcomingGroup as $group) {
             $upcomingSeries[] = count($group);
@@ -285,9 +307,11 @@ class DashboardService {
         $totalIncome = 0;
 
         // get equipment price
-        $inventories = $this->inventoryRepo->list('purchase_price,stock');
+        $inventories = $this->inventoryRepo->list('purchase_price,stock,id', '', ['items:id,inventory_id,purchase_price']);
         $totalInventoryPrice = collect($inventories)->map(function ($item) {
-            return $item->stock * $item->purchase_price;
+            $itemsPrice = collect($item->items)->pluck('purchase_price')->sum();
+
+            return $itemsPrice;
         })->sum();
 
         $employees = $this->employeeRepo->list('id,position_id', 'status != ' . \App\Enums\Employee\Status::Inactive->value, ['position:id,name']);
@@ -417,7 +441,7 @@ class DashboardService {
                 'relation' => 'personInCharges',
                 'query' => 'pic_id = ' . $employeeId,
             ];
-        } else if (isDirector()) {
+        } else if (isDirector() || isItSupport()) {
             $whereHas = [];
         } else if ($roleId != $superUserRole && $roleId != $projectManagerRole) {
             $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
@@ -427,7 +451,7 @@ class DashboardService {
                 $projectTaskIds = implode("','", $projectTasks);
                 $projectTaskIds = "'" . $projectTaskIds;
                 $projectTaskIds .= "'";
-                
+
                 $hasQuery = "id IN (" . $projectTaskIds . ")";
             } else {
                 $hasQuery = "id IN (0)";
@@ -518,7 +542,7 @@ class DashboardService {
                 $projectTaskIds = implode("','", $projectTasks);
                 $projectTaskIds = "'" . $projectTaskIds;
                 $projectTaskIds .= "'";
-                
+
                 $hasQuery = "id IN (" . $projectTaskIds . ")";
             } else {
                 $hasQuery = "id IN (0)";

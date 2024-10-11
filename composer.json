@@ -20,6 +20,7 @@
         "phpoffice/phpspreadsheet": "^1.29",
         "pusher/pusher-php-server": "^7.2",
         "revolution/laravel-google-sheets": "^6.3",
+        "sentry/sentry-laravel": "^4.9",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-permission": "^6.4",
         "stechstudio/laravel-zipstream": "^5.0",
