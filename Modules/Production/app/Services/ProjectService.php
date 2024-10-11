@@ -2689,8 +2689,26 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
+            // format payload to remove item type
+            $currentPayload = [];
+            foreach ($data['items'] as $outputData) {
+                if (count($outputData['inventories']) > 0) {
+                    foreach ($outputData['inventories'] as $inventory) {
+                        $currentPayload[] = [
+                            'inventory_id' => $inventory['id'],
+                            'qty' => $inventory['qty'],
+                        ];
+                    }
+                } else {
+                    $currentPayload[] = [
+                        'inventory_id' => $outputData['inventory_id'],
+                        'qty' => $outputData['qty'],
+                    ];
+                }
+            }
+
             // handle duplicate items
-            $groupBy = collect($data['items'])->groupBy('inventory_id')->all();
+            $groupBy = collect($currentPayload)->groupBy('inventory_id')->all();
             $out = [];
             foreach ($groupBy as $key => $group) {
                 $qty = collect($group)->pluck('qty')->sum();
