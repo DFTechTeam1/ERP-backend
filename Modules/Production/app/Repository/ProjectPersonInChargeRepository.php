@@ -3,10 +3,10 @@
 namespace Modules\Production\Repository;
 
 use Modules\Production\Models\ProjectPersonInCharge;
-use Modules\Production\Repository\Interface\ProjectPersonInChargeInterface;
+use Modules\Production\Repository\Interface\ProjectPersonInChargeInterfaces;
 
-class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
-    
+class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
+
     private $model;
 
     private $key;
@@ -69,7 +69,7 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -92,7 +92,7 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
         } else {
             $query->where("uid", $uid);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -144,7 +144,7 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
     public function delete(int $id, string $where = '')
     {
         $query = $this->model->query();
-        
+
         if (empty($where)) {
             $query->where('id', $id);
         } else {
