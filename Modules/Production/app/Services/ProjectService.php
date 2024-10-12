@@ -319,6 +319,7 @@ class ProjectService
     ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
@@ -495,6 +496,22 @@ class ProjectService
                 $sorts = rtrim($sorts, ',');
             }
 
+            // condition when user want to see all projects
+            $isAllItems = false;
+            if ($itemsPerPage < 0) {
+                $page = 1;
+
+                $allProjects = $this->repo->list(
+                    'id',
+                    $where,
+                    $relation,
+                    $whereHas
+                )->count();
+
+                $itemsPerPage = $allProjects;
+                $isAllItems = true;
+            }
+
             $paginated = $this->repo->pagination(
                 $select,
                 $where,
@@ -604,6 +621,8 @@ class ProjectService
                     'sort' => $sorts,
                     'paginated' => $paginated,
                     'totalData' => $totalData,
+                    'itemPerPage' => (int) $itemsPerPage,
+                    'isAllItems' => $isAllItems
                 ],
             );
         } catch (\Throwable $th) {
@@ -1431,6 +1450,7 @@ class ProjectService
                     'country_id' => $data->country_id,
                     'state_id' => $data->state_id,
                     'city_id' => $data->city_id,
+                    'feedback' => $data->feedback,
                     'event_type' => $eventType,
                     'event_type_raw' => $data->event_type,
                     'event_class_raw' => $data->project_class_id,
@@ -5025,6 +5045,7 @@ class ProjectService
             }
 
             $this->repo->update([
+                'feedback' => $data['feedback'],
                 'status' => \App\Enums\Production\ProjectStatus::Completed->value
             ], $projectUid);
 
@@ -5037,6 +5058,7 @@ class ProjectService
             $project = $this->repo->show($projectUid, 'id,status');
 
             $currentData = getCache('detailProject' . $projectId);
+            $currentData['feedback'] = $data['feedback'];
             $currentData['status_raw'] = $project->status;
             $currentData['status'] = $project->status_text;
             $currentData['status_color'] = $project->status_color;
