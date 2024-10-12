@@ -456,10 +456,18 @@ class InventoryService {
                 }
             }
 
-            $paginated = $this->projectRepo->list(
+            $totalData = $this->projectRepo->list('id', $where, $relation, $whereHas)->count();
+
+            if ($itemsPerPage < 0) {
+                $itemsPerPage = $this->projectRepo->list('id', $where, [], $whereHas)->count();
+            }
+
+            $paginated = $this->projectRepo->pagination(
                 $select,
                 $where,
                 $relation,
+                $itemsPerPage,
+                $page,
                 $whereHas
             );
 
@@ -501,7 +509,10 @@ class InventoryService {
             return generalResponse(
                 'Success',
                 false,
-                $paginated,
+                [
+                    'paginated' => $paginated,
+                    'totalData' => $totalData,
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -1110,6 +1121,10 @@ class InventoryService {
                 } elseif (!empty($search['warranty']) && !empty($where)) {
                     $where .= " AND warranty = {$search['warranty']}";
                 }
+            }
+
+            if ($itemsPerPage < 0) {
+                $itemsPerPage = $this->customItemRepo->list('id', $where)->count();
             }
 
             $paginated = $this->customItemRepo->pagination(
