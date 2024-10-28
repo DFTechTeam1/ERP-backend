@@ -49,8 +49,16 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::get('custom-inventories', "{$namespace}\CustomInventoryController@index");
     Route::post('custom-inventories', "{$namespace}\CustomInventoryController@store");
     Route::put('custom-inventories/{uid}', "{$namespace}\CustomInventoryController@update");
+    Route::post('custom-inventories/bulk', "{$namespace}\CustomInventoryController@bulkDelete");
     Route::get('custom-inventories/itemList', "{$namespace}\CustomInventoryController@getItemList");
     Route::get('custom-inventories/edit/{uid}', "{$namespace}\CustomInventoryController@show");
+
+    Route::get('request-inventory/approval-line', "{$namespace}\RequestInventoryController@getApprovalLines");
+    Route::post('request-inventory/bulk', "{$namespace}\RequestInventoryController@bulkDelete");
+    Route::get('request-inventory/get-request-inventory-status', "{$namespace}\RequestInventoryController@getRequestInventoryStatus");
+    Route::post('request-inventory/closed', "{$namespace}\RequestInventoryController@closedRequest");
+    Route::apiResource('request-inventory', "{$namespace}\RequestInventoryController");
+    Route::get('request-inventory/{type}/{uid}', "{$namespace}\RequestInventoryController@processRequest");
 
 });
 

@@ -30,18 +30,18 @@ class SupplierService {
         DB::beginTransaction();
         try {
             $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\BrandImport, $data['excel']);
-            
+
             $output = [];
-    
+
             $error = [];
-            
+
             foreach ($data as $value) {
                 unset($value[0]);
                 unset($value[1]);
-    
+
                 foreach (array_values($value) as $val) {
                     $check = $this->repo->show('dummy', 'id', [], "lower(name) = '" . strtolower($val[0]) . "'");
-    
+
                     if (!$check) {
                         $this->repo->store(['name' => $val[0]]);
                     } else {
@@ -51,7 +51,7 @@ class SupplierService {
             }
 
             DB::commit();
-    
+
             return generalResponse(
                 __("global.importSupplierSuccess"),
                 false,
@@ -72,7 +72,7 @@ class SupplierService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(
@@ -88,8 +88,8 @@ class SupplierService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+            if (!empty($search)) { // array
+                $where = formatSearchConditions($search['filters'], $where);
             }
 
             $paginated = $this->repo->pagination(
@@ -159,7 +159,7 @@ class SupplierService {
      * Store data
      *
      * @param array $data
-     * 
+     *
      * @return array
      */
     public function store(array $data): array
@@ -182,7 +182,7 @@ class SupplierService {
      * @param array $data
      * @param integer $id
      * @param string $where
-     * 
+     *
      * @return array
      */
     public function update(
@@ -201,13 +201,13 @@ class SupplierService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
      * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -227,7 +227,7 @@ class SupplierService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array
