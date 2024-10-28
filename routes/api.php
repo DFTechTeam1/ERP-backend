@@ -30,6 +30,13 @@ Route::get('line-flex', function () {
 
 });
 
+Route::post('{token}/telegram-webhook', function (Request $request, string $token) {
+    Log::debug('webhook telegram', [
+        'req' => $request->all(),
+        'token' => $token
+    ]);
+});
+
 Route::get('messages', function () {
    $invoice = 'https://quicklyevents.com/storage/invoices/1/1706684868139-invoice.pdf';
 
