@@ -16,9 +16,7 @@ Route::get('telegram', function () {
     $env = env('TELEGRAM_BOT_TOKEN');
     $tele = new \Telegram\Bot\Api($env);
 
-    $tele->setWebhook(['url' => "https://backend.dfactory.pro/api/{$env}/telegram-webhook"]);
-
-    return $tele->getWebhookInfo();
+    return $tele->getMe();
 });
 
 Route::get('barcode', function () {

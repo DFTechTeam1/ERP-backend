@@ -31,7 +31,7 @@ return [
     |             ]
     */
     'bots' => [
-        'mybot' => [
+        'dfdatacenter_bot' => [
             'token' => env('TELEGRAM_BOT_TOKEN', 'YOUR-BOT-TOKEN'),
             'certificate_path' => '',
             'webhook_url' => env('TELEGRAM_WEBHOOK_URL', 'YOUR-BOT-WEBHOOK-URL'),
