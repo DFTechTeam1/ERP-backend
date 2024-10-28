@@ -59,7 +59,8 @@ class InventoryRepository extends InventoryInterface {
         array $relation = [],
         int $itemsPerPage,
         int $page,
-        array $whereHas = []
+        array $whereHas = [],
+        string $orderBy = ''
     )
     {
         $query = $this->model->query();
@@ -82,8 +83,8 @@ class InventoryRepository extends InventoryInterface {
             }
         }
 
-        $query->orderBy('created_at', 'DESC');
-        
+        $query->orderByRaw($orderBy);
+
         if ($itemsPerPage < 0) {
             return $query->get();
         } else {
@@ -110,7 +111,7 @@ class InventoryRepository extends InventoryInterface {
         } else {
             $query->where("uid", $uid);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }

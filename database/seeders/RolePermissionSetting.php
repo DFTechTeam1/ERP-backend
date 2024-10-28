@@ -407,6 +407,34 @@ class RolePermissionSetting extends Seeder
     protected function inventoriesPermission()
     {
         return [
+            ['name' => 'list_request_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'create_request_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'cancel_request_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'approve_request_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'reject_request_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_request_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
             ['name' => 'list_supplier', 'group' => 'inventories', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),

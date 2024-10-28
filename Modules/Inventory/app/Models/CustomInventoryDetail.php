@@ -23,6 +23,6 @@ class CustomInventoryDetail extends Model
 
     public function inventory(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Inventory\Models\Inventory::class, 'inventory_id');
+        return $this->belongsTo(\Modules\Inventory\Models\InventoryItem::class, 'inventory_id');
     }
 }

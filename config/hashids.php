@@ -30,7 +30,7 @@ return [
 
         'main' => [
             'salt' => config('app.hashSalt'),
-            'length' => 0,
+            'length' => 25,
             'alphabet' => 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
         ],
 

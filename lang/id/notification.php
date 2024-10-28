@@ -13,4 +13,11 @@ return [
     'notRegisteredAsUser' => 'Karyawan belum terdaftar sebagai user aplikasi',
     'successApproveAndChooseMemberTransfer' => "Permintaan berhasil disetujui dengan custom tim member",
     'qrcodeError' => 'QrCode bermasalah',
+    'unitRelationFound' => 'Unit tidak bisa dihapus karena mempunya relasi dengan inventori',
+    'inventoryTypeRelationFound' => 'Tipe inventori tidak bisa dihapus karena mempunya relasi dengan inventori',
+    'requestInventoryCreated' => 'Permintaan berhasil dibuat. Kamu akan menerima pemberitahuan kalau ada perubahan',
+    'requestInventoryUpdated' => 'Pegajuan permintaan inventory berhasil di perbaruhi',
+    'requestInventoryHasBeenApproved' => 'Permintaan berhasil disetujui dan sedang dalam pemrosesan',
+    'requestInventoryHasBeenRejected' => 'Permintaan telah ditolak',
+    'successDeleteRequest' => 'Permintaan berhasil dihapus'
 ];
