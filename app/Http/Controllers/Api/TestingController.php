@@ -159,9 +159,21 @@ class TestingController extends Controller
         try {
             $all = $request->all();
 
+            $formId = getIdFromUid($uid, new FormInteractive());
             FormInteractiveResponse::create([
-                'form_interactive_id' => getIdFromUid($uid, new FormInteractive()),
+                'form_interactive_id' => $formId,
                 'response' => json_encode($all)
+            ]);
+
+            // get all messages
+            $messages = FormInteractiveResponse::where('form_interactive_id', $formId)
+                ->get();
+
+            $pusher = new \App\Services\PusherNotification();
+
+            $pusher->send('channel-interactive-new', 'notification-event', [
+                'user_message' => $all,
+                'messages' => $messages
             ]);
 
             return apiResponse(

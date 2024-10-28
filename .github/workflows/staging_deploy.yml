@@ -80,7 +80,7 @@ jobs:
           echo "PUSHER_APP_CLUSTER=${{ secrets.PUSHER_APP_CLUSTER_STAGING }}" >> .env
           echo "ROOT_EMAIL=${{ secrets.ROOT_EMAIL_STAGING }}" >> .env
           echo "GEOAPIFY_KEY=${{ secrets.GEOAPIFY_KEY_STAGING }}" >> .env
-          echo "SENTRY_LARAVEL_DSN=${{ secrets.SENTRY_LARAVEL_DSN_STAGING }}" >> .env
+          echo "SENTRY_LARAVEL_DSN=null" >> .env
           echo "SENTRY_TRACES_SAMPLE_RATE=${{ secrets.SENTRY_TRACES_SAMPLE_RATE_STAGING }}" >> .env
 
       - name: Install PHP and Composer

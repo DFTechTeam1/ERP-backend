@@ -12,7 +12,33 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('barcode', function () {
+//    $data = \Modules\Inventory\Models\CustomInventory::select('barcode', 'build_series', 'id')
+//        ->get();
+//    $data = collect($data)->map(function ($item) {
+//        $item['barcode_path'] = asset('storage/'. $item->barcode);
+//
+//        return $item;
+//    })->toArray();
+//
+//    return view('barcode', compact('data'));
+    $colorRed = [255, 0, 0];
+    $barcode = (new \Picqer\Barcode\Types\TypeCode128())->getBarcode('https://google.com');
+    $renderer = new \Picqer\Barcode\Renderers\PngRenderer();
+    $renderer->setForegroundColor($colorRed);
+    file_put_contents('barcode.png', $renderer->render($barcode, 300, 80));
+
+    $image = asset('barcode.png');
+    return view('testing_barcode', compact('image'));
+});
+
 Route::get('generate-official-email', [\App\Http\Controllers\Api\TestingController::class, 'generateOfficialEmail']);
+
+Route::get('trigger', function () {
+    $pusher = new \App\Services\PusherNotification();
+
+    $pusher->send('channel-interactive-new', 'notification-event', ['message' => 'Hello']);
+});
 
 Route::get('ilham', function () {
     $endDate = date('Y-m-d', strtotime('+2 days'));

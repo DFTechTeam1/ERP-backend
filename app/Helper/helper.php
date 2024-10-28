@@ -728,3 +728,80 @@ if (!function_exists('isAssistantPMRole')) {
         return $out;
     }
 }
+
+if (!function_exists('formatSearchConditions')) {
+    function formatSearchConditions(array $filters, string $where) {
+        foreach ($filters as $data) {
+            $value = strtolower($data['value']);
+
+            if ($data['condition'] == 'contain') {
+                $condition = " like ";
+                $value = "'%{$value}%'";
+            } else if ($data['condition'] == 'not_contain') {
+                $condition = ' not like ';
+                $value = "'%{$value}%'";
+
+            } else if ($data['condition'] == 'equal') {
+                $condition = ' = ';
+            } else if ($data['condition'] == 'not_equal') {
+                $condition = ' != ';
+            } else if ($data['condition'] == 'more_than') {
+                $condition = " >= ";
+            }
+
+            $where .= $data['field'] . $condition . $value . ' and ';
+        }
+        $where = rtrim($where, " and");
+
+        return $where;
+    }
+}
+
+if (!function_exists('uploadBase64')) {
+    function uploadBase64(string $base64Image, string $path)
+    {
+        // Decode the base64 string
+        $imageParts = explode(";base64,", $base64Image);
+        if (count($imageParts) != 2) {
+            return null;
+        }
+
+        $imageTypeAux = explode("image/", $imageParts[0]);
+        if (count($imageTypeAux) != 2) {
+            return null;
+        }
+
+        $imageType = $imageTypeAux[1]; // e.g., png, jpg, etc.
+        $imageBase64 = base64_decode($imageParts[1]);
+
+        // Create a unique file name
+        $fileName = uniqid() . '.' . $imageType;
+
+        // Define the storage path
+        $filePath = $path . '/' . $fileName;
+
+        // Save the image using Laravel's Storage facade
+        \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $imageBase64);
+
+        return $fileName;
+    }
+}
+
+if (!function_exists('generateBarcode')) {
+    function generateBarcode(string $code, string $path)
+    {
+        $realPath = storage_path('app/public/' . $path);
+        $service = new \Milon\Barcode\DNS1D();
+        if (!is_dir($realPath)) {
+            mkdir($realPath, 0777, true);
+        }
+        $service->setStorPath($realPath);
+
+        $barcode = $service->getBarcodePNGPath($code, 'PDF417');
+        if (!$barcode) {
+            return null;
+        }
+
+        return str_replace(storage_path('app/public/'), '', $barcode);
+    }
+}

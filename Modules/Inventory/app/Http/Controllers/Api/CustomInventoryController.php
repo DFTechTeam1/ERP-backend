@@ -62,4 +62,18 @@ class CustomInventoryController extends Controller
 
         return response()->json([]);
     }
+
+    /**
+     * Bulk Delete
+     *
+     * @param Request $request
+     */
+    public function bulkDelete(Request $request)
+    {
+        return apiResponse($this->service->bulkDeleteCustomInventory(
+            collect($request->ids)->map(function ($item) {
+                return $item['uid'];
+            })->toArray()
+        ));
+    }
 }

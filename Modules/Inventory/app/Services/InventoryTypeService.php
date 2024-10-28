@@ -3,11 +3,16 @@
 namespace Modules\Inventory\Services;
 
 use App\Enums\ErrorCode\Code;
+use App\Exceptions\InventoryTypeRelationFound;
+use Modules\Inventory\Models\InventoryType;
+use Modules\Inventory\Repository\InventoryRepository;
 use Modules\Inventory\Repository\InventoryTypeRepository;
 use \Illuminate\Support\Facades\DB;
 
 class InventoryTypeService {
     private $repo;
+
+    private $inventoryRepo;
 
     /**
      * Construction Data
@@ -15,6 +20,8 @@ class InventoryTypeService {
     public function __construct()
     {
         $this->repo = new InventoryTypeRepository;
+
+        $this->inventoryRepo = new InventoryRepository();
     }
 
     /**
@@ -30,18 +37,18 @@ class InventoryTypeService {
         DB::beginTransaction();
         try {
             $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\BrandImport, $data['excel']);
-            
+
             $output = [];
-    
+
             $error = [];
-            
+
             foreach ($data as $value) {
                 unset($value[0]);
                 unset($value[1]);
-    
+
                 foreach (array_values($value) as $val) {
                     $check = $this->repo->show('dummy', 'id', [], "lower(name) = '" . strtolower($val[0]) . "'");
-    
+
                     if (!$check) {
                         $slug = strtolower(implode('_', explode(' ', $val[0])));
                         $this->repo->store(['name' => $val[0], 'slug' => $slug]);
@@ -52,7 +59,7 @@ class InventoryTypeService {
             }
 
             DB::commit();
-    
+
             return generalResponse(
                 __("global.importInventoryTypeSuccess"),
                 false,
@@ -73,7 +80,7 @@ class InventoryTypeService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(
@@ -89,8 +96,23 @@ class InventoryTypeService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+            if (!empty($search)) { // array
+                $where = formatSearchConditions($search['filters'], $where);
+            }
+
+            $sort = "name asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'name') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
+                    } else {
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                    }
+                }
+
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
             }
 
             $paginated = $this->repo->pagination(
@@ -98,7 +120,9 @@ class InventoryTypeService {
                 $where,
                 $relation,
                 $itemsPerPage,
-                $page
+                $page,
+                [],
+                $sort
             );
             $totalData = $this->repo->list('id', $where)->count();
 
@@ -160,7 +184,7 @@ class InventoryTypeService {
      * Store data
      *
      * @param array $data
-     * 
+     *
      * @return array
      */
     public function store(array $data): array
@@ -184,7 +208,7 @@ class InventoryTypeService {
      * @param array $data
      * @param string $id
      * @param string $where
-     * 
+     *
      * @return array
      */
     public function update(
@@ -203,13 +227,13 @@ class InventoryTypeService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
      * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -229,12 +253,20 @@ class InventoryTypeService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array
     {
         try {
+            foreach($ids as $id) {
+                $typeId = getIdFromUid($id, new InventoryType());
+
+                $relation = $this->inventoryRepo->show('id', 'id', [], 'item_type = ' . $typeId);
+                if ($relation) {
+                    throw new InventoryTypeRelationFound();
+                }
+            }
             $this->repo->bulkDelete($ids, 'uid');
 
             return generalResponse(

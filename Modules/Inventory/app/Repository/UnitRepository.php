@@ -54,7 +54,9 @@ class UnitRepository extends UnitInterface {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $orderBy = ''
     )
     {
         $query = $this->model->query();
@@ -68,7 +70,17 @@ class UnitRepository extends UnitInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
+        if ($whereHas) {
+            foreach ($whereHas as $wh) {
+                $query->whereHas($wh['relation'], function ($q) use ($wh) {
+                    $q->whereRaw($wh['query']);
+                });
+            }
+        }
+
+        $query->orderByRaw($orderBy);
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -91,7 +103,7 @@ class UnitRepository extends UnitInterface {
         } else {
             $query->where("uid", $uid);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }

@@ -13,6 +13,7 @@ class UpdateBuild extends FormRequest
     {
         return [
             'inventories' => 'required|array',
+            'removed_items' => 'nullable|array',
             'type' => 'required',
             'default_request_item' => 'required',
             'name' => [
