@@ -10,7 +10,7 @@ class StartCommand extends Command {
 
     public function handle()
     {
-        $username = $this->getUpdate()->getMessage()->getChat()->getFrom()->getUsername();
+        $username = $this->getUpdate()->getMessage()->from->username;
 
         $this->replyWithMessage([
             'text' => "Hey {$username}, there! Welcome to our bot!",
