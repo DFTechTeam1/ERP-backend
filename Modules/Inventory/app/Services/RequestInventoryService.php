@@ -52,7 +52,7 @@ class RequestInventoryService {
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "name asc";
+            $sort = "status asc";
             if (request('sort')) {
                 $sort = "";
                 foreach (request('sort') as $sortList) {

@@ -23,7 +23,7 @@ enum RequestInventoryStatus: int
     {
         return match ($this) {
             static::Requested => 'primary',
-            static::Approved => 'primary',
+            static::Approved => 'info',
             static::Rejected => 'danger',
             static::Closed => 'secondary',
         };
