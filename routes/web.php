@@ -12,6 +12,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('telegram', function () {
+    $env = env('TELEGRAM_BOT_TOKEN');
+    $tele = new \Telegram\Bot\Api($env);
+
+    $tele->setWebhook(['url' => "https://backend.dfactory.pro/api/{$env}/telegram-webhook"]);
+
+    return $tele->getWebhookInfo();
+});
+
 Route::get('barcode', function () {
 //    $data = \Modules\Inventory\Models\CustomInventory::select('barcode', 'build_series', 'id')
 //        ->get();
