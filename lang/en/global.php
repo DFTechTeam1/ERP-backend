@@ -179,7 +179,9 @@ return [
     'month' => 'Month',
     'newRequestTeam' => 'New team request',
     'newRequestTeamText' => 'You have new team request in event :event',
-    
+    'rejected' => 'Rejected',
+    'closed' => 'Closed',
+
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
     'credentialDoesNotMatch' => 'The credential provided does not match our database',

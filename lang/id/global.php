@@ -180,7 +180,9 @@ return [
     'month' => 'Bulan',
     'newRequestTeam' => 'Permintaan team baru',
     'newRequestTeamText' => 'Kamu menerima permintaan team untuk event :event',
-    
+    'rejected' => 'Ditolak',
+    'closed' => 'Selesai',
+
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',
     'credentialDoesNotMatch' => 'Data yang diberikan tidak cocok dengan database',

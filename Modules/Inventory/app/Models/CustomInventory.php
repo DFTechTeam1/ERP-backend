@@ -22,6 +22,7 @@ class CustomInventory extends Model
         'type',
         'location',
         'default_request_item',
+        'barcode'
     ];
 
     protected $hidden = ['created_at', 'updated_at'];

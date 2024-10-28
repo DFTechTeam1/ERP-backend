@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Enums\ErrorCode\Code;
+use App\Models\UserEncryptedToken;
 use DateTime;
 use App\Exceptions\UserNotFound;
 use App\Http\Controllers\Controller;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Nullix\CryptoJsAes\CryptoJsAes;
+use Vinkla\Hashids\Facades\Hashids;
 
 class LoginController extends Controller
 {
@@ -37,6 +39,32 @@ class LoginController extends Controller
     {
         //
     }
+
+    public function getDetailFromMigrate(string $code)
+    {
+        $decode = Hashids::decode($code);
+
+        $userId = $decode[0] ?? 0;
+
+        $data = UserEncryptedToken::where('user_id', $userId)->first();
+
+        if (!$data) {
+            // return error
+        }
+
+        $encryptedPayload = $this->service->encrypt($data->data, env('SALT_KEY'));
+
+        return apiResponse(
+            generalResponse(
+                'success',
+                false,
+                [
+                    'token' => $encryptedPayload
+                ]
+            )
+        );
+    }
+
 
     public function login(Login $request)
     {
@@ -73,7 +101,7 @@ class LoginController extends Controller
             $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
             $token = $user->createToken($role, $permissions, now()->addHours(2));
-            
+
             $menuService = new \App\Services\MenuService();
             $menus = $menuService->getMenus($user->getAllPermissions());
 
@@ -110,7 +138,7 @@ class LoginController extends Controller
             ) {
                 $isProjectManager = true;
             }
-            
+
             $emailShow = trim(
                 strip_tags(
                     html_entity_decode(
@@ -132,6 +160,8 @@ class LoginController extends Controller
                 $notifications = formatNotifications($employee->unreadNotifications->toArray());
             }
 
+            $userIdEncode = Hashids::encode($user->id);
+
             $payload = [
                 'token' => $token->plainTextToken,
                 'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
@@ -146,7 +176,14 @@ class LoginController extends Controller
                 'is_project_manager' => $isProjectManager,
                 'is_super_user' => $isSuperUser,
                 'notifications' => $notifications,
+                'encrypted_user_id' => $userIdEncode,
             ];
+
+            // this data is used when changing to other subdomains
+            UserEncryptedToken::updateOrCreate(
+                ['user_id' => $user->id],
+                ['data' => json_encode($payload)]
+            );
 
             $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
 
@@ -168,13 +205,14 @@ class LoginController extends Controller
 
             // TODO: further development
             // $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
-    
+
             return apiResponse(
                 generalResponse(
                     'Success',
                     false,
                     [
                         'token' => $encryptedPayload,
+                        $userIdEncode
                     ],
                 ),
             );
@@ -194,7 +232,7 @@ class LoginController extends Controller
      * Sign out account
      *
      * @return void
-     */ 
+     */
     public function logout(Request $request)
     {
         try {
@@ -254,7 +292,7 @@ class LoginController extends Controller
             $email = $request->email;
 
             $user = \App\Models\User::where('email', $email)->first();
-    
+
             if (!$user) {
                 throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
             }
