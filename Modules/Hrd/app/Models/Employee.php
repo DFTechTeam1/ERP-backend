@@ -79,12 +79,13 @@ class Employee extends Model
         'line_id',
         'end_date',
         'resign_reason',
+        'telegram_chat_id'
     ];
 
     protected $appends = [
-        'status_text', 
-        'status_color', 
-        'date_of_birth_text', 
+        'status_text',
+        'status_color',
+        'date_of_birth_text',
         'full_address',
         'initial',
         'gender_text',
@@ -244,7 +245,7 @@ class Employee extends Model
                 $out .= " " . $this->postal_code;
             }
         }
-        
+
         return Attribute::make(
             get: fn() => $out,
         );
