@@ -4,6 +4,7 @@ use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskStatus;
 use App\Jobs\PostNotifyCompleteProjectJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
+use App\Services\Telegram\TelegramService;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Models\ProjectTask;
@@ -13,10 +14,9 @@ Route::get('/', function () {
 });
 
 Route::get('telegram', function () {
-    $env = env('TELEGRAM_BOT_TOKEN');
-    $tele = new \Telegram\Bot\Api($env);
-
-    return $tele->getMe();
+    $chatId = '1991941955';
+    $service = new TelegramService();
+    return $service->getWebhookInfo();
 });
 
 Route::get('barcode', function () {

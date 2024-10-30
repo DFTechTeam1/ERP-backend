@@ -31,12 +31,10 @@ Route::get('line-flex', function () {
 });
 
 Route::post('{token}/telegram-webhook', function (Request $request, string $token) {
-    $update = \Telegram\Bot\Laravel\Facades\Telegram::commandsHandler(true);
 
     Log::debug('webhook telegram', [
         'req' => $request->all(),
         'token' => $token,
-        'update' => $update,
     ]);
 });
 
