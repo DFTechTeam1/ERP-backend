@@ -2,7 +2,11 @@
 
 namespace App\Services\Telegram;
 
+use App\Enums\Telegram\ChatStatus;
+use App\Enums\Telegram\ChatType;
+use App\Enums\Telegram\CommandList;
 use Illuminate\Support\Facades\Http;
+use Modules\Telegram\Models\TelegramChatHistory;
 
 class TelegramService {
     private $token;
@@ -55,6 +59,10 @@ class TelegramService {
                 $link = '/getWebhookInfo';
                 break;
 
+            case 'setWebhook':
+                $link = '/setWebhook';
+                break;
+
             default:
                 $link = '/getMe';
                 break;
@@ -75,16 +83,48 @@ class TelegramService {
         return $this->sendRequest();
     }
 
-    public function sendTextMessage(string $chatId, string $message, bool $isRemoveKeyboard = false)
+    public function sendTextMessage(
+        string $chatId,
+        string $message,
+        bool $isRemoveKeyboard = false
+    )
     {
         $this->getUrl('message');
         $payload = [
             'chat_id' => $chatId,
             'text' => $message,
-            'remove_keyboard' => $isRemoveKeyboard
+            'remove_keyboard' => $isRemoveKeyboard,
         ];
 
         return $this->sendRequest('post', $payload);
+    }
+
+    public function updateConversation($chatId, $payload)
+    {
+        $current = TelegramChatHistory::select('id')
+            ->where('chat_id', $chatId)
+            ->latest()
+            ->first();
+
+        TelegramChatHistory::where('id', $current->id)
+            ->update($payload);
+    }
+
+    public function storeConversation(
+        string $chatId,
+        string $message,
+        string $chatType = '',
+        string $botCommand = '',
+        int $status = ChatStatus::Processing->value
+    )
+    {
+        TelegramChatHistory::create([
+            'chat_id' => $chatId,
+            'message' => $message,
+            'chat_type' => $chatType,
+            'bot_command' => $botCommand,
+            'status' => $status
+        ]);
     }
 
     public function sendButtonMessage(string $chatId, string $message, array $keyboard)
@@ -139,6 +179,14 @@ class TelegramService {
     {
         $this->getUrl('getWebhookInfo');
         return $this->sendRequest();
+    }
+
+    public function setWebhook(string $url)
+    {
+        $this->getUrl('setWebhook');
+        return $this->sendRequest('post', [
+            'url' => $url
+        ]);
     }
 
     public function sendRequest(string $type = 'get', array $payload = [])

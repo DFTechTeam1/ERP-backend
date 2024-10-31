@@ -18,10 +18,10 @@ class RequestTeamMemberJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * 
+     *
      * @param int $projectId
      * @param array $data
-     * 
+     *
      * $data will have
      * int transferId
      * int team
@@ -59,8 +59,8 @@ class RequestTeamMemberJob implements ShouldQueue
 
         $player = \Modules\Hrd\Models\Employee::find($this->data['team']);
 
-        $lineIds = [$targetPic->line_id];
+        $telegramChatIds = [$targetPic->telegram_chat_id];
 
-        \Illuminate\Support\Facades\Notification::send($targetPic, new \Modules\Production\Notifications\RequestTeamMemberNotification($lineIds, $targetPic, $requestedBy, $player, $project, $this->data['transferId']));
+        \Illuminate\Support\Facades\Notification::send($targetPic, new \Modules\Production\Notifications\RequestTeamMemberNotification($telegramChatIds, $targetPic, $requestedBy, $player, $project, $this->data['transferId']));
     }
 }

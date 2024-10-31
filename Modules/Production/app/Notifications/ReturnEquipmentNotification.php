@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,7 +14,7 @@ class ReturnEquipmentNotification extends Notification
 
     public $employee;
 
-    public $lineIds;
+    public $telegramChatIds;
 
     public $project;
 
@@ -26,7 +27,7 @@ class ReturnEquipmentNotification extends Notification
 
         $this->project = $project;
 
-        $this->lineIds = [$employee->line_id];
+        $this->telegramChatIds = [$employee->telegram_chat_id];
     }
 
     /**
@@ -36,7 +37,7 @@ class ReturnEquipmentNotification extends Notification
     {
         return [
             'database',
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -57,11 +58,19 @@ class ReturnEquipmentNotification extends Notification
     public function toArray($notifiable): array
     {
         $link = config('frontend_url') . '/admin/inventories/request-equipment/' . $this->project->uid;
-        
+
         return [
             'title' => __('global.returnEquipment'),
             'message' => __('global.equipmentHasBeenReturned', ['event' => $this->project['name']]),
             'link' => $link,
+        ];
+    }
+
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' =>  "Halo " . $this->employee->name . ". Equipment untuk event " . $this->project->name . " sudah di kembalikan dan siap untuk di cek",
         ];
     }
 
@@ -75,7 +84,7 @@ class ReturnEquipmentNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

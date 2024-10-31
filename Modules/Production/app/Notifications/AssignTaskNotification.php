@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,7 +13,7 @@ class AssignTaskNotification extends Notification
 {
     use Queueable;
 
-    public $lineIds;
+    public $chatIds;
 
     public $task;
 
@@ -21,13 +22,13 @@ class AssignTaskNotification extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct($lineIds, $task, $employeeId)
+    public function __construct($chatIds, $task, $employeeId)
     {
-        $this->lineIds = $lineIds;
-
         $this->task = $task;
 
         $this->employeeId = $employeeId;
+
+        $this->chatIds = $chatIds;
     }
 
     /**
@@ -35,7 +36,7 @@ class AssignTaskNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return [\App\Notifications\LineChannel::class];
+        return [TelegramChannel::class];
     }
 
     /**
@@ -57,6 +58,14 @@ class AssignTaskNotification extends Notification
         return [];
     }
 
+    public function toTelegram($notifiable)
+    {
+        return [
+            'chatIds' => $this->chatIds,
+            'message' => 'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya."
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $divider = \App\Enums\CodeDivider::assignTaskJobDivider->value;
@@ -64,7 +73,7 @@ class AssignTaskNotification extends Notification
         $payloadEncrypted = $this->task->id . $divider . $this->employeeId . $divider . $this->task->project->id;
 
         $postbackApprove = 'approveTask=' . Hashids::encode($payloadEncrypted);
-        
+
         $messages = [
             [
                 'type' => 'text',
@@ -73,7 +82,7 @@ class AssignTaskNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
 
