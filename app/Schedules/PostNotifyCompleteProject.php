@@ -12,7 +12,7 @@ class PostNotifyCompleteProject {
         $projects = \Modules\Production\Models\Project::selectRaw('id,project_date,name,status')
             ->with([
                 'personInCharges:id,project_id,pic_id',
-                'personInCharges.employee:id,uid,email,nickname,line_id'
+                'personInCharges.employee:id,uid,email,nickname,line_id,telegram_chat_id'
             ])
             ->whereIn(
                 'status',

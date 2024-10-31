@@ -13,7 +13,7 @@ class PostNotifyCompleteProjectNotification extends Notification
 
     private $payload;
 
-    private $lineIds;
+    private $telegramChatIds;
 
     /**
      * Create a new notification instance.
@@ -21,7 +21,7 @@ class PostNotifyCompleteProjectNotification extends Notification
     public function __construct(array $payload)
     {
         $this->payload = $payload;
-        $this->lineIds = [$payload['employee']['line_id']];
+        $this->telegramChatIds = [$payload['employee']['telegram_chat_id']];
     }
 
     /**
@@ -32,7 +32,7 @@ class PostNotifyCompleteProjectNotification extends Notification
     public function via(object $notifiable): array
     {
         return [
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class
         ];
     }
 
@@ -59,6 +59,17 @@ class PostNotifyCompleteProjectNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => [
+                'Halo ' . $this->payload['employee']['nickname']. ', event ' . $this->payload['project']['name'] . ' sudah selesai dan kamu belum memberi penilaian pada sistem.',
+                'Segera login dan beri penilaian ya :)'
+            ]
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -73,7 +84,7 @@ class PostNotifyCompleteProjectNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

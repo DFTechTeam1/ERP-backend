@@ -13,7 +13,7 @@ class UpcomingDeadlineNotification extends Notification
 
     private $payload;
 
-    private $lineIds;
+    private $telegramChatIds;
 
     /**
      * Create a new notification instance.
@@ -21,7 +21,7 @@ class UpcomingDeadlineNotification extends Notification
     public function __construct(array $payload)
     {
         $this->payload = $payload;
-        $this->lineIds = [$payload['employee']['employee']['line_id']];
+        $this->telegramChatIds = [$payload['employee']['employee']['telegram_chat_id']];
     }
 
     /**
@@ -32,7 +32,7 @@ class UpcomingDeadlineNotification extends Notification
     public function via(object $notifiable): array
     {
         return [
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class
         ];
     }
 
@@ -59,6 +59,17 @@ class UpcomingDeadlineNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => [
+                'Halo ' . $this->payload['employee']['employee']['nickname']. ', batas pengerjaan tugas ' . $this->payload['task']['name'] . ' adalah 2 hari lagi.',
+                'Segera selesaikan ya. Semangat!'
+            ]
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -78,7 +89,7 @@ class UpcomingDeadlineNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }
