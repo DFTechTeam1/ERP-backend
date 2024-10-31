@@ -14,7 +14,7 @@ class UpcomingDeadlineTask {
         $tasks = ProjectTask::selectRaw('id,uid,project_id,name')
             ->with([
                 'pics:id,project_task_id,employee_id',
-                'pics.employee:id,nickname,email,line_id',
+                'pics.employee:id,nickname,email,line_id,telegram_chat_id',
                 'project:id,name'
             ])
             ->whereIn(
