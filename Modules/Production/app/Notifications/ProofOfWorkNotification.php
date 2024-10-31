@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,17 +18,17 @@ class ProofOfWorkNotification extends Notification
 
     public $task;
 
-    public $lineIds;
+    public $telegramChatIds;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct($project, $taskPic, $task, $lineIds)
+    public function __construct($project, $taskPic, $task, $telegramChatIds)
     {
         $this->project = $project;
         $this->taskPic = $taskPic;
         $this->task = $task;
-        $this->lineIds = $lineIds;
+        $this->telegramChatIds = $telegramChatIds;
     }
 
     /**
@@ -36,7 +37,7 @@ class ProofOfWorkNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class
         ];
     }
 
@@ -59,6 +60,14 @@ class ProofOfWorkNotification extends Notification
         return [];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => "{$this->taskPic->nickname} baru saja menyelesaikan tugas {$this->task->name}. Silahkan login untuk melihat detailnya.",
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -69,7 +78,7 @@ class ProofOfWorkNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

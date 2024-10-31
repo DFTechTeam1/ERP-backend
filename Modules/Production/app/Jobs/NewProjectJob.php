@@ -21,6 +21,7 @@ class NewProjectJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param string $projectUid
      */
     public function __construct(string $projectUid)
     {
@@ -46,7 +47,7 @@ class NewProjectJob implements ShouldQueue
             $user = \App\Models\User::select('id')
                 ->where('employee_id', $employee->id)
                 ->first();
-    
+
             $output = formatNotifications($employee->unreadNotifications->toArray());
 
             $this->pusher->send('my-channel-' . $user->id, 'notification-event', $output);
@@ -70,6 +71,6 @@ class NewProjectJob implements ShouldQueue
             $notif = formatNotifications($employee->unreadNotifications->toArray());
 
             $this->pusher->send('my-channel-' . $user->id, 'notification-event', $notif);
-        } 
+        }
     }
 }

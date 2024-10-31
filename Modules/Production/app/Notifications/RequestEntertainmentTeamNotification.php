@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,7 +12,7 @@ class RequestEntertainmentTeamNotification extends Notification
 {
     use Queueable;
 
-    private $lineIds;
+    private $telegramChatIds;
 
     private $message;
 
@@ -20,9 +21,9 @@ class RequestEntertainmentTeamNotification extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $lineIds, array $message, object $project)
+    public function __construct(array $telegramChatIds, array $message, object $project)
     {
-        $this->lineIds = $lineIds;
+        $this->telegramChatIds = $telegramChatIds;
 
         $this->message = $message;
 
@@ -36,7 +37,7 @@ class RequestEntertainmentTeamNotification extends Notification
     {
         return [
             'database',
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class
         ];
     }
 
@@ -66,8 +67,16 @@ class RequestEntertainmentTeamNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => collect($this->message)->pluck('text')->toArray()
+        ];
+    }
+
     public function toLine($notifiable)
-    {   
+    {
         return [
             'line_ids' => $this->lineIds,
             'messages' => $this->message,

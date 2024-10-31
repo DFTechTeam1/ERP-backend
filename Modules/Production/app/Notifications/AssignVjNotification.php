@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,8 +12,8 @@ class AssignVjNotification extends Notification
 {
     use Queueable;
 
-    public $lineIds;
-    
+    public $telegramChatIds;
+
     public $project;
 
     public $creator;
@@ -22,9 +23,9 @@ class AssignVjNotification extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $lineIds, $project, $employee, $creator)
+    public function __construct(array $telegramChatIds, $project, $employee, $creator)
     {
-        $this->lineIds = $lineIds;
+        $this->telegramChatIds = $telegramChatIds;
 
         $this->project = $project;
 
@@ -40,7 +41,7 @@ class AssignVjNotification extends Notification
     {
         return [
             'database',
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -73,6 +74,14 @@ class AssignVjNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => 'Halo ' . $this->employee->nickname . ", " . $this->creator . " baru saja memilihmu sebagai VJ / Operator untuk event " . $this->project->name . " di tanggal " . date('d F Y', strtotime($this->project->project_date)),
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -83,7 +92,7 @@ class AssignVjNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

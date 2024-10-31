@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,7 +18,7 @@ class ReviseTaskNotification extends Notification
 
     public $revise;
 
-    public $lineIds;
+    public $telegramChatIds;
 
     /**
      * Create a new notification instance.
@@ -30,7 +31,7 @@ class ReviseTaskNotification extends Notification
 
         $this->revise = $revise;
 
-        $this->lineIds = [$employee->line_id];
+        $this->telegramChatIds = [$employee->telegram_chat_id];
     }
 
     /**
@@ -40,7 +41,7 @@ class ReviseTaskNotification extends Notification
     {
         return [
             'database',
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -67,6 +68,17 @@ class ReviseTaskNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => [
+                'Halo ' . $this->employee->nickname . ' tugas ' . $this->task->name . ' di event ' . $this->task->project->name . ' harus di revisi nih.',
+                'Revisinya karena ' . $this->revise->reason,
+            ]
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -81,7 +93,7 @@ class ReviseTaskNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

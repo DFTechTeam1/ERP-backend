@@ -24,9 +24,14 @@ class RequestEntertainmentTeamJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param array $payload
+     * @param object $project
+     * @param object $entertainmentPic
+     * @param object$requestedEmployee
+     * @param array $employeeIds
      */
     public function __construct(
-        array $payload, 
+        array $payload,
         object $project,
         object $entertainmentPic,
         object $requestedEmployee,
@@ -48,10 +53,10 @@ class RequestEntertainmentTeamJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $picEmployeeData = \Modules\Hrd\Models\Employee::selectRaw('id,line_id,nickname')
+        $picEmployeeData = \Modules\Hrd\Models\Employee::selectRaw('id,line_id,telegram_chat_id,nickname')
             ->find($this->entertainmentPic->employee_id);
 
-        $requested = \Modules\Hrd\Models\Employee::selectRaw('id,line_id,nickname')
+        $requested = \Modules\Hrd\Models\Employee::selectRaw('id,line_id,telegram_chat_id,nickname')
             ->find($this->requestedEmployee->employee_id);
 
         $existsEmployeeMessage = null;
@@ -81,10 +86,10 @@ class RequestEntertainmentTeamJob implements ShouldQueue
             ]
         ];
 
-        $lineIds = [$picEmployeeData->line_id];
+        $telegramChatIds = [$picEmployeeData->telegram_chat_id];
 
         $picEmployeeData->notify(new \Modules\Production\Notifications\RequestEntertainmentTeamNotification(
-            $lineIds,
+            $telegramChatIds,
             $messages,
             $this->project,
         ));

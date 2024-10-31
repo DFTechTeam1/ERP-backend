@@ -17,13 +17,16 @@ use Illuminate\Support\Facades\Route;
 use KodePandai\Indonesia\Models\District;
 use App\Http\Controllers\Api\DashboardController;
 use Illuminate\Support\Facades\Broadcast;
+use Modules\Production\Jobs\AssignTaskJob;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
 Route::get('testing', function () {
+    $project = \Modules\Production\Models\Project::orderBy('id', 'desc')->first();
 
+    AssignTaskJob::dispatch([35], 16);
 });
 
 Route::get('line-flex', function () {
@@ -31,11 +34,8 @@ Route::get('line-flex', function () {
 });
 
 Route::post('{token}/telegram-webhook', function (Request $request, string $token) {
-
-    Log::debug('webhook telegram', [
-        'req' => $request->all(),
-        'token' => $token,
-    ]);
+    $event = new \Modules\Telegram\Service\Webhook\Telegram();
+    $event->categorize($request->all());
 });
 
 Route::get('messages', function () {

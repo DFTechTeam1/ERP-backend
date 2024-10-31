@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,7 +16,7 @@ class NewProjectForEntertainmentNotification extends Notification
 
     public $employee;
 
-    public $lineIds;
+    public $telegramChatIds;
 
     /**
      * Create a new notification instance.
@@ -27,7 +28,7 @@ class NewProjectForEntertainmentNotification extends Notification
         $this->employee = $employee;
 
         if ($employee->line_id) {
-            $this->lineIds = [$employee->line_id];
+            $this->telegramChatIds = [$employee->telegram_chat_id];
         }
     }
 
@@ -38,7 +39,7 @@ class NewProjectForEntertainmentNotification extends Notification
     {
         return [
             'database',
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -65,18 +66,26 @@ class NewProjectForEntertainmentNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => 'Halo ' . $this->employee->nickname . ". Ada event baru lagi nih. Ini Detailnya: \nevent: " . $this->project->name . " \ntanggal: " . date('d F Y', strtotime($this->project->project_date)),
+        ];
+    }
+
     public function toLine($notifiable)
     {
-        if (count($this->lineIds)) {
+        if (count($this->telegramChatIds)) {
             $messages = [
                 [
                     'type' => 'text',
                     'text' => 'Halo ' . $this->employee->nickname . ". Ada event baru lagi nih. Ini Detailnya: \nevent: " . $this->project->name . " \ntanggal: " . date('d F Y', strtotime($this->project->project_date)),
                 ],
             ];
-    
+
             return [
-                'line_ids' => $this->lineIds,
+                'line_ids' => [],
                 'messages' => $messages,
             ];
         }

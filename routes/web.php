@@ -16,7 +16,8 @@ Route::get('/', function () {
 Route::get('telegram', function () {
     $chatId = '1991941955';
     $service = new TelegramService();
-    return $service->getWebhookInfo();
+//    return $service->setWebhook('https://faithful-snipe-fresh.ngrok-free.app/api/7793421211:AAHgUvMU_ug9xBAs47uPZR4OpIZPUbiGM8c/telegram-webhook');
+     return $service->getWebhookInfo();
 });
 
 Route::get('barcode', function () {

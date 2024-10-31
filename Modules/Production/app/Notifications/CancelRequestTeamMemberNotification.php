@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,16 +14,16 @@ class CancelRequestTeamMemberNotification extends Notification
 
     private $transfer;
 
-    private $lineIds;
+    private $telegramChatIds;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(\Modules\Production\Models\TransferTeamMember $transfer, array $lineIds)
+    public function __construct(\Modules\Production\Models\TransferTeamMember $transfer, array $telegramChatIds)
     {
         $this->transfer = $transfer;
 
-        $this->lineIds = $lineIds;
+        $this->telegramChatIds = $telegramChatIds;
     }
 
     /**
@@ -30,7 +31,9 @@ class CancelRequestTeamMemberNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return [\App\Notifications\LineChannel::class];
+        return [
+            TelegramChannel::class,
+        ];
     }
 
     /**
@@ -52,6 +55,14 @@ class CancelRequestTeamMemberNotification extends Notification
         return [];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => 'Halo ' . $this->transfer->requestToPerson->name . ', ' . $this->transfer->requestByPerson->name . ' telah membatalkan permintaan request untuk ' . $this->transfer->employee->name . '.',
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -62,7 +73,7 @@ class CancelRequestTeamMemberNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

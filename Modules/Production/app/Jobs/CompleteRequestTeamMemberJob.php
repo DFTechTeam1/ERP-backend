@@ -16,6 +16,7 @@ class CompleteRequestTeamMemberJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param string $transferUid
      */
     public function __construct(string $transferUid)
     {
@@ -36,8 +37,8 @@ class CompleteRequestTeamMemberJob implements ShouldQueue
 
         $targetPic = \Modules\Hrd\Models\Employee::find($transfer->request_to);
 
-        $lineIds = [$targetPic->line_id];
+        $telegramChatIds = [$targetPic->telegram_chat_id];
 
-        \Illuminate\Support\Facades\Notification::send($targetPic, new \Modules\Production\Notifications\CompleteRequestTeamMemberNotification($lineIds, $transfer));
+        \Illuminate\Support\Facades\Notification::send($targetPic, new \Modules\Production\Notifications\CompleteRequestTeamMemberNotification($telegramChatIds, $transfer));
     }
 }

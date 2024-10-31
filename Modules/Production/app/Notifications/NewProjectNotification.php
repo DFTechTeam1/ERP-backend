@@ -17,6 +17,8 @@ class NewProjectNotification extends Notification
 
     public $lineIds;
 
+    public $chatIds;
+
     /**
      * Create a new notification instance.
      */
@@ -27,6 +29,8 @@ class NewProjectNotification extends Notification
         $this->employee = $employee;
 
         $this->lineIds = [$this->employee->line_id];
+
+        $this->chatIds = $this->employee->telegram_chat_id ? [$this->employee->telegram_chat_id] : [];
     }
 
     /**
@@ -36,7 +40,7 @@ class NewProjectNotification extends Notification
     {
         return [
             'database',
-            \App\Notifications\LineChannel::class
+            \App\Notifications\TelegramChannel::class,
         ];
     }
 
@@ -66,6 +70,14 @@ class NewProjectNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable)
+    {
+        return [
+            'chatIds' => $this->chatIds,
+            'message' => 'Halo ' . $this->employee->nickname . ". Ada event baru nih buat kamu. Event " . $this->project->name . " di tanggal " . date('d F Y', strtotime($this->project->project_date)) . ' akan kamu handle.'
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -76,7 +88,7 @@ class NewProjectNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

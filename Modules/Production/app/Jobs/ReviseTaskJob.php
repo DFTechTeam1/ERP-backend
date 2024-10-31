@@ -20,6 +20,8 @@ class ReviseTaskJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param array<int> $employeeIds
+     * @param int $taskId
      */
     public function __construct(array $employeeIds, int $taskId)
     {
@@ -48,7 +50,7 @@ class ReviseTaskJob implements ShouldQueue
 
         foreach ($this->employeeIds as $employeeId) {
             $employee = \Modules\Hrd\Models\Employee::find($employeeId);
-            
+
             \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\ReviseTaskNotification($employee, $task, $revise));
 
             $notif = formatNotifications($employee->unreadNotifications->toArray());

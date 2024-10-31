@@ -24,6 +24,9 @@ class PostEquipmentUpdateJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param string $projectId
+     * @param array $requestedData
+     * @param bool $userCanAcceptRequest
      */
     public function __construct(string $projectId, array $requestedData, bool $userCanAcceptRequest)
     {
@@ -53,6 +56,7 @@ class PostEquipmentUpdateJob implements ShouldQueue
                 return $filter->employee->user_id;
             })->map(function ($item) {
                 return [
+                    'telegram_chat_id' => $item->telegram_chat_id,
                     'line_id' => $item->employee->line_id,
                     'name' => $item->employee->name,
                     'id' => $item->employee->id,

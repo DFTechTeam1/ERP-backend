@@ -18,6 +18,8 @@ class RejectRequestTeamMemberJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param string $transferUid
+     * @param string $reason
      */
     public function __construct(string $transferUid, string $reason)
     {
@@ -41,8 +43,8 @@ class RejectRequestTeamMemberJob implements ShouldQueue
             ->first();
 
         $requested = \Modules\Hrd\Models\Employee::find($transfer->requested_by);
-        $lineIds = [$requested->line_id];
+        $telegramChatIds = [$requested->telegram_chat_id];
 
-        \Illuminate\Support\Facades\Notification::send($requested, new \Modules\Production\Notifications\RejectRequestTeamMemberNotification($lineIds, $transfer));
+        \Illuminate\Support\Facades\Notification::send($requested, new \Modules\Production\Notifications\RejectRequestTeamMemberNotification($telegramChatIds, $transfer));
     }
 }
