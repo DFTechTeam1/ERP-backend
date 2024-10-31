@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,7 +16,7 @@ class RemovePMFromProjectNotification extends Notification
 
     public $employee;
 
-    public $lineIds;
+    public $telegramChatIds;
 
     /**
      * Create a new notification instance.
@@ -26,7 +27,7 @@ class RemovePMFromProjectNotification extends Notification
 
         $this->project = $project;
 
-        $this->lineIds = [$this->employee->line_id];
+        $this->telegramChatIds = [$this->employee->telegram_chat_id];
     }
 
     /**
@@ -36,7 +37,7 @@ class RemovePMFromProjectNotification extends Notification
     {
         return [
             'database',
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -66,6 +67,14 @@ class RemovePMFromProjectNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => 'Halo ' . $this->employee->nickname . ", Event {$this->project->name} tidak jadi kamu kerjakan. Mungkin akan di ganti dengan project yang lebih besar :) Semangat!",
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -76,7 +85,7 @@ class RemovePMFromProjectNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

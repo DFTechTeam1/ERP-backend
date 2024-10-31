@@ -18,6 +18,10 @@ class AssignVjJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param object $project
+     * @param array<string, array<string>> $employees
+     * $employees will have:
+     * employee_id
      */
     public function __construct($project, array $employees)
     {
@@ -42,9 +46,9 @@ class AssignVjJob implements ShouldQueue
         foreach ($this->employees['employee_id'] as $employee) {
             $employeeData = \Modules\Hrd\Models\Employee::where('uid', $employee)->first();
 
-            $lineIds = [$employeeData->line_id];
+            $telegramChatIds = [$employeeData->telegram_chat_id];
 
-            \Illuminate\Support\Facades\Notification::send($employeeData, new \Modules\Production\Notifications\AssignVjNotification($lineIds, $this->project, $employeeData, $creator));
+            \Illuminate\Support\Facades\Notification::send($employeeData, new \Modules\Production\Notifications\AssignVjNotification($telegramChatIds, $this->project, $employeeData, $creator));
 
             $user = \App\Models\User::select('id')->where('employee_id', $employeeData->id)->first();
 

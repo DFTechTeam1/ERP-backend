@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,16 +12,16 @@ class CompleteRequestTeamMemberNotification extends Notification
 {
     use Queueable;
 
-    private $lineIds;
+    private $telegramChatIds;
 
     private $transfer;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $lineIds, \Modules\Production\Models\TransferTeamMember $transfer)
+    public function __construct(array $telegramChatIds, \Modules\Production\Models\TransferTeamMember $transfer)
     {
-        $this->lineIds = $lineIds;
+        $this->telegramChatIds = $telegramChatIds;
 
         $this->transfer = $transfer;
     }
@@ -30,7 +31,9 @@ class CompleteRequestTeamMemberNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return [\App\Notifications\LineChannel::class];
+        return [
+            TelegramChannel::class,
+        ];
     }
 
     /**
@@ -50,6 +53,14 @@ class CompleteRequestTeamMemberNotification extends Notification
     public function toArray($notifiable): array
     {
         return [];
+    }
+
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' =>'Halo ' . $this->transfer->requestToPerson->nickname . '. ' . $this->transfer->employee->nickname . ' telah menyelesaikan semua tugas pada event ' . $this->transfer->project->name . '. Transfer team member sekarang sudah selesai dan ' . $this->transfer->employee->nickname . ' telah bisa mengerjakan tugas2 yang anda berikan secara utuh',
+        ];
     }
 
     public function toLine($notifiable)

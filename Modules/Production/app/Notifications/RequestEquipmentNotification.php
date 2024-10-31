@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,7 +32,7 @@ class RequestEquipmentNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class
         ];
     }
 
@@ -52,6 +53,17 @@ class RequestEquipmentNotification extends Notification
     public function toArray($notifiable): array
     {
         return [];
+    }
+
+    public function toTelegram($notifiable): array
+    {
+        $telegramChatIds = collect($this->users)->pluck('telegram_chat_id')->toArray();
+        $telegramChatIds = array_values(array_filter($telegramChatIds));
+
+        return [
+            'chatIds' => $telegramChatIds,
+            'message' => collect($this->messages)->pluck('text')->toArray(),
+        ];
     }
 
     public function toLine($notifiable): array
