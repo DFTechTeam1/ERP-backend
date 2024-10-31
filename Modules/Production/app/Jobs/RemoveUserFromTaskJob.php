@@ -18,6 +18,8 @@ class RemoveUserFromTaskJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param array<string> $employeeUids
+     * @param int $taskId
      */
     public function __construct(array $employeeUids, int $taskId)
     {

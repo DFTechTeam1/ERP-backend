@@ -38,15 +38,15 @@ class ApproveRequestTeamMemberJob implements ShouldQueue
 
             $requested = \Modules\Hrd\Models\Employee::find($transfer->requested_by);
 
-            $lineIds = [$requested->line_id];
+            $telegramIds = [$requested->telegram_chat_id];
 
             $employee = \Modules\Hrd\Models\Employee::find($transfer->employee_id);
 
-            $employeeLineIds = [$employee->line_id];
+            $employeeTelegramIds = [$employee->telegram_chat_id];
 
-            \Illuminate\Support\Facades\Notification::send($requested, new \Modules\Production\Notifications\ApproveRequestTeamMemberNotification($transfer, $lineIds));
+            \Illuminate\Support\Facades\Notification::send($requested, new \Modules\Production\Notifications\ApproveRequestTeamMemberNotification($transfer, $telegramIds));
 
-            \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\PlayerApproveRequestTeamNotification($transfer, $employeeLineIds));
+            \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\PlayerApproveRequestTeamNotification($transfer, $employeeTelegramIds));
         }
 
     }

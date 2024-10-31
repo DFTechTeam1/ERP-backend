@@ -18,6 +18,8 @@ class RemovePMFromProjectJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param array $pics
+     * @param string $projectUid
      */
     public function __construct(array $pics, string $projectUid)
     {
@@ -42,7 +44,7 @@ class RemovePMFromProjectJob implements ShouldQueue
         $uids = implode(',', $this->pics);
 
         $employees = $employeeRepo->list(
-            'id,uid,name,line_id,nickname',
+            'id,uid,name,line_id,nickname,telegram_chat_id',
             "id IN ({$uids})",
         );
 
@@ -52,7 +54,7 @@ class RemovePMFromProjectJob implements ShouldQueue
             $user = \App\Models\User::select('id')
                 ->where('employee_id', $employee->id)
                 ->first();
-    
+
             $output = formatNotifications($employee->unreadNotifications->toArray());
 
             $pusher->send('my-channel-' . $user->id, 'notification-event', $output);

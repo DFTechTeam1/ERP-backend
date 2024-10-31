@@ -16,8 +16,9 @@ class CancelRequestTeamMemberJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param string $uid
      */
-    public function __construct($uid)
+    public function __construct(string $uid)
     {
         $this->uid = $uid;
     }
@@ -36,8 +37,8 @@ class CancelRequestTeamMemberJob implements ShouldQueue
 
         $targetPic = \Modules\Hrd\Models\Employee::find($transfer->request_to);
 
-        $lineIds = [$targetPic->line_id];
+        $telegramChatIds = [$targetPic->telegram_chat_id];
 
-        \Illuminate\Support\Facades\Notification::send($targetPic, new \Modules\Production\Notifications\CancelRequestTeamMemberNotification($transfer, $lineIds));
+        \Illuminate\Support\Facades\Notification::send($targetPic, new \Modules\Production\Notifications\CancelRequestTeamMemberNotification($transfer, $telegramChatIds));
     }
 }

@@ -18,6 +18,8 @@ class CancelProjectWithPicJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param array<string>  $employeeIds
+     * @param string $projectUid
      */
     public function __construct(array $employeeIds, string $projectUid)
     {
@@ -35,14 +37,14 @@ class CancelProjectWithPicJob implements ShouldQueue
             ->first();
 
         foreach ($this->employeeIds as $employeeId) {
-            $employee = \Modules\Hrd\Models\Employee::selectRaw('id,name,nickname,line_id')
+            $employee = \Modules\Hrd\Models\Employee::selectRaw('id,name,nickname,line_id,telegram_chat_id')
                 ->where('employee_id', $employeeId)
                 ->first();
 
             \Illuminate\Support\Facades\Notification::send(
-                $employee, 
+                $employee,
                 new \Modules\Production\Notifications\CancelProjectWithPicNotification($employee, $project)
-            ); 
+            );
         }
     }
 }
