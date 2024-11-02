@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
+use App\Services\Telegram\TelegramService;
 use App\Services\WhatsappService;
 use App\Services\LocalNasService;
 use App\Services\NasConnectionService;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 use KodePandai\Indonesia\Models\District;
 use App\Http\Controllers\Api\DashboardController;
 use Illuminate\Support\Facades\Broadcast;
+use Modules\Inventory\Jobs\NewRequestInventoryJob;
 use Modules\Production\Jobs\AssignTaskJob;
 
 Route::get('/user', function (Request $request) {
@@ -24,10 +26,13 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::get('testing', function () {
-    $project = \Modules\Production\Models\Project::orderBy('id', 'desc')->first();
+    $chatId = '1991941955';
 
-    AssignTaskJob::dispatch([35], 16);
+    $inventory = \Modules\Inventory\Models\RequestInventory::find(21);
+
+    NewRequestInventoryJob::dispatch($inventory);
 });
+
 
 Route::get('line-flex', function () {
 

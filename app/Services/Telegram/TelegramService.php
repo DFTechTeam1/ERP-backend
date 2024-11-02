@@ -6,6 +6,7 @@ use App\Enums\Telegram\ChatStatus;
 use App\Enums\Telegram\ChatType;
 use App\Enums\Telegram\CommandList;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Modules\Telegram\Models\TelegramChatHistory;
 
 class TelegramService {
@@ -86,7 +87,8 @@ class TelegramService {
     public function sendTextMessage(
         string $chatId,
         string $message,
-        bool $isRemoveKeyboard = false
+        bool $isRemoveKeyboard = false,
+        array $linkPreview = []
     )
     {
         $this->getUrl('message');
@@ -95,6 +97,10 @@ class TelegramService {
             'text' => $message,
             'remove_keyboard' => $isRemoveKeyboard,
         ];
+
+        if (!empty($linkPreview)) {
+            $payload['link_preview_options'] = $linkPreview;
+        }
 
         return $this->sendRequest('post', $payload);
     }
