@@ -4,6 +4,7 @@ namespace Modules\Inventory\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Inventory\Http\Requests\RequestInventory\ConvertToInventory;
 use Modules\Inventory\Http\Requests\RequestInventory\Create;
 use Modules\Inventory\Http\Requests\RequestInventory\Update;
 use Modules\Inventory\Services\RequestInventoryService;
@@ -67,6 +68,11 @@ class RequestInventoryController extends Controller
     public function processRequest(string $type, string $uid)
     {
         return apiResponse($this->service->process($type, $uid));
+    }
+
+    public function convertToInventory(ConvertToInventory $request, string $uid)
+    {
+        return apiResponse($this->service->convertToInventory($request->validated(), $uid));
     }
 
     public function bulkDelete(Request $request)

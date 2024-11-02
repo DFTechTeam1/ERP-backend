@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Inventory\Jobs\NewRequestInventoryJob;
+use Modules\Inventory\Jobs\ProcessRequestInventory;
 use Modules\Inventory\Repository\RequestInventoryRepository;
 
 class RequestInventoryService {
@@ -102,10 +104,11 @@ class RequestInventoryService {
                     'purchase_link' => $link,
                     'store_name' => $list->store_name,
                     'purchase_source' => $list->purchase_source,
-                    'can_be_approve' => $list->status === RequestInventoryStatus::Requested->value && auth()->user()->can('approve_request_inventory') ? true : false,
-                    'can_be_reject' => $list->status === RequestInventoryStatus::Requested->value && auth()->user()->can('reject_request_inventory') ? true : false,
-                    'can_be_deleted' => $list->status === RequestInventoryStatus::Approved->value ? true : false,
-                    'can_be_edited' => $list->status === RequestInventoryStatus::Approved->value || $list->status === RequestInventoryStatus::Rejected->value ? true : false,
+                    'can_be_approve' => ($list->status === RequestInventoryStatus::Requested->value && $list->status != RequestInventoryStatus::Closed->value) && auth()->user()->can('approve_request_inventory') ? true : false,
+                    'can_be_reject' => ($list->status === RequestInventoryStatus::Requested->value && $list->status != RequestInventoryStatus::Closed->value) && auth()->user()->can('reject_request_inventory') ? true : false,
+                    'can_be_converted' => ($list->status === RequestInventoryStatus::Approved->value && $list->status != RequestInventoryStatus::Closed->value) && auth()->user()->can('approve_request_inventory') ? true : false,
+                    'can_be_deleted' => $list->status === RequestInventoryStatus::Approved->value || $list->status === RequestInventoryStatus::Closed->value ? true : false,
+                    'can_be_edited' => $list->status === RequestInventoryStatus::Approved->value || $list->status === RequestInventoryStatus::Rejected->value || $list->status === RequestInventoryStatus::Closed->value ? true : false,
                 ];
             }
 
@@ -178,6 +181,36 @@ class RequestInventoryService {
         );
     }
 
+    public function convertToInventory(array $data, string $uid)
+    {
+        DB::beginTransaction();
+        try {
+            $requestData = $this->repo->show($uid);
+            $data['stock'] = $requestData['quantity'];
+            $data['name'] = $requestData->name;
+
+            $inventoryService = new InventoryService();
+            $store = $inventoryService->store($data);
+
+            if (!$store['error']) {
+                // closed the request
+                $this->repo->update([
+                    'status' => RequestInventoryStatus::Closed->value,
+                ], $uid);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.requestConvertedToInventory'),
+                false
+            );
+        } catch(\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
     /**
      * Store data
      *
@@ -211,7 +244,9 @@ class RequestInventoryService {
 
                 $item['approval_target'] = $data['approval_target'];
 
-                $this->repo->store($item);
+                $store = $this->repo->store($item);
+
+                NewRequestInventoryJob::dispatch($store)->afterCommit();
             }
 
             DB::commit();
@@ -268,13 +303,20 @@ class RequestInventoryService {
     {
         if ($type == 'reject') {
             $status = RequestInventoryStatus::Rejected->value;
+            $rejectedBy = auth()->user()->employee_id;
         } else if ($type == 'approved') {
             $status = RequestInventoryStatus::Approved->value;
+            $approvedBy = auth()->user()->employee_id;
         }
 
         $this->repo->update([
-            'status' => $status
+            'status' => $status,
+            'approved_by' => isset($approvedBy) ? $approvedBy : null,
+            'rejected_by' => isset($rejectedBy) ? $rejectedBy : null,
         ], $uid);
+
+        // sending notifiation
+        ProcessRequestInventory::dispatch($uid);
 
         return generalResponse(
             $type == 'approved' ? __('notification.requestInventoryHasBeenApproved') : __('notification.requestInventoryHasBeenRejected'),

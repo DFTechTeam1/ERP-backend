@@ -58,6 +58,7 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::get('request-inventory/get-request-inventory-status', "{$namespace}\RequestInventoryController@getRequestInventoryStatus");
     Route::post('request-inventory/closed', "{$namespace}\RequestInventoryController@closedRequest");
     Route::apiResource('request-inventory', "{$namespace}\RequestInventoryController");
+    Route::post('request-inventory/convert-to-inventory/{uid}', "{$namespace}\RequestInventoryController@convertToInventory");
     Route::get('request-inventory/{type}/{uid}', "{$namespace}\RequestInventoryController@processRequest");
 
 });
