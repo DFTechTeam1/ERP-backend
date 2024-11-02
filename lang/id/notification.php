@@ -19,5 +19,6 @@ return [
     'requestInventoryUpdated' => 'Pegajuan permintaan inventory berhasil di perbaruhi',
     'requestInventoryHasBeenApproved' => 'Permintaan berhasil disetujui dan sedang dalam pemrosesan',
     'requestInventoryHasBeenRejected' => 'Permintaan telah ditolak',
-    'successDeleteRequest' => 'Permintaan berhasil dihapus'
+    'successDeleteRequest' => 'Permintaan berhasil dihapus',
+    'requestConvertedToInventory' => 'Barang berhasil di ubah ke inventori.',
 ];

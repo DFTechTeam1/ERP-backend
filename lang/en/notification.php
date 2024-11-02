@@ -19,5 +19,6 @@ return [
     'requestInventoryUpdated' => 'Request inventory has been updated',
     'requestInventoryHasBeenApproved' => 'Request inventory has been approved and are being processed',
     'requestInventoryHasBeenRejected' => 'Request inventory has been rejected',
-    'successDeleteRequest' => 'Success delete request'
+    'successDeleteRequest' => 'Success delete request',
+    'requestConvertedToInventory' => 'Inventory success converted to inventory',
 ];
