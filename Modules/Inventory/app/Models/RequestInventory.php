@@ -33,7 +33,9 @@ class RequestInventory extends Model
         'status',
         'requested_by',
         'approval_target',
-        'store_name'
+        'store_name',
+        'approved_by',
+        'rejected_by',
     ];
 
     protected $appends = ['status_text', 'status_color', 'target_line'];
@@ -127,5 +129,15 @@ class RequestInventory extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'requested_by');
+    }
+
+    public function approvedByEmployee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'approved_by');
+    }
+
+    public function rejectedByEmployee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'rejected_by');
     }
 }

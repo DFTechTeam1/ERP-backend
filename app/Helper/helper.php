@@ -732,15 +732,25 @@ if (!function_exists('isAssistantPMRole')) {
 if (!function_exists('formatSearchConditions')) {
     function formatSearchConditions(array $filters, string $where) {
         foreach ($filters as $data) {
-            $value = strtolower($data['value']);
+            $value = $data['value'];
+
+            if (gettype($data['value']) == 'string') {
+                $value = strtolower($data['value']);
+            }
 
             if ($data['condition'] == 'contain') {
-                $condition = " like ";
-                $value = "'%{$value}%'";
+                if (gettype($value) == 'array') {
+                    $condition = " in ";
+                    $valueString = implode(',', $value);
+                    $value = "({$valueString})";
+                } else {
+                    $condition = " like ";
+                    $value = "'%{$value}%'";
+                }
+
             } else if ($data['condition'] == 'not_contain') {
                 $condition = ' not like ';
                 $value = "'%{$value}%'";
-
             } else if ($data['condition'] == 'equal') {
                 $condition = ' = ';
             } else if ($data['condition'] == 'not_equal') {
