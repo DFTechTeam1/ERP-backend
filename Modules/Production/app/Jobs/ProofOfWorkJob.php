@@ -53,7 +53,8 @@ class ProofOfWorkJob implements ShouldQueue
         $taskPic = \Modules\Hrd\Models\Employee::where('user_id', $this->taskPic)->first();
 
         // get detail task
-        $task = \Modules\Production\Models\ProjectTask::selectRaw('id,name')->find($this->taskId);
+        $task = \Modules\Production\Models\ProjectTask::selectRaw('id,name')
+            ->find($this->taskId);
 
         foreach ($pm as $manager) {
             $employee = \Modules\Hrd\Models\Employee::find($manager->pic_id);
