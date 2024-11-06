@@ -7,6 +7,7 @@ use App\Enums\ErrorCode\Code;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -592,6 +593,7 @@ class ProjectService
 
                 return [
                     'uid' => $item->uid,
+                    'id' => $item->id,
                     'marketing' => $marketing,
                     'pic' => count($pics) > 0  ? implode(', ', $pics) : __('global.undetermined'),
                     'no_pic' => count($pics) == 0 ? true : false,
@@ -1057,7 +1059,11 @@ class ProjectService
         }
 
         // get entertainment teams
-        $entertain = $this->transferTeamRepo->list('id,employee_id,requested_by,alternative_employee_id', "project_id = " . $project->id . " and is_entertainment = 1", ['employee:id,uid,name,email,position_id', 'employee.position:id,name']);
+        $entertain = $this->transferTeamRepo->list(
+            'id,employee_id,requested_by,alternative_employee_id',
+            "project_id = " . $project->id . " and is_entertainment = 1 and employee_id is not null",
+            ['employee:id,uid,name,email,position_id', 'employee.position:id,name']
+        );
 
         $outputEntertain = collect((object) $entertain)->map(function ($item) {
             return [
@@ -1862,7 +1868,12 @@ class ProjectService
         DB::beginTransaction();
         try {
             $data['project_date'] = date('Y-m-d', strtotime($data['project_date']));
-            $data['led_detail'] = json_encode($data['led_detail']);
+
+            $ledDetail = [];
+            if ((isset($data['led_detail'])) && (!empty($data['led_detail']))) {
+                $ledDetail = $data['led_detail'];
+            }
+            $data['led_detail'] = json_encode($ledDetail);
 
             $city = \Modules\Company\Models\City::select('name')->find($data['city_id']);
             $state = \Modules\Company\Models\State::select('name')->find($data['state_id']);
@@ -1926,13 +1937,13 @@ class ProjectService
         // 'items.*.inventory_id' => 'required',
         // 'items.*.qty' => 'required',
 
-        $items = $this->customItemRepo->show('dummy', '*', ['items.inventory:id,name,uid'], 'default_request_item = 1');
+        $items = $this->customItemRepo->show('dummy', '*', ['items.inventory:id,inventory_id', 'items.inventory.inventory:id,name,uid'], 'default_request_item = 1');
 
-        if ($items->items->count() > 0) {
+        if (($items) && ($items->items->count() > 0)) {
             $payload = [];
             foreach ($items->items as $item) {
                 $payload[] = [
-                    'inventory_id' => $item->inventory->uid,
+                    'inventory_id' => $item->inventory->inventory->uid,
                     'qty' => $item->qty,
                 ];
             }
@@ -1966,6 +1977,12 @@ class ProjectService
 
             $data['city_name'] = $city->name;
 
+            $ledDetail = [];
+            if ((isset($data['led_detail'])) && (!empty($data['led_detail']))) {
+                $ledDetail = $data['led_detail'];
+            }
+            $data['led_detail'] = json_encode($ledDetail);
+
             $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
             $projectId = getIdFromUid($id, new \Modules\Production\Models\Project());
 
@@ -1985,7 +2002,7 @@ class ProjectService
                 }
             }
 
-            $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue,country_id,state_id,city_id', [
+            $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue,country_id,state_id,city_id,led_detail,led_area', [
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id,uid,boss_id',
             ]);
@@ -2006,6 +2023,8 @@ class ProjectService
             $currentData['collaboration'] = $project->collaboration;
             $currentData['status'] = $project->status_text;
             $currentData['status_raw'] = $project->status;
+            $currentData['led_area'] = $project->led_area;
+            $currentData['led_detail'] = json_decode($project->led_detail, true);
             $currentData['note'] = $project->note ?? '-';
             $currentData['client_portal'] = $project->client_portal;
             $currentData['pic'] = implode(', ', $pics);
@@ -2712,7 +2731,7 @@ class ProjectService
             // format payload to remove item type
             $currentPayload = [];
             foreach ($data['items'] as $outputData) {
-                if (count($outputData['inventories']) > 0) {
+                if ((isset($outputData['inventories'])) && (count($outputData['inventories']) > 0)) {
                     foreach ($outputData['inventories'] as $inventory) {
                         $currentPayload[] = [
                             'inventory_id' => $inventory['id'],
@@ -2784,6 +2803,11 @@ class ProjectService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+            Log::debug('check continue request', [
+                'message' => $th->getMessage(),
+                'file' => $th->getFile(),
+                'line' => $th->getLine()
+            ]);
 
             return errorResponse($th);
         }
@@ -4259,7 +4283,7 @@ class ProjectService
      * @param string @projectUid
      * @param string $taskUid
      */
-    public function approveTask(string $projectUid, string $taskUid)
+    public function approveTask(string $projectUid, string $taskUid, bool $isFromTelegram = false)
     {
         try {
             $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());

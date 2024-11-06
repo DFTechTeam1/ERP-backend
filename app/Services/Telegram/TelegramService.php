@@ -25,11 +25,42 @@ class TelegramService {
         $this->commands = [];
     }
 
+    public function reinit()
+    {
+        $this->token = '';
+        $this->url = '';
+        $this->commands = [];
+
+        $this->reconstruct();
+    }
+
+    protected function reconstruct()
+    {
+        $this->token = config('app.telegram_bot_token');
+
+        $this->url = config('app.telegram_url');
+
+        $this->commands = [];
+    }
+
+
     protected function getUrl(string $type)
     {
         switch ($type) {
             case 'info':
                 $link = '/getMe';
+                break;
+
+            case 'chatAction':
+                $link = '/sendChatAction';
+                break;
+
+            case 'editButtonMessage':
+                $link = '/editMessageReplyMarkup';
+                break;
+
+            case 'deleteMessage':
+                $link = '/deleteMessage';
                 break;
 
             case 'update':
@@ -84,11 +115,41 @@ class TelegramService {
         return $this->sendRequest();
     }
 
+    public function sendChatAction(string $chatId, $payload)
+    {
+        $this->getUrl('chatAction');
+        $payload['chat_id'] = $chatId;
+        return $this->sendRequest('post', $payload);
+    }
+
+    public function deleteMessage(string $chatId, string $messageId)
+    {
+        $this->getUrl('deleteMessage');
+
+        return $this->sendRequest('post', [
+            'chat_id' => $chatId,
+            'message_id' => $messageId
+        ]);
+    }
+
+    public function sendEditButtonMessage(string $chatId, string $messageId, mixed $keyboard)
+    {
+        $this->getUrl('editButtonMessage');
+        $payload = [
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+            'reply_markup' => $keyboard
+        ];
+
+        return $this->sendRequest('post', $payload);
+    }
+
     public function sendTextMessage(
         string $chatId,
         string $message,
         bool $isRemoveKeyboard = false,
-        array $linkPreview = []
+        array $linkPreview = [],
+        string $loginUrl = ''
     )
     {
         $this->getUrl('message');
@@ -100,6 +161,12 @@ class TelegramService {
 
         if (!empty($linkPreview)) {
             $payload['link_preview_options'] = $linkPreview;
+        }
+
+        if (!empty($loginUrl)) {
+            $payload['login_url'] = [
+                'url' => $loginUrl
+            ];
         }
 
         return $this->sendRequest('post', $payload);
@@ -139,10 +206,15 @@ class TelegramService {
         $payload = [
             'chat_id' => $chatId,
             'text' => $message,
-            'reply_markup' => $keyboard
+            'reply_markup' => empty($keyboard) ? (object)[] : $keyboard
         ];
 
-        return $this->sendRequest('post', $payload);
+        Log::debug('payload', $payload);
+
+        $send = $this->sendRequest('post', $payload);
+        Log::debug('send button', $send);
+
+        return $send;
     }
 
     public function getMyCommands()

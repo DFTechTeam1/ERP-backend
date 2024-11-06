@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Production\Models\ProjectTask;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('landing');
 });
 
 Route::get('telegram', function () {
