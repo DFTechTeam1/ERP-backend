@@ -78,7 +78,7 @@ class ProofOfWorkNotification extends Notification
         })->toArray();
         $images[0]['caption'] = 'Ini gambar previewnya';
 
-        if (env('APP_ENV') == 'local') {
+        if (env('APP_ENV') == 'local' && env('APP_URL') != 'https://backend.dfactory.pro') {
             $images = [
                 ['type' => 'photo', 'media' => env('STATIC_IMAGE'), 'caption' => 'Ini gambar previewnya'],
             ];
