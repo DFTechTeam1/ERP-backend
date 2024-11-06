@@ -85,7 +85,7 @@ class ReviseTaskNotification extends Notification
             // add caption on the first item
             $images[0]['caption'] = "Ini gambaran revisimu";
 
-            if (env('APP_ENV') === 'local') {
+            if (env('APP_ENV') == 'local' && env('APP_URL') != 'https://backend.dfactory.pro') {
                 $images = [
                     ['type' => 'photo', 'media' => env('STATIC_IMAGE'), 'caption' => 'Ini gambaran revisimu'],
                 ];
