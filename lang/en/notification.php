@@ -21,4 +21,6 @@ return [
     'requestInventoryHasBeenRejected' => 'Request inventory has been rejected',
     'successDeleteRequest' => 'Success delete request',
     'requestConvertedToInventory' => 'Inventory success converted to inventory',
+    'userInventoryStored' => 'User Inventory has been successfully stored',
+    'successAddUserInventory' => 'stock added successfully',
 ];

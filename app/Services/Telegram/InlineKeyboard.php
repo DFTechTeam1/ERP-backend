@@ -12,8 +12,25 @@ class InlineKeyboard {
         ];
     }
 
-    public function addItem(string $label, string $url, bool $isWebApp = false)
+    public function addItemWithCallbackQuery(string $text, string $callback)
     {
+        $items = [
+            'text' => $text,
+            'callback_data' => $callback
+        ];
+
+        array_push(
+            $this->keyboard['inline_keyboard'],
+            [$items]
+        );
+    }
+
+    public function addItem(
+        string $label,
+        string $url = '',
+        bool $isWebApp = false,
+        string $callBackQuery = ''
+    ) {
         $items = [
             'text' => $label,
         ];
@@ -22,7 +39,9 @@ class InlineKeyboard {
             $items['web_app'] = [
                 'url' => $url
             ];
-        } else {
+        }
+
+        if (!empty($url)) {
             $items['url'] = $url;
         }
 
