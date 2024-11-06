@@ -28,6 +28,8 @@ class initiateTelegramCommand extends Command
     {
         $telegram = new TelegramService();
         $telegram->addCommand('connection', 'Hubungkan akun telegram kamu dengan sistem');
+        $telegram->addCommand('my_project', 'Lihat project mu');
+        $telegram->addCommand('my_task', 'Lihat tugas tugas mu');
         $telegram->setMyCommand();
 
         $this->info('Telegram is ready to use');

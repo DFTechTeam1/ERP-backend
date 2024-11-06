@@ -3,6 +3,7 @@
 namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Modules\Production\Rules\LedDetailRule;
 
 class Create extends FormRequest
 {
@@ -22,8 +23,8 @@ class Create extends FormRequest
             'note' => 'nullable',
             'classification' => 'required',
             'pic' => 'nullable',
-            'led_area' => 'required',
-            'led_detail' => 'required',
+            'led_area' => 'nullable',
+            'led_detail' => 'nullable',
             'status' => 'nullable',
             'country_id' => 'required',
             'state_id' => 'required',

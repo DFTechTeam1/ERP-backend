@@ -599,6 +599,7 @@ class InventoryService {
                     'purchase_price' => $item->purchase_price ? config('company.currency') . ' ' . number_format(collect($item->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')) : '-',
                     'items' => collect($item->items)->map(function ($inventoryItem) {
                         return [
+                            'id' => $inventoryItem->id,
                             'inventory_code' => $inventoryItem->inventory_code,
                             'status' => $inventoryItem->status_text,
                             'purchase_price' => $inventoryItem->purchase_price ? number_format($inventoryItem->purchase_price) : '0',
@@ -1068,6 +1069,7 @@ class InventoryService {
                     'uid' => $item->uid,
                     'name' => $item->name,
                     'updated' => Carbon::parse($item->updated_at)->diffForHumans(),
+                    'type' => $item->type == 'itemvj' ? 'Item VJ' : 'PC Rakitan',
                     'default_request_item' => $item->default_request_item,
                     'total_price' => number_format(collect($item->items)->pluck('price')->sum(), 2, '.'),
                     'total_items' => $item->items->count(),

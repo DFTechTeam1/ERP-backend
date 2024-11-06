@@ -21,4 +21,6 @@ return [
     'requestInventoryHasBeenRejected' => 'Permintaan telah ditolak',
     'successDeleteRequest' => 'Permintaan berhasil dihapus',
     'requestConvertedToInventory' => 'Barang berhasil di ubah ke inventori.',
+    'userInventoryStored' => 'Inventory untuk user berhasil di tambahkan',
+    'successAddUserInventory' => 'Stok inventory berhasil ditambah',
 ];
