@@ -7,6 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Log;
 
 class ReviseTaskNotification extends Notification
 {
@@ -70,12 +71,45 @@ class ReviseTaskNotification extends Notification
 
     public function toTelegram($notifiable): array
     {
+        $images = json_decode($this->revise->file, true);
+
+        if ($images) {
+            $images = collect($images)->map(function ($item) {
+                $path = asset('storage/projects/' . $this->revise->project_id . '/task/' . $this->revise->project_task_id . '/revise/' . $item);
+
+                return [
+                    'type' => 'photo',
+                    'media' => $path
+                ];
+            })->toArray();
+            // add caption on the first item
+            $images[0]['caption'] = "Ini gambaran revisimu";
+
+            if (env('APP_ENV') === 'local') {
+                $images = [
+                    ['type' => 'photo', 'media' => env('STATIC_IMAGE'), 'caption' => 'Ini gambaran revisimu'],
+                ];
+            }
+        }
+
+        $messages = [
+            'Halo ' . $this->employee->nickname . ' tugas ' . $this->task->name . ' di event ' . $this->task->project->name . ' harus di revisi nih.',
+            'Revisinya karena ' . $this->revise->reason,
+        ];
+
+        if ($images) {
+            $messages = collect($messages)->push([
+                'type' => 'media_group',
+                'text' => 'media_group',
+                'photos' => $images
+            ])->values()->toArray();
+        }
+
+        Log::debug('messages', $messages);
+
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => [
-                'Halo ' . $this->employee->nickname . ' tugas ' . $this->task->name . ' di event ' . $this->task->project->name . ' harus di revisi nih.',
-                'Revisinya karena ' . $this->revise->reason,
-            ]
+            'message' => $messages
         ];
     }
 

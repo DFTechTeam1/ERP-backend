@@ -27,33 +27,37 @@ class TelegramChannel {
         $chatIds = $message['chatIds'];
 
         foreach ($chatIds as $chatId) {
-            if (gettype($message['message']) == 'string') {
+            if ($chatId) {
+                if (gettype($message['message']) == 'string') {
 //                \Modules\Telegram\Jobs\TelegramSendingJob::dispatch($chatId, $message['message'])->delay(now()->addSeconds(2));
-                $service->sendTextMessage($chatId, $message['message']);
-                $service->reinit();
-            } else if (gettype($message['message']) == 'array') {
-                foreach ($message['message'] as $message) {
-                    if (!isset($message['text'])) {
-                        if (gettype($message) == 'string') {
+                    $service->sendTextMessage($chatId, $message['message']);
+                    $service->reinit();
+                } else if (gettype($message['message']) == 'array') {
+                    foreach ($message['message'] as $message) {
+                        if (!isset($message['text'])) {
+                            if (gettype($message) == 'string') {
 //                            \Modules\Telegram\Jobs\TelegramSendingJob::dispatch($chatId, $message)->delay(now()->addSeconds(2));
-                            $service->sendTextMessage($chatId, $message);
-                            $service->reinit();
-                        } else {
-                            foreach ($message as $msg) {
-//                                \Modules\Telegram\Jobs\TelegramSendingJob::dispatch($chatId, $msg)->delay(now()->addSeconds(2));
-                                $service->sendTextMessage($chatId, $msg);
+                                $service->sendTextMessage($chatId, $message);
                                 $service->reinit();
+                            } else {
+                                foreach ($message as $msg) {
+//                                \Modules\Telegram\Jobs\TelegramSendingJob::dispatch($chatId, $msg)->delay(now()->addSeconds(2));
+                                    $service->sendTextMessage($chatId, $msg);
+                                    $service->reinit();
+                                }
                             }
-                        }
-                    } else {
+                        } else {
 //                        \Modules\Telegram\Jobs\TelegramSendingJob::dispatch($chatId, $message)->delay(now()->addSeconds(2));
-                        if ($message['type'] == 'link_preview') {
-                            $send = $service->sendTextMessage($chatId, $message['text'], true, $message['link_previews']);
-                            Log::debug('SENDING', $send);
-                        } else if ($message['type'] == 'inline_keyboard') {
-                            $service->sendButtonMessage($chatId, $message['text'], $message['keyboard']);
+                            if ($message['type'] == 'link_preview') {
+                                $send = $service->sendTextMessage($chatId, $message['text'], true, $message['link_previews']);
+                                Log::debug('SENDING', $send);
+                            } else if ($message['type'] == 'inline_keyboard') {
+                                $service->sendButtonMessage($chatId, $message['text'], $message['keyboard']);
+                            } else if ($message['type'] == 'media_group') {
+                                $service->sendPhoto($chatId, '', $message['photos']);
+                            }
+                            $service->reinit();
                         }
-                        $service->reinit();
                     }
                 }
             }

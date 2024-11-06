@@ -7,6 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Modules\Production\Models\ProjectTaskProofOfWork;
 
 class ProofOfWorkNotification extends Notification
 {
@@ -62,9 +63,39 @@ class ProofOfWorkNotification extends Notification
 
     public function toTelegram($notifiable): array
     {
+        $works = ProjectTaskProofOfWork::select('preview_image')
+            ->where('project_task_id', $this->task->id)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $images = json_decode($works->preview_image, true);
+        $images = collect($images)->map(function ($item) {
+            return [
+                'type' => 'photo',
+                'media' => asset('storage/projects/' . $this->project->id . '/task/' . $this->task->id . '/proofOfWork/' . $item),
+            ];
+        })->toArray();
+        $images[0]['caption'] = 'Ini gambar previewnya';
+
+        if (env('APP_ENV') == 'local') {
+            $images = [
+                ['type' => 'photo', 'media' => env('STATIC_IMAGE'), 'caption' => 'Ini gambar previewnya'],
+            ];
+        }
+
+        $messages = [
+            "{$this->taskPic->nickname} baru saja menyelesaikan tugas {$this->task->name}. Silahkan login untuk melihat detailnya.",
+        ];
+
+        $messages = collect($messages)->push([
+            'type' => 'media_group',
+            'text' => 'media_group',
+            'photos' => $images
+        ])->values()->toArray();
+
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => "{$this->taskPic->nickname} baru saja menyelesaikan tugas {$this->task->name}. Silahkan login untuk melihat detailnya.",
+            'message' => $messages
         ];
     }
 
