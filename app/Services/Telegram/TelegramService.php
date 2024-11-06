@@ -51,6 +51,10 @@ class TelegramService {
                 $link = '/getMe';
                 break;
 
+            case 'sendPhoto':
+                $link = '/sendMediaGroup';
+                break;
+
             case 'chatAction':
                 $link = '/sendChatAction';
                 break;
@@ -139,6 +143,17 @@ class TelegramService {
             'chat_id' => $chatId,
             'message_id' => $messageId,
             'reply_markup' => $keyboard
+        ];
+
+        return $this->sendRequest('post', $payload);
+    }
+
+    public function sendPhoto(string $chatId, string $caption, array $mediaUrl)
+    {
+        $this->getUrl('sendPhoto');
+        $payload = [
+            'chat_id' => $chatId,
+            'media' => $mediaUrl
         ];
 
         return $this->sendRequest('post', $payload);
