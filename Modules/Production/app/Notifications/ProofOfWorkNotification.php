@@ -7,6 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Log;
 use Modules\Production\Models\ProjectTaskProofOfWork;
 
 class ProofOfWorkNotification extends Notification
@@ -92,6 +93,8 @@ class ProofOfWorkNotification extends Notification
             'text' => 'media_group',
             'photos' => $images
         ])->values()->toArray();
+
+        Log::debug('MESSAGE PROOF OF WORK', $messages);
 
         return [
             'chatIds' => $this->telegramChatIds,
