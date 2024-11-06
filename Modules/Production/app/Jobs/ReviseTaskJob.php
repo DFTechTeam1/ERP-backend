@@ -43,7 +43,7 @@ class ReviseTaskJob implements ShouldQueue
             ])
             ->find($this->taskId);
 
-        $revise = \Modules\Production\Models\ProjectTaskReviseHistory::selectRaw('reason')
+        $revise = \Modules\Production\Models\ProjectTaskReviseHistory::selectRaw('reason,file,project_id,project_task_id')
                 ->where('project_task_id', $this->taskId)
                 ->orderBy('created_at', 'desc')
                 ->first();
