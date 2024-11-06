@@ -61,6 +61,9 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::post('request-inventory/convert-to-inventory/{uid}', "{$namespace}\RequestInventoryController@convertToInventory");
     Route::get('request-inventory/{type}/{uid}', "{$namespace}\RequestInventoryController@processRequest");
 
+    Route::apiResource('user-inventory', "{$namespace}\UserInventoryController");
+    Route::post('user-inventory/add-item/{uid}', "{$namespace}\UserInventoryController@addItem");
+
 });
 
 Route::get('download/template/brand', "{$namespace}\InventoryController@downloadBrandTemplate");

@@ -62,7 +62,20 @@ class AssignTaskNotification extends Notification
     {
         return [
             'chatIds' => $this->chatIds,
-            'message' => 'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya."
+            'message' => [
+                'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya.",
+                [
+                    'text' => 'Setujui tugas ini?',
+                    'type' => 'inline_keyboard',
+                    'keyboard' => [
+                        'inline_keyboard' => [
+                            [
+                                ['text' => 'Terima pekerjaan', 'callback_data' => 'idt=ptappv&eid=' . $this->employeeId . '&tid=' . $this->task->id . '&pid=' . $this->task->project->id],
+                            ]
+                        ]
+                    ]
+                ]
+            ]
         ];
     }
 

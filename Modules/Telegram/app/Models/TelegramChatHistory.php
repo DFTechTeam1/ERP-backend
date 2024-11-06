@@ -21,7 +21,8 @@ class TelegramChatHistory extends Model
         'chat_type',
         'bot_command',
         'from_customer',
-        'is_closed'
+        'is_closed',
+        'topic'
     ];
 
     protected static function newFactory(): TelegramChatHistoryFactory
