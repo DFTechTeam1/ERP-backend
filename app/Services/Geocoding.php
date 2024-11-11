@@ -2,6 +2,7 @@
 
 namespace App\Services;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class Geocoding {
 	private $key;
@@ -12,12 +13,26 @@ class Geocoding {
 	{
 		$this->key = config('app.geoapify');
 
-		$this->url = 'https://api.geoapify.com/v1/geocode/search?apiKey=' . $this->key;
+		$this->url = 'https://api.geoapify.com/v1/geocode';
 	}
+
+    public function getPlaceName(array $locations)
+    {
+        $response = Http::get($this->url . "/reverse?lat=" . $locations['lat'] . '&lon=' . $locations['lon'] . '&type=street&format=json&apiKey=' . $this->key);
+        Log::info($response->body());
+        $output = [];
+        if ($response->successful()) {
+            $output = [
+                'street' => $response->json()['results'][0]['formatted'],
+            ];
+        }
+
+        return $output;
+    }
 
 	public function getCoordinate(string $placeName)
 	{
-		$response = Http::get($this->url . '&text=' . $placeName);
+		$response = Http::get($this->url . '/search?apiKey=' . $this->key . '&text=' . $placeName);
 
 		$json = $response->json();
 

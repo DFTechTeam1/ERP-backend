@@ -20,7 +20,8 @@ class UserInventoryMaster extends Model
     protected $fillable = [
         'employee_id',
         'uid',
-        'total_inventory'
+        'total_inventory',
+        'inventory_type'
     ];
 
     public function items(): HasMany
