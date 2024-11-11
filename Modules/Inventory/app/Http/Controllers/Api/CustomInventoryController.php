@@ -6,14 +6,19 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use \Modules\Inventory\Http\Requests\Inventory\Custom\Build;
 use Modules\Inventory\Http\Requests\Inventory\Custom\UpdateBuild;
+use Modules\Inventory\Services\CustomInventoryService;
 
 class CustomInventoryController extends Controller
 {
     private $service;
 
+    private $customService;
+
     public function __construct()
     {
         $this->service = new \Modules\Inventory\Services\InventoryService;
+
+        $this->customService = new CustomINventoryService;
     }
 
     public function getItemList()
@@ -27,6 +32,11 @@ class CustomInventoryController extends Controller
     public function index()
     {
         return apiResponse($this->service->listOfBuildInventories());
+    }
+
+    public function getAssembled()
+    {
+        return apiResponse($this->customService->getAssembled());
     }
 
     /**

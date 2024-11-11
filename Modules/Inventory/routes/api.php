@@ -47,6 +47,7 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::apiResource('inventory-types', "{$namespace}\InventoryTypeController");
 
     Route::get('custom-inventories', "{$namespace}\CustomInventoryController@index");
+    Route::get('custom-inventories/get-assembled', "{$namespace}\CustomInventoryController@getAssembled");
     Route::post('custom-inventories', "{$namespace}\CustomInventoryController@store");
     Route::put('custom-inventories/{uid}', "{$namespace}\CustomInventoryController@update");
     Route::post('custom-inventories/bulk', "{$namespace}\CustomInventoryController@bulkDelete");
@@ -63,6 +64,8 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
 
     Route::apiResource('user-inventory', "{$namespace}\UserInventoryController");
     Route::post('user-inventory/add-item/{uid}', "{$namespace}\UserInventoryController@addItem");
+    Route::get('user-inventory/available-inventories/{employeeUid}', "{$namespace}\UserInventoryController@getAvailableInventories");
+    Route::get('user-inventory/get-user-information/{employeeUid}', "{$namespace}\UserInventoryController@getUserInformation");
 
 });
 

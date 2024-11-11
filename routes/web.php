@@ -16,26 +16,16 @@ Route::get('/', function () {
 Route::get('telegram', function () {
     $chatId = '1991941955';
     $service = new TelegramService();
-    $work = \Modules\Production\Models\ProjectTaskProofOfWork::selectRaw('preview_image,id,project_task_id,project_id')
-        ->find(16);
-
-    $images = json_decode($work->preview_image, true);
-
-    $images = collect($images)->map(function ($item) use ($work) {
-        $path = asset('storage/projects/' . $work->project_id . '/task/' . $work->project_task_id . '/proofOfWork/' . $item);
-
-        return [
-            'type' => 'photo',
-            'media' => $path
-        ];
-    })->toArray();
-
-    $images = [
-        ['type' => 'photo', 'media' => 'https://backend.dfactory.pro/storage/projects/references/163/20241023_4494464_826-qris.png_20241106104710.webp', 'caption' => 'Lihat disini detail revisimu'],
-        ['type' => 'photo', 'media' => 'https://backend.dfactory.pro/storage/projects/references/163/62917.jpg_20241106104710.webp']
-    ];
-
-    return $service->sendPhoto($chatId, '', $images);
+    return $service->sendButtonMessage($chatId, 'Kirim lokasimu sekarang juga!', [
+        'keyboard' => [
+            [
+                ['text' => 'Lokasi', 'request_location' => true]
+            ]
+        ],
+        'is_persistent' => true,
+        'one_time_keyboard' => true,
+        'resize_keyboard' => true,
+    ]);
 });
 
 Route::get('barcode', function () {

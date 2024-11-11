@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Inventory\Http\Requests\UserInventory\AddItem;
 use Modules\Inventory\Http\Requests\UserInventory\Create;
+use Modules\Inventory\Http\Requests\UserInventory\Update;
 use Modules\Inventory\Services\UserInventoryService;
 
 class UserInventoryController extends Controller
@@ -26,12 +27,22 @@ class UserInventoryController extends Controller
             '*',
             '',
             [
-                'items:inventory_id,user_inventory_master_id,uid',
+                'items:inventory_id,user_inventory_master_id',
                 'items.inventory:id,inventory_id,inventory_code,qrcode',
                 'items.inventory.inventory:id,name,uid',
                 'employee:id,name,uid'
             ]
         ));
+    }
+
+    public function getAvailableInventories(string $employeeUid)
+    {
+        return apiResponse($this->service->getAvailableInventories($employeeUid));
+    }
+
+    public function getUserInformation(string $employeeUid)
+    {
+        return apiResponse($this->service->getUserInformation($employeeUid));
     }
 
     /**
@@ -57,19 +68,15 @@ class UserInventoryController extends Controller
      */
     public function show($id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->show($id));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(Update $request, string $id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->update($request->validated(), $id));
     }
 
     /**

@@ -5,6 +5,7 @@ namespace Modules\Telegram\Service\Webhook;
 use App\Enums\Telegram\ChatStatus;
 use App\Enums\Telegram\ChatType;
 use App\Enums\Telegram\CommandList;
+use App\Services\Geocoding;
 use App\Services\Telegram\TelegramService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -99,6 +100,27 @@ class Telegram {
                         }
                     } else {
                         $this->handleFreeText($payload);
+                    }
+                } else if (isset($payload['message']['location'])) {
+                    // handle geolocation from current command
+                    if (
+                        (isset($payload['message']['reply_to_message'])) &&
+                        ($payload['message']['reply_to_message']['text'] == 'Kirim lokasimu')
+                    ) {
+                        // get location
+                        $geo = new Geocoding();
+                        $location = $geo->getPlaceName([
+                            'lat' => $payload['message']['location']['latitude'],
+                            'lon' => $payload['message']['location']['longitude']
+                        ]);
+
+                        Log::debug('location', $location);
+
+                        if (!empty($location)) {
+                            $sendLocation = $this->service->sendTextMessage($this->chatId, 'Lokasimu berada di ' . $location['street'], true);
+
+                            Log::debug('sendLocation', $sendLocation);
+                        }
                     }
                 }
 
@@ -233,6 +255,22 @@ class Telegram {
     public function handleStart()
     {
         $this->service->sendTextMessage($this->chatId, 'Halo selamat datang 🤙🤙');
+    }
+
+    public function handleAttendance()
+    {
+        if ($this->validateUser()) {
+            $this->service->sendButtonMessage($this->chatId, 'Kirim lokasimu', [
+                'keyboard' => [
+                    [
+                        ['text' => 'Lokasi', 'request_location' => true]
+                    ]
+                ],
+                'is_persistent' => true,
+                'one_time_keyboard' => true,
+                'resize_keyboard' => true,
+            ]);
+        }
     }
 
     public function handleMyTask()

@@ -83,6 +83,40 @@ class CustomInventoryService {
         }
     }
 
+    public function getAssembled()
+    {
+        $data = $this->repo->list(
+            'id,uid,name',
+            "type = 'pcrakitan'",
+            [
+                'items:id,custom_inventory_id,inventory_id',
+                'items.inventory:id,inventory_id,inventory_code',
+                'items.inventory.inventory:id,name'
+            ]
+        );
+
+        $output = [];
+        foreach ($data as $item) {
+            $output[] = [
+                'title' => $item->name,
+                'value' => $item->uid,
+                'items' => collect($item->items)->map(function ($inventory) {
+                    return [
+                        'item_id' => $inventory->inventory->id,
+                        'code' => $inventory->inventory->inventory_code,
+                        'name' => $inventory->inventory->inventory->name,
+                    ];
+                })->toArray()
+            ];
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $output
+        );
+    }
+
     public function datatable()
     {
         //

@@ -945,8 +945,6 @@ class ProjectService
             }
         }
 
-        logging('picids', $picIds);
-
         $picIds = array_values(array_unique($picIds));
         $picUids = array_values(array_unique($picUids));
 
@@ -1223,7 +1221,10 @@ class ProjectService
                 $outputTask[$keyTask]['have_permission_to_move_board'] = $havePermissionToMoveBoard;
 
                 if (
-                    in_array($employeeId, $picIds) &&
+                    (
+                        in_array($employeeId, $picIds) ||
+                        $superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()
+                    ) &&
                     $task->project->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
                     ($task->status == \App\Enums\Production\TaskStatus::OnProgress->value ||
                     $task->status == \App\Enums\Production\TaskStatus::Revise->value)
@@ -1556,7 +1557,10 @@ class ProjectService
         $task['picIds'] = $picIds;
 
         if (
-            in_array($employeeId, $picIds) &&
+            (
+                in_array($employeeId, $picIds) ||
+                $superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()
+            ) &&
             $task['project']->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
             ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value ||
             $task['status'] == \App\Enums\Production\TaskStatus::Revise->value)
@@ -1797,7 +1801,10 @@ class ProjectService
                 $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
 
                 if (
-                    in_array($employeeId, $picIds) &&
+                    (
+                        in_array($employeeId, $picIds) ||
+                        $superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()
+                    ) &&
                     $project['status_raw'] == \App\Enums\Production\ProjectStatus::OnGoing->value &&
                     ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value ||
                     $task['status'] == \App\Enums\Production\TaskStatus::Revise->value)
@@ -1829,6 +1836,13 @@ class ProjectService
 
             $output[$keyBoard]['tasks'] = $outputTask;
         }
+
+        Log::debug('check permission', [
+            'superuser' => $superUserRole,
+            'projectpic' => $isProjectPic,
+            'directory' => $isDirector,
+            'assistant' => isAssistantPMRole()
+        ]);
 
         $project['boards'] = $output;
 
@@ -2359,11 +2373,6 @@ class ProjectService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
-            logging('error assign member', [
-                'file' => $th->getFile(),
-                'message' => $th->getMessage(),
-                'line' => $th->getLine(),
-            ]);
             return errorResponse($th);
         }
     }
@@ -3416,18 +3425,24 @@ class ProjectService
                     }
                 }
 
-                // move task
-                $setCurrentPic = true;
-                $this->changeTaskBoardProcess(
-                    [
-                        'board_id' => $boardId,
-                        'task_id' => $taskUid,
-                        'board_source_id' => $sourceBoardId,
-                    ],
-                    $projectUid,
-                    \App\Enums\Production\TaskStatus::CheckByPm->value,
-                    $setCurrentPic
-                );
+                // set current pic
+                $currentPics = $this->taskPicRepo->list('employee_id', 'project_task_id = ' . $taskId);
+                $payloadUpdate['current_pics'] = json_encode(collect($currentPics)->pluck('employee_id')->toArray());
+
+                $this->taskRepo->update($payloadUpdate, '', "id = " . $taskId);
+
+//                // move task
+//                $setCurrentPic = true;
+//                $this->changeTaskBoardProcess(
+//                    [
+//                        'board_id' => $boardId,
+//                        'task_id' => $taskUid,
+//                        'board_source_id' => $sourceBoardId,
+//                    ],
+//                    $projectUid,
+//                    \App\Enums\Production\TaskStatus::CheckByPm->value,
+//                    $setCurrentPic
+//                );
 
                 // set worktime as finish to current task pic
                 $currentTaskPic = $this->taskPicRepo->list('id,employee_id', 'project_task_id = ' . $taskId);
@@ -4393,7 +4408,7 @@ class ProjectService
 
             $this->taskRepo->update([
                 'status' => \App\Enums\Production\TaskStatus::Revise->value,
-                'project_board_id' => $currentTaskData->current_board,
+//                'project_board_id' => $currentTaskData->current_board,
                 'current_board' => null,
             ], $taskUid);
 
@@ -4488,6 +4503,36 @@ class ProjectService
             foreach ($currentPic as $pic) {
                 $this->setTaskWorkingTime($taskId, $pic->employee_id, \App\Enums\Production\WorkType::Finish->value);
             }
+
+            // move task to next board
+            $taskDetail = $this->taskRepo->show($taskUid, 'id,project_board_id');
+            $sourceBoardId = $taskDetail->project_board_id;
+
+            // get next board
+            $boardList = $this->boardRepo->list('id,name', 'project_id = ' . $projectId);
+            foreach ($boardList as $keyBoard => $boardData) {
+                if ($boardData->id == $sourceBoardId) {
+                    if (isset($boardList[$keyBoard + 1])) {
+                        $boardId = $boardList[$keyBoard + 1]->id;
+                        break;
+                    } else {
+                        $boardId = $sourceBoardId;
+                        break;
+                    }
+                }
+            }
+
+            $setCurrentPic = true;
+            $this->changeTaskBoardProcess(
+                [
+                    'board_id' => $boardId,
+                    'task_id' => $taskUid,
+                    'board_source_id' => $sourceBoardId,
+                ],
+                $projectUid,
+                \App\Enums\Production\TaskStatus::CheckByPm->value,
+                $setCurrentPic
+            );
 
             // detach current pic which is project manager
             $this->detachTaskPic(
@@ -4985,7 +5030,7 @@ class ProjectService
 
         $histories = $this->taskPicHistory->list('id,project_id,project_task_id,employee_id', 'project_id = ' . $projectId, ['employee:id,name,employee_id,uid,nickname']);
 
-        $data = collect($histories)->map(function ($item) {
+        $data = collect((object) $histories)->map(function ($item) {
             return [
                 'id' => $item->id,
                 'employee' => $item->employee->name . ' (' . $item->employee->employee_id . ')',
@@ -5702,8 +5747,6 @@ class ProjectService
             $itemsPerPage,
             $page,
         );
-
-        logging('where file manager', [$where]);
 
         $totalData = $this->repo->list('id', $where)->count();
         $total = round($totalData / $itemsPerPage);
