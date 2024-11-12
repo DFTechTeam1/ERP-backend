@@ -171,8 +171,13 @@ class TelegramService {
         $payload = [
             'chat_id' => $chatId,
             'text' => $message,
-            'remove_keyboard' => $isRemoveKeyboard,
         ];
+
+        if ($isRemoveKeyboard) {
+            $payload['reply_markup'] = [
+                'remove_keyboard' => true,
+            ];
+        }
 
         if (!empty($linkPreview)) {
             $payload['link_preview_options'] = $linkPreview;

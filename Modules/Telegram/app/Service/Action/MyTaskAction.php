@@ -161,7 +161,7 @@ class MyTaskAction {
             $name = 'sendApproveWork';
         }
 
-        $this->$name();
+        $this->$name(true);
     }
 
     protected function sendApproveWork()

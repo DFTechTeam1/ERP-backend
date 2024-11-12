@@ -23,4 +23,5 @@ return [
     'requestConvertedToInventory' => 'Inventory success converted to inventory',
     'userInventoryStored' => 'User Inventory has been successfully stored',
     'successAddUserInventory' => 'stock added successfully',
+    'successUpdateUserInventory' => 'Success edit user inventory',
 ];

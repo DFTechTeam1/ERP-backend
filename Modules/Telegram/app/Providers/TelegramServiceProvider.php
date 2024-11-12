@@ -4,6 +4,8 @@ namespace Modules\Telegram\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Telegram\Console\GetWebhookComamnd;
+use Modules\Telegram\Console\SetWebhookCommand;
 
 class TelegramServiceProvider extends ServiceProvider
 {
@@ -37,7 +39,10 @@ class TelegramServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+         $this->commands([
+             SetWebhookCommand::class,
+             GetWebhookComamnd::class
+         ]);
     }
 
     /**

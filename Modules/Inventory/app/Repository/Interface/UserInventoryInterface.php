@@ -21,7 +21,7 @@ abstract class UserInventoryInterface {
 
     abstract function update(array $data, string $id = '', string $where = '');
 
-    abstract function delete(int $id);
+    abstract function delete(int $id, string $where = '');
 
     abstract function bulkDelete(array $ids, string $key = '');
 }

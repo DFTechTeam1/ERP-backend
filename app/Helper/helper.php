@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
@@ -310,7 +311,13 @@ if (!function_exists('uploadImageandCompress')) {
 
         $filepath = $path . '/' . $name;
 
-        Image::read($image)->toWebp($compressValue)->save($filepath);
+//        Image::read($image)->toWebp($compressValue)->save($filepath);
+
+        $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
+        $newImage = $imageManager->read($image);
+        $newImage->scale(height: 400);
+        $newImage->toWebp(60);
+        $newImage->save($filepath);
 
         return $name;
     }
