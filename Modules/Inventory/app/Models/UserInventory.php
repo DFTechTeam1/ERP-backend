@@ -18,7 +18,9 @@ class UserInventory extends Model
     protected $fillable = [
         'inventory_id',
         'user_inventory_master_id',
-        'quantity'
+        'quantity',
+        'inventory_type',
+        'custom_inventory_id'
     ];
 
     public function inventory(): BelongsTo

@@ -4,7 +4,7 @@ namespace Modules\Inventory\Http\Requests\UserInventory;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class Create extends FormRequest
+class Update extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -15,11 +15,12 @@ class Create extends FormRequest
             'inventories' => 'required',
             'inventories.*.id' => 'required',
             'inventories.*.quantity' => 'required',
-            'inventories.*.inventory_type' => 'required',
-            'inventories.*.custom_inventory_id' => 'nullable',
-            'employee_id' => 'required',
+            'inventories.*.current_id' => 'nullable',
+            'deleted_inventories' => 'nullable',
+            'deleted_inventories.*.current_id' => 'nullable'
         ];
     }
+
     /**
      * Determine if the user is authorized to make this request.
      */

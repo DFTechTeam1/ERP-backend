@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Company\Models\Position;
 use Modules\Hrd\Database\factories\EmployeeFactory;
@@ -192,9 +193,9 @@ class Employee extends Model
         return $this->hasMany(EmployeeFamily::class, 'employee_id');
     }
 
-    public function user(): BelongsTo
+    public function user(): HasOne
     {
-        return $this->belongsTo(\App\Models\User::class, 'user_id');
+        return $this->hasOne(\App\Models\User::class, 'employee_id');
     }
 
     public function boss()

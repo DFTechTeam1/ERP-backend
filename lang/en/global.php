@@ -115,7 +115,7 @@ return [
     'entertaintment' => "Entertainment",
     'newProject' => 'New Project',
     'newProjectNotification' => 'You just assigned to event :event',
-    'totalEquipmentPrice' => 'Total Equipment Price',
+    'totalEquipmentPrice' => 'Total Equipment',
     'totalIncome' => 'Total Income',
     'totalProjectInMonth' => 'Total Project in Month',
     'totalEmployee' => 'Total Employee',

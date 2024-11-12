@@ -23,4 +23,5 @@ return [
     'requestConvertedToInventory' => 'Barang berhasil di ubah ke inventori.',
     'userInventoryStored' => 'Inventory untuk user berhasil di tambahkan',
     'successAddUserInventory' => 'Stok inventory berhasil ditambah',
+    'successUpdateUserInventory' => 'Inventory user berhasil di ubah',
 ];

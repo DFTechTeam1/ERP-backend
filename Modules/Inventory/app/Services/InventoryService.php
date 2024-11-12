@@ -725,6 +725,22 @@ class InventoryService {
         );
     }
 
+    public function getAllInventoryItems()
+    {
+        $data = $this->inventoryItemRepo->list('id,inventory_id,status', '', ['inventory:id,name']);
+
+        return generalResponse(
+            'success',
+            false,
+            collect((object) $data)->map(function ($item) {
+                return [
+                    'value' => $item->id,
+                    'title' => $item->inventory->name
+                ];
+            })->toArray()
+        );
+    }
+
     public function getAll()
     {
         $where = '';
@@ -733,6 +749,13 @@ class InventoryService {
             (request('type') == 'bundle')
         ) {
             return $this->getBundleInventories();
+        }
+
+        if (
+            (request('type')) &&
+            (request('type') == 'inventory_item')
+        ) {
+            return $this->getAllInventoryItems();
         }
 
         $data = $this->repo->list('id,uid as value,name as title', '', ['items', 'image']);
