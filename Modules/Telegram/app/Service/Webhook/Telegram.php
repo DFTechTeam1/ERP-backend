@@ -5,9 +5,11 @@ namespace Modules\Telegram\Service\Webhook;
 use App\Enums\Telegram\ChatStatus;
 use App\Enums\Telegram\ChatType;
 use App\Enums\Telegram\CommandList;
+use App\Models\User;
 use App\Services\Geocoding;
 use App\Services\Telegram\TelegramService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Modules\Hrd\Models\Employee;
 use Modules\Telegram\Enums\CallbackIdentity;
@@ -29,6 +31,23 @@ class Telegram {
     public function __construct()
     {
         $this->service  = new TelegramService();
+    }
+
+    protected function validatePermission(string $permission)
+    {
+        $employee = Employee::select('id')
+            ->where('telegram_chat_id', $this->chatId)
+            ->first();
+        $user = User::where('employee_id', $employee->id)->first();
+
+        if (!$user->hasPermissionTo($permission)) {
+            $this->service->sendTextMessage($this->chatId, 'Wuushhh, KAMU TIDAK PUNYA AKSES COMMAND INI 😬');
+            $out = false;
+        } else {
+            $out = true;
+        }
+
+        return $out;
     }
 
     protected function validateUser()
@@ -155,27 +174,40 @@ class Telegram {
     public function handleFreeText(array $payload = [])
     {
         try {
-            // first check the command continoues message
-            // Then continue to other process
-            if (!$this->haveContinueCommand($payload)) {
-                $current = TelegramChatHistory::selectRaw('id,chat_id,from_customer,bot_command,message,chat_type,is_closed')
-                    ->where('chat_id', $this->chatId)
-                    ->orderBy('id', 'desc')
-                    ->first();
+            Log::debug('session', [Session::get('user_chat_state_' . $this->chatId)]);
 
-                if ($current->is_closed) {
-                    return $this->service->sendTextMessage($this->chatId, 'Wah saya belum memahami apa yang kamu bicarakan. Coba mulai dari awal dengan command yang ada di menu ya 🙂');
+            // check base on session
+            if (Session::get('user_chat_state_' . $this->chatId)) {
+                $name = "handle" . ucfirst(snakeToCamel($payload['message']['text']));
+                Log::debug('method', [
+
+                ]);
+                if (method_exists($this, $name)) {
+                    return $this->$name($payload);
                 }
+            } else {
+                // first check the command continoues message
+                // Then continue to other process
+                if (!$this->haveContinueCommand($payload)) {
+                    $current = TelegramChatHistory::selectRaw('id,chat_id,from_customer,bot_command,message,chat_type,is_closed')
+                        ->where('chat_id', $this->chatId)
+                        ->orderBy('id', 'desc')
+                        ->first();
 
-                // Only process message that came after bot message
-                if (!$current->from_customer) {
-                    if ($current->chat_type == ChatType::FreeText->value) {
-                        if ($current->bot_command == CommandList::Connection->value) {
-                            return $this->handleConnectionReply($current);
-                        } else if ($current->bot_command == CommandList::MyTask->value) {
-                            // THIS IS THE WAY TO HANDLE CALLBACK QUERY
-                            $callback = new Callback();
-                            $callback->handle($payload);
+                    if ($current->is_closed) {
+                        return $this->service->sendTextMessage($this->chatId, 'Wah saya belum memahami apa yang kamu bicarakan. Coba mulai dari awal dengan command yang ada di menu ya 🙂');
+                    }
+
+                    // Only process message that came after bot message
+                    if (!$current->from_customer) {
+                        if ($current->chat_type == ChatType::FreeText->value) {
+                            if ($current->bot_command == CommandList::Connection->value) {
+                                return $this->handleConnectionReply($current);
+                            } else if ($current->bot_command == CommandList::MyTask->value) {
+                                // THIS IS THE WAY TO HANDLE CALLBACK QUERY
+                                $callback = new Callback();
+                                $callback->handle($payload);
+                            }
                         }
                     }
                 }
@@ -270,6 +302,58 @@ class Telegram {
                 'one_time_keyboard' => true,
                 'resize_keyboard' => true,
             ]);
+        }
+    }
+
+    public function handleAwaitingTaskName(array $payload)
+    {
+        if ($this->validateUser()) {
+            if ($this->validatePermission('add_task')) {
+                $this->service->sendTextMessage($this->chatId, "Pilih tim mu yang akan mengerjakan", true);
+                $currentEmployee = Employee::select('id')->where('telegram_chat_id', $this->chatId)->first();
+                $employees = Employee::selectRaw('id,nickname')
+                    ->where('boss_id', $currentEmployee->id)
+                    ->get();
+
+                if (empty($employees)) {
+                    // clear session
+                    Session::forget('user_chat_state_' . $this->chatId);
+                    return $this->service->sendTextMessage($this->chatId, 'Wah kamu masih belum mempunyai tim nih');
+                }
+
+                $keyboards = [];
+                foreach ($employees as $employeeData) {
+                    $keyboards[] = [
+                        'text' => $employeeData->nickname,
+                        'callback_data' => 'task_employee_' . $employeeData->id
+                    ];
+                }
+
+                $chunks = array_chunk($keyboards, 3);
+
+                $this->service->sendButtonMessage($this->chatId, 'Pilih tim mu yang akan mengerjakan', [
+                    'inline_keyboard' => [$chunks]
+                ]);
+
+                Session::put(
+                    'user_chat_state_' . $this->chatId . '_task',
+                    json_encode([
+                        'task_name' => $payload['message']['text']
+                    ])
+                );
+            }
+        }
+    }
+
+    public function handleCreateTask()
+    {
+        if ($this->validateUser()) {
+            // validate permission
+            if ($this->validatePermission('add_task')) {
+                $this->service->sendTextMessage($this->chatId, 'Nama tugas baru kamu apa?', true);
+                // store
+                Session::put('user_chat_state_' . $this->chatId, 'awaiting_task_name');
+            }
         }
     }
 

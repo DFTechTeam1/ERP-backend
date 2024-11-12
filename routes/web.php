@@ -14,18 +14,9 @@ Route::get('/', function () {
 });
 
 Route::get('telegram', function () {
-    $chatId = '1991941955';
-    $service = new TelegramService();
-    return $service->sendButtonMessage($chatId, 'Kirim lokasimu sekarang juga!', [
-        'keyboard' => [
-            [
-                ['text' => 'Lokasi', 'request_location' => true]
-            ]
-        ],
-        'is_persistent' => true,
-        'one_time_keyboard' => true,
-        'resize_keyboard' => true,
-    ]);
+    $user = \App\Models\User::where('employee_id', 49)->first();
+
+    return $user->hasPermissionTo('add_task');
 });
 
 Route::get('barcode', function () {
