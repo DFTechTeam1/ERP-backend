@@ -385,10 +385,12 @@ class DashboardService {
                 [
                     'text' => __("global.totalEquipmentPrice"),
                     'value' => 'Rp. ' . number_format($totalInventoryPrice, 2),
+                    'is_hide_nominal' => true,
                 ],
                 [
                     'text' => __("global.totalIncome"),
                     'value' => 'Rp. ' . number_format($totalIncome, 2),
+                    'is_hide_nominal' => true,
                 ],
             ],
             'right' => [

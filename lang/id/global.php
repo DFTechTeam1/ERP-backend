@@ -116,7 +116,7 @@ return [
     'entertaintment' => "Entertainment",
     'newProject' => 'Event Baru',
     'newProjectNotification' => 'Kamu baru saja dipilih untuk mengerjakan event :event',
-    'totalEquipmentPrice' => 'Total Harga Equipment',
+    'totalEquipmentPrice' => 'Total Equipment',
     'totalIncome' => 'Total Pendapatan',
     'totalProjectInMonth' => 'Total Event Bulan Ini',
     'totalEmployee' => 'Total Karyawan',
