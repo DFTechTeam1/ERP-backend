@@ -2,17 +2,17 @@
 
 namespace Modules\Inventory\Repository;
 
-use Modules\Inventory\Models\UserInventoryMaster;
-use Modules\Inventory\Repository\Interface\UserInventoryMasterInterface;
+use Modules\Inventory\Models\EmployeeInventoryItem;
+use Modules\Inventory\Repository\Interface\EmployeeInventoryItemInterface;
 
-class UserInventoryMasterRepository extends UserInventoryMasterInterface {
+class EmployeeInventoryItemRepository extends EmployeeInventoryItemInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new UserInventoryMaster();
+        $this->model = new EmployeeInventoryItem();
         $this->key = 'id';
     }
 
@@ -68,7 +68,7 @@ class UserInventoryMasterRepository extends UserInventoryMasterInterface {
         if ($relation) {
             $query->with($relation);
         }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -80,18 +80,14 @@ class UserInventoryMasterRepository extends UserInventoryMasterInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where("uid", $uid);
-        } else {
-            $query->whereRaw($where);
-        }
-
+        $query->where("uid", $uid);
+        
         if ($relation) {
             $query->with($relation);
         }

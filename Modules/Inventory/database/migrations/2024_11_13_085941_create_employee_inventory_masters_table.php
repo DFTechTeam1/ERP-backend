@@ -11,15 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('employee_custom_inventories', function (Blueprint $table) {
+        Schema::create('employee_inventory_masters', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('employee_id')
+            $table->unsignedBigInteger('employee_id');
+            $table->foreign('employee_id')
                 ->references('id')
                 ->on('employees')
-                ->cascadeOnDelete();
-            $table->foreignId('custom_inventory_id')
-                ->references('id')
-                ->on('custom_inventories')
                 ->cascadeOnDelete();
             $table->timestamps();
         });
@@ -30,10 +27,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('employee_custom_inventories', function (Blueprint $table) {
-            $table->dropForeign(['custom_inventory_id']);
+        Schema::table('employee_inventory_masters', function (Blueprint $table) {
             $table->dropForeign(['employee_id']);
         });
-        Schema::dropIfExists('employee_custom_inventories');
+
+        Schema::dropIfExists('employee_inventory_masters');
     }
 };

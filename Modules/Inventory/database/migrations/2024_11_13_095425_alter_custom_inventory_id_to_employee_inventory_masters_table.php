@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('user_inventories', function (Blueprint $table) {
-            $table->dropColumn('uid');
+        Schema::table('employee_inventory_masters', function (Blueprint $table) {
+            $table->json('custom_inventory_id')->nullable();
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('user_inventories', function (Blueprint $table) {
-            $table->uuid('uid');
+        Schema::table('employee_inventory_masters', function (Blueprint $table) {
+            $table->dropColumn('custom_inventory_id');
         });
     }
 };

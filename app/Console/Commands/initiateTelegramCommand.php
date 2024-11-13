@@ -13,6 +13,7 @@ class initiateTelegramCommand extends Command
      * @var string
      */
     protected $signature = 'app:initiate-telegram';
+//pass: jZneOS!p9:MUwB~8 user: u164909942.proderp ip: ftp://91.108.118.109
 
     /**
      * The console command description.
