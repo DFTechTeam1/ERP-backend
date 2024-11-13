@@ -2,17 +2,17 @@
 
 namespace Modules\Inventory\Repository;
 
-use Modules\Inventory\Models\UserInventory;
-use Modules\Inventory\Repository\Interface\UserInventoryInterface;
+use Modules\Inventory\Models\EmployeeInventoryMaster;
+use Modules\Inventory\Repository\Interface\EmployeeInventoryMasterInterface;
 
-class UserInventoryRepository extends UserInventoryInterface {
+class EmployeeInventoryMasterRepository extends EmployeeInventoryMasterInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new UserInventory();
+        $this->model = new EmployeeInventoryMaster();
         $this->key = 'id';
     }
 
@@ -80,13 +80,17 @@ class UserInventoryRepository extends UserInventoryInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
+        if (empty($where)) {
+            $query->where("id", $uid);
+        } else {
+            $query->whereRaw($where);
+        }
 
         if ($relation) {
             $query->with($relation);
@@ -106,37 +110,6 @@ class UserInventoryRepository extends UserInventoryInterface {
     public function store(array $data)
     {
         return $this->model->create($data);
-    }
-
-    /**
-     * Multiple update and create
-     *
-     * @param array $data
-     * @param array $uniqueColumns
-     * @param array $updatedColumns
-     * @return void
-     */
-    public function upsert(
-        array $data,
-        array $uniqueColumns,
-        array $updatedColumns
-    )
-    {
-        return $this->model->upsert(
-            $data,
-            $uniqueColumns,
-            $updatedColumns
-        );
-    }
-
-    /**
-     * Bulk insert
-     * @param array $data
-     * @return void
-     */
-    public function insert(array $data)
-    {
-        $this->model->insert($data);
     }
 
     /**
@@ -167,17 +140,10 @@ class UserInventoryRepository extends UserInventoryInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-
-        if (empty($where)) {
-            $query->where('id', $id);
-        } else {
-            $query->whereRaw($where);;
-        }
-
-        return $query->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**

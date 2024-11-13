@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Modules\Inventory\Http\Requests\UserInventory\AddItem;
 use Modules\Inventory\Http\Requests\UserInventory\Create;
 use Modules\Inventory\Http\Requests\UserInventory\Update;
-use Modules\Inventory\Services\UserInventoryService;
+use Modules\Inventory\Services\EmployeeInventoryMasterService;
 
 class UserInventoryController extends Controller
 {
@@ -15,7 +15,7 @@ class UserInventoryController extends Controller
 
     public function __construct()
     {
-        $this->service = new UserInventoryService();
+        $this->service = new EmployeeInventoryMasterService();
     }
 
     /**
@@ -27,10 +27,10 @@ class UserInventoryController extends Controller
             '*',
             '',
             [
-                'items:inventory_id,user_inventory_master_id',
-                'items.inventory:id,inventory_id,inventory_code,qrcode',
-                'items.inventory.inventory:id,name,uid',
-                'employee:id,name,uid'
+                'employee:id,name,nickname',
+                'items:id,employee_inventory_master_id,inventory_item_id,inventory_status',
+                'items.inventory:id,inventory_id,inventory_code',
+                'items.inventory.inventory:id,name'
             ]
         ));
     }
@@ -38,6 +38,11 @@ class UserInventoryController extends Controller
     public function getAvailableInventories(string $employeeUid)
     {
         return apiResponse($this->service->getAvailableInventories($employeeUid));
+    }
+
+    public function getAvailableCustomInventories(string $employeeUid)
+    {
+        return apiResponse($this->service->getAvailableCustomInventories($employeeUid));
     }
 
     public function getUserInformation(string $employeeUid)
@@ -50,9 +55,9 @@ class UserInventoryController extends Controller
      * @param string $uid
      * @return \Illuminate\Http\JsonResponse
      */
-    public function addItem(AddItem $request, string $uid)
+    public function addItem(AddItem $request, mixed $id)
     {
-        return apiResponse($this->service->addUserInventory($request->validated(), $uid));
+        return apiResponse($this->service->updateInventory($request->validated(), $id));
     }
 
     /**

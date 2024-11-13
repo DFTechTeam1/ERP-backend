@@ -149,17 +149,6 @@ Table "custom_inventory_details" {
   }
 }
 
-Table "employee_custom_inventories" {
-  "id" bigint [pk, not null, increment]
-  "employee_id" bigint [not null]
-  "custom_inventory_id" bigint [not null]
-  "created_at" timestamp [default: NULL]
-  "updated_at" timestamp [default: NULL]
-}
-
-Ref "employee_custom_inventories_employee_id_foreign":"employees"."id" < "employee_custom_inventories"."employee_id" [delete: cascade]
-Ref "employee_custom_inventories_custom_inventory_id_foreign":"custom_inventories"."id" < "employee_custom_inventories"."custom_inventory_id" [delete: cascade]
-
 Table "divisions" {
   "id" bigint [pk, not null, increment]
   "name" varchar(255) [not null]
@@ -413,6 +402,12 @@ Table "inventory_items" {
   Indexes {
     inventory_id [name: "inventory_items_inventory_id_foreign"]
   }
+}
+
+Table "employee_inventory_masters" {
+    "id" bigint [pk, not null, increment]
+    "employee_id" bigint [not null]
+    inventory_item_id bigint [not null]
 }
 
 Table "inventory_maintenance_requests" {
@@ -1086,35 +1081,6 @@ Table "user_encrypted_tokens" {
   "data" longtext [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
-}
-
-Table "user_inventories" {
-  "id" bigint [pk, not null, increment]
-  "inventory_id" bigint [not null]
-  "quantity" tinyint [not null, default: '1']
-  "created_at" timestamp [default: NULL]
-  "updated_at" timestamp [default: NULL]
-  "user_inventory_master_id" bigint [not null]
-  "inventory_type" varchar(20) [not null]
-  "custom_inventory_id" int [default: NULL]
-
-  Indexes {
-    inventory_id [name: "user_inventories_inventory_id_foreign"]
-    user_inventory_master_id [name: "user_inventories_user_inventory_master_id_foreign"]
-  }
-}
-
-Table "user_inventory_masters" {
-  "id" bigint [pk, not null, increment]
-  "uid" char(36) [not null]
-  "employee_id" bigint [not null]
-  "total_inventory" int [not null, default: '0']
-  "created_at" timestamp [default: NULL]
-  "updated_at" timestamp [default: NULL]
-
-  Indexes {
-    employee_id [name: "user_inventory_masters_employee_id_foreign"]
-  }
 }
 
 Table "user_login_histories" {
