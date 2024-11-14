@@ -596,7 +596,7 @@ class InventoryService {
                     'brand' => $item->brand ? $item->brand->name : '-',
                     'image' => $item->image ? asset("storage/{$this->imageFolder}/{$item->image->image}") : asset('images/noimage.png'),
                     'year_of_purchase' => $item->year_of_purchase ?? '-',
-                    'purchase_price' => $item->purchase_price ? config('company.currency') . ' ' . number_format(collect($item->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')) : '-',
+                    'purchase_price' => config('company.currency') . ' ' . number_format(collect($item->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')),
                     'items' => collect($item->items)->map(function ($inventoryItem) {
                         return [
                             'id' => $inventoryItem->id,
