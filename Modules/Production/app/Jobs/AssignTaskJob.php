@@ -37,16 +37,17 @@ class AssignTaskJob implements ShouldQueue
             ->find($this->taskId);
 
         $employees = [];
-        $lineIds = [];
         foreach ($this->employeeIds as $employee) {
-            $data = \Modules\Hrd\Models\Employee::selectRaw('line_id,id,uid,name,email')
+            $data = \Modules\Hrd\Models\Employee::selectRaw('line_id,id,uid,name,email,telegram_chat_id')
                 ->find($employee);
 
             if ($data->line_id) {
                 $employees[] = $data;
-                $lineIds[] = $data->line_id;
 
-                \Illuminate\Support\Facades\Notification::send($employees, new \Modules\Production\Notifications\AssignTaskNotification([$data->line_id], $task, $employee));
+                \Illuminate\Support\Facades\Notification::send(
+                    $employees,
+                    new \Modules\Production\Notifications\AssignTaskNotification([$data->telegram_chat_id], $task, $employee)
+                );
             }
 
         }

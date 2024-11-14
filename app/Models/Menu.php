@@ -15,6 +15,9 @@ class Menu extends Model
         'icon',
         'group',
         'link',
-        'permission'
+        'permission',
+        'app_type',
+        'new_icon',
+        'new_link'
     ];
 }

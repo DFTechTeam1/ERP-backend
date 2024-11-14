@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,16 +14,16 @@ class PlayerApproveRequestTeamNotification extends Notification
 
     private $transfer;
 
-    private $lineIds;
+    private $telegramChatIds;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(\Modules\Production\Models\TransferTeamMember $transfer, array $lineIds)
+    public function __construct(\Modules\Production\Models\TransferTeamMember $transfer, array $telegramChatIds)
     {
         $this->transfer = $transfer;
 
-        $this->lineIds = $lineIds;
+        $this->telegramChatIds = $telegramChatIds;
     }
 
     /**
@@ -30,7 +31,7 @@ class PlayerApproveRequestTeamNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return [\App\Notifications\LineChannel::class];
+        return [TelegramChannel::class];
     }
 
     /**
@@ -52,6 +53,17 @@ class PlayerApproveRequestTeamNotification extends Notification
         return [];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => [
+                'Halo ' . $this->transfer->employee->nickname . ', ' . $this->transfer->requestByPerson->nickname . ' membutuhkan bantuan untuk mengerjakan tugas di event ' . $this->transfer->project->name,
+                $this->transfer->requestToPerson->nickname . ' sudah setuju. Kamu akan segera menerima notifikasi tugas yang akan dikerjakan.',
+            ]
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $messages = [
@@ -66,7 +78,7 @@ class PlayerApproveRequestTeamNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

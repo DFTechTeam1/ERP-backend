@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +31,7 @@ class CancelProjectWithPicNotification extends Notification
     {
         return [
             'database',
-            \App\Notifications\LineChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -60,8 +61,18 @@ class CancelProjectWithPicNotification extends Notification
         ];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        $eventDate = date('d F Y', strtotime($this->project->project_date));
+
+        return [
+            'chatIds' => [$this->employee->telegram_chat_id],
+            'message' => "Halo {$this->employee->nickname}, event {$this->project->name} di tanggal {$eventDate} di cancel nih."
+        ];
+    }
+
     public function toLine($notifiable)
-    {   
+    {
         $eventDate = date('d F Y', strtotime($this->project->project_date));
         $messages = [
             [

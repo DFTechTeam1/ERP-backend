@@ -5,5 +5,6 @@
     "Nas": true,
     "Production": true,
     "Addon": true,
-    "LineMessaging": true
+    "LineMessaging": true,
+    "Telegram": true
 }

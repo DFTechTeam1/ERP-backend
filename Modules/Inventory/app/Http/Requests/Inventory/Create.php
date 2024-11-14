@@ -34,7 +34,7 @@ class Create extends FormRequest
             'status' => 'nullable',
             'images.*' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                'string'
             ],
             'status' => 'nullable',
             'current_images' => 'nullable',

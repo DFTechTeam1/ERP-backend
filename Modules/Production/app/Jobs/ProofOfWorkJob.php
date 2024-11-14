@@ -22,6 +22,9 @@ class ProofOfWorkJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param int $projectId
+     * @param int $taskId
+     * @param int $taskPic
      */
     public function __construct(int $projectId, int $taskId, int $taskPic)
     {
@@ -50,14 +53,15 @@ class ProofOfWorkJob implements ShouldQueue
         $taskPic = \Modules\Hrd\Models\Employee::where('user_id', $this->taskPic)->first();
 
         // get detail task
-        $task = \Modules\Production\Models\ProjectTask::selectRaw('id,name')->find($this->taskId);
+        $task = \Modules\Production\Models\ProjectTask::selectRaw('id,name')
+            ->find($this->taskId);
 
         foreach ($pm as $manager) {
             $employee = \Modules\Hrd\Models\Employee::find($manager->pic_id);
-            $lineId = $employee->line_id;
+            $telegramChatId = $employee->telegram_chat_id;
 
-            if ($lineId) {
-                \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\ProofOfWorkNotification($project, $taskPic, $task, [$lineId]));
+            if ($telegramChatId) {
+                \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\ProofOfWorkNotification($project, $taskPic, $task, [$telegramChatId]));
             }
         }
     }

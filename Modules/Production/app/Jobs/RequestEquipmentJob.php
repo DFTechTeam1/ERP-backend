@@ -17,8 +17,9 @@ class RequestEquipmentJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param object $project
      */
-    public function __construct($project)
+    public function __construct(object $project)
     {
         $this->project = $project;
     }

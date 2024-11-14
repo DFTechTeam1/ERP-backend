@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,16 +12,16 @@ class RejectRequestTeamMemberNotification extends Notification
 {
     use Queueable;
 
-    private $lineIds;
+    private $telegramChatIds;
 
     private $transfer;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $lineIds, \Modules\Production\Models\TransferTeamMember $transfer)
+    public function __construct(array $telegramChatIds, \Modules\Production\Models\TransferTeamMember $transfer)
     {
-        $this->lineIds = $lineIds;
+        $this->telegramChatIds = $telegramChatIds;
 
         $this->transfer = $transfer;
     }
@@ -30,7 +31,7 @@ class RejectRequestTeamMemberNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return [\App\Notifications\LineChannel::class];
+        return [TelegramChannel::class];
     }
 
     /**
@@ -52,6 +53,30 @@ class RejectRequestTeamMemberNotification extends Notification
         return [];
     }
 
+    public function toTelegram($notifiable): array
+    {
+        $message = 'Halo ' . $this->transfer->requestByPerson->nickname . '. Permintaan anda untuk meminjam ' . $this->transfer->employee->nickname . ' di tolak dengan alasan ' . $this->transfer->reject_reason;
+
+        $messages = [
+            [
+                'type' => 'text',
+                'text' => $message,
+            ]
+        ];
+
+        if ($this->transfer->alternativeEmployee) {
+            $messages[] = [
+                'type' => 'text',
+                'text' => $this->transfer->alternativeEmployee->nickname . ' sebagai penggantinya. Kamu sudah bisa mulai memberikan tugas.'
+            ];
+        }
+
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => collect($messages)->pluck('text')->toArray()
+        ];
+    }
+
     public function toLine($notifiable)
     {
         $message = 'Halo ' . $this->transfer->requestByPerson->nickname . '. Permintaan anda untuk meminjam ' . $this->transfer->employee->nickname . ' di tolak dengan alasan ' . $this->transfer->reject_reason;
@@ -67,7 +92,7 @@ class RejectRequestTeamMemberNotification extends Notification
             $messages[] = [
                 'type' => 'text',
                 'text' => $this->transfer->alternativeEmployee->nickname . ' sebagai penggantinya. Kamu sudah bisa mulai memberikan tugas.'
-            ];   
+            ];
         }
 
         return [

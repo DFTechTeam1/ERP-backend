@@ -30,18 +30,18 @@ class BrandService {
         DB::beginTransaction();
         try {
             $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\BrandImport, $data['excel']);
-            
+
             $output = [];
-    
+
             $error = [];
-            
+
             foreach ($data as $value) {
                 unset($value[0]);
                 unset($value[1]);
-    
+
                 foreach (array_values($value) as $val) {
                     $check = $this->repo->show('dummy', 'id', [], "lower(name) = '" . strtolower($val[0]) . "'");
-    
+
                     if (!$check) {
                         $this->repo->store(['name' => $val[0]]);
                     } else {
@@ -51,7 +51,7 @@ class BrandService {
             }
 
             DB::commit();
-    
+
             return generalResponse(
                 __("global.importBrandSuccess"),
                 false,
@@ -72,7 +72,7 @@ class BrandService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(
@@ -88,8 +88,23 @@ class BrandService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+            if (!empty($search)) { // array
+                $where = formatSearchConditions($search['filters'], $where);
+            }
+
+            $sort = "name asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'name') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
+                    } else {
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                    }
+                }
+
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
             }
 
             $paginated = $this->repo->pagination(
@@ -97,7 +112,9 @@ class BrandService {
                 $where,
                 $relation,
                 $itemsPerPage,
-                $page
+                $page,
+                [],
+                $sort
             );
             $totalData = $this->repo->list('id', $where)->count();
 
@@ -159,7 +176,7 @@ class BrandService {
      * Store data
      *
      * @param array $data
-     * 
+     *
      * @return array
      */
     public function store(array $data): array
@@ -182,7 +199,7 @@ class BrandService {
      * @param array $data
      * @param string $id
      * @param string $where
-     * 
+     *
      * @return array
      */
     public function update(
@@ -201,13 +218,13 @@ class BrandService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
      * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -227,7 +244,7 @@ class BrandService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array

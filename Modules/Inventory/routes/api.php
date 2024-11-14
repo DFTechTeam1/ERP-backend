@@ -47,10 +47,25 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::apiResource('inventory-types', "{$namespace}\InventoryTypeController");
 
     Route::get('custom-inventories', "{$namespace}\CustomInventoryController@index");
+    Route::get('custom-inventories/get-assembled', "{$namespace}\CustomInventoryController@getAssembled");
     Route::post('custom-inventories', "{$namespace}\CustomInventoryController@store");
     Route::put('custom-inventories/{uid}', "{$namespace}\CustomInventoryController@update");
+    Route::post('custom-inventories/bulk', "{$namespace}\CustomInventoryController@bulkDelete");
     Route::get('custom-inventories/itemList', "{$namespace}\CustomInventoryController@getItemList");
     Route::get('custom-inventories/edit/{uid}', "{$namespace}\CustomInventoryController@show");
+
+    Route::get('request-inventory/approval-line', "{$namespace}\RequestInventoryController@getApprovalLines");
+    Route::post('request-inventory/bulk', "{$namespace}\RequestInventoryController@bulkDelete");
+    Route::get('request-inventory/get-request-inventory-status', "{$namespace}\RequestInventoryController@getRequestInventoryStatus");
+    Route::post('request-inventory/closed', "{$namespace}\RequestInventoryController@closedRequest");
+    Route::apiResource('request-inventory', "{$namespace}\RequestInventoryController");
+    Route::post('request-inventory/convert-to-inventory/{uid}', "{$namespace}\RequestInventoryController@convertToInventory");
+    Route::get('request-inventory/{type}/{uid}', "{$namespace}\RequestInventoryController@processRequest");
+
+    Route::apiResource('user-inventory', "{$namespace}\UserInventoryController");
+    Route::post('user-inventory/add-item/{uid}', "{$namespace}\UserInventoryController@addItem");
+    Route::get('user-inventory/available-inventories/{employeeUid}', "{$namespace}\UserInventoryController@getAvailableInventories");
+    Route::get('user-inventory/get-user-information/{employeeUid}', "{$namespace}\UserInventoryController@getUserInformation");
 
 });
 

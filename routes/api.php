@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
+use App\Services\Telegram\TelegramService;
+use App\Services\WhatsappService;
 use App\Services\LocalNasService;
 use App\Services\NasConnectionService;
 use Illuminate\Http\Request;
@@ -16,23 +18,97 @@ use Illuminate\Support\Facades\Route;
 use KodePandai\Indonesia\Models\District;
 use App\Http\Controllers\Api\DashboardController;
 use Illuminate\Support\Facades\Broadcast;
+use Modules\Inventory\Jobs\NewRequestInventoryJob;
+use Modules\Inventory\Services\UserInventoryService;
+use Modules\Production\Jobs\AssignTaskJob;
+use Modules\Telegram\Http\Controllers\TelegramAuthorizationController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
 Route::get('testing', function () {
-    $project = \Modules\Production\Models\Project::latest()->first();
-    $entertainmentPic = \App\Models\User::find(2);
-    $user = \App\Models\User::latest()->first();
-    $employeeIds = [6];
+    $items = \Modules\Inventory\Models\UserInventoryMaster::with('items:id,user_inventory_master_id,inventory_id,quantity')
+        ->latest()->first();
+
+    $inventories = collect($items->items)->map(function ($item) {
+        return [
+            'id' => $item->inventory_id,
+            'quantity' => $item->quantity,
+            'user_inventory_master_id' => $item->user_inventory_master_id,
+        ];
+    })->toArray();
+
+    $new = [
+        'id' => 1,
+        'quantity' => 10,
+        'user_inventory_master_id' => 0,
+    ];
+
+    $inventories = collect($inventories)->push($new);
+
+    $service = new UserInventoryService();
+    return $service->addItem($inventories->toArray(), $items);
+});
+
+Route::get('telegram-login', [\Modules\Telegram\Http\Controllers\TelegramAuthorizationController::class, 'index']);
+
+
+Route::get('line-flex', function () {
+
+});
+
+Route::post('{token}/telegram-webhook', function (Request $request, string $token) {
+    $event = new \Modules\Telegram\Service\Webhook\Telegram();
+    $event->categorize($request->all());
+});
+
+Route::get('messages', function () {
+   $invoice = 'https://quicklyevents.com/storage/invoices/1/1706684868139-invoice.pdf';
+
+   $payload = [
+       'url' => $invoice
+   ];
+
+    $service = new WhatsappService();
+    $service->sendTemplateMessage('booking_confirmation_message_new', $payload, ['6285795327357']);
+});
+
+Route::post('base64', function (Request $request) {
+    $base64Image = $request->image;
+    // Decode the base64 string
+    $imageParts = explode(";base64,", $base64Image);
+    if (count($imageParts) != 2) {
+        return response()->json([
+            'error' => 'Is not base64 image'
+        ]);
+    }
+
+    $imageTypeAux = explode("image/", $imageParts[0]);
+    if (count($imageTypeAux) != 2) {
+        return response()->json([
+            'error' => 'Is not base64 image'
+        ]);
+    }
+
+    $imageType = $imageTypeAux[1]; // e.g., png, jpg, etc.
+    $imageBase64 = base64_decode($imageParts[1]);
+
+    // Create a unique file name
+    $fileName = uniqid() . '.' . $imageType;
+
+    // Define the storage path
+    $filePath = 'base64/' . $fileName;
+
+    // Save the image using Laravel's Storage facade
+    \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $imageBase64);
 
     return response()->json([
-        'project' => $project,
-        'enter' => $entertainmentPic,
-        'user' => $user,
+        'success' => 'Upload success'
     ]);
 });
+
+Route::get('detail-migrate/{code}', [LoginController::class, 'getDetailFromMigrate']);
 
 Route::get('forms', [TestingController::class, 'forms']);
 Route::post('forms', [TestingController::class, 'storeForm']);

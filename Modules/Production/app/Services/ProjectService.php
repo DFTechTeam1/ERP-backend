@@ -7,6 +7,7 @@ use App\Enums\ErrorCode\Code;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -106,7 +107,7 @@ class ProjectService
 
         $this->projectTaskAttachmentRepo = new ProjectTaskAttachmentRepository;
 
-        $this->projectPicRepository = new ProjectPersonInChargeRepository;
+        $this->projectPicRepository = new ProjectPersonInChargeRepository();
 
         $this->projectTaskLogRepository = new ProjectTaskLogRepository;
 
@@ -319,6 +320,7 @@ class ProjectService
     ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
@@ -495,6 +497,22 @@ class ProjectService
                 $sorts = rtrim($sorts, ',');
             }
 
+            // condition when user want to see all projects
+            $isAllItems = false;
+            if ($itemsPerPage < 0) {
+                $page = 1;
+
+                $allProjects = $this->repo->list(
+                    'id',
+                    $where,
+                    $relation,
+                    $whereHas
+                )->count();
+
+                $itemsPerPage = $allProjects;
+                $isAllItems = true;
+            }
+
             $paginated = $this->repo->pagination(
                 $select,
                 $where,
@@ -575,6 +593,7 @@ class ProjectService
 
                 return [
                     'uid' => $item->uid,
+                    'id' => $item->id,
                     'marketing' => $marketing,
                     'pic' => count($pics) > 0  ? implode(', ', $pics) : __('global.undetermined'),
                     'no_pic' => count($pics) == 0 ? true : false,
@@ -604,6 +623,8 @@ class ProjectService
                     'sort' => $sorts,
                     'paginated' => $paginated,
                     'totalData' => $totalData,
+                    'itemPerPage' => (int) $itemsPerPage,
+                    'isAllItems' => $isAllItems
                 ],
             );
         } catch (\Throwable $th) {
@@ -924,8 +945,6 @@ class ProjectService
             }
         }
 
-        logging('picids', $picIds);
-
         $picIds = array_values(array_unique($picIds));
         $picUids = array_values(array_unique($picUids));
 
@@ -1038,7 +1057,11 @@ class ProjectService
         }
 
         // get entertainment teams
-        $entertain = $this->transferTeamRepo->list('id,employee_id,requested_by,alternative_employee_id', "project_id = " . $project->id . " and is_entertainment = 1", ['employee:id,uid,name,email,position_id', 'employee.position:id,name']);
+        $entertain = $this->transferTeamRepo->list(
+            'id,employee_id,requested_by,alternative_employee_id',
+            "project_id = " . $project->id . " and is_entertainment = 1 and employee_id is not null",
+            ['employee:id,uid,name,email,position_id', 'employee.position:id,name']
+        );
 
         $outputEntertain = collect((object) $entertain)->map(function ($item) {
             return [
@@ -1198,7 +1221,10 @@ class ProjectService
                 $outputTask[$keyTask]['have_permission_to_move_board'] = $havePermissionToMoveBoard;
 
                 if (
-                    in_array($employeeId, $picIds) &&
+                    (
+                        in_array($employeeId, $picIds) ||
+                        $superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()
+                    ) &&
                     $task->project->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
                     ($task->status == \App\Enums\Production\TaskStatus::OnProgress->value ||
                     $task->status == \App\Enums\Production\TaskStatus::Revise->value)
@@ -1431,6 +1457,7 @@ class ProjectService
                     'country_id' => $data->country_id,
                     'state_id' => $data->state_id,
                     'city_id' => $data->city_id,
+                    'feedback' => $data->feedback,
                     'event_type' => $eventType,
                     'event_type_raw' => $data->event_type,
                     'event_class_raw' => $data->project_class_id,
@@ -1530,7 +1557,10 @@ class ProjectService
         $task['picIds'] = $picIds;
 
         if (
-            in_array($employeeId, $picIds) &&
+            (
+                in_array($employeeId, $picIds) ||
+                $superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()
+            ) &&
             $task['project']->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
             ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value ||
             $task['status'] == \App\Enums\Production\TaskStatus::Revise->value)
@@ -1771,7 +1801,10 @@ class ProjectService
                 $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
 
                 if (
-                    in_array($employeeId, $picIds) &&
+                    (
+                        in_array($employeeId, $picIds) ||
+                        $superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()
+                    ) &&
                     $project['status_raw'] == \App\Enums\Production\ProjectStatus::OnGoing->value &&
                     ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value ||
                     $task['status'] == \App\Enums\Production\TaskStatus::Revise->value)
@@ -1803,6 +1836,13 @@ class ProjectService
 
             $output[$keyBoard]['tasks'] = $outputTask;
         }
+
+        Log::debug('check permission', [
+            'superuser' => $superUserRole,
+            'projectpic' => $isProjectPic,
+            'directory' => $isDirector,
+            'assistant' => isAssistantPMRole()
+        ]);
 
         $project['boards'] = $output;
 
@@ -1842,7 +1882,12 @@ class ProjectService
         DB::beginTransaction();
         try {
             $data['project_date'] = date('Y-m-d', strtotime($data['project_date']));
-            $data['led_detail'] = json_encode($data['led_detail']);
+
+            $ledDetail = [];
+            if ((isset($data['led_detail'])) && (!empty($data['led_detail']))) {
+                $ledDetail = $data['led_detail'];
+            }
+            $data['led_detail'] = json_encode($ledDetail);
 
             $city = \Modules\Company\Models\City::select('name')->find($data['city_id']);
             $state = \Modules\Company\Models\State::select('name')->find($data['state_id']);
@@ -1906,13 +1951,13 @@ class ProjectService
         // 'items.*.inventory_id' => 'required',
         // 'items.*.qty' => 'required',
 
-        $items = $this->customItemRepo->show('dummy', '*', ['items.inventory:id,name,uid'], 'default_request_item = 1');
+        $items = $this->customItemRepo->show('dummy', '*', ['items.inventory:id,inventory_id', 'items.inventory.inventory:id,name,uid'], 'default_request_item = 1');
 
-        if ($items->items->count() > 0) {
+        if (($items) && ($items->items->count() > 0)) {
             $payload = [];
             foreach ($items->items as $item) {
                 $payload[] = [
-                    'inventory_id' => $item->inventory->uid,
+                    'inventory_id' => $item->inventory->inventory->uid,
                     'qty' => $item->qty,
                 ];
             }
@@ -1946,6 +1991,12 @@ class ProjectService
 
             $data['city_name'] = $city->name;
 
+            $ledDetail = [];
+            if ((isset($data['led_detail'])) && (!empty($data['led_detail']))) {
+                $ledDetail = $data['led_detail'];
+            }
+            $data['led_detail'] = json_encode($ledDetail);
+
             $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
             $projectId = getIdFromUid($id, new \Modules\Production\Models\Project());
 
@@ -1965,7 +2016,7 @@ class ProjectService
                 }
             }
 
-            $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue,country_id,state_id,city_id', [
+            $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue,country_id,state_id,city_id,led_detail,led_area', [
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id,uid,boss_id',
             ]);
@@ -1986,6 +2037,8 @@ class ProjectService
             $currentData['collaboration'] = $project->collaboration;
             $currentData['status'] = $project->status_text;
             $currentData['status_raw'] = $project->status;
+            $currentData['led_area'] = $project->led_area;
+            $currentData['led_detail'] = json_decode($project->led_detail, true);
             $currentData['note'] = $project->note ?? '-';
             $currentData['client_portal'] = $project->client_portal;
             $currentData['pic'] = implode(', ', $pics);
@@ -2320,11 +2373,6 @@ class ProjectService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
-            logging('error assign member', [
-                'file' => $th->getFile(),
-                'message' => $th->getMessage(),
-                'line' => $th->getLine(),
-            ]);
             return errorResponse($th);
         }
     }
@@ -2689,8 +2737,26 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
+            // format payload to remove item type
+            $currentPayload = [];
+            foreach ($data['items'] as $outputData) {
+                if ((isset($outputData['inventories'])) && (count($outputData['inventories']) > 0)) {
+                    foreach ($outputData['inventories'] as $inventory) {
+                        $currentPayload[] = [
+                            'inventory_id' => $inventory['id'],
+                            'qty' => $inventory['qty'],
+                        ];
+                    }
+                } else {
+                    $currentPayload[] = [
+                        'inventory_id' => $outputData['inventory_id'],
+                        'qty' => $outputData['qty'],
+                    ];
+                }
+            }
+
             // handle duplicate items
-            $groupBy = collect($data['items'])->groupBy('inventory_id')->all();
+            $groupBy = collect($currentPayload)->groupBy('inventory_id')->all();
             $out = [];
             foreach ($groupBy as $key => $group) {
                 $qty = collect($group)->pluck('qty')->sum();
@@ -2746,6 +2812,11 @@ class ProjectService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+            Log::debug('check continue request', [
+                'message' => $th->getMessage(),
+                'file' => $th->getFile(),
+                'line' => $th->getLine()
+            ]);
 
             return errorResponse($th);
         }
@@ -3354,18 +3425,24 @@ class ProjectService
                     }
                 }
 
-                // move task
-                $setCurrentPic = true;
-                $this->changeTaskBoardProcess(
-                    [
-                        'board_id' => $boardId,
-                        'task_id' => $taskUid,
-                        'board_source_id' => $sourceBoardId,
-                    ],
-                    $projectUid,
-                    \App\Enums\Production\TaskStatus::CheckByPm->value,
-                    $setCurrentPic
-                );
+                // set current pic
+                $currentPics = $this->taskPicRepo->list('employee_id', 'project_task_id = ' . $taskId);
+                $payloadUpdate['current_pics'] = json_encode(collect($currentPics)->pluck('employee_id')->toArray());
+
+                $this->taskRepo->update($payloadUpdate, '', "id = " . $taskId);
+
+//                // move task
+//                $setCurrentPic = true;
+//                $this->changeTaskBoardProcess(
+//                    [
+//                        'board_id' => $boardId,
+//                        'task_id' => $taskUid,
+//                        'board_source_id' => $sourceBoardId,
+//                    ],
+//                    $projectUid,
+//                    \App\Enums\Production\TaskStatus::CheckByPm->value,
+//                    $setCurrentPic
+//                );
 
                 // set worktime as finish to current task pic
                 $currentTaskPic = $this->taskPicRepo->list('id,employee_id', 'project_task_id = ' . $taskId);
@@ -4221,7 +4298,7 @@ class ProjectService
      * @param string @projectUid
      * @param string $taskUid
      */
-    public function approveTask(string $projectUid, string $taskUid)
+    public function approveTask(string $projectUid, string $taskUid, bool $isFromTelegram = false)
     {
         try {
             $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
@@ -4331,7 +4408,7 @@ class ProjectService
 
             $this->taskRepo->update([
                 'status' => \App\Enums\Production\TaskStatus::Revise->value,
-                'project_board_id' => $currentTaskData->current_board,
+//                'project_board_id' => $currentTaskData->current_board,
                 'current_board' => null,
             ], $taskUid);
 
@@ -4426,6 +4503,36 @@ class ProjectService
             foreach ($currentPic as $pic) {
                 $this->setTaskWorkingTime($taskId, $pic->employee_id, \App\Enums\Production\WorkType::Finish->value);
             }
+
+            // move task to next board
+            $taskDetail = $this->taskRepo->show($taskUid, 'id,project_board_id');
+            $sourceBoardId = $taskDetail->project_board_id;
+
+            // get next board
+            $boardList = $this->boardRepo->list('id,name', 'project_id = ' . $projectId);
+            foreach ($boardList as $keyBoard => $boardData) {
+                if ($boardData->id == $sourceBoardId) {
+                    if (isset($boardList[$keyBoard + 1])) {
+                        $boardId = $boardList[$keyBoard + 1]->id;
+                        break;
+                    } else {
+                        $boardId = $sourceBoardId;
+                        break;
+                    }
+                }
+            }
+
+            $setCurrentPic = true;
+            $this->changeTaskBoardProcess(
+                [
+                    'board_id' => $boardId,
+                    'task_id' => $taskUid,
+                    'board_source_id' => $sourceBoardId,
+                ],
+                $projectUid,
+                \App\Enums\Production\TaskStatus::CheckByPm->value,
+                $setCurrentPic
+            );
 
             // detach current pic which is project manager
             $this->detachTaskPic(
@@ -4923,7 +5030,7 @@ class ProjectService
 
         $histories = $this->taskPicHistory->list('id,project_id,project_task_id,employee_id', 'project_id = ' . $projectId, ['employee:id,name,employee_id,uid,nickname']);
 
-        $data = collect($histories)->map(function ($item) {
+        $data = collect((object) $histories)->map(function ($item) {
             return [
                 'id' => $item->id,
                 'employee' => $item->employee->name . ' (' . $item->employee->employee_id . ')',
@@ -5007,6 +5114,7 @@ class ProjectService
             }
 
             $this->repo->update([
+                'feedback' => $data['feedback'],
                 'status' => \App\Enums\Production\ProjectStatus::Completed->value
             ], $projectUid);
 
@@ -5019,6 +5127,7 @@ class ProjectService
             $project = $this->repo->show($projectUid, 'id,status');
 
             $currentData = getCache('detailProject' . $projectId);
+            $currentData['feedback'] = $data['feedback'];
             $currentData['status_raw'] = $project->status;
             $currentData['status'] = $project->status_text;
             $currentData['status_color'] = $project->status_color;
@@ -5638,8 +5747,6 @@ class ProjectService
             $itemsPerPage,
             $page,
         );
-
-        logging('where file manager', [$where]);
 
         $totalData = $this->repo->list('id', $where)->count();
         $total = round($totalData / $itemsPerPage);

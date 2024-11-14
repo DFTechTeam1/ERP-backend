@@ -18,6 +18,7 @@ class ReturnEquipmentJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     * @param string $projectUid
      */
     public function __construct(string $projectUid)
     {
@@ -39,7 +40,7 @@ class ReturnEquipmentJob implements ShouldQueue
         $users = \App\Models\User::role('it support')->get();
 
         foreach ($users as $user) {
-            $employee = \Modules\Hrd\Models\Employee::selectRaw('id,line_id,name')->where('user_id', $user->id)->first();
+            $employee = \Modules\Hrd\Models\Employee::selectRaw('id,line_id,telegram_chat_id,name')->where('user_id', $user->id)->first();
 
             \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\ReturnEquipmentNotification($employee, $project));
 

@@ -16,11 +16,13 @@ class MoreDetailUpdate extends FormRequest
             'collaboration' => 'nullable',
             'event_type' => 'required',
             'note' => 'nullable',
-            'status' => 'required',
+            'status' => 'nullable',
             'venue' => 'required',
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
+            'led_area' => 'nullable',
+            'led_detail' => 'nullable',
         ];
     }
 

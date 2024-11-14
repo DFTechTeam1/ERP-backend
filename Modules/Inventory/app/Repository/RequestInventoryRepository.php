@@ -1,19 +1,18 @@
 <?php
 
-namespace Modules\Production\Repository;
+namespace Modules\Inventory\Repository;
 
-use Modules\Production\Models\ProjectPersonInCharge;
-use Modules\Production\Repository\Interface\ProjectPersonInChargeInterface;
+use Modules\Inventory\Models\RequestInventory;
+use Modules\Inventory\Repository\Interface\RequestInventoryInterface;
 
-class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
-    
+class RequestInventoryRepository extends RequestInventoryInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectPersonInCharge();
+        $this->model = new RequestInventory();
         $this->key = 'id';
     }
 
@@ -55,7 +54,9 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $orderBy = ''
     )
     {
         $query = $this->model->query();
@@ -69,7 +70,17 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
+        if ($whereHas) {
+            foreach ($whereHas as $wh) {
+                $query->whereHas($wh['relation'], function ($q) use ($wh) {
+                    $q->whereRaw($wh['query']);
+                });
+            }
+        }
+
+        $query->orderByRaw($orderBy);
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -81,18 +92,14 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where("uid", $uid);
-        }
-        
+        $query->where("uid", $uid);
+
         if ($relation) {
             $query->with($relation);
         }
@@ -141,17 +148,10 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-        
-        if (empty($where)) {
-            $query->where('id', $id);
-        } else {
-            $query->whereRaw($where);
-        }
-
-        return $query->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**
