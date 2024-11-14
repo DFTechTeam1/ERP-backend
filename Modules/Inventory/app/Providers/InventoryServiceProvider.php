@@ -4,6 +4,7 @@ namespace Modules\Inventory\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Inventory\Console\SyncInventoryToNewItemFormat;
 
 class InventoryServiceProvider extends ServiceProvider
 {
@@ -37,7 +38,9 @@ class InventoryServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+         $this->commands([
+             SyncInventoryToNewItemFormat::class
+         ]);
     }
 
     /**

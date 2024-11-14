@@ -4,7 +4,9 @@ namespace Modules\Inventory\Services;
 
 use App\Enums\ErrorCode\Code;
 use App\Enums\Inventory\InventoryStatus;
+use App\Enums\Production\RequestEquipmentStatus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Modules\Inventory\Models\Brand;
 use Modules\Inventory\Models\InventoryType;
 use Modules\Inventory\Models\Supplier;
@@ -106,7 +108,7 @@ class InventoryService {
         DB::beginTransaction();
         try {
             $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\InventoryImport, $data['excel']);
-            
+
             $output = [];
 
             $data = $data[0];
@@ -134,7 +136,7 @@ class InventoryService {
 
                 foreach ($value as $inventory) {
                     if (
-                        empty($inventory[0]) || 
+                        empty($inventory[0]) ||
                         ($inventory[1] < 0) ||
                         empty($inventory[2]) ||
                         empty($inventory[3]) ||
@@ -224,7 +226,7 @@ class InventoryService {
             }
 
             DB::commit();
-    
+
             return generalResponse(
                 __("global.importInventorySuccess"),
                 false,
@@ -327,7 +329,7 @@ class InventoryService {
         $excel->setValue('A1', 'TEMPLATE INVENTORY LIST');
         $excel->mergeCells('A1:F1');
         $excel->alignCenter('A1:F1');
-        
+
         $excel->setAsBold('A1');
         $excel->setValue('A4', "Nama Barang");
         $excel->setValue('B4', "Harga Barang");
@@ -340,7 +342,7 @@ class InventoryService {
         $excel->setValue('I4', 'Garansi');
         $excel->setValue('J4', 'Lokasi Unit');
         $excel->setValue('K4', 'Nama karyawan pemegang unit (Jika diperlukan saja)');
-        
+
         $excel->autoSize(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']);
 
         $excel->setAsBold('A4');
@@ -379,7 +381,7 @@ class InventoryService {
 
         for ($a = 5; $a < $bulkSheet; $a++) {
             $excel->setAsTypeList($warehouseList, "C{$a}", 'STOP! Ada Error', 'Pilih gudang kawan', 'Pilih Gudang');
-            
+
             if ($typeListRaw->count() > 0) {
                 $excel->setAsTypeList($typeList, "D{$a}", 'STOP! Ada Error', 'Pilih tipe dulu kawan', 'Pilih Tipe');
             }
@@ -391,7 +393,7 @@ class InventoryService {
             if ($suppliersRaw->count() > 0) {
                 $excel->setAsTypeList($suppliers, "F{$a}", 'STOP! Ada Error', 'Pilih brand nya kawan', 'Pilih Brand');
             }
-            
+
             $excel->setAsTypeList($locations, "J{$a}", 'STOP! Ada Error', 'Pilih lokasi nya kawan', 'Pilih Lokasi');
         }
 
@@ -455,10 +457,18 @@ class InventoryService {
                 }
             }
 
-            $paginated = $this->projectRepo->list(
+            $totalData = $this->projectRepo->list('id', $where, $relation, $whereHas)->count();
+
+            if ($itemsPerPage < 0) {
+                $itemsPerPage = $this->projectRepo->list('id', $where, [], $whereHas)->count();
+            }
+
+            $paginated = $this->projectRepo->pagination(
                 $select,
                 $where,
                 $relation,
+                $itemsPerPage,
+                $page,
                 $whereHas
             );
 
@@ -500,7 +510,10 @@ class InventoryService {
             return generalResponse(
                 'Success',
                 false,
-                $paginated,
+                [
+                    'paginated' => $paginated,
+                    'totalData' => $totalData,
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -513,7 +526,7 @@ class InventoryService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(
@@ -531,76 +544,22 @@ class InventoryService {
             $whereHas = [];
 
             if (!empty($search)) { // array
-                if (!empty($search['name']) && empty($where)) {
-                    $name = strtolower($search['name']);
-                    $where = "LOWER(name) LIKE '%{$name}%'";
-                } else if (!empty($search['name']) && !empty($where)) {
-                    $name = strtolower($search['name']);
-                    $where .= " AND LOWER(name) LIKE '%{$name}%'";
-                }
+                $where = formatSearchConditions($search['filters'], $where);
+            }
 
-                if (
-                    (
-                        (!empty($search['stockCondition'])) &&
-                        !empty($search['quantity'])
-                    )
-                ) {
-                    if ($search['stockCondition'] == 'more_than') {
-                        $marker = '>';
-                    } else if ($search['stockCondition'] == 'less_than') {
-                        $marker = '<';
+            $sort = "name asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'name') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
                     } else {
-                        $marker = '=';
-                    }
-                    $qty = $search['quantity'];
-
-                    if (empty($where) && !empty($qty)) {
-                        $where = "stock {$marker} {$qty}";
-                    } else if ((!empty($where) && !empty($qty))) {
-                        $where .= " AND stock {$marker} {$qty}";
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
                     }
                 }
 
-                if (!empty($search['brand'])) {
-                    $whereHas[] = [
-                        'relation' => 'brand',
-                        'query' => "LOWER(name) LIKE '%{$search['brand']}%'",
-                    ];
-                }
-
-                if (!empty($search['yearOfPurchase']) && empty($where)) {
-                    $where = "year_of_purchase = {$search['yearOfPurchase']}";
-                } elseif (!empty($search['yearOfPurchase']) && !empty($where)) {
-                    $where .= " AND year_of_purchase = {$search['yearOfPurchase']}";
-                }
-
-                if (
-                    (
-                        (!empty($search['purchasePriceCondition'])) &&
-                        !empty($search['purchasePrice'])
-                    )
-                ) {
-                    if ($search['purchasePriceCondition'] == 'more_than') {
-                        $marker = '>';
-                    } else if ($search['purchasePriceCondition'] == 'less_than') {
-                        $marker = '<';
-                    } else {
-                        $marker = '=';
-                    }
-                    $qty = $search['purchasePrice'];
-
-                    if (empty($where) && !empty($qty)) {
-                        $where = "purchase_price {$marker} {$qty}";
-                    } else if ((!empty($where) && !empty($qty))) {
-                        $where .= " AND purchase_price {$marker} {$qty}";
-                    }
-                }
-
-                if (!empty($search['warranty']) && empty($where)) {
-                    $where = "warranty = {$search['warranty']}";
-                } elseif (!empty($search['warranty']) && !empty($where)) {
-                    $where .= " AND warranty = {$search['warranty']}"; 
-                }
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
             }
 
             $paginated = $this->repo->pagination(
@@ -609,7 +568,8 @@ class InventoryService {
                 $relation,
                 $itemsPerPage,
                 $page,
-                $whereHas
+                $whereHas,
+                $sort
             );
 
             $inventoryStatuses = InventoryStatus::cases();
@@ -636,11 +596,16 @@ class InventoryService {
                     'brand' => $item->brand ? $item->brand->name : '-',
                     'image' => $item->image ? asset("storage/{$this->imageFolder}/{$item->image->image}") : asset('images/noimage.png'),
                     'year_of_purchase' => $item->year_of_purchase ?? '-',
-                    'purchase_price' => $item->purchase_price ? config('company.currency') . ' ' . number_format($item->purchase_price, 0, config('company.pricing_divider'), config('company.pricing_divider')) : '-',
+                    'purchase_price' => $item->purchase_price ? config('company.currency') . ' ' . number_format(collect($item->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')) : '-',
                     'items' => collect($item->items)->map(function ($inventoryItem) {
                         return [
+                            'id' => $inventoryItem->id,
                             'inventory_code' => $inventoryItem->inventory_code,
                             'status' => $inventoryItem->status_text,
+                            'purchase_price' => $inventoryItem->purchase_price ? number_format($inventoryItem->purchase_price) : '0',
+                            'warranty' => $inventoryItem->warranty ?? '-',
+                            'year_of_purchase' => $inventoryItem->year_of_purchase ?? '-',
+                            'qrcode' => $inventoryItem->qrcode ? asset("storage/{$inventoryItem->qrcode}") : asset('images/noimage.png'),
                         ];
                     }),
                     'locations' => $location,
@@ -672,34 +637,127 @@ class InventoryService {
             $where = "lower(name) like '%{$search}%'";
         }
 
-        $currentCustomData = $this->customItemRepo->list('id', '', ['items:id,inventory_id,custom_inventory_id,qty']);
+        // get all available items
+        $currentCustomData = $this->customItemRepo->list("id", '', ['items:id,custom_inventory_id,inventory_id']);
+        $inventoryItemIds = [];
+        foreach ($currentCustomData as $current) {
+            foreach ($current->items as $currentItem) {
+                $inventoryItemIds[] = $currentItem->inventory_id;
+            }
+        }
 
-        $data = $this->repo->list('id,uid,name,stock', $where, [], 'warehouse_id DESC');
+        $inventoryItemIds = array_values(array_unique($inventoryItemIds));
 
-        $data = collect($data)->map(function ($item) use ($currentCustomData) {
-            $item['active'] = false;
+        $data = $this->repo->list(
+            'id,uid,name,stock,unit_id',
+            $where,
+            [
+                'unit:id,name',
+                'items' => function ($q) use ($inventoryItemIds) {
+                    $q->selectRaw('id,inventory_id,purchase_price,inventory_code')
+                        ->whereNotIn('id', $inventoryItemIds);
+                }
+            ],
+            'warehouse_id DESC'
+        );
 
-            // reduce stock
-            foreach ($currentCustomData as $custom) {
-                foreach ($custom->items as $inventory) {
-                    if ($inventory->inventory_id == $item->id) {
-                        $item['stock'] = $item['stock'] - $inventory->qty;
-                    }
+        $output = [];
+        foreach ($data as $inventory) {
+            foreach ($inventory->items as $item) {
+                if ($inventory->stock > 0) {
+                    $output[] = [
+                        'name' => $inventory->name,
+                        'uid' => $inventory->uid,
+                        'display_image' => $inventory->display_image,
+                        'price' => $item->purchase_price,
+                        'series' => $item->inventory_code,
+                        'id' => $item->id,
+                        'stock' => $inventory->stock,
+                    ];
                 }
             }
-
-            return $item;
-        });
+        }
 
         return generalResponse(
             'success',
             false,
-            $data->toArray(),
+            $output,
+        );
+    }
+
+    public function getBundleInventories()
+    {
+        $data = $this->customItemRepo->list(
+            'id,type,name,uid',
+            "type = 'itemvj'",
+            [
+                'items:id,inventory_id,custom_inventory_id,qty',
+                'items.inventory:id,uid,name'
+            ]
+        );
+
+        $output = [];
+        foreach ($data as $item) {
+
+            $items = [];
+            foreach ($item->items as $inventory) {
+                for($a = 0; $a < $inventory->qty; $a++) {
+                    $items[] = [
+                        'id' => $inventory->inventory->uid,
+                        'name' => $inventory->inventory->name,
+                        'qty' => 1,
+                    ];
+                }
+            }
+
+            $output[] = [
+                'title' => $item->name,
+                'value' => $item->uid,
+                'location' => '',
+                'items' => $items
+            ];
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $output
+        );
+    }
+
+    public function getAllInventoryItems()
+    {
+        $data = $this->inventoryItemRepo->list('id,inventory_id,status', '', ['inventory:id,name']);
+
+        return generalResponse(
+            'success',
+            false,
+            collect((object) $data)->map(function ($item) {
+                return [
+                    'value' => $item->id,
+                    'title' => $item->inventory->name
+                ];
+            })->toArray()
         );
     }
 
     public function getAll()
     {
+        $where = '';
+        if (
+            (request('type')) &&
+            (request('type') == 'bundle')
+        ) {
+            return $this->getBundleInventories();
+        }
+
+        if (
+            (request('type')) &&
+            (request('type') == 'inventory_item')
+        ) {
+            return $this->getAllInventoryItems();
+        }
+
         $data = $this->repo->list('id,uid as value,name as title', '', ['items', 'image']);
 
         $data = collect((object) $data)->map(function ($item) {
@@ -751,11 +809,12 @@ class InventoryService {
                     'brand:id,uid,name',
                     'unit:id,uid,name',
                     'supplier:id,uid,name',
-                    'items:id,inventory_id,inventory_code,status,current_location,user_id,qrcode',
+                    'items:id,inventory_id,inventory_code,status,current_location,user_id,qrcode,purchase_price,warranty,year_of_purchase',
                     'items.employee:id,uid,name',
                     'items.employee:id,uid',
                     'images:id,image,inventory_id',
-                    'itemTypeRelation:id,uid,name'
+                    'itemTypeRelation:id,uid,name',
+                    'projectEquipments:id,inventory_id,status'
                 ]
             );
 
@@ -799,6 +858,19 @@ class InventoryService {
                 }
             }
 
+            // check relation to project equipments (project request equipment)
+            // if this equipment have relation and have status Ready or requested, then item cannot be delete
+            $projectRequest = collect($data->projectEquipments)->pluck('status')->toArray();
+            $cannotBeDelete = false;
+            if (count($projectRequest) > 0) {
+                if (
+                    in_array(RequestEquipmentStatus::Requested->value, $projectRequest) ||
+                    in_array(RequestEquipmentStatus::Ready->value, $projectRequest)
+                ) {
+                    $cannotBeDelete = true;
+                }
+            }
+
             $out = [
                 'uid' => $data->uid,
                 'name' => $data->name,
@@ -818,19 +890,24 @@ class InventoryService {
                 'item_type' => $itemType,
                 'description' => $data->description,
                 'year_of_purchase' => $data->year_of_purchase,
-                'purchase_price' => $data->purchase_price ? config('company.currency') . ' ' . number_format($data->purchase_price, 0, config('company.pricing_divider'), config('company.pricing_divider')) : '-',
+                'purchase_price' => config('company.currency') . ' ' . number_format(collect($data->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')),
                 'price_raw' => $data->purchase_price ? $data->purchase_price : '',
                 'last_update' => date('d F Y H:i', strtotime($data->updated_at)),
                 'warehouse_id' => $data->warehouse_id,
                 'warehouse_text' => $warehouseText ?? '',
                 'warehouse_color' => $warehouseColor ?? '',
                 'warranty' => $data->warranty,
+                'deleteable' => $cannotBeDelete,
                 'items' => collect($data->items)->map(function ($item) {
                     return [
                         'inventory_code' => $item->inventory_code,
                         'status' => $item->status,
                         'status_text' => $item->status_text,
                         'current_location' => $item->current_location,
+                        'purchase_price' => config('company.currency') . ' ' . number_format($item->purchase_price, 0, config('company.pricing_divider'), config('company.pricing_divider')),
+                        'purchase_price_raw' => $item->purchase_price,
+                        'warranty' => $item->warranty,
+                        'year_of_purchase' => $item->year_of_purchase,
                         'location' => $item->location,
                         'id' => $item->id,
                         'user_id' => $item->employee ? $item->employee->uid : null,
@@ -862,9 +939,9 @@ class InventoryService {
                     'default_request_item' => 0,
                 ], '', "default_request_item = 1");
             }
-            
+
             $this->customItemRepo->update(
-                collect($data)->except(['inventories'])->toArray(),
+                collect($data)->except(['inventories', 'removed_items'])->toArray(),
                 $uid
             );
 
@@ -876,22 +953,22 @@ class InventoryService {
             $itemData = $this->customItemRepo->show($uid);
 
             foreach ($data['inventories'] as $inventory) {
-                $inventoryData = $this->repo->show($inventory['uid'], 'id,purchase_price');
-
-                $totalPrice = $inventoryData->purchase_price * $inventory['stock'];
-
                 if (isset($inventory['current_id'])) {
                     $this->customItemDetailRepo->update([
-                        'qty' => $inventory['stock'],
-                        'price' => $totalPrice,
+                        'qty' => 1,
+                        'price' => $inventory['price'],
                     ], '', 'id = ' .$inventory['current_id']);
                 } else {
                     $itemData->items()->create([
-                        'inventory_id' => $inventoryData->id,
-                        'qty' => $inventory['stock'],
-                        'price' => $totalPrice,
+                        'inventory_id' => $inventory['id'],
+                        'qty' => 1,
+                        'price' => $inventory['price'],
                     ]);
                 }
+            }
+
+            foreach ($data['removed_items'] as $removedItems) {
+                $this->customItemDetailRepo->delete($removedItems['current_id']);
             }
 
             DB::commit();
@@ -936,14 +1013,10 @@ class InventoryService {
 
             $item->items()->createMany(
                 collect($inventories)->map(function ($item) {
-                    $inventory = $this->repo->show($item['uid'], 'id,purchase_price');
-
-                    $totalPrice = $inventory->purchase_price * $item['stock'];
-
                     return [
-                        'inventory_id' => $inventory->id,
-                        'qty' => $item['stock'],
-                        'price' => $totalPrice,
+                        'inventory_id' => $item['id'],
+                        'qty' => 1,
+                        'price' => $item['price'],
                     ];
                 })->toArray()
             );
@@ -973,85 +1046,36 @@ class InventoryService {
             $whereHas = [];
 
             if (!empty($search)) { // array
-                if (!empty($search['name']) && empty($where)) {
-                    $name = strtolower($search['name']);
-                    $where = "LOWER(name) LIKE '%{$name}%'";
-                } else if (!empty($search['name']) && !empty($where)) {
-                    $name = strtolower($search['name']);
-                    $where .= " AND LOWER(name) LIKE '%{$name}%'";
-                }
+                $where = formatSearchConditions($search['filters'], $where);
+            }
 
-                if (
-                    (
-                        (!empty($search['stockCondition'])) &&
-                        !empty($search['quantity'])
-                    )
-                ) {
-                    if ($search['stockCondition'] == 'more_than') {
-                        $marker = '>';
-                    } else if ($search['stockCondition'] == 'less_than') {
-                        $marker = '<';
+            $sort = "name asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'name') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
                     } else {
-                        $marker = '=';
-                    }
-                    $qty = $search['quantity'];
-
-                    if (empty($where) && !empty($qty)) {
-                        $where = "stock {$marker} {$qty}";
-                    } else if ((!empty($where) && !empty($qty))) {
-                        $where .= " AND stock {$marker} {$qty}";
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
                     }
                 }
 
-                if (!empty($search['brand'])) {
-                    $whereHas[] = [
-                        'relation' => 'brand',
-                        'query' => "LOWER(name) LIKE '%{$search['brand']}%'",
-                    ];
-                }
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
+            }
 
-                if (!empty($search['yearOfPurchase']) && empty($where)) {
-                    $where = "year_of_purchase = {$search['yearOfPurchase']}";
-                } elseif (!empty($search['yearOfPurchase']) && !empty($where)) {
-                    $where .= " AND year_of_purchase = {$search['yearOfPurchase']}";
-                }
-
-                if (
-                    (
-                        (!empty($search['purchasePriceCondition'])) &&
-                        !empty($search['purchasePrice'])
-                    )
-                ) {
-                    if ($search['purchasePriceCondition'] == 'more_than') {
-                        $marker = '>';
-                    } else if ($search['purchasePriceCondition'] == 'less_than') {
-                        $marker = '<';
-                    } else {
-                        $marker = '=';
-                    }
-                    $qty = $search['purchasePrice'];
-
-                    if (empty($where) && !empty($qty)) {
-                        $where = "purchase_price {$marker} {$qty}";
-                    } else if ((!empty($where) && !empty($qty))) {
-                        $where .= " AND purchase_price {$marker} {$qty}";
-                    }
-                }
-
-                if (!empty($search['warranty']) && empty($where)) {
-                    $where = "warranty = {$search['warranty']}";
-                } elseif (!empty($search['warranty']) && !empty($where)) {
-                    $where .= " AND warranty = {$search['warranty']}"; 
-                }
+            if ($itemsPerPage < 0) {
+                $itemsPerPage = $this->customItemRepo->list('id', $where)->count();
             }
 
             $paginated = $this->customItemRepo->pagination(
                 '*',
                 $where,
-                ['items.inventory:id,uid,name'],
+                ['items.inventory:id,inventory_id', 'items.inventory.inventory:id,uid,name'],
                 $itemsPerPage,
                 $page,
-                $whereHas
+                $whereHas,
+                $sort
             );
 
             $locations = \App\Enums\Inventory\Location::cases();
@@ -1068,6 +1092,7 @@ class InventoryService {
                     'uid' => $item->uid,
                     'name' => $item->name,
                     'updated' => Carbon::parse($item->updated_at)->diffForHumans(),
+                    'type' => $item->type == 'itemvj' ? 'Item VJ' : 'PC Rakitan',
                     'default_request_item' => $item->default_request_item,
                     'total_price' => number_format(collect($item->items)->pluck('price')->sum(), 2, '.'),
                     'total_items' => $item->items->count(),
@@ -1096,12 +1121,27 @@ class InventoryService {
 
     public function detailCustomInventory(string $uid)
     {
-        $data = $this->customItemRepo->show($uid, '*', ['items.inventory:id,uid,name']);
+        $data = $this->customItemRepo->show($uid, '*', ['items.inventory:id,inventory_id,inventory_code,purchase_price', 'items.inventory.inventory:id,name,stock,uid']);
+        $items = collect($data->items)->map(function ($item) {
+            return [
+                'display_image' => $item->inventory->inventory->display_image,
+                'id' => $item->inventory->id,
+                'name' => $item->inventory->inventory->name,
+                'price' => $item->inventory->purchase_price,
+                'series' => $item->inventory->inventory_code,
+                'stock' => $item->inventory->inventory->stock,
+                'uid' => $item->inventory->inventory->uid,
+                'current_id' => $item->id
+            ];
+        });
 
         return generalResponse(
             'success',
             false,
-            $data->toArray(),
+            [
+                'raw' => $data,
+                'items' => $items
+            ],
         );
     }
 
@@ -1109,7 +1149,7 @@ class InventoryService {
      * Store data
      *
      * @param array $data
-     * 
+     *
      * @return array
      */
     public function store(array $data): array
@@ -1121,7 +1161,7 @@ class InventoryService {
             if ((isset($data['supplier_id'])) && (!empty($data['supplier_id']))) {
                 $data['supplier_id'] = getIdFromUid($data['supplier_id'], new Supplier());
             }
-            $data['brand_id'] = getIdFromUid($data['brand_id'], new Brand()); 
+            $data['brand_id'] = getIdFromUid($data['brand_id'], new Brand());
             $data['unit_id'] = getIdFromUid($data['unit_id'], new Unit());
 
             $inventoryType = $this->inventoryTypeRepo->show($data['item_type'], 'id,slug,uid');
@@ -1152,10 +1192,10 @@ class InventoryService {
             if (isset($data['images'])) {
                 foreach ($data['images'] as $image) {
                     $imageNames[] = [
-                        'image' => uploadImage($image, $this->imageFolder)
+                        'image' => uploadBase64($image, $this->imageFolder)
                     ];
                 }
-    
+
                 $inventory->images()->createMany($imageNames);
             }
 
@@ -1190,7 +1230,7 @@ class InventoryService {
         DB::beginTransaction();
         try {
             $inventory = $this->repo->show(
-                $parentUid, 
+                $parentUid,
                 'id,uid,item_type',
                 [
                     'itemTypeRelation:id,slug',
@@ -1247,6 +1287,9 @@ class InventoryService {
                 'current_location' => $itemLocation['location'],
                 'user_id' => $userId,
                 'qrcode' => $qrcode,
+                'purchase_price' => $itemLocation['purchase_price'],
+                'warranty' => $itemLocation['warranty'],
+                'year_of_purchase' => $itemLocation['year_of_purchase'],
             ];
 
             $countItems++;
@@ -1262,7 +1305,7 @@ class InventoryService {
             $inventoryId = getIdFromUid($uid, new \Modules\Inventory\Models\Inventory());
 
             $data = $this->inventoryItemRepo->list(
-                'id,inventory_id,inventory_code,status,current_location,user_id',
+                'id,inventory_id,inventory_code,status,current_location,user_id,purchase_price,warranty,year_of_purchase',
                 'inventory_id = ' . $inventoryId,
                 [
                     'employee:id,uid,name'
@@ -1275,6 +1318,9 @@ class InventoryService {
                     'status' => $item->status,
                     'status_text' => $item->status_text,
                     'current_location' => $item->current_location,
+                    'purchase_price' => number_format($item->purchase_price),
+                    'warranty' => $item->warranty,
+                    'year_of_purchase' => $item->year_of_purchase,
                     'location' => $item->location,
                     'id' => $item->id,
                     'user_id' => $item->employee ? $item->employee->uid : null,
@@ -1310,7 +1356,7 @@ class InventoryService {
      * @param array $data
      * @param string $id
      * @param string $where
-     * 
+     *
      * @return array
      */
     public function update(
@@ -1326,7 +1372,7 @@ class InventoryService {
             if ((isset($data['supplier_id'])) && (!empty($data['supplier_id']))) {
                 $data['supplier_id'] = getIdFromUid($data['supplier_id'], new Supplier());
             }
-            $data['brand_id'] = getIdFromUid($data['brand_id'], new Brand()); 
+            $data['brand_id'] = getIdFromUid($data['brand_id'], new Brand());
             $data['unit_id'] = getIdFromUid($data['unit_id'], new Unit());
             $inventoryId = getIdFromUid($id, new Inventory());
 
@@ -1411,6 +1457,9 @@ class InventoryService {
                     'status' => InventoryStatus::InUse->value,
                     'user_id' => $userId,
                     'qrcode' => $qrcode,
+                    'purchase_price' => $itemLocation['purchase_price'],
+                    'warranty' => $itemLocation['warranty'] == 'null' ? NULL : $itemLocation['warranty'],
+                    'year_of_purchase' => $itemLocation['year_of_purchase'] == 'null' ? NULL : $itemLocation['year_of_purchase'],
                 ];
 
                 if (empty($itemLocation['id'])) { // create
@@ -1420,7 +1469,10 @@ class InventoryService {
                         collect($payloadItemLocation)->only([
                             'inventory_id',
                             'current_location',
-                            'user_id'
+                            'user_id',
+                            'purchase_price',
+                            'warranty',
+                            'year_of_purchase',
                         ])->toArray(),
                         '',
                         'id = ' . $itemLocation['id'],
@@ -1431,12 +1483,19 @@ class InventoryService {
             // handle image uploading
             if (isset($data['images'])) {
                 foreach ($data['images'] as $image) {
-                    $imageNames[] = [
-                        'image' => uploadImage($image, $this->imageFolder)
-                    ];
+                    if (!Str::startsWith($image, 'https://') || !Str::startsWith($image, 'http://')) {
+                        $imageNames[] = [
+                            'image' => uploadBase64($image, $this->imageFolder)
+                        ];
+                    }
                 }
-    
-                $inventory->images()->createMany($imageNames);
+                $imageNames = collect($imageNames)->filter(function ($filter) {
+                    return $filter['image'];
+                })->values()->toArray();
+
+                if (count($imageNames) > 0) {
+                    $inventory->images()->createMany($imageNames);
+                }
             }
 
             DB::commit();
@@ -1457,13 +1516,13 @@ class InventoryService {
 
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
      * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -1483,7 +1542,7 @@ class InventoryService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array
@@ -1515,6 +1574,32 @@ class InventoryService {
             $this->repo->bulkDelete($ids, 'uid');
 
             \Modules\Inventory\Jobs\DeleteImageJob::dispatch($images)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successDeleteInventory'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete bulk data
+     *
+     * @param array $ids
+     *
+     * @return array
+     */
+    public function bulkDeleteCustomInventory(array $ids): array
+    {
+        DB::beginTransaction();
+        try {
+            $this->customItemRepo->bulkDelete($ids, 'uid');
 
             DB::commit();
 

@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Notifications;
 
+use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,7 +13,7 @@ class RequestTeamMemberNotification extends Notification
 {
     use Queueable;
 
-    private $lineIds;
+    private $telegramChatIds;
 
     private $pic;
 
@@ -28,15 +29,15 @@ class RequestTeamMemberNotification extends Notification
      * Create a new notification instance.
      */
     public function __construct(
-        array $lineIds, 
-        object $pic, 
-        object $requestedBy, 
-        \Modules\Hrd\Models\Employee $player, 
+        array $telegramChatIds,
+        object $pic,
+        object $requestedBy,
+        \Modules\Hrd\Models\Employee $player,
         object $project,
         int $transferId
     )
     {
-        $this->lineIds = $lineIds;
+        $this->telegramChatIds = $telegramChatIds;
 
         $this->pic = $pic;
 
@@ -54,7 +55,9 @@ class RequestTeamMemberNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return [\App\Notifications\LineChannel::class];
+        return [
+            TelegramChannel::class
+        ];
     }
 
     /**
@@ -74,6 +77,64 @@ class RequestTeamMemberNotification extends Notification
     public function toArray($notifiable): array
     {
         return [];
+    }
+
+    public function toTelegram($notifiable): array
+    {
+        $playerData = $this->player['nickname'];
+
+        $divider = 107;
+
+        $tokenData = Hashids::encode(
+            $this->player['id'] . $divider . $this->project->id . $divider . $this->requestedBy->id . $divider . $this->transferId
+        );
+
+        $postbackApprove = 'type=approveRequestTeam&data=' . json_encode([
+                'pyr' => $this->player['id'],
+                'pid' => $this->project->id,
+                'rid' => $this->requestedBy->id,
+                'tfid' => $this->transferId,
+            ]);
+
+        $transfer = \Modules\Production\Models\TransferTeamMember::find($this->transferId);
+
+        $messages = [
+            [
+                'type' => 'text',
+                'text' => 'Hai ' . $this->pic->nickname . ', ' . $this->requestedBy->nickname . ' request untuk meminjam ' . $playerData . ' untuk sementara dalam pengerjaan event ' . $this->project->name . ' (' . date('d F Y', strtotime($this->project->project_date)) . ') dengan alasan ' . $transfer->reason,
+            ],
+            [
+                'type' => 'text',
+                'text' => 'Silahkan login untuk melihat detail request'
+            ],
+            // [
+            //     'type' => 'template',
+            //     'altText' => 'Request Member Message',
+            //     'template' => [
+            //         'type' => 'buttons',
+            //         'text' => 'Apakah kamu setuju meminjamkan ' . $playerData . ' untuk sementara waktu?',
+            //         'actions' => [
+            //             [
+            //                 'type' => 'postback',
+            //                 'label' => __('global.approve'),
+            //                 'data' => $postbackApprove,
+            //             ],
+            //             [
+            //                 'type' => 'postback',
+            //                 'label' => __('global.reject'),
+            //                 'data' => 'action=reject',
+            //                 "inputOption" => "openKeyboard",
+            //                 "fillInText" => "tokenId={$tokenData}\nalasan: \npengganti: ",
+            //             ],
+            //         ]
+            //     ]
+            // ],
+        ];
+
+        return [
+            'chatIds' => $this->telegramChatIds,
+            'message' => collect($messages)->pluck('text')->toArray(),
+        ];
     }
 
     public function toLine($notifiable)
@@ -129,7 +190,7 @@ class RequestTeamMemberNotification extends Notification
         ];
 
         return [
-            'line_ids' => $this->lineIds,
+            'line_ids' => [],
             'messages' => $messages,
         ];
     }

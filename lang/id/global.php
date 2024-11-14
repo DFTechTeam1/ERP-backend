@@ -116,7 +116,7 @@ return [
     'entertaintment' => "Entertainment",
     'newProject' => 'Event Baru',
     'newProjectNotification' => 'Kamu baru saja dipilih untuk mengerjakan event :event',
-    'totalEquipmentPrice' => 'Total Harga Equipment',
+    'totalEquipmentPrice' => 'Total Equipment',
     'totalIncome' => 'Total Pendapatan',
     'totalProjectInMonth' => 'Total Event Bulan Ini',
     'totalEmployee' => 'Total Karyawan',
@@ -180,7 +180,9 @@ return [
     'month' => 'Bulan',
     'newRequestTeam' => 'Permintaan team baru',
     'newRequestTeamText' => 'Kamu menerima permintaan team untuk event :event',
-    
+    'rejected' => 'Ditolak',
+    'closed' => 'Selesai',
+
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',
     'credentialDoesNotMatch' => 'Data yang diberikan tidak cocok dengan database',

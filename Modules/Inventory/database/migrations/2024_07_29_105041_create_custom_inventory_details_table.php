@@ -17,10 +17,7 @@ return new class extends Migration
                 ->references('id')
                 ->on('custom_inventories')
                 ->cascadeOnDelete();
-            $table->foreignId('inventory_id')
-                ->references('id')
-                ->on('inventories')
-                ->cascadeOnDelete();
+            $table->integer('inventory_id');
             $table->integer('qty');
             $table->double('price');
             $table->timestamps();
@@ -36,7 +33,7 @@ return new class extends Migration
             $table->dropForeign(['custom_inventory_id']);
             $table->dropForeign(['inventory_id']);
         });
-        
+
         Schema::dropIfExists('custom_inventory_details');
     }
 };

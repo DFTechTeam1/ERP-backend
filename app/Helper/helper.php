@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
@@ -69,9 +70,9 @@ if (!function_exists('errorMessage')) {
             } else {
                 if (config('app.env') == 'local') {
                     $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
-                    $messageError = $out;        
+                    $messageError = $out;
                 } else {
-                    $out = __('global.failedProcessingData');        
+                    $out = __('global.failedProcessingData');
                 }
             }
         } else if (($message instanceof Throwable) && config('app.env') == 'local') {
@@ -84,13 +85,13 @@ if (!function_exists('errorMessage')) {
             logging('error: ', [$message]);
             $out = $message;
         }
-        
+
         // if (file_exists(base_path('exceptions.json'))) {
         //     $exceptions = File::get(base_path('exceptions.json'));
         //     $exceptionArray = json_decode($exceptions, true);
         //     $arrayKeys = array_keys($exceptionArray);
 
-            
+
         //     foreach ($arrayKeys as $exception) {
         //         $check = "\\App\\Exceptions\\{$exception}";
         //         if ($message instanceof $check) {
@@ -138,7 +139,7 @@ if (!function_exists('errorResponse')) {
 
 if (!function_exists('createQr')) {
     function createQr($payload)
-    {   
+    {
         $option = new QROptions;
         $option->version      = 7;
         // $option->outputBase64 = false;
@@ -152,7 +153,7 @@ if (!function_exists('createQr')) {
 if (!function_exists('generateQrcode')) {
     function generateQrcode($payload, string $filename) {
         $explode = explode('/', $filename);
-        
+
         array_pop($explode);
 
         $path = implode('/', $explode);
@@ -208,9 +209,9 @@ if (!function_exists('uploadFile')) {
             $ext = $file->getClientOriginalExtension();
             $datetime = date('YmdHis');
             $name = "uploaded_file_{$datetime}.{$ext}";
-    
+
             Storage::putFileAs($path, $file, $name);
-    
+
             return $name;
         } catch (\Throwable $th) {
             Log::debug('uploadFile Error', [
@@ -227,7 +228,7 @@ if (!function_exists('uploadAddon')) {
         try {
             $mime = $file->getClientMimeType();
             Log::debug('mime in uploadAddon function: ', [$mime]);
-    
+
             // if (
             //     $mime == 'image/png' ||
             //     $mime == 'image/jpg' ||
@@ -245,7 +246,7 @@ if (!function_exists('uploadAddon')) {
                 'addons',
                 $file
             );
-    
+
             return [
                 'mime' => $mime,
                 'file' => $uploadedFile,
@@ -272,7 +273,7 @@ if (!function_exists('uploadImage')) {
 
         $ext = $image->getClientOriginalExtension();
         $datetime = date('YmdHis');
-        
+
         $name = "uploaded_{$folderName}_{$datetime}.{$ext}";
 
         if ($isOriginalName) {
@@ -300,7 +301,7 @@ if (!function_exists('uploadImageandCompress')) {
         $ext = $image->getClientOriginalExtension();
         $originalName = $image->getClientOriginalName();
         $datetime = date('YmdHis');
-        
+
         $name = "{$originalName}_{$datetime}.{$extTarget}";
 
         // create file
@@ -310,7 +311,13 @@ if (!function_exists('uploadImageandCompress')) {
 
         $filepath = $path . '/' . $name;
 
-        Image::read($image)->toWebp($compressValue)->save($filepath);
+//        Image::read($image)->toWebp($compressValue)->save($filepath);
+
+        $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
+        $newImage = $imageManager->read($image);
+        $newImage->scale(height: 400);
+        $newImage->toWebp(60);
+        $newImage->save($filepath);
 
         return $name;
     }
@@ -394,7 +401,7 @@ if (!function_exists('getSettingByKey')) {
 if (!function_exists('cachingSetting')) {
     function cachingSetting() {
         $setting = Cache::get('setting');
-    
+
         if (!$setting) {
             Cache::rememberForever('setting', function () {
                 $data = \Modules\Company\Models\Setting::get();
@@ -427,7 +434,7 @@ if (!function_exists('curlRequest')) {
     function curlRequest(string $url, array $payload)
     {
         $curl = curl_init();
-    
+
         curl_setopt_array($curl, array(
             CURLOPT_URL => $url,
             CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
@@ -470,7 +477,7 @@ if (!function_exists('getPicOfInventory')) {
         $users = getUserByRole('it support');
         // check permission
         logging('user data: ', $users->toArray());
-        
+
         $employees = [];
         foreach ($users as $user) {
             $permissions = $user->getPermissionsViaRoles();
@@ -478,7 +485,7 @@ if (!function_exists('getPicOfInventory')) {
             logging('permissions data: ', $permissionNames);
             if (in_array('accept_request_equipment', $permissionNames)) {
                 logging('is have permission: ', [$user]);
-                $employees[] = \Modules\Hrd\Models\Employee::selectRaw('id,uid,name,line_id,user_id')
+                $employees[] = \Modules\Hrd\Models\Employee::selectRaw('id,uid,name,line_id,telegram_chat_id,user_id')
                     ->where('user_id', $user->id)
                     ->first();
             }
@@ -585,6 +592,12 @@ if (!function_exists('isDirector')) {
     }
 }
 
+if (!function_exists('isItSupport')) {
+    function isItSupport() {
+        return auth()->user()->hasRole('it support');
+    }
+}
+
 if (!function_exists('snakeToCamel')) {
     function snakeToCamel(string $word) {
         return lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $word))));
@@ -621,7 +634,7 @@ if (!function_exists('parseUserAgent')) {
     function parseUserAgent($userAgent) {
         $browser = 'Unknown';
         $os = 'Unknown';
-    
+
         // Detect browser
         if (strpos($userAgent, 'Firefox') !== false) {
             $browser = 'Firefox';
@@ -632,7 +645,7 @@ if (!function_exists('parseUserAgent')) {
         } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
             $browser = 'Internet Explorer';
         }
-    
+
         // Detect OS
         if (strpos($userAgent, 'Windows NT') !== false) {
             $os = 'Windows';
@@ -645,7 +658,7 @@ if (!function_exists('parseUserAgent')) {
         } elseif (strpos($userAgent, 'iPhone') !== false || strpos($userAgent, 'iPad') !== false) {
             $os = 'iOS';
         }
-    
+
         return ['browser' => $browser, 'os' => $os];
     }
 }
@@ -720,5 +733,92 @@ if (!function_exists('isAssistantPMRole')) {
         }
 
         return $out;
+    }
+}
+
+if (!function_exists('formatSearchConditions')) {
+    function formatSearchConditions(array $filters, string $where) {
+        foreach ($filters as $data) {
+            $value = $data['value'];
+
+            if (gettype($data['value']) == 'string') {
+                $value = strtolower($data['value']);
+            }
+
+            if ($data['condition'] == 'contain') {
+                if (gettype($value) == 'array') {
+                    $condition = " in ";
+                    $valueString = implode(',', $value);
+                    $value = "({$valueString})";
+                } else {
+                    $condition = " like ";
+                    $value = "'%{$value}%'";
+                }
+
+            } else if ($data['condition'] == 'not_contain') {
+                $condition = ' not like ';
+                $value = "'%{$value}%'";
+            } else if ($data['condition'] == 'equal') {
+                $condition = ' = ';
+            } else if ($data['condition'] == 'not_equal') {
+                $condition = ' != ';
+            } else if ($data['condition'] == 'more_than') {
+                $condition = " >= ";
+            }
+
+            $where .= $data['field'] . $condition . $value . ' and ';
+        }
+        $where = rtrim($where, " and");
+
+        return $where;
+    }
+}
+
+if (!function_exists('uploadBase64')) {
+    function uploadBase64(string $base64Image, string $path)
+    {
+        // Decode the base64 string
+        $imageParts = explode(";base64,", $base64Image);
+        if (count($imageParts) != 2) {
+            return null;
+        }
+
+        $imageTypeAux = explode("image/", $imageParts[0]);
+        if (count($imageTypeAux) != 2) {
+            return null;
+        }
+
+        $imageType = $imageTypeAux[1]; // e.g., png, jpg, etc.
+        $imageBase64 = base64_decode($imageParts[1]);
+
+        // Create a unique file name
+        $fileName = uniqid() . '.' . $imageType;
+
+        // Define the storage path
+        $filePath = $path . '/' . $fileName;
+
+        // Save the image using Laravel's Storage facade
+        \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $imageBase64);
+
+        return $fileName;
+    }
+}
+
+if (!function_exists('generateBarcode')) {
+    function generateBarcode(string $code, string $path)
+    {
+        $realPath = storage_path('app/public/' . $path);
+        $service = new \Milon\Barcode\DNS1D();
+        if (!is_dir($realPath)) {
+            mkdir($realPath, 0777, true);
+        }
+        $service->setStorPath($realPath);
+
+        $barcode = $service->getBarcodePNGPath($code, 'PDF417');
+        if (!$barcode) {
+            return null;
+        }
+
+        return str_replace(storage_path('app/public/'), '', $barcode);
     }
 }

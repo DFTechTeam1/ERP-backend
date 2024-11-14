@@ -115,7 +115,7 @@ return [
     'entertaintment' => "Entertainment",
     'newProject' => 'New Project',
     'newProjectNotification' => 'You just assigned to event :event',
-    'totalEquipmentPrice' => 'Total Equipment Price',
+    'totalEquipmentPrice' => 'Total Equipment',
     'totalIncome' => 'Total Income',
     'totalProjectInMonth' => 'Total Project in Month',
     'totalEmployee' => 'Total Employee',
@@ -179,7 +179,9 @@ return [
     'month' => 'Month',
     'newRequestTeam' => 'New team request',
     'newRequestTeamText' => 'You have new team request in event :event',
-    
+    'rejected' => 'Rejected',
+    'closed' => 'Closed',
+
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
     'credentialDoesNotMatch' => 'The credential provided does not match our database',

@@ -137,4 +137,10 @@ return [
 
     'root_email' => env('ROOT_EMAIL'),
 
+    'telegram_bot_token' => env('TELEGRAM_BOT_TOKEN', ''),
+
+    'telegram_url' => env('TELEGRAM_URL', null),
+
+    'telegram_domain' => env('TELEGRAM_DOMAIN', null),
+
 ];

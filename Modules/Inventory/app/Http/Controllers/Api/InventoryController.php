@@ -57,7 +57,7 @@ class InventoryController extends Controller
             'id,uid,name,item_type,brand_id,supplier_id,description,year_of_purchase,unit_id,purchase_price,warranty',
             '',
             [
-                'items:id,inventory_code,status,inventory_id,current_location',
+                'items:id,inventory_code,status,inventory_id,current_location,purchase_price,warranty,year_of_purchase,qrcode',
                 'image:id,image,inventory_id',
                 'brand:id,name',
                 'unit:id,name',
@@ -140,6 +140,20 @@ class InventoryController extends Controller
     public function bulkDelete(Request $request)
     {
         return apiResponse($this->service->bulkDelete(
+            collect($request->ids)->map(function ($item) {
+                return $item['uid'];
+            })->toArray()
+        ));
+    }
+
+    /**
+     * Bulk Delete
+     *
+     * @param Request $request
+     */
+    public function bulkDeleteCustomInventory(Request $request)
+    {
+        return apiResponse($this->service->bulkDeleteCustomInventory(
             collect($request->ids)->map(function ($item) {
                 return $item['uid'];
             })->toArray()

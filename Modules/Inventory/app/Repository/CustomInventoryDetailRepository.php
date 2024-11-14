@@ -68,7 +68,7 @@ class CustomInventoryDetailRepository extends CustomInventoryDetailInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -87,7 +87,7 @@ class CustomInventoryDetailRepository extends CustomInventoryDetailInterface {
         $query->selectRaw($select);
 
         $query->where("uid", $uid);
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -138,7 +138,7 @@ class CustomInventoryDetailRepository extends CustomInventoryDetailInterface {
      */
     public function delete(int $id)
     {
-        return $this->model->whereIn('id', $id)
+        return $this->model->where('id', $id)
             ->delete();
     }
 

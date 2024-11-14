@@ -54,7 +54,9 @@ class CustomInventoryRepository extends CustomInventoryInterface {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $orderBy = ''
     )
     {
         $query = $this->model->query();
@@ -68,7 +70,19 @@ class CustomInventoryRepository extends CustomInventoryInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
+        if ($whereHas) {
+            foreach ($whereHas as $wh) {
+                $query->whereHas($wh['relation'], function ($q) use ($wh) {
+                    $q->whereRaw($wh['query']);
+                });
+            }
+        }
+
+        logging('orderby', [$orderBy]);
+
+        $query->orderByRaw($orderBy);
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -91,7 +105,7 @@ class CustomInventoryRepository extends CustomInventoryInterface {
         } else {
             $query->where("uid", $uid);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
