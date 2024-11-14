@@ -6,6 +6,7 @@ use App\Enums\ErrorCode\Code;
 use App\Enums\Inventory\InventoryStatus;
 use App\Enums\Production\RequestEquipmentStatus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Modules\Inventory\Models\Brand;
 use Modules\Inventory\Models\InventoryType;
@@ -1260,43 +1261,47 @@ class InventoryService {
 
     protected function addItems($inventory, array $data)
     {
-        // create inventory code
-        // random int - SLUG item type - Inventory position - order number
-        $dividerCode = '-';
+        try {
+            // create inventory code
+            // random int - SLUG item type - Inventory position - order number
+            $dividerCode = '-';
 
-        $inventoryType = $inventory->itemTypeRelation;
+            $inventoryType = $inventory->itemTypeRelation;
 
-        $itemLoactions = [];
-        $countItems = $inventory->items->count();
-        foreach ($data['item_locations'] as $keyLocation => $itemLocation) {
-            $inventoryCode = rand(100,900) . $dividerCode . $inventoryType->slug . $dividerCode . $countItems + 1;
-            $userId = null;
-            if (
-                (isset($itemLocation['user_id'])) &&
-                (!empty($itemLocation['user_id'])) &&
-                ($itemLocation['user_id'] != 'undefined')
-            ) {
-                $userId = getIdFromUid($itemLocation['user_id'], new \Modules\Hrd\Models\Employee());
+            $itemLoactions = [];
+            $countItems = $inventory->items->count();
+            foreach ($data['item_locations'] as $keyLocation => $itemLocation) {
+                $inventoryCode = rand(100,900) . $dividerCode . $inventoryType->slug . $dividerCode . $countItems + 1;
+                $userId = null;
+                if (
+                    (isset($itemLocation['user_id'])) &&
+                    (!empty($itemLocation['user_id'])) &&
+                    ($itemLocation['user_id'] != 'undefined')
+                ) {
+                    $userId = getIdFromUid($itemLocation['user_id'], new \Modules\Hrd\Models\Employee());
+                }
+
+                $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr' . rand(100,900) . date('Yhs') . '.png');
+
+                $itemLoactions[] = [
+                    'inventory_code' => $inventoryCode,
+                    'status' => InventoryStatus::InUse->value,
+                    'current_location' => $itemLocation['location'],
+                    'user_id' => $userId,
+                    'qrcode' => $qrcode,
+                    'purchase_price' => $itemLocation['purchase_price'],
+                    'warranty' => $itemLocation['warranty'],
+                    'year_of_purchase' => $itemLocation['year_of_purchase'],
+                ];
+
+                $countItems++;
             }
 
-            $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr' . rand(100,900) . date('Yhs') . '.png');
-
-            $itemLoactions[] = [
-                'inventory_code' => $inventoryCode,
-                'status' => InventoryStatus::InUse->value,
-                'current_location' => $itemLocation['location'],
-                'user_id' => $userId,
-                'qrcode' => $qrcode,
-                'purchase_price' => $itemLocation['purchase_price'],
-                'warranty' => $itemLocation['warranty'],
-                'year_of_purchase' => $itemLocation['year_of_purchase'],
-            ];
-
-            $countItems++;
+            // store items
+            $inventory->items()->createMany($itemLoactions);
+        } catch (\Throwable $th) {
+            Log::error($th);
         }
-
-        // store items
-        $inventory->items()->createMany($itemLoactions);
     }
 
     public function itemList(string $uid)
