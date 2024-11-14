@@ -74,7 +74,7 @@ class Telegram {
         // Payload can be came from callback query
         if (isset($payload['message'])) {
             $this->senderId = $payload['message']['from']['id'];
-            $this->senderName = $payload['message']['from']['username'];
+            $this->senderName = $payload['message']['from']['username'] ?? 'Anonymous';
             $this->chatId = $payload['message']['chat']['id'];
         }
 
