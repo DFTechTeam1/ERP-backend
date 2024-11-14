@@ -65,6 +65,7 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::apiResource('user-inventory', "{$namespace}\UserInventoryController");
     Route::post('user-inventory/add-item/{uid}', "{$namespace}\UserInventoryController@addItem");
     Route::get('user-inventory/available-inventories/{employeeUid}', "{$namespace}\UserInventoryController@getAvailableInventories");
+    Route::get('user-inventory/available-custom-inventory/{employeeUid}', "{$namespace}\UserInventoryController@getAvailableCustomInventories");
     Route::get('user-inventory/get-user-information/{employeeUid}', "{$namespace}\UserInventoryController@getUserInformation");
 
 });

@@ -8,7 +8,7 @@ use App\Jobs\PostNotifyCompleteProjectJob;
 class PostNotifyCompleteProject {
     public function __invoke()
     {
-        $cutOffDate = '2024-10-03';
+        $cutOffDate = '2024-11-01';
         $projects = \Modules\Production\Models\Project::selectRaw('id,project_date,name,status')
             ->with([
                 'personInCharges:id,project_id,pic_id',
