@@ -13,7 +13,6 @@ class initiateTelegramCommand extends Command
      * @var string
      */
     protected $signature = 'app:initiate-telegram';
-//pass: jZneOS!p9:MUwB~8 user: u164909942.proderp ip: ftp://91.108.118.109
 
     /**
      * The console command description.
@@ -27,12 +26,48 @@ class initiateTelegramCommand extends Command
      */
     public function handle()
     {
+        $commands = [
+            'local' => [
+                [
+                    'name' => 'connection',
+                    'description' => 'Hubungkan akun telegram kamu dengan sistem'
+                ],
+                [
+                    'name' => 'my_project',
+                    'description' => 'Lihat project mu'
+                ],
+                [
+                    'name' => 'my_task',
+                    'description' => 'Lihat tugas tugas mu'
+                ],
+                [
+                    'name' => 'attendance',
+                    'description' => 'Absen jika kamu berada di luar kantor'
+                ],
+                [
+                    'name' => 'create_task',
+                    'description' => 'Buat tugas untuk tim mu'
+                ],
+            ],
+            'production' => [
+                [
+                    'name' => 'connection',
+                    'description' => 'Hubungkan akun telegram kamu dengan sistem'
+                ],
+                [
+                    'name' => 'my_project',
+                    'description' => 'Lihat project mu'
+                ],
+            ]
+        ];
+
         $telegram = new TelegramService();
-        $telegram->addCommand('connection', 'Hubungkan akun telegram kamu dengan sistem');
-        $telegram->addCommand('my_project', 'Lihat project mu');
-        $telegram->addCommand('my_task', 'Lihat tugas tugas mu');
-        $telegram->addCommand('attendance', 'Absen jika kamu berada di luar kantor');
-        $telegram->addCommand('create_task', 'Buat tugas untuk tim mu');
+
+        $selected = $commands[env('APP_ENV')];
+        foreach ($selected as $command) {
+            $telegram->addCommand($command['name'], $command['description']);
+        }
+
         $telegram->setMyCommand();
 
         $this->info('Telegram is ready to use');
