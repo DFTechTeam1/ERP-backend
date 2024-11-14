@@ -74,8 +74,8 @@ class TelegramAuthorizationController extends Controller
         return view('telegram::telegram-auth', [
             'chat_id' => $auth_data['id'],
             'first_name' => $auth_data['first_name'],
-            'username' => $auth_data['username'],
-            'photo_url' => $auth_data['photo_url']
+            'username' => $auth_data['username'] ?? 'Anonymous',
+            'photo_url' => $auth_data['photo_url'] ?? asset('dfactory.webp')
         ]);
     }
 
