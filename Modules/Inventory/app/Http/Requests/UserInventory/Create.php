@@ -12,12 +12,11 @@ class Create extends FormRequest
     public function rules(): array
     {
         return [
-            'inventories' => 'required',
-            'inventories.*.id' => 'required',
-            'inventories.*.quantity' => 'required',
-            'inventories.*.inventory_type' => 'required',
-            'inventories.*.custom_inventory_id' => 'nullable',
             'employee_id' => 'required',
+            'custom_inventories' => 'nullable',
+            'custom_inventories.*.id' => 'nullable',
+            'inventories' => 'nullable',
+            'inventories.*.id' => 'nullable'
         ];
     }
     /**
