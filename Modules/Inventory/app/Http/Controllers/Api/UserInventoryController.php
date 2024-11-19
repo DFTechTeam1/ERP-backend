@@ -28,7 +28,7 @@ class UserInventoryController extends Controller
             '',
             [
                 'employee:id,name,nickname',
-                'items:id,employee_inventory_master_id,inventory_item_id,inventory_status',
+                'items:id,employee_inventory_master_id,inventory_item_id,inventory_status,inventory_source,inventory_source_id',
                 'items.inventory:id,inventory_id,inventory_code',
                 'items.inventory.inventory:id,name'
             ]
@@ -82,6 +82,11 @@ class UserInventoryController extends Controller
     public function update(Update $request, string $id)
     {
         return apiResponse($this->service->update($request->validated(), $id));
+    }
+
+    public function deleteInventory(mixed $id, Request $request)
+    {
+        return apiResponse($this->service->deleteInventory($id, $request->type, $request->inventory_code));
     }
 
     /**

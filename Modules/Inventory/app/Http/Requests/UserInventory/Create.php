@@ -3,6 +3,7 @@
 namespace Modules\Inventory\Http\Requests\UserInventory;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Modules\Inventory\Rules\EmployeeInventory\EmployeeRule;
 
 class Create extends FormRequest
 {
@@ -12,7 +13,10 @@ class Create extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_id' => 'required',
+            'employee_id' => [
+                'required',
+                new EmployeeRule()
+            ],
             'custom_inventories' => 'nullable',
             'custom_inventories.*.id' => 'nullable',
             'inventories' => 'nullable',
