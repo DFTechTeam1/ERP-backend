@@ -4,10 +4,12 @@ namespace Modules\Inventory\Services;
 
 use App\Enums\ErrorCode\Code;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Models\Employee;
 use Modules\Inventory\Models\CustomInventory;
 use Modules\Inventory\Models\InventoryItem;
 use Modules\Inventory\Repository\CustomInventoryRepository;
+use Modules\Inventory\Repository\EmployeeInventoryItemRepository;
 use Modules\Inventory\Repository\EmployeeInventoryMasterRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
 
@@ -18,12 +20,16 @@ class EmployeeInventoryMasterService {
 
     private $customInventoryRepo;
 
+    private $employeeInventoryItemRepo;
+
     /**
      * Construction Data
      */
     public function __construct()
     {
         $this->repo = new EmployeeInventoryMasterRepository;
+
+        $this->employeeInventoryItemRepo = new EmployeeInventoryItemRepository;
 
         $this->inventoryItemRepo = new InventoryItemRepository;
 
@@ -66,17 +72,24 @@ class EmployeeInventoryMasterService {
             $totalData = $this->repo->list('id', $where)->count();
 
             $paginated = collect((object) $paginated)->map(function ($item) {
+                $itemGroupsRaw = collect((object)  $item->items)->groupBy('inventory_source_id');
+                $itemGroups = [];
+                foreach ($itemGroupsRaw as $group => $raw) {
+                    foreach ($raw as $rawItem) {
+                        $itemGroups[$group][] = [
+                            'display_image' => $rawItem->inventory->inventory->display_image,
+                            'code' => $rawItem->inventory->inventory_code,
+                            'name' => $rawItem->inventory->inventory->name,
+                            'type' => $raw[0]['inventory_source'],
+                        ];
+                    }
+                }
+
                 return [
                     'id' => $item->id,
                     'employee' => $item->employee->name,
                     'total_items' => $item->items->count(),
-                    'items' => collect((object) $item->items)->map(function ($itemInventory) {
-                        return [
-                            'name' => $itemInventory->inventory->inventory->name,
-                            'display_image' => $itemInventory->inventory->inventory->display_image,
-                            'code' => $itemInventory->inventory->inventory_code
-                        ];
-                    })->toArray()
+                    'items' => $itemGroups,
                 ];
             });
 
@@ -219,13 +232,16 @@ class EmployeeInventoryMasterService {
 
     public function getAvailableCustomInventories(string $employeeUid)
     {
-        $employeeId = getIdFromUid($employeeUid, new Employee());
-
-        $current = $this->repo->show('uid', 'custom_inventory_id', [], 'employee_id = ' . $employeeId);
+        $allData = $this->repo->list('custom_inventory_id', 'custom_inventory_id is not null');
+        $customInventoryIds = [];
+        foreach ($allData as $employeeInventory) {
+            $merge = array_merge($customInventoryIds, $employeeInventory->custom_inventory_id);
+            $customInventoryIds = $merge;
+        }
 
         $where = "type = 'pcrakitan'";
-        if (($current) && ($current->custom_inventory_id)) {
-            $currentCustom = "(" . implode(',', $current->custom_inventory_id) . ")";
+        if (!empty($customInventoryIds)) {
+            $currentCustom = "(" . implode(',', $customInventoryIds) . ")";
             $where .= ' and id not in ' . $currentCustom;
         }
 
@@ -265,6 +281,22 @@ class EmployeeInventoryMasterService {
         $output = [];
         $where = '';
 
+        // get all inventory items that already registered on custom inventory
+        $customInventories = $this->customInventoryRepo->list(
+            'id',
+            '',
+            [
+                'items:id,custom_inventory_id,inventory_id',
+                'items.inventory:id,inventory_id,inventory_code',
+            ]
+        );
+        $customInventoryItems = [];
+        foreach ($customInventories as $customInventory) {
+            foreach ($customInventory->items as $itemInventory) {
+                $customInventoryItems[] = $itemInventory->inventory->id;
+            }
+        }
+
         if ($current) {
             $itemIds = collect((object) $current->items)->pluck('inventory_item_id')->toArray();
 
@@ -274,12 +306,22 @@ class EmployeeInventoryMasterService {
             }
         }
 
+        if (!empty($customInventoryItems)) {
+            $conditionCustomInventory = "(" . implode(',', $customInventoryItems) . ")";
+            if (empty($where)) {
+                $where = "id not in {$conditionCustomInventory}";
+            } else {
+                $where .= " and id not in {$conditionCustomInventory}";
+            }
+        }
+
         $items = $this->inventoryItemRepo->list('id,inventory_id,inventory_code', $where, ['inventory:id,name']);
 
         foreach ($items as $item) {
             $output[] = [
                 'title' => $item->inventory->name,
-                'value' => $item->id
+                'value' => $item->id,
+                'code' => $item->inventory_code,
             ];
         }
 
@@ -326,6 +368,8 @@ class EmployeeInventoryMasterService {
                 return [
                     'inventory_item_id' => $item['id'],
                     'inventory_status' => 1,
+                    'inventory_source' => 'inventory',
+                    'inventory_source_id' => 0
                 ];
             })->toArray();
         }
@@ -340,10 +384,12 @@ class EmployeeInventoryMasterService {
                     ]
                 );
 
-                $customItemList = collect((object) $customItem->items)->map(function ($inventory) {
+                $customItemList = collect((object) $customItem->items)->map(function ($inventory) use($customInventory) {
                     return [
                         'inventory_item_id' => $inventory->inventory_id,
-                        'inventory_status' => 1
+                        'inventory_status' => 1,
+                        'inventory_source' => 'custom',
+                        'inventory_source_id' => getIdFromUid($customInventory['id'], new CustomInventory()),
                     ];
                 })->toArray();
 
@@ -392,6 +438,40 @@ class EmployeeInventoryMasterService {
     }
 
     /**
+     * Delete selected inventory
+     * @param string $id
+     * @param string $type
+     * @param mixed $inventoryId
+     * @return array
+     */
+    public function deleteInventory(string $id, string $type, string $inventoryCode)
+    {
+        DB::beginTransaction();
+        try {
+            $data = $this->repo->show($id, 'custom_inventory_id,employee_id,id');
+
+            if ($type === 'custom') {
+                // delete custom inventory id
+
+            } else {
+                // delete inventory item
+//                $this->employeeInventoryItemRepo->delete(0, 'employee_inventory_master_id = ' . $id . " and inventory_item_id = " . $inventoryId);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.successUpdateUserInventory'),
+                false
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Update selected data
      *
      * @param array $data
@@ -406,14 +486,27 @@ class EmployeeInventoryMasterService {
         string $where = ''
     ): array
     {
+        DB::beginTransaction();
         try {
-            $this->repo->update($data, $id);
+            $employeeId = getIdFromUid($data['employee_id'], new Employee());
+
+            $customInventory = $this->processCustomInventories($data);
+
+            $inventories = $this->processInventories($data);
+
+            $this->repo->update([
+                'custom_inventory_id' => $customInventory
+            ], $id);
+
+            DB::commit();
 
             return generalResponse(
                 'success',
                 false,
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
