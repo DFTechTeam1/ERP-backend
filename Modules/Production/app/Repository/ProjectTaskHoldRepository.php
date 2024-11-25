@@ -1,18 +1,18 @@
 <?php
 
-namespace Modules\Inventory\Repository;
+namespace Modules\Production\Repository;
 
-use Modules\Inventory\Models\InventoryItem;
-use Modules\Inventory\Repository\Interface\InventoryItemInterface;
+use Modules\Production\Models\ProjectTaskHold;
+use Modules\Production\Repository\Interface\ProjectTaskHoldInterface;
 
-class InventoryItemRepository extends InventoryItemInterface {
+class ProjectTaskHoldRepository extends ProjectTaskHoldInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new InventoryItem();
+        $this->model = new ProjectTaskHold();
         $this->key = 'id';
     }
 
@@ -68,7 +68,7 @@ class InventoryItemRepository extends InventoryItemInterface {
         if ($relation) {
             $query->with($relation);
         }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -80,18 +80,14 @@ class InventoryItemRepository extends InventoryItemInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where("uid", $uid);
-        } else {
-            $query->whereRaw($where);
-        }
-
+        $query->where("uid", $uid);
+        
         if ($relation) {
             $query->with($relation);
         }
@@ -140,31 +136,10 @@ class InventoryItemRepository extends InventoryItemInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $key = 'id')
+    public function delete(int $id)
     {
-        return $this->model->where($key, $id)
+        return $this->model->whereIn('id', $id)
             ->delete();
-    }
-
-    /**
-     * Multiple update and create
-     *
-     * @param array $data
-     * @param array $uniqueColumns
-     * @param array $updatedColumns
-     * @return void
-     */
-    public function upsert(
-        array $data,
-        array $uniqueColumns,
-        array $updatedColumns
-    )
-    {
-        return $this->model->upsert(
-            $data,
-            $uniqueColumns,
-            $updatedColumns
-        );
     }
 
     /**
