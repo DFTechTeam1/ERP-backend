@@ -10,6 +10,8 @@ enum TaskStatus: int
     case Completed = 4;
     case WaitingApproval = 5;
 
+    case OnHold = 6;
+
     public function label()
     {
         return match ($this) {
@@ -18,6 +20,7 @@ enum TaskStatus: int
             static::Revise => __("global.revise"),
             static::Completed => __("global.completed"),
             static::WaitingApproval => __("global.waitingApproval"),
+            static::OnHold => __("global.onHold"),
         };
     }
 
@@ -29,6 +32,7 @@ enum TaskStatus: int
             static::Revise => 'orange-darken-1',
             static::Completed => 'success',
             static::WaitingApproval => 'grey-lighten-1',
+            static::OnHold => 'yellow-darken-3',
         };
     }
 }
