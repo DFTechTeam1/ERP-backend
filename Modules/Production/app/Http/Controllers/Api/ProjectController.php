@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
+use Modules\Production\Http\Requests\Project\HoldTask;
 use Modules\Production\Http\Requests\Project\LoanTeamMember;
 use Modules\Production\Http\Requests\Project\ChangeStatus;
 use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
@@ -364,7 +365,7 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->changeTaskBoard($request->validated(), $projectId));
     }
-    
+
     /**
      * Change board of task (When user move a task)
      *
@@ -446,7 +447,7 @@ class ProjectController extends Controller
      * $request data will be:
      * 1. string reason -> required
      * 2. blob file -> nullable
-     * 
+     *
      * @param ReviseTask $request
      * @param string $projectUid
      * @param string $taskUid
@@ -455,6 +456,16 @@ class ProjectController extends Controller
     public function reviseTask(ReviseTask $request, string $projectUid, string $taskUid)
     {
         return apiResponse($this->service->reviseTask($request->validated(), $projectUid, $taskUid));
+    }
+
+    public function holdTask(string $projectUid, string $taskUid, HoldTask $request)
+    {
+        return apiResponse($this->service->holdTask($projectUid, $taskUid, $request->validated()));
+    }
+
+    public function startTask(string $projectUid, string $taskUid)
+    {
+        return apiResponse($this->service->startTask($projectUid, $taskUid));
     }
 
     public function getProjectCalendars()
@@ -573,7 +584,7 @@ class ProjectController extends Controller
 
     public function getPicScheduler(string $projectUid)
     {
-        return apiResponse($this->service->getPicScheduler($projectUid));        
+        return apiResponse($this->service->getPicScheduler($projectUid));
     }
 
     public function assignPic(\Modules\Production\Http\Requests\Project\AssignPic $request, string $projectUid)
@@ -621,7 +632,7 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->getprojectyears());
     }
-    
+
     public function getProjectFolderDetail()
     {
         return apiResponse($this->service->getProjectFolderDetail());

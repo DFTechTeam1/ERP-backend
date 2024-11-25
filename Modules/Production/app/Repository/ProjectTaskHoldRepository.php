@@ -1,18 +1,18 @@
 <?php
 
-namespace Modules\Inventory\Repository;
+namespace Modules\Production\Repository;
 
-use Modules\Inventory\Models\EmployeeInventoryItem;
-use Modules\Inventory\Repository\Interface\EmployeeInventoryItemInterface;
+use Modules\Production\Models\ProjectTaskHold;
+use Modules\Production\Repository\Interface\ProjectTaskHoldInterface;
 
-class EmployeeInventoryItemRepository extends EmployeeInventoryItemInterface {
+class ProjectTaskHoldRepository extends ProjectTaskHoldInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EmployeeInventoryItem();
+        $this->model = new ProjectTaskHold();
         $this->key = 'id';
     }
 
@@ -68,7 +68,7 @@ class EmployeeInventoryItemRepository extends EmployeeInventoryItemInterface {
         if ($relation) {
             $query->with($relation);
         }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -87,7 +87,7 @@ class EmployeeInventoryItemRepository extends EmployeeInventoryItemInterface {
         $query->selectRaw($select);
 
         $query->where("uid", $uid);
-
+        
         if ($relation) {
             $query->with($relation);
         }
@@ -136,17 +136,10 @@ class EmployeeInventoryItemRepository extends EmployeeInventoryItemInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-
-        if (empty($where)) {
-            $query->where('id', $id);
-        } else {
-            $query->whereRaw($where);
-        }
-
-        return $query->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**
