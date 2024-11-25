@@ -63,7 +63,7 @@ Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::get('request-inventory/{type}/{uid}', "{$namespace}\RequestInventoryController@processRequest");
 
     Route::apiResource('user-inventory', "{$namespace}\UserInventoryController");
-    Route::delete('user-inventory/delete-inventory', "{$namespace}\UserInventoryController@deleteInventory");
+    Route::post('user-inventory/delete-inventory', "{$namespace}\UserInventoryController@deleteInventory");
     Route::post('user-inventory/add-item/{uid}', "{$namespace}\UserInventoryController@addItem");
     Route::get('user-inventory/available-inventories/{employeeUid}', "{$namespace}\UserInventoryController@getAvailableInventories");
     Route::get('user-inventory/available-custom-inventory/{employeeUid}', "{$namespace}\UserInventoryController@getAvailableCustomInventories");

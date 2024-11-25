@@ -24,4 +24,6 @@ return [
     'userInventoryStored' => 'User Inventory has been successfully stored',
     'successAddUserInventory' => 'stock added successfully',
     'successUpdateUserInventory' => 'Success edit user inventory',
+    'taskIsOnHold' => 'Task is now start to hold',
+    'taskIsNowActive' => 'Task is now active',
 ];

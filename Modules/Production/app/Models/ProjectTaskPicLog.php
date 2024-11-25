@@ -50,6 +50,8 @@ class ProjectTaskPicLog extends Model
                 $out = __("global.employeeReviseTask");
             } else if (\App\Enums\Production\WorkType::Finish->value == $this->attributes['work_type']) {
                 $out = __("global.employeeFinishTask", ['name' => $employee->nickname]);
+            } else if (\App\Enums\Production\WorkType::OnHold->value == $this->attributes['work_type']) {
+                $out = __("global.onHoldTask", ['name' => $employee->nickname]);
             }
         }
 

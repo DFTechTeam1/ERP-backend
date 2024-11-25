@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Inventory\Http\Requests\UserInventory\AddItem;
 use Modules\Inventory\Http\Requests\UserInventory\Create;
+use Modules\Inventory\Http\Requests\UserInventory\DeleteInventory;
 use Modules\Inventory\Http\Requests\UserInventory\Update;
 use Modules\Inventory\Services\EmployeeInventoryMasterService;
 
@@ -27,7 +28,7 @@ class UserInventoryController extends Controller
             '*',
             '',
             [
-                'employee:id,name,nickname',
+                'employee:id,name,nickname,uid',
                 'items:id,employee_inventory_master_id,inventory_item_id,inventory_status,inventory_source,inventory_source_id',
                 'items.inventory:id,inventory_id,inventory_code',
                 'items.inventory.inventory:id,name'
@@ -84,9 +85,9 @@ class UserInventoryController extends Controller
         return apiResponse($this->service->update($request->validated(), $id));
     }
 
-    public function deleteInventory(mixed $id, Request $request)
+    public function deleteInventory(DeleteInventory $request)
     {
-        return apiResponse($this->service->deleteInventory($id, $request->type, $request->inventory_code));
+        return apiResponse($this->service->deleteInventory($request->validated()));
     }
 
     /**

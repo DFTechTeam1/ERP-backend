@@ -88,6 +88,7 @@ class EmployeeInventoryMasterService {
                 return [
                     'id' => $item->id,
                     'employee' => $item->employee->name,
+                    'eid' => $item->employee->uid,
                     'total_items' => $item->items->count(),
                     'items' => $itemGroups,
                 ];
@@ -444,18 +445,30 @@ class EmployeeInventoryMasterService {
      * @param mixed $inventoryId
      * @return array
      */
-    public function deleteInventory(string $id, string $type, string $inventoryCode)
+    public function deleteInventory(array $payload)
     {
         DB::beginTransaction();
         try {
-            $data = $this->repo->show($id, 'custom_inventory_id,employee_id,id');
+            $employeeId = getIdFromUid($payload['employee_id'], new Employee());
+            $inventoryId = $payload['inventory_id'];
+            $type = $payload['type'];
 
             if ($type === 'custom') {
                 // delete custom inventory id
+                $master = $this->repo->show('id', 'id,employee_id,custom_inventory_id', [], 'employee_id = ' . $employeeId);
 
+                $this->employeeInventoryItemRepo->delete(0, 'inventory_source_id = ' . $inventoryId);
+
+                $filterCustom = array_values(array_filter($master->custom_inventory_id, function ($filter) use ($inventoryId) {
+                    return $filter !=  $inventoryId;
+                }));
+                $this->repo->update([
+                    'custom_inventory_id' => $filterCustom
+                ], 'id', 'employee_id = ' . $employeeId);
             } else {
                 // delete inventory item
-//                $this->employeeInventoryItemRepo->delete(0, 'employee_inventory_master_id = ' . $id . " and inventory_item_id = " . $inventoryId);
+                $inventoryItem = $this->inventoryItemRepo->show('id', 'id', [], "inventory_code = '" . $inventoryId . "'");
+                $this->employeeInventoryItemRepo->delete('0', 'inventory_item_id = ' . $inventoryItem->id);
             }
 
             DB::commit();
