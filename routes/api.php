@@ -27,6 +27,25 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::get('interactive/download', function (Request $request) {
+    return \Illuminate\Support\Facades\Response::download(asset('storage/interactive/qr/' . $request->get('file')));
+});
+
+Route::post('interactive/image/1', function (Request $request) {
+    try {
+        $image = uploadBase64($request->image, 'interactive/qr');
+        if ($image) {
+            // create qr
+            $qrcode = createQr(env('APP_URL') . '/interactive/download?file=' . $image);
+        }
+        return $qrcode ?? '';
+    } catch (\Throwable $th) {
+        return json_encode([
+            'error' => $th->getMessage()
+        ]);
+    }
+});
+
 Route::get('testing', function () {
     $items = \Modules\Inventory\Models\UserInventoryMaster::with('items:id,user_inventory_master_id,inventory_id,quantity')
         ->latest()->first();

@@ -822,3 +822,14 @@ if (!function_exists('generateBarcode')) {
         return str_replace(storage_path('app/public/'), '', $barcode);
     }
 }
+
+if (!function_exists('checkForeignKey')) {
+    function checkForeignKey($tableName, $columnName)
+    {
+        return \Illuminate\Support\Facades\DB::table('information_schema.KEY_COLUMN_USAGE')
+            ->where('TABLE_NAME', $tableName)
+            ->where('COLUMN_NAME', $columnName)
+            ->where('TABLE_SCHEMA', \Illuminate\Support\Facades\DB::getDatabaseName())
+            ->exists();
+    }
+}
