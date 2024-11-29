@@ -24,4 +24,6 @@ return [
     'userInventoryStored' => 'Inventory untuk user berhasil di tambahkan',
     'successAddUserInventory' => 'Stok inventory berhasil ditambah',
     'successUpdateUserInventory' => 'Inventory user berhasil di ubah',
+    'taskIsOnHold' => 'Tugas sekarang sudah di tahan',
+    'taskIsNowActive' => 'Tugas sekarang sudah aktif',
 ];

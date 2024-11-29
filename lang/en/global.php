@@ -181,6 +181,10 @@ return [
     'newRequestTeamText' => 'You have new team request in event :event',
     'rejected' => 'Rejected',
     'closed' => 'Closed',
+    'onHold' => 'On Hold',
+    'onHoldTask' => ':name hold the task',
+    'actorHoldTheTask' => ':actor hold the task',
+    'actorStartTheTask' => ':actor start the task',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

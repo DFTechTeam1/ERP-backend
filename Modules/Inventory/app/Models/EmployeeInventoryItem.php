@@ -17,7 +17,9 @@ class EmployeeInventoryItem extends Model
     protected $fillable = [
         'employee_inventory_master_id',
         'inventory_item_id',
-        'inventory_status'
+        'inventory_status',
+        'inventory_source',
+        'inventory_source_id'
     ];
 
     public function inventory(): BelongsTo
