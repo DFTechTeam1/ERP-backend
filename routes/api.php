@@ -27,10 +27,6 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::get('interactive/download', function (Request $request) {
-    return \Illuminate\Support\Facades\Response::download(asset('storage/interactive/qr/' . $request->get('file')));
-});
-
 Route::post('interactive/image/1', function (Request $request) {
     try {
         $image = uploadBase64($request->image, 'interactive/qr');
