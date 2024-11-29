@@ -4,10 +4,13 @@ namespace Modules\Production\Services;
 
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
+use App\Enums\Production\TaskStatus;
+use App\Enums\Production\WorkType;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -76,6 +79,8 @@ class ProjectService
 
     private $inventoryItemRepo;
 
+    private $projectTaskHoldRepo;
+
     private $geocoding;
 
     /**
@@ -84,6 +89,8 @@ class ProjectService
     public function __construct()
     {
         $this->geocoding = new \App\Services\Geocoding();
+
+        $this->projectTaskHoldRepo = new \Modules\Production\Repository\ProjectTaskHoldRepository();
 
         $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
 
@@ -1759,6 +1766,14 @@ class ProjectService
                 if ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value) {
                     $outputTask[$keyTask]['is_active'] = true;
                 }
+
+                // disable when task is on hold
+                if ($task['status'] === \App\Enums\Production\TaskStatus::OnHold->value) {
+                    $outputTask[$keyTask]['is_active'] = false;
+                }
+
+                $outputTask[$keyTask]['show_hold_button'] = $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value || $task['status'] == \App\Enums\Production\TaskStatus::Revise->value;
+                $outputTask[$keyTask]['is_hold'] = $task['status'] == \App\Enums\Production\TaskStatus::OnHold->value ? true : false;
 
                 // foreach ($task['pics'] as $pic) {
                 //     if ($pic['employee_id'] == $employeeId) {
@@ -3746,6 +3761,26 @@ class ProjectService
         return $this->{$type}($payload);
     }
 
+    protected function startTaskLog($payload)
+    {
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task_id'],
+            'type' => 'holdTask',
+            'text' => __('global.actorStartTheTask', ['actor' => $payload['actor']]),
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    protected function holdTaskLog($payload)
+    {
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task_id'],
+            'type' => 'holdTask',
+            'text' => __('global.actorHoldTheTask', ['actor' => $payload['actor']]),
+            'user_id' => auth()->id(),
+        ]);
+    }
+
     /**
      * Add log when user add attachment
      *
@@ -4465,6 +4500,103 @@ class ProjectService
                 deleteImage($path);
             }
 
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function startTask(string $projectUid, string $taskUid)
+    {
+        DB::beginTransaction();
+        try {
+            $user = auth()->user();
+            $taskId = getIdFromUid($taskUid, new ProjectTask());
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+            $employee = $this->employeeRepo->show('id', 'id,nickname', [], 'id = ' . $user->employee_id);
+            $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnProgress->value);
+
+            $this->taskRepo->update([
+                'status' => TaskStatus::OnProgress->value
+            ], $taskUid);
+
+            $this->loggingTask([
+                'task_id' => $taskId,
+                'actor' => $employee->nickname,
+            ], 'startTask');
+
+            //update cache and finishing process
+            $task = $this->formattedDetailTask($taskUid);
+
+            $currentData = getCache('detailProject' . $projectId);
+
+            $boards = $this->formattedBoards($task->project->uid);
+            $currentData['boards'] = $boards;
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.taskIsNowActive'),
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function holdTask(string $projectUid, string $taskUid, array $payload = [])
+    {
+        DB::beginTransaction();
+        try {
+            $user = auth()->user();
+            $taskId = getIdFromUid($taskUid, new ProjectTask());
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+            $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnHold->value);
+            $employee = $this->employeeRepo->show('id', 'id,nickname', [], 'id = ' . $user->employee_id);
+
+            $this->taskRepo->update([
+                'status' => TaskStatus::OnHold->value
+            ], $taskUid);
+
+            $this->projectTaskHoldRepo->store([
+                'project_task_id' => $taskId,
+                'reason' => $payload['reason'],
+                'hold_at' => Carbon::now(),
+                'hold_by' => auth()->user()->employee_id ?? auth()->id()
+            ]);
+
+            $this->loggingTask([
+                'task_id' => $taskId,
+                'actor' => $employee->nickname,
+            ], 'holdTask');
+
+            //update cache and finishing process
+            $task = $this->formattedDetailTask($taskUid);
+
+            $currentData = getCache('detailProject' . $projectId);
+
+            $boards = $this->formattedBoards($task->project->uid);
+            $currentData['boards'] = $boards;
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.taskIsOnHold'),
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ],
+            );
+        } catch (\Throwable $th) {
             DB::rollBack();
 
             return errorResponse($th);
