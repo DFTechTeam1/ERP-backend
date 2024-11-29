@@ -13,6 +13,10 @@ Route::get('/', function () {
     return view('landing');
 });
 
+Route::get('interactive/download', function (\Illuminate\Support\Facades\Request$request) {
+    return \Illuminate\Support\Facades\Response::download(public_path('storage/interactive/qr/' . request('file')));
+});
+
 Route::get('telegram', function () {
     $user = \App\Models\User::where('employee_id', 49)->first();
 
