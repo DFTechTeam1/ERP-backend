@@ -36,7 +36,7 @@ Route::post('interactive/image/{deviceId}', function (Request $request, $deviceI
             mkdir(storage_path('app/public/' . $filepath), 0777, true);
         }
 
-        $image = uploadBase64($request->image, $filepath);
+        $image = uploadBase64($request->getContent(), $filepath);
         if ($image) {
             // create qr
             $qrcode = createQr(env('APP_URL') . '/interactive/download?file=' . $image);
