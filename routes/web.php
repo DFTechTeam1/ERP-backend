@@ -14,7 +14,9 @@ Route::get('/', function () {
 });
 
 Route::get('interactive/download', function (\Illuminate\Support\Facades\Request$request) {
-    return \Illuminate\Support\Facades\Response::download(public_path('storage/interactive/qr/' . request('file')));
+    $date = date('Y-m-d');
+    $deviceId = request('d');
+    return \Illuminate\Support\Facades\Response::download(public_path("storage/interactive/qr/{$deviceId}/{$date}/" . request('file')));
 });
 
 Route::get('prune', function () {
