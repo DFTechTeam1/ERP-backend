@@ -158,9 +158,10 @@ if (!function_exists('generateQrcode')) {
 
         $path = implode('/', $explode);
 
-        // if (!is_dir(storage_path("app/public/{$filename}"))) {
-        // }
-        \Illuminate\Support\Facades\Storage::makeDirectory($path);
+         if (!is_dir(storage_path("app/public/{$path}"))) {
+             mkdir(storage_path("app/public/{$path}"), 0777, true);
+         }
+//        \Illuminate\Support\Facades\Storage::makeDirectory($path);
 
         $fullpath = storage_path('app/public/' . $filename);
 
@@ -169,8 +170,8 @@ if (!function_exists('generateQrcode')) {
 
         FacadesQrCode::format('png')
             ->size(512)
-            ->style('dot')
-            ->eye('circle')
+            ->style('round')
+            ->eye('square')
             ->gradient($from[0], $from[1], $from[2], $to[0], $to[1], $to[2], 'diagonal')
             ->margin(1)
             ->generate($payload, $fullpath);
