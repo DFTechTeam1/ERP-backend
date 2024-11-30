@@ -9,6 +9,7 @@ use App\Enums\Production\WorkType;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectRepository;
@@ -2097,10 +2098,13 @@ class ProjectService
 
             $data['project_class_id'] = $projectClass->id;
 
-            $this->repo->update(
+            $update = $this->repo->update(
                 collect($data)->except(['date'])->toArray(),
                 $projectUid
             );
+
+            // manually fire the event
+            Event::dispatch('eloquent.updated: ' . get_class(new \Modules\Production\Models\Project()), $update);
 
             /**
              * This function will return

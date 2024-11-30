@@ -824,6 +824,57 @@ if (!function_exists('generateBarcode')) {
     }
 }
 
+
+if (!function_exists('getStructureNasFolder')) {
+    function getStructureNasFolder(): array {
+        return [
+            "{year}/{format_name}/Brief",
+            "{year}/{format_name}/Asset_3D",
+            "{year}/{format_name}/Asset_Footage",
+            "{year}/{format_name}/Asset_Render",
+            "{year}/{format_name}/Final_Render",
+            "{year}/{format_name}/Aseet_Sementara",
+            "{year}/{format_name}/Preview",
+            "{year}/{format_name}/Sketsa",
+            "{year}/{format_name}/TC",
+            "{year}/{format_name}/Raw",
+            "{year}/{format_name}/Audio",
+        ];
+    }
+}
+
+if (!function_exists('MonthInBahasa')) {
+    function MonthInBahasa($search = ''): array|string {
+        $months = ['Januari', 'Febuari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+        if (!empty($search)) {
+            $explode = str_split($search);
+            if ($explode[0] == 0) {
+                $search = $explode[1];
+            }
+
+            $months = $months[$search -1];
+        }
+
+        return $months;
+    }
+}
+
+if (!function_exists('stringToPascalSnakeCase')) {
+    function stringToPascalSnakeCase($string) {
+        // Remove special characters except spaces and apostrophes
+        $string = preg_replace('/[^a-zA-Z0-9\s\']/', '', $string);
+
+        // Convert to PascalCase (capitalize each word)
+        $pascalCase = str_replace(' ', '', ucwords(strtolower($string)));
+
+        // Convert PascalCase to snake_case while keeping capitalization on each word
+        $snakeCase = preg_replace('/([a-z])([A-Z])/', '$1_$2', $pascalCase);
+
+        return $snakeCase;
+    }
+}
+
 if (!function_exists('checkForeignKey')) {
     function checkForeignKey($tableName, $columnName)
     {
@@ -832,5 +883,6 @@ if (!function_exists('checkForeignKey')) {
             ->where('COLUMN_NAME', $columnName)
             ->where('TABLE_SCHEMA', \Illuminate\Support\Facades\DB::getDatabaseName())
             ->exists();
+
     }
 }
