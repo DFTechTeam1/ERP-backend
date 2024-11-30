@@ -27,9 +27,16 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::post('interactive/image/1', function (Request $request) {
+Route::post('interactive/image/{deviceId}', function (Request $request, $deviceId) {
     try {
-        $image = uploadBase64($request->image, 'interactive/qr');
+        $date = date('Y-m-d');
+        $filepath = "interactive/qr/{$deviceId}/{$date}";
+
+        if (!is_dir(storage_path('app/public/' . $filepath))) {
+            mkdir(storage_path('app/public/' . $filepath), 0777, true);
+        }
+
+        $image = uploadBase64($request->image, $filepath);
         if ($image) {
             // create qr
             $qrcode = createQr(env('APP_URL') . '/interactive/download?file=' . $image);
