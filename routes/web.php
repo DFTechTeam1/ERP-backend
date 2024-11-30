@@ -13,6 +13,26 @@ Route::get('/', function () {
     return view('landing');
 });
 
+Route::get('interactive/download', function (\Illuminate\Support\Facades\Request$request) {
+    $date = date('Y-m-d');
+    $deviceId = request('d');
+    return \Illuminate\Support\Facades\Response::download(public_path("storage/interactive/qr/{$deviceId}/{$date}/" . request('file')));
+});
+
+Route::get('prune', function () {
+    $files = glob(storage_path('app/public/interactive/qr/*'));
+    foreach ($files as $file) {
+        if (is_file($file)) {
+            unlink($file);
+        }
+    }
+
+    if (empty(glob(storage_path('app/public/interactive/qr/*')))) {
+        rmdir(storage_path('app/public/interactive/qr'));
+    }
+    echo json_encode($files);
+});
+
 Route::get('telegram', function () {
 //    $user = \App\Models\User::where('employee_id', 49)->first();
 //
