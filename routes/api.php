@@ -36,10 +36,11 @@ Route::post('interactive/image/{deviceId}', function (Request $request, $deviceI
             mkdir(storage_path('app/public/' . $filepath), 0777, true);
         }
 
+        $filename = date('YmdHis') . '.png';
         $image = uploadBase64($request->getContent(), $filepath);
         if ($image) {
             // create qr
-            $qrcode = generateQrcode(env('APP_URL') . '/interactive/download?file=' . $image, $filepath . '/' . date('YmdHis') . '.png');
+            $qrcode = generateQrcode(env('APP_URL') . '/interactive/download?file=' . $filename, $filepath . '/' . $filename);
         }
         return $qrcode ? 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path("app/public/{$qrcode}"))) : '';
     } catch (\Throwable $th) {
