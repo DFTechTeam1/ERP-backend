@@ -40,7 +40,7 @@ Route::post('interactive/image/{deviceId}', function (Request $request, $deviceI
         $image = uploadBase64($request->getContent(), $filepath);
         if ($image) {
             // create qr
-            $qrcode = generateQrcode(env('APP_URL') . '/interactive/download?file=' . $filename, $filepath . '/' . $filename);
+            $qrcode = generateQrcode(env('APP_URL') . '/interactive/download?file=' . $filename . '&d=' . $deviceId, $filepath . '/' . $filename);
         }
         return $qrcode ? 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path("app/public/{$qrcode}"))) : '';
     } catch (\Throwable $th) {
