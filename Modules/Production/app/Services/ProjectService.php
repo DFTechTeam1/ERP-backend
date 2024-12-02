@@ -6203,7 +6203,7 @@ class ProjectService
     public function getEmployeeTaskList(string $projectUid, int $employeeId)
     {
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
-        $tasks = $this->taskPicHistory->list('project_id,project_task_id,employee_id', "employee_id = {$employeeId} and project_id = {$projectId}", ['task:id,name,status,created_at', 'task.proofOfWorks:project_task_id,project_id,nas_link,preview_image']);
+        $tasks = $this->taskPicHistory->list('distinct(project_task_id),project_id,employee_id', "employee_id = {$employeeId} and project_id = {$projectId}", ['task:id,name,status,created_at', 'task.proofOfWorks:project_task_id,project_id,nas_link,preview_image']);
 
         $output = [];
         foreach ($tasks as $task) {
