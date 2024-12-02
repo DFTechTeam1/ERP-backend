@@ -652,5 +652,10 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->requestEntertainment($request->validated(), $projectUid));
     }
+
+    public function getEmployeeTaskList(string $projectUid, int $employeeId)
+    {
+        return apiResponse($this->service->getEmployeeTaskList($projectUid, $employeeId));
+    }
 }
 

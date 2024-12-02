@@ -13,6 +13,7 @@ class NasFolderObserver
      */
     public function created(Project $project): void
     {
+        Log::debug('project', $project->toArray());
         $this->mainProcess($project->id, $project->name, $project->project_date);
     }
 
@@ -43,7 +44,7 @@ class NasFolderObserver
                 ]);
         } else {
             NasFolderCreation::create([
-                'project_name' => $proejctName,
+                'project_name' => $projectName,
                 'project_id' => $projectId,
                 'folder_path' => json_encode($folders)
             ]);
