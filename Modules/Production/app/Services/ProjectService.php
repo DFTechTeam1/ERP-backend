@@ -11,6 +11,8 @@ use App\Exceptions\NotRegisteredAsUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Modules\Hrd\Models\Employee;
+use Modules\Production\Jobs\AssignNewPic;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectReferenceRepository;
@@ -671,9 +673,9 @@ class ProjectService
             $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
         }
 
-        if (request('filter_month')) {
-            $startDate = request('filter_year') . '-' . request('filter_month') . '-01';
-        }
+//        if (request('filter_month')) {
+//            $startDate = request('filter_year') . '-' . request('filter_month') . '-01';
+//        }
 
         if (empty($where)) {
             $where = "project_date >= '{$startDate}'";
@@ -686,14 +688,16 @@ class ProjectService
 
         if (request('end_date')) {
             $endDate = date('Y-m-d', strtotime(request('end_date')));
+            Log::debug('end date first', [date('Y-m-d', strtotime(request('end_date')))]);
         } else { // set based on selected project date
             $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
         }
+        Log::debug('end data', [$endDate]);
 
-        if (request('filter_month')) {
-            $endCarbon = \Carbon\Carbon::parse(request('filter_year') . '-' . request('filter_month') . '-01');
-            $endDate = request('filter_year') . '-' . request('filter_month') . '-' . $endCarbon->endOfMonth()->format('d');
-        }
+//        if (request('filter_month')) {
+//            $endCarbon = \Carbon\Carbon::parse(request('filter_year') . '-' . request('filter_month') . '-01');
+//            $endDate = request('filter_year') . '-' . request('filter_month') . '-' . $endCarbon->endOfMonth()->format('d');
+//        }
 
         if (empty($where)) {
             $where = "project_date <= '{$endDate}'";
@@ -705,21 +709,23 @@ class ProjectService
         $filterData['date']['enable'] = true;
 
         // by venue
+        $select = "id,uid,name,project_date,venue,event_type,collaboration,status,led_area,led_detail,project_class_id,classification,city_name";
         $coordinate = [];
         $orderBy = 'project_date ASC';
-        if (request('filter_venue')) {
+        if (request('filter_venue') == 1) {
             $coordinate = [$project->latitude, $project->longitude, $project->latitude];
             $orderBy = 'distance ASC, project_date ASC';
-        }
-
-        $data = $this->repo->list(
-            "id,uid,name,project_date,venue,event_type,collaboration,status,led_area,led_detail,project_class_id,classification,city_name,(
+            $select = "id,uid,name,project_date,venue,event_type,collaboration,status,led_area,led_detail,project_class_id,classification,city_name,(
                        6371 * acos(
                            cos(radians({$project->latitude})) * cos(radians(latitude)) *
                            cos(radians(longitude) - radians({$project->longitude})) +
                            sin(radians({$project->latitude})) * sin(radians(latitude))
                        )
-                   ) AS distance",
+                   ) AS distance";
+        }
+
+        $data = $this->repo->list(
+            $select,
             $where,
             [
                 'projectClass:id,name,color',
@@ -2013,24 +2019,9 @@ class ProjectService
             }
             $data['led_detail'] = json_encode($ledDetail);
 
-            $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
             $projectId = getIdFromUid($id, new \Modules\Production\Models\Project());
 
-            if (
-                (isset($ata['pic'])) &&
-                (count($data['pic']) > 0)
-            ) {
-                foreach ($data['pic'] as $pic) {
-                    $employeeId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
-
-                    $this->projectPicRepository->delete(0, 'project_id = ' . $projectId);
-
-                    $this->projectPicRepository->store([
-                        'pic_id' => $employeeId,
-                        'project_id' => $projectId,
-                    ]);
-                }
-            }
+            $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
 
             $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue,country_id,state_id,city_id,led_detail,led_area', [
                 'personInCharges:id,pic_id,project_id',

@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Repository;
 
+use Illuminate\Support\Facades\Log;
 use Modules\Production\Models\Project;
 use Modules\Production\Repository\Interface\ProjectInterface;
 
