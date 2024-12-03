@@ -27,6 +27,29 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::post('interactive/image/{deviceId}', function (Request $request, $deviceId) {
+    try {
+        $date = date('Y-m-d');
+        $filepath = "interactive/qr/{$deviceId}/{$date}";
+
+        if (!is_dir(storage_path('app/public/' . $filepath))) {
+            mkdir(storage_path('app/public/' . $filepath), 0777, true);
+        }
+
+        $filename = date('YmdHis') . '.png';
+        $image = uploadBase64($request->getContent(), $filepath);
+        if ($image) {
+            // create qr
+            $qrcode = generateQrcode(env('APP_URL') . '/interactive/download?file=' . $image . '&d=' . $deviceId, $filepath . '/' . $filename);
+        }
+        return $qrcode ? 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path("app/public/{$qrcode}"))) : '';
+    } catch (\Throwable $th) {
+        return json_encode([
+            'error' => $th->getMessage()
+        ]);
+    }
+});
+
 Route::get('testing', function () {
     $items = \Modules\Inventory\Models\UserInventoryMaster::with('items:id,user_inventory_master_id,inventory_id,quantity')
         ->latest()->first();

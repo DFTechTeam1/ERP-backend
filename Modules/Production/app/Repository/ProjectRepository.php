@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Repository;
 
+use Illuminate\Support\Facades\Log;
 use Modules\Production\Models\Project;
 use Modules\Production\Repository\Interface\ProjectInterface;
 
@@ -100,7 +101,7 @@ class ProjectRepository extends ProjectInterface {
         } else {
             $query->orderByRaw($sortBy);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -113,9 +114,9 @@ class ProjectRepository extends ProjectInterface {
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(
-        string $uid = '', 
-        string $select = '*', 
-        array $relation = [], 
+        string $uid = '',
+        string $select = '*',
+        array $relation = [],
         string $where = ''
     )
     {
@@ -128,7 +129,7 @@ class ProjectRepository extends ProjectInterface {
         } else {
             $query->whereRaw($where);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -168,7 +169,7 @@ class ProjectRepository extends ProjectInterface {
 
         $query->update($data);
 
-        return $query;
+        return $query->first();
     }
 
     /**

@@ -10,6 +10,8 @@ enum WorkType: string
     case Revise = 'revise';
     case Finish = 'finish';
 
+    case OnHold = 'on_hold';
+
     public function label()
     {
         return match ($this) {
@@ -18,6 +20,7 @@ enum WorkType: string
             static::CheckByPm => __("global.waitingApproval"),
             static::Revise => __("global.waitingApproval"),
             static::Finish => __("global.waitingApproval"),
+            static::OnHold => __("global.onHold"),
         };
     }
 }

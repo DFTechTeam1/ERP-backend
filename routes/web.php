@@ -13,10 +13,15 @@ Route::get('/', function () {
     return view('landing');
 });
 
-Route::get('telegram', function () {
-    $user = \App\Models\User::where('employee_id', 49)->first();
+Route::get('interactive/download', function (\Illuminate\Support\Facades\Request$request) {
+    $date = date('Y-m-d');
+    $deviceId = request('d');
+    return \Illuminate\Support\Facades\Response::download(public_path("storage/interactive/qr/{$deviceId}/{$date}/" . request('file')));
+});
 
-    return $user->hasPermissionTo('add_task');
+Route::get('telegram', function () {
+    $telegram = new TelegramService();
+    $telegram->sendTextMessage('1991941955', 'testing message');
 });
 
 Route::get('barcode', function () {

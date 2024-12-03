@@ -7,7 +7,7 @@ abstract class InventoryItemInterface {
 
     abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
 
-    abstract function show(string $uid, string $select = '*', array $relation = []);
+    abstract function show(string $uid, string $select = '*', array $relation = [], string $where = '');
 
     abstract function store(array $data);
 

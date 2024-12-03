@@ -1119,6 +1119,18 @@ Table "users" {
   }
 }
 
+Table "nas_folder_creations" {
+    "id" bigint [pk, not null, increment]
+    "project_name" varchar(255) [not null]
+    "project_id" bigint [not null]
+    "folder_path" longtext [not null, note: '["2024/01_Januari_Event_Name/Brief", "2024/01_Januari_Event_Name/Asset_3D", "2024/01_Januari_Event_Name/Asset_Footage"]']
+    "status" bool [default: 1]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
+}
+
+Ref: "nas_folder_creation"."project_id" < "projects"."id"
+
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
 
 Ref "custom_inventory_details_ibfk_1":"inventory_items"."id" < "custom_inventory_details"."inventory_id"

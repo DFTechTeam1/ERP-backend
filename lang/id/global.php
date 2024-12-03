@@ -182,6 +182,10 @@ return [
     'newRequestTeamText' => 'Kamu menerima permintaan team untuk event :event',
     'rejected' => 'Ditolak',
     'closed' => 'Selesai',
+    'onHold' => 'Ditunda',
+    'onHoldTask' => ':name menunda tugas',
+    'actorHoldTheTask' => ':actor menunda pekerjaan ini',
+    'actorStartTheTask' => ':actor memulai pekerjaan ini',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',
