@@ -4,10 +4,16 @@ namespace Modules\Production\Services;
 
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
+use App\Enums\Production\TaskStatus;
+use App\Enums\Production\WorkType;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Modules\Hrd\Models\Employee;
+use Modules\Production\Jobs\AssignNewPic;
+use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -76,6 +82,8 @@ class ProjectService
 
     private $inventoryItemRepo;
 
+    private $projectTaskHoldRepo;
+
     private $geocoding;
 
     /**
@@ -84,6 +92,8 @@ class ProjectService
     public function __construct()
     {
         $this->geocoding = new \App\Services\Geocoding();
+
+        $this->projectTaskHoldRepo = new \Modules\Production\Repository\ProjectTaskHoldRepository();
 
         $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
 
@@ -663,9 +673,9 @@ class ProjectService
             $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
         }
 
-        if (request('filter_month')) {
-            $startDate = request('filter_year') . '-' . request('filter_month') . '-01';
-        }
+//        if (request('filter_month')) {
+//            $startDate = request('filter_year') . '-' . request('filter_month') . '-01';
+//        }
 
         if (empty($where)) {
             $where = "project_date >= '{$startDate}'";
@@ -678,14 +688,16 @@ class ProjectService
 
         if (request('end_date')) {
             $endDate = date('Y-m-d', strtotime(request('end_date')));
+            Log::debug('end date first', [date('Y-m-d', strtotime(request('end_date')))]);
         } else { // set based on selected project date
             $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
         }
+        Log::debug('end data', [$endDate]);
 
-        if (request('filter_month')) {
-            $endCarbon = \Carbon\Carbon::parse(request('filter_year') . '-' . request('filter_month') . '-01');
-            $endDate = request('filter_year') . '-' . request('filter_month') . '-' . $endCarbon->endOfMonth()->format('d');
-        }
+//        if (request('filter_month')) {
+//            $endCarbon = \Carbon\Carbon::parse(request('filter_year') . '-' . request('filter_month') . '-01');
+//            $endDate = request('filter_year') . '-' . request('filter_month') . '-' . $endCarbon->endOfMonth()->format('d');
+//        }
 
         if (empty($where)) {
             $where = "project_date <= '{$endDate}'";
@@ -697,21 +709,23 @@ class ProjectService
         $filterData['date']['enable'] = true;
 
         // by venue
+        $select = "id,uid,name,project_date,venue,event_type,collaboration,status,led_area,led_detail,project_class_id,classification,city_name";
         $coordinate = [];
         $orderBy = 'project_date ASC';
-        if (request('filter_venue')) {
+        if (request('filter_venue') == 1) {
             $coordinate = [$project->latitude, $project->longitude, $project->latitude];
             $orderBy = 'distance ASC, project_date ASC';
-        }
-
-        $data = $this->repo->list(
-            "id,uid,name,project_date,venue,event_type,collaboration,status,led_area,led_detail,project_class_id,classification,city_name,(
+            $select = "id,uid,name,project_date,venue,event_type,collaboration,status,led_area,led_detail,project_class_id,classification,city_name,(
                        6371 * acos(
                            cos(radians({$project->latitude})) * cos(radians(latitude)) *
                            cos(radians(longitude) - radians({$project->longitude})) +
                            sin(radians({$project->latitude})) * sin(radians(latitude))
                        )
-                   ) AS distance",
+                   ) AS distance";
+        }
+
+        $data = $this->repo->list(
+            $select,
             $where,
             [
                 'projectClass:id,name,color',
@@ -1760,6 +1774,14 @@ class ProjectService
                     $outputTask[$keyTask]['is_active'] = true;
                 }
 
+                // disable when task is on hold
+                if ($task['status'] === \App\Enums\Production\TaskStatus::OnHold->value) {
+                    $outputTask[$keyTask]['is_active'] = false;
+                }
+
+                $outputTask[$keyTask]['show_hold_button'] = $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value || $task['status'] == \App\Enums\Production\TaskStatus::Revise->value;
+                $outputTask[$keyTask]['is_hold'] = $task['status'] == \App\Enums\Production\TaskStatus::OnHold->value ? true : false;
+
                 // foreach ($task['pics'] as $pic) {
                 //     if ($pic['employee_id'] == $employeeId) {
                 //         logging('TESTING PIC', $pic);
@@ -1997,24 +2019,9 @@ class ProjectService
             }
             $data['led_detail'] = json_encode($ledDetail);
 
-            $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
             $projectId = getIdFromUid($id, new \Modules\Production\Models\Project());
 
-            if (
-                (isset($ata['pic'])) &&
-                (count($data['pic']) > 0)
-            ) {
-                foreach ($data['pic'] as $pic) {
-                    $employeeId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
-
-                    $this->projectPicRepository->delete(0, 'project_id = ' . $projectId);
-
-                    $this->projectPicRepository->store([
-                        'pic_id' => $employeeId,
-                        'project_id' => $projectId,
-                    ]);
-                }
-            }
+            $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
 
             $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue,country_id,state_id,city_id,led_detail,led_area', [
                 'personInCharges:id,pic_id,project_id',
@@ -2082,10 +2089,13 @@ class ProjectService
 
             $data['project_class_id'] = $projectClass->id;
 
-            $this->repo->update(
+            $update = $this->repo->update(
                 collect($data)->except(['date'])->toArray(),
                 $projectUid
             );
+
+            // manually fire the event
+            Event::dispatch('eloquent.updated: ' . get_class(new \Modules\Production\Models\Project()), $update);
 
             /**
              * This function will return
@@ -3746,6 +3756,26 @@ class ProjectService
         return $this->{$type}($payload);
     }
 
+    protected function startTaskLog($payload)
+    {
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task_id'],
+            'type' => 'holdTask',
+            'text' => __('global.actorStartTheTask', ['actor' => $payload['actor']]),
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    protected function holdTaskLog($payload)
+    {
+        $this->projectTaskLogRepository->store([
+            'project_task_id' => $payload['task_id'],
+            'type' => 'holdTask',
+            'text' => __('global.actorHoldTheTask', ['actor' => $payload['actor']]),
+            'user_id' => auth()->id(),
+        ]);
+    }
+
     /**
      * Add log when user add attachment
      *
@@ -4465,6 +4495,103 @@ class ProjectService
                 deleteImage($path);
             }
 
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function startTask(string $projectUid, string $taskUid)
+    {
+        DB::beginTransaction();
+        try {
+            $user = auth()->user();
+            $taskId = getIdFromUid($taskUid, new ProjectTask());
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+            $employee = $this->employeeRepo->show('id', 'id,nickname', [], 'id = ' . $user->employee_id);
+            $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnProgress->value);
+
+            $this->taskRepo->update([
+                'status' => TaskStatus::OnProgress->value
+            ], $taskUid);
+
+            $this->loggingTask([
+                'task_id' => $taskId,
+                'actor' => $employee->nickname,
+            ], 'startTask');
+
+            //update cache and finishing process
+            $task = $this->formattedDetailTask($taskUid);
+
+            $currentData = getCache('detailProject' . $projectId);
+
+            $boards = $this->formattedBoards($task->project->uid);
+            $currentData['boards'] = $boards;
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.taskIsNowActive'),
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function holdTask(string $projectUid, string $taskUid, array $payload = [])
+    {
+        DB::beginTransaction();
+        try {
+            $user = auth()->user();
+            $taskId = getIdFromUid($taskUid, new ProjectTask());
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+            $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnHold->value);
+            $employee = $this->employeeRepo->show('id', 'id,nickname', [], 'id = ' . $user->employee_id);
+
+            $this->taskRepo->update([
+                'status' => TaskStatus::OnHold->value
+            ], $taskUid);
+
+            $this->projectTaskHoldRepo->store([
+                'project_task_id' => $taskId,
+                'reason' => $payload['reason'],
+                'hold_at' => Carbon::now(),
+                'hold_by' => auth()->user()->employee_id ?? auth()->id()
+            ]);
+
+            $this->loggingTask([
+                'task_id' => $taskId,
+                'actor' => $employee->nickname,
+            ], 'holdTask');
+
+            //update cache and finishing process
+            $task = $this->formattedDetailTask($taskUid);
+
+            $currentData = getCache('detailProject' . $projectId);
+
+            $boards = $this->formattedBoards($task->project->uid);
+            $currentData['boards'] = $boards;
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.taskIsOnHold'),
+                false,
+                [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ],
+            );
+        } catch (\Throwable $th) {
             DB::rollBack();
 
             return errorResponse($th);
@@ -6062,5 +6189,33 @@ class ProjectService
 
            return errorResponse($th);
         }
+    }
+
+    public function getEmployeeTaskList(string $projectUid, int $employeeId)
+    {
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+        $tasks = $this->taskPicHistory->list('distinct(project_task_id),project_id,employee_id', "employee_id = {$employeeId} and project_id = {$projectId}", ['task:id,name,status,created_at', 'task.proofOfWorks:project_task_id,project_id,nas_link,preview_image']);
+
+        $output = [];
+        foreach ($tasks as $task) {
+            $output[] = [
+                'name' => $task->task->name,
+                'status' => $task->task->task_status,
+                'created_at' => date('d F Y', strtotime($task->task->created_at)),
+                'proof_of_works' => collect((object) $task->task->proofOfWorks)->map(function ($item) {
+                    return [
+                        'images' => $item->images,
+                        'nas_link' => $item->nas_link
+                    ];
+                })->toArray(),
+                'task_status_color' => $task->task->task_status_color
+            ];
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $output
+        );
     }
 }

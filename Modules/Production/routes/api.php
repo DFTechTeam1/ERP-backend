@@ -89,6 +89,9 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask']);
     Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
     Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask']);
+    Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask']);
+    Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask']);
+    Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
     Route::delete('project/{projectUid}/task/{taskUid}/deleteAttachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 
     Route::get('team-transfers', [TeamTransferController::class, 'index']);

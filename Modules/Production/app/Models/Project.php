@@ -3,6 +3,7 @@
 namespace Modules\Production\Models;
 
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Production\Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Modules\Production\Observers\NasFolderObserver;
 
+#[ObservedBy([NasFolderObserver::class])]
 class Project extends Model
 {
     use HasFactory, ModelObserver;

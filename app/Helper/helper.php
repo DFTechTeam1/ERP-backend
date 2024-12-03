@@ -158,9 +158,10 @@ if (!function_exists('generateQrcode')) {
 
         $path = implode('/', $explode);
 
-        // if (!is_dir(storage_path("app/public/{$filename}"))) {
-        // }
-        \Illuminate\Support\Facades\Storage::makeDirectory($path);
+         if (!is_dir(storage_path("app/public/{$path}"))) {
+             mkdir(storage_path("app/public/{$path}"), 0777, true);
+         }
+//        \Illuminate\Support\Facades\Storage::makeDirectory($path);
 
         $fullpath = storage_path('app/public/' . $filename);
 
@@ -169,8 +170,8 @@ if (!function_exists('generateQrcode')) {
 
         FacadesQrCode::format('png')
             ->size(512)
-            ->style('dot')
-            ->eye('circle')
+            ->style('round')
+            ->eye('square')
             ->gradient($from[0], $from[1], $from[2], $to[0], $to[1], $to[2], 'diagonal')
             ->margin(1)
             ->generate($payload, $fullpath);
@@ -820,5 +821,68 @@ if (!function_exists('generateBarcode')) {
         }
 
         return str_replace(storage_path('app/public/'), '', $barcode);
+    }
+}
+
+
+if (!function_exists('getStructureNasFolder')) {
+    function getStructureNasFolder(): array {
+        return [
+            "{year}/{format_name}/Brief",
+            "{year}/{format_name}/Asset_3D",
+            "{year}/{format_name}/Asset_Footage",
+            "{year}/{format_name}/Asset_Render",
+            "{year}/{format_name}/Final_Render",
+            "{year}/{format_name}/Aseet_Sementara",
+            "{year}/{format_name}/Preview",
+            "{year}/{format_name}/Sketsa",
+            "{year}/{format_name}/TC",
+            "{year}/{format_name}/Raw",
+            "{year}/{format_name}/Audio",
+        ];
+    }
+}
+
+if (!function_exists('MonthInBahasa')) {
+    function MonthInBahasa($search = ''): array|string {
+        $months = ['Januari', 'Febuari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+        if (!empty($search)) {
+            $explode = str_split($search);
+            if ($explode[0] == 0) {
+                $search = $explode[1];
+            }
+
+            $months = $months[$search -1];
+        }
+
+        return $months;
+    }
+}
+
+if (!function_exists('stringToPascalSnakeCase')) {
+    function stringToPascalSnakeCase($string) {
+        // Remove special characters except spaces and apostrophes
+        $string = preg_replace('/[^a-zA-Z0-9\s\']/', '', $string);
+
+        // Convert to PascalCase (capitalize each word)
+        $pascalCase = str_replace(' ', '', ucwords(strtolower($string)));
+
+        // Convert PascalCase to snake_case while keeping capitalization on each word
+        $snakeCase = preg_replace('/([a-z])([A-Z])/', '$1_$2', $pascalCase);
+
+        return $snakeCase;
+    }
+}
+
+if (!function_exists('checkForeignKey')) {
+    function checkForeignKey($tableName, $columnName)
+    {
+        return \Illuminate\Support\Facades\DB::table('information_schema.KEY_COLUMN_USAGE')
+            ->where('TABLE_NAME', $tableName)
+            ->where('COLUMN_NAME', $columnName)
+            ->where('TABLE_SCHEMA', \Illuminate\Support\Facades\DB::getDatabaseName())
+            ->exists();
+
     }
 }

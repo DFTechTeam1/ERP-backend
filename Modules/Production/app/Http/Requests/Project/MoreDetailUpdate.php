@@ -23,6 +23,7 @@ class MoreDetailUpdate extends FormRequest
             'city_id' => 'required',
             'led_area' => 'nullable',
             'led_detail' => 'nullable',
+            'pic' => 'array|nullable'
         ];
     }
 

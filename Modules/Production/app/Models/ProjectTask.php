@@ -86,6 +86,11 @@ class ProjectTask extends Model
             ->orderBy('created_at', 'ASC');
     }
 
+    public function holds(): HasMany
+    {
+        return $this->hasMany(ProjectTaskHold::class, 'project_task_id');
+    }
+
     public function taskLink(): HasMany
     {
         return $this->hasMany(ProjectTaskAttachment::class, 'project_task_id')
@@ -161,7 +166,7 @@ class ProjectTask extends Model
             get: fn() => $out,
         );
     }
-    
+
     public function endDateText(): Attribute
     {
         $out = '-';
@@ -202,7 +207,7 @@ class ProjectTask extends Model
                         'start' => date('d F Y H:i', strtotime($report['start_at'])),
                         'end' => date('d F Y H:i', strtotime($report['end_at'])),
                         'worktime' => $workTime
-                    ]; 
+                    ];
                 }
             }
         }
@@ -231,7 +236,7 @@ class ProjectTask extends Model
 
         if (isset($this->attributes['status'])) {
             $taskStatus = \App\Enums\Production\TaskStatus::cases();
-            
+
             foreach ($taskStatus as $status) {
                 if ($status->value == $this->attributes['status']) {
                     $out = $status->label();
