@@ -20,31 +20,8 @@ Route::get('interactive/download', function (\Illuminate\Support\Facades\Request
 });
 
 Route::get('telegram', function () {
-//    $user = \App\Models\User::where('employee_id', 49)->first();
-//
-//    return $user->hasPermissionTo('add_task');
-
-    $project = (object) [
-        'project_date' => '2024-12-05',
-        'name' => 'Hello im ilham'
-    ];
-
-    $rawMonth = date('m', strtotime($project->project_date));
-    $month = MonthInBahasa($rawMonth);
-    $projectName = stringToPascalSnakeCase($project->name);
-    $fixName = $rawMonth . "_" . $month . "_" . $projectName;
-
-    $folders = getStructureNasFolder();
-
-    $folders = collect($folders)->map(function ($mapping) use ($project, $fixName) {
-         return str_replace(
-             ["{year}", "{format_name}"],
-             [date('Y', strtotime($project->project_date)), $fixName],
-             $mapping
-         );
-    });
-
-    echo $folders;
+    $telegram = new TelegramService();
+    $telegram->sendTextMessage('1991941955', 'testing message');
 });
 
 Route::get('barcode', function () {
