@@ -8,6 +8,7 @@ use App\Enums\Production\TaskStatus;
 use App\Enums\Production\WorkType;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -85,6 +86,8 @@ class ProjectService
     private $projectTaskHoldRepo;
 
     private $geocoding;
+
+    private $telegramEmployee;
 
     /**
      * Construction Data
@@ -1530,7 +1533,7 @@ class ProjectService
 
     protected function formatSingleTaskPermission($task)
     {
-        $employeeId = auth()->user()->employee_id;
+        $employeeId = $this->telegramEmployee ? $this->telegramEmployee->id : auth()->user()->employee_id;
         $superUserRole = isSuperUserRole();
         $isDirector = isDirector();
 
@@ -2367,7 +2370,11 @@ class ProjectService
                 if ($isRevise) {
                     \Modules\Production\Jobs\ReviseTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
                 } else {
-                    \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+                    if ($isForProjectManager) {
+//                        \Modules\Production\Jobs\AssignCheckByPMJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+                    } else {
+                        \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+                    }
                 }
             }
 
@@ -3843,7 +3850,7 @@ class ProjectService
             'project_task_id' => $payload['task_id'],
             'type' => 'assignMemberTask',
             'text' => $text,
-            'user_id' => auth()->id(),
+            'user_id' => auth()->id() ?? 0,
         ]);
     }
 
@@ -3977,6 +3984,7 @@ class ProjectService
      */
     protected function moveTaskLog($payload)
     {
+        $nickname = $this->telegramEmployee ? $this->telegramEmployee->nickname : auth()->user()->username;
         // get source board
         $sourceBoard = collect($payload['boards'])->filter(function ($filter) use ($payload) {
             return $filter['id'] == $payload['board_source_id'];
@@ -3987,7 +3995,7 @@ class ProjectService
         })->values();
 
         $text = __('global.moveTaskLogText', [
-            'name' => auth()->user()->username, 'boardSource' => $sourceBoard[0]['name'], 'boardTarget' => $boardTarget[0]['name']
+            'name' => $nickname, 'boardSource' => $sourceBoard[0]['name'], 'boardTarget' => $boardTarget[0]['name']
         ]);
 
         $this->projectTaskLogRepository->store([
@@ -4608,10 +4616,14 @@ class ProjectService
      * @param string $taskUid
      * @return array
      */
-    public function markAsCompleted(string $projectUid, string $taskUid): array
+    public function markAsCompleted(string $projectUid, string $taskUid, object $employee = null): array
     {
         DB::beginTransaction();
         try {
+            if ($employee) {
+                // THIS IS REMARK REQUEST CAME FROM TELEGRAM
+                $this->telegramEmployee = $employee;
+            }
             $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
@@ -4672,14 +4684,25 @@ class ProjectService
                 'status' => \App\Enums\Production\TaskStatus::Completed->value,
             ], $taskUid);
 
-            $task = $this->formattedDetailTask($taskUid);
+            $payloadOutput = [];
+            if ($this->telegramEmployee) {
+                // delete cache
+                Artisan::call('cache:clear');
+            } else {
+                $task = $this->formattedDetailTask($taskUid);
 
-            $currentData = getCache('detailProject' . $projectId);
+                $currentData = getCache('detailProject' . $projectId);
 
-            $boards = $this->formattedBoards($task->project->uid);
-            $currentData['boards'] = $boards;
+                $boards = $this->formattedBoards($task->project->uid);
+                $currentData['boards'] = $boards;
 
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+                $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+                $payloadOutput = [
+                    'task' => $task,
+                    'full_detail' => $currentData,
+                ];
+            }
 
             \Modules\Production\Jobs\TaskIsCompleteJob::dispatch($currentPicIds, $taskId)->afterCommit();
 
@@ -4688,10 +4711,7 @@ class ProjectService
             return generalResponse(
                 __('global.taskIsCompletedAndContinue'),
                 false,
-                [
-                    'task' => $task,
-                    'full_detail' => $currentData,
-                ]
+                $payloadOutput
             );
         } catch (\Throwable $th) {
             DB::rollBack();
