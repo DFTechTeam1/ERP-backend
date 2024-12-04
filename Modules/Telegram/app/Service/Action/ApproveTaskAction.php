@@ -4,6 +4,7 @@ namespace Modules\Telegram\Service\Action;
 
 use App\Models\User;
 use App\Services\Telegram\TelegramService;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Http;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\ProjectTask;
@@ -95,7 +96,8 @@ class ApproveTaskAction {
             ->where('id', $this->tid)
             ->first();
 
-        $response = Http::withToken($this->token)
+        $response = Http::withOptions(['verify' => !(App::environment('local') && config('app.url') != config('app.staging_url'))])
+            ->withToken($this->token)
             ->get(config('app.url') . "/api/production/project/{$taskData->project->uid}/task/{$taskData->uid}/approve");
 
         if ($response->successful()) {
