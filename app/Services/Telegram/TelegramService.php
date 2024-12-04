@@ -164,7 +164,8 @@ class TelegramService {
         string $message,
         bool $isRemoveKeyboard = false,
         array $linkPreview = [],
-        string $loginUrl = ''
+        string $loginUrl = '',
+        string $parseMode = ''
     )
     {
         $this->getUrl('message');
@@ -187,6 +188,10 @@ class TelegramService {
             $payload['login_url'] = [
                 'url' => $loginUrl
             ];
+        }
+
+        if (!empty($parseMode)) {
+            $payload['parse_mode'] = $parseMode;
         }
 
         return $this->sendRequest('post', $payload);

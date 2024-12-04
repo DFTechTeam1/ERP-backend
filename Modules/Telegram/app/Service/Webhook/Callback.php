@@ -19,6 +19,8 @@ use Illuminate\Support\Str;
 use Modules\Hrd\Models\Employee;
 use Modules\Telegram\Service\Action\ApproveTaskAction;
 use Modules\Telegram\Enums\CallbackIdentity;
+use Modules\Telegram\Service\Action\CheckProofOfWorkAction;
+use Modules\Telegram\Service\Action\MarkTaskAsCompleteAction;
 use Modules\Telegram\Service\Action\MyProjectAction;
 use Modules\Telegram\Service\Action\MyTaskAction;
 
@@ -84,7 +86,7 @@ class Callback {
      */
     public function handle(array $payload)
     {
-        Log::debug('payload', $payload);
+        Log::debug('payload callback query', $payload);
 
         if (isset($payload['callback_query'])) {
             $data = $payload['callback_query']['data'];
@@ -99,6 +101,12 @@ class Callback {
             } else if ($queries['idt'] == CallbackIdentity::ApproveTask->value) {
                 $approveAction = new ApproveTaskAction();
                 $approveAction($payload);
+            } else if ($queries['idt'] == CallbackIdentity::CheckProofOfWork->value) {
+                $checkAction = new CheckProofOfWorkAction();
+                $checkAction($payload);
+            } else if ($queries['idt'] == CallbackIdentity::MarkTaskAsComplete->value) {
+                $completeAction = new MarkTaskAsCompleteAction();
+                $completeAction($payload);
             }
         } else if (isset($payload['message'])) {
 
