@@ -54,7 +54,11 @@ class TelegramChannel {
                             } else if ($message['type'] == 'inline_keyboard') {
                                 $service->sendButtonMessage($chatId, $message['text'], $message['keyboard']);
                             } else if ($message['type'] == 'media_group') {
-                                $service->sendPhoto($chatId, '', $message['photos']);
+                                $sendImage = $service->sendPhoto($chatId, '', $message['photos']);
+                                Log::debug('result send image', [
+                                    'res' => $sendImage,
+                                    'payload' => $message
+                                ]);
                             }
                             $service->reinit();
                         }
