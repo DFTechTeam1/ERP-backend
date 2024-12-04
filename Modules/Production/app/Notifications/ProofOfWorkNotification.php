@@ -87,7 +87,7 @@ class ProofOfWorkNotification extends Notification
         $messages = [
             "{$this->taskPic->nickname} baru saja menyelesaikan tugas {$this->task->name}. Silahkan login untuk melihat detailnya.",
         ];
-
+        Log::debug('images preview for task', $images);
         $messages = collect($messages)->push([
             'type' => 'media_group',
             'text' => 'media_group',
