@@ -300,7 +300,7 @@ if (!function_exists('uploadImageandCompress')) {
         $path = storage_path("app/public/{$path}");
 
         $ext = $image->getClientOriginalExtension();
-        $originalName = $image->getClientOriginalName();
+        $originalName = 'image';
         $datetime = date('YmdHis');
 
         $name = "{$originalName}_{$datetime}.{$extTarget}";
