@@ -9,4 +9,6 @@ enum CallbackIdentity: string
     case Back = 'back';
 
     case ApproveTask = 'ptappv';
+    case CheckProofOfWork = 'cpofwork';
+    case MarkTaskAsComplete = 'mtccomplete';
 }

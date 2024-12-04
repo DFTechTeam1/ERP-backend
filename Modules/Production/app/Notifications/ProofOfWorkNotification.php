@@ -94,7 +94,17 @@ class ProofOfWorkNotification extends Notification
             'photos' => $images
         ])->values()->toArray();
 
-        Log::debug('MESSAGE PROOF OF WORK', $messages);
+        $messages = collect($messages)->push([
+            'text' => 'Selesaikan pekerjaan?',
+            'type' => 'inline_keyboard',
+            'keyboard' => [
+                'inline_keyboard' => [
+                    [
+                        ['text' => 'Selesaikan Saja', 'callback_data' => 'idt=' . \Modules\Telegram\Enums\CallbackIdentity::MarkTaskAsComplete->value . '&tid=' . $this->task->id],
+                    ]
+                ]
+            ]
+        ])->values()->toArray();
 
         return [
             'chatIds' => $this->telegramChatIds,

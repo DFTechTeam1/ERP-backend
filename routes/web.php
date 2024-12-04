@@ -20,8 +20,25 @@ Route::get('interactive/download', function (\Illuminate\Support\Facades\Request
 });
 
 Route::get('telegram', function () {
-    $telegram = new TelegramService();
-    $telegram->sendTextMessage('1991941955', 'testing message');
+    $chatId = '1991941955';
+    $task = ProjectTask::with([
+            'pics:id,project_task_id,employee_id',
+            'pics.employee:id,nickname',
+            'project:id,name'
+        ])
+        ->find(276);
+
+    $service = new TelegramService();
+    $message = "Tugas *{$task->name}* di event *{$task->project->name}* sudah selesai.";
+    $service->sendTextMessage($chatId, $message, parseMode: 'Markdown');
+    $service->reinit();
+    $service->sendButtonMessage($chatId, 'Klik tombol dibawah kl kamu ingin melihat hasil pekerjaannya', [
+        'inline_keyboard' => [
+            [
+                ['text' => 'Cek Hasil Pekerjaan', 'callback_data' => 'idt=' . \Modules\Telegram\Enums\CallbackIdentity::CheckProofOfWork->value . '&tid=' . $task->id],
+            ]
+        ]
+    ]);
 });
 
 Route::get('barcode', function () {
