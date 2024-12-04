@@ -143,4 +143,5 @@ return [
 
     'telegram_domain' => env('TELEGRAM_DOMAIN', null),
 
+    'staging_url' => env('STAGING_URL', null),
 ];

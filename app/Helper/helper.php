@@ -300,7 +300,7 @@ if (!function_exists('uploadImageandCompress')) {
         $path = storage_path("app/public/{$path}");
 
         $ext = $image->getClientOriginalExtension();
-        $originalName = $image->getClientOriginalName();
+        $originalName = 'image';
         $datetime = date('YmdHis');
 
         $name = "{$originalName}_{$datetime}.{$extTarget}";
@@ -871,7 +871,7 @@ if (!function_exists('stringToPascalSnakeCase')) {
         // Convert PascalCase to snake_case while keeping capitalization on each word
         $snakeCase = preg_replace('/([a-z])([A-Z])/', '$1_$2', $pascalCase);
 
-        return $snakeCase;
+        return strtoupper($snakeCase);
     }
 }
 

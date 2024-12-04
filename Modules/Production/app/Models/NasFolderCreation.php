@@ -18,6 +18,8 @@ class NasFolderCreation extends Model
         'folder_path',
         'project_id',
         'status',
-        'type'
+        'type',
+        'last_folder_name',
+        'current_folder_name'
     ];
 }
