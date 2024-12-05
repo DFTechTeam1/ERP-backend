@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
+use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
 if (!function_exists('setEmailConfiguration')) {
@@ -884,5 +885,48 @@ if (!function_exists('checkForeignKey')) {
             ->where('TABLE_SCHEMA', \Illuminate\Support\Facades\DB::getDatabaseName())
             ->exists();
 
+    }
+}
+
+if (!function_exists('putTelegramSession')) {
+    function putTelegramSession(string $chatId, mixed $value)
+    {
+        $check = \Modules\Telegram\Models\TelegramSession::select('*')
+            ->where('chat_id', $chatId)
+            ->active()
+            ->first();
+
+        // deactive current session
+        if ($check) {
+            $check->status = 0;
+            $check->save();
+        }
+
+        // create new session
+        \Modules\Telegram\Models\TelegramSession::create([
+            'chat_id' => $chatId,
+            'value' => $value,
+            'status' => 1
+        ]);
+    }
+}
+
+if (!function_exists('getTelegramSession')) {
+    function getTelegramSession(string $chatId)
+    {
+        $data = TelegramSession::select('*')
+            ->where('chat_id', $chatId)
+            ->active()
+            ->first();
+
+        return $data ? $data->value : null;
+    }
+}
+
+if (!function_exists('destroyTelegramSession')) {
+    function destroyTelegramSession(string $chatId, string $value)
+    {
+        TelegramSession::where('chat_id', $chatId)
+            ->where('value', $value)->delete();
     }
 }
