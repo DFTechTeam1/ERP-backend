@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Modules\Hrd\Models\Employee;
+use Modules\Nas\Services\NasService;
 use Modules\Telegram\Enums\CallbackIdentity;
+use Modules\Telegram\Enums\TelegramSessionKey;
 use Modules\Telegram\Models\TelegramChatCommand;
 use Modules\Telegram\Models\TelegramChatHistory;
 use Modules\Telegram\Service\Action\MyTaskAction;
@@ -116,6 +118,8 @@ class Telegram {
                             } else {
                                 $this->service->sendTextMessage($this->chatId, 'Wah saya belum bisa memproses pesan kamu. Ulangi lagi yaa');
                             }
+                        } else if ($payload['message']['entities'][0]['type'] == 'url') {
+                            $this->handleFreeText($payload);
                         }
                     } else {
                         $this->handleFreeText($payload);
@@ -171,19 +175,76 @@ class Telegram {
         return true;
     }
 
+    public function handleManageNas(array $payload = [])
+    {
+        if ($this->validateUser()) {
+            // validate permission
+            if ($this->validatePermission(permission: 'manage_nas')) {
+                // send button options
+                $this->service->sendButtonMessage($this->chatId, 'Silahkan pilih', [
+                    'inline_keyboard' => [
+                        [
+                            ['text' => 'Set aktif IP', 'callback_data' => 'idt=' . CallbackIdentity::SetActiveIP->value],
+                            ['text' => 'Set aktif root', 'callback_data' => 'idt=' . CallbackIdentity::SetActiveRoot->value],
+                            ['text' => 'Lihat Konfigurasi', 'callback_data' => 'idt=' . CallbackIdentity::GetNasConfiguration->value]
+                        ],
+                        [
+                            ['text' => 'Hapus Konfigurasi', 'callback_data' => 'idt=' . CallbackIdentity::DeleteNasConfiguration->value]
+                        ]
+                    ]
+                ]);
+            }
+        }
+    }
+
+    protected function registerNasIp(array $payload = [])
+    {
+        $message = $payload['message']['text'];
+
+        $service = new NasService();
+        $service->setIp(ip: $message);
+
+        // delete current session
+        destroyTelegramSession(chatId: $this->chatId, value: TelegramSessionKey::WaitingNasIp->value);
+
+        // send success message
+        $this->service->sendTextMessage(
+            chatId: $this->chatId,
+            message: 'Sip. IP untuk NAS aktif sekarang adalah ' . $message
+        );
+    }
+
+    protected function registerRootFolderName(array $payload = [])
+    {
+        $message = $payload['message']['text'];
+
+        $service = new NasService();
+        $service->setRoot(rootName: $message);
+
+        // delete current session
+        destroyTelegramSession(chatId: $this->chatId, value: TelegramSessionKey::WaitingRootFolderName->value);
+
+        // send success message
+        $this->service->sendTextMessage(
+            chatId: $this->chatId,
+            message: 'Sip. Root folder untuk NAS sudah di setting ke ' . $message
+        );
+    }
+
     public function handleFreeText(array $payload = [])
     {
         try {
-            Log::debug('session', [Session::get('user_chat_state_' . $this->chatId)]);
+            $currentSession = getTelegramSession(chatId: $this->chatId);
+            Log::debug('session', [$currentSession]);
 
             // check base on session
-            if (Session::get('user_chat_state_' . $this->chatId)) {
-                $name = "handle" . ucfirst(snakeToCamel($payload['message']['text']));
-                Log::debug('method', [
-
-                ]);
-                if (method_exists($this, $name)) {
-                    return $this->$name($payload);
+            if ($currentSession) {
+                // get action from current session
+                Log::debug('action callback', [TelegramSessionKey::getAction($currentSession)]);
+                if ($action = TelegramSessionKey::getAction($currentSession)) {
+                    if (method_exists($this, $action)) {
+                        return $this->$action(payload: $payload);
+                    }
                 }
             } else {
                 // first check the command continoues message
