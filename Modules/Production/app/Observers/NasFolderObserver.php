@@ -89,32 +89,26 @@ class NasFolderObserver
     }
 
     /**
+     * If current project exists and status is active and type is create, just edit the path
+     * Otherwise update status, type to update and path
      * Handle the NasFolder "updated" event.
      */
     public function updated(Project $customer): void
     {
         Log::debug("updated project: ", $customer->toArray());
 
-        $current = NasFolderCreation::selectRaw('*')
-            ->where('project_id', $customer->id)
+        $current = NasFolderCreation::where('project_id', $customer->id)
             ->latest()
             ->first();
 
         $schema = $this->createFolderSchema($customer);
-
-        if ($current) {
-            if ($current->type == 'create' && $customer->name != $current->project_name && ($current->status == 1 || $current->status == 2)) { // if status is waiting to execute and status is not inactive and name is different between the request and current data
-                // update path
-
-                NasFolderCreation::where('project_id', $customer->id)
-                    ->update([
-                        'folder_path' => $schema['folder_path'],
-                        'last_folder_name' => $schema['last_folder_name'],
-                        'current_folder_name' => $customer->name
-                    ]);
-            }
-        } else {
-            // create an update queue
+        if ($current->status && $current->type == 'create') {
+            NasFolderCreation::where('project_id', $customer->id)
+                ->update([
+                    'folder_path' => json_encode($schema['folder_path']),
+                    'last_folder_name' => json_encode($schema['last_folder_name']),
+                ]);
+        } else if (!$current->status) {
             NasFolderCreation::create([
                 'project_name' => $customer->name,
                 'project_id' => $customer->id,
