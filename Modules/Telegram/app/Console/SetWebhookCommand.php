@@ -17,7 +17,7 @@ class SetWebhookCommand extends Command
     /**
      * The console command description.
      */
-    protected $description = 'Command description.';
+    protected $description = 'Set webhook for telegram.';
 
     /**
      * Create a new command instance.
