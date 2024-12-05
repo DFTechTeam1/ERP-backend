@@ -5530,9 +5530,10 @@ class ProjectService
         $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
 
         $userPics = \App\Models\User::role('project manager')->get();
+        $userPicsAdmin = \App\Models\User::role('project manager admin')->get();
         $assistant = \App\Models\User::role('assistant manager')->get();
         $director = \App\Models\User::role('director')->get();
-        $pics = collect($userPics)->merge($director)->merge($assistant)->toArray();
+        $pics = collect($userPics)->merge($director)->merge($assistant)->merge($userPicsAdmin)->toArray();
 
         // get all workload in each pics
         $output = [];

@@ -4,6 +4,7 @@ namespace Modules\Nas\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Nas\Console\SetNasConfiguration;
 
 class NasServiceProvider extends ServiceProvider
 {
@@ -37,7 +38,9 @@ class NasServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+         $this->commands([
+             SetNasConfiguration::class
+         ]);
     }
 
     /**
