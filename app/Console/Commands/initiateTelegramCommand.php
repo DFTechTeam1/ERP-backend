@@ -48,6 +48,10 @@ class initiateTelegramCommand extends Command
                     'name' => 'create_task',
                     'description' => 'Buat tugas untuk tim mu'
                 ],
+                [
+                    'name' => 'manage_nas',
+                    'description' => 'Kelola NAS disini'
+                ]
             ],
             'production' => [
                 [
