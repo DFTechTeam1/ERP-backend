@@ -62,6 +62,10 @@ class initiateTelegramCommand extends Command
                     'name' => 'my_project',
                     'description' => 'Lihat project mu'
                 ],
+                [
+                    'name' => 'manage_nas',
+                    'description' => 'Kelola NAS disini'
+                ]
             ]
         ];
 
