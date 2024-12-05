@@ -73,19 +73,19 @@ class NasFolderObserver
     {
         Log::debug('created', $customer->toArray());
 
-        $schema = $this->createFolderSchema($customer);
-
-        NasFolderCreation::create([
-            'project_name' => $customer->name,
-            'project_id' => $customer->id,
-            'folder_path' => json_encode($schema['folder_path']),
-            'status' => 1,
-            'type' => 'create',
-            'last_folder_name' => json_encode($schema['last_folder_name']),
-            'current_folder_name' => $customer->name
-        ]);
-
-        echo json_encode($schema);
+//        $schema = $this->createFolderSchema($customer);
+//
+//        NasFolderCreation::create([
+//            'project_name' => $customer->name,
+//            'project_id' => $customer->id,
+//            'folder_path' => json_encode($schema['folder_path']),
+//            'status' => 1,
+//            'type' => 'create',
+//            'last_folder_name' => json_encode($schema['last_folder_name']),
+//            'current_folder_name' => $customer->name
+//        ]);
+//
+//        echo json_encode($schema);
     }
 
     /**
@@ -97,28 +97,28 @@ class NasFolderObserver
     {
         Log::debug("updated project: ", $customer->toArray());
 
-        $current = NasFolderCreation::where('project_id', $customer->id)
-            ->latest()
-            ->first();
-
-        $schema = $this->createFolderSchema($customer);
-        if ($current->status && $current->type == 'create') {
-            NasFolderCreation::where('project_id', $customer->id)
-                ->update([
-                    'folder_path' => json_encode($schema['folder_path']),
-                    'last_folder_name' => json_encode($schema['last_folder_name']),
-                ]);
-        } else if (!$current->status) {
-            NasFolderCreation::create([
-                'project_name' => $customer->name,
-                'project_id' => $customer->id,
-                'folder_path' => json_encode($schema['folder_path']),
-                'status' => 1,
-                'type' => 'update',
-                'last_folder_name' => json_encode($schema['last_folder_name']),
-                'current_folder_name' => $customer->name
-            ]);
-        }
+//        $current = NasFolderCreation::where('project_id', $customer->id)
+//            ->latest()
+//            ->first();
+//
+//        $schema = $this->createFolderSchema($customer);
+//        if ($current->status && $current->type == 'create') {
+//            NasFolderCreation::where('project_id', $customer->id)
+//                ->update([
+//                    'folder_path' => json_encode($schema['folder_path']),
+//                    'last_folder_name' => json_encode($schema['last_folder_name']),
+//                ]);
+//        } else if (!$current->status) {
+//            NasFolderCreation::create([
+//                'project_name' => $customer->name,
+//                'project_id' => $customer->id,
+//                'folder_path' => json_encode($schema['folder_path']),
+//                'status' => 1,
+//                'type' => 'update',
+//                'last_folder_name' => json_encode($schema['last_folder_name']),
+//                'current_folder_name' => $customer->name
+//            ]);
+//        }
     }
 
     /**
