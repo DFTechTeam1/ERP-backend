@@ -19,26 +19,11 @@ Route::get('interactive/download', function (\Illuminate\Support\Facades\Request
     return \Illuminate\Support\Facades\Response::download(public_path("storage/interactive/qr/{$deviceId}/{$date}/" . request('file')));
 });
 
-Route::get('telegram', function () {
-    $chatId = '1991941955';
-    $task = ProjectTask::with([
-            'pics:id,project_task_id,employee_id',
-            'pics.employee:id,nickname',
-            'project:id,name'
-        ])
-        ->find(276);
-
-    $service = new TelegramService();
-    $message = "Tugas *{$task->name}* di event *{$task->project->name}* sudah selesai.";
-    $service->sendTextMessage($chatId, $message, parseMode: 'Markdown');
-    $service->reinit();
-    $service->sendButtonMessage($chatId, 'Klik tombol dibawah kl kamu ingin melihat hasil pekerjaannya', [
-        'inline_keyboard' => [
-            [
-                ['text' => 'Cek Hasil Pekerjaan', 'callback_data' => 'idt=' . \Modules\Telegram\Enums\CallbackIdentity::CheckProofOfWork->value . '&tid=' . $task->id],
-            ]
-        ]
-    ]);
+Route::get('created', function () {
+    $customer = \Modules\Production\Models\Project::find(232);
+    $customer->name = 'coba ubah';
+    $observer = new \Modules\Production\Observers\NasFolderObserver();
+    $observer->updated($customer);
 });
 
 Route::get('barcode', function () {
