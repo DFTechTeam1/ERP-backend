@@ -100,7 +100,12 @@ class LoginController extends Controller
             }
             $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
-            $token = $user->createToken($role, $permissions, now()->addHours(24));
+            $expireTime = now()->addHours(24);
+            if ($request->remember_me) {
+                $expireTime = now()->addDays(30);
+            }
+
+            $token = $user->createToken($role, $permissions, $expireTime);
 
             $menuService = new \App\Services\MenuService();
             $menus = $menuService->getMenus($user->getAllPermissions());

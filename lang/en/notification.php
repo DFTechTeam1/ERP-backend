@@ -26,4 +26,7 @@ return [
     'successUpdateUserInventory' => 'Success edit user inventory',
     'taskIsOnHold' => 'Task is now start to hold',
     'taskIsNowActive' => 'Task is now active',
+    'logProjectCreated' => ':user create project :project',
+    'logProjectAssignPic' => ':user assign :pic to event :project',
+    'logProjectChangeStatus' => ':user change event :project status to :status',
 ];

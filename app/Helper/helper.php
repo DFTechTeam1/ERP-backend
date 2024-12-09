@@ -930,3 +930,9 @@ if (!function_exists('destroyTelegramSession')) {
             ->where('value', $value)->delete();
     }
 }
+
+if (!function_exists('loggingProject')) {
+    function loggingProject(mixed $projectId, string $message) {
+
+    }
+}
