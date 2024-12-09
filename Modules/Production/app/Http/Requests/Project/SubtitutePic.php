@@ -13,7 +13,9 @@ class SubtitutePic extends FormRequest
     {
         return [
             'pics' => 'array',
+            'pics.*' => 'string',
             'removed' => 'array',
+            'removed.*' => 'string',
         ];
     }
 

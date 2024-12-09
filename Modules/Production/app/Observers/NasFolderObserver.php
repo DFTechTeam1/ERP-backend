@@ -8,9 +8,6 @@ use Modules\Production\Models\Project;
 
 class NasFolderObserver
 {
-    const StaticIP = '192.168.100.104';
-
-    const Root = "queue_job_8";
 
     protected function folders()
     {
@@ -51,7 +48,7 @@ class NasFolderObserver
 
         $year = date('Y', strtotime($customer->project_date));
 
-        $parent = "/" . self::Root . "/{$year}/{$subFolder1}/{$subFolder2}";
+        $parent =  "/{$year}/{$subFolder1}/{$subFolder2}";
 
         $toBeCreatedParents = [];
         $toBeCreatedNames = [];
@@ -60,32 +57,40 @@ class NasFolderObserver
             $toBeCreatedNames[] = $folder;
         }
 
+        // set current path
+        $currentPath = [];
+        foreach ($toBeCreatedParents as $keyFolder => $folder) {
+            $currentPath[] = $folder . "/" . $toBeCreatedNames[$keyFolder];
+        }
+
         return [
             'folder_path' => $toBeCreatedParents,
-            'last_folder_name' => $toBeCreatedNames
+            'last_folder_name' => $toBeCreatedNames,
+            'current_path' => $currentPath,
         ];
     }
 
     /**
      * Handle the NasFolder "created" event.
      */
-    public function created(Project $customer): void
+    public function created(Project $customer)
     {
         Log::debug('created', $customer->toArray());
 
-//        $schema = $this->createFolderSchema($customer);
-//
-//        NasFolderCreation::create([
-//            'project_name' => $customer->name,
-//            'project_id' => $customer->id,
-//            'folder_path' => json_encode($schema['folder_path']),
-//            'status' => 1,
-//            'type' => 'create',
-//            'last_folder_name' => json_encode($schema['last_folder_name']),
-//            'current_folder_name' => $customer->name
-//        ]);
-//
-//        echo json_encode($schema);
+        $schema = $this->createFolderSchema($customer);
+
+        NasFolderCreation::create([
+            'project_name' => $customer->name,
+            'project_id' => $customer->id,
+            'folder_path' => json_encode($schema['folder_path']),
+            'status' => 1,
+            'type' => 'create',
+            'last_folder_name' => json_encode($schema['last_folder_name']),
+            'current_folder_name' => $customer->name,
+            'current_path' => json_encode($schema['current_path'])
+        ]);
+
+        echo json_encode($schema);
     }
 
     /**
@@ -97,28 +102,34 @@ class NasFolderObserver
     {
         Log::debug("updated project: ", $customer->toArray());
 
-//        $current = NasFolderCreation::where('project_id', $customer->id)
-//            ->latest()
-//            ->first();
-//
-//        $schema = $this->createFolderSchema($customer);
-//        if ($current->status && $current->type == 'create') {
-//            NasFolderCreation::where('project_id', $customer->id)
-//                ->update([
-//                    'folder_path' => json_encode($schema['folder_path']),
-//                    'last_folder_name' => json_encode($schema['last_folder_name']),
-//                ]);
-//        } else if (!$current->status) {
-//            NasFolderCreation::create([
-//                'project_name' => $customer->name,
-//                'project_id' => $customer->id,
-//                'folder_path' => json_encode($schema['folder_path']),
-//                'status' => 1,
-//                'type' => 'update',
-//                'last_folder_name' => json_encode($schema['last_folder_name']),
-//                'current_folder_name' => $customer->name
-//            ]);
-//        }
+        // check queue
+        $check = NasFolderCreation::selectRaw('*')
+            ->byProject($customer->id)
+            ->first();
+
+        $schema = $this->createFolderSchema($customer);
+        if ($check) { // When queue already exists
+            if ($check->project_name != $customer->name) { // if there have different name between request data and existing data
+                if ($check->status == 0 || $check->status == 3) { // update only when queue status id 0 (Inactive) and 3 (Failed)
+                    // set current path from existing path
+                    $currentPathExisting = [];
+                    $folderPath = json_decode($check->folder_path, true);
+                    $names = json_decode($check->last_folder_name, true);
+                    foreach ($folderPath as $keyFd => $fd) {
+                        $currentPathExisting[] = $fd . "/" . $names[$keyFd];
+                    }
+
+                    $check->folder_path = json_encode($schema['folder_path']);
+                    $check->last_folder_name = json_encode($schema['last_folder_name']);
+                    $check->type = 'update';
+                    $check->status = 1;
+                    $check->current_path = json_encode($currentPathExisting);
+                    $check->save();
+                }
+            }
+        } else { // when there's no record
+            $this->created($customer);
+        }
     }
 
     /**
