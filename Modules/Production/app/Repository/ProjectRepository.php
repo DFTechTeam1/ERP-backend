@@ -196,6 +196,9 @@ class ProjectRepository extends ProjectInterface {
             $key = $this->key;
         }
 
-        return $this->model->whereIn($key, $ids)->delete();
+        $data = $this->model->whereIn($key, $ids)->get();
+        foreach ($data as $project) {
+            $project->delete();
+        }
     }
 }
