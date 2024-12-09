@@ -370,6 +370,17 @@ class ProjectService
                 }
             }
 
+            if (request('filter_year') == 'true') {
+                $startMonth = date('Y') . '-01-01';
+                $endMonth = date('Y') . '-12-31';
+
+                if (empty($where)) {
+                    $where = "project_date BETWEEN '{$startMonth}' AND '{$endMonth}'";
+                } else {
+                    $where .= " and project_date BETWEEN '{$startMonth}' AND '{$endMonth}'";
+                }
+            }
+
             if (request('filter_today') == 'true') {
                 $startDate = date('Y-m-d');
                 if (empty($where)) {
