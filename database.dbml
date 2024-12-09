@@ -1129,6 +1129,16 @@ Table "nas_folder_creations" {
     "updated_at" timestamp [default: NULL]
 }
 
+Table "project_logs" {
+    "id" bigint [pk, not null, increment]
+    "project_id" bigint [not null]
+    "message" varchar(255) [not null]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
+}
+
+Ref: "project_logs"."project_id" < "projects.id"
+
 Ref: "nas_folder_creation"."project_id" < "projects"."id"
 
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
