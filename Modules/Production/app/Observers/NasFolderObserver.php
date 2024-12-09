@@ -35,16 +35,31 @@ class NasFolderObserver
         ];
     }
 
-    protected function createFolderSchema(Project $customer): array
+    protected function pregName(string $name)
     {
-        $name = preg_replace('/[.,\"~@\/]/', '', $customer->name);
+        return preg_replace('/[.,\"~@\/]/', '', $name);
+    }
+
+    protected function createFolderSchema(Project $customer, object $currentData = null): array
+    {
+        $name = $this->pregName(name: $customer->name);
         $name = stringToPascalSnakeCase($name);
 
+        $date = date('d', strtotime($customer->project_date));
         $month = date('m', strtotime($customer->project_date));
         $monthText = MonthInBahasa(date('m', strtotime($customer->project_date)));
         $subFolder1 = strtoupper($month . '_' . $monthText);
+        $prefixName = strtoupper($date . "_" . $monthText);
 
-        $subFolder2 = $subFolder1 . '_' . $name;
+        $subFolder2 = $prefixName . '_' . $name;
+
+        // get current folder name
+        if ($currentData) {
+            $prefixCurrentName = strtoupper($date . '_' . $monthText);
+            $currentFolderName1 = strtoupper($month . '_' . $monthText);
+            $currentName = stringToPascalSnakeCase($this->pregName(name: $currentData->project_name));
+            $currentFolderName = $prefixCurrentName . '_' . $currentName;
+        }
 
         $year = date('Y', strtotime($customer->project_date));
 
@@ -67,6 +82,7 @@ class NasFolderObserver
             'folder_path' => $toBeCreatedParents,
             'last_folder_name' => $toBeCreatedNames,
             'current_path' => $currentPath,
+            'updated_name' => $currentFolderName ?? NULL
         ];
     }
 
@@ -79,18 +95,19 @@ class NasFolderObserver
 
         $schema = $this->createFolderSchema($customer);
 
-        NasFolderCreation::create([
-            'project_name' => $customer->name,
-            'project_id' => $customer->id,
-            'folder_path' => json_encode($schema['folder_path']),
-            'status' => 1,
-            'type' => 'create',
-            'last_folder_name' => json_encode($schema['last_folder_name']),
-            'current_folder_name' => $customer->name,
-            'current_path' => json_encode($schema['current_path'])
-        ]);
-
-        echo json_encode($schema);
+        // running start from january
+        if (date('m', strtotime($customer->project_date)) >= 1 && date('Y', strtotime($customer->project_date)) >= 2025) {
+            NasFolderCreation::create([
+                'project_name' => $customer->name,
+                'project_id' => $customer->id,
+                'folder_path' => json_encode($schema['folder_path']),
+                'status' => 1,
+                'type' => 'create',
+                'last_folder_name' => json_encode($schema['last_folder_name']),
+                'current_folder_name' => NULL,
+                'current_path' => json_encode($schema['current_path'])
+            ]);
+        }
     }
 
     /**
@@ -105,12 +122,13 @@ class NasFolderObserver
         // check queue
         $check = NasFolderCreation::selectRaw('*')
             ->byProject($customer->id)
+            ->latest()
             ->first();
 
-        $schema = $this->createFolderSchema($customer);
+        $schema = $this->createFolderSchema($customer, $check);
         if ($check) { // When queue already exists
             if ($check->project_name != $customer->name) { // if there have different name between request data and existing data
-                if ($check->status == 0 || $check->status == 3) { // update only when queue status id 0 (Inactive) and 3 (Failed)
+                if ($check->type != 'delete') { // update only when queue status id 1 (active) and 3 (Failed)
                     // set current path from existing path
                     $currentPathExisting = [];
                     $folderPath = json_decode($check->folder_path, true);
@@ -119,16 +137,16 @@ class NasFolderObserver
                         $currentPathExisting[] = $fd . "/" . $names[$keyFd];
                     }
 
+                    $check->project_name = $customer->name;
                     $check->folder_path = json_encode($schema['folder_path']);
                     $check->last_folder_name = json_encode($schema['last_folder_name']);
                     $check->type = 'update';
                     $check->status = 1;
+                    $check->current_folder_name = $schema['updated_name'];
                     $check->current_path = json_encode($currentPathExisting);
                     $check->save();
                 }
             }
-        } else { // when there's no record
-            $this->created($customer);
         }
     }
 
@@ -138,6 +156,44 @@ class NasFolderObserver
     public function deleted(Project $project): void
     {
         Log::debug('deleted project: ', $project->toArray());
+        $check = NasFolderCreation::where('project_id', $project->id)
+            ->latest()
+            ->first();
+
+        $schema = $this->createFolderSchema($project);
+
+        if ($check) {
+            if ($check->status == 0) { // already execute
+                // activate again with status is delete
+                $check->type = 'delete';
+                $check->status = 1;
+                $check->save();
+            } else if ($check->status > 0) {
+                $check->delete();
+
+                NasFolderCreation::create([
+                    'project_name' => $project->name,
+                    'project_id' => $project->id,
+                    'folder_path' => json_encode($schema['folder_path']),
+                    'status' => 1,
+                    'type' => 'delete',
+                    'last_folder_name' => json_encode($schema['last_folder_name']),
+                    'current_folder_name' => $project->name,
+                    'current_path' => json_encode($schema['current_path'])
+                ]);
+            } else if (!$check) {
+                NasFolderCreation::create([
+                    'project_name' => $project->name,
+                    'project_id' => $project->id,
+                    'folder_path' => json_encode($schema['folder_path']),
+                    'status' => 1,
+                    'type' => 'delete',
+                    'last_folder_name' => json_encode($schema['last_folder_name']),
+                    'current_folder_name' => $project->name,
+                    'current_path' => json_encode($schema['current_path'])
+                ]);
+            }
+        }
     }
 
     /**
