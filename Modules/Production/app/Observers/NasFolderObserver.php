@@ -165,11 +165,14 @@ class NasFolderObserver
         if ($check) {
             if ($check->status == 0) { // already execute
                 // activate again with status is delete
-                $check->type = 'delete';
-                $check->status = 1;
-                return $check->save();
+                NasFolderCreation::where('id', $check->id)
+                    ->update([
+                        'type' => 'delete',
+                        'status' => 1
+                    ]);
             } else if ($check->status > 0) {
-                $check->delete();
+                NasFolderCreation::where('id', $check->id)
+                    ->delete();
 
                 return NasFolderCreation::create([
                     'project_name' => $project->name,
