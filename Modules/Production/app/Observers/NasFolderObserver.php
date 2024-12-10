@@ -168,6 +168,7 @@ class NasFolderObserver
                 $check->type = 'delete';
                 $check->status = 1;
                 $check->save();
+                return;
             } else if ($check->status > 0) {
                 $check->delete();
 
