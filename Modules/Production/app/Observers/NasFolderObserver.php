@@ -153,7 +153,7 @@ class NasFolderObserver
     /**
      * Handle the NasFolder "deleted" event.
      */
-    public function deleted(Project $project): void
+    public function deleted(Project $project)
     {
         Log::debug('deleted project: ', $project->toArray());
         $check = NasFolderCreation::where('project_id', $project->id)
@@ -167,12 +167,11 @@ class NasFolderObserver
                 // activate again with status is delete
                 $check->type = 'delete';
                 $check->status = 1;
-                $check->save();
-                return;
+                return $check->save();
             } else if ($check->status > 0) {
                 $check->delete();
 
-                NasFolderCreation::create([
+                return NasFolderCreation::create([
                     'project_name' => $project->name,
                     'project_id' => $project->id,
                     'folder_path' => json_encode($schema['folder_path']),
@@ -183,7 +182,7 @@ class NasFolderObserver
                     'current_path' => json_encode($schema['current_path'])
                 ]);
             } else if (!$check) {
-                NasFolderCreation::create([
+                return NasFolderCreation::create([
                     'project_name' => $project->name,
                     'project_id' => $project->id,
                     'folder_path' => json_encode($schema['folder_path']),
