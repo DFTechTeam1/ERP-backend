@@ -370,6 +370,17 @@ class ProjectService
                 }
             }
 
+            if (request('filter_year') == 'true') {
+                $startMonth = date('Y') . '-01-01';
+                $endMonth = date('Y') . '-12-31';
+
+                if (empty($where)) {
+                    $where = "project_date BETWEEN '{$startMonth}' AND '{$endMonth}'";
+                } else {
+                    $where .= " and project_date BETWEEN '{$startMonth}' AND '{$endMonth}'";
+                }
+            }
+
             if (request('filter_today') == 'true') {
                 $startDate = date('Y-m-d');
                 if (empty($where)) {
@@ -2582,7 +2593,7 @@ class ProjectService
         }
     }
 
-    protected function reninitDetailCache($project)
+    protected function reinitDetailCache($project)
     {
         $this->show($project->uid);
 
@@ -4851,16 +4862,19 @@ class ProjectService
                 }
             }
 
-            $project = $this->repo->show($projectUid, 'id,status');
+            $project = $this->repo->show($projectUid, 'id,status,uid');
 
             $currentData = getCache('detailProject' . $projectId);
-            if ($currentData) {
-                $currentData['status_raw'] = $project->status;
-                $currentData['status'] = $project->status_text;
-                $currentData['status_color'] = $project->status_color;
 
-                $currentData = $this->formatTasksPermission($currentData, $projectId);
+            if (!$currentData) {
+                $currentData = $this->reinitDetailCache($project);
             }
+
+            $currentData['status_raw'] = $project->status;
+            $currentData['status'] = $project->status_text;
+            $currentData['status_color'] = $project->status_color;
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
 
             DB::commit();
 
@@ -5628,15 +5642,25 @@ class ProjectService
             $this->handleAssignPicLogic($data, $projectUid, $projectId);
 
             // update cache
-            if ($currentData = getCache('detailProject' . $projectId)) {
-                // new pics
-                $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name']);
+            $currentData = getCache('detailProject' . $projectId);
 
-                $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
-                $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
-
-                $currentData = $this->formatTasksPermission($currentData, $projectId);
+            if (!$currentData) {
+                $currentData = $this->reinitDetailCache((object) ['id' => $projectId, 'uid' => $projectUid]);
             }
+
+            // new pics
+            $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name,employee_id']);
+
+            $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
+            $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
+
+            $listUpdated = [
+                'pic' => $currentData['pic'],
+                'no_pic' => false,
+                'pic_eid' => collect((object) $newPics)->pluck('employee.employee_id')->toArray()
+            ];
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
 
             DB::commit();
 
@@ -5645,6 +5669,7 @@ class ProjectService
                 false,
                 [
                     'full_detail' => $currentData,
+                    'list_updated' => $listUpdated
                 ],
             );
         } catch (\Throwable $error) {
@@ -5717,15 +5742,26 @@ class ProjectService
             }
 
             // update cache
-            if ($currentData = getCache('detailProject' . $projectId)) {
-                // new pics
-                $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name']);
-
-                $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
-                $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
-
-                $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = getCache('detailProject' . $projectId);
+            if (!$currentData) {
+                $currentData = $this->reinitDetailCache((object) ['id' => $projectId, 'uid' => $projectUid]);
             }
+
+            // new pics
+            $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name,employee_id']);
+
+            $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
+            $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            // update list project
+            $noPic = $newPics->count() > 0 ? false : true;
+            $listUpdated = [
+                'pic' => !$noPic ? $currentData['pic'] : __('global.undetermined'),
+                'no_pic' => $noPic,
+                'pic_eid' => collect((object) $newPics)->pluck('employee.employee_id')->toArray()
+            ];
 
             DB::commit();
 
@@ -5734,6 +5770,7 @@ class ProjectService
                 false,
                 [
                     'full_detail' => $currentData ?? [],
+                    'list_updated' => $listUpdated
                 ],
             );
         } catch (\Throwable $e) {
