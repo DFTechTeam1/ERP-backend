@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['POST', 'GET', 'DELETE', 'PUT', 'OPTION', '*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['http://localhost:5174', 'https://erp.dfactory.pro'],
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +29,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];
