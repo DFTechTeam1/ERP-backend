@@ -17,9 +17,9 @@ return [
 
     'paths' => ['api/*', 'sanctum/csrf-cookie', 'broadcasting/auth'],
 
-    'allowed_methods' => ['POST', 'GET', 'DELETE', 'PUT', 'OPTION', '*'],
+    'allowed_methods' => ['POST', 'GET', 'DELETE', 'PUT', 'OPTION'],
 
-    'allowed_origins' => ['http://localhost:5174', 'https://erp.dfactory.pro'],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +29,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    'supports_credentials' => false,
 
 ];
