@@ -1457,9 +1457,9 @@ class ProjectService
                 $equipments = $this->formattedEquipments($data->id);
 
                 // days to go
-                $projectData = new DateTime($data->project_date);
-                $diff = date_diff($projectData, new DateTime('now'));
-                $daysToGo = $diff->d;
+                $projectEndDate = Carbon::parse($data->project_date);
+                $nowTime = Carbon::now();
+                $daysToGo = floor($nowTime->diffInDays($projectEndDate));
 
                 // check time to upload showreels
                 $allowedUploadShowreels = true;
@@ -4225,9 +4225,15 @@ class ProjectService
                     $statusColor = 'blue-darken-2';
                 }
 
-                $projectDate = new DateTime($task->project->project_date);
-                $diff = date_diff($projectDate, new DateTime('now'));
-                $daysToGo = $diff->d . ' ' . __('global.day');
+                // $projectDate = new DateTime($task->project->project_date);
+                $projectDate = Carbon::parse($task->project->project_date);
+                $nowTime = Carbon::now();
+                // $diff = date_diff($projectDate, new DateTime('now'));
+                $diff = $nowTime->diffInDays($projectDate);
+                $daysToGo = floor($diff) . ' ' . __('global.day');
+                if (floor($diff) < 0) {
+                    $daysToGo = __('global.passed');
+                }
 
                 $pics = collect($task->pics)->map(function ($pic) {
                     return [

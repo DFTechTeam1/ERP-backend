@@ -186,6 +186,7 @@ return [
     'onHoldTask' => ':name menunda tugas',
     'actorHoldTheTask' => ':actor menunda pekerjaan ini',
     'actorStartTheTask' => ':actor memulai pekerjaan ini',
+    'passed' => 'Terlewati',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',
