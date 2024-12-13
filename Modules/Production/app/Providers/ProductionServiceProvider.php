@@ -4,6 +4,7 @@ namespace Modules\Production\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Production\Console\ClearAllCache;
 
 class ProductionServiceProvider extends ServiceProvider
 {
@@ -37,7 +38,9 @@ class ProductionServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+        $this->commands([
+            ClearAllCache::class
+        ]);
     }
 
     /**
