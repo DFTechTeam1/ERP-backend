@@ -34,6 +34,11 @@ class DivisionController extends Controller
         return apiResponse($this->divisionService->list('uid,name,parent_id','',['parentDivision:id,uid,name']));
     }
 
+    public function allDivisions()
+    {
+        return apiResponse($this->divisionService->allDivisions());
+    }
+
     /**
      * Get specific data by uid
      * @param string $uid
@@ -90,8 +95,7 @@ class DivisionController extends Controller
      */
     public function bulkDelete(Request $request)
     {
-        $uids = $request->input('uids');
-        Log::info($uids);
+        $uids = $request->input('ids');
 
         return apiResponse($this->divisionService->bulkDelete($uids, 'uid'));
     }
