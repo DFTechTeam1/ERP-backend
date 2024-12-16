@@ -63,6 +63,7 @@ class DivisionRepository extends DivisionInterface
         array $relation = [],
         int $itemsPerPage,
         int $page,
+        array $whereHas = [],
         string $orderBy = ''
     )
     {
