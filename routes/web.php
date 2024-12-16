@@ -5,27 +5,13 @@ use App\Enums\Production\TaskStatus;
 use App\Jobs\PostNotifyCompleteProjectJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Services\Telegram\TelegramService;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Models\ProjectTask;
 
 Route::get('/', function () {
     return view('landing');
-});
-
-Route::get('/excel', function () {
-    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet();
-
-// Set a value in a cell (optional)
-    $url = asset('images/user.png');
-    $sheet->setCellValue('A1', 'Here is an image:');
-    $sheet->setCellValue('A3', 'Hello');
-    $sheet->getCell('A3')->getHyperlink()->setUrl($url);
-
-// Save the spreadsheet as an Excel file
-    $writer = new PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-    $writer->save('example.xlsx');
 });
 
 Route::get('interactive/download', function (\Illuminate\Support\Facades\Request$request) {

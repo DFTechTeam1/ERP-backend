@@ -185,6 +185,7 @@ return [
     'onHoldTask' => ':name hold the task',
     'actorHoldTheTask' => ':actor hold the task',
     'actorStartTheTask' => ':actor start the task',
+    'passed' => 'Passed',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
