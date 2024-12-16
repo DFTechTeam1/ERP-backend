@@ -55,6 +55,7 @@ class PositionRepository extends PositionInterface {
         array $relation = [],
         int $itemsPerPage,
         int $page,
+        array $whereHas = [],
         string $orderBy = ''
     )
     {

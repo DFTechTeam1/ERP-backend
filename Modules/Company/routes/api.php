@@ -21,25 +21,26 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
 
 Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::class)
     ->middleware(['auth:sanctum'])
-    ->group(function (){
+    ->group(function () {
     Route::get('positions', 'list');
     Route::get('positions/all', 'getAll');
     Route::get('positions/{uid}', 'show');
     Route::post('positions', 'store');
-    Route::patch('positions/{uid}', 'update');
+    Route::put('positions/{uid}', 'update');
     Route::delete('positions/{uid}', 'delete');
-    Route::delete('positions', 'bulkDelete');
+    Route::post('positions/bulk', 'bulkDelete');
 });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\DivisionController::class)
     ->middleware(['auth:sanctum'])
     ->group(function () {
    Route::get('divisions','list');
+   Route::get('divisions/all', 'allDivisions');
    Route::get('divisions/{uid}','show');
    Route::post('divisions','store');
-   Route::patch('divisions/{uid}','update');
+   Route::put('divisions/{uid}','update');
    Route::delete('divisions/{uid}','delete');
-   Route::delete('divisions','bulkDelete');
+   Route::post('divisions/bulk','bulkDelete');
 });
 
 Route::get('setting/{code?}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getSetting']);

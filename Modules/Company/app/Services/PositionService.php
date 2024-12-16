@@ -4,6 +4,7 @@ namespace Modules\Company\Services;
 
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\PositionException;
+use Modules\Company\Models\Division;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
 
@@ -42,27 +43,24 @@ class PositionService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
             $search = request('search');
-            if (!empty($search)) {
-                $search = strtolower($search);
-                // if search value seperated with ',', then user WHERE IN
-                $nameExplode = explode(',', $search);
-                if (count($nameExplode) > 1) {
-                    $where = "lower(name) WHERE IN ({$search})";
-                } else {
-                    $where = "lower(name) LIKE '%{$search}%'";
-                }
+
+            if (!empty($search)) { // array
+                $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $order = '';
-            $sortBy = request('sortBy');
-            if(!empty($sortBy)) {
-                foreach ($sortBy as $item) {
-                    if($item['key'] == 'division.name') {
-                        $item['key'] = 'division_id';
+            $sort = "name asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'name') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
+                    } else {
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
                     }
-                    $orderBy[] = $item['key']." ".$item['order'];
                 }
-                $order = implode(', ', $orderBy);
+
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
             }
 
             $positions = $this->repo->pagination(
@@ -71,7 +69,8 @@ class PositionService {
                 $relation,
                 $itemsPerPage,
                 $page,
-                $order
+                [],
+                $sort
             )->toArray();
 
             $paginated = [];
@@ -180,10 +179,9 @@ class PositionService {
     public function store(array $data): array
     {
         try {
-            $division = $this->divisionRepo->show($data['division_id'], 'id')->toArray();
-            $data['division_id'] = $division['id'];
+            $data['division_id'] = getIdFromUid($data['division_id'], new Division());
 
-            $position = $this->repo->store($data)->toArray();
+            $this->repo->store($data);
 
             return generalResponse(
                 __("global.successCreatePosition"),
@@ -297,7 +295,7 @@ class PositionService {
             $positionErrorStatus = false;
 
             foreach ($uids as $uid) {
-                $data = $this->repo->show($uid,'id,name',[
+                $data = $this->repo->show($uid['uid'],'id,name',[
                     'employees:id,position_id,name',
                 ]);
 
