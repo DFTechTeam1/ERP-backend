@@ -29,4 +29,5 @@ return [
     'logProjectCreated' => ':user create project :project',
     'logProjectAssignPic' => ':user assign :pic to event :project',
     'logProjectChangeStatus' => ':user change event :project status to :status',
+    'cannotDeleteRoleBcsRelation' => 'Cannot delete role because it has relation to user',
 ];

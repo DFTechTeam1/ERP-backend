@@ -26,4 +26,8 @@ return [
     'successUpdateUserInventory' => 'Inventory user berhasil di ubah',
     'taskIsOnHold' => 'Tugas sekarang sudah di tahan',
     'taskIsNowActive' => 'Tugas sekarang sudah aktif',
+    'logProjectCreated' => ':user create project :project',
+    'logProjectAssignPic' => ':user assign :pic to event :project',
+    'logProjectChangeStatus' => ':user change event :project status to :status',
+    'cannotDeleteRoleBcsRelation' => 'Tidak dapat menghapus role karena memiliki relasi ke data user',
 ];
