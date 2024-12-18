@@ -66,6 +66,15 @@
             transition: background-color;
         }
     </style>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "0acae159-4c1b-4c96-b9d5-a9ae5752e1fa",
+        });
+      });
+    </script>
 </head>
 <body>
 <div class="container">
