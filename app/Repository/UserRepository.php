@@ -58,7 +58,9 @@ class UserRepository {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $orderBy = ''
     )
     {
         $query = $this->model->query();
@@ -73,8 +75,10 @@ class UserRepository {
             $query->with($relation);
         }
 
-        $query->orderBy('updated_at', 'DESC');
-        
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
+        }
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 

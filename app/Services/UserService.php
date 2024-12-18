@@ -49,26 +49,40 @@ class UserService {
         $page = request('page') ?? 1;
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+        $where = '';
+        
         $search = request('search');
 
-        $where = '';
+            if (!empty($search)) { // array
+                $where = formatSearchConditions($search['filters'], $where);
+            }
 
-        if (!empty($search)) {
-            $where = "lower(username) like '%" . strtolower($search) . "%'";
-            $where .= " or lower(email) like '%" . strtolower($search) . "%'";
-        }
+            $sort = "email asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'email') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
+                    } else {
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                    }
+                }
 
-        logging('where user', [$where]);
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
+            }
 
         $paginated = $this->repo->pagination(
             'id,uid,email,email_verified_at',
             $where,
             ['lastLogin:id,user_id,login_at'],
             $itemsPerPage,
-            $page
+            $page,
+            [],
+            $sort
         );
 
-        $paginated = collect($paginated)->map(function ($item) {
+        $paginated = collect((object) $paginated)->map(function ($item) {
             $roles = $item->getRoleNames();
             $is_deleteable = true;
             $is_editable = true;
@@ -171,9 +185,6 @@ class UserService {
                     }
                 }
 
-                logging('positionAsProjectManager', $positionAsProjectManager);
-                logging('positionAsDirector', $positionAsDirector);
-
                 if ($positionAsProjectManager && $positionAsDirector) {
                     $combine = array_merge($positionAsDirector, $positionAsProjectManager);
 
@@ -234,7 +245,7 @@ class UserService {
                 'id' => $data->id,
                 'email' => $data->email,
                 'is_external_user' => $data->is_external_user,
-                'role_id' => $data->roles[0]->id,
+                'role_id' => isset($data->roles[0]) ? $data->roles[0]->id : 0,
             ],
         );
     }

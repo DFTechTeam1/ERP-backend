@@ -27,6 +27,13 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::post('/onesignal', function (Request $request) {
+    logging('onesignal', $request->toArray());
+});
+Route::post('/onesignal-clicked', function (Request $request) {
+    logging('onesignal-clicked', $request->toArray());
+});
+
 Route::post('interactive/image/{deviceId}', function (Request $request, $deviceId) {
     try {
         $date = date('Y-m-d');
