@@ -30,4 +30,8 @@ return [
     'logProjectAssignPic' => ':user assign :pic to event :project',
     'logProjectChangeStatus' => ':user change event :project status to :status',
     'cannotDeleteRoleBcsRelation' => 'Tidak dapat menghapus role karena memiliki relasi ke data user',
+    'successCreateBranch' => 'Berhasil menyimpan cabang perusahaan',
+    'successUpdateBranch' => 'Berhasil mengubah cabang perusahaan',
+    'successDeleteBranch' => 'Berhasil menghapus cabang perusahaan',
+    'cannotDeleteBranchBcsRelation' => 'Tidak dapat menghapus cabang perusahaan karna masih ada keterkaitan dengan data karyawan',
 ];

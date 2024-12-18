@@ -19,6 +19,7 @@ use KodePandai\Indonesia\Models\Village;
 use Modules\Hrd\Observers\EmployeeObserver;
 use Modules\Hrd\Observers\EmployeeObserverObserver;
 use Illuminate\Notifications\Notifiable;
+use Modules\Company\Models\Branch;
 
 // #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
@@ -196,6 +197,11 @@ class Employee extends Model
     public function user(): HasOne
     {
         return $this->hasOne(\App\Models\User::class, 'employee_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
     }
 
     public function boss()

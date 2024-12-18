@@ -30,4 +30,8 @@ return [
     'logProjectAssignPic' => ':user assign :pic to event :project',
     'logProjectChangeStatus' => ':user change event :project status to :status',
     'cannotDeleteRoleBcsRelation' => 'Cannot delete role because it has relation to user',
+    'successCreateBranch' => 'Success create new branch',
+    'successUpdateBranch' => 'Success update branch',
+    'successDeleteBranch' => 'Success delete branch',
+    'cannotDeleteBranchBcsRelation' => 'Cannot delete branch because already have relation with the employee',
 ];

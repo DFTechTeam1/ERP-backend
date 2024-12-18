@@ -81,104 +81,25 @@ class EmployeeService
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
             $search = request('search');
-            $where = '';
-            if (!empty($search)) {
-                if (!empty($search['name']) && empty($where)) {
-                    $name = strtolower($search['name']);
-                    $where = "lower(name) LIKE '%{$name}%'";
-                } else if (!empty($search['name']) && !empty($where)) {
-                    $name = $search['name'];
-                    $where .= " AND lower(name) LIKE '%{$name}%'";
-                }
 
-                if (!empty($search['employee_id']) && empty($where)) {
-                    $employee_id = strtolower($search['employee_id']);
-                    $where = "lower(employee_id) = '{$employee_id}'";
-                } else if (!empty($search['employee_id']) && !empty($where)) {
-                    $employee_id = $search['employee_id'];
-                    $where .= " AND lower(employee_id) = '{$employee_id}'";
-                }
+            if (!empty($search)) { // array
+                $where = formatSearchConditions($search['filters'], $where);
+            }
 
-                if (!empty($search['position_id'])) {
-                    if (empty($where)) {
-                        $where = "position_id IN (";
-                    } else if (!empty($where)) {
-                        $where .= " AND position_id IN (";
-                    }
-
-                    foreach ($search['position_id'] as $positionId) {
-                        $posId = getIdFromUid($positionId, new \Modules\Company\Models\Position());
-                        $where .= "'{$posId}',";
-                    }
-
-                    $where = rtrim($where, ',') . ")";
-                }
-
-                if (!empty($search['level_staff'])) {
-                    if (empty($where)) {
-                        $where = "level_staff IN (";
-                    } else if (!empty($where)) {
-                        $where .= " AND level_staff IN (";
-                    }
-
-                    foreach ($search['level_staff'] as $levelStaff) {
-                        $where .= "'{$levelStaff}',";
-                    }
-
-                    $where = rtrim($where, ',') . ")";
-                }
-
-                if (!empty($search['join_date']) && !empty($search['join_date_condition'])) {
-                    $condition = $search['join_date_condition'];
-                    if ($condition == 'equal') {
-                        $accessor = '=';
-                    } else if ($condition == 'less_than') {
-                        $accessor = '<=';
+            $sort = "name asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'name') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
                     } else {
-                        $accessor = '>=';
-                    }
-
-                    $searchJoinDate = date('Y-m-d', strtotime($search['join_date']));
-
-                    if (empty($where)) {
-                        $where = "join_date {$accessor} '{$searchJoinDate}'";
-                    } else if (!empty($where)) {
-                        $where .= " AND join_date {$accessor} '{$searchJoinDate}'";
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
                     }
                 }
+
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
             }
-
-            if (!empty($search['status'])) {
-                if (empty($where)) {
-                    $where = "status = {$search['status']}";
-                } else {
-                    $where .= " AND status = {$search['status']}";
-                }
-            } else {
-                if (empty($where)) {
-                    $where = 'status != ' . \App\Enums\Employee\Status::Inactive->value;
-                } else {
-                    $where .= " and status != " . \App\Enums\Employee\Status::Inactive->value;
-                }
-            }
-
-
-            $order = '';
-            $sortBy = request('sortBy');
-            if(!empty($sortBy)) {
-                foreach ($sortBy as $item) {
-                    if($item['key'] == 'position.name') {
-                        $item['key'] = 'position_id';
-                    } else if ($item['key'] == 'nip') {
-                        $item['key'] = 'employee_id';
-                    }
-                    $orderBy[] = $item['key']." ".$item['order'];
-                }
-                $order = implode(', ', $orderBy);
-            } else {
-                $order = 'employee_id asc';
-            }
-
 
             $employees = $this->repo->pagination(
                 $select,
@@ -186,7 +107,8 @@ class EmployeeService
                 $relation,
                 $itemsPerPage,
                 $page,
-                $order
+                [],
+                $sort
             );
 
             $paginated = collect($employees)->map(function ($item) {
@@ -321,10 +243,10 @@ class EmployeeService
         ];
 
         $key = request()->min_level;
-
+        
         if (!empty(request()->min_level)) {
             $search = array_search($key, $levelStaffOrder);
-
+            
             if ($search > 0) {
                 $splice = array_splice($levelStaffOrder, 0, $search);
 
@@ -356,7 +278,7 @@ class EmployeeService
             $where
         );
 
-        $data = collect($data)->map(function ($item) {
+        $data = collect((object) $data)->map(function ($item) {
             return [
                 'value' => $item->uid,
                 'title' => $item->name,

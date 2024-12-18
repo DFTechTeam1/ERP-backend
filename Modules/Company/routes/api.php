@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Company\Http\Controllers\Api\BranchController;
 use Modules\Company\Http\Controllers\Api\ProjectClassController;
 use Modules\Company\Http\Controllers\CompanyController;
 
@@ -17,6 +18,11 @@ use Modules\Company\Http\Controllers\CompanyController;
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::apiResource('company', CompanyController::class)->names('company');
+});
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::apiResource('branch', BranchController::class)->names('branch');
+    Route::post('branch/bulk', [BranchController::class, 'bulkDelete']);
 });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::class)
