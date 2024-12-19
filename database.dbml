@@ -1146,6 +1146,14 @@ Table "branches" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "interactive_images" {
+  "id" bigint [pk, increment, not null]
+  "qrcode" varchar(255) [not null]
+  "filepath" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "employees"."branch_id" < "branches"."id"
 
 Ref: "project_logs"."project_id" < "projects.id"

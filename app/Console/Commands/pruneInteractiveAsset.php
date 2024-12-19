@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\InteractiveImage;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class pruneInteractiveAsset extends Command
@@ -25,28 +27,20 @@ class pruneInteractiveAsset extends Command
      */
     public function handle()
     {
-        $date = date('Y-m-d', strtotime('-1 day'));
-        if (isLocal()) {
-            $date = date('Y-m-d');
-        }
-        $deviceIds = [1,2,3];
+        // get all data
+        $images = InteractiveImage::whereRaw("created_at < NOW() - INTERVAL 5 MINUTE")
+            ->get();
 
-        echo $date;
-
-        foreach ($deviceIds as $deviceId) {
-            $path = "app/public/interactive/qr/{$deviceId}/{$date}";
-            if (is_dir(storage_path($path))) {
-                $files = glob(storage_path($path) . '/*');
-                foreach ($files as $file) {
-                    if (is_file($file)) {
-                        unlink($file);
-                    }
-                }
-
-                if (empty(glob(storage_path($path) . '/*'))) {
-                    rmdir(storage_path($path));
-                }
+        foreach ($images as $image) {
+            if (is_file(storage_path("app/public/{$image->qrcode}"))) {
+                unlink(storage_path("app/public/{$image->qrcode}"));
             }
+            if (is_file(storage_path("app/public/{$image->filepath}"))) {
+                unlink(storage_path("app/public/{$image->filepath}"));
+            }
+
+            InteractiveImage::where('id', $image->id)
+                ->delete();
         }
     }
 }
