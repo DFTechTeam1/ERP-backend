@@ -2,7 +2,10 @@
 
 namespace Modules\Hrd\Services;
 
+use App\Enums\Employee\Gender;
+use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\ProbationStatus;
+use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\EmployeeException;
@@ -115,13 +118,22 @@ class EmployeeService
                 return [
                     'uid' => $item->uid,
                     'name' => $item->name,
+                    'address' => $item->address,
+                    'branch' => $item->branch ? $item->branch->short_name : '-',
+                    'sign_date' => date('d F Y', strtotime($item->join_date)),
+                    'resign_date' => $item->end_date ? date('d F Y', strtotime($item->end_date)) : '-',
                     'email' => $item->email,
+                    'birth_date' => date('d F Y', strtotime($item->date_of_birth)),
+                    'birth_place' => $item->place_of_birth,
+                    'religion' => Religion::getReligion(code: $item->religion),
+                    'gender' => Gender::getGender(code: $item->gender),
                     'position' => $item->position->name,
                     'level_staff' => __("global.{$item->level_staff}"),
                     'status' => $item->status_text,
                     'status_color' => $item->status_color,
                     'join_date' => date('d F Y', strtotime($item->join_date)),
                     'phone' => $item->phone,
+                    'martial_status' => MartialStatus::getMartialStatus(code: $item->martial_status),
                     'placement' => $item->placement,
                     'employee_id' => $item->employee_id,
                     'user' => $item->user,

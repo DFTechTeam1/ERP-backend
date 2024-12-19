@@ -16,6 +16,25 @@ enum MartialStatus: string
         }
     }
 
+    public static function getMartialStatus(string $code)
+    {
+        switch ($code) {
+            case self::Single->value:
+                $output = __('global.single');
+                break;
+
+            case self::Married->value:
+                $output = __('global.married');
+                break;
+            
+            default:
+                $output = '-';
+                break;
+        }
+
+        return $output;
+    }
+
     public function label()
     {
         return match ($this) {
