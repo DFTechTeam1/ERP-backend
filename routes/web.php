@@ -2,6 +2,7 @@
 
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskStatus;
+use App\Http\Controllers\Api\InteractiveController;
 use App\Jobs\PostNotifyCompleteProjectJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Services\Telegram\TelegramService;
@@ -14,11 +15,7 @@ Route::get('/', function () {
     return view('landing');
 });
 
-Route::get('interactive/download', function (\Illuminate\Support\Facades\Request$request) {
-    $date = date('Y-m-d');
-    $deviceId = request('d');
-    return \Illuminate\Support\Facades\Response::download(public_path("storage/interactive/qr/{$deviceId}/{$date}/" . request('file')));
-});
+Route::get('interactive/download', [InteractiveController::class, 'download']);
 
 Route::get('created', function () {
     $customer = \Modules\Production\Models\Project::find(232);

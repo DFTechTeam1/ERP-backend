@@ -345,6 +345,11 @@ class RolePermissionSetting extends Seeder
     protected function masterPermission()
     {
         return [
+            ['name' => 'list_branch', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
             ['name' => 'list_division', 'group' => 'master', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
