@@ -28,13 +28,13 @@ class pruneInteractiveAsset extends Command
     public function handle()
     {
         // get all data
-        $images = InteractiveImage::whereRaw("created_at < NOW() - INTERVAL 5 MINUTE")
+        $dateMax = date('Y-m-d H:i:s', strtotime('-5 minutes'));
+        $images = InteractiveImage::whereRaw("created_at <= '{$dateMax}'")
             ->get();
 
         logging('all images to be deleted', $images->toArray());
 
         foreach ($images as $image) {
-            logging('image to delete: ', $image->toArray());
             if (is_file(storage_path("app/public/{$image->qrcode}"))) {
                 unlink(storage_path("app/public/{$image->qrcode}"));
             }
