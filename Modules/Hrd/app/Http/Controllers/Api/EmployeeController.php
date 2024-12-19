@@ -27,13 +27,34 @@ class EmployeeController extends Controller
      */
     public function list()
     {
+        $selects = [
+            'id', 'uid', 'name',
+            'address',
+            'employee_id',
+            'nickname',
+            'branch_id',
+            'position_id',
+            'level_staff',
+            'status',
+            'join_date',
+            'end_date',
+            'email',
+            'date_of_birth',
+            'place_of_birth',
+            'phone',
+            'religion',
+            'gender',
+            'martial_status',
+        ];
+
         return apiResponse(
             $this->employeeService->list(
-                'id,uid,name,email,position_id,employee_id,level_staff,status,join_date,phone,placement,user_id',
+                implode(',', $selects),
                 '',
                 [
                     'position:id,uid,name',
-                    'user:id,uid,email'
+                    'user:id,uid,email',
+                    'branch:id,short_name'
                 ]
             )
         );

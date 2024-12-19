@@ -16,6 +16,24 @@ enum Gender: string
         }
     }
 
+    public static function getGender(string $code)
+    {
+        switch ($code) {
+            case self::Female->value:
+                $output = __('global.female');
+                break;
+
+            case self::Male->value:
+                $output = __('global.male');
+                break;
+            
+            default:
+                $output = '-';
+                break;
+        }
+
+        return $output;}
+
     public function label()
     {
         return match ($this) {
