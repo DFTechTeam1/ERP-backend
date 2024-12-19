@@ -38,9 +38,7 @@ class BranchController extends Controller
      */
     public function show($id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->show($id));
     }
 
     /**

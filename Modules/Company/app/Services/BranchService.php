@@ -97,7 +97,7 @@ class BranchService {
     public function show(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid, 'name,uid,id');
+            $data = $this->repo->show($uid, 'id,name,short_name');
 
             return generalResponse(
                 'success',
