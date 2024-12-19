@@ -15,6 +15,13 @@ use Intervention\Image\Laravel\Facades\Image;
 use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
+if (!function_exists('isLocal')) {
+    function isLocal()
+    {
+        return App::environment('local') && config('app.url') == 'https://backend.test';
+    }
+}
+
 if (!function_exists('setEmailConfiguration')) {
     function setEmailConfiguration()
     {

@@ -26,6 +26,9 @@ class pruneInteractiveAsset extends Command
     public function handle()
     {
         $date = date('Y-m-d', strtotime('-1 day'));
+        if (isLocal()) {
+            $date = date('Y-m-d');
+        }
         $deviceIds = [1,2,3];
 
         echo $date;
