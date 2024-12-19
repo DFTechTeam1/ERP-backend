@@ -32,6 +32,7 @@ class pruneInteractiveAsset extends Command
             ->get();
 
         foreach ($images as $image) {
+            logging('image to delete: ', $image->toArray());
             if (is_file(storage_path("app/public/{$image->qrcode}"))) {
                 unlink(storage_path("app/public/{$image->qrcode}"));
             }
