@@ -60,10 +60,11 @@ class InteractiveController extends Controller
             ->where('identifier', $identifier)
             ->first();
 
-        $filepath = public_path("storage/{$image->filepath}");
-        if (!is_file($filepath)) {
+        if (!$image) {
             return view('interactive/image_not_found');
         }
+
+        $filepath = public_path("storage/{$image->filepath}");
 
         return \Illuminate\Support\Facades\Response::download($filepath);
     }
