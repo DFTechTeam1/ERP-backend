@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\InteractiveImage;
 use Illuminate\Http\Request;
 
 class InteractiveController extends Controller
@@ -23,13 +24,23 @@ class InteractiveController extends Controller
             if (!is_dir(storage_path('app/public/' . $filepath))) {
                 mkdir(storage_path('app/public/' . $filepath), 0777, true);
             }
+
+            // make indentifier
+            $identifier = uniqid(prefix: 'uq');
     
             $filename = date('YmdHis') . '.png';
             $image = uploadBase64($request->getContent(), $filepath);
             if ($image) {
                 // create qr
-                $qrcode = generateQrcode(env('APP_URL') . '/interactive/download?file=' . $image . '&d=' . $deviceId, $filepath . '/' . $filename);
+                $qrcode = generateQrcode(env('APP_URL') . '/interactive/download?if=' . $identifier . '&d=' . $deviceId, $filepath . '/' . $filename);
             }
+
+            // store to database
+            InteractiveImage::create([
+                'filepath' => $filepath . '/' . $image,
+                'qrcode' => $filepath . '/' . $filename,
+                'identifier' => $identifier
+            ]);
 
             return $qrcode ? 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path("app/public/{$qrcode}"))) : '';
         } catch (\Throwable $th) {
@@ -41,13 +52,18 @@ class InteractiveController extends Controller
 
     public function download()
     {
-        $date = date('Y-m-d');
-        $deviceId = request('d');
-        $filepath = public_path("storage/interactive/qr/{$deviceId}/{$date}/" . request('file'));
+        $identifier = request('if');
+
+        // get from database
+        $image = InteractiveImage::select('qrcode', 'filepath')
+            ->where('identifier', $identifier)
+            ->first();
+
+        $filepath = public_path("storage/{$image->filepath}");
         if (!is_file($filepath)) {
             return view('interactive/image_not_found');
         }
-        return is_file($filepath);
-        return \Illuminate\Support\Facades\Response::download();
+
+        return \Illuminate\Support\Facades\Response::download($filepath);
     }
 }

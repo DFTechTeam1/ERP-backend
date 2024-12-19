@@ -81,7 +81,8 @@ class Employee extends Model
         'line_id',
         'end_date',
         'resign_reason',
-        'telegram_chat_id'
+        'telegram_chat_id',
+        'branch_id'
     ];
 
     protected $appends = [
