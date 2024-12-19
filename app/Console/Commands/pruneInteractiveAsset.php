@@ -32,8 +32,6 @@ class pruneInteractiveAsset extends Command
         $images = InteractiveImage::whereRaw("created_at <= '{$dateMax}'")
             ->get();
 
-        logging('all images to be deleted', $images->toArray());
-
         foreach ($images as $image) {
             if (is_file(storage_path("app/public/{$image->qrcode}"))) {
                 unlink(storage_path("app/public/{$image->qrcode}"));
