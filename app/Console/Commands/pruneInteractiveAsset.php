@@ -31,6 +31,8 @@ class pruneInteractiveAsset extends Command
         $images = InteractiveImage::whereRaw("created_at < NOW() - INTERVAL 5 MINUTE")
             ->get();
 
+        logging('all images to be deleted', $images->toArray());
+
         foreach ($images as $image) {
             logging('image to delete: ', $image->toArray());
             if (is_file(storage_path("app/public/{$image->qrcode}"))) {
