@@ -2203,6 +2203,7 @@ class ProjectService
                     $linkPayload[] = [
                         'media_path' => $link['href'],
                         'type' => 'link',
+                        'name' => $link['name']
                     ];
                 }
             }
