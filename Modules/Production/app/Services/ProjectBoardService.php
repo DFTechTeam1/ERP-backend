@@ -11,9 +11,10 @@ class ProjectBoardService {
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(ProjectBoardRepository $repo)
     {
-        $this->repo = new ProjectBoardRepository;
+        // $this->repo = new ProjectBoardRepository;
+        $this->repo = $repo;
     }
 
     /**
@@ -78,7 +79,7 @@ class ProjectBoardService {
     public function show(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid, 'name,uid,id');
+            $data = $this->repo->show($uid, '*');
 
             return generalResponse(
                 'success',

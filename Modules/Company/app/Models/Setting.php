@@ -5,6 +5,8 @@ namespace Modules\Company\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Modules\Company\Database\Factories\SettingFactory;
+
 // use Modules\Company\Database\factories\SettingFactory;
 
 class Setting extends Model
@@ -18,10 +20,10 @@ class Setting extends Model
         'key', 'value', 'code'
     ];
 
-    // protected static function newFactory(): SettingFactory
-    // {
-    //     //return SettingFactory::new();
-    // }
+    protected static function newFactory(): SettingFactory
+    {
+        return SettingFactory::new();
+    }
 
     public static function scopeGetIp(Builder $query)
     {
