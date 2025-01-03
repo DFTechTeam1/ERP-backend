@@ -3,6 +3,8 @@
 namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Modules\Production\Rules\LinkReferenceRule;
 
 class StoreReferences extends FormRequest
 {
@@ -14,6 +16,7 @@ class StoreReferences extends FormRequest
         return [
             'files.*.path' => 'nullable',
             'link.*.href' => 'nullable',
+            'link.*.name' => [new LinkReferenceRule]
         ];
     }
 

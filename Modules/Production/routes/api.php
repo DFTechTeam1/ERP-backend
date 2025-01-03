@@ -53,7 +53,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/{projectUid}/getPicForSubtitute', [ProjectController::class, 'getPicForSubtitute']);
     Route::get('project/{projectUid}/readyToGo', [ProjectController::class, 'readyToGo']);
     Route::delete('project/{projectUid}/removeAllVJ', [ProjectController::class, 'removeAllVJ']);
-    Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
+    Route::post('project/{id}/references', [ProjectController::class, 'storeReferences'])->name('store-reference');
     Route::post('project/{projectUid}/completeProject', [ProjectController::class, 'completeProject']);
     Route::post('project/{projectUid}/assignVj', [ProjectController::class, 'assignVJ']);
     Route::get('project/getTargetPicsAndTaskList/{projectUid}', [ProjectController::class, 'getTargetPicsAndTaskList']); // get pic list for request team member (exclude logged accont)
