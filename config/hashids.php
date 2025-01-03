@@ -40,6 +40,12 @@ return [
             // 'alphabet' => 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
         ],
 
+        'taskIdentifier' => [
+            'salt' => config('app.taskSalt'),
+            'length' => 4,
+            'alphabet' => 'abcdefghijklmnopqrstuvwxyz1234567890'
+        ]
+
     ],
 
 ];

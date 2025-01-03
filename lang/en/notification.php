@@ -34,4 +34,5 @@ return [
     'successUpdateBranch' => 'Success update branch',
     'successDeleteBranch' => 'Success delete branch',
     'cannotDeleteBranchBcsRelation' => 'Cannot delete branch because already have relation with the employee',
+    'employeeNotFound' => 'Employee not found'
 ];

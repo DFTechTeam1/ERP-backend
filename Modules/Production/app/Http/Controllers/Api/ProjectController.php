@@ -3,6 +3,7 @@
 namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\UserRoleManagement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
@@ -22,14 +23,22 @@ use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Http\Requests\Project\CompleteProject;
+use Modules\Production\Services\TestingService;
 
 class ProjectController extends Controller
 {
     private $service;
 
-    public function __construct()
+    private $testingService;
+
+    public function __construct(
+        ProjectService $projectService,
+        TestingService $testingService
+    )
     {
-        $this->service = new ProjectService();
+        $this->service = $projectService;
+
+        $this->testingService = $testingService;
     }
 
     /**
@@ -37,7 +46,7 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        return apiResponse($this->service->list(
+        return apiResponse($this->testingService->list(
             'id,uid,name,project_date,venue,event_type,collaboration,note,marketing_id,status,classification,led_area,led_detail,project_class_id',
             '',
             [

@@ -34,4 +34,5 @@ return [
     'successUpdateBranch' => 'Berhasil mengubah cabang perusahaan',
     'successDeleteBranch' => 'Berhasil menghapus cabang perusahaan',
     'cannotDeleteBranchBcsRelation' => 'Tidak dapat menghapus cabang perusahaan karna masih ada keterkaitan dengan data karyawan',
+    'employeeNotFound' => 'Karyawan tidak ditemukan'
 ];

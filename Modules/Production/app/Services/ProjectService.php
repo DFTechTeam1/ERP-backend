@@ -8,6 +8,7 @@ use App\Enums\Production\TaskStatus;
 use App\Enums\Production\WorkType;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
+use App\Services\UserRoleManagement;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -36,6 +37,10 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use DateTime;
 use Carbon\Carbon;
+use Modules\Hrd\Repository\EmployeeTaskPointRepository;
+use Modules\Inventory\Repository\InventoryItemRepository;
+use Modules\Production\Repository\ProjectTaskHoldRepository;
+use Modules\Production\Repository\ProjectVjRepository;
 
 class ProjectService
 {
@@ -63,8 +68,6 @@ class ProjectService
 
     private $taskWorktimeRepo;
 
-    private $positionRepo;
-
     private $taskPicLogRepo;
 
     private $taskReviseHistoryRepo;
@@ -89,58 +92,90 @@ class ProjectService
 
     private $telegramEmployee;
 
+    private $userManagement;
+
+    private $positionRepo;
+
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        UserRoleManagement $userRoleManagement,
+        ProjectBoardRepository $projectBoardRepo,
+        \App\Services\Geocoding $geoCoding,
+        ProjectTaskHoldRepository $projectTaskHoldRepo,
+        ProjectVjRepository $projectVjRepo,
+        InventoryItemRepository $inventoryItemRepo,
+        ProjectClassRepository $projectClassRepo,
+        ProjectRepository $projectRepo,
+        ProjectReferenceRepository $projectRefRepo,
+        EmployeeRepository $employeeRepo,
+        ProjectTaskRepository $projectTaskRepo,
+        ProjectTaskPicRepository $projectTaskPicRepo,
+        ProjectEquipmentRepository $projectEquipmentRepo,
+        ProjectTaskAttachmentRepository $projectTaskAttachmentRepo,
+        ProjectPersonInChargeRepository $projectPicRepo,
+        ProjectTaskLogRepository $projectTaskLogRepo,
+        ProjectTaskProofOfWorkRepository $projectProofOfWorkRepo,
+        ProjectTaskWorktimeRepository $projectTaskWorktimeRepo,
+        PositionRepository $positionRepo,
+        ProjectTaskPicLogRepository $taskPicLogRepo,
+        ProjectTaskReviseHistoryRepository $taskReviseHistoryRepo,
+        TransferTeamMemberRepository $transferTeamRepo,
+        EmployeeTaskPointRepository $employeeTaskPoint,
+        ProjectTaskPicHistoryRepository $taskPicHistory,
+        CustomInventoryRepository $customItemRepo
+    )
     {
-        $this->geocoding = new \App\Services\Geocoding();
+        $this->userManagement = $userRoleManagement;
 
-        $this->projectTaskHoldRepo = new \Modules\Production\Repository\ProjectTaskHoldRepository();
+        $this->geocoding = $geoCoding;
 
-        $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
+        $this->projectTaskHoldRepo = $projectTaskHoldRepo;
 
-        $this->inventoryItemRepo = new \Modules\Inventory\Repository\InventoryItemRepository();
+        $this->projectVjRepo = $projectVjRepo;
 
-        $this->projectClassRepo = new ProjectClassRepository;
+        $this->inventoryItemRepo = $inventoryItemRepo;
 
-        $this->repo = new ProjectRepository;
+        $this->projectClassRepo = $projectClassRepo;
 
-        $this->referenceRepo = new ProjectReferenceRepository;
+        $this->repo = $projectRepo;
 
-        $this->employeeRepo = new EmployeeRepository;
+        $this->referenceRepo = $projectRefRepo;
 
-        $this->taskRepo = new ProjectTaskRepository;
+        $this->employeeRepo = $employeeRepo;
 
-        $this->boardRepo = new ProjectBoardRepository;
+        $this->taskRepo = $projectTaskRepo;
 
-        $this->taskPicRepo = new ProjectTaskPicRepository;
+        $this->boardRepo = $projectBoardRepo;
 
-        $this->projectEquipmentRepo = new ProjectEquipmentRepository;
+        $this->taskPicRepo = $projectTaskPicRepo;
 
-        $this->projectTaskAttachmentRepo = new ProjectTaskAttachmentRepository;
+        $this->projectEquipmentRepo = $projectEquipmentRepo;
 
-        $this->projectPicRepository = new ProjectPersonInChargeRepository();
+        $this->projectTaskAttachmentRepo = $projectTaskAttachmentRepo;
 
-        $this->projectTaskLogRepository = new ProjectTaskLogRepository;
+        $this->projectPicRepository = $projectPicRepo;
 
-        $this->proofOfWorkRepo = new ProjectTaskProofOfWorkRepository;
+        $this->projectTaskLogRepository = $projectTaskLogRepo;
 
-        $this->taskWorktimeRepo = new ProjectTaskWorktimeRepository;
+        $this->proofOfWorkRepo = $projectProofOfWorkRepo;
 
-        $this->positionRepo = new PositionRepository;
+        $this->taskWorktimeRepo = $projectTaskWorktimeRepo;
 
-        $this->taskPicLogRepo = new ProjectTaskPicLogRepository;
+        $this->positionRepo = $positionRepo;
 
-        $this->taskReviseHistoryRepo = new ProjectTaskReviseHistoryRepository;
+        $this->taskPicLogRepo = $taskPicLogRepo;
 
-        $this->transferTeamRepo = new TransferTeamMemberRepository;
+        $this->taskReviseHistoryRepo = $taskReviseHistoryRepo;
 
-        $this->employeeTaskPoint = new \Modules\Hrd\Repository\EmployeeTaskPointRepository;
+        $this->transferTeamRepo = $transferTeamRepo;
 
-        $this->taskPicHistory = new ProjectTaskPicHistoryRepository;
+        $this->employeeTaskPoint = $employeeTaskPoint;
 
-        $this->customItemRepo = new CustomInventoryRepository;
+        $this->taskPicHistory = $taskPicHistory;
+
+        $this->customItemRepo = $customItemRepo;
     }
 
     /**
@@ -340,13 +375,10 @@ class ProjectService
             $search = request('search');
             $whereHas = [];
 
-            $superAdminRole = getSettingByKey('super_user_role');
             $roles = auth()->user()->roles;
-            $isSuperAdmin = $roles[0]->id == $superAdminRole ? true : false;
 
-            $productionRoles = json_decode(getSettingByKey('production_staff_role'), true);
-            $isProductionRole = in_array($roles[0]->id, $productionRoles);
-            $isEntertainmentRole = auth()->user()->hasRole('entertainment');
+            $isProductionRole = $this->userManagement->isProductionRole();
+            $isEntertainmentRole = $this->userManagement->isEntertainmentRole();
 
             $projectManagerRole = getSettingByKey('project_manager_role');
             $isPMRole = $roles[0]->id == $projectManagerRole;

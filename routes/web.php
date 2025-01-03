@@ -1,8 +1,10 @@
 <?php
 
+use App\Enums\Employee\Religion;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
+use App\Http\Controllers\LandingPageController;
 use App\Jobs\PostNotifyCompleteProjectJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Services\Telegram\TelegramService;
@@ -10,10 +12,9 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Services\TestingService;
 
-Route::get('/', function () {
-    return view('landing');
-});
+Route::get('/', [LandingPageController::class, 'index']);
 
 Route::get('interactive/download', [InteractiveController::class, 'download']);
 
