@@ -27,6 +27,7 @@ class Login extends FormRequest
         return [
             'email' => 'required',
             'password' => 'required',
+            'remember_me' => 'nullable'
         ];
     }
 

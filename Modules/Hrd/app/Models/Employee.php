@@ -4,6 +4,7 @@ namespace Modules\Hrd\Models;
 
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
+use Database\Factories\Hrd\EmployeeFactory as HrdEmployeeFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,11 +21,20 @@ use Modules\Hrd\Observers\EmployeeObserver;
 use Modules\Hrd\Observers\EmployeeObserverObserver;
 use Illuminate\Notifications\Notifiable;
 use Modules\Company\Models\Branch;
+use Modules\Company\Models\IndonesiaCity;
+use Modules\Company\Models\IndonesiaDistrict;
+use Modules\Company\Models\IndonesiaVillage;
+use Modules\Company\Models\Province;
 
 // #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
 {
     use HasFactory, ModelObserver, ModelCreationObserver, SoftDeletes, Notifiable;
+
+    protected static function newFactory()
+    {
+        return HrdEmployeeFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -213,6 +223,26 @@ class Employee extends Model
     public function projects(): HasMany
     {
         return $this->hasMany(\Modules\Production\Models\ProjectPersonInCharge::class, 'pic_id');
+    }
+
+    public function province(): BelongsTo
+    {
+        return $this->belongsTo(Province::class, 'province_id', 'code');
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(IndonesiaCity::class, 'city_id', 'code');
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(IndonesiaDistrict::class, 'district_id', 'code');
+    }
+
+    public function village(): BelongsTo
+    {
+        return $this->belongsTo(IndonesiaVillage::class, 'village_id', 'code');
     }
 
     public function fullAddress(): Attribute

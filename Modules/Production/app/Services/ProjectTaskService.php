@@ -11,9 +11,61 @@ class ProjectTaskService {
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        ProjectTaskRepository $projectTaskRepo
+    )
     {
-        $this->repo = new ProjectTaskRepository;
+        $this->repo = $projectTaskRepo;
+    }
+
+    public function massUpdateIdentifierID()
+    {
+        $tasks = $this->repo->list(select: 'uid,task_identifier_id');
+            
+        foreach ($tasks as $task) {
+            if (!$task->task_identifier_id) {
+                $this->repo->update(
+                    data: ['task_identifier_id' => $this->generateIdentifier()],
+                    id: $task->uid,
+                );
+            }
+        }
+    }
+
+    /**
+     * Generate random task_identifier_id for each task
+     *
+     * @return string
+     */
+    public function generateIdentifier(): string
+    {
+        $random = generateRandomPassword(4);
+
+        // check unique
+        $finalRandomText = $this->checkCurrentIdentifier(identifier: $random);
+
+        return $finalRandomText;
+    }
+
+    /**
+     * Make sure task_identifier_id is unique
+     *
+     * @param string $identifier
+     * @return string
+     */
+    protected function checkCurrentIdentifier(string $identifier): string
+    {
+        $current = $this->repo->show(
+            uid: 'id',
+            select: 'id',
+            where: "task_identifier_id = '{$identifier}'"
+        );
+
+        if ($current) {
+            $identifier = generateRandomPassword(4);
+        }
+
+        return $identifier;
     }
 
     /**

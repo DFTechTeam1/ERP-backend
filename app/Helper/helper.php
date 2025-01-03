@@ -195,7 +195,7 @@ if (!function_exists('getIdFromUid')) {
             ->where("uid", $uid)
             ->first();
 
-        return $data->id;
+        return $data ? $data->id : 0;
     }
 }
 
@@ -357,9 +357,8 @@ if (!function_exists('deleteFolder')) {
 }
 
 if (!function_exists('generateRandomPassword')) {
-    function generateRandomPassword()
+    function generateRandomPassword($length = 10)
     {
-        $length = 10;
         $char = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $charLen = strlen($char);
         $password = '';
@@ -645,27 +644,29 @@ if (!function_exists('parseUserAgent')) {
         $os = 'Unknown';
 
         // Detect browser
-        if (strpos($userAgent, 'Firefox') !== false) {
-            $browser = 'Firefox';
-        } elseif (strpos($userAgent, 'Chrome') !== false) {
-            $browser = 'Chrome';
-        } elseif (strpos($userAgent, 'Safari') !== false) {
-            $browser = 'Safari';
-        } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
-            $browser = 'Internet Explorer';
-        }
-
-        // Detect OS
-        if (strpos($userAgent, 'Windows NT') !== false) {
-            $os = 'Windows';
-        } elseif (strpos($userAgent, 'Mac OS X') !== false) {
-            $os = 'Mac OS';
-        } elseif (strpos($userAgent, 'Linux') !== false) {
-            $os = 'Linux';
-        } elseif (strpos($userAgent, 'Android') !== false) {
-            $os = 'Android';
-        } elseif (strpos($userAgent, 'iPhone') !== false || strpos($userAgent, 'iPad') !== false) {
-            $os = 'iOS';
+        if (!App::runningInConsole()) {
+            if (strpos($userAgent, 'Firefox') !== false) {
+                $browser = 'Firefox';
+            } elseif (strpos($userAgent, 'Chrome') !== false) {
+                $browser = 'Chrome';
+            } elseif (strpos($userAgent, 'Safari') !== false) {
+                $browser = 'Safari';
+            } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
+                $browser = 'Internet Explorer';
+            }
+    
+            // Detect OS
+            if (strpos($userAgent, 'Windows NT') !== false) {
+                $os = 'Windows';
+            } elseif (strpos($userAgent, 'Mac OS X') !== false) {
+                $os = 'Mac OS';
+            } elseif (strpos($userAgent, 'Linux') !== false) {
+                $os = 'Linux';
+            } elseif (strpos($userAgent, 'Android') !== false) {
+                $os = 'Android';
+            } elseif (strpos($userAgent, 'iPhone') !== false || strpos($userAgent, 'iPad') !== false) {
+                $os = 'iOS';
+            }
         }
 
         return ['browser' => $browser, 'os' => $os];
@@ -674,22 +675,25 @@ if (!function_exists('parseUserAgent')) {
 
 if (!function_exists('getUserAgentInfo')) {
     function getUserAgentInfo() {
-        return $_SERVER['HTTP_USER_AGENT'];
+        return App::runningInConsole() ? '' : $_SERVER['HTTP_USER_AGENT'];
     }
 }
 
 if (!function_exists('getClientIp')) {
     function getClientIp() {
+        
         $ip = '';
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            // Check for IP from shared internet
-            $ip = $_SERVER['HTTP_CLIENT_IP'];
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            // Check for IP from a proxy
-            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-        } else {
-            // Fallback to REMOTE_ADDR
-            $ip = $_SERVER['REMOTE_ADDR'];
+        if (!App::runningInConsole()) {
+            if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+                // Check for IP from shared internet
+                $ip = $_SERVER['HTTP_CLIENT_IP'];
+            } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                // Check for IP from a proxy
+                $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+            } else {
+                // Fallback to REMOTE_ADDR
+                $ip = $_SERVER['REMOTE_ADDR'];
+            }
         }
         return $ip;
     }

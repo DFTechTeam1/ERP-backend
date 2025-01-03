@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Models;
 
+use App\Traits\HasTaskIdentifier;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Carbon\Carbon;
@@ -15,13 +16,14 @@ use Modules\Production\Database\Factories\ProjectTaskFactory;
 
 class ProjectTask extends Model
 {
-    use HasFactory, ModelObserver, ModelCreationObserver;
+    use HasFactory, ModelObserver, HasTaskIdentifier;
 
     /**
      * The attributes that are mass assignable.
      */
     protected $fillable = [
         'uid',
+        'task_identifier_id',
         'project_id',
         'project_board_id',
         'start_date',

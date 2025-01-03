@@ -18,7 +18,9 @@ use Modules\Production\Http\Controllers\ProductionController;
 
 Route::get('production/project/{projectUid}/downloadReferences', [ProjectController::class, 'downloadReferences']);
 
-Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
+Route::middleware(['auth:sanctum'])
+    ->name('production.')
+    ->prefix('production')->group(function () {
     Route::get('eventTypes', [ProjectController::class, 'getEventTypes']);
     Route::get('classList', [ProjectController::class, 'getClassList']);
     Route::get('status', [ProjectController::class, 'getProjectStatus']);
@@ -27,7 +29,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
 
     Route::post('project', [ProjectController::class, 'store']);
-    Route::get('project', [ProjectController::class, 'index']);
+    Route::get('project', [ProjectController::class, 'index'])->name('project-list');
     Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
     Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
     Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
@@ -61,7 +63,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{projectUid}/changeStatus', [ProjectController::class, 'changeStatus']);
     Route::get('project/{id}/getBoards', [ProjectController::class, 'getProjectBoards']);
     Route::get('project/{id}/getProjectTeams', [ProjectController::class, 'getProjectTeams']);
-    Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask']);
+    Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask'])->name('storeTask');
     Route::post('project/{taskId}/description', [ProjectController::class, 'storeDescription']);
     Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
     Route::post('project/{taskId}/manualMoveBoard', [ProjectController::class, 'manualMoveBoard']);

@@ -34,7 +34,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/checkIdNumber', 'checkIdNumber');
         Route::get('employees/generateEmployeeId', 'generateEmployeeID');
         Route::get('employees/getProjectManagers', 'getProjectManagers');
-        Route::get('employees/{uid}','show');
+        Route::get('employees/{uid}','show')->name('hrd.employees.show');
         Route::post('employees','store');
         Route::put('employees/{uid}','update');
         Route::delete('employees/{uid}','delete');

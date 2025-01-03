@@ -814,6 +814,7 @@ Table "project_task_worktimes" {
 Table "project_tasks" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
+  "task_identifier_id" varchar(4) [unique, note: "used as relation key with HR data"]
   "project_id" bigint [not null]
   "project_board_id" bigint [not null]
   "start_date" date [default: NULL]
