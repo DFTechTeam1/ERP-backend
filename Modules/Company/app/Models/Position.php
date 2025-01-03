@@ -6,6 +6,7 @@ use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Modules\Company\Database\Factories\PositionFactory;
 use Modules\Hrd\Models\Employee;
 
 // use Modules\Company\Database\factories\PositionFactory;
@@ -13,6 +14,11 @@ use Modules\Hrd\Models\Employee;
 class Position extends Model
 {
     use HasFactory, ModelCreationObserver, ModelObserver;
+
+    protected static function newFactory()
+    {
+        return PositionFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable.

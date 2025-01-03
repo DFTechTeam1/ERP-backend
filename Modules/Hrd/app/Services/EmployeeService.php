@@ -18,6 +18,7 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
 use Modules\Company\Models\Position;
 use Modules\Company\Repository\PositionRepository;
+use Modules\Hrd\Exceptions\EmployeeNotFound;
 use Modules\Hrd\Repository\EmployeeRepository;
 use \PhpOffice\PhpSpreadsheet\Reader\Xlsx as Reader;
 
@@ -491,6 +492,11 @@ class EmployeeService
             // validate permission
             $user = auth()->user();
             $employeeId = getIdFromUid($uid, new \Modules\Hrd\Models\Employee());
+
+            if (!$employeeId) {
+                throw new EmployeeNotFound();
+            }
+
             if (
                 $user->email != config('app.root_email') &&
                 !$user->is_director &&

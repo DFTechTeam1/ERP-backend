@@ -3,11 +3,18 @@
 namespace App\Services;
 
 use App\Enums\ErrorCode\Code;
+use App\Exceptions\UserNotFound;
+use App\Models\User;
+use App\Models\UserEncryptedToken;
+use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
+use App\Repository\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Vinkla\Hashids\Facades\Hashids;
 
 class UserService {
     private $repo;
@@ -18,15 +25,25 @@ class UserService {
 
     private $loginHistoryRepo;
 
-    public function __construct()
+    private $generalService;
+
+    public function __construct(
+        UserRepository $userRepo,
+        EmployeeRepository $employeeRepo,
+        RoleRepository $roleRepo,
+        UserLoginHistoryRepository $userLogHistoryRepo,
+        GeneralService $generalService
+    )
     {
-        $this->repo = new \App\Repository\UserRepository();
+        $this->repo = $userRepo;
 
-        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
+        $this->employeeRepo = $employeeRepo;
 
-        $this->roleRepo = new \App\Repository\RoleRepository();
+        $this->roleRepo = $roleRepo;
 
-        $this->loginHistoryRepo = new UserLoginHistoryRepository();
+        $this->loginHistoryRepo = $userLogHistoryRepo;
+
+        $this->generalService = $generalService; 
     }
 
     public function addAsUser(string $userId)
@@ -304,5 +321,151 @@ class UserService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    public function login(array $validated, bool $unitTesting = false)
+    {
+        $user = $this->repo->detail(
+            id: 'id',
+            select: '*',
+            where: "email = '{$validated['email']}'",
+            relation: ['employee.position', 'roles']
+        );
+
+        if (!$user) {
+            throw new UserNotFound(__('global.userNotFound'));
+        }
+
+        if (!$user->email_verified_at) {
+            throw new UserNotFound(__('global.userNotActive'));
+        }
+
+        if (!Hash::check($validated['password'], $user->password)) {
+            throw new UserNotFound(__('global.credentialDoesNotMatch'));
+        }
+
+        if (!isset($user->getRoleNames()[0])) {
+            throw new \App\Exceptions\DoNotHaveAppPermission();
+        }
+
+        $role = $user->getRoleNames()[0];
+        $roles = $user->roles;
+
+        $roleId = null;
+        if (count($roles) > 0) {
+            $roleId = $roles[0]->id;
+        }
+        $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
+
+        $expireTime = now()->addHours(24);
+        if (isset($validated['remember_me'])) {
+            $expireTime = now()->addDays(30);
+        }
+
+        $token = $user->createToken($role, $permissions, $expireTime);
+
+        $menuService = new \App\Services\MenuService();
+        $menus = $menuService->getMenus($user->getAllPermissions());
+
+        $isProjectManager = false;
+
+        $isEmployee = false;
+
+        $isDirector = false;
+
+        $isSuperUser = false;
+
+        $positionAsDirectors = json_decode($this->generalService->getSettingByKey('position_as_directors'), true);
+
+        $positionAsProjectManager = json_decode($this->generalService->getSettingByKey('position_as_project_manager'), true);
+
+        $superUserRole = $this->generalService->getSettingByKey('super_user_role');
+
+        if ($roleId == $superUserRole) {
+            $isSuperUser = true;
+        }
+
+        if (
+            ($positionAsDirectors) &&
+            ($user->employee) &&
+            (in_array($user->employee->position->uid, $positionAsDirectors))
+        ) {
+            $isDirector = true;
+        }
+
+        if (
+            ($positionAsProjectManager) &&
+            ($user->employee) &&
+            (in_array($user->employee->position->uid, $positionAsProjectManager))
+        ) {
+            $isProjectManager = true;
+        }
+
+        $emailShow = trim(
+            strip_tags(
+                html_entity_decode(
+                    $user->email, ENT_QUOTES, 'UTF-8')
+                )
+            );
+        if (strlen($user->email) > 15) {
+            $emailShow = mb_substr($emailShow, 0, 15) . ' ...';
+        } else {
+            $emailShow = $user->email;
+        }
+        $user['email_show'] = $emailShow;
+
+        $employee = \Modules\Hrd\Models\Employee::select("id")
+            ->find($user->employee_id);
+
+        $notifications = [];
+        if ($employee) {
+            $notifications = $this->generalService->formatNotifications($employee->unreadNotifications->toArray());
+        }
+
+        $userIdEncode = Hashids::encode($user->id);
+
+        $payload = [
+            'token' => $token->plainTextToken,
+            'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
+            'user' => $user,
+            'permissions' => $permissions,
+            'role' => $role,
+            'menus' => $menus['data'],
+            'role_id' => $roleId,
+            'app_name' => $this->generalService->getSettingByKey('app_name'),
+            'board_start_calcualted' => $this->generalService->getSettingByKey('board_start_calcualted'),
+            'is_director' => $isDirector,
+            'is_project_manager' => $isProjectManager,
+            'is_super_user' => $isSuperUser,
+            'notifications' => $notifications,
+            'encrypted_user_id' => $userIdEncode,
+        ];
+
+        // this data is used when changing to other subdomains
+        UserEncryptedToken::updateOrCreate(
+            ['user_id' => $user->id],
+            ['data' => json_encode($payload)]
+        );
+
+        $encryptionService = new EncryptionService();
+        $encryptedPayload = $encryptionService->encrypt(json_encode($payload), env('SALT_KEY'));
+
+        // store histories
+        $this->loginHistoryRepo->store([
+            'user_id' => $user->id,
+            'ip' => $this->generalService->getClientIp(),
+            'browser' => $this->generalService->parseUserAgent($this->generalService->getUserAgentInfo())['browser'],
+            'login_at' => Carbon::now(),
+        ]);
+
+        // store to cache for user device information
+        \Illuminate\Support\Facades\Cache::rememberForever('userLogin' . $user->id, function () {
+            return [
+                'ip' => $this->generalService->getClientIp(),
+                'browser' => $this->generalService->parseUserAgent($this->generalService->getUserAgentInfo()),
+            ];
+        });
+
+        return $encryptedPayload;
     }
 }

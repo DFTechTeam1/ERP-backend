@@ -17,6 +17,8 @@ return [
 
     'hashSalt' => env('HASH_SALT', 's3cr3t.@'),
 
+    'taskSalt' => env('TASK_SALT', 'def4ault'),
+
     'saltKey' => env('DeF4cT012YIt-T34m', null),
 
     'googleApiKey' => env('GOOGLE_CONSOLE_API_KEY'),

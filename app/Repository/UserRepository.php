@@ -119,17 +119,21 @@ class UserRepository {
         return $this->model->whereIn('uid', $ids)->delete();
     }
 
-    public function detail(string $id = '', string $select = '*', string $where = '')
+    public function detail(string $id = '', string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
+        if (!empty($relation)) {
+            $query->with($relation);
+        }
+
         if (!empty($where)) {
             $query->whereRaw($where);
         }
 
-        if (!empty($id)) {
+        if (!empty($id) && empty($where)) {
             $query->where('uid', $id);
         }
 
