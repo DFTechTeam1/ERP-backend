@@ -4,9 +4,19 @@ namespace Modules\Company\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Company\Services\MasterService;
 
 class CompanyController extends Controller
 {
+    private $masterService;
+
+    public function __construct(
+        MasterService $masterService
+    )
+    {
+        $this->masterService = $masterService;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -15,6 +25,42 @@ class CompanyController extends Controller
         //
 
         return response()->json([]);
+    }
+
+    /**
+     * Get all religions
+     *
+     */
+    public function getReligions()
+    {
+        return apiResponse($this->masterService->getReligions());
+    }
+
+    /**
+     * Get all genders
+     *
+     */
+    public function getGenders()
+    {
+        return apiResponse($this->masterService->getGenders());
+    }
+
+    /**
+     * Get all martial status
+     *
+     */
+    public function getMartialStatus()
+    {
+        return apiResponse($this->masterService->getMartialStatus());
+    }
+
+    /**
+     * Get all blood type
+     *
+     */
+    public function getBloodType()
+    {
+        return apiResponse($this->masterService->getBloodType());
     }
 
     /**

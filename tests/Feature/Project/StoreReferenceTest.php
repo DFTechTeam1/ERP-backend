@@ -5,6 +5,8 @@ namespace Tests\Feature\Project;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Modules\Production\Models\Project;
 use Tests\TestCase;
@@ -35,7 +37,6 @@ class StoreReferenceTest extends TestCase
     public function testPayloadIsMissing(): void
     {
         $project = Project::factory()->count(1)->create();
-        dd($project);
         $payload = [
             'link' => [
                 ['href' => 'google.com']
@@ -46,6 +47,38 @@ class StoreReferenceTest extends TestCase
             'Authorization' => 'Bearer ' . $this->getToken($this->user)
         ]);
 
-        dd($response);
+        $response->assertStatus(422);
+        $response->assertJsonStructure([
+            'message',
+            'errors'
+        ]);
+    }
+
+    public function testUploadOnlyLinkReturnSuccess(): void
+    {
+        $project = Project::factory()->count(1)->create();
+        $payload = [
+            'link' => [
+                ['href' => 'https://google.com', 'name' => 'google.com']
+            ]
+        ];
+
+        $response = $this->post(route('api.production.store-reference', ['id' => $project[0]->uid]), $payload, [
+            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJsonStructure([
+            'message',
+            'data' => [
+                'full_detail',
+                'references'
+            ],
+        ]);
+        $this->assertDatabaseHas('project_references', [
+            'media_path' => 'https://google.com',
+            'name' => 'google.com',
+            'type' => 'link'
+        ]);
     }
 }

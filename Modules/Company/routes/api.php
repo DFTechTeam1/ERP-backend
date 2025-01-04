@@ -61,3 +61,11 @@ Route::get('world/cities', [\Modules\Company\Http\Controllers\Api\RegionControll
 Route::get('projectClass/getAll', [ProjectClassController::class, 'getAll']);
 Route::resource('projectClass', ProjectClassController::class);
 Route::post('projectClass/bulk', [ProjectClassController::class, 'bulkDelete']);
+
+Route::middleware(['auth:sanctum'])
+    ->group(function () {
+        Route::get('religions', [CompanyController::class, 'getReligions']);
+        Route::get('genders', [CompanyController::class, 'getGenders']);
+        Route::get('martial-status', [CompanyController::class, 'getMartialStatus']);
+        Route::get('blood-type', [CompanyController::class, 'getBloodType']);
+    });

@@ -71,7 +71,8 @@ trait TestUserAuthentication
         
         return $service->login(validated: [
             'email' => $user->email,
-            'remember_me' => false
+            'remember_me' => false,
+            'password' => 'password'
         ], unitTesting: true);
     }
 }

@@ -38,7 +38,7 @@ class ProjectFactory extends Factory
             'name' => fake()->name(),
             'client_portal' => 'client_portal_' . fake()->randomKey(),
             'project_date' => date('Y-m-d', strtotime('+1 week')),
-            'event_type' => $eventTypes,
+            'event_type' => fake()->randomElement($eventTypes),
             'venue' => 'Hotel brawijaya',
             'marketing_id' => Employee::factory(),
             'collaboration' => 'nuansa',
