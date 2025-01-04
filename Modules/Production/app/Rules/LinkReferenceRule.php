@@ -13,7 +13,7 @@ class LinkReferenceRule implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         [,$index,] = explode('.', $attribute);
-
+        
         if (empty($value) && request("link.{$index}.href")) {
             $fail('validation.referenceNameRequired')->translate();
         }
