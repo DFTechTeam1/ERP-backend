@@ -20,10 +20,13 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::apiResource('company', CompanyController::class)->names('company');
 });
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::apiResource('branch', BranchController::class)->names('branch');
-    Route::post('branch/bulk', [BranchController::class, 'bulkDelete']);
-});
+Route::middleware(['auth:sanctum'])
+    ->name('company.')
+    ->group(function () {
+        Route::get('branch/all', [BranchController::class, 'getAll'])->name('branches.get-all');
+        Route::apiResource('branch', BranchController::class)->names('branches');
+        Route::post('branch/bulk', [BranchController::class, 'bulkDelete'])->name('branches.bulk-delete');
+    });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::class)
     ->middleware(['auth:sanctum'])
@@ -68,4 +71,5 @@ Route::middleware(['auth:sanctum'])
         Route::get('genders', [CompanyController::class, 'getGenders']);
         Route::get('martial-status', [CompanyController::class, 'getMartialStatus']);
         Route::get('blood-type', [CompanyController::class, 'getBloodType']);
+        Route::get('level-staff', [CompanyController::class, 'getLevelStaff']);
     });

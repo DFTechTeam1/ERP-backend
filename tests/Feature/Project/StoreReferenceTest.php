@@ -43,7 +43,7 @@ class StoreReferenceTest extends TestCase
             ]
         ];
 
-        $response = $this->post(route('api.production.store-reference', ['id' => $project[0]->uid]), $payload, [
+        $response = $this->postJson(route('api.production.store-reference', ['id' => $project[0]->uid]), $payload, [
             'Authorization' => 'Bearer ' . $this->getToken($this->user)
         ]);
 

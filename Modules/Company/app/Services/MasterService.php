@@ -4,6 +4,7 @@ namespace Modules\Company\Services;
 
 use App\Enums\Employee\BloodType;
 use App\Enums\Employee\Gender;
+use App\Enums\Employee\LevelStaff;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\Religion;
 
@@ -86,6 +87,28 @@ class MasterService {
         $bloodTypes = collect($bloodTypes)->map(function ($item) {
             return [
                 'title' => $item->value,
+                'value' => $item->value
+            ];
+        })->toArray();
+
+        return generalResponse(
+            message: 'success',
+            error: false,
+            data: $bloodTypes
+        );
+    }
+
+    /**
+     * Get all level staff from enums
+     *
+     * @return array
+     */
+    public function getLevelStaff(): array
+    {
+        $bloodTypes = LevelStaff::cases();
+        $bloodTypes = collect($bloodTypes)->map(function ($item) {
+            return [
+                'title' => LevelStaff::generateLabel($item->value),
                 'value' => $item->value
             ];
         })->toArray();
