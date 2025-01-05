@@ -38,6 +38,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::post('employees','store');
         Route::put('employees/{uid}','update');
         Route::delete('employees/{uid}','delete');
+        Route::post('employees/validateEmployeeId', 'validateEmployeeID');
         Route::post('employees/bulk', "bulkDelete");
         Route::post('employees/addAsUser', 'addAsUser');
         Route::post('employees/submitImport', 'submitImport');

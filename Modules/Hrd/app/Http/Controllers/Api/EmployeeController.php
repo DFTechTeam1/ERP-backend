@@ -92,6 +92,17 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Validate employee ID
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateEmployeeID(Request $request): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->employeeService->validateEmployeeID($request->toArray()));
+    }
+
+    /**
      * Function to get all employees data
      *
      * @return \Illuminate\Http\JsonResponse
@@ -157,7 +168,6 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->activateAccount($key));
     }
 
-
     /**
      * Create new data
      * @param Create $request
@@ -170,7 +180,6 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->store($data));
         // return apiResponse($this->employeeService->store($request->all()));
     }
-
 
     /**
      * Update selected data

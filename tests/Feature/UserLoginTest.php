@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use Mockery\MockInterface;
+use Modules\Company\Database\Factories\ProvinceFactory;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Spatie\Permission\Models\Permission;
@@ -55,6 +56,8 @@ class UserLoginTest extends TestCase
             new UserLoginHistoryRepository,
             $this->generalServiceMock
         );
+
+        ProvinceFactory::$sequence = 1;
     }
 
     /**

@@ -64,6 +64,15 @@ class CompanyController extends Controller
     }
 
     /**
+     * Get all level staff
+     *
+     */
+    public function getLevelStaff()
+    {
+        return apiResponse($this->masterService->getLevelStaff());
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)

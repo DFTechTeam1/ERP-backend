@@ -17,8 +17,8 @@ class BranchFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->unique()->randomElement(['PT. Citra Bahagia Indonesia', 'Dfactory']),
-            'short_name' => fake()->unique()->randomElement(['CBI', 'DF'])
+            'name' => fake()->randomElement(['PT. Citra Bahagia Indonesia', 'Dfactory']),
+            'short_name' => fake()->randomElement(['CBI', 'DF'])
         ];
     }
 }

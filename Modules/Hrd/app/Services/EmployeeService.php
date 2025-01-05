@@ -9,6 +9,7 @@ use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\EmployeeException;
+use App\Repository\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -19,7 +20,14 @@ use Intervention\Image\Laravel\Facades\Image;
 use Modules\Company\Models\Position;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
+use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
+use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Production\Repository\ProjectPersonInChargeRepository;
+use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
+use Modules\Production\Repository\ProjectTaskRepository;
+use Modules\Production\Repository\ProjectVjRepository;
 use \PhpOffice\PhpSpreadsheet\Reader\Xlsx as Reader;
 
 class EmployeeService
@@ -40,27 +48,38 @@ class EmployeeService
     private $bpjsPhotoTmp;
     private $kkPhotoTmp;
 
-    public function __construct()
+    public function __construct(
+        EmployeeRepository $employeeRepo,
+        PositionRepository $positionRepo,
+        UserRepository $userRepo,
+        ProjectTaskRepository $projectTaskRepo,
+        ProjectRepository $projectRepo,
+        ProjectVjRepository $projectVjRepo,
+        ProjectPersonInChargeRepository $projectPicRepo,
+        ProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
+        EmployeeFamilyRepository $employeeFamilyRepo,
+        EmployeeEmergencyContactRepository $employeeEmergencyRepo
+    )
     {
-        $this->repo = new EmployeeRepository;
+        $this->repo = $employeeRepo;
 
-        $this->positionRepo = new PositionRepository;
+        $this->positionRepo = $positionRepo;
 
-        $this->userRepo = new \App\Repository\UserRepository();
+        $this->userRepo = $userRepo;
 
-        $this->taskRepo = new \Modules\Production\Repository\ProjectTaskRepository();
+        $this->taskRepo = $projectTaskRepo;
 
-        $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
+        $this->projectRepo = $projectRepo;
 
-        $this->projectVjRepo = new \Modules\Production\Repository\ProjectVjRepository();
+        $this->projectVjRepo = $projectVjRepo;
 
-        $this->projectPicRepo = new \Modules\Production\Repository\ProjectPersonInChargeRepository();
+        $this->projectPicRepo = $projectPicRepo;
 
-        $this->projectTaskHistoryRepo = new \Modules\Production\Repository\ProjectTaskPicHistoryRepository();
+        $this->projectTaskHistoryRepo = $projectTaskPicHistoryRepo;
 
-        $this->employeeFamilyRepo = new \Modules\Hrd\Repository\EmployeeFamilyRepository();
+        $this->employeeFamilyRepo = $employeeFamilyRepo;
 
-        $this->employeeEmergencyRepo = new \Modules\Hrd\Repository\EmployeeEmergencyContactRepository();
+        $this->employeeEmergencyRepo = $employeeEmergencyRepo;
     }
 
     /**
@@ -188,6 +207,25 @@ class EmployeeService
             [
                 'employee_id' => $numbering,
             ],
+        );
+    }
+
+    /**
+     * Validate employee ID
+     *
+     * @param array $data
+     * @return array
+     */
+    public function validateEmployeeID(array $data): array
+    {
+        $check = $this->repo->show('id', 'id', [], "employee_id = '" . $data['employee_id'] . "'");
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'valid' => !$check ? true : false
+            ]
         );
     }
 
