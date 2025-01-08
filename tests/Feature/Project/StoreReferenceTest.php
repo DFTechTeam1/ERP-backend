@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Modules\Company\Database\Factories\ProvinceFactory;
 use Modules\Production\Models\Project;
 use Tests\TestCase;
 
@@ -29,6 +30,8 @@ class StoreReferenceTest extends TestCase
 
         Sanctum::actingAs($this->user);
         $this->actingAs($this->user);
+
+        ProvinceFactory::$sequence = 1;
     }
 
     /**

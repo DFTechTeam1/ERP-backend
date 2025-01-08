@@ -69,7 +69,6 @@ class EmployeeFactory extends Factory
             'blood_type' => fake()->bloodType(),
             'date_of_birth' => fake()->date('Y-m-d', '1996-01-01'),
             'place_of_birth' => 'Indonesia',
-            'dependant' => 0,
             'gender' => fake()->randomElement(['male', 'female']),
             'bank_detail' => json_encode([
                 [
@@ -92,12 +91,10 @@ class EmployeeFactory extends Factory
             'boss_id' => null,
             'level_staff' => fake()->randomElement(['manager', 'lead', 'staff']),
             'status' => Status::Permanent->value,
-            'placement' => 'Surabaya',
             'join_date' => fake()->dateTimeBetween('-3 years', 'now'),
             'start_review_probation_date' => null,
             'probation_status' => null,
             'end_probation_date' => null,
-            'company_name' => 'Dfactory',
             'branch_id' => Branch::factory()
         ];
     }

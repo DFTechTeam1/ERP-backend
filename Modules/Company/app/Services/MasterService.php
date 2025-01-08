@@ -6,7 +6,9 @@ use App\Enums\Employee\BloodType;
 use App\Enums\Employee\Gender;
 use App\Enums\Employee\LevelStaff;
 use App\Enums\Employee\MartialStatus;
+use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\Religion;
+use App\Enums\Employee\SalaryType;
 
 class MasterService {
     /**
@@ -117,6 +119,50 @@ class MasterService {
             message: 'success',
             error: false,
             data: $bloodTypes
+        );
+    }
+
+    /**
+     * Get all salary type from enums
+     *
+     * @return array
+     */
+    public function getSalaryType(): array
+    {
+        $salaryTypes = SalaryType::cases();
+        $salaryTypes = collect($salaryTypes)->map(function ($item) {
+            return [
+                'title' => $item->label(),
+                'value' => $item->value
+            ];
+        })->toArray();
+
+        return generalResponse(
+            message: 'success',
+            error: false,
+            data: $salaryTypes
+        );
+    }
+
+    /**
+     * Get all salary type from enums
+     *
+     * @return array
+     */
+    public function getPtkpType(): array
+    {
+        $ptkpTypes = PtkpStatus::cases();
+        $ptkpTypes = collect($ptkpTypes)->map(function ($item) {
+            return [
+                'title' => $item->label(),
+                'value' => $item->value
+            ];
+        })->toArray();
+
+        return generalResponse(
+            message: 'success',
+            error: false,
+            data: $ptkpTypes
         );
     }
 }

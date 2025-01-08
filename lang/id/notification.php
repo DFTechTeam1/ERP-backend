@@ -37,5 +37,9 @@ return [
     'employeeNotFound' => 'Karyawan tidak ditemukan',
     'projectNotFound' => 'Event tidak ditemukan',
     'linkNameRequired' => 'Display name harus diisi',
-    'linkRequired' => 'Link harus diisi'
+    'linkRequired' => 'Link harus diisi',
+    'linkOrFileRequired' => 'Link atau file harus diisi',
+    'successCreateEmployee' => 'Berhasil Membuat Karyawan',
+    'successUpdateEmployee' => 'Berhasil Mengubah Karyawan',
+    'successDeleteEmployee' => 'Berhasil Menghapus Karyawan',
 ];

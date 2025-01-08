@@ -7,6 +7,7 @@ use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
+use App\Services\RoleService;
 use App\Services\UserService;
 use Laravel\Sanctum\Sanctum;
 use Modules\Company\Models\IndonesiaCity;
@@ -66,7 +67,8 @@ trait TestUserAuthentication
             new EmployeeRepository,
             new RoleRepository,
             new UserLoginHistoryRepository,
-            new GeneralService
+            new GeneralService,
+            new RoleService
         );
         
         return $service->login(validated: [

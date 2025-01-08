@@ -2,6 +2,13 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Enums\Employee\Gender;
+use App\Enums\Employee\LevelStaff;
+use App\Enums\Employee\MartialStatus;
+use App\Enums\Employee\PtkpStatus;
+use App\Enums\Employee\Religion;
+use App\Enums\Employee\SalaryType;
+use App\Enums\Employee\Status;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Database\Factories\Hrd\EmployeeFactory as HrdEmployeeFactory;
@@ -25,6 +32,7 @@ use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\IndonesiaVillage;
 use Modules\Company\Models\Province;
+use Modules\Production\Models\ProjectTaskPic;
 
 // #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
@@ -37,54 +45,82 @@ class Employee extends Model
     }
 
     /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'gender' => Gender::class,
+            'religion' => Religion::class,
+            'status' => Status::class,
+            'martial_status' => MartialStatus::class,
+            'level_staff' => LevelStaff::class,
+            'salary_type' => SalaryType::class,
+            'ptkp_status' => PtkpStatus::class
+        ];
+    }
+
+    /**
      * The attributes that are mass assignable.
      */
     protected $fillable = [
         'uid',
         'name',
-        'employee_id',
         'nickname',
         'email',
+        'date_of_birth',
+        'place_of_birth',
+        'martial_status',
+        'religion',
         'phone',
         'id_number',
-        'religion',
-        'martial_status',
         'address',
+        'current_address',
+        'position_id',
+        'employee_id',
+        'level_staff',
+        'boss_id',
+        'status',
+        'branch_id',
+        'join_date',
+        'gender',
+
+        // new
+        'ptkp_status',
+        'basic_salary',
+        'salary_type',
+
+        'bpjs_ketenagakerjaan_number',
+        'npwp_number',
+
         'province_id',
         'city_id',
         'district_id',
         'village_id',
         'postal_code',
-        'current_address',
         'blood_type',
-        'date_of_birth',
-        'place_of_birth',
-        'dependant',
-        'gender',
         'bank_detail',
-        'relation_contact',
         'education',
         'education_name',
         'education_major',
         'education_year',
-        'position_id',
-        'boss_id',
-        'level_staff',
-        'status',
-        'placement',
-        'join_date',
+        'relation_contact',
         'start_review_probation_date',
-        'probation_status',
         'end_probation_date',
-        'company_name',
+        'probation_status',
         'bpjs_status',
-        'bpjs_ketenagakerjaan_number',
         'bpjs_kesehatan_number',
-        'npwp_number',
         'bpjs_photo',
         'npwp_photo',
         'id_number_photo',
         'kk_photo',
+
+        // 'placement',
+        // 'dependant',
+        // 'company_name',
+        
         'created_by',
         'updated_by',
         'user_id',
@@ -92,7 +128,6 @@ class Employee extends Model
         'end_date',
         'resign_reason',
         'telegram_chat_id',
-        'branch_id'
     ];
 
     protected $appends = [
@@ -193,6 +228,11 @@ class Employee extends Model
         return new Attribute(
             get: fn() => $out,
         );
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPic::class, 'employee_id', 'id');
     }
 
     public function position(): BelongsTo
@@ -305,6 +345,22 @@ class Employee extends Model
     {
         return Attribute::make(
             get: fn (?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
+        );
+    }
+
+    public function bankDetail(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => ($value) ? json_decode($value, true) : [],
+            set: fn($value) => $value ? json_encode($value) : NULL
+        );
+    }
+
+    public function relationContact(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => ($value) ? json_decode($value, true) : [],
+            set: fn($value) => $value ? json_encode($value) : NULL
         );
     }
 

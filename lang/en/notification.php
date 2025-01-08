@@ -39,5 +39,8 @@ return [
     'projectNotFound' => 'Project not found',
     'linkNameRequired' => 'Link name is required',
     'linkRequired' => 'Link is required',
-    'linkOrFileRequired' => 'Link or files is required'
+    'linkOrFileRequired' => 'Link or files is required',
+    'successCreateEmployee' => 'Success Create Employee',
+    'successUpdateEmployee' => 'Success Update Employee',
+    'successDeleteEmployee' => 'Success Delete Employee',
 ];

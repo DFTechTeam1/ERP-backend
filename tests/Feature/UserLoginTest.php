@@ -7,6 +7,7 @@ use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
+use App\Services\RoleService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -54,7 +55,8 @@ class UserLoginTest extends TestCase
             new EmployeeRepository,
             new RoleRepository,
             new UserLoginHistoryRepository,
-            $this->generalServiceMock
+            $this->generalServiceMock,
+            new RoleService
         );
 
         ProvinceFactory::$sequence = 1;

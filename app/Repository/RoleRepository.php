@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 
 class RoleRepository {
@@ -19,7 +20,7 @@ class RoleRepository {
 
     public function show($id)
     {
-        return $this->model->findById($id);
+        return $this->model->findById($id, 'sanctum');
     }
 
     /**

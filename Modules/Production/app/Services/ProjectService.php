@@ -2494,7 +2494,7 @@ class ProjectService
      * @param boolean $isEmployeeUid
      * @return void
      */
-    protected function detachTaskPic(array $ids, int $taskId, bool $isEmployeeUid = true, bool $removeFromHistory = false)
+    public function detachTaskPic(array $ids, int $taskId, bool $isEmployeeUid = true, bool $removeFromHistory = false, string $message = '')
     {
         foreach ($ids as $removedUser) {
             if ($isEmployeeUid) {
@@ -2510,9 +2510,19 @@ class ProjectService
                 $this->taskPicHistory->deleteWithCondition('employee_id = ' . $removedEmployeeId . ' AND project_task_id = ' . $taskId);
             }
 
+            $employee = $this->employeeRepo->show('id', 'id,name,nickname', [], 'id = ' . $removedEmployeeId);
+
+            $logMessage = __('global.removedMemberLogText', [
+                'removedUser' => $employee->nickname
+            ]);
+            if (!empty($message)) {
+                $logMessage = $message;
+            }
+
             $this->loggingTask([
                 'task_id' => $taskId,
-                'employee_uid' => $removedUser
+                'employee_uid' => $removedUser,
+                'message' => $logMessage
             ], 'removeMemberTask');
         }
     }
@@ -3933,15 +3943,10 @@ class ProjectService
      */
     protected function removeMemberTaskLog($payload)
     {
-        $employee = $this->employeeRepo->show($payload['employee_uid'], 'id,name,nickname');
-        $text = __('global.removedMemberLogText', [
-            'removedUser' => $employee->nickname
-        ]);
-
         $this->projectTaskLogRepository->store([
             'project_task_id' => $payload['task_id'],
             'type' => 'assignMemberTask',
-            'text' => $text,
+            'text' => $payload['message'],
             'user_id' => auth()->id() ?? 0,
         ]);
     }
