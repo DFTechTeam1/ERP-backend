@@ -188,6 +188,7 @@ class RoleService {
                     'name' => $data->name,
                     'permissions' => $permissions,
                 ],
+                'raw' => $data
             ],
         );
     }

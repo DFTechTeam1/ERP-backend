@@ -3,6 +3,8 @@
 namespace Tests\Feature\Employee;
 
 use App\Repository\UserRepository;
+use App\Services\GeneralService;
+use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Mockery;
@@ -37,6 +39,11 @@ class ValidateEmployeeIdTest extends TestCase
             instance: $employeeRepoMock
         );
 
+        $userServiceMock = $this->instance(
+            abstract: UserService::class,
+            instance: Mockery::mock(UserService::class)
+        );
+
         $this->service = new EmployeeService(
             $this->employeeRepoMock,
             new PositionRepository,
@@ -47,7 +54,9 @@ class ValidateEmployeeIdTest extends TestCase
             new ProjectPersonInChargeRepository,
             new ProjectTaskPicHistoryRepository,
             new EmployeeFamilyRepository,
-            new EmployeeEmergencyContactRepository
+            new EmployeeEmergencyContactRepository,
+            $userServiceMock,
+            new GeneralService
         );
     }
 
@@ -67,7 +76,7 @@ class ValidateEmployeeIdTest extends TestCase
             )
             ->andReturnTrue();
 
-        $response = $this->service->validateEmployeeID(['employee_id' => 'DF001']);
+        $response = $this->service->validateEmployeeID(['employee_id' => 'DF001', 'uid' => 0]);
 
         $this->assertFalse($response['data']['valid']);
     }
@@ -85,7 +94,7 @@ class ValidateEmployeeIdTest extends TestCase
             )
             ->andReturnNull();
 
-        $response = $this->service->validateEmployeeID(['employee_id' => 'DF001']);
+        $response = $this->service->validateEmployeeID(['employee_id' => 'DF001', 'uid' => 0]);
 
         $this->assertTrue($response['data']['valid']);
     }

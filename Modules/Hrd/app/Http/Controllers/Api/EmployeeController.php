@@ -60,6 +60,27 @@ class EmployeeController extends Controller
         );
     }
 
+    public function generateRandomPassword()
+    {
+        return apiResponse(generalResponse(
+            message: 'Success',
+            error: false,
+            data: [
+                'password' => generateRandomPassword(14),
+            ]
+        ));
+    }
+
+    /**
+     * Get all available status from enums
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllStatus(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->employeeService->getAllStatus());
+    }
+
     public function submitImport(Request $request)
     {
         return apiResponse($this->employeeService->submitImport($request->toArray()));
@@ -178,7 +199,6 @@ class EmployeeController extends Controller
         $data = $request->validated();
 
         return apiResponse($this->employeeService->store($data));
-        // return apiResponse($this->employeeService->store($request->all()));
     }
 
     /**

@@ -187,6 +187,7 @@ return [
     'actorHoldTheTask' => ':actor menunda pekerjaan ini',
     'actorStartTheTask' => ':actor memulai pekerjaan ini',
     'passed' => 'Terlewati',
+    'deleted' => "Dihapus",
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',

@@ -72,4 +72,6 @@ Route::middleware(['auth:sanctum'])
         Route::get('martial-status', [CompanyController::class, 'getMartialStatus']);
         Route::get('blood-type', [CompanyController::class, 'getBloodType']);
         Route::get('level-staff', [CompanyController::class, 'getLevelStaff']);
+        Route::get('salary-type', [CompanyController::class, 'getSalaryType']);
+        Route::get('ptkp-type', [CompanyController::class, 'getPtkpType']);
     });

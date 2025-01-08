@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Spatie\Permission\Models\Role;
 use Vinkla\Hashids\Facades\Hashids;
 
 class UserService {
@@ -27,12 +28,15 @@ class UserService {
 
     private $generalService;
 
+    private $roleService;
+
     public function __construct(
         UserRepository $userRepo,
         EmployeeRepository $employeeRepo,
         RoleRepository $roleRepo,
         UserLoginHistoryRepository $userLogHistoryRepo,
-        GeneralService $generalService
+        GeneralService $generalService,
+        RoleService $roleService
     )
     {
         $this->repo = $userRepo;
@@ -44,6 +48,8 @@ class UserService {
         $this->loginHistoryRepo = $userLogHistoryRepo;
 
         $this->generalService = $generalService; 
+
+        $this->roleService = $roleService;
     }
 
     public function addAsUser(string $userId)
@@ -161,79 +167,81 @@ class UserService {
     }
 
     /**
+     * Main service to store a new user and send activation link via email
+     *
+     * @param array $data
+     * @return \App\Models\User
+     */
+    public function mainServiceStoreUser(array $data): \App\Models\User
+    {
+        $isEmployee = false;
+        $isDirector = false;
+        $isProjectManager = false;
+
+        // setup role
+        $roleData = $this->roleService->show($data['role_id']);
+        if (!$roleData['error']) {
+            $role = $roleData['data']['raw'];
+        }
+
+        if (!$data['is_external_user']) {    
+            $currentProjectManagerRole = json_decode($this->generalService->getSettingByKey('project_manager_role'), true) ?? [];
+            if (
+                ($currentProjectManagerRole) &&
+                (in_array($data['role_id'], $currentProjectManagerRole))
+            ) {
+                $isProjectManager = true;
+            }
+
+            $directorRole = $this->generalService->getSettingByKey('director_role');
+            if ($directorRole == $data['role_id']) {
+                $isDirector = true;
+            }
+
+            $pmAndDirectorRole = collect($currentProjectManagerRole)->merge([$directorRole])->toArray();
+
+            $isEmployee = !in_array($data['role_id'], $pmAndDirectorRole);
+        }
+
+        $payload = [
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'is_external_user' => $data['is_external_user'],
+            'employee_id' => $data['employee_id'],
+            'username' => NULL,
+            'is_employee' => $isEmployee,
+            'is_director' => $isDirector,
+            'is_project_manager' => $isProjectManager,
+        ];
+
+        // only assign role and send notification to internal user
+        if (!$data['is_external_user']) {
+            $user = $this->repo->store($payload);
+            $user->assignRole($role);
+    
+            SendEmailActivationJob::dispatch($user, $data['password'])->afterCommit();
+        }
+
+        return $user;
+    }
+
+    /**
      * Store user
      *
      * @param array $data
+     * $data is
+     * @param bool is_external_user
+     * @param string email
+     * @param string employee_id
+     * @param string password
+     * @param int role_id
      * @return array
      */
     public function store(array $data)
     {
         DB::beginTransaction();
         try {
-            $isDirector = null;
-            $isEmployee = null;
-            $isPM = null;
-
-            if (!$data['is_external_user']) {
-                $employee = $this->employeeRepo->show($data['employee_id'], 'id,uid,email,position_id');
-                $email = $data['email'];
-                $employeeId = $employee->id;
-
-                // define a role position (is_employee, is_director or is_project_manager)
-                $positionAsDirector = json_decode(getSettingByKey('position_as_directors'), true);
-                if ($positionAsDirector) {
-                    $positionAsDirector = collect($positionAsDirector)->map(function ($director) {
-                        return getIdFromUid($director, new \Modules\Company\Models\Position());
-                    })->toArray();
-
-                    if (in_array($employee->position_id, $positionAsDirector)) {
-                        $isDirector = true;
-                    }
-                }
-
-                $positionAsProjectManager = json_decode(getSettingByKey('position_as_project_manager'), true);
-                if ($positionAsProjectManager) {
-                    $positionAsProjectManager = collect($positionAsProjectManager)->map(function ($pm) {
-                        return getIdFromUid($pm, new \Modules\Company\Models\Position());
-                    })->toArray();
-
-                    if (in_array($employee->position_id, $positionAsProjectManager)) {
-                        $isPM = true;
-                    }
-                }
-
-                if ($positionAsProjectManager && $positionAsDirector) {
-                    $combine = array_merge($positionAsDirector, $positionAsProjectManager);
-
-                    if (!in_array($employee->position_id, $combine)) {
-                        $isEmployee = true;
-                    }
-                }
-            } else {
-                $email = $data['email'];
-                $employeeId = 0;
-            }
-
-            $user = $this->repo->store([
-                'email' => $email,
-                'password' => $data['password'],
-                'employee_id' => $employeeId,
-                'is_employee' => $isEmployee,
-                'is_project_manager' => $isPM,
-                'is_director' => $isDirector,
-            ]);
-
-            // assign role
-            $role = $this->roleRepo->show($data['role']);
-            $user->assignRole($role);
-
-            if (!$data['is_external_user']) {
-                $this->employeeRepo->update([
-                    'user_id' => $user->id,
-                ], $data['employee_id']);
-            }
-
-            SendEmailActivationJob::dispatch($user, $data['password'])->afterCommit();
+            $this->mainServiceStoreUser($data);
 
             DB::commit();
 
@@ -241,7 +249,6 @@ class UserService {
                 __('global.successCreateUser'),
                 false
             );
-
         } catch(\Throwable $th) {
             DB::rollBack();
 

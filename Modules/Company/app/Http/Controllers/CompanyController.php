@@ -73,6 +73,24 @@ class CompanyController extends Controller
     }
 
     /**
+     * Get all salary type
+     *
+     */
+    public function getSalaryType()
+    {
+        return apiResponse($this->masterService->getSalaryType());
+    }
+
+    /**
+     * Get all ptkp types
+     *
+     */
+    public function getPtkpType()
+    {
+        return apiResponse($this->masterService->getPtkpType());
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -16,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles, HasApiTokens, ModelObserver;
+    use HasFactory, Notifiable, HasRoles, HasApiTokens, ModelObserver, SoftDeletes;
 
     protected $guard_name = 'sanctum';
 
@@ -26,17 +27,17 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'uid',
         'email',
         'password',
-        'uid',
-        'image',
-        'last_login_at',
         'is_external_user',
-        'username',
         'employee_id',
+        'username',
         'is_employee',
         'is_director',
         'is_project_manager',
+        'image',
+        'last_login_at',
         'email_verified_at',
         'reset_password_token_claim',
         'reset_password_token_exp',

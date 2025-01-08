@@ -10,6 +10,8 @@ use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\EmployeeException;
 use App\Repository\UserRepository;
+use App\Services\GeneralService;
+use App\Services\UserService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -20,6 +22,7 @@ use Intervention\Image\Laravel\Facades\Image;
 use Modules\Company\Models\Position;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -28,7 +31,7 @@ use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectVjRepository;
-use \PhpOffice\PhpSpreadsheet\Reader\Xlsx as Reader;
+use Modules\Production\Services\ProjectService;
 
 class EmployeeService
 {
@@ -47,6 +50,9 @@ class EmployeeService
     private $npwpPhotoTmp;
     private $bpjsPhotoTmp;
     private $kkPhotoTmp;
+    private $userService;
+    private $generalService;
+    private $projectService;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -58,10 +64,17 @@ class EmployeeService
         ProjectPersonInChargeRepository $projectPicRepo,
         ProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
         EmployeeFamilyRepository $employeeFamilyRepo,
-        EmployeeEmergencyContactRepository $employeeEmergencyRepo
+        EmployeeEmergencyContactRepository $employeeEmergencyRepo,
+        UserService $userService,
+        GeneralService $generalService,
+        ProjectService $projectService
     )
     {
+        $this->projectService = $projectService;
+
         $this->repo = $employeeRepo;
+
+        $this->userService = $userService;
 
         $this->positionRepo = $positionRepo;
 
@@ -80,6 +93,8 @@ class EmployeeService
         $this->employeeFamilyRepo = $employeeFamilyRepo;
 
         $this->employeeEmergencyRepo = $employeeEmergencyRepo;
+
+        $this->generalService = $generalService;
     }
 
     /**
@@ -145,15 +160,15 @@ class EmployeeService
                     'email' => $item->email,
                     'birth_date' => date('d F Y', strtotime($item->date_of_birth)),
                     'birth_place' => $item->place_of_birth,
-                    'religion' => Religion::getReligion(code: $item->religion),
-                    'gender' => Gender::getGender(code: $item->gender),
+                    'religion' => Religion::getReligion(code: $item->religion->value),
+                    'gender' => Gender::getGender(code: $item->gender->value),
                     'position' => $item->position->name,
-                    'level_staff' => __("global.{$item->level_staff}"),
+                    'level_staff' => __("global.{$item->level_staff->value}"),
                     'status' => $item->status_text,
                     'status_color' => $item->status_color,
                     'join_date' => date('d F Y', strtotime($item->join_date)),
                     'phone' => $item->phone,
-                    'martial_status' => MartialStatus::getMartialStatus(code: $item->martial_status),
+                    'martial_status' => MartialStatus::getMartialStatus(code: $item->martial_status->value),
                     'placement' => $item->placement,
                     'employee_id' => $item->employee_id,
                     'user' => $item->user,
@@ -218,7 +233,13 @@ class EmployeeService
      */
     public function validateEmployeeID(array $data): array
     {
-        $check = $this->repo->show('id', 'id', [], "employee_id = '" . $data['employee_id'] . "'");
+        $where = "employee_id = '" . $data['employee_id'] . "'";
+
+        if ($data['uid']) {
+            $where .= " and uid != '{$data['uid']}'";
+        }
+
+        $check = $this->repo->show('id', 'id', [], $where);
 
         return generalResponse(
             'success',
@@ -278,6 +299,29 @@ class EmployeeService
     }
 
     /**
+     * Get all available status from enums
+     *
+     * @return array
+     */
+    public function getAllStatus(): array
+    {
+        $status = Status::cases();
+
+        $status = collect($status)->map(function ($item) {
+            return [
+                'value' => $item->value,
+                'title' => $item->label()
+            ];
+        })->toArray();
+
+        return generalResponse(
+            message: 'success',
+            error: false,
+            data: $status
+        );
+    }
+
+    /**
      * Function to get all data
      *
      * @return array
@@ -300,7 +344,7 @@ class EmployeeService
             
             if ($search > 0) {
                 $splice = array_splice($levelStaffOrder, 0, $search);
-
+                
                 $splice = collect($splice)->map(function ($item) {
                     return "'{$item}'";
                 })->toArray();
@@ -492,13 +536,12 @@ class EmployeeService
         $projects = array_merge($projects, $asPicTask);
         $data['project_detail'] = $projects;
 
-        $data['bank_detail'] = json_decode($data->bank_detail, true);
-        $data['emergency_contact'] = json_decode($data->relation_contact, true);
-
         $data['join_date_format'] = date('d F Y', strtotime($data->join_date));
         $data['length_of_service'] = getLengthOfService($data->join_date);
 
         $data['level_staff_text'] = \App\Enums\Employee\LevelStaff::generateLabel('staff');
+
+        $data['basic_salary'] = number_format($data->basic_salary, 0, '', '');
 
         $data['boss_uid'] = null;
         $data['approval_line'] = null;
@@ -572,115 +615,47 @@ class EmployeeService
      */
     public function store(array $data): array
     {
+        DB::beginTransaction();
         try {
-            $data['bank_detail'] = json_encode($data['banks']);
-            $data['relation_contact'] = json_encode($data['relation']);
-            $data['education'] = $data['educations']['education'];
-            $data['education_name'] = $data['educations']['education_name'];
-            $data['education_major'] = $data['educations']['education_major'];
-            $data['education_year'] = $data['educations']['graduation_year'];
-            $data['level_staff'] = $data['level'];
-            $data['join_date'] = date('Y-m-d', strtotime($data['join_date']));
-            $data['start_review_probation_date'] = isset($data['start_review_date']) ? date('Y-m-d', strtotime($data['start_review_date'])) : null;
-            $data['end_probation_date'] = isset($data['end_probation_date']) ? date('Y-m-d', strtotime($data['end_probation_date'])) : null;
-            $data['company_name'] = $data['company'];
-            $data['date_of_birth'] = $data['date_of_birth'] != 'null' ? date('Y-m-d', strtotime($data['date_of_birth'])) : null;
-            $data['position_id'] = getIdFromUid($data['position_id'], new Position());
-            $data['province_id'] = isset($data['province_id']) ? $data['province_id'] : null;
-            $data['city_id'] = isset($data['city_id']) ? $data['city_id'] : null;
-            $data['district_id'] = isset($data['district_id']) ? $data['district_id'] : null;
-            $data['village_id'] = isset($data['village_id']) ? $data['village_id'] : null;
-            $data['dependant'] = $data['dependents'] != null ? $data['dependents'] : null;
-
-            if (isset($data['boss_id'])) {
-                $data['boss_id'] = getIdFromUid($data['boss_id'], new \Modules\Hrd\Models\Employee());
+            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new Position());
+            if (!empty($data['boss_id'])) {
+                $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
 
-            if (
-                (isset($data['id_number_photo'])) &&
-                ($data['id_number_photo'])
-            ) {
-                $this->idCardPhotoTmp = uploadImageandCompress(
-                    'employees',
-                    10,
-                    $data['id_number_photo']
+            $employee = $this->repo->store(
+                collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray()
+            );
+
+            // invite to ERP if needed
+            if ($data['invite_to_erp']) {
+
+                $this->userService->mainServiceStoreUser(
+                    collect($data)->only([
+                        'password',
+                        'email',
+                        'role_id'
+                    ])
+                    ->merge(['employee_id' => $employee->id, 'is_external_user' => 0])
+                    ->toArray()
                 );
-                $data['id_number_photo'] = $this->idCardPhotoTmp;
             }
 
-            if (
-                (isset($data['npwp_photo'])) &&
-                ($data['npwp_photo'])
-            ) {
-                $this->npwpPhotoTmp = uploadImageandCompress(
-                    'employees',
-                    10,
-                    $data['npwp_photo']
-                );
-                $data['npwp_photo'] = $this->npwpPhotoTmp;
+            // invite to Talenta
+            if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
+                // TODO: Communiate with talenta
             }
-
-            if (
-                (isset($data['bpjs_photo'])) &&
-                ($data['bpjs_photo'])
-            ) {
-                $this->bpjsPhotoTmp = uploadImageandCompress(
-                    'employees',
-                    10,
-                    $data['bpjs_photo']
-                );
-                $data['bpjs_photo'] = $this->bpjsPhotoTmp;
-            }
-
-            if (
-                (isset($data['kk_photo'])) &&
-                ($data['kk_photo'])
-            ) {
-                $this->kkPhotoTmp = uploadImageandCompress(
-                    'employees',
-                    10,
-                    $data['kk_photo']
-                );
-                $data['kk_photo'] = $this->kkPhotoTmp;
-            }
-
-            $this->repo->store(collect($data)->except([
-                'banks',
-                'relation',
-                'educations',
-                'level',
-                'start_review_date',
-                'company',
-                'id_card_photo'
-            ])->toArray());
-
-            \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
+            
+            DB::commit();
 
             return generalResponse(
-                __("global.successCreateEmployee"),
-                false,
-                [],
+                message: __('notification.successCreateEmployee'),
+                error: false,
+                data: []
             );
         } catch (\Throwable $th) {
-            if ($this->idCardPhotoTmp) {
-                deleteImage(storage_path('app/public/employees/' . $this->idCardPhotoTmp));
-            }
-            if ($this->npwpPhotoTmp) {
-                deleteImage(storage_path('app/public/employees/' . $this->npwpPhotoTmp));
-            }
-            if ($this->bpjsPhotoTmp) {
-                deleteImage(storage_path('app/public/employees/' . $this->bpjsPhotoTmp));
-            }
-            if ($this->kkPhotoTmp) {
-                deleteImage(storage_path('app/public/employees/' . $this->kkPhotoTmp));
-            }
+            DB::rollBack();
 
-            return generalResponse(
-                errorMessage($th),
-                true,
-                [],
-                Code::BadRequest->value,
-            );
+            return errorResponse($th);
         }
     }
 
@@ -743,128 +718,36 @@ class EmployeeService
      */
     public function update(
         array $data,
-        string $uid='',
-        string $where=''
+        string $uid = '',
+        string $where = ''
     ): array
     {
+        DB::beginTransaction();
         try {
-            $deletedImages = $data['deleted_image'] ?? [];
-            // $employee = $this->repo->show($uid, 'id,id_number_photo,npwp_photo,kk_photo,bpjs_photo');
-
-            $data['bank_detail'] = json_encode($data['banks']);
-            $data['relation_contact'] = json_encode($data['relation']);
-            $data['education'] = $data['educations']['education'];
-            $data['education_name'] = $data['educations']['education_name'];
-            $data['education_major'] = $data['educations']['education_major'];
-            $data['education_year'] = $data['educations']['graduation_year'];
-            $data['current_address'] = $data['current_address'] != 'null' ? $data['current_address'] : null;
-            $data['level_staff'] = $data['level'];
-            $data['join_date'] = date('Y-m-d', strtotime($data['join_date']));
-            $data['start_review_probation_date'] = (isset($data['start_review_date']) && ($data['start_review_date'] != 'null')) ? date('Y-m-d', strtotime($data['start_review_date'])) : null;
-            $data['end_probation_date'] = (isset($data['end_probation_date']) && $data['end_probation_date'] != 'null') ? date('Y-m-d', strtotime($data['end_probation_date'])) : null;
-            $data['company_name'] = $data['company'];
-            $data['date_of_birth'] = $data['date_of_birth'] != 'null' ? date('Y-m-d', strtotime($data['date_of_birth'])) : null;
-            $data['position_id'] = getIdFromUid($data['position_id'], new Position());
-            $data['province_id'] = isset($data['province_id']) ? $data['province_id'] : null;
-            $data['city_id'] = isset($data['city_id']) ? $data['city_id'] : null;
-            $data['district_id'] = isset($data['district_id']) ? $data['district_id'] : null;
-            $data['village_id'] = isset($data['village_id']) ? $data['village_id'] : null;
-            $data['dependant'] = $data['dependents'] != null ? $data['dependents'] : null;
-
-            if (isset($data['boss_id'])) {
-                $data['boss_id'] = getIdFromUid($data['boss_id'], new \Modules\Hrd\Models\Employee());
+            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new Position());
+            if (!empty($data['boss_id'])) {
+                $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
 
-            if ((count($deletedImages) > 0) && (isset($deletedImages['id_number_photo']))) {
-                $data['id_number_photo'] = null;
-            }
-            if (isset($data['id_number_photo'])) {
-                $this->idCardPhotoTmp = uploadImageandCompress(
-                    'employees',
-                    10,
-                    $data['id_number_photo']
-                );
-                $data['id_number_photo'] = $this->idCardPhotoTmp;
+            if ((isset($data['is_residence_same'])) && ($data['is_residence_same'])) {
+                $data['current_address'] = $data['address'];
             }
 
-            if ((count($deletedImages) > 0) && (isset($deletedImages['npwp_photo']))) {
-                $data['npwp_photo'] = null;
-            }
-            if (isset($data['npwp_photo'])) {
-                $this->npwpPhotoTmp = uploadImageandCompress(
-                    'employees',
-                    10,
-                    $data['npwp_photo']
-                );
-                $data['npwp_photo'] = $this->npwpPhotoTmp;
-            }
-
-            if ((count($deletedImages) > 0) && (isset($deletedImages['bpjs_photo']))) {
-                $data['bpjs_photo'] = null;
-            }
-            if (isset($data['bpjs_photo'])) {
-                $this->bpjsPhotoTmp = uploadImageandCompress(
-                    'employees',
-                    10,
-                    $data['bpjs_photo']
-                );
-                $data['bpjs_photo'] = $this->bpjsPhotoTmp;
-            }
-
-            if ((count($deletedImages) > 0) && (isset($deletedImages['kk_photo']))) {
-                $data['kk_photo'] = null;
-            }
-            if (isset($data['kk_photo'])) {
-                $this->kkPhotoTmp = uploadImageandCompress(
-                    'employees',
-                    10,
-                    $data['kk_photo']
-                );
-                $data['kk_photo'] = $this->kkPhotoTmp;
-            }
-
-            logging('employee payload', $data);
-
-            $payloadUpdate = collect($data)->except([
-                'banks',
-                'relation',
-                'educations',
-                'level',
-                'start_review_date',
-                'company',
-                'id_card_photo',
-                'is_residence_same',
-                'dependents',
-                'deleted_image'
-            ])->toArray();
-
-            $this->repo->update($payloadUpdate, $uid);
+            $this->repo->update(
+                collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray(),
+                $uid
+            );
 
             \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
 
-            \Modules\Hrd\Jobs\DeleteImageJob::dispatch($deletedImages);
+            DB::commit();
 
             return generalResponse(
                 __("global.successUpdateEmployee"),
                 false,
-                [
-                    'payload' => $payloadUpdate,
-                    'data' => $data,
-                ],
             );
         } catch (\Throwable $th) {
-            if ($this->idCardPhotoTmp) {
-                deleteImage(storage_path('app/public/employees/' . $this->idCardPhotoTmp));
-            }
-            if ($this->npwpPhotoTmp) {
-                deleteImage(storage_path('app/public/employees/' . $this->npwpPhotoTmp));
-            }
-            if ($this->bpjsPhotoTmp) {
-                deleteImage(storage_path('app/public/employees/' . $this->bpjsPhotoTmp));
-            }
-            if ($this->kkPhotoTmp) {
-                deleteImage(storage_path('app/public/employees/' . $this->kkPhotoTmp));
-            }
+            DB::rollBack();
 
             return generalResponse(
                 errorMessage($th),
@@ -922,6 +805,20 @@ class EmployeeService
         }
     }
 
+    public function detachFromAllTasks(\Illuminate\Support\Collection $employee): bool
+    {
+        // get all tasks
+        foreach ($employee->tasks as $task) {
+            $this->projectService->detachTaskPic(
+                ids: [$employee->uid],
+                taskId: $task->id,
+                message: __('global.removedMemberBcsResign', ['removedUser' => $employee->nickname])
+            );
+        }
+
+        return true;
+    }
+
     /**
      * Delete bulk data
      *
@@ -932,56 +829,42 @@ class EmployeeService
     public function bulkDelete(array $ids): array
     {
         DB::beginTransaction();
+
         try {
-            $images = [];
+            // Throw an error when employee have a relation to project or equipment
+            
+
             foreach ($ids as $id) {
-                $employee = $this->repo->show($id, 'id,id_number_photo,npwp_photo,kk_photo,bpjs_photo');
-                // get relation to project
-                $asPic = $this->projectPicRepo->show('dummy', 'id', [], 'pic_id = ' . $employee->id);
-
-                // get as task pic
-                $asTaskPic = $this->projectTaskHistoryRepo->show('dummy', 'id', [], 'employee_id = ' . $employee->id);
-
-                $employeeErrorStatus = false;
-
-                if ($asPic || $asTaskPic) {
-                    $employeeErrorRelation[] = 'projects';
-                    $employeeErrorStatus = true;
-                }
-
-                if ($employeeErrorStatus) {
-                    DB::rollBack();
-                    throw new EmployeeException(__("global.employeeRelationFound", [
-                        'name' => $employee->name,
-                        'relation' => implode(' and ',$employeeErrorRelation)
-                    ]));
-                }
-
-                if ($employee->id_number_photo) {
-                    $images[] = $employee->id_number_photo;
-                }
-                if ($employee->nwp_photo) {
-                    $images[] = $employee->npwp_photo;
-                }
-                if ($employee->kk_photo) {
-                    $images[] = $employee->kk_photo;
-                }
-                if ($employee->bpjs_photo) {
-                    $images[] = $employee->bpjs_photo;
-                }
+                $employee = $this->repo->show(
+                    uid: $id,
+                    select: 'id,name,email',
+                    relation: [
+                        'tasks:id,project_task_id,employee_id',
+                        'user:id,employee_id,uid'
+                    ],
+                );
+    
+                $this->detachFromAllTasks(employee: $employee);
             }
 
-            // $this->repo->bulkDelete($ids, 'uid');
+            // TODO: Check all equipments
+            
+            // remove access to system
+            $this->userService->bulkDelete(
+                ids: [$employee->user->uid]
+            );
 
-            \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
+            // TODO:: Delete talenta access
 
-            \Modules\Hrd\Jobs\DeleteImageJob::dispatch($images)->afterCommit();
+            $this->repo->update([
+                'status' => Status::Deleted->value,
+            ]);
 
             DB::commit();
 
             return generalResponse(
-                __('global.successDeleteEmployee'),
-                false,
+                message: __('global.successDeleteEmployee'),
+                error: false,
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -1646,6 +1529,19 @@ class EmployeeService
      */
     public function resign(array $data, string $employeeUid)
     {
+        /**
+         * What should be done when we delete:
+         * 
+         * 1. Unattach from all tasks he have
+         * 2. Make sure all equipment are already given back and in good condition
+         * 3. Take back the access from system
+         * 4. Tack back the access from email
+         * 5. Tack back the access from talenta
+         * 6. Write a history for a record
+         * 7. Change status
+         * 8. Don't DELETE UNTIL THE DESIRE TIME REACHED
+         */
+
         $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
 
         $this->repo->update([

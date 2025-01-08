@@ -3,9 +3,12 @@
 namespace Tests\Feature\Employee;
 
 use App\Repository\UserRepository;
+use App\Services\GeneralService;
+use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Mockery;
+use Mockery\MockInterface;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
@@ -34,6 +37,11 @@ class GenerateEmployeeIdTest extends TestCase
 
         $this->employeeRepoMock = $this->instance(EmployeeRepository::class, $employeeMock);
 
+        $userServiceMock = $this->instance(
+            abstract: UserService::class,
+            instance: Mockery::mock(UserService::class)
+        );
+
         $this->service = new EmployeeService(
             $this->employeeRepoMock,
             new PositionRepository,
@@ -44,7 +52,9 @@ class GenerateEmployeeIdTest extends TestCase
             new ProjectPersonInChargeRepository,
             new ProjectTaskPicHistoryRepository,
             new EmployeeFamilyRepository,
-            new EmployeeEmergencyContactRepository
+            new EmployeeEmergencyContactRepository,
+            $userServiceMock,
+            new GeneralService
         );
     }
 

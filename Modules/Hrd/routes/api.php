@@ -29,13 +29,15 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
     ->middleware(['auth:sanctum'])
     ->group(function() {
         Route::get('employees','list');
+        Route::post('employees','store')->name('employees.store');
         Route::get('employees/all','getAll');
         Route::get('employees/checkEmail', 'checkEmail');
         Route::get('employees/checkIdNumber', 'checkIdNumber');
         Route::get('employees/generateEmployeeId', 'generateEmployeeID');
         Route::get('employees/getProjectManagers', 'getProjectManagers');
+        Route::get('employees/getAllStatus', 'getAllStatus')->name('employees.getAllStatus');
+        Route::get('employees/generateRandomPassword', 'generateRandomPassword')->name('employees.generateRandomPassword');
         Route::get('employees/{uid}','show')->name('hrd.employees.show');
-        Route::post('employees','store');
         Route::put('employees/{uid}','update');
         Route::delete('employees/{uid}','delete');
         Route::post('employees/validateEmployeeId', 'validateEmployeeID');

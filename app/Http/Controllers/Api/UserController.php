@@ -12,9 +12,9 @@ class UserController extends Controller
 {
     private $service;
 
-    public function __construct()
+    public function __construct(UserService $service)
     {
-        $this->service = new UserService();
+        $this->service = $service;
     }
 
     /**
