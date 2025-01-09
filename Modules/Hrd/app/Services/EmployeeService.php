@@ -13,14 +13,17 @@ use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\UserService;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
 use Modules\Company\Models\Position;
 use Modules\Company\Repository\PositionRepository;
+use Modules\Hrd\Exceptions\EmployeeHasRelation;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
@@ -52,7 +55,6 @@ class EmployeeService
     private $kkPhotoTmp;
     private $userService;
     private $generalService;
-    private $projectService;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -66,12 +68,9 @@ class EmployeeService
         EmployeeFamilyRepository $employeeFamilyRepo,
         EmployeeEmergencyContactRepository $employeeEmergencyRepo,
         UserService $userService,
-        GeneralService $generalService,
-        ProjectService $projectService
+        GeneralService $generalService
     )
     {
-        $this->projectService = $projectService;
-
         $this->repo = $employeeRepo;
 
         $this->userService = $userService;
@@ -119,6 +118,8 @@ class EmployeeService
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
             $search = request('search');
+
+            $where = "status != " . Status::Deleted->value;
 
             if (!empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
@@ -805,18 +806,9 @@ class EmployeeService
         }
     }
 
-    public function detachFromAllTasks(\Illuminate\Support\Collection $employee): bool
+    public function validateRelation()
     {
-        // get all tasks
-        foreach ($employee->tasks as $task) {
-            $this->projectService->detachTaskPic(
-                ids: [$employee->uid],
-                taskId: $task->id,
-                message: __('global.removedMemberBcsResign', ['removedUser' => $employee->nickname])
-            );
-        }
 
-        return true;
     }
 
     /**
@@ -831,34 +823,38 @@ class EmployeeService
         DB::beginTransaction();
 
         try {
-            // Throw an error when employee have a relation to project or equipment
-            
-
             foreach ($ids as $id) {
                 $employee = $this->repo->show(
                     uid: $id,
                     select: 'id,name,email',
                     relation: [
                         'tasks:id,project_task_id,employee_id',
-                        'user:id,employee_id,uid'
+                        'user:id,employee_id,uid',
+                        'projects:id,project_id,pic_id'
                     ],
                 );
-    
-                $this->detachFromAllTasks(employee: $employee);
+
+                if ($employee->projects->count() > 0 || $employee->tasks->count() > 0) {
+                    DB::rollBack();
+
+                    return errorResponse(__('notification.cannotDeleteEmployeeBcsRelation'));
+                }
+
+                $this->repo->update([
+                    'status' => Status::Deleted->value,
+                ], uid: $id);
             }
 
             // TODO: Check all equipments
             
             // remove access to system
-            $this->userService->bulkDelete(
-                ids: [$employee->user->uid]
-            );
+            if ($employee->user) {
+                $this->userService->bulkDelete(
+                    ids: [$employee->user->uid]
+                );
+            }
 
             // TODO:: Delete talenta access
-
-            $this->repo->update([
-                'status' => Status::Deleted->value,
-            ]);
 
             DB::commit();
 

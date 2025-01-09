@@ -3,7 +3,9 @@
 namespace Database\Factories\Hrd;
 
 use App\Enums\Employee\MartialStatus;
+use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\Religion;
+use App\Enums\Employee\SalaryType;
 use App\Enums\Employee\Status;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Company\Models\Branch;
@@ -60,10 +62,10 @@ class EmployeeFactory extends Factory
             'religion' => fake()->randomElement($religions),
             'martial_status' => fake()->randomElement($martialStatus),
             'address' => fake()->address(),
-            'province_id' => Province::factory()->create()->code,
-            'city_id' => IndonesiaCity::factory()->create()->code,
-            'district_id' => IndonesiaDistrict::factory()->create()->code,
-            'village_id' => IndonesiaVillage::factory()->create()->code,
+            // 'province_id' => Province::factory()->create()->code,
+            // 'city_id' => IndonesiaCity::factory()->create()->code,
+            // 'district_id' => IndonesiaDistrict::factory()->create()->code,
+            // 'village_id' => IndonesiaVillage::factory()->create()->code,
             'postal_code' => 1234,
             'current_address' => fake()->address(),
             'blood_type' => fake()->bloodType(),
@@ -95,6 +97,9 @@ class EmployeeFactory extends Factory
             'start_review_probation_date' => null,
             'probation_status' => null,
             'end_probation_date' => null,
+            'basic_salary' => '20000000',
+            'salary_type' => SalaryType::Monthly->value,
+            'ptkp_status' => PtkpStatus::K0->value,
             'branch_id' => Branch::factory()
         ];
     }

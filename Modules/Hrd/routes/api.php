@@ -38,7 +38,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/getAllStatus', 'getAllStatus')->name('employees.getAllStatus');
         Route::get('employees/generateRandomPassword', 'generateRandomPassword')->name('employees.generateRandomPassword');
         Route::get('employees/{uid}','show')->name('hrd.employees.show');
-        Route::put('employees/{uid}','update');
+        Route::put('employees/{uid}','update')->name('employees.update');
         Route::delete('employees/{uid}','delete');
         Route::post('employees/validateEmployeeId', 'validateEmployeeID');
         Route::post('employees/bulk', "bulkDelete");
