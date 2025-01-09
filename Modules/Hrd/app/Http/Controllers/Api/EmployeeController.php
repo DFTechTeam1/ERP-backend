@@ -255,9 +255,7 @@ class EmployeeController extends Controller
     public function bulkDelete(Request $request)
     {
         return apiResponse($this->employeeService->bulkDelete(
-            collect($request->ids)->map(function ($item) {
-                return $item['uid'];
-            })->toArray()
+            $request->uids
         ));
     }
 

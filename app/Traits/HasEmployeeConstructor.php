@@ -19,6 +19,7 @@ use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectVjRepository;
+use Modules\Production\Services\ProjectService;
 
 trait HasEmployeeConstructor
 {
@@ -38,7 +39,8 @@ trait HasEmployeeConstructor
         $employeeFamilyRepo = null,
         $employeeEmergencyRepo = null,
         $userService = null,
-        $generalService =  null
+        $generalService =  null,
+        $projectService = null
     )
     {
         $userServiceData = new UserService(
@@ -65,7 +67,7 @@ trait HasEmployeeConstructor
             $employeeFamilyRepo ? $employeeFamilyRepo : new EmployeeFamilyRepository,
             $employeeEmergencyRepo ? $employeeEmergencyRepo : new EmployeeEmergencyContactRepository,
             $userService ? $userService : $userServiceData,
-            $generalService ? $generalService : new GeneralService
+            $generalService ? $generalService : new GeneralService,
         );
     }
 }

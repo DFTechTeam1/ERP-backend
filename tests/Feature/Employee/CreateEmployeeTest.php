@@ -171,4 +171,9 @@ class CreateEmployeeTest extends TestCase
 
         parent::tearDown();
     }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+    }
 }

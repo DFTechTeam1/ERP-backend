@@ -57,6 +57,7 @@ if (!function_exists('successResponse')) {
 
 if (!function_exists('errorMessage')) {
     function errorMessage($message) {
+        Log::debug("Check error", [!$message instanceof Throwable]);
         $arr = ['App\Exceptions\TemplateNotValid'];
 
         if ($message instanceof Throwable) {
@@ -779,7 +780,11 @@ if (!function_exists('formatSearchConditions')) {
                 $condition = " >= ";
             }
 
-            $where .= $data['field'] . $condition . $value . ' and ';
+            if (empty($where)) {
+                $where .= $data['field'] . $condition . $value . ' and ';
+            } else {
+                $where .= " and " . $data['field'] . $condition . $value . ' and ';
+            }
         }
         $where = rtrim($where, " and");
 
