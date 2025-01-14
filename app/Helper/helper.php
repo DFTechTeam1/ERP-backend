@@ -752,6 +752,10 @@ if (!function_exists('isAssistantPMRole')) {
 
 if (!function_exists('formatSearchConditions')) {
     function formatSearchConditions(array $filters, string $where) {
+        if (empty($where)) {
+            $where = '';
+        }
+
         foreach ($filters as $data) {
             $value = $data['value'];
 
@@ -780,11 +784,7 @@ if (!function_exists('formatSearchConditions')) {
                 $condition = " >= ";
             }
 
-            if (empty($where)) {
-                $where .= $data['field'] . $condition . $value . ' and ';
-            } else {
-                $where .= " and " . $data['field'] . $condition . $value . ' and ';
-            }
+            $where .= $data['field'] . $condition . $value . ' and ';
         }
         $where = rtrim($where, " and");
 

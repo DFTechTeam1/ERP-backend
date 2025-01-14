@@ -22,8 +22,6 @@ class LandingPageController extends Controller
 
     public function index()
     {
-        return Employee::with(['tasks', 'projects'])
-            ->where('id', 17)->first();
         return view('landing');
     }
 }

@@ -138,16 +138,55 @@ class Employee extends Model
         'initial',
         'gender_text',
         'martial_text',
+        'blood_type_text',
+        'religion_text'
     ];
+
+    public function bloodTypeText(): Attribute
+    {
+        $out = '-';
+        if (isset($this->attributes['blood_type'])) {
+            $cases = \App\Enums\Employee\BloodType::cases();
+            foreach ($cases as $case) {
+                if ($case->value == $this->attributes['blood_type']) {
+                    $out = $case->value;
+                    break;
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
+
+    public function religionText(): Attribute
+    {
+        $out = '-';
+        if (isset($this->attributes['religion'])) {
+            $cases = \App\Enums\Employee\Religion::cases();
+            foreach ($cases as $case) {
+                if ($case->value == $this->attributes['religion']) {
+                    $out = Religion::getReligion($this->attributes['religion']);
+                    break;
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
 
     public function genderText(): Attribute
     {
         $out = '-';
-        if ($this->gender) {
+        if (isset($this->attributes['gender'])) {
             $cases = \App\Enums\Employee\Gender::cases();
             foreach ($cases as $case) {
-                if ($case->value == $this->gender) {
+                if ($case->value == $this->attributes['gender']) {
                     $out = $case->label();
+                    break;
                 }
             }
         }
@@ -160,10 +199,11 @@ class Employee extends Model
     public function martialText(): Attribute
     {
         $out = '-';
-        if ($this->martial_status) {
+
+        if ($this->attributes['martial_status']) {
             $cases = \App\Enums\Employee\MartialStatus::cases();
             foreach ($cases as $case) {
-                if ($case->value == $this->martial_status) {
+                if ($case->value == $this->attributes['martial_status']) {
                     $out = $case->label();
                 }
             }
