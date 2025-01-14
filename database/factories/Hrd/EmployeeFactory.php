@@ -54,7 +54,7 @@ class EmployeeFactory extends Factory
 
         return [
             'name' => $name,
-            'employee_id' => fake()->randomElement($range),
+            'employee_id' => 'DF' . fake()->randomNumber(3, true),
             'nickname' => $firstName,
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->randomNumber(9),

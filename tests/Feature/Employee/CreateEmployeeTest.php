@@ -56,6 +56,8 @@ class CreateEmployeeTest extends TestCase
         ]));
 
         $response->assertStatus(422);
+
+        parent::tearDown();
     }
 
     public function testEmailAlreadyExists(): void
@@ -76,6 +78,8 @@ class CreateEmployeeTest extends TestCase
         $response->assertStatus(422);
         $this->assertArrayHasKey('errors', $response);
         $this->assertStringContainsString('The email has already been taken.', $response['errors']['email'][0]);
+
+        parent::tearDown();
     }
 
     protected function payloadData()
@@ -141,6 +145,8 @@ class CreateEmployeeTest extends TestCase
 
         // employee should not be created
         $this->assertDatabaseMissing('employees', ['email' => $payload['email']]);
+
+        parent::tearDown();
     }
 
     public function testSuccessCreateNewEmployeeWithCreateErpUser(): void

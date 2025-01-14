@@ -119,11 +119,23 @@ class EmployeeService
 
             $search = request('search');
 
-            $where = "status != " . Status::Deleted->value;
-
-            if (!empty($search)) { // array
+            if (!empty($search)) { // array 
+                $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
+                if (!in_array('status', $filterNames)) {
+                    $search['filters'] = collect($search['filters'])->merge([
+                        [
+                            'field' => 'status',
+                            'condition' => 'not_contain',
+                            'value' => Status::Deleted->value
+                        ]
+                    ])->toArray();
+                }
                 $where = formatSearchConditions($search['filters'], $where);
+            } else {
+                $where = "status != " . Status::Deleted->value;
             }
+
+            Log::debug('where cond', [$where]);
 
             $sort = "name asc";
             if (request('sort')) {
