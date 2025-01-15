@@ -48,8 +48,8 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::post('employees/{employeeUid}/resign','resign');
         Route::put('employees/{uid}/basicInfo','updateBasicInfo')->name('employees.updateBasicInfo');
         Route::put('employees/{uid}/identity','updateIdentity')->name('employees.updateIdentity');;
-        Route::post('employees/{employeeUid}/storeFamily','storeFamily');
-        Route::put('employees/{familyUid}/updateFamily','updateFamily');
+        Route::post('employees/{employeeUid}/storeFamily','storeFamily')->name('employees.storeFamily');
+        Route::put('employees/{familyUid}/updateFamily','updateFamily')->name('employees.updateFamily');
         Route::get('employees/{employeeUid}/initFamily','initFamily');
         Route::delete('employees/{familyUid}/deleteFamily','deleteFamily');
         Route::post('employees/{employeeUid}/storeEmergency','storeEmergency');

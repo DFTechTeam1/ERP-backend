@@ -43,6 +43,26 @@ Enum "employees_level_staff_enum" {
   "junior_staff"
 }
 
+Enum "relationship_enum" {
+  "father"
+  "mother"
+  "sibling"
+  "spouse"
+  "child"
+  "cousin"
+  "nibling"
+  "parent_in_law"
+  "brother_in_law"
+  "sister_in_law"
+  "uncle"
+  "aunt"
+  "grandfather"
+  "grandmother"
+  "friend"
+  "coworker"
+  "others"
+}
+
 Enum "project_task_worktimes_work_type_enum" {
   "on_progress"
   "review_by_pm"
@@ -191,10 +211,13 @@ Table "employee_families" {
   "uid" char(36) [not null]
   "employee_id" bigint [not null]
   "name" varchar(255) [not null]
-  "relation" varchar(255) [default: NULL]
-  "date_of_birth" date [default: NULL]
+  "relationship" relationship_enum [default: NULL]
+  "address" varchar(255) [NULL]
   "id_number" varchar(16) [not null]
   "gender" varchar(10) [default: NULL]
+  "date_of_birth" date [default: NULL]
+  "religion" varchar(255) [not null]
+  "martial_status" varchar(255) [NOT NULL]
   "job" varchar(255) [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]

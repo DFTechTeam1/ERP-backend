@@ -549,6 +549,8 @@ class EmployeeService
         $projects = array_merge($projects, $asPicTask);
         $data['project_detail'] = $projects;
 
+        $data['current_address'] = $data->is_residence_same ? $data->address : $data->current_address;
+
         $data['join_date_format'] = date('d F Y', strtotime($data->join_date));
         $data['length_of_service'] = getLengthOfService($data->join_date);
 
@@ -1293,7 +1295,7 @@ class EmployeeService
             $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
 
             $payload['employee_id'] = $employeeId;
-            logging('payload', $payload);
+
             $this->employeeFamilyRepo->store($payload);
 
             DB::commit();
@@ -1343,35 +1345,31 @@ class EmployeeService
      */
     public function initFamily(string $employeeUid): array
     {
-        $data = $this->employeeFamilyRepo->list('*', 'employee_id = ' . getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee()));
+        $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee());
+        $data = $this->employeeFamilyRepo->list(
+            select: '*',
+            where: "employee_id = {$employeeId}"
+        );
 
-        $family = \App\Enums\Employee\RelationFamily::cases();
-
-        $output = collect((object) $data)->map(function ($item) use ($family) {
-            $relation = '-';
-            foreach ($family as $f) {
-                if ($item->relation == $f->value) {
-                    $relation = $f->label();
-                }
-            }
-
+        $output = collect((object) $data)->map(function ($item) {
             return [
                 'uid' => $item->uid,
                 'name' => $item->name,
-                'relation' => $relation,
-                'relation_raw' => $item->relation,
+                'relationship' => $item->relationship_text,
+                'date_of_birth' => date('d F Y', strtotime($item->date_of_birth)),
                 'id_number' => $item->id_number,
-                'date_of_birth' => $item->date_of_birth ? date('d F Y', strtotime($item->date_of_birth)) : '-',
-                'date_of_birth_raw' => $item->date_of_birth,
-                'gender' => $item->gender,
+                'gender' => $item->gender_text,
                 'job' => $item->job,
+                'religion' => $item->religion_text,
+                'martial_status' => $item->martial_status_status
             ];
-        })->toArray();
+        })->values()
+        ->toArray();
 
         return generalResponse(
-            'success',
-            false,
-            $output,
+            message: 'success',
+            error: false,
+            data: $data->toArray()
         );
     }
 
