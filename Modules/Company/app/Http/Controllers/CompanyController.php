@@ -55,6 +55,15 @@ class CompanyController extends Controller
     }
 
     /**
+     * Get all relation family
+     *
+     */
+    public function getRelationFamily()
+    {
+        return apiResponse($this->masterService->getRelationFamily());
+    }
+
+    /**
      * Get all blood type
      *
      */

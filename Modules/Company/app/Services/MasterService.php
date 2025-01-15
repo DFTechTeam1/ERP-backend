@@ -7,6 +7,7 @@ use App\Enums\Employee\Gender;
 use App\Enums\Employee\LevelStaff;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\PtkpStatus;
+use App\Enums\Employee\RelationFamily;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\SalaryType;
 
@@ -75,6 +76,28 @@ class MasterService {
             message: 'success',
             error: false,
             data: $martialStatus
+        );
+    }
+
+    /**
+     * Get all relation family from enums
+     *
+     * @return array
+     */
+    public function getRelationFamily(): array
+    {
+        $relations = RelationFamily::cases();
+        $relations = collect($relations)->map(function ($item) {
+            return [
+                'title' => $item->label(),
+                'value' => $item->value
+            ];
+        })->toArray();
+
+        return generalResponse(
+            message: 'success',
+            error: false,
+            data: $relations
         );
     }
 

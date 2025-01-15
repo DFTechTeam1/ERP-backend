@@ -74,4 +74,5 @@ Route::middleware(['auth:sanctum'])
         Route::get('level-staff', [CompanyController::class, 'getLevelStaff']);
         Route::get('salary-type', [CompanyController::class, 'getSalaryType']);
         Route::get('ptkp-type', [CompanyController::class, 'getPtkpType']);
+        Route::get('relation-family', [CompanyController::class, 'getRelationFamily']);
     });
