@@ -55,6 +55,8 @@ class StoreReferenceTest extends TestCase
             'message',
             'errors'
         ]);
+
+        parent::tearDown();
     }
 
     public function testUploadOnlyLinkReturnSuccess(): void
@@ -83,5 +85,12 @@ class StoreReferenceTest extends TestCase
             'name' => 'google.com',
             'type' => 'link'
         ]);
+
+        parent::tearDown();
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
     }
 }

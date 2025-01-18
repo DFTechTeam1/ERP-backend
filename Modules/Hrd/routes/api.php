@@ -42,19 +42,19 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::delete('employees/{uid}','delete');
         Route::post('employees/validateEmployeeId', 'validateEmployeeID');
         Route::post('employees/bulk', "bulkDelete");
-        Route::post('employees/addAsUser', 'addAsUser');
+        Route::post('employees/addAsUser', 'addAsUser')->name('employees.addAsUser');
         Route::post('employees/submitImport', 'submitImport');
         Route::get('employees/getVJ/{projectUid}','getVJ');
         Route::post('employees/{employeeUid}/resign','resign');
         Route::put('employees/{uid}/basicInfo','updateBasicInfo')->name('employees.updateBasicInfo');
-        Route::put('employees/{uid}/identity','updateIdentity')->name('employees.updateIdentity');;
+        Route::put('employees/{uid}/identity','updateIdentity')->name('employees.updateIdentity');
         Route::post('employees/{employeeUid}/storeFamily','storeFamily')->name('employees.storeFamily');
         Route::put('employees/{familyUid}/updateFamily','updateFamily')->name('employees.updateFamily');
         Route::get('employees/{employeeUid}/initFamily','initFamily');
         Route::delete('employees/{familyUid}/deleteFamily','deleteFamily');
         Route::post('employees/{employeeUid}/storeEmergency','storeEmergency');
         Route::put('employees/{emergencyUid}/updateEmergency','updateEmergency');
-        Route::put('employees/{employeeUid}/updateEmployment','updateEmployment');
+        Route::put('employees/{employeeUid}/updateEmployment','updateEmployment')->name('employees.updateEmployment');
         Route::get('employees/{employeeUid}/initEmergency','initEmergency');
         Route::delete('employees/{emergencyUid}/deleteEmergency','deleteEmergency');
 

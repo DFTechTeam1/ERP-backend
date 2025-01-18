@@ -92,9 +92,9 @@ class User extends Authenticatable
 
     public function statusColor(): Attribute
     {
-        $out = 'grey-lighten-1';
+        $out = 'secondary';
         if ($this->email_verified_at) {
-            $out = 'green-lighten-3';
+            $out = 'primary';
         }
 
         return Attribute::make(

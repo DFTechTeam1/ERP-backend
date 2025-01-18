@@ -102,6 +102,8 @@ class UpdateBasicInfoTest extends TestCase
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('employees', ['name' => 'updated name']);
+
+        parent::tearDown();
     }
 
     protected function tearDown(): void

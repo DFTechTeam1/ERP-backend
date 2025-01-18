@@ -42,4 +42,6 @@ return [
     'successCreateEmployee' => 'Berhasil Membuat Karyawan',
     'successUpdateEmployee' => 'Berhasil Mengubah Karyawan',
     'successDeleteEmployee' => 'Berhasil Menghapus Karyawan',
+    'cannotDeleteEmployeeBcsRelation' => 'Karyawan ini masih mempunyai pekerjaan yang belum selesai atau inventori yang melekat.',
+    'userAlreadyExists' => 'User sudah terdaftar',
 ];

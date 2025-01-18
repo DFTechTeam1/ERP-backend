@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Hrd\Http\Requests\Employee\AddAsUser;
 use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
 use Modules\Hrd\Http\Requests\Employee\UpdateBasicInfo;
@@ -45,6 +46,7 @@ class EmployeeController extends Controller
             'religion',
             'gender',
             'martial_status',
+            'user_id'
         ];
 
         return apiResponse(
@@ -53,7 +55,7 @@ class EmployeeController extends Controller
                 '',
                 [
                     'position:id,uid,name',
-                    'user:id,uid,email',
+                    'user:id,uid,email,employee_id',
                     'branch:id,short_name'
                 ]
             )
@@ -166,12 +168,12 @@ class EmployeeController extends Controller
     /**
      * Function to assign employee to webapp user
      *
-     * @param Request $request
+     * @param AddAsUser $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function addAsUser(Request $request)
+    public function addAsUser(AddAsUser $request)
     {
-        return apiResponse($this->employeeService->addAsUser($request->user_id));
+        return apiResponse($this->employeeService->addAsUser($request->validated()));
     }
 
     /**
@@ -235,7 +237,6 @@ class EmployeeController extends Controller
     {
         return apiResponse($this->employeeService->updateIdentity($request->validated(), $uid));
     }
-
 
     /**
      * Delete specific data

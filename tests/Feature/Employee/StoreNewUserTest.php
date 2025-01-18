@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Mockery;
 use Mockery\MockInterface;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
@@ -66,7 +67,7 @@ class StoreNewUserTest extends TestCase
         $payload = [
             'is_external_user' => 0,
             'email' => 'ilham@gmail.com',
-            'employee_id' => $employee->id,
+            'employee_id' => $employee->uid,
             'password' => 'password',
             'role_id' => $role->id
         ];
@@ -78,5 +79,12 @@ class StoreNewUserTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'ilham@gmail.com', 'employee_id' => $employee->id]);
         $this->assertTrue($user ? true : false);
         $this->assertTrue($user->hasRole('testing'));
+
+        parent::tearDown();
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
     }
 }

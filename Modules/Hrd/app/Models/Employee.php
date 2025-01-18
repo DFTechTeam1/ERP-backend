@@ -200,7 +200,7 @@ class Employee extends Model
     {
         $out = '-';
 
-        if ($this->attributes['martial_status']) {
+        if (isset($this->attributes['martial_status'])) {
             $cases = \App\Enums\Employee\MartialStatus::cases();
             foreach ($cases as $case) {
                 if ($case->value == $this->attributes['martial_status']) {
@@ -236,9 +236,9 @@ class Employee extends Model
 
         $out = '-';
 
-        if ($this->status) {
+        if ($this->attributes['status']) {
             foreach ($statuses as $status) {
-                if ($status->value == $this->status) {
+                if ($status->value == $this->attributes['status']) {
                     $out = $status->label();
                     break;
                 }

@@ -9,6 +9,7 @@ use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\EmployeeException;
+use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\UserService;
@@ -127,15 +128,19 @@ class EmployeeService
                             'field' => 'status',
                             'condition' => 'not_contain',
                             'value' => Status::Deleted->value
-                        ]
+                        ],
+                        [
+                            'field' => 'status',
+                            'condition' => 'not_contain',
+                            'value' => Status::Inactive->value
+                        ],
                     ])->toArray();
                 }
+
                 $where = formatSearchConditions($search['filters'], $where);
             } else {
-                $where = "status != " . Status::Deleted->value;
+                $where = "status != " . Status::Deleted->value . " and status != " . Status::Inactive->value;
             }
-
-            Log::debug('where cond', [$where]);
 
             $sort = "name asc";
             if (request('sort')) {
@@ -184,6 +189,7 @@ class EmployeeService
                     'martial_status' => MartialStatus::getMartialStatus(code: $item->martial_status->value),
                     'placement' => $item->placement,
                     'employee_id' => $item->employee_id,
+                    'user_id' => $item->user_id,
                     'user' => $item->user,
                 ];
             })->toArray();
@@ -375,6 +381,14 @@ class EmployeeService
             }
         }
 
+        if (!empty(request('not_user'))) {
+            if (empty($where)) {
+                $where = "user_id IS NULL";
+            } else {
+                $where .= " and user_id IS NULL";
+            }
+        }
+
         if (!empty($where)) {
             $where .= " and status != " . \App\Enums\Employee\Status::Inactive->value;
         } else {
@@ -382,7 +396,7 @@ class EmployeeService
         }
 
         $data = $this->repo->list(
-            'uid,id,name',
+            'uid,id,name,email',
             $where
         );
 
@@ -390,6 +404,7 @@ class EmployeeService
             return [
                 'value' => $item->uid,
                 'title' => $item->name,
+                'email' => $item->email
             ];
         })->toArray();
 
@@ -425,24 +440,43 @@ class EmployeeService
      * @param string $id
      * @return array
      */
-    public function addAsUser(string $id)
+    public function addAsUser(array $payload)
     {
         DB::beginTransaction();
         try {
-            $user = $this->repo->show($id, 'id,email,name');
+            $user = $this->repo->show($payload['user_id'], 'id,email,name');
 
-            // generate random password
-            $password = generateRandomPassword();
-            $userId = $this->userRepo->store([
+            // check email
+            $checkUser = $this->userRepo->detail(
+                select: 'id',
+                where: "email = '" . $user->email . "'"
+            );
+            if ($checkUser) {
+                DB::rollBack();
+
+                return generalResponse(
+                    message: __('notification.userAlreadyExists'),
+                    error: true,
+                    code: 500
+                );
+            }
+
+            $userData = $this->userRepo->store([
                 'email' => $user->email,
-                'password' => $password,
+                'password' => $payload['password'],
+                'employee_id' => $user->id
             ]);
 
             $this->repo->update([
-                'user_id' => $userId->id
-            ], $id);
+                'user_id' => $userData->id
+            ], $payload['user_id']);
 
-            \Modules\Hrd\Jobs\SendEmailActivationJob::dispatch($password, $userId)->afterCommit();
+            // assign role
+            $roleRepo = new RoleRepository();
+            $role = $roleRepo->show($payload['role_id']);
+            $userData->assignRole($role);
+
+            \Modules\Hrd\Jobs\SendEmailActivationJob::dispatch($userData, $payload['password'])->afterCommit();
 
             DB::commit();
 
@@ -492,7 +526,8 @@ class EmployeeService
     {
         $relation = [
             'position:id,name,uid',
-            'user:id,employee_id,email'
+            'user:id,employee_id,email',
+            'branch:id,name'
         ];
 
         $data = $this->repo->show($uid, $select, $relation);
@@ -557,6 +592,10 @@ class EmployeeService
         $data['level_staff_text'] = \App\Enums\Employee\LevelStaff::generateLabel('staff');
 
         $data['basic_salary'] = number_format($data->basic_salary, 0, '', '');
+
+        $branch = $data->branch;
+        unset($data['branch']);
+        $data['branch'] = $branch ? $branch->name : '-';
 
         $data['boss_uid'] = null;
         $data['approval_line'] = null;
@@ -633,7 +672,7 @@ class EmployeeService
         DB::beginTransaction();
         try {
             $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new Position());
-            if (!empty($data['boss_id'])) {
+            if (!empty($data['boss_id'])) { 
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
 
@@ -642,9 +681,9 @@ class EmployeeService
             );
 
             // invite to ERP if needed
-            if ($data['invite_to_erp']) {
+            if (isset($data['invite_to_erp'])) {
 
-                $this->userService->mainServiceStoreUser(
+                $user = $this->userService->mainServiceStoreUser(
                     collect($data)->only([
                         'password',
                         'email',
@@ -653,6 +692,11 @@ class EmployeeService
                     ->merge(['employee_id' => $employee->id, 'is_external_user' => 0])
                     ->toArray()
                 );
+
+                // update user id
+                $this->repo->update([
+                    'user_id' => $user->id
+                ], $employee->uid);
             }
 
             // invite to Talenta
@@ -1505,7 +1549,6 @@ class EmployeeService
     public function updateEmployment(array $payload, string $employeeUid): array
     {
         try {
-            $payload['level_staff'] = $payload['level'];
             $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\Position());
             if (
                 (isset($payload['boss_id'])) &&
@@ -1516,9 +1559,13 @@ class EmployeeService
 
             $this->repo->update(collect($payload)->except(['level'])->toArray(), $employeeUid);
 
+            // get detail to refresh data in the front page
+            $data = $this->getDetailEmployee($employeeUid, '*');
+
             return generalResponse(
                 __('global.successUpdateEmployment'),
                 false,
+                $data
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

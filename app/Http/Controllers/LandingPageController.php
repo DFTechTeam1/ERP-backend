@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Modules\Hrd\Models\Employee;
 use Modules\Production\Services\ProjectRepositoryGroup;
 use Vinkla\Hashids\Facades\Hashids;
 
