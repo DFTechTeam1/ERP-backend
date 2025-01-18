@@ -23,6 +23,8 @@ enum Religion: string
             return self::Hindu;
         } else if ($data == 'Budha') {
             return self::Budha;
+        } else {
+            return '-';
         }
     }
 

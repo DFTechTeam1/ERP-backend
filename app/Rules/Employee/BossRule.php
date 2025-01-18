@@ -16,7 +16,7 @@ class BossRule implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (request()->level != 'manager' && !$value) {
+        if (request()->level_staff != 'manager' && !$value) {
             $fail('global.bossIdRequired')->translate();
         }
     }

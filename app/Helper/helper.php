@@ -57,6 +57,7 @@ if (!function_exists('successResponse')) {
 
 if (!function_exists('errorMessage')) {
     function errorMessage($message) {
+        Log::debug("Check error", [!$message instanceof Throwable]);
         $arr = ['App\Exceptions\TemplateNotValid'];
 
         if ($message instanceof Throwable) {
@@ -751,6 +752,10 @@ if (!function_exists('isAssistantPMRole')) {
 
 if (!function_exists('formatSearchConditions')) {
     function formatSearchConditions(array $filters, string $where) {
+        if (empty($where)) {
+            $where = '';
+        }
+
         foreach ($filters as $data) {
             $value = $data['value'];
 
@@ -782,7 +787,7 @@ if (!function_exists('formatSearchConditions')) {
             $where .= $data['field'] . $condition . $value . ' and ';
         }
         $where = rtrim($where, " and");
-
+        
         return $where;
     }
 }

@@ -4,6 +4,7 @@ namespace App\Enums\Employee;
 
 enum Status: int
 {
+    case Deleted = 0;
     case Permanent = 1;
     case Contract = 2;
     case PartTime = 3;
@@ -27,6 +28,7 @@ enum Status: int
     public function label()
     {
         return match ($this) {
+            static::Deleted => __('global.deleted'),
             static::Permanent => __('global.permanent'),
             static::Contract => __('global.contract'),
             static::PartTime => __('global.partTime'),
@@ -41,6 +43,7 @@ enum Status: int
     public function statusColor()
     {
         return match ($this) {
+            static::Deleted => 'danger',
             static::Permanent => 'success',
             static::Contract => 'primary',
             static::PartTime => 'indigo-lighten-3',

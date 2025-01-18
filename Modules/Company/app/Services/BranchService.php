@@ -12,9 +12,9 @@ class BranchService {
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(BranchRepository $repo)
     {
-        $this->repo = new BranchRepository;
+        $this->repo = $repo;
     }
 
     /**
@@ -81,6 +81,36 @@ class BranchService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Get all branches
+     *
+     * @return array
+     */
+    public function getAll(): array
+    {
+        $where = '';
+        
+        if (request('search')) {
+            $search = request('search');
+            $where .= "name like '%{$search}%'";
+        }
+
+        $data = $this->repo->list('id,name', $where);
+
+        $data = collect((object) $data)->map(function ($item) {
+            return [
+                'value' => $item->id,
+                'title' => $item->name,
+            ];
+        })->toArray();
+
+        return generalResponse(
+            'success',
+            false,
+            $data
+        );
     }
 
     public function datatable()

@@ -20,10 +20,13 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::apiResource('company', CompanyController::class)->names('company');
 });
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::apiResource('branch', BranchController::class)->names('branch');
-    Route::post('branch/bulk', [BranchController::class, 'bulkDelete']);
-});
+Route::middleware(['auth:sanctum'])
+    ->name('company.')
+    ->group(function () {
+        Route::get('branch/all', [BranchController::class, 'getAll'])->name('branches.get-all');
+        Route::apiResource('branch', BranchController::class)->names('branches');
+        Route::post('branch/bulk', [BranchController::class, 'bulkDelete'])->name('branches.bulk-delete');
+    });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::class)
     ->middleware(['auth:sanctum'])
@@ -61,3 +64,15 @@ Route::get('world/cities', [\Modules\Company\Http\Controllers\Api\RegionControll
 Route::get('projectClass/getAll', [ProjectClassController::class, 'getAll']);
 Route::resource('projectClass', ProjectClassController::class);
 Route::post('projectClass/bulk', [ProjectClassController::class, 'bulkDelete']);
+
+Route::middleware(['auth:sanctum'])
+    ->group(function () {
+        Route::get('religions', [CompanyController::class, 'getReligions']);
+        Route::get('genders', [CompanyController::class, 'getGenders']);
+        Route::get('martial-status', [CompanyController::class, 'getMartialStatus']);
+        Route::get('blood-type', [CompanyController::class, 'getBloodType']);
+        Route::get('level-staff', [CompanyController::class, 'getLevelStaff']);
+        Route::get('salary-type', [CompanyController::class, 'getSalaryType']);
+        Route::get('ptkp-type', [CompanyController::class, 'getPtkpType']);
+        Route::get('relation-family', [CompanyController::class, 'getRelationFamily']);
+    });
