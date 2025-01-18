@@ -116,7 +116,7 @@ class UserRepository {
             $key = $this->key;
         }
 
-        return $this->model->whereIn('uid', $ids)->delete();
+        return $this->model->whereIn($key, $ids)->delete();
     }
 
     public function detail(string $id = '', string $select = '*', string $where = '', array $relation = [])

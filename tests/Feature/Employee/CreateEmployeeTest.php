@@ -175,6 +175,10 @@ class CreateEmployeeTest extends TestCase
         // check role
         $this->assertTrue($user->hasRole('testing'));
 
+        // check relation
+        $this->assertNotNull($user->employee_id);
+        $this->assertNotNull(Employee::where('user_id', $user->id)->first());
+
         parent::tearDown();
     }
 

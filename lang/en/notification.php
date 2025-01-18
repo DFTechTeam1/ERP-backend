@@ -44,4 +44,5 @@ return [
     'successUpdateEmployee' => 'Success Update Employee',
     'successDeleteEmployee' => 'Success Delete Employee',
     'cannotDeleteEmployeeBcsRelation' => 'This employee still have ongoing event or tasks',
+    'userAlreadyExists' => 'User already exists',
 ];

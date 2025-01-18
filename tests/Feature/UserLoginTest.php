@@ -254,4 +254,9 @@ class UserLoginTest extends TestCase
         
         $this->assertTrue(is_string($response));
     }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+    }
 }

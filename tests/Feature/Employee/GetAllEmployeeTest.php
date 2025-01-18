@@ -77,5 +77,12 @@ class GetAllEmployeeTest extends TestCase
         $response = $this->service->getAll();
 
         $this->assertCount($totalManager, $response['data']);
+
+        parent::tearDown();
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
     }
 }

@@ -12,7 +12,9 @@ use App\Repository\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Spatie\Permission\Models\Role;
 use Vinkla\Hashids\Facades\Hashids;
@@ -76,24 +78,24 @@ class UserService {
         
         $search = request('search');
 
-            if (!empty($search)) { // array
-                $where = formatSearchConditions($search['filters'], $where);
-            }
+        if (!empty($search)) { // array
+            $where = formatSearchConditions($search['filters'], $where);
+        }
 
-            $sort = "email asc";
-            if (request('sort')) {
-                $sort = "";
-                foreach (request('sort') as $sortList) {
-                    if ($sortList['field'] == 'email') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
-                    } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
-                    }
+        $sort = "email asc";
+        if (request('sort')) {
+            $sort = "";
+            foreach (request('sort') as $sortList) {
+                if ($sortList['field'] == 'email') {
+                    $sort = $sortList['field'] . " {$sortList['order']},";
+                } else {
+                    $sort .= "," . $sortList['field'] . " {$sortList['order']},";
                 }
-
-                $sort = rtrim($sort, ",");
-                $sort = ltrim($sort, ',');
             }
+
+            $sort = rtrim($sort, ",");
+            $sort = ltrim($sort, ',');
+        }
 
         $paginated = $this->repo->pagination(
             'id,uid,email,email_verified_at',
@@ -128,7 +130,6 @@ class UserService {
         })->toArray();
         $totalData = $this->repo->list('id', $where)->count();
 
-
         return generalResponse(
             'success',
             false,
@@ -149,12 +150,9 @@ class UserService {
             }
 
             $user->email = $data['email'];
-            if (!empty($data['password'])) {
-                $user->password = Hash::make($data['password']);
-            }
             $user->save();
 
-            $role = $this->roleRepo->show($data['role']);
+            $role = $this->roleRepo->show($data['role_id']);
             $user->assignRole($role);
 
             return generalResponse(
@@ -201,13 +199,16 @@ class UserService {
             $pmAndDirectorRole = collect($currentProjectManagerRole)->merge([$directorRole])->toArray();
 
             $isEmployee = !in_array($data['role_id'], $pmAndDirectorRole);
+
+            $employeeId = $this->generalService->getIdFromUid($data['employee_id'], new Employee());
         }
+
 
         $payload = [
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'is_external_user' => $data['is_external_user'],
-            'employee_id' => $data['employee_id'],
+            'employee_id' => $employeeId ?? null,
             'username' => NULL,
             'is_employee' => $isEmployee,
             'is_director' => $isDirector,
@@ -215,10 +216,15 @@ class UserService {
         ];
 
         // only assign role and send notification to internal user
+        $user = $this->repo->store($payload);
+        $user->assignRole($role);
+
         if (!$data['is_external_user']) {
-            $user = $this->repo->store($payload);
-            $user->assignRole($role);
-    
+            // update relation on employee
+            $this->employeeRepo->update([
+                'user_id' => $user->id,
+            ], $data['employee_id']);
+
             SendEmailActivationJob::dispatch($user, $data['password'])->afterCommit();
         }
 
@@ -261,12 +267,15 @@ class UserService {
         $data = $this->repo->detail($id);
         $data->roles;
 
+        $employeeData = $this->employeeRepo->show('id', 'id,uid', [], 'user_id = ' . $data->id);
+
         return generalResponse(
             'success',
             false,
             [
                 'uid' => $data->uid,
                 'id' => $data->id,
+                'employee_uid' => $employeeData ? $employeeData->uid : null,
                 'email' => $data->email,
                 'is_external_user' => $data->is_external_user,
                 'role_id' => isset($data->roles[0]) ? $data->roles[0]->id : 0,
@@ -309,23 +318,64 @@ class UserService {
      */
     public function bulkDelete(array $ids): array
     {
+        DB::beginTransaction();
         try {
             foreach ($ids as $id) {
-                $user = $this->repo->detail($id);
+                $user = $this->repo->detail(
+                    select: '*',
+                    where: "uid = '{$id}'"
+                );
+
+                // validate relation
+                $employee = $this->employeeRepo->show(
+                    uid: 'id',
+                    select: 'id,name,email,uid',
+                    relation: [
+                        'tasks:id,project_task_id,employee_id',
+                        'projects:id,project_id,pic_id'
+                    ],
+                    where: "user_id = " . $user->id
+                );
+
+                if (
+                    ($employee) &&
+                    (
+                        $employee->projects->count() > 0 || $employee->tasks->count() > 0
+                    )
+                ) {
+                    DB::rollBack();
+
+                    return errorResponse(__('notification.cannotDeleteEmployeeBcsRelation'));
+                }
 
                 $roles = $user->roles;
                 foreach ($roles as $role) {
                     $user->removeRole($role);
                 }
+
+                // detach from employee data
+                if ($employee) {
+                    $this->employeeRepo->update([
+                        'user_id' => NULL,
+                    ], $employee->uid);
+                }
+
+                // update email
+                $this->repo->update([
+                    'email' => $user->email . '_deleted_' . strtotime('now'),
+                    'employee_id' => NULL
+                ], 'id', $user->id);
             }
 
-            $this->repo->bulkDelete($ids, 'id');
+            $this->repo->bulkDelete($ids, 'uid');
 
+            DB::commit();
             return generalResponse(
                 __('global.successDeleteUser'),
                 false,
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }

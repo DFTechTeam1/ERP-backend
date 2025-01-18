@@ -787,7 +787,7 @@ if (!function_exists('formatSearchConditions')) {
             $where .= $data['field'] . $condition . $value . ' and ';
         }
         $where = rtrim($where, " and");
-
+        
         return $where;
     }
 }

@@ -93,7 +93,7 @@ class EmployeeFactory extends Factory
             'boss_id' => null,
             'level_staff' => fake()->randomElement(['manager', 'lead', 'staff']),
             'status' => Status::Permanent->value,
-            'join_date' => fake()->dateTimeBetween('-3 years', 'now'),
+            'join_date' => fake()->dateTimeBetween('-3 years', 'now')->format('Y-m-d'),
             'start_review_probation_date' => null,
             'probation_status' => null,
             'end_probation_date' => null,
