@@ -236,7 +236,7 @@ class Employee extends Model
 
         $out = '-';
 
-        if ($this->attributes['status']) {
+        if (isset($this->attributes['status'])) {
             foreach ($statuses as $status) {
                 if ($status->value == $this->attributes['status']) {
                     $out = $status->label();
