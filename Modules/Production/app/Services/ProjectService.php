@@ -37,8 +37,11 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use DateTime;
 use Carbon\Carbon;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
+use Modules\Production\Exceptions\AttributeReferenceMissing;
+use Modules\Production\Exceptions\ProjectNotFound;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectVjRepository;
 
@@ -946,6 +949,7 @@ class ProjectService
                     'media_path' => 'link',
                     'link' => $reference->media_path,
                     'id' => $reference->id,
+                    'name' => $reference->name
                 ];
             } else if (in_array($reference->type, $fileDocumentType)) {
                 $group['pdf'][] = [
@@ -2190,51 +2194,90 @@ class ProjectService
      */
     public function storeReferences(array $data, string $id)
     {
+        // 2nd layer validation
+        if (empty($data['link']) && empty($data['files'])) {
+            return generalResponse(
+                message: 'Invalid data',
+                error: true,
+                data: [
+                    'link.0.name' => [__('notification.linkOrFileRequired')],
+                    'link.0.href' => [__('notification.linkOrFileRequired')],
+                    'files.0.path' => [__('notification.linkOrFileRequired')]
+                ],
+            );
+        }
+
         $fileImageType = ['jpg', 'jpeg', 'png'];
         $fileDocumentType = ['doc', 'docx', 'xlsx', 'pdf'];
         $project = $this->repo->show($id);
+
+        if (!$project) {
+            throw new ProjectNotFound();
+        }
+
         try {
             $output = [];
 
             // handle link upload
             $linkPayload = [];
-            foreach ($data['link'] as $link) {
-                if (!empty($link['href'])) {
-                    $linkPayload[] = [
-                        'media_path' => $link['href'],
-                        'type' => 'link',
-                    ];
+            if (isset($data['link'])) {
+                foreach ($data['link'] as $keyLink => $link) {
+                    // 3rd layer of validation
+                    if (!isset($link['name']) && isset($link['href'])) {
+                        return generalResponse('Invalid data', true, [
+                            "link.{$keyLink}.name" => [__('notification.linkNameRequired')]
+                        ], 422);
+                    }
+
+                    if (
+                        (isset($link['name']) && !isset($link['href'])) ||
+                        empty($link['href'])
+                    ) {
+                        return generalResponse('Invalid data', true, [
+                            "link.{$keyLink}.href" => [__('notification.linkRequired')]
+                        ], 422);
+                    }
+
+                    if (!empty($link['href'])) {
+                        $linkPayload[] = [
+                            'media_path' => $link['href'],
+                            'type' => 'link',
+                            'name' => $link['name']
+                        ];
+                    }
                 }
             }
 
             // handle file upload
-            foreach ($data['files'] as $file) {
-                if ($file['path']) {
-                    $type = $file['path']->getClientOriginalExtension();
-
-                    if (gettype(array_search($type, $fileImageType)) != 'boolean') {
-                        $fileData = uploadImageandCompress(
-                            'projects/references/' . $project->id,
-                            10,
-                            $file['path']
-                        );
-                    } else { // handle document upload
-                        $fileType = array_search($type, $fileDocumentType);
-                        if (gettype($fileType) != 'boolean') {
-                            $type = $fileDocumentType[$fileType];
+            if (isset($data['files'])) {
+                foreach ($data['files'] as $file) {
+                    if ($file['path']) {
+                        $type = $file['path']->getClientOriginalExtension();
+    
+                        if (gettype(array_search($type, $fileImageType)) != 'boolean') {
+                            $fileData = uploadImageandCompress(
+                                'projects/references/' . $project->id,
+                                10,
+                                $file['path']
+                            );
+                        } else { // handle document upload
+                            $fileType = array_search($type, $fileDocumentType);
+                            if (gettype($fileType) != 'boolean') {
+                                $type = $fileDocumentType[$fileType];
+                            }
+    
+                            $fileData = uploadFile(
+                                'projects/references/' . $project->id,
+                                $file['path']
+                            );
                         }
-
-                        $fileData = uploadFile(
-                            'projects/references/' . $project->id,
-                            $file['path']
-                        );
+    
+                        $output[] = [
+                            'media_path' => $fileData,
+                            'name' => $fileData,
+                            'type' => $type,
+                        ];
                     }
-
-                    $output[] = [
-                        'media_path' => $fileData,
-                        'name' => $fileData,
-                        'type' => $type,
-                    ];
                 }
             }
 
@@ -2245,6 +2288,12 @@ class ProjectService
             // update cache
             $referenceData = $this->formatingReferenceFiles($project->references, $project->id);
             $currentData = getCache('detailProject' . $project->id);
+            
+            if (!$currentData) {
+                $this->show($id);
+                $currentData = getCache('detailProject' . $project->id);
+            }
+
             $currentData['references'] = $referenceData;
 
             $currentData = $this->formatTasksPermission($currentData, $project->id);
@@ -2445,7 +2494,7 @@ class ProjectService
      * @param boolean $isEmployeeUid
      * @return void
      */
-    protected function detachTaskPic(array $ids, int $taskId, bool $isEmployeeUid = true, bool $removeFromHistory = false)
+    public function detachTaskPic(array $ids, int $taskId, bool $isEmployeeUid = true, bool $removeFromHistory = false, string $message = '')
     {
         foreach ($ids as $removedUser) {
             if ($isEmployeeUid) {
@@ -2461,9 +2510,19 @@ class ProjectService
                 $this->taskPicHistory->deleteWithCondition('employee_id = ' . $removedEmployeeId . ' AND project_task_id = ' . $taskId);
             }
 
+            $employee = $this->employeeRepo->show('id', 'id,name,nickname', [], 'id = ' . $removedEmployeeId);
+
+            $logMessage = __('global.removedMemberLogText', [
+                'removedUser' => $employee->nickname
+            ]);
+            if (!empty($message)) {
+                $logMessage = $message;
+            }
+
             $this->loggingTask([
                 'task_id' => $taskId,
-                'employee_uid' => $removedUser
+                'employee_uid' => $removedUser,
+                'message' => $logMessage
             ], 'removeMemberTask');
         }
     }
@@ -3884,15 +3943,10 @@ class ProjectService
      */
     protected function removeMemberTaskLog($payload)
     {
-        $employee = $this->employeeRepo->show($payload['employee_uid'], 'id,name,nickname');
-        $text = __('global.removedMemberLogText', [
-            'removedUser' => $employee->nickname
-        ]);
-
         $this->projectTaskLogRepository->store([
             'project_task_id' => $payload['task_id'],
             'type' => 'assignMemberTask',
-            'text' => $text,
+            'text' => $payload['message'],
             'user_id' => auth()->id() ?? 0,
         ]);
     }

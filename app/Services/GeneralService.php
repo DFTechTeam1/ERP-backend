@@ -8,6 +8,11 @@
 namespace App\Services;
 
 class GeneralService {
+    public function getIdFromUid(string $uid, $model)
+    {
+        return getIdFromUid($uid, $model);
+    }
+
     public function getSettingByKey(string $param)
     {
         return getSettingByKey($param);
@@ -31,5 +36,10 @@ class GeneralService {
     public function getUserAgentInfo()
     {
         return getUserAgentInfo();
+    }
+
+    public function generateRandomPassword(int $length)
+    {
+        return generateRandomPassword($length);
     }
 }

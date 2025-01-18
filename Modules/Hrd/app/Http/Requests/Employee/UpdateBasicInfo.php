@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Http\Requests\Employee;
 
+use App\Enums\Employee\BloodType;
 use App\Enums\Employee\Gender;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\Religion;
@@ -18,26 +19,29 @@ class UpdateBasicInfo extends FormRequest
     {
         return [
             'name' => 'required',
-            'nickname' => 'required',
             'email' => [
                 'required',
                 new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'email'),
             ],
+            'nickname' => 'required',
             'phone' => 'required',
-            'religion' => [
-                'required',
-                Rule::enum(Religion::class),
-            ],
-            'martial_status' => [
-                'required',
-                Rule::enum(MartialStatus::class),
-            ],
-            'blood_type' => 'nullable',
             'date_of_birth' => 'required',
             'place_of_birth' => 'required',
             'gender' => [
                 'required',
                 Rule::enum(Gender::class),
+            ],
+            'martial_status' => [
+                'required',
+                Rule::enum(MartialStatus::class),
+            ],
+            'blood_type' => [
+                'nullable',
+                Rule::enum(BloodType::class)
+            ],
+            'religion' => [
+                'required',
+                Rule::enum(Religion::class),
             ],
         ];
     }

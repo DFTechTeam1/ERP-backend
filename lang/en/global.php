@@ -186,6 +186,8 @@ return [
     'actorHoldTheTask' => ':actor hold the task',
     'actorStartTheTask' => ':actor start the task',
     'passed' => 'Passed',
+    'deleted' => "Deleted",
+    'removedMemberBcsResign' => ':removedUser has been not working in office anymore and removed from task',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

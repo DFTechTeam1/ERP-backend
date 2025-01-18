@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Modules\Production\Services\ProjectRepositoryGroup;
 use Vinkla\Hashids\Facades\Hashids;
 

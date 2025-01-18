@@ -34,5 +34,14 @@ return [
     'successUpdateBranch' => 'Berhasil mengubah cabang perusahaan',
     'successDeleteBranch' => 'Berhasil menghapus cabang perusahaan',
     'cannotDeleteBranchBcsRelation' => 'Tidak dapat menghapus cabang perusahaan karna masih ada keterkaitan dengan data karyawan',
-    'employeeNotFound' => 'Karyawan tidak ditemukan'
+    'employeeNotFound' => 'Karyawan tidak ditemukan',
+    'projectNotFound' => 'Event tidak ditemukan',
+    'linkNameRequired' => 'Display name harus diisi',
+    'linkRequired' => 'Link harus diisi',
+    'linkOrFileRequired' => 'Link atau file harus diisi',
+    'successCreateEmployee' => 'Berhasil Membuat Karyawan',
+    'successUpdateEmployee' => 'Berhasil Mengubah Karyawan',
+    'successDeleteEmployee' => 'Berhasil Menghapus Karyawan',
+    'cannotDeleteEmployeeBcsRelation' => 'Karyawan ini masih mempunyai pekerjaan yang belum selesai atau inventori yang melekat.',
+    'userAlreadyExists' => 'User sudah terdaftar',
 ];
