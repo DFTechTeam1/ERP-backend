@@ -56,6 +56,10 @@ class TransferTeamMemberService {
             $user = auth()->user();
             $roles = $user->roles;
             $roleId = $roles[0]->id;
+
+            $superUserRole = getSettingByKey('super_user_role');
+            $isSuperUserRole = $roleId == $superUserRole;
+
             if ($roleId != getSettingByKey('super_user_role')) {
                 if (empty($where)) {
                     $where = "request_to = {$user->employee_id} or requested_by = {$user->employee_id}";
@@ -80,12 +84,16 @@ class TransferTeamMemberService {
                 $page
             );
 
-            $paginated = collect($paginated)->map(function ($item) use($user) {
+            $paginated = collect((object) $paginated)->map(function ($item) use($user, $isSuperUserRole) {
                 $item['project_date'] = date('d F Y', strtotime($item->project_date));
 
                 $haveCancelAction = $item->requested_by == $user->employee_id ? true : false;
 
                 $haveApproveAction = $item->request_to == $user->employee_id ? true : false;
+
+                // override approve action and cancel
+                $haveApproveAction = $isSuperUserRole;
+                $haveCancelAction = $isSuperUserRole;
 
                 $haveAction = $item->status == \App\Enums\Production\TransferTeamStatus::Canceled->value || $item->status == \App\Enums\Production\TransferTeamStatus::Completed->value || $item->status == \App\Enums\Production\TransferTeamStatus::Reject->value || $item->status == \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value ? true : false;
 
