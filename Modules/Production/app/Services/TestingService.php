@@ -4,6 +4,7 @@ namespace Modules\Production\Services;
 
 use App\Services\UserRoleManagement;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Services\EmployeeRepoGroup;
 
 class TestingService {
@@ -199,6 +200,8 @@ class TestingService {
                 }
             }
 
+            Log::debug('where project 1', [$where]);
+
             $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id', [], 'id = ' . $this->user->employee_id);
 
             // get project that only related to authorized user
@@ -283,6 +286,8 @@ class TestingService {
                 $itemsPerPage = $allProjects;
                 $isAllItems = true;
             }
+
+            Log::debug('where project', [$where]);
 
             $paginated = $this->projectGroupRepo->projectRepo->pagination(
                 $select,

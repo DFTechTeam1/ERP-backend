@@ -44,4 +44,8 @@ return [
     'successDeleteEmployee' => 'Berhasil Menghapus Karyawan',
     'cannotDeleteEmployeeBcsRelation' => 'Karyawan ini masih mempunyai pekerjaan yang belum selesai atau inventori yang melekat.',
     'userAlreadyExists' => 'User sudah terdaftar',
+    'successChangePassword' => "Berhasil mengubah password pengguna",
+    "songHasBeenAdded" => "Musik berhasil ditambahkan. Kamu akan menerima notifikasi lebih lanjut jika sudah ada update",
+    "songNotFound" => "Lagu tidak ditemukan",
+    "successUpdateSong" => "Berhasil mengubah list musik",
 ];

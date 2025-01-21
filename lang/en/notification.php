@@ -45,4 +45,8 @@ return [
     'successDeleteEmployee' => 'Success Delete Employee',
     'cannotDeleteEmployeeBcsRelation' => 'This employee still have ongoing event or tasks',
     'userAlreadyExists' => 'User already exists',
+    'successChangePassword' => "Success change user password",
+    "songHasBeenAdded" => "Song has been added. You'll receive futher notification once its updated",
+    "songNotFound" => "Song is not found",
+    "successUpdateSong" => "Success update song",
 ];

@@ -192,6 +192,7 @@ Route::prefix('auth')->group(function () {
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
     Route::post('changePassword', [LoginController::class, 'changePassword']);
+    Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
 });
 
 Route::middleware('auth:sanctum')

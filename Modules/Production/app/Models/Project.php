@@ -65,6 +65,11 @@ class Project extends Model
         return $this->hasMany(ProjectPersonInCharge::class, 'project_id');
     }
 
+    public function songs(): HasMany
+    {
+        return $this->hasMany(ProjectSongList::class, 'project_id');
+    }
+
     public function vjs(): HasMany
     {
         return $this->hasMany(\Modules\Production\Models\ProjectVj::class, 'project_id');

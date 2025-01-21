@@ -123,7 +123,6 @@ class UpdateEmployeeTest extends TestCase
          $response = $this->putJson(route('api.employees.update', ['uid' => $employees[0]->uid]), $payload, [
             'Authorization' => 'Bearer ' . $this->token
         ]);
-        Log::debug('response', [$response]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('employees', ['name' => 'Name updated']);

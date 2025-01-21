@@ -38,10 +38,16 @@ use Modules\Inventory\Repository\CustomInventoryRepository;
 use DateTime;
 use Carbon\Carbon;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Cache;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Production\Exceptions\AttributeReferenceMissing;
 use Modules\Production\Exceptions\ProjectNotFound;
+use Modules\Production\Exceptions\SongNotFound;
+use Modules\Production\Jobs\RequestEditSongJob;
+use Modules\Production\Jobs\RequestSongJob;
+use Modules\Production\Models\ProjectSongList;
+use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectVjRepository;
 
@@ -99,6 +105,8 @@ class ProjectService
 
     private $positionRepo;
 
+    private $projectSongListRepo;
+
     /**
      * Construction Data
      */
@@ -127,7 +135,8 @@ class ProjectService
         TransferTeamMemberRepository $transferTeamRepo,
         EmployeeTaskPointRepository $employeeTaskPoint,
         ProjectTaskPicHistoryRepository $taskPicHistory,
-        CustomInventoryRepository $customItemRepo
+        CustomInventoryRepository $customItemRepo,
+        ProjectSongListRepository $projectSongListRepo
     )
     {
         $this->userManagement = $userRoleManagement;
@@ -179,6 +188,8 @@ class ProjectService
         $this->taskPicHistory = $taskPicHistory;
 
         $this->customItemRepo = $customItemRepo;
+
+        $this->projectSongListRepo = $projectSongListRepo;
     }
 
     /**
@@ -581,6 +592,7 @@ class ProjectService
                 $whereHas,
                 $sorts
             );
+            
             $totalData = $this->repo->list('id', $where, [], $whereHas)->count();
 
             $eventTypes = \App\Enums\Production\EventType::cases();
@@ -1264,6 +1276,8 @@ class ProjectService
 
                 $outputTask[$keyTask]['is_director'] = $isDirector;
 
+                $outputTask[$keyTask]['is_mine'] = (bool) in_array(auth()->user()->employee_id, $picIds);
+
                 if ($superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()) {
                     $isActive = true;
                 }
@@ -1456,7 +1470,8 @@ class ProjectService
                     'country:id,name',
                     'state:id,name',
                     'city:id,name',
-                    'projectClass:id,name,maximal_point'
+                    'projectClass:id,name,maximal_point',
+                    'songs:uid,name,project_id,created_by,created_at'
                 ]);
 
                 $progress = $this->formattedProjectProgress($data->tasks, $projectId);
@@ -1553,6 +1568,7 @@ class ProjectService
                     'showreels' => $data->showreels_path,
                     'person_in_charges' => $data->personInCharges,
                     'project_maximal_point' => $data->projectClass->maximal_point,
+                    'songs' => $data->songs
                 ];
 
                 storeCache('detailProject' . $data->id, $output);
@@ -6367,5 +6383,121 @@ class ProjectService
             false,
             $output
         );
+    }
+
+    /**
+     * Store song lists
+     * 
+     * @param array $payload
+     * @param string $projectUid
+     * 
+     * @return array
+     */
+    public function storeSongs(array $payload, string $projectUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $project = $this->repo->show($projectUid, 'id,name,project_date', ['songs']);
+
+            $createdBy = auth()->id();
+
+            $songs = [];
+            foreach ($payload['songs'] as $song) {
+                $songs[] = new ProjectSongList([
+                    'name' => $song,
+                    'created_by' => $createdBy,
+                ]);
+            }
+            $project->songs()->saveMany($songs);
+
+            // send notification
+            RequestSongJob::dispatch($project, $payload['songs'], $createdBy)->afterCommit();
+
+            // clear cache
+            Cache::forget('detailProject' . $project->id);
+
+            DB::commit();
+            
+            return generalResponse(
+                message: __('notification.songHasBeenAdded'),
+                error: false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to check update song
+     * Do validation before edit the song
+     * 
+     * @param array $payload
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function updateSong(array $payload, string $projectUid, string $songUid): array
+    {
+        try {
+            // check validation
+            $song = $this->projectSongListRepo->show(
+                $songUid,
+                'id,project_id,name',
+                [
+                    'task:id,project_song_list_id,employee_id',
+                    'task.employee:id,name,nickname'
+                ]
+            );
+
+            if (!$song) {
+                throw new SongNotFound();
+            }
+
+            if ($song->task) {
+                // request changes to entertainment first
+                $this->projectSongListRepo->update([
+                    'is_request_edit' => true,
+                    'is_request_delete' => false
+                ], $songUid);
+
+                // send notification to PM entertainment
+                $requesterId = auth()->id();
+                RequestEditSongJob::dispatch($payload, $projectUid, $songUid, $requesterId)->afterCommit();
+
+                goto result;
+            }
+
+            // do edit when available
+            $this->doEditSong(payload: $payload, songUid: $songUid);
+
+            result:
+            return generalResponse(
+                __('notification.successUpdateSong'),
+                false,
+                [
+                    'song' => $song
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update song
+     * 
+     * @param array $payload
+     * @param string $songUid
+     * 
+     * @return bool
+     */
+    public function doEditSong(array $payload, string $songUid): bool
+    {
+        $this->projectSongListRepo->update([
+            'name' => $payload['name']
+        ], $songUid);
+
+        return true;
     }
 }

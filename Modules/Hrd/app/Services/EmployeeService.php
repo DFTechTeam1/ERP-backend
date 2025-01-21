@@ -681,7 +681,10 @@ class EmployeeService
             );
 
             // invite to ERP if needed
-            if (isset($data['invite_to_erp'])) {
+            if (
+                (isset($data['invite_to_erp'])) &&
+                ($data['invite_to_erp'] == 1)
+            ) {
 
                 $user = $this->userService->mainServiceStoreUser(
                     collect($data)->only([
