@@ -50,19 +50,19 @@ class RolePermissionSetting extends Seeder
     protected function seedRoles()
     {
         $roles = [
-            ['name' => $this->getRootRole(), 'permissions' => $this->getRolePermissions($this->getRootRole())],
-            ['name' => $this->getDirectorRole(), 'permissions' => $this->getRolePermissions($this->getDirectorRole())],
-            ['name' => $this->getMarketingRole(), 'permissions' => $this->getRolePermissions($this->getMarketingRole())],
-            ['name' => $this->getProductionRole(), 'permissions' => $this->getRolePermissions($this->getProductionRole())],
-            ['name' => $this->getProjectManagerRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerRole())],
-            ['name' => $this->getProjectManagerAdminRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerAdminRole())],
-            ['name' => $this->getProjectManagerEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerEntertainmentRole())],
-            ['name' => $this->getEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getEntertainmentRole())],
-            ['name' => $this->getItSupportRole(), 'permissions' => $this->getRolePermissions($this->getItSupportRole())],
-            ['name' => $this->getHrdRole(), 'permissions' => $this->getRolePermissions($this->getHrdRole())],
-            ['name' => $this->getFinanceRole(), 'permissions' => $this->getRolePermissions($this->getFinanceRole())],
-            ['name' => $this->getRegularRole(), 'permissions' => $this->getRolePermissions($this->getRegularRole())],
-            ['name' => $this->getAssistantProjectManagerRole(), 'permissions' => []],
+            ['is_permanent' => true, 'name' => $this->getRootRole(), 'permissions' => $this->getRolePermissions($this->getRootRole())],
+            ['is_permanent' => true, 'name' => $this->getDirectorRole(), 'permissions' => $this->getRolePermissions($this->getDirectorRole())],
+            ['is_permanent' => true, 'name' => $this->getMarketingRole(), 'permissions' => $this->getRolePermissions($this->getMarketingRole())],
+            ['is_permanent' => true, 'name' => $this->getProductionRole(), 'permissions' => $this->getRolePermissions($this->getProductionRole())],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerRole())],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerAdminRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerAdminRole())],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerEntertainmentRole())],
+            ['is_permanent' => true, 'name' => $this->getEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getEntertainmentRole())],
+            ['is_permanent' => true, 'name' => $this->getItSupportRole(), 'permissions' => $this->getRolePermissions($this->getItSupportRole())],
+            ['is_permanent' => true, 'name' => $this->getHrdRole(), 'permissions' => $this->getRolePermissions($this->getHrdRole())],
+            ['is_permanent' => true, 'name' => $this->getFinanceRole(), 'permissions' => $this->getRolePermissions($this->getFinanceRole())],
+            ['is_permanent' => false, 'name' => $this->getRegularRole(), 'permissions' => $this->getRolePermissions($this->getRegularRole())],
+            ['is_permanent' => true, 'name' => $this->getAssistantProjectManagerRole(), 'permissions' => []],
         ];
 
         foreach ($roles as $role) {
@@ -72,8 +72,11 @@ class RolePermissionSetting extends Seeder
 
             if (!$check) {
                 $roleData = Role::create(collect($role)->except('permissions')->toArray());
-
                 $roleData->syncPermissions($role['permissions']);
+            } else {
+                DB::table('roles')
+                    ->where('id', $check->id)
+                    ->update(collect($role)->except('permissions')->toArray());
             }
         }
 

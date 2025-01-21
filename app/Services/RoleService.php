@@ -52,7 +52,7 @@ class RoleService {
             }
 
         $paginated = $this->repo->pagination(
-            'id as uid,name',
+            'id as uid,name,is_permanent',
             $where,
             [],
             $itemsPerPage,
