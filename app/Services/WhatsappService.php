@@ -42,8 +42,6 @@ class WhatsappService {
             'token' => $this->token
         ])->post('https://smartchatapi.com/w4b_salasar_ecommerce/Api/send_template_message', $payload);
 
-        Log::debug('response send message: ', [$response->json()]);
-
         return $response->json();
     }
 

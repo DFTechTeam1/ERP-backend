@@ -90,12 +90,17 @@ class MyProjectAction {
                 'start_date' => $startDate,
                 'end_date' => $endDate,
             ],
+            'filter_month' => false,
+            'filter_today' => false,
+            'filter_year' => false,
             'page' => 1,
             'itemsPerPage' => 100
         ];
 
         $response = Http::withToken($this->token)
-            ->get(env("APP_URL") . "/api/production/project", $search);
+            ->get(env("TELEGRAM_DOMAIN") . "/api/production/project", $search);
+
+        Log::debug('response project', [$response->json()]);
 
         if ($response->successful()) {
             $projects = collect($response->json()['data']['paginated'])->map(function ($item) {

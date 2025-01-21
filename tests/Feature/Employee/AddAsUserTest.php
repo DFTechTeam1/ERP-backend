@@ -3,6 +3,7 @@
 namespace Tests\Feature\Employee;
 
 use App\Models\User;
+use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Traits\HasEmployeeConstructor;
 use App\Traits\TestUserAuthentication;
@@ -17,6 +18,7 @@ use Mockery\MockInterface;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class AddAsUserTest extends TestCase
@@ -122,9 +124,15 @@ class AddAsUserTest extends TestCase
             ->count(1)
             ->create();
 
+        $role = Role::create([
+            'name' => 'new role',
+            'guard' => 'sanctum'
+        ]);
+
         $payload = [
             'user_id' => $employees[0]->uid,
-            'password' => 'password'
+            'password' => 'password',
+            'role_id' => $role->id
         ];
 
         $response = $this->postJson(route('api.employees.addAsUser'), $payload, [
