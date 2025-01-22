@@ -187,6 +187,7 @@ class RoleService {
                     'id' => $data->id,
                     'name' => $data->name,
                     'permissions' => $permissions,
+                    'is_permanent' => $data->is_permanent
                 ],
                 'raw' => $data
             ],
