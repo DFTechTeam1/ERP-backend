@@ -92,8 +92,10 @@ class TransferTeamMemberService {
                 $haveApproveAction = $item->request_to == $user->employee_id ? true : false;
 
                 // override approve action and cancel
-                $haveApproveAction = $isSuperUserRole;
-                $haveCancelAction = $isSuperUserRole;
+                if ($isSuperUserRole) {
+                    $haveApproveAction = true;
+                    $haveCancelAction = true;
+                }
 
                 $haveAction = $item->status == \App\Enums\Production\TransferTeamStatus::Canceled->value || $item->status == \App\Enums\Production\TransferTeamStatus::Completed->value || $item->status == \App\Enums\Production\TransferTeamStatus::Reject->value || $item->status == \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value ? true : false;
 
