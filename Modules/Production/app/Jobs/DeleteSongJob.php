@@ -14,16 +14,19 @@ class DeleteSongJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $song;
+    public $songName;
 
     public $requesterId;
+
+    public $projectName;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(object $song, int $requesterId)
+    public function __construct(string $songName, string $projectName, int $requesterId)
     {
-        $this->song = $song;
+        $this->songName = $songName;
+        $this->projectName = $projectName;
         $this->requesterId = $requesterId;
     }
 
@@ -49,7 +52,7 @@ class DeleteSongJob implements ShouldQueue
                 ->first();
 
             $message = "Halo {$entertainmentPic->employee->nickname}";
-            $message .= "{$employee->nickname} telah menghapus musik " . $this->song->name . ' di event ' . $this->song->project->name;
+            $message .= "\n{$employee->nickname} telah menghapus musik " . $this->songName . ' di event ' . $this->projectName;
 
             $telegramChatIds = [$entertainmentPic->employee->telegram_chat_id];
 
