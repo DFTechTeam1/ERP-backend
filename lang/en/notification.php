@@ -49,4 +49,7 @@ return [
     "songHasBeenAdded" => "Song has been added. You'll receive futher notification once its updated",
     "songNotFound" => "Song is not found",
     "successUpdateSong" => "Success update song",
+    "successUpdateDistributedSong" => "Update will need Entertainment PM Approval. You'll be notified when its updated",
+    "successDeleteSong" => "Success delete song",
+    "failedDeleteRequestEditSong" => "Song is on approval process. Cannot be delete while this process is not done yet"
 ];

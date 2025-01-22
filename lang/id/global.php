@@ -188,6 +188,11 @@ return [
     'actorStartTheTask' => ':actor memulai pekerjaan ini',
     'passed' => 'Terlewati',
     'deleted' => "Dihapus",
+    'removedMemberBcsResign' => ':removedUser sudah tidak bekerja lagi dan dikeluarkan dari tugas',
+    'distributed' => 'Terdistribusi',
+    'waitingToDistribute' => 'Menunggu di distribusikan',
+    'songEditRequest' => 'Menunggu Persetujuan Edit',
+    'songDeleteRequest' => 'Menunggu Persetujuan Hapus',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',
