@@ -136,9 +136,9 @@ class ProjectSongListRepository extends ProjectSongListInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(string $id)
     {
-        return $this->model->whereIn('id', $id)
+        return $this->model->whereIn('uid', $id)
             ->delete();
     }
 

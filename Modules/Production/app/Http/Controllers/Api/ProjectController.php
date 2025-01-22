@@ -24,6 +24,7 @@ use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Http\Requests\Project\CompleteProject;
 use Modules\Production\Http\Requests\Project\RequestSong;
+use Modules\Production\Http\Requests\Project\UpdateSong;
 use Modules\Production\Services\TestingService;
 
 class ProjectController extends Controller
@@ -680,9 +681,9 @@ class ProjectController extends Controller
         return apiResponse($this->service->storeSongs($request->validated(), $projectUid));
     }
 
-    public function updateSong(Request $request, string $projectUid, string $songUid)
+    public function updateSong(UpdateSong $request, string $projectUid, string $songUid)
     {
-        return apiResponse($this->service->updateSong($request->toArray(), $projectUid, $songUid));
+        return apiResponse($this->service->updateSong($request->validated(), $projectUid, $songUid));
     }
 }
 

@@ -3,6 +3,7 @@
 namespace Modules\Production\Models;
 
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +24,8 @@ class ProjectSongList extends Model
         'name',
         'is_request_edit',
         'is_request_delete',
-        'created_by'
+        'created_by',
+        'target_name'
     ];
 
     // protected static function newFactory(): ProjectSongListFactory

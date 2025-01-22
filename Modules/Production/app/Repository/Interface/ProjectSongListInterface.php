@@ -13,7 +13,7 @@ abstract class ProjectSongListInterface {
 
     abstract function update(array $data, string $id = '', string $where = '');
 
-    abstract function delete(int $id);
+    abstract function delete(string $id);
 
     abstract function bulkDelete(array $ids, string $key = '');
 }

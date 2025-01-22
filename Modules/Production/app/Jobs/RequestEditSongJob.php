@@ -65,7 +65,7 @@ class RequestEditSongJob implements ShouldQueue
                 ->first();
 
             $message = "Halo {$entertainmentPic->employee->nickname}\n";
-            $message .= "{$requesterData->nickname} request untuk ubah lagu untuk event {$project->name} dari {$currentSong->name} jadi {$this->payload['name']}";
+            $message .= "{$requesterData->nickname} request untuk ubah lagu untuk event {$project->name} dari {$currentSong->name} jadi {$this->payload['song']}";
             $message .= "\nLogin untuk melihat detailnya.";
 
             $entertainmentPic->notify(new RequestEditSongNotification(
