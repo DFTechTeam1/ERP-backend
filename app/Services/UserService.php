@@ -177,9 +177,11 @@ class UserService {
         $isProjectManager = false;
 
         // setup role
-        $roleData = $this->roleService->show($data['role_id']);
-        if (!$roleData['error']) {
-            $role = $roleData['data']['raw'];
+        if (isset($data['role_id'])) {
+            $roleData = $this->roleService->show($data['role_id']);
+            if (!$roleData['error']) {
+                $role = $roleData['data']['raw'];
+            }
         }
 
         if (!$data['is_external_user']) {    
@@ -192,13 +194,16 @@ class UserService {
             }
 
             $directorRole = $this->generalService->getSettingByKey('director_role');
-            if ($directorRole == $data['role_id']) {
+            if (
+                (isset($data['role_id'])) &&
+                ($directorRole == $data['role_id'])
+            ) {
                 $isDirector = true;
             }
 
             $pmAndDirectorRole = collect($currentProjectManagerRole)->merge([$directorRole])->toArray();
 
-            $isEmployee = !in_array($data['role_id'], $pmAndDirectorRole);
+            $isEmployee = !isset($data['role_id']) ? false : !in_array($data['role_id'], $pmAndDirectorRole);
 
             $employeeId = $this->generalService->getIdFromUid($data['employee_id'], new Employee());
         }
@@ -217,7 +222,10 @@ class UserService {
 
         // only assign role and send notification to internal user
         $user = $this->repo->store($payload);
-        $user->assignRole($role);
+
+        if ($role) {
+            $user->assignRole($role);
+        }
 
         if (!$data['is_external_user']) {
             // update relation on employee
@@ -281,6 +289,22 @@ class UserService {
                 'role_id' => isset($data->roles[0]) ? $data->roles[0]->id : 0,
             ],
         );
+    }
+
+    public function userChangePassword(array $payload, string $userUid): array
+    {
+        try {
+            $this->repo->update([
+                'password' => Hash::make($payload['password'])
+            ], 'uid', $userUid);
+
+            return generalResponse(
+                message: __('notification.successChangePassword'),
+                error: false
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 
     public function activate(string $key)

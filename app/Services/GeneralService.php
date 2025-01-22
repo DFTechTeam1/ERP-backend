@@ -42,4 +42,9 @@ class GeneralService {
     {
         return generateRandomPassword($length);
     }
+
+    public function getCache(string $cacheId)
+    {
+        return getCache($cacheId);
+    }
 }

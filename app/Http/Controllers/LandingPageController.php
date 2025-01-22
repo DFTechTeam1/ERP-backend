@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Modules\Production\Services\ProjectRepositoryGroup;
-use Vinkla\Hashids\Facades\Hashids;
 
 class LandingPageController extends Controller
 {

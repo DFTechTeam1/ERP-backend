@@ -44,4 +44,11 @@ return [
     'successDeleteEmployee' => 'Berhasil Menghapus Karyawan',
     'cannotDeleteEmployeeBcsRelation' => 'Karyawan ini masih mempunyai pekerjaan yang belum selesai atau inventori yang melekat.',
     'userAlreadyExists' => 'User sudah terdaftar',
+    'successChangePassword' => "Berhasil mengubah password pengguna",
+    "songHasBeenAdded" => "Musik berhasil ditambahkan. Kamu akan menerima notifikasi lebih lanjut jika sudah ada update",
+    "songNotFound" => "Lagu tidak ditemukan",
+    "successUpdateSong" => "Berhasil mengubah list musik",
+    "successUpdateDistributedSong" => "Proses ini membutuhkan persetujuan PM Entertainment. Kamu akan mendapat informasi lebih lanjut mengenai perubahan ini",
+    "successDeleteSong" => "Berhasil menghapus musik",
+    "failedDeleteRequestEditSong" => "Lagu dalam proses persetujuan untuk edit. Tidak bisa dilakukan penghapusan"
 ];
