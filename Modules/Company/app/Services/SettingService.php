@@ -27,9 +27,7 @@ class SettingService {
                 $settings = $this->formatKanbanSetting($selected);
             } else {
                 $selected = collect($selected)->map(function ($item) {
-                    if ($item['key'] == 'production_staff_role') {
-                        $item['value'] = json_decode($item['value'], true);
-                    } else if ($item['key'] == 'super_user_role' || $item['key'] == 'board_start_calcualted') {
+                    if ($item['key'] == 'super_user_role' || $item['key'] == 'board_start_calcualted') {
                         $item['value'] = (int) $item['value'];
                     }
 
@@ -43,7 +41,7 @@ class SettingService {
                     $item['value'] = json_decode($item['value'], true);
                 } else if ($item['key'] == 'default_boards') {
                     $item['value'] = $this->formatKanbanSetting($item);
-                } else if ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey') {
+                } else if ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment') {
                     $item['value'] = json_decode($item['value'], true);
                 }
 

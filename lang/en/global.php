@@ -186,6 +186,12 @@ return [
     'actorHoldTheTask' => ':actor hold the task',
     'actorStartTheTask' => ':actor start the task',
     'passed' => 'Passed',
+    'deleted' => "Deleted",
+    'removedMemberBcsResign' => ':removedUser has been not working in office anymore and removed from task',
+    'distributed' => 'Distributed',
+    'waitingToDistribute' => 'Waiting to Distribute',
+    'songEditRequest' => 'Waiting Edit Approval',
+    'songDeleteRequest' => 'Waiting Delete Approval',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

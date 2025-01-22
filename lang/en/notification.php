@@ -1,5 +1,6 @@
 <?php
 
+use function PHPSTORM_META\map;
 
 return [
 	'youAreRemovedFromProject' => "You're no longer PIC from event :project",
@@ -34,5 +35,21 @@ return [
     'successUpdateBranch' => 'Success update branch',
     'successDeleteBranch' => 'Success delete branch',
     'cannotDeleteBranchBcsRelation' => 'Cannot delete branch because already have relation with the employee',
-    'employeeNotFound' => 'Employee not found'
+    'employeeNotFound' => 'Employee not found',
+    'projectNotFound' => 'Project not found',
+    'linkNameRequired' => 'Link name is required',
+    'linkRequired' => 'Link is required',
+    'linkOrFileRequired' => 'Link or files is required',
+    'successCreateEmployee' => 'Success Create Employee',
+    'successUpdateEmployee' => 'Success Update Employee',
+    'successDeleteEmployee' => 'Success Delete Employee',
+    'cannotDeleteEmployeeBcsRelation' => 'This employee still have ongoing event or tasks',
+    'userAlreadyExists' => 'User already exists',
+    'successChangePassword' => "Success change user password",
+    "songHasBeenAdded" => "Song has been added. You'll receive futher notification once its updated",
+    "songNotFound" => "Song is not found",
+    "successUpdateSong" => "Success update song",
+    "successUpdateDistributedSong" => "Update will need Entertainment PM Approval. You'll be notified when its updated",
+    "successDeleteSong" => "Success delete song",
+    "failedDeleteRequestEditSong" => "Song is on approval process. Cannot be delete while this process is not done yet"
 ];

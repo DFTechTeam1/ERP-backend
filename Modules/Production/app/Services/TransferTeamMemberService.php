@@ -6,6 +6,7 @@ use App\Enums\Production\TransferTeamStatus;
 use Carbon\Carbon;
 use App\Enums\ErrorCode\Code;
 use \Illuminate\Support\Facades\DB;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
 
 class TransferTeamMemberService {
@@ -18,13 +19,17 @@ class TransferTeamMemberService {
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        TransferTeamMemberRepository $repo,
+        EmployeeRepository $employeeRepo,
+        ProjectService $projectService
+    )
     {
-        $this->repo = new TransferTeamMemberRepository;
+        $this->repo = $repo;
 
-        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
+        $this->employeeRepo = $employeeRepo;
 
-        $this->projectService = new \Modules\Production\Services\ProjectService;
+        $this->projectService = $projectService;
     }
 
     /**
@@ -56,7 +61,11 @@ class TransferTeamMemberService {
             $user = auth()->user();
             $roles = $user->roles;
             $roleId = $roles[0]->id;
-            if ($roleId != getSettingByKey('super_user_role')) {
+
+            $superUserRole = getSettingByKey('super_user_role');
+            $isSuperUserRole = $superUserRole == $roleId;
+
+            if ($roleId != $superUserRole) {
                 if (empty($where)) {
                     $where = "request_to = {$user->employee_id} or requested_by = {$user->employee_id}";
                 } else {
@@ -80,12 +89,18 @@ class TransferTeamMemberService {
                 $page
             );
 
-            $paginated = collect($paginated)->map(function ($item) use($user) {
+            $paginated = collect((object) $paginated)->map(function ($item) use($user, $isSuperUserRole) {
                 $item['project_date'] = date('d F Y', strtotime($item->project_date));
 
                 $haveCancelAction = $item->requested_by == $user->employee_id ? true : false;
 
                 $haveApproveAction = $item->request_to == $user->employee_id ? true : false;
+
+                // override haveApproveAction, haveCancelAction when root
+                if ($isSuperUserRole) {
+                    $haveCancelAction = true;
+                    $haveApproveAction = true;
+                }
 
                 $haveAction = $item->status == \App\Enums\Production\TransferTeamStatus::Canceled->value || $item->status == \App\Enums\Production\TransferTeamStatus::Completed->value || $item->status == \App\Enums\Production\TransferTeamStatus::Reject->value || $item->status == \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value ? true : false;
 

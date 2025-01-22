@@ -5,14 +5,17 @@ namespace Modules\Production\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use \Modules\Production\Http\Requests\RejectTeamRequest;
+use Modules\Production\Services\TransferTeamMemberService;
 
 class TeamTransferController extends Controller
 {
     private $service;
 
-    public function __construct()
+    public function __construct(
+        TransferTeamMemberService $service
+    )
     {
-        $this->service = new \Modules\Production\Services\TransferTeamMemberService;
+        $this->service = $service;
     }
 
     /**

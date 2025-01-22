@@ -30,8 +30,7 @@ class Update extends FormRequest
                 'required_if:is_external_user,1',
                 new \App\Rules\UniqueLowerRule(new \App\Models\User(), $this->route('user'), 'email'),
             ],
-            'password' => 'nullable',
-            'role' => 'required',
+            'role_id' => 'required',
         ];
     }
 

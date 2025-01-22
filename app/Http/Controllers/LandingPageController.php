@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Modules\Hrd\Services\TalentaService;
 use Modules\Production\Services\ProjectRepositoryGroup;
-use Vinkla\Hashids\Facades\Hashids;
 
 class LandingPageController extends Controller
 {

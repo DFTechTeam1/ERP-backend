@@ -12,9 +12,9 @@ class BranchController extends Controller
 {
     private $service;
 
-    public function __construct()
+    public function __construct(BranchService $service)
     {
-        $this->service = new BranchService();
+        $this->service = $service;
     }
 
     /**
@@ -27,6 +27,9 @@ class BranchController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * 
+     * @param Create $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Create $request)
     {
@@ -39,6 +42,16 @@ class BranchController extends Controller
     public function show($id)
     {
         return apiResponse($this->service->show($id));
+    }
+
+    /**
+     * Get all branches
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAll(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->getAll());
     }
 
     /**

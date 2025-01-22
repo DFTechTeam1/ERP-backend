@@ -3,6 +3,11 @@
 namespace App\Traits;
 
 use App\Models\User;
+use App\Repository\RoleRepository;
+use App\Repository\UserLoginHistoryRepository;
+use App\Repository\UserRepository;
+use App\Services\GeneralService;
+use App\Services\RoleService;
 use App\Services\UserService;
 use Laravel\Sanctum\Sanctum;
 use Modules\Company\Models\IndonesiaCity;
@@ -10,6 +15,7 @@ use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\IndonesiaVillage;
 use Modules\Company\Models\Province;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -56,10 +62,19 @@ trait TestUserAuthentication
 
     public function getToken($user)
     {
-        $service = new UserService();
+        $service = new UserService(
+            new UserRepository,
+            new EmployeeRepository,
+            new RoleRepository,
+            new UserLoginHistoryRepository,
+            new GeneralService,
+            new RoleService
+        );
+        
         return $service->login(validated: [
             'email' => $user->email,
-            'remember_me' => false
+            'remember_me' => false,
+            'password' => 'password'
         ], unitTesting: true);
     }
 }
