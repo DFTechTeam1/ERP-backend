@@ -6618,13 +6618,25 @@ class ProjectService
             $this->doDeleteSong($songUid, $song);
 
             result:
+            // get current data
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $currentData = $this->generalService->getCache('detailProject' . $projectId);
+            
+            if (!$currentData) {
+                $this->show($projectUid);
+                $currentData = $this->generalService->getCache('detailProject' . $projectId);
+            }
+
+            $currentData = $this->formatTasksPermission($currentData, $projectId);
 
             DB::commit();
 
             return generalResponse(
-                message: __('notifiation.successDeleteSong'),
+                message: __('notification.successDeleteSong'),
                 error: false,
-                data: []
+                data: [
+                    'full_detail' => $currentData
+                ]
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -6635,9 +6647,11 @@ class ProjectService
 
     public function doDeleteSong(string $songUid, object $song)
     {
+        $songName = $song->name;
+        $projectName = $song->project->name;
         $this->projectSongListRepo->delete(id: $songUid);
 
         $requesterId = auth()->id();
-        DeleteSongJob::dispatch($song, $requesterId)->afterCommit();
+        DeleteSongJob::dispatch($songName, $projectName, $requesterId)->afterCommit();
     }
 }

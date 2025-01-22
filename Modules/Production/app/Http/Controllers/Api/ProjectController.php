@@ -681,9 +681,22 @@ class ProjectController extends Controller
         return apiResponse($this->service->storeSongs($request->validated(), $projectUid));
     }
 
-    public function updateSong(UpdateSong $request, string $projectUid, string $songUid)
+    /**
+     * Function to update song
+     *
+     * @param UpdateSong $request
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateSong(UpdateSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->updateSong($request->validated(), $projectUid, $songUid));
+    }
+
+    public function deleteSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->deleteSong($projectUid, $songUid));
     }
 }
 
