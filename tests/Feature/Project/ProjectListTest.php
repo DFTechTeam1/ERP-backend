@@ -3,7 +3,6 @@
 namespace Tests\Feature\Project;
 
 use App\Traits\HasEmployeeConstructor;
-use App\Traits\HasProjectConstructor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\Request;

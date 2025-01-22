@@ -50,6 +50,11 @@ class Project extends Model
 
     protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
 
+    protected static function newFactory(): ProjectFactory
+    {
+        return ProjectFactory::new();
+    }
+
     /**
      * Get all of the personInCharges for the Project
      *
@@ -58,6 +63,11 @@ class Project extends Model
     public function personInCharges(): HasMany
     {
         return $this->hasMany(ProjectPersonInCharge::class, 'project_id');
+    }
+
+    public function songs(): HasMany
+    {
+        return $this->hasMany(ProjectSongList::class, 'project_id');
     }
 
     public function vjs(): HasMany

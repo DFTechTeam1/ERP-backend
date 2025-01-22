@@ -7,6 +7,7 @@ use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
+use App\Services\RoleService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use Mockery\MockInterface;
+use Modules\Company\Database\Factories\ProvinceFactory;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Spatie\Permission\Models\Permission;
@@ -53,8 +55,11 @@ class UserLoginTest extends TestCase
             new EmployeeRepository,
             new RoleRepository,
             new UserLoginHistoryRepository,
-            $this->generalServiceMock
+            $this->generalServiceMock,
+            new RoleService
         );
+
+        ProvinceFactory::$sequence = 1;
     }
 
     /**
@@ -248,5 +253,10 @@ class UserLoginTest extends TestCase
         $response = $this->service->login(['email' => $user->email, 'password' => 'password', 'remember_me' => true]);
         
         $this->assertTrue(is_string($response));
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
     }
 }

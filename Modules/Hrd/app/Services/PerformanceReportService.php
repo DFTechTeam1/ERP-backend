@@ -41,7 +41,7 @@ class PerformanceReportService {
             }
         ]);
 
-        return collect($data)->filter(function ($item) {
+        return collect((object) $data)->filter(function ($item) {
             return $item->project;
         })
         ->values()

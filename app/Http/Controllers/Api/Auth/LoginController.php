@@ -235,7 +235,13 @@ class LoginController extends Controller
         }
     }
 
-    public function changePassword(Request $request)
+    /**
+     * Change password for authenticated user only
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function changePassword(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
             $user = auth()->user();
@@ -247,10 +253,27 @@ class LoginController extends Controller
                 generalResponse(
                     'success',
                     false,
+                    [
+                        'user' => $user
+                    ]
                 )
             );
         } catch (\Throwable $e) {
             return apiResponse(errorResponse($e));
         }
+    }
+
+    /**
+     * Change password for selected user
+     *
+     * @param Request $request
+     * @param string $userUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function userChangePassword(Request $request, string $userUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse(
+            $this->userService->userChangePassword($request->all(), $userUid)
+        );
     }
 }

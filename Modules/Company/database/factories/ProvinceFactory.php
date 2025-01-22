@@ -11,7 +11,7 @@ class ProvinceFactory extends Factory
      */
     protected $model = \Modules\Company\Models\Province::class;
 
-    protected static $sequence = 1;
+    public static $sequence = 1;
 
     /**
      * Define the model's default state.

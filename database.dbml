@@ -21,6 +21,11 @@ Enum "employees_gender_enum" {
   "male"
 }
 
+Enum "salaray_type_enum" {
+  "month"
+  "daily"
+}
+
 Enum "employees_education_enum" {
   "smp"
   "sma"
@@ -36,6 +41,26 @@ Enum "employees_level_staff_enum" {
   "staff"
   "lead"
   "junior_staff"
+}
+
+Enum "relationship_enum" {
+  "father"
+  "mother"
+  "sibling"
+  "spouse"
+  "child"
+  "cousin"
+  "nibling"
+  "parent_in_law"
+  "brother_in_law"
+  "sister_in_law"
+  "uncle"
+  "aunt"
+  "grandfather"
+  "grandmother"
+  "friend"
+  "coworker"
+  "others"
 }
 
 Enum "project_task_worktimes_work_type_enum" {
@@ -186,10 +211,13 @@ Table "employee_families" {
   "uid" char(36) [not null]
   "employee_id" bigint [not null]
   "name" varchar(255) [not null]
-  "relation" varchar(255) [default: NULL]
-  "date_of_birth" date [default: NULL]
+  "relationship" relationship_enum [default: NULL]
+  "address" varchar(255) [NULL]
   "id_number" varchar(16) [not null]
   "gender" varchar(10) [default: NULL]
+  "date_of_birth" date [default: NULL]
+  "religion" varchar(255) [not null]
+  "martial_status" varchar(255) [NOT NULL]
   "job" varchar(255) [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
@@ -218,38 +246,48 @@ Table "employees" {
   "name" varchar(255) [not null]
   "nickname" varchar(255) [default: NULL]
   "email" varchar(255) [not null]
-  "phone" varchar(15) [not null]
-  "id_number" varchar(16) [not null]
-  "religion" employees_religion_enum [not null]
-  "martial_status" employees_martial_status_enum [not null]
-  "address" varchar(255) [not null]
-  "postal_code" varchar(6) [not null]
-  "current_address" varchar(255) [default: NULL]
-  "blood_type" varchar(2) [default: NULL]
   "date_of_birth" date [not null]
   "place_of_birth" varchar(255) [not null]
-  "dependant" varchar(10) [default: NULL, note: 'tanggungan']
+  "martial_status" employees_martial_status_enum [not null]
+  "religion" employees_religion_enum [not null]
+  "phone" varchar(15) [not null]
+  "id_number" varchar(16) [not null]
+  "address" varchar(255) [not null]
+  "current_address" varchar(255) [default: NULL]
+  "position_id" bigint [not null]
+  "employee_id" varchar(150) [not null]
+  "level_staff" employees_level_staff_enum [not null]
+  "boss_id" int [default: NULL]
+  "status" tinyint [not null, note: '1 for permanenet, 2 for contract, 3 for part time, 4 for freelance, 5 for internship, 6 for inactive, 7 for waiting HR checking (usually comes from self-filling after the contract)']
+  "branch_id" bigint [not null]
+  "join_date" date [not null]
   "gender" employees_gender_enum [not null]
+
+  // new
+  "ptkp_status" varchar(5) [not null]
+  "basic_salry" decimal [not null, default: 0]
+  "salary_type" salaray_type_enum [not null]
+
+  "bpjs_ketenagakerjaan_number" varchar(50) [default: NULL]
+  "npwp_number" varchar(50) [default: NULL]
+
+  "province_id" int [default: NULL]
+  "city_id" int [default: NULL]
+  "district_id" bigint [default: NULL]
+  "village_id" bigint [default: NULL]
+  "postal_code" varchar(6) [not null]
+  "blood_type" varchar(2) [default: NULL]
   "bank_detail" json [default: NULL, note: 'Format: [{"bank_name": "", "account_number": "", "account_holder_name": "", "is_active": ""}]']
-  "relation_contact" json [default: NULL, note: 'Format: {"name": "", "phone": "", "relationship": ""}']
   "education" employees_education_enum [not null]
   "education_name" varchar(255) [default: NULL]
   "education_major" varchar(255) [default: NULL]
   "education_year" year [default: NULL]
-  "position_id" bigint [not null]
-  "boss_id" int [default: NULL]
-  "level_staff" employees_level_staff_enum [not null]
-  "status" tinyint [not null, note: '1 for permanenet, 2 for contract, 3 for part time, 4 for freelance, 5 for internship, 6 for inactive, 7 for waiting HR checking (usually comes from self-filling after the contract)']
-  "placement" varchar(255) [default: NULL]
-  "join_date" date [not null]
+  "relation_contact" json [default: NULL, note: 'Format: {"name": "", "phone": "", "relationship": ""}']
   "start_review_probation_date" date [default: NULL]
-  "probation_status" tinyint [default: NULL]
   "end_probation_date" date [default: NULL]
-  "company_name" varchar(255) [default: NULL]
+  "probation_status" tinyint [default: NULL]
   "bpjs_status" tinyint [default: NULL]
-  "bpjs_ketenagakerjaan_number" varchar(50) [default: NULL]
   "bpjs_kesehatan_number" varchar(50) [default: NULL]
-  "npwp_number" varchar(50) [default: NULL]
   "bpjs_photo" varchar(255) [default: NULL]
   "npwp_photo" varchar(255) [default: NULL]
   "id_number_photo" varchar(255) [default: NULL]
@@ -259,17 +297,16 @@ Table "employees" {
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "deleted_at" timestamp [default: NULL]
-  "employee_id" varchar(150) [not null]
-  "province_id" int [default: NULL]
-  "city_id" int [default: NULL]
-  "district_id" bigint [default: NULL]
-  "village_id" bigint [default: NULL]
   "user_id" int [default: NULL]
   "line_id" varchar(255) [default: NULL]
   "end_date" date [default: NULL]
   "resign_reason" varchar(255) [default: NULL]
-  "branch_id" int [not null]
   "telegram_chat_id" varchar(255) [default: NULL]
+
+  // deleted
+  "dependant" varchar(10) [default: NULL, note: 'tanggungan']
+  "placement" varchar(255) [default: NULL]
+  "company_name" varchar(255) [default: NULL]
 
   Indexes {
     position_id [name: "employees_position_id_foreign"]
@@ -882,6 +919,43 @@ Table "projects" {
   "longitude" varchar(150) [default: NULL]
   "latitude" varchar(150) [default: NULL]
   "feedback" text
+}
+
+Table "project_song_lists" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(16) [not null]
+  "project_id" bigint [not null]
+  "name" varchar(255) [not null]
+  "is_request_edit" tinyint(1) [default: '0']
+  "is_request_delete" tinyint(1) [default: '0']
+  "created_at" timestamp
+  "created_by" bigint
+  "updated_at" timestamp
+}
+
+Table "entertainment_task_songs" {
+  "id" bigint [pk, not null, increment]
+  "project_song_list_id" bigint [not null]
+  "status" enum
+  "employee_id" bigint [not null]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
+Table "entertainment_task_song_results" {
+  "id" bigint [pk, not null, increment]
+  "entertainment_task_song_id" bigint [not null]
+  "nas_path" varchar(255) [not null]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
+Table "entertainment_task_song_pic_histories" {
+  "id" bigint [pk, not null, increment]
+  "entertainment_task_song_id" bigint [not null]
+  "employee_id" bigint [not null]
+  "created_at" timestamp
+  "updated_at" timestamp
 }
 
 Table "request_inventories" {

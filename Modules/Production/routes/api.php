@@ -44,6 +44,11 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
 
+    // songs
+    Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');
+    Route::put('project/{projectUid}/song/{songUid}', [ProjectController::class, 'updateSong'])->name('projects.updateSongs');
+    Route::delete('project/{projectUid}/song/{songUid}', [ProjectController::class, 'deleteSong'])->name('projects.deleteSongs');
+
     Route::get('project/{projectUid}/statusses', [ProjectController::class, 'getProjectStatusses']);
     Route::get('project/{projectUid}/prepareFinalCheck', [ProjectController::class, 'prepareFinalCheck']);
     Route::get('project/scheduler/{projectUid}', [ProjectController::class, 'getAllSchedulerProjects']);
@@ -53,7 +58,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/{projectUid}/getPicForSubtitute', [ProjectController::class, 'getPicForSubtitute']);
     Route::get('project/{projectUid}/readyToGo', [ProjectController::class, 'readyToGo']);
     Route::delete('project/{projectUid}/removeAllVJ', [ProjectController::class, 'removeAllVJ']);
-    Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
+    Route::post('project/{id}/references', [ProjectController::class, 'storeReferences'])->name('store-reference');
     Route::post('project/{projectUid}/completeProject', [ProjectController::class, 'completeProject']);
     Route::post('project/{projectUid}/assignVj', [ProjectController::class, 'assignVJ']);
     Route::get('project/getTargetPicsAndTaskList/{projectUid}', [ProjectController::class, 'getTargetPicsAndTaskList']); // get pic list for request team member (exclude logged accont)
