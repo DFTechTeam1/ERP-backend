@@ -12,6 +12,7 @@ use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
+use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -64,10 +65,11 @@ trait HasProjectConstructor
         $projectTaskPicHistoryRepo = null,
         $customInventoryRepo = null,
         $projectSongListRepo = null,
-        $generalService = null
+        $generalService = null,
+        $entertainSongRepo = null
     )
     {
-        $this->service = new ProjectService(
+        $this->projectService = new ProjectService(
             $userRoleManagement ? $userRoleManagement :new UserRoleManagement,
             $projectBoardRepo ? $projectBoardRepo : new ProjectBoardRepository,
             $geocoding ? $geocoding : new Geocoding,
@@ -94,7 +96,8 @@ trait HasProjectConstructor
             $projectTaskPicHistoryRepo ? $projectTaskPicHistoryRepo : new ProjectTaskPicHistoryRepository,
             $customInventoryRepo ? $customInventoryRepo : new CustomInventoryRepository,
             $projectSongListRepo ? $projectSongListRepo : new ProjectSongListRepository,
-            $generalService ? $generalService : new GeneralService
+            $generalService ? $generalService : new GeneralService,
+            $entertainSongRepo ? $entertainSongRepo : new EntertainmentTaskSongRepository
         );
     }
 }
