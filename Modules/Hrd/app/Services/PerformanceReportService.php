@@ -297,7 +297,7 @@ class PerformanceReportService {
                     // set tasks
                     foreach ($projectPoint['tasks'] as $task) {
                         $excel->setValue("A{$indexTask}", $projectPoint['employee']['name']);
-                        $excel->setValue("B{$indexTask}", $projectPoint['employee']['employee_id'] . ' - ' . count($projectPoint['tasks']) . ' - ' . $indexing);
+                        $excel->setValue("B{$indexTask}", $projectPoint['employee']['employee_id']);
                         $excel->setValue("C{$indexTask}", $projectPoint['employee']['position']['name']);
                         $excel->setValue("D{$indexTask}", $projectPoint['project_name']);
                         $excel->setValue("E{$indexTask}", $task['name']);
