@@ -248,7 +248,7 @@ class PerformanceReportService {
 
             $points = [];
             foreach ($employeeUids as $employeeId) {
-                $pointResult = $this->getEmployeePoint($employeeId);
+                $pointResult = $this->getEmployeePoint($employeeId, $payload['start_date'], $payload['end_date']);
 
                 if (count($pointResult) > 0) {
                     $pointResult = collect($pointResult)->filter(function ($filter) {
