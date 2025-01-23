@@ -4,6 +4,7 @@ namespace Modules\Hrd\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Hrd\Console\ManualExportPerformanceReport;
 
 class HrdServiceProvider extends ServiceProvider
 {
@@ -37,7 +38,9 @@ class HrdServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+        $this->commands([
+            ManualExportPerformanceReport::class
+        ]);
     }
 
     /**

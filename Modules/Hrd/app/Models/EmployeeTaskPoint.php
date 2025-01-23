@@ -29,5 +29,8 @@ class EmployeeTaskPoint extends Model
         return $this->belongsTo(\Modules\Production\Models\Project::class, 'project_id');
     }
 
-    
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
 }
