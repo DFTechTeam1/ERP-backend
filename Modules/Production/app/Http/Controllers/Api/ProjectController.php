@@ -23,6 +23,7 @@ use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Http\Requests\Project\CompleteProject;
+use Modules\Production\Http\Requests\Project\DistributeSong;
 use Modules\Production\Http\Requests\Project\RequestSong;
 use Modules\Production\Http\Requests\Project\UpdateSong;
 use Modules\Production\Services\TestingService;
@@ -694,9 +695,21 @@ class ProjectController extends Controller
         return apiResponse($this->service->updateSong($request->validated(), $projectUid, $songUid));
     }
 
+    /**
+     * Function to delete single song
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function deleteSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->deleteSong($projectUid, $songUid));
+    }
+
+    public function distributeSong(DistributeSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        
     }
 }
 

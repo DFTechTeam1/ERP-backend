@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\System\BaseRole;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -155,67 +156,67 @@ class RolePermissionSetting extends Seeder
 
     protected function getRootRole()
     {
-        return 'root';
+        return BaseRole::Root->value;
     }
 
     protected function getMarketingRole()
     {
-        return 'marketing';
+        return BaseRole::Marketing->value;
     }
 
     protected function getDirectorRole()
     {
-        return 'director';
+        return BaseRole::Director->value;
     }
 
     protected function getProductionRole()
     {
-        return 'production';
+        return BaseRole::Production->value;
     }
 
     protected function getEntertainmentRole()
     {
-        return 'entertainment';
+        return BaseRole::Entertainment->value;
     }
 
     protected function getProjectManagerAdminRole()
     {
-        return 'project manager admin';
+        return BaseRole::ProjectManagerAdmin->value;
     }
 
     protected function getItSupportRole()
     {
-        return 'it support';
+        return BaseRole::ItSupport->value;
     }
 
     protected function getHrdRole()
     {
-        return 'hrd';
+        return BaseRole::Hrd->value;
     }
 
     protected function getFinanceRole()
     {
-        return 'finance';
+        return BaseRole::Finance->value;
     }
 
     protected function getRegularRole()
     {
-        return 'regulare employee';
+        return BaseRole::RegularEmployee->value;
     }
 
     protected function getProjectManagerRole()
     {
-        return 'project manager';
+        return BaseRole::ProjectManager->value;
     }
 
     protected function getAssistantProjectManagerRole()
     {
-        return 'assistant manager';
+        return BaseRole::AssistantProjectManger->value;
     }
 
     protected function getProjectManagerEntertainmentRole()
     {
-        return 'project manager entertainment';
+        return BaseRole::ProjectManagerEntertainment->value;
     }
 
     protected function dashboardPermission()
@@ -713,6 +714,24 @@ class RolePermissionSetting extends Seeder
                 $this->getProjectManagerAdminRole(),
             ]],
             ['name' => 'create_request_song', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+            ]],
+            ['name' => 'approve_request_song', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+            ]],
+            ['name' => 'reject_request_song', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+            ]],
+            ['name' => 'distribute_request_song', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
                 $this->getProjectManagerRole(),
