@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Enums\System\BaseRole;
 use App\Services\UserRoleManagement;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -68,6 +69,146 @@ class TestingService {
         return $newWhereHas;
     }
 
+    public function listForEntertainment(string $select = '*', string $where = '', array $relation = [])
+    {
+        $relation[] = 'songs:id,uid,project_id,name,is_request_edit,is_request_delete';
+
+        $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+
+        $whereHas = [];
+
+        $page = request('page') ?? 1;
+        $page = $page == 1 ? 0 : $page;
+        $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+        
+        $sorts = '';
+        if (!empty(request('sortBy'))) {
+            foreach (request('sortBy') as $sort) {
+                if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
+                    $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
+                }
+            }
+
+            $sorts = rtrim($sorts, ',');
+        }
+
+        $paginated = $this->projectGroupRepo->projectRepo->pagination(
+            $select,
+            $where,
+            $relation,
+            $itemsPerPage,
+            $page,
+            $whereHas,
+            $sorts
+        );
+
+        $eventTypes = \App\Enums\Production\EventType::cases();
+        $classes = \App\Enums\Production\Classification::cases();
+        $statusses = \App\Enums\Production\ProjectStatus::cases();
+
+        $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses) {
+            $pics = collect($item->personInCharges)->map(function ($pic) {
+                return [
+                    'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
+                ];
+            })->pluck('name')->values()->toArray();
+
+            $picEid = collect($item->personInCharges)->pluck('employee.employee_id')->toArray();
+
+            $marketing = $item->marketing ? $item->marketing->name : '-';
+
+            $marketingData = collect($item->marketings)->pluck('marketing.name')->toArray();
+            $marketing = $item->marketings[0]->marketing->name;
+            if ($item->marketings->count() > 1) {
+                $marketing .= ", and +" . $item->marketings->count() - 1 . " more";
+            }
+
+            $eventType = '-';
+            foreach ($eventTypes as $et) {
+                if ($et->value == $item->event_type) {
+                    $eventType = $et->label();
+                }
+            }
+
+            $status = '-';
+            $statusColor = '';
+            if ($item->status) {
+                foreach ($statusses as $statusData) {
+                    if ($statusData->value == $item->status) {
+                        $status = $statusData->label();
+                        $statusColor = $statusData->color();
+                    }
+                }
+            } else {
+                $status = __('global.undetermined');
+                $statusColor = 'grey-lighten-1';
+            }
+
+            $eventClass = '-';
+            $eventClassColor = null;
+            foreach ($classes as $class) {
+                if ($class->value == $item->classification) {
+                    $eventClass = $class->label();
+                    $eventClassColor = $class->color();
+                }
+            }
+
+            $vj = '-';
+
+            if ($item->vjs->count() > 0) {
+                $vj = implode(',', collect($item->vjs)->pluck('employee.nickname')->toArray());
+            }
+
+            $needReturnEquipment = false;
+            if ($item->status == \App\Enums\production\ProjectStatus::Completed->value && $item->equipments->count() > 0) {
+                $needReturnEquipment = true;
+            }
+            if ($item->equipments->count() > 0) {
+                if ($item->equipments[0]->is_returned) {
+                    $needReturnEquipment = false;
+                }
+            }
+
+            return [
+                'uid' => $item->uid,
+                'id' => $item->id,
+                'marketing' => $marketing,
+                'pic' => count($pics) > 0  ? implode(', ', $pics) : __('global.undetermined'),
+                'no_pic' => count($pics) == 0 ? true : false,
+                'pic_eid' => $picEid,
+                'name' => $item->name,
+                'project_date' => date('d F Y', strtotime($item->project_date)),
+                'venue' => $item->venue,
+                'event_type' => $eventType,
+                'led_area' => $item->led_area,
+                'event_class' => $item->projectClass->name,
+                'event_class_color' => $item->projectClass->color,
+                'status' => $status,
+                'status_color' => $statusColor,
+                'status_raw' => $item->status,
+                'project_is_complete' => $item->status == \App\Enums\production\ProjectStatus::Completed->value,
+                'vj' => $vj,
+                'have_vj' => $item->vjs->count() > 0 ? true : false,
+                'is_final_check' => $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false,
+                'need_return_equipment' => $needReturnEquipment,
+                'songs' => $item->songs,
+                'number_of_equipments' => $item->equipments->count()
+            ];
+        });
+
+        $totalData = $this->projectGroupRepo->projectRepo->list('id', $where, [], $whereHas)->count();
+
+        return generalResponse(
+            message: 'success',
+            error: false,
+            data: [
+                'paginated' => $paginated,
+                'totalData' => $totalData,
+                'itemPerPage' => (int) $itemsPerPage,
+            ]
+        );
+    }
+
     /**
      * Get list of data
      *
@@ -92,6 +233,7 @@ class TestingService {
             $whereHas = [];
 
             $roles = $this->user->roles;
+            $roleNames = collect($roles)->pluck("name")->toArray();
 
             $isProductionRole = $this->userRoleManagement->isProductionRole();
             $isEntertainmentRole = $this->userRoleManagement->isEntertainmentRole();
@@ -200,7 +342,12 @@ class TestingService {
                 }
             }
 
-            Log::debug('where project 1', [$where]);
+            if (
+                in_array(BaseRole::Entertainment->value, $roleNames) ||
+                in_array(BaseRole::ProjectManagerEntertainment->value, $roleNames)
+            ) {
+                return $this->listForEntertainment($select, $where, $relation);
+            }
 
             $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id', [], 'id = ' . $this->user->employee_id);
 
@@ -287,8 +434,6 @@ class TestingService {
                 $isAllItems = true;
             }
 
-            Log::debug('where project', [$where]);
-
             $paginated = $this->projectGroupRepo->projectRepo->pagination(
                 $select,
                 $where,
@@ -304,7 +449,7 @@ class TestingService {
             $classes = \App\Enums\Production\Classification::cases();
             $statusses = \App\Enums\Production\ProjectStatus::cases();
 
-            $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses) {
+            $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses, $roles) {
                 $pics = collect($item->personInCharges)->map(function ($pic) {
                     return [
                         'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
@@ -389,6 +534,8 @@ class TestingService {
                     'have_vj' => $item->vjs->count() > 0 ? true : false,
                     'is_final_check' => $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false,
                     'need_return_equipment' => $needReturnEquipment,
+                    'roles' => $roles,
+                    'number_of_equipments' => $item->equipments->count()
                 ];
             });
 

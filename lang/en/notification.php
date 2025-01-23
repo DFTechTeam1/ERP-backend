@@ -51,5 +51,6 @@ return [
     "successUpdateSong" => "Success update song",
     "successUpdateDistributedSong" => "Update will need Entertainment PM Approval. You'll be notified when its updated",
     "successDeleteSong" => "Success delete song",
-    "failedDeleteRequestEditSong" => "Song is on approval process. Cannot be delete while this process is not done yet"
+    "failedDeleteRequestEditSong" => "Song is on approval process. Cannot be delete while this process is not done yet",
+    "songHasBeenDistributed" => "Song has been distributed"
 ];

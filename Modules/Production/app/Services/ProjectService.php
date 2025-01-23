@@ -4,8 +4,10 @@ namespace Modules\Production\Services;
 
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
+use App\Enums\Production\TaskSongStatus;
 use App\Enums\Production\TaskStatus;
 use App\Enums\Production\WorkType;
+use App\Enums\System\BaseRole;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
 use App\Services\GeneralService;
@@ -47,11 +49,13 @@ use Modules\Production\Exceptions\FailedModifyWaitingApprovalSong;
 use Modules\Production\Exceptions\ProjectNotFound;
 use Modules\Production\Exceptions\SongNotFound;
 use Modules\Production\Jobs\DeleteSongJob;
+use Modules\Production\Jobs\DistributeSongJob;
 use Modules\Production\Jobs\RequestDeleteSongJob;
 use Modules\Production\Jobs\RequestEditSongJob;
 use Modules\Production\Jobs\RequestSongJob;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
+use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectVjRepository;
@@ -114,6 +118,8 @@ class ProjectService
 
     private $generalService;
 
+    private $entertainmentTaskSongRepo;
+
     /**
      * Construction Data
      */
@@ -144,9 +150,12 @@ class ProjectService
         ProjectTaskPicHistoryRepository $taskPicHistory,
         CustomInventoryRepository $customItemRepo,
         ProjectSongListRepository $projectSongListRepo,
-        GeneralService $generalService
+        GeneralService $generalService,
+        EntertainmentTaskSongRepository $entertainmentTaskSongRepo
     )
     {
+        $this->entertainmentTaskSongRepo = $entertainmentTaskSongRepo;
+
         $this->generalService = $generalService;
 
         $this->userManagement = $userRoleManagement;
@@ -374,6 +383,11 @@ class ProjectService
         }
 
         return $newWhereHas;
+    }
+
+    public function listForEntertainment()
+    {
+        
     }
 
     /**
@@ -609,7 +623,7 @@ class ProjectService
             $classes = \App\Enums\Production\Classification::cases();
             $statusses = \App\Enums\Production\ProjectStatus::cases();
 
-            $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses) {
+            $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses, $roles) {
                 $pics = collect($item->personInCharges)->map(function ($pic) {
                     return [
                         'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
@@ -672,6 +686,8 @@ class ProjectService
                     }
                 }
 
+                $item['roles'] = $roles;
+
                 return [
                     'uid' => $item->uid,
                     'id' => $item->id,
@@ -694,6 +710,7 @@ class ProjectService
                     'have_vj' => $item->vjs->count() > 0 ? true : false,
                     'is_final_check' => $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false,
                     'need_return_equipment' => $needReturnEquipment,
+                    'roles' => $item['roles']
                 ];
             });
 
@@ -1738,13 +1755,14 @@ class ProjectService
         return $resp;
     }
 
-    protected function updateSongList(int $projectId): array
+    public function updateSongList(int $projectId): array
     {
         $songs = $this->projectSongListRepo->list(
             select: 'uid,id,name,created_by,is_request_edit,is_request_delete',
             where: 'project_id = ' . $projectId,
             relation: [
-                'task:id,project_song_list_id',
+                'task:id,project_song_list_id,employee_id',
+                'task.employee:id,nickname'
             ]
         );
 
@@ -6578,7 +6596,15 @@ class ProjectService
         return true;
     }
 
-    public function deleteSong(string $projectUid, string $songUid)
+    /**
+     * Delete song
+     * 
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function deleteSong(string $projectUid, string $songUid): array
     {
         DB::beginTransaction();
         try {
@@ -6645,7 +6671,15 @@ class ProjectService
         }
     }
 
-    public function doDeleteSong(string $songUid, object $song)
+    /**
+     * Actual function to delete song
+     * 
+     * @param string $songUid
+     * @param object $song
+     * 
+     * @return void
+     */
+    public function doDeleteSong(string $songUid, object $song): void
     {
         $songName = $song->name;
         $projectName = $song->project->name;
@@ -6653,5 +6687,70 @@ class ProjectService
 
         $requesterId = auth()->id();
         DeleteSongJob::dispatch($songName, $projectName, $requesterId)->afterCommit();
+    }
+
+    /**
+     * Distribute song to selected employee
+     * 
+     * @param array $payload
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function distributeSong(array $payload, string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $employeeId = $this->generalService->getIdFromUid($payload['employee_uid'], new Employee());
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+
+            $song = $this->projectSongListRepo->show($songUid, 'id');
+
+            if (!$song) {
+                throw new SongNotFound();
+            }
+
+            $this->entertainmentTaskSongRepo->store([
+                'project_song_list_id' => $songId,
+                'status' => TaskSongStatus::Active->value,
+                'employee_id' => $employeeId
+            ]);
+
+            DistributeSongJob::dispatch($payload['employee_uid'], $projectUid, $songUid)->afterCommit();
+
+            // get current data
+            $currentData = $this->renewCache($projectUid);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.songHasBeenDistributed'),
+                error: false,
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function renewCache(string $projectUid)
+    {
+        // get current data
+        $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+        $currentData = $this->generalService->getCache('detailProject' . $projectId);
+        
+        if (!$currentData) {
+            $this->show($projectUid);
+            $currentData = $this->generalService->getCache('detailProject' . $projectId);
+        }
+
+        $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+        return $currentData;
     }
 }
