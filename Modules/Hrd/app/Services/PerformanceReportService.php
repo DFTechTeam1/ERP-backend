@@ -2,7 +2,10 @@
 
 namespace Modules\Hrd\Services;
 
+use App\Enums\Employee\Status;
+use Carbon\Carbon;
 use DateTime;
+use Modules\Hrd\Models\Employee;
 
 class PerformanceReportService {
     private $repo;
@@ -48,16 +51,24 @@ class PerformanceReportService {
         ->count();
     }
 
-    protected function getEmployeePoint(int $employeeId)
+    protected function getEmployeePoint(int $employeeId, string $startDate = '', string $endDate = '')
     {
-        $data = $this->employeePointRepo->list('point,additional_point,total_point,project_id', 'employee_id = ' . $employeeId, [
-            'project' => function ($q) {
+        if (empty($startDate)) {
+            $startDate = $this->startDate;
+        }
+        if (empty($endDate)) {
+            $endDate = $this->endDate;
+        }
+        $data = $this->employeePointRepo->list('point,additional_point,total_point,project_id,employee_id', 'employee_id = ' . $employeeId, [
+            'project' => function ($q) use ($startDate, $endDate) {
                 $q->selectRaw('id,name')
-                    ->whereBetween('project_date', [$this->startDate, $this->endDate]);
-            }
+                    ->whereBetween('project_date', [$startDate, $endDate]);
+            },
+            'employee:id,name,employee_id,position_id',
+            'employee.position:id,name'
         ]);
 
-        $data = collect($data)->filter(function ($filter) {
+        $data = collect((object) $data)->filter(function ($filter) {
             return $filter->project;
         })->all();
 
@@ -76,7 +87,7 @@ class PerformanceReportService {
                 ]
             );
 
-            $task = collect($task)->map(function ($mapping) {
+            $task = collect((object) $task)->map(function ($mapping) {
                 
                 return [
                     'name' => $mapping->taskLog[0]->task->name,
@@ -90,6 +101,7 @@ class PerformanceReportService {
                 'additional_point' => $point->additional_point,
                 'total_point' => $point->total_point,
                 'tasks' => $task,
+                'employee' => $point->employee
             ];
         }
 
@@ -176,5 +188,178 @@ class PerformanceReportService {
             false,
             $output,
         );
+    }
+
+    /**
+     * Import employee point based on user input
+     * User can be choose:
+     * 1. All Employee and all data
+     * 2. Selected employee
+     * 3. Selected date range
+     * 4. Maximum is 1 month period
+     *
+     * $payload will have
+     * bool all_employee -> required (false or true)
+     * array employee_uids -> nullable, required if all_employee is false
+     * string date_start -> nullable
+     * end date_start -> nullable
+     * 
+     * Default date is 1 period
+     * 
+     * @param array $payload
+     * @return void
+     */
+    public function importEmployeePoint(array $payload)
+    {
+        try {
+            $where = '';
+    
+            // get the employee ids
+            if ($payload['all_employee'] == 1) {
+                $employeeUids = $this->getAllEmployeeIdForPoint();
+            } else {
+                $employeeUids = collect($payload['employee_uids'])->map(function ($item) {
+                    return getIdFromUid($item, new Employee());
+                })->toArray();
+            }
+            $employeeUidsCombine = implode(',', $employeeUids);
+            $where .= "employee_id IN ({$employeeUidsCombine})";
+    
+            // get date range
+            if (empty($payload['start_date']) && empty($payload['end_date'])) {
+                $where = $this->setDefaultPeriodQueryForPoint($where);
+            } else if (!empty($payload['start_date']) && !empty($payload['end_date'])) {
+                $formatDate = $this->formatPointQueryDate($payload);
+                
+                $where .= $where .= "DATE(created_at) BETWEEN {$formatDate['start']} AND {$formatDate['end']}";
+            } else if (!empty($payload['start_date']) && empty($payload['end_date'])) {
+                $payload['end_date'] = date('Y-m-d');
+                $formatDate = $this->formatPointQueryDate($payload);
+                
+                $where .= $where .= "DATE(created_at) BETWEEN {$formatDate['start']} AND {$formatDate['end']}";
+            } else if (empty($payload['start_date']) && !empty($payload['end_date'])) {
+                $payload['start_end'] = date('Y-m-d');
+                $formatDate = $this->formatPointQueryDate($payload);
+                
+                $where .= $where .= "DATE(created_at) BETWEEN {$formatDate['start']} AND {$formatDate['end']}";
+            }
+
+            $totalProject = $this->getTotalProjectEmployee($employeeUids[0]);
+
+            $points = [];
+            foreach ($employeeUids as $employeeId) {
+                $pointResult = $this->getEmployeePoint($employeeId, $payload['start_date'], $payload['end_date']);
+
+                if (count($pointResult) > 0) {
+                    $pointResult = collect($pointResult)->filter(function ($filter) {
+                        return $filter['point'] > 0;
+                    })->values()->toArray();
+
+                    $points[] = $pointResult;
+                }
+            }
+
+            $excel = new \App\Services\ExcelService();
+
+            $excel->createSheet('Report', 0);
+            $excel->setActiveSheet('Report');
+
+            $excel->setValue('A1', 'REPORT PERFORMANCE REPORT ' . $this->startDate . ' - ' . $this->endDate);
+            $excel->mergeCells('A1:H1');
+            $excel->setAsBold('A1');
+            
+            // header
+            $excel->setValue('A4', 'Nama');
+            $excel->setValue('B4', 'Employee ID');
+            $excel->setValue('C4', 'Posisi');
+            $excel->setValue('D4', 'Event');
+            $excel->setValue('E4', 'Tugas');
+            $excel->setValue('F4', 'Poin');
+            $excel->setValue('G4', 'Tambahan Poin');
+            $excel->setValue('H4', 'Total Poin');
+
+            $excel->setAsBold('A4');
+            $excel->setAsBold('B4');
+            $excel->setAsBold('C4');
+            $excel->setAsBold('D4');
+            $excel->setAsBold('E4');
+            $excel->setAsBold('F4');
+            $excel->setAsBold('G4');
+            $excel->setAsBold('H4');
+
+            // fill up the template
+            $indexing = 5;
+            $indexTask = 5;
+            foreach ($points as $formatPoint) {
+                $projectKey = 5;
+                foreach ($formatPoint as $projectPoint) {
+                    
+                    // set tasks
+                    foreach ($projectPoint['tasks'] as $task) {
+                        $excel->setValue("A{$indexTask}", $projectPoint['employee']['name']);
+                        $excel->setValue("B{$indexTask}", $projectPoint['employee']['employee_id']);
+                        $excel->setValue("C{$indexTask}", $projectPoint['employee']['position']['name']);
+                        $excel->setValue("D{$indexTask}", $projectPoint['project_name']);
+                        $excel->setValue("E{$indexTask}", $task['name']);
+                        $excel->setValue("F{$indexTask}", $projectPoint['point']);
+                        $excel->setValue("G{$indexTask}", $projectPoint['additional_point']);
+                        $excel->setValue("H{$indexTask}", $projectPoint['total_point']);
+    
+                        $indexTask++;
+                    }
+
+                    $indexing++;
+                    $projectKey++;
+                }
+            }
+
+            $excel->autoSize(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+
+            $excel->save(public_path('point.xlsx'));
+            
+            return generalResponse(
+                message: 'success',
+                error: false,
+                data: [
+                    'total_project' => $totalProject,
+                    'point' => $points,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    protected function getAllEmployeeIdForPoint(): array
+    {
+        $employees = $this->repo->list(
+            select: 'id',
+            where: "status NOT IN (". Status::Inactive->value .")"
+        );
+
+        return collect($employees)->pluck('id')->toArray();
+    }
+
+    protected function formatPointQueryDate(array $payload): array
+    {
+        $start = date('Y-m-d', strtotime($payload['start_date']));
+        $end = date('Y-m-d', strtotime($payload['end_date']));
+
+        return [
+            'start' => $start,
+            'end' => $end
+        ];
+    }
+
+    public function setDefaultPeriodQueryForPoint(string $where = ''): string
+    {
+        $now = Carbon::now();
+
+        $start = $now->copy()->subMonthNoOverflow()->day(24);
+        $end = $now->copy()->day(23);
+
+        $where .= "DATE(created_at) BETWEEN {$start} AND {$end}";
+
+        return $where;
     }
 }
