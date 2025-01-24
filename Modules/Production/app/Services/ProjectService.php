@@ -1743,7 +1743,7 @@ class ProjectService
             if (count($output) > 0) {
                 $firstLine = count($output) > 2 ? array_splice($output, 0, 2) : $output;
 
-                $moreLine = count($output) > 2 ? array_splice($output, 2) : [];
+                $moreLine = count($output) > 2 ? $output : [];
 
                 $resp = [
                     'first_line' => $firstLine,
