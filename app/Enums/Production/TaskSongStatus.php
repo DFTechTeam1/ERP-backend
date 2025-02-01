@@ -16,4 +16,22 @@ enum TaskSongStatus: int
             static::Revise => __("global.revise"),
         };
     }
+
+    public static function getLabel(int $value)
+    {
+        return match ($value) {
+            self::Active->value => __('global.active'),
+            self::OnProgress->value => __('global.onProgress'),
+            self::Revise->value => __('global.revise'),
+        };
+    }
+
+    public static function getColor(int $value)
+    {
+        return match ($value) {
+            self::Active->value => 'primary',
+            self::OnProgress->value => 'success',
+            self::Revise->value => 'orange-lighten-3',
+        };
+    }
 }

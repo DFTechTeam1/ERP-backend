@@ -3,6 +3,7 @@
 namespace Modules\Company\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Log;
 
 class ProvinceFactory extends Factory
 {
@@ -18,9 +19,15 @@ class ProvinceFactory extends Factory
      */
     public function definition(): array
     {
+        if (self::$sequence > 99) {
+            self::$sequence = 1;
+        }
+        
+        $code = self::$sequence++;
+
         return [
             'name' => fake()->randomElement(['ACEH', 'SUMATERA UTARA', 'JAWA TIMUR', 'JAWA TENGAH', 'JAWA BARAT']),
-            'code' => self::$sequence++,
+            'code' => $code,
             'latitude' => fake()->latitude(),
             'longitude' => fake()->longitude()
         ];

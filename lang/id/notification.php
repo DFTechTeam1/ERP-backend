@@ -51,5 +51,11 @@ return [
     "successUpdateDistributedSong" => "Proses ini membutuhkan persetujuan PM Entertainment. Kamu akan mendapat informasi lebih lanjut mengenai perubahan ini",
     "successDeleteSong" => "Berhasil menghapus musik",
     "failedDeleteRequestEditSong" => "Lagu dalam proses persetujuan untuk edit. Tidak bisa dilakukan penghapusan",
-    "songHasBeenDistributed" => "Musik telah di bagikan"
+    "songHasBeenDistributed" => "Musik telah di bagikan",
+    "employeeRequired" => "Karyawan harus diisi",
+    "employeeAlreadyAssignedForThisSong" => ":name sudah ditugaskan di musik ini",
+    "successSubtituteSongPic" => 'Berhasil merubah PIC',
+    "songHasBeenEdited" => "Musik berhasil di ubah",
+    "requestEditSongHasBeenRejected" => "Permintaan untuk mengubah lagu berhasil ditolak",
+    "duplicateSongOnBulkAssign" => "Ada musik yang sama pada beberapa karyawan. Pastikan tidak ada musik yang sama di setiap karyawan yang dipilih."
 ];

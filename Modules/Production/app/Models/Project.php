@@ -70,6 +70,11 @@ class Project extends Model
         return $this->hasMany(ProjectSongList::class, 'project_id');
     }
 
+    public function entertainmentTaskSong(): HasMany
+    {
+        return $this->hasMany(EntertainmentTaskSong::class, 'project_id');
+    }
+
     public function vjs(): HasMany
     {
         return $this->hasMany(\Modules\Production\Models\ProjectVj::class, 'project_id');

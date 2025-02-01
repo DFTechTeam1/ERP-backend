@@ -80,13 +80,17 @@ class ProjectSongListRepository extends ProjectSongListInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
+        if (empty($where)) {
+            $query->where("uid", $uid);
+        } else {
+            $query->whereRaw($where);
+        }
         
         if ($relation) {
             $query->with($relation);
@@ -136,10 +140,17 @@ class ProjectSongListRepository extends ProjectSongListInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(string $id)
+    public function delete(int $id, string $where = '')
     {
-        return $this->model->where('uid', $id)
-            ->delete();
+        $query = $this->model->query();
+
+        if (empty($where)) {
+            $query->where('id', $id);
+        } else {
+            $query->whereRaw($where);
+        }
+
+        return $query->delete();
     }
 
     /**

@@ -54,6 +54,9 @@ trait TestUserAuthentication
         $user = $users->firstOrFail();
         $user->assignRole($role);
 
+        $employee[0]->user_id = $users[0]->id;
+        $employee[0]->save();
+
         return [
             'employee' => $employee,
             'user' => $user

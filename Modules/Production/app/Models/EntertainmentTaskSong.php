@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Models\Employee;
+use Modules\Production\Database\Factories\EntertainmentTaskSongFactory;
 
 // use Modules\Production\Database\Factories\EntertainmentTaskSongFactory;
 
@@ -19,16 +20,22 @@ class EntertainmentTaskSong extends Model
     protected $fillable = [
         'project_song_list_id',
         'status',
-        'employee_id'
+        'employee_id',
+        'project_id'
     ];
 
-    // protected static function newFactory(): EntertainmentTaskSongFactory
-    // {
-    //     // return EntertainmentTaskSongFactory::new();
-    // }
+    protected static function newFactory(): EntertainmentTaskSongFactory
+    {
+        return EntertainmentTaskSongFactory::new();
+    }
 
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id');
     }
 }
