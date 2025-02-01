@@ -192,6 +192,7 @@ return [
     'waitingToDistribute' => 'Waiting to Distribute',
     'songEditRequest' => 'Waiting Edit Approval',
     'songDeleteRequest' => 'Waiting Delete Approval',
+    'active' => 'Active',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

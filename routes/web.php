@@ -17,20 +17,7 @@ use Modules\Hrd\Services\PerformanceReportService;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Services\TestingService;
 
-<<<<<<< HEAD
 Route::get('/', [LandingPageController::class, 'index']);
-=======
-Route::get('/', function () {
-    $service = new PerformanceReportService();
-    return $service->importEmployeePoint([
-        'employee_uids' => ['d0d9ffab-bf58-488b-87bb-a8c9c2fb2978'],
-        'all_employee' => 1,
-        'start_date' => '2024-12-25',
-        'end_date' => '2025-01-24'
-    ]);
-    return view('landing');
-});
->>>>>>> aa7707ede4f17f992ed2dae9e41fbd66d2593553
 
 Route::get('interactive/download', [InteractiveController::class, 'download']);
 

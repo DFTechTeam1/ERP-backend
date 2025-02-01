@@ -52,5 +52,11 @@ return [
     "successUpdateDistributedSong" => "Update will need Entertainment PM Approval. You'll be notified when its updated",
     "successDeleteSong" => "Success delete song",
     "failedDeleteRequestEditSong" => "Song is on approval process. Cannot be delete while this process is not done yet",
-    "songHasBeenDistributed" => "Song has been distributed"
+    "songHasBeenDistributed" => "Song has been distributed",
+    "employeeRequired" => "Employee is required",
+    "employeeAlreadyAssignedForThisSong" => ":name already assinged for this song",
+    "successSubtituteSongPic" => 'Success to change the PIC',
+    "songHasBeenEdited" => "Song has been successfully update",
+    "requestEditSongHasBeenRejected" => "Request edit song is rejected",
+    "duplicateSongOnBulkAssign" => "There was duplicate song on some users. Please remove the duplicate before continue."
 ];

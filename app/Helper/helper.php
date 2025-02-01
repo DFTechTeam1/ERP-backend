@@ -77,7 +77,7 @@ if (!function_exists('errorMessage')) {
             if (in_array(get_class($message), $outputFiles)) {
                 $out = $message->getMessage();
             } else {
-                if (config('app.env') == 'local') {
+                if (config('app.env') == 'local' || config('app.env') == 'testing') {
                     $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
                     $messageError = $out;
                 } else {

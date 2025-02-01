@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Production\Database\Factories\ProjectSongListFactory;
 
 // use Modules\Production\Database\Factories\ProjectSongListFactory;
 
@@ -25,13 +27,14 @@ class ProjectSongList extends Model
         'is_request_edit',
         'is_request_delete',
         'created_by',
-        'target_name'
+        'target_name',
+        'reason'
     ];
 
-    // protected static function newFactory(): ProjectSongListFactory
-    // {
-    //     // return ProjectSongListFactory::new();
-    // }
+    protected static function newFactory(): ProjectSongListFactory
+    {
+        return ProjectSongListFactory::new();
+    }
 
     public function project(): BelongsTo
     {
@@ -41,5 +44,10 @@ class ProjectSongList extends Model
     public function task(): HasOne
     {
         return $this->hasOne(EntertainmentTaskSong::class, 'project_song_list_id');
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(EntertainmentTaskSongLog::class, 'project_song_list_id');
     }
 }
