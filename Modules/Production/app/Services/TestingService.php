@@ -72,6 +72,8 @@ class TestingService {
     public function listForEntertainment(string $select = '*', string $where = '', array $relation = [])
     {
         $relation[] = 'songs:id,uid,project_id,name,is_request_edit,is_request_delete';
+        $relation[] = 'songs.task:id,project_song_list_id,employee_id';
+        $relation[] = 'songs.task.employee:id,nickname';
 
         $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
 

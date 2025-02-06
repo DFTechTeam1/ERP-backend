@@ -13,5 +13,10 @@ return [
     'songDelegateByPM' => ':user ditugaskan untuk mendelegasikan ke crew entertainment.',
     'songChangePICByPM' => ':pm telah mengganti PIC dari :user ke :target',
     'songApproveRequestEdit' => ':pm sudah menyetujui perubahan musik di event :event dari :currentName ke :newName',
-    'songRejectRequestEdit' => ':pm menolak permintaan perubaah musik'
+    'songRejectRequestEdit' => ':pm menolak permintaan perubaah musik',
+    'songRemoveWorker' => ':pm menghapus :user dari tugas',
+    'requestToEditSong' => ':author melakukan permintaan pergantian musik',
+    'requestToDeleteSong' => ':author melakukan permintaan untuk menghapus musik',
+    'editSong' => ':author merubah judul musik dari :currentName ke :newName',
+    'startWorkSong' => ':user mulai mengerjakan tugas ini'
 ];

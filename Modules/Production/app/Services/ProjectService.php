@@ -47,6 +47,7 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use DateTime;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
@@ -6429,6 +6430,56 @@ class ProjectService
     }
 
     /**
+     * Get all entertainment team member with workload on selected project
+     * 
+     * @param string $projectUid
+     * 
+     * @return array
+     */
+    public function entertainmentMemberWorkload(string $projectUid): array
+    {
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $users = \App\Models\User::role([BaseRole::Entertainment->value, BaseRole::ProjectManagerEntertainment->value])
+                ->with([
+                    'employee' => function ($query) use ($projectId) {
+                        $query->selectRaw('id,name,uid,employee_id')
+                            ->with([
+                                'songTasks' => function ($taskQuery) use ($projectId) {
+                                    $taskQuery->selectRaw('id,project_song_list_id,employee_id,project_id,status')
+                                        ->where('project_id', $projectId)
+                                        ->with('song:id,name,uid');
+                                }
+                            ]);
+                    }
+                ])
+                ->get();
+
+            $output = collect($users)->map(function ($user) {
+                return [
+                    'uid' => $user->employee->uid,
+                    'name' => $user->employee->name,
+                    'email' => $user->email,
+                    'employee_id' => $user->employee->employee_id,
+                    'tasks' => collect($user->employee->songTasks)->map(function ($task) {
+                        return [
+                            'uid' => $task->song->uid,
+                            'name' => $task->song->name
+                        ];
+                    })
+                ];
+            })->toArray();
+
+            return generalResponse(
+                message: 'success',
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Function to check update song
      * Do validation before edit the song
      * 
@@ -6450,6 +6501,7 @@ class ProjectService
                     'task.employee:id,name,nickname'
                 ]
             );
+            $currentName = $song->name;
 
             if (!$song) {
                 throw new SongNotFound();
@@ -6467,11 +6519,39 @@ class ProjectService
                 $requesterId = auth()->id();
                 RequestEditSongJob::dispatch($payload, $projectUid, $songUid, $requesterId)->afterCommit();
 
+                // log this request
+                StoreLogAction::run(
+                    type: TaskSongLogType::RequestToEditSong->value,
+                    payload: [
+                        'project_song_list_id' => $song->id,
+                        'project_id' => $song->project_id,
+                        'employee_id' => null,
+                    ],
+                    params: [
+                        'author' => auth()->user()->load('employee')->employee->nickname
+                    ]
+                );
+
                 goto result;
             }
 
             // do edit when available
             $this->doEditSong(payload: ['name' => $payload['song']], songUid: $songUid);
+
+            // log the changes
+            StoreLogAction::run(
+                type: TaskSongLogType::EditSong->value,
+                payload: [
+                    'project_song_list_id' => $song->id,
+                    'project_id' => $song->project_id,
+                    'employee_id' => null,
+                ],
+                params: [
+                    'author' => auth()->user()->load('employee')->employee->nickname,
+                    'currentName' => $currentName,
+                    'newName' => $payload['song']
+                ]
+            );
 
             result:
             // get current data
@@ -6765,7 +6845,7 @@ class ProjectService
                 goto result;
             }
 
-            $this->doDeleteSong($songUid, $song);
+            $this->doDeleteSong($song->id, $song);
 
             result:
             // get current data
@@ -6798,16 +6878,16 @@ class ProjectService
     /**
      * Actual function to delete song
      * 
-     * @param string $songUid
+     * @param int $songId
      * @param object $song
      * 
      * @return void
      */
-    public function doDeleteSong(string $songUid, object $song): void
+    public function doDeleteSong(int $songId, object $song): void
     {
         $songName = $song->name;
         $projectName = $song->project->name;
-        $this->projectSongListRepo->delete(id: $songUid);
+        $this->projectSongListRepo->delete(id: $songId);
 
         $requesterId = auth()->id();
         DeleteSongJob::dispatch($songName, $projectName, $requesterId)->afterCommit();
@@ -6841,7 +6921,7 @@ class ProjectService
                 relation: [
                     'employee:id,nickname'
                 ],
-                where: "employee_id = {$employeeId}"
+                where: "employee_id = {$employeeId} and project_song_list_id = {$song->id}"
             );
 
             if ($currentSongTask) {
@@ -6909,14 +6989,24 @@ class ProjectService
                 ];
             }
 
-            $logs = [];
+            $logs = [
+                'main' => [],
+                'more' => []
+            ];
+            $moreLogs = [];
             if (count($data->logs) > 0) {
-                $logs = collect($data->logs)->map(function ($logItem) {
+                $rawLogs = collect($data->logs)->map(function ($logItem) {
                     return [
                         'text' => $logItem->formatted_text,
                         'time' => date('d F Y H:i', strtotime($logItem->created_at))
                     ];
                 })->toArray();
+
+                $mainLogs = array_splice($rawLogs, 0, 3);
+                $moreLogs = $rawLogs;
+
+                $logs['main'] = $mainLogs;
+                $logs['more'] = $moreLogs;
             }
 
             $output = [
@@ -6972,6 +7062,143 @@ class ProjectService
             );
         } else {
             return errorResponse($switch['message']);
+        }
+    }
+
+    /**
+     * Function to start work. Time tracker will start here
+     * 
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function startWorkOnSong(string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+
+            $task = $this->entertainmentTaskSongRepo->show(
+                uid: 'id',
+                select: 'id,time_tracker,status',
+                where: "project_id = {$projectId} AND project_song_list_id = {$songId}"
+            );
+
+            if ($task->status == TaskSongStatus::OnProgress->value) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.songAlreadyInProgress'));
+            }
+            
+            // set time tracker
+            $currentTimeTracker = $task->time_tracker;
+            $currentTimeTracker[] = [
+                'type' => 'start_working',
+                'start_time' => date('Y-m-d H:i'),
+                'end_time' => null
+            ];
+
+            $this->entertainmentTaskSongRepo->update(
+                data: [
+                    'status' => TaskSongStatus::OnProgress->value,
+                    'time_tracker' => $currentTimeTracker
+                ],
+                where: "project_song_list_id = {$songId}"
+            );
+
+            // logging
+            StoreLogAction::run(
+                type: TaskSongLogType::StartWorking->value,
+                payload: [
+                    'project_song_list_id' => $songId,
+                    'project_id' => $projectId,
+                    'employee_id' => null,
+                ],
+                params: [
+                    'user' => auth()->user()->load('employee')->employee->nickname
+                ]
+            );
+
+            $currentData = $this->detailCacheAction->handle($projectUid);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.startWorkNow'),
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    public function songReportAsDone(array $payload, string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+
+            $images = [];
+            if ((isset($payload['images'])) && (count($payload['images']) > 0)) {
+                // upload image
+                foreach ($payload['images'] as $image) {
+                    $images[] = uploadImageandCompress(
+                        path: "projects/{$projectId}/entertainment/song/{$songId}",
+                        compressValue: 0,
+                        image: $image
+                    );
+                }
+            }
+
+            $task = $this->entertainmentTaskSongRepo->show(
+                uid: 'id',
+                select: 'id,time_tracker',
+                where: "project_id = {$projectId} AND project_song_list_id = {$songId}"
+            );
+
+            // update time tracker
+            // Tracker is should be exists. If not it'll return an error
+            $currentTracker = $task->time_tracker;
+            $lastTracker = array_pop($currentTracker);
+            $lastTracker['end_time'] = date('Y-m-d H:i');
+            array_push($currentTracker, $lastTracker);
+
+            $this->entertainmentTaskSongRepo->update(
+                data: [
+                    'time_tracker' => $currentTracker,
+                    'status' => TaskSongStatus::OnFirstReview->value
+                ],
+                id: (string) $task->id
+            );
+
+            // logging
+            StoreLogAction::run(
+                type: TaskSongLogType::RequestToEditSong->value,
+                payload: [
+                    'project_song_list_id' => $songId,
+                    'project_id' => $projectId,
+                ],
+                params: [
+                    'author' => auth()->user()->load('employee')->employee->nickname
+                ]
+            );
+
+            DB::commit();
+
+            return generalResponse(
+                message: 'Success',
+                data: []
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
         }
     }
 

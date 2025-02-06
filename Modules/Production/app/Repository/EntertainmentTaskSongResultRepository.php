@@ -2,17 +2,17 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\EntertainmentTaskSong;
-use Modules\Production\Repository\Interface\EntertainmentTaskSongInterface;
+use Modules\Production\Models\EntertainmentTaskSongResult;
+use Modules\Production\Repository\Interface\EntertainmentTaskSongResultInterface;
 
-class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
+class EntertainmentTaskSongResultRepository extends EntertainmentTaskSongResultInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EntertainmentTaskSong();
+        $this->model = new EntertainmentTaskSongResult();
         $this->key = 'id';
     }
 
@@ -80,17 +80,13 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where("uid", $uid);
-        } else {
-            $query->whereRaw($where);
-        }
+        $query->where("uid", $uid);
         
         if ($relation) {
             $query->with($relation);
@@ -126,7 +122,7 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
         if (!empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('id', $id);
+            $query->where('uid', $id);
         }
 
         $query->update($data);
@@ -140,17 +136,10 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-
-        if (!empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where('id', $id);
-        }
-
-        return $query->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**

@@ -15,4 +15,8 @@ return [
     'songApproveRequestEdit' => ':pm has approved changes song in event :event from :currentName to :newName',
     'songRejectRequestEdit' => ':pm has been rejected the request to edit song',
     'songRemoveWorker' => ':pm remove :user from task',
+    'requestToEditSong' => ':author request to edit song',
+    'requestToDeleteSong' => ':author request to delete song',
+    'editSong' => ':author changed music from :currentName to :newName',
+    'startWorkSong' => ':user start working on this task'
 ];
