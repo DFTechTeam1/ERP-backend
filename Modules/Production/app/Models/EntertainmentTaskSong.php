@@ -2,9 +2,12 @@
 
 namespace Modules\Production\Models;
 
+use App\Enums\Production\TaskSongStatus;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Database\Factories\EntertainmentTaskSongFactory;
 
@@ -19,9 +22,10 @@ class EntertainmentTaskSong extends Model
      */
     protected $fillable = [
         'project_song_list_id',
-        'status',
         'employee_id',
-        'project_id'
+        'project_id',
+        'status',
+        'time_tracker'
     ];
 
     protected static function newFactory(): EntertainmentTaskSongFactory
@@ -34,8 +38,26 @@ class EntertainmentTaskSong extends Model
         return $this->belongsTo(Employee::class, 'employee_id');
     }
 
+    public function song(): BelongsTo
+    {
+        return $this->belongsTo(ProjectSongList::class, 'project_song_list_id');
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id');
+    }
+
+    public function results(): HasMany
+    {
+        return $this->hasMany(EntertainmentTaskSongResult::class, 'entertainment_task_song_id');
+    }
+
+    public function timeTracker(): Attribute
+    {
+        return Attribute::make(
+            set: fn($value) => empty($value) ? null : json_encode($value),
+            get: fn($value) => $value ? json_decode($value, true) : []
+        );
     }
 }

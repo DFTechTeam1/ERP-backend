@@ -699,6 +699,18 @@ class ProjectController extends Controller
     }
 
     /**
+     * Start work on selected song task
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function startWorkOnSong(string $projectUid, string $songUid)
+    {
+        return apiResponse($this->service->startWorkOnSong($projectUid, $songUid));
+    }
+
+    /**
      * Function to bulk assign
      *
      * @param BulkAssignSong $request
@@ -781,6 +793,17 @@ class ProjectController extends Controller
     public function entertainmentListMember(string $projectUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->entertainmentListMember($projectUid));
+    }
+
+    /**
+     * Get entertainment wokrload detail
+     *
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function entertainmentMemberWorkload(string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->entertainmentMemberWorkload($projectUid));
     }
 
     /**

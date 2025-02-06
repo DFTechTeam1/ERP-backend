@@ -9,9 +9,9 @@ class DashboardController extends Controller
 {
     private $service;
 
-    public function __construct()
+    public function __construct(\App\Services\DashboardService $service)
     {
-        $this->service = new \App\Services\DashboardService();
+        $this->service = $service;
     }
 
     /**
@@ -25,6 +25,11 @@ class DashboardController extends Controller
     public function getReport()
     {
         return apiResponse($this->service->getReport());
+    }
+
+    public function getProjectSong()
+    {
+        return apiResponse($this->service->getProjectSong());
     }
 
     public function getProjectCalendar()

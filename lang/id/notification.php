@@ -57,5 +57,7 @@ return [
     "successSubtituteSongPic" => 'Berhasil merubah PIC',
     "songHasBeenEdited" => "Musik berhasil di ubah",
     "requestEditSongHasBeenRejected" => "Permintaan untuk mengubah lagu berhasil ditolak",
-    "duplicateSongOnBulkAssign" => "Ada musik yang sama pada beberapa karyawan. Pastikan tidak ada musik yang sama di setiap karyawan yang dipilih."
+    "duplicateSongOnBulkAssign" => "Ada musik yang sama pada beberapa karyawan. Pastikan tidak ada musik yang sama di setiap karyawan yang dipilih.",
+    "startWorkNow" => "Kamu bisa mulai mengerjakan tugas ini sekarang",
+    "songAlreadyInProgress" => "Musik sudah dalam proses pengerjaan"
 ];

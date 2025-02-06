@@ -30,21 +30,29 @@ class DashboardService {
 
     private $endDate;
 
-    public function __construct()
+    public function __construct(
+        \Modules\Production\Repository\ProjectRepository $projectRepo,
+        \Modules\Inventory\Repository\InventoryRepository $inventoryRepo,
+        \Modules\Hrd\Repository\EmployeeRepository $employeeRepo,
+        \Modules\Company\Repository\PositionRepository $positionRepo,
+        \Modules\Production\Repository\ProjectTaskPicRepository $projectTaskPicRepo,
+        \Modules\Production\Repository\ProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
+        \Modules\Production\Repository\ProjectTaskPicLogRepository $projectTaskPicLogRepo
+    )
     {
-        $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
+        $this->projectRepo = $projectRepo;
 
-        $this->inventoryRepo = new \Modules\Inventory\Repository\InventoryRepository();
+        $this->inventoryRepo = $inventoryRepo;
 
-        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
+        $this->employeeRepo = $employeeRepo;
 
-        $this->positionRepo = new \Modules\Company\Repository\PositionRepository();
+        $this->positionRepo = $positionRepo;
 
-        $this->taskPic = new \Modules\Production\Repository\ProjectTaskPicRepository();
+        $this->taskPic = $projectTaskPicRepo;
 
-        $this->taskPicHistory = new \Modules\Production\Repository\ProjectTaskPicHistoryRepository();
+        $this->taskPicHistory = $projectTaskPicHistoryRepo;
 
-        $this->taskPicLog = new \Modules\Production\Repository\ProjectTaskPicLogRepository();
+        $this->taskPicLog = $projectTaskPicLogRepo;
     }
 
     public function getReport()
@@ -508,6 +516,55 @@ class DashboardService {
                 'year' => $year,
             ],
         );
+    }
+
+    /**
+     * Get all project songs for entertainment division
+     *
+     * @return void
+     */
+    public function getProjectSong(): array
+    {
+        try {
+            $projects = $this->projectRepo->list(
+                select: 'id,name,project_date,uid',
+                where: "project_date >= '" . date('Y-m-d') . "'",
+                relation: [
+                    'songs:id,project_id,name',
+                    'songs.task:id,project_song_list_id,employee_id'
+                ],
+                limit: 50
+            );
+
+            $projects = collect((object) $projects)->map(function ($mapping) {
+                $mapping['project_date'] = date('d M Y', strtotime($mapping['project_date']));
+
+                // grouping
+                $assignSong = [];
+                $unassignSong = [];
+
+                foreach ($mapping->songs as $song) {
+                    if ($song->task) {
+                        $assignSong[] = $song;
+                    }
+                    if (!$song->task) {
+                        $unassignSong[] = $song;
+                    }
+                }
+
+                $mapping['assign_song'] = $assignSong;
+                $mapping['unassign_song'] = $unassignSong;
+
+                return $mapping;
+            })->toArray();
+
+            return generalResponse(
+                message: 'success',
+                data: $projects
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 
     /**

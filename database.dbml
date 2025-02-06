@@ -938,6 +938,7 @@ Table "entertainment_task_songs" {
   "project_song_list_id" bigint [not null]
   "status" enum
   "employee_id" bigint [not null]
+  "time_tracker" longtext [note: "will be like: [{type: 'start_working', start_time: '2025-01-10 10:00', 'end_time': null}]. Type will be start_working, start_revise"]
   "created_at" timestamp
   "updated_at" timestamp
 }
@@ -946,14 +947,16 @@ Table "entertainment_task_song_results" {
   "id" bigint [pk, not null, increment]
   "entertainment_task_song_id" bigint [not null]
   "nas_path" varchar(255) [not null]
+  "employee_id" bigint [not null]
+  "note" text
   "created_at" timestamp
   "updated_at" timestamp
 }
 
-Table "entertainment_task_song_pic_histories" {
+Table "entertainment_task_song_result_images" {
   "id" bigint [pk, not null, increment]
-  "entertainment_task_song_id" bigint [not null]
-  "employee_id" bigint [not null]
+  "entertainment_task_song_result_id" bigint
+  "path" varchar(255)
   "created_at" timestamp
   "updated_at" timestamp
 }

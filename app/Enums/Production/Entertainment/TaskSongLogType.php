@@ -17,6 +17,9 @@ enum TaskSongLogType: string {
     case ApprovedRequestEdit = 'approveRequestEdit';
     case RejectRequestEdit = 'rejectRequestEdit';
     case RemoveWorkerFromTask = 'removeWorkerFromTask';
+    case RequestToEditSong = 'requestToEditSong';
+    case EditSong = 'editSong';
+    case StartWorking = 'startWorking';
 
     public static function generateText(string $type, array $payload = [])
     {
@@ -87,6 +90,20 @@ enum TaskSongLogType: string {
             case static::RemoveWorkerFromTask->value:
                 $text = 'log.songRemoveWorker';
                 break;
+
+            case static::RequestToEditSong->value:
+                $text = 'log.requestToEditSong';
+                break;
+
+            case static::EditSong->value:
+                $text = 'log.editSong';
+                break;
+
+            case static::StartWorking->value:
+                $text = 'log.startWorkSong';
+                break;
+
+            
             
             default:
                 $text = '-';
