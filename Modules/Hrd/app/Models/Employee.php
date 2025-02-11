@@ -23,6 +23,7 @@ use Modules\Company\Models\Position;
 use Modules\Hrd\Database\factories\EmployeeFactory;
 use Modules\Inventory\Models\InventoryRequest;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use KodePandai\Indonesia\Models\Village;
 use Modules\Hrd\Observers\EmployeeObserver;
 use Modules\Hrd\Observers\EmployeeObserverObserver;
@@ -309,6 +310,11 @@ class Employee extends Model
     public function province(): BelongsTo
     {
         return $this->belongsTo(Province::class, 'province_id', 'code');
+    }
+
+    public function points(): HasMany
+    {
+        return $this->hasMany(EmployeePoint::class, 'employee_id');
     }
 
     public function songTasks(): HasMany

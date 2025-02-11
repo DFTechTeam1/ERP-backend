@@ -9,6 +9,7 @@ enum TaskSongStatus: int
     case Revise = 3;
     case OnFirstReview = 4;
     case OnLastReview = 5;
+    case Completed = 6;
 
     public function label()
     {
@@ -16,8 +17,9 @@ enum TaskSongStatus: int
             static::Active => __("global.active"),
             static::OnProgress => __("global.onProgress"),
             static::Revise => __("global.revise"),
-            static::OnFirstReview => __('global.waitingApproval'),
-            static::OnLastReview => __('global.waitingApproval')
+            static::OnFirstReview => __('global.checkByPm'),
+            static::OnLastReview => __('global.checkByPm'),
+            static::Completed => __("global.completed")
         };
     }
 
@@ -27,8 +29,9 @@ enum TaskSongStatus: int
             self::Active->value => __('global.active'),
             self::OnProgress->value => __('global.onProgress'),
             self::Revise->value => __('global.revise'),
-            self::OnFirstReview->value => __('global.waitingApproval'),
-            self::OnLastReview->value => __('global.waitingApproval'),
+            self::OnFirstReview->value => __('global.checkByPm'),
+            self::OnLastReview->value => __('global.checkByPm'),
+            self::Completed->value => __('global.completed')
         };
     }
 
@@ -40,6 +43,7 @@ enum TaskSongStatus: int
             self::Revise->value => 'orange-lighten-3',
             self::OnFirstReview->value => 'indigo-lighten-1',
             self::OnLastReview->value => 'indigo-lighten-1',
+            self::Completed->value => 'success'
         };
     }
 }

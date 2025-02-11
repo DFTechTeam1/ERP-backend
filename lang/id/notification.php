@@ -59,5 +59,12 @@ return [
     "requestEditSongHasBeenRejected" => "Permintaan untuk mengubah lagu berhasil ditolak",
     "duplicateSongOnBulkAssign" => "Ada musik yang sama pada beberapa karyawan. Pastikan tidak ada musik yang sama di setiap karyawan yang dipilih.",
     "startWorkNow" => "Kamu bisa mulai mengerjakan tugas ini sekarang",
-    "songAlreadyInProgress" => "Musik sudah dalam proses pengerjaan"
+    "songAlreadyInProgress" => "Musik sudah dalam proses pengerjaan",
+    "failedToUploadImage" => "Gagal unggah file",
+    "songHaveNoTask" => "Musik ini tidak memiliki tugas untuk diselesaikan",
+    "taskAlreadyBeingChecked" => "Tugas sudah dalam proses pengecekan oleh PM",
+    "songAlreadyApproved" => "Tugas di musik ini sudah di setujui",
+    "taskSongHasBeenApproved" => "Tugas ini berhasil di setujui",
+    "failedToAproveTask" => "Gagal menyetujui tugas",
+    "entertainmentPMShouldCheckThisFirst" => "PM Entertainment harus menyetujui pekerjaan ini dahulu"
 ];

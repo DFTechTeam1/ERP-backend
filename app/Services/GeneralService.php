@@ -47,4 +47,13 @@ class GeneralService {
     {
         return getCache($cacheId);
     }
+
+    public function uploadImageandCompress(
+        string $path,
+        int $compressValue,
+        $image,
+        string $extTarget = 'webp',
+    ) {
+        return uploadImageandCompress($path, $compressValue, $image, $extTarget);
+    }
 }

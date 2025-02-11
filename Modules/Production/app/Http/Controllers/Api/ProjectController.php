@@ -27,6 +27,7 @@ use Modules\Production\Http\Requests\Project\CompleteProject;
 use Modules\Production\Http\Requests\Project\DistributeSong;
 use Modules\Production\Http\Requests\Project\RejectEditSong;
 use Modules\Production\Http\Requests\Project\RequestSong;
+use Modules\Production\Http\Requests\Project\SongReportAsDone;
 use Modules\Production\Http\Requests\Project\SubtituteWorkerSong;
 use Modules\Production\Http\Requests\Project\UpdateSong;
 use Modules\Production\Services\TestingService;
@@ -745,6 +746,31 @@ class ProjectController extends Controller
     public function updateSong(UpdateSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->updateSong($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Store the result of work
+     *
+     * @param SongReportAsDone $request
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function songReportAsDone(SongReportAsDone $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->songReportAsDone($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Approve JB by root, PM or director
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function songApproveWork(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->songApproveWork($projectUid, $songUid));
     }
 
     /**

@@ -13,7 +13,11 @@ return new class extends Migration
     {
         Schema::create('entertainment_task_song_result_images', function (Blueprint $table) {
             $table->id();
-            
+            $table->foreignId('result_id')
+                ->references('id')
+                ->on('entertainment_task_song_results')
+                ->cascadeOnDelete();
+            $table->string('path');
             $table->timestamps();
         });
     }
@@ -23,6 +27,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('entertainment_task_song_result_images', function (Blueprint $table) {
+            $table->dropForeign(['result_id']);
+        });
+
         Schema::dropIfExists('entertainment_task_song_result_images');
     }
 };

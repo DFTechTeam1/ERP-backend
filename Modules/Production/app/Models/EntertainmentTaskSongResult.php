@@ -5,6 +5,7 @@ namespace Modules\Production\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Hrd\Models\Employee;
 
 // use Modules\Production\Database\Factories\EntertainmentTaskSongResultFactory;
@@ -17,7 +18,7 @@ class EntertainmentTaskSongResult extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'entertainment_task_song_id',
+        'task_id',
         'nas_path',
         'employee_id',
         'note'
@@ -35,6 +36,11 @@ class EntertainmentTaskSongResult extends Model
 
     public function task(): BelongsTo
     {
-        return $this->belongsTo(EntertainmentTaskSong::class, 'entertainment_task_song_id');
+        return $this->belongsTo(EntertainmentTaskSong::class, 'task_id');
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(EntertainmentTaskSongResultImage::class, 'result_id');
     }
 }

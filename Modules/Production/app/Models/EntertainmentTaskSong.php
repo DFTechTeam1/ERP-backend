@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeePoint;
 use Modules\Production\Database\Factories\EntertainmentTaskSongFactory;
 
 // use Modules\Production\Database\Factories\EntertainmentTaskSongFactory;
@@ -27,6 +29,8 @@ class EntertainmentTaskSong extends Model
         'status',
         'time_tracker'
     ];
+
+    protected $appends = ['status_text', 'status_color'];
 
     protected static function newFactory(): EntertainmentTaskSongFactory
     {
@@ -50,7 +54,7 @@ class EntertainmentTaskSong extends Model
 
     public function results(): HasMany
     {
-        return $this->hasMany(EntertainmentTaskSongResult::class, 'entertainment_task_song_id');
+        return $this->hasMany(EntertainmentTaskSongResult::class, 'task_id');
     }
 
     public function timeTracker(): Attribute
@@ -58,6 +62,31 @@ class EntertainmentTaskSong extends Model
         return Attribute::make(
             set: fn($value) => empty($value) ? null : json_encode($value),
             get: fn($value) => $value ? json_decode($value, true) : []
+        );
+    }
+
+    public function statusText(): Attribute
+    {
+        $output = __('global.waitingToDistribute');
+        if (isset($this->attributes['status'])) {
+            $output = TaskSongStatus::getLabel($this->attributes['status']);
+        }
+
+        return Attribute::make(
+            get: fn() => $output
+        );
+    }
+
+    public function statusColor(): Attribute
+    {
+        $output = "info";
+
+        if (isset($this->attributes['status'])) {
+            $output = TaskSongStatus::getColor($this->attributes['status']);
+        }
+
+        return Attribute::make(
+            get: fn() => $output
         );
     }
 }

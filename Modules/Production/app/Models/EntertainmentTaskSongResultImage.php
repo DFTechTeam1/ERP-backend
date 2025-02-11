@@ -13,7 +13,10 @@ class EntertainmentTaskSongResultImage extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = [];
+    protected $fillable = [
+        "result_id",
+        "path",
+    ];
 
     // protected static function newFactory(): EntertainmentTaskSongResultImageFactory
     // {

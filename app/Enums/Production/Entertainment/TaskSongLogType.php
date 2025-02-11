@@ -20,6 +20,9 @@ enum TaskSongLogType: string {
     case RequestToEditSong = 'requestToEditSong';
     case EditSong = 'editSong';
     case StartWorking = 'startWorking';
+    case ReportAsDone = 'reportAsDone';
+    case ApprovedByEntertainmentPM = 'approveByEntertaimentPM';
+    case ApprovedByEventPM = 'approveByEventPM';
 
     public static function generateText(string $type, array $payload = [])
     {
@@ -103,7 +106,17 @@ enum TaskSongLogType: string {
                 $text = 'log.startWorkSong';
                 break;
 
-            
+            case static::ReportAsDone->value:
+                $text = 'log.songReportAsDone';
+                break;
+
+            case static::ApprovedByEntertainmentPM->value:
+                $text = 'log.songApprovedByEntertainmentPM';
+                break;
+
+            case static::ApprovedByEventPM->value:
+                $text = 'log.songApprovedByEventPM';
+                break;
             
             default:
                 $text = '-';

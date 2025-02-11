@@ -241,7 +241,7 @@ class TestingService {
             $isEntertainmentRole = $this->userRoleManagement->isEntertainmentRole();
 
             $projectManagerRole = getSettingByKey('project_manager_role');
-            $isPMRole = $roles[0]->id == $projectManagerRole;
+            $isPMRole = in_array($roles[0]->id, json_decode($projectManagerRole, true));
 
             // $filterResult = $this->buildFilterResult();
 
@@ -545,7 +545,6 @@ class TestingService {
                 'Success',
                 false,
                 [
-                    'sort' => $sorts,
                     'paginated' => $paginated,
                     'totalData' => $totalData,
                     'itemPerPage' => (int) $itemsPerPage,

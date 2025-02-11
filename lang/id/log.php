@@ -18,5 +18,8 @@ return [
     'requestToEditSong' => ':author melakukan permintaan pergantian musik',
     'requestToDeleteSong' => ':author melakukan permintaan untuk menghapus musik',
     'editSong' => ':author merubah judul musik dari :currentName ke :newName',
-    'startWorkSong' => ':user mulai mengerjakan tugas ini'
+    'startWorkSong' => ':user mulai mengerjakan tugas ini',
+    'songReportAsDone' => ':user melaporkan tugas telah selesai',
+    'songApprovedByEntertainmentPM' => ':pm sudah menyetujui pekerjaan :user',
+    'songApprovedByEventPM' => ':pm sudah menyetujui JB ini. Tugas sudah selesai'
 ];

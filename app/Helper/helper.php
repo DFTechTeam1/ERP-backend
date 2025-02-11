@@ -306,30 +306,34 @@ if (!function_exists('uploadImageandCompress')) {
         $image,
         string $extTarget = 'webp',
     ) {
-        $path = storage_path("app/public/{$path}");
-
-        $ext = $image->getClientOriginalExtension();
-        $originalName = 'image';
-        $datetime = date('YmdHis');
-
-        $name = "{$originalName}_{$datetime}.{$extTarget}";
-
-        // create file
-        if (!is_dir($path)) {
-            File::makeDirectory($path, 0777, true);
+        try {
+            $path = storage_path("app/public/{$path}");
+    
+            $ext = $image->getClientOriginalExtension();
+            $originalName = 'image';
+            $datetime = strtotime('now') . random_int(1,8);
+    
+            $name = "{$originalName}_{$datetime}.{$extTarget}";
+    
+            // create file
+            if (!is_dir($path)) {
+                File::makeDirectory($path, 0777, true);
+            }
+    
+            $filepath = $path . '/' . $name;
+    
+    //        Image::read($image)->toWebp($compressValue)->save($filepath);
+    
+            $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
+            $newImage = $imageManager->read($image);
+            $newImage->scale(height: 400);
+            $newImage->toWebp(60);
+            $newImage->save($filepath);
+    
+            return $name;
+        } catch (\Throwable $th) {
+            return false;
         }
-
-        $filepath = $path . '/' . $name;
-
-//        Image::read($image)->toWebp($compressValue)->save($filepath);
-
-        $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
-        $newImage = $imageManager->read($image);
-        $newImage->scale(height: 400);
-        $newImage->toWebp(60);
-        $newImage->save($filepath);
-
-        return $name;
     }
 }
 

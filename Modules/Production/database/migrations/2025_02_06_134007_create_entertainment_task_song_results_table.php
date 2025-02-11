@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('entertainment_task_song_results', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('entertainment_task_song_id')
+            $table->foreignId('task_id')
                 ->references('id')
                 ->on('entertainment_task_songs')
                 ->cascadeOnDelete();
@@ -31,7 +31,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('entertainment_task_song_results', function (Blueprint $table) {
-            $table->dropForeign(['entertainment_task_song_id']);
+            $table->dropForeign(['task_id']);
         });
 
         Schema::dropIfExists('entertainment_task_song_results');
