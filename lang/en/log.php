@@ -18,5 +18,8 @@ return [
     'requestToEditSong' => ':author request to edit song',
     'requestToDeleteSong' => ':author request to delete song',
     'editSong' => ':author changed music from :currentName to :newName',
-    'startWorkSong' => ':user start working on this task'
+    'startWorkSong' => ':user start working on this task',
+    'songReportAsDone' => ':user has been report the progress',
+    'songApprovedByEntertainmentPM' => ':pm approved :user task',
+    'songApprovedByEventPM' => ':pm has been approved this JB. Task is completed'
 ];

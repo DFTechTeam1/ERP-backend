@@ -961,6 +961,20 @@ Table "entertainment_task_song_result_images" {
   "updated_at" timestamp
 }
 
+// This table is used with NEW WORKFLOW. WILL IMPLEMENT ON ENTERTAINMENT POINT FIRST.
+// TODO: Pointing production point to this table
+Table "employee_points" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [not null]
+  "point" integer [default: 0]
+  "additional_point" integer [default: 0]
+  "project_id" bigint [not null]
+  "source_id" integer [not null]
+  "source_type" varchar(255) [not null]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
 Table "request_inventories" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]

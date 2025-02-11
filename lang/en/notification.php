@@ -60,5 +60,12 @@ return [
     "requestEditSongHasBeenRejected" => "Request edit song is rejected",
     "duplicateSongOnBulkAssign" => "There was duplicate song on some users. Please remove the duplicate before continue.",
     "startWorkNow" => "You can now start work on this task",
-    "songAlreadyInProgress" => "Music is already in progress"
+    "songAlreadyInProgress" => "Music is already in progress",
+    "failedToUploadImage" => "Failed to upload image",
+    "songHaveNoTask" => "Song have no task",
+    "taskAlreadyBeingChecked" => "Tasks are already in the process of being checked by PM",
+    "songAlreadyApproved" => "This song is already approved",
+    "taskSongHasBeenApproved" => "Song has been approved",
+    "failedToAproveTask" => "Failed to approve task",
+    "entertainmentPMShouldCheckThisFirst" => "PM Entertainment should check this first"
 ];

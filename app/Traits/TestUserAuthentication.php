@@ -21,7 +21,7 @@ use Spatie\Permission\Models\Role;
 
 trait TestUserAuthentication
 {
-    public function auth()
+    public function auth(string $roleName = 'testing role', string $permissionName = 'detail_project')
     {
         $province = Province::factory()->count(1)->create();
         $city = IndonesiaCity::factory()
@@ -46,8 +46,8 @@ trait TestUserAuthentication
                 'village_id' => $village[0]->code,
             ])
             ->create();
-        $role = Role::create(['name' => 'testing role', 'guard_name' => 'sanctum']);
-        $permission = Permission::create(['name' => 'detail_employee', 'guard_name' => 'sanctum']);
+        $role = Role::create(['name' => $roleName, 'guard_name' => 'sanctum']);
+        $permission = Permission::create(['name' => $permissionName, 'guard_name' => 'sanctum']);
         $role->givePermissionTo($permission);
 
         $users = User::factory()->count(1)->create(['employee_id' => $employee[0]->id]);
