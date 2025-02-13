@@ -72,6 +72,8 @@ class TestingService {
     public function listForEntertainment(string $select = '*', string $where = '', array $relation = [])
     {
         $relation[] = 'songs:id,uid,project_id,name,is_request_edit,is_request_delete';
+        $relation[] = 'songs.task:id,project_song_list_id,employee_id';
+        $relation[] = 'songs.task.employee:id,nickname';
 
         $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
 
@@ -80,6 +82,14 @@ class TestingService {
         $page = request('page') ?? 1;
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+        $user = auth()->user();
+        if ($user->hasRole(BaseRole::Entertainment->value)) {
+            $whereHas[] = [
+                'relation' => 'entertainmentTaskSong',
+                'query' => "employee_id = " . $user->load('employee')->employee->id
+            ];
+        }
         
         $sorts = '';
         if (!empty(request('sortBy'))) {
@@ -239,7 +249,7 @@ class TestingService {
             $isEntertainmentRole = $this->userRoleManagement->isEntertainmentRole();
 
             $projectManagerRole = getSettingByKey('project_manager_role');
-            $isPMRole = $roles[0]->id == $projectManagerRole;
+            $isPMRole = in_array($roles[0]->id, json_decode($projectManagerRole, true));
 
             // $filterResult = $this->buildFilterResult();
 
@@ -342,6 +352,7 @@ class TestingService {
                 }
             }
 
+            // override logic when user is entertianment
             if (
                 in_array(BaseRole::Entertainment->value, $roleNames) ||
                 in_array(BaseRole::ProjectManagerEntertainment->value, $roleNames)
@@ -543,7 +554,6 @@ class TestingService {
                 'Success',
                 false,
                 [
-                    'sort' => $sorts,
                     'paginated' => $paginated,
                     'totalData' => $totalData,
                     'itemPerPage' => (int) $itemsPerPage,

@@ -12,7 +12,14 @@ class DistributeSong extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'employee_uid' => 'required'
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'employee_uid.required' => __('notification.employeeRequired')
         ];
     }
 

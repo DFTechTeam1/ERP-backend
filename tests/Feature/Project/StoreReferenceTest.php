@@ -30,8 +30,6 @@ class StoreReferenceTest extends TestCase
 
         Sanctum::actingAs($this->user);
         $this->actingAs($this->user);
-
-        ProvinceFactory::$sequence = 1;
     }
 
     /**

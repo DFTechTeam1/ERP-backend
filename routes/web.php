@@ -8,9 +8,12 @@ use App\Http\Controllers\LandingPageController;
 use App\Jobs\PostNotifyCompleteProjectJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Services\Telegram\TelegramService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Modules\Hrd\Services\PerformanceReportService;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Services\TestingService;
 

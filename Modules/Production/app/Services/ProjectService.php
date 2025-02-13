@@ -2,14 +2,26 @@
 
 namespace Modules\Production\Services;
 
+use App\Actions\Hrd\PointRecord;
+use App\Actions\Project\DetailCache;
+use App\Actions\Project\DetailProject;
+use App\Actions\Project\Entertainment\DistributeSong;
+use App\Actions\Project\Entertainment\ReportAsDone;
+use App\Actions\Project\Entertainment\StoreLogAction;
+use App\Actions\Project\Entertainment\SwitchSongWorker;
+use App\Actions\Project\FormatTaskPermission;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
+use App\Enums\Production\Entertainment\TaskSongLogType;
 use App\Enums\Production\TaskSongStatus;
 use App\Enums\Production\TaskStatus;
 use App\Enums\Production\WorkType;
 use App\Enums\System\BaseRole;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
+use App\Exceptions\SongHaveNoTask;
+use App\Exceptions\TaskAlreadyBeingChecked;
+use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\UserRoleManagement;
 use Illuminate\Support\Facades\Artisan;
@@ -40,6 +52,7 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use DateTime;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
@@ -48,14 +61,23 @@ use Modules\Production\Exceptions\AttributeReferenceMissing;
 use Modules\Production\Exceptions\FailedModifyWaitingApprovalSong;
 use Modules\Production\Exceptions\ProjectNotFound;
 use Modules\Production\Exceptions\SongNotFound;
+use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Jobs\DeleteSongJob;
 use Modules\Production\Jobs\DistributeSongJob;
+use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
 use Modules\Production\Jobs\RequestDeleteSongJob;
 use Modules\Production\Jobs\RequestEditSongJob;
 use Modules\Production\Jobs\RequestSongJob;
+use Modules\Production\Jobs\SongApprovedToBeEditedJob;
+use Modules\Production\Jobs\SongReportAsDone;
+use Modules\Production\Jobs\SongReviseJob;
+use Modules\Production\Jobs\TaskSongApprovedJob;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
+use Modules\Production\Repository\EntertainmentTaskSongResultImageRepository;
+use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
+use Modules\Production\Repository\EntertainmentTaskSongReviseRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectVjRepository;
@@ -120,6 +142,20 @@ class ProjectService
 
     private $entertainmentTaskSongRepo;
 
+    private $entertainmentTaskSongLogService;
+
+    private $userRepo;
+
+    private $detailProjectAction;
+
+    private $detailCacheAction;
+
+    private $entertainmentTaskSongResultRepo;
+
+    private $entertainmentTaskSongResultImageRepo;
+
+    private $entertainmentTaskSongRevise;
+
     /**
      * Construction Data
      */
@@ -151,9 +187,30 @@ class ProjectService
         CustomInventoryRepository $customItemRepo,
         ProjectSongListRepository $projectSongListRepo,
         GeneralService $generalService,
-        EntertainmentTaskSongRepository $entertainmentTaskSongRepo
+        EntertainmentTaskSongRepository $entertainmentTaskSongRepo,
+        EntertainmentTaskSongLogService $entertainmentTaskSongLogService,
+        UserRepository $userRepo,
+        DetailProject $detailProjectAction,
+        DetailCache $detailCacheAction,
+        EntertainmentTaskSongResultRepository $entertainmentTaskSongResultRepo,
+        EntertainmentTaskSongResultImageRepository $entertainmentTaskSongResultImageRepo,
+        EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise
     )
-    {
+    {   
+        $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
+
+        $this->entertainmentTaskSongResultImageRepo = $entertainmentTaskSongResultImageRepo;
+
+        $this->entertainmentTaskSongResultRepo = $entertainmentTaskSongResultRepo;
+
+        $this->detailCacheAction = $detailCacheAction;
+
+        $this->detailProjectAction = $detailProjectAction;
+
+        $this->userRepo = $userRepo;
+
+        $this->entertainmentTaskSongLogService = $entertainmentTaskSongLogService;
+
         $this->entertainmentTaskSongRepo = $entertainmentTaskSongRepo;
 
         $this->generalService = $generalService;
@@ -718,7 +775,6 @@ class ProjectService
                 'Success',
                 false,
                 [
-                    'sort' => $sorts,
                     'paginated' => $paginated,
                     'totalData' => $totalData,
                     'itemPerPage' => (int) $itemsPerPage,
@@ -1480,126 +1536,7 @@ class ProjectService
     public function show(string $uid): array
     {
         try {
-            // clearCache('detailProject' . getIdFromUid($uid, new \Modules\Production\Models\Project()));
-            $projectId = getIdFromUid($uid, new \Modules\Production\Models\Project());
-            $output = getCache('detailProject' . $projectId);
-
-            if (!$output) {
-                $data = $this->repo->show($uid, '*', [
-                    'marketing:id,name,employee_id',
-                    'personInCharges:id,pic_id,project_id',
-                    'personInCharges.employee:id,name,employee_id,uid,boss_id',
-                    'references:id,project_id,media_path,name,type',
-                    'equipments.inventory:id,name',
-                    'equipments.inventory.image',
-                    'marketings:id,marketing_id,project_id',
-                    'marketings.marketing:id,name',
-                    'country:id,name',
-                    'state:id,name',
-                    'city:id,name',
-                    'projectClass:id,name,maximal_point',
-                ]);
-
-                $progress = $this->formattedProjectProgress($data->tasks, $projectId);
-
-                $eventTypes = \App\Enums\Production\EventType::cases();
-                $classes = \App\Enums\Production\Classification::cases();
-
-                // get teams
-                $projectTeams = $this->getProjectTeams($data);
-                $teams = $projectTeams['teams'];
-                $pics = $projectTeams['pics'];
-                $picIds = $projectTeams['picUids'];
-
-                $marketing = $data->marketing ? $data->marketing->name : '-';
-
-                $eventType = '-';
-                foreach ($eventTypes as $et) {
-                    if ($et->value == $data->event_type) {
-                        $eventType = $et->label();
-                    }
-                }
-
-                $eventClass = '-';
-                $eventClassColor = null;
-                foreach ($classes as $class) {
-                    if ($class->value == $data->classification) {
-                        $eventClass = $class->label();
-                        $eventClassColor = $class->color();
-                    }
-                }
-
-                $boardsData = $this->formattedBoards($uid);
-
-                $equipments = $this->formattedEquipments($data->id);
-
-                // days to go
-                $projectEndDate = Carbon::parse($data->project_date);
-                $nowTime = Carbon::now();
-                $daysToGo = floor($nowTime->diffInDays($projectEndDate));
-
-                // check time to upload showreels
-                $allowedUploadShowreels = true;
-                $currentTasks = [];
-                foreach ($boardsData as $board) {
-                    foreach ($board['tasks'] as $task) {
-                        $currentTasks[] = $task;
-                    }
-                }
-                $currentTaskStatusses = collect($currentTasks)->pluck('status')->count();
-                $completedStatus = collect($currentTasks)->filter(function ($filter) {
-                    return $filter['status'] == \App\Enums\Production\TaskStatus::Completed->value;
-                })->values()->count();
-                // if ($currentTaskStatusses == $completedStatus) {
-                //     $allowedUploadShowreels = true;
-                // }
-
-                $output = [
-                    'id' => $data->id,
-                    'allowed_upload_showreels' => $allowedUploadShowreels,
-                    'uid' => $data->uid,
-                    'name' => $data->name,
-                    'country_id' => $data->country_id,
-                    'state_id' => $data->state_id,
-                    'city_id' => $data->city_id,
-                    'feedback' => $data->feedback,
-                    'event_type' => $eventType,
-                    'event_type_raw' => $data->event_type,
-                    'event_class_raw' => $data->project_class_id,
-                    'event_class' => $data->projectClass->name,
-                    'event_class_color' => $eventClassColor,
-                    'project_date' => date('d F Y', strtotime($data->project_date)),
-                    'days_to_go' => $daysToGo,
-                    'venue' => $data->venue,
-                    'city_name' => $data->city_name,
-                    'marketing' => $marketing,
-                    'pic' => implode(', ', $pics),
-                    'pic_ids' => $picIds,
-                    'collaboration' => $data->collaboration,
-                    'note' => $data->note ?? '-',
-                    'led_area' => $data->led_area,
-                    'led_detail' => json_decode($data->led_detail, true),
-                    'client_portal' => $data->client_portal,
-                    'status' => $data->status_text,
-                    'status_color' => $data->status_color,
-                    'status_raw' => $data->status,
-                    'references' => $this->formatingReferenceFiles($data->references, $data->id),
-                    'boards' => $boardsData,
-                    'teams' => $teams,
-                    'task_type' => $data->task_type,
-                    'task_type_text' => $data->task_type_text,
-                    'task_type_color' => $data->task_type_color,
-                    'progress' => $progress,
-                    'equipments' => $equipments,
-                    'showreels' => $data->showreels_path,
-                    'person_in_charges' => $data->personInCharges,
-                    'project_maximal_point' => $data->projectClass->maximal_point,
-                ];
-
-                storeCache('detailProject' . $data->id, $output);
-            }
-
-            $output = $this->formatTasksPermission($output, $projectId);
+            $output = $this->detailProjectAction->handle($uid, $this->repo);
 
             $serviceEncrypt = new \App\Services\EncryptionService();
             $encrypts = $serviceEncrypt->encrypt(json_encode($output), env('SALT_KEY'));
@@ -1743,7 +1680,7 @@ class ProjectService
             if (count($output) > 0) {
                 $firstLine = count($output) > 2 ? array_splice($output, 0, 2) : $output;
 
-                $moreLine = count($output) > 2 ? array_splice($output, 2) : [];
+                $moreLine = count($output) > 2 ? $output : [];
 
                 $resp = [
                     'first_line' => $firstLine,
@@ -1767,21 +1704,7 @@ class ProjectService
         );
 
         $songs = collect((object) $songs)->map(function ($item) {
-            $statusFormat = $item->task ? __('global.distributed') : __('global.waitingToDistribute');
-            $statusColor = $item->task ? 'success': 'info';
-
-            $statusRequest = null;
-            if ($item->is_request_edit) {
-                $statusRequest = __('global.songEditRequest');
-            }
-
-            if ($item->is_request_delete) {
-                $statusRequest = __('global.songDeleteRequest');
-            }
-
-            $item['status_format'] = $statusFormat;
-            $item['status_color'] = $statusColor;
-            $item['status_request'] = $statusRequest;
+            $item = $this->formatSingleSongStatus($item);
 
             $disabled = false;
             if ($item->is_request_edit || $item->is_request_delete) {
@@ -1793,6 +1716,61 @@ class ProjectService
         })->toArray();
 
         return $songs;
+    }
+
+    public function formatSingleSongStatus(object $item)
+    {
+        $statusFormat = $item->task ? __('global.distributed') : __('global.waitingToDistribute');
+        $statusColor = $item->task ? 'success': 'info';
+
+        if (!$item->task) {
+            $item['status_text'] = $statusFormat;
+            $item['status_color'] = $statusColor;
+        } else {
+            $item['status_text'] = $item->task->status_text;
+            $item['status_color'] = $item->task->status_color;
+        }
+
+        $statusRequest = null;
+        if ($item->is_request_edit) {
+            $statusRequest = __('global.songEditRequest');
+        }
+
+        if ($item->is_request_delete) {
+            $statusRequest = __('global.songDeleteRequest');
+        }
+
+        $item['status_request'] = $statusRequest;
+
+        // override all action for root
+        $admin = auth()->user()->hasRole(BaseRole::Root->value);
+        $director = auth()->user()->hasRole(BaseRole::Director->value);
+        $entertainmentPm = auth()->user()->hasRole(BaseRole::ProjectManagerEntertainment->value);
+
+        $item['status_of_work'] = !$item->task ? null : TaskSongStatus::getLabel($item->task->status);
+        $item['status_of_work_color'] = !$item->task ? null : TaskSongStatus::getColor($item->task->status);
+
+        $item['my_own'] = $admin || $director || $entertainmentPm ?
+            true :
+            (
+                !$item->task ?
+                false :
+                (
+                    $item->task->employee->user_id == auth()->user()->id ?
+                    true :
+                    false
+                )
+            ); // override permission for root, director and project manager
+        $item['need_to_be_done'] = !$item->task ? false : ($item->task->status == TaskSongStatus::OnProgress->value ? true : false);
+        $item['need_worker_approval'] = !$item->task ?
+            false :
+            (
+                $item->task->status == TaskSongStatus::Active->value && ($item->task->employee->user_id == auth()->user()->id || $admin || $director || $entertainmentPm) ?
+                true :
+                false
+            );
+
+        return $item;
     }
 
     public function formatTasksPermission($project, int $projectId)
@@ -5823,7 +5801,7 @@ class ProjectService
             $this->handleAssignPicLogic($data, $projectUid, $projectId);
 
             // update cache
-            $currentData = getCache('detailProject' . $projectId);
+            $currentData = $this->detailCacheAction->handle($projectUid);
 
             if (!$currentData) {
                 $currentData = $this->reinitDetailCache((object) ['id' => $projectId, 'uid' => $projectUid]);
@@ -5841,7 +5819,7 @@ class ProjectService
                 'pic_eid' => collect((object) $newPics)->pluck('employee.employee_id')->toArray()
             ];
 
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = FormatTaskPermission::run($currentData, $projectId);
 
             DB::commit();
 
@@ -6487,14 +6465,7 @@ class ProjectService
             RequestSongJob::dispatch($project, $payload['songs'], $createdBy)->afterCommit();
 
             // get current data
-            $currentData = getCache('detailProject' . $project->id);
-            
-            if (!$currentData) {
-                $this->show($projectUid);
-                $currentData = getCache('detailProject' . $project->id);
-            }
-
-            $currentData = $this->formatTasksPermission($currentData, $project->id);
+            $currentData = $this->detailCacheAction->handle($projectUid);
 
             DB::commit();
             
@@ -6504,6 +6475,56 @@ class ProjectService
                 data: [
                     'full_detail' => $currentData
                 ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get all entertainment team member with workload on selected project
+     * 
+     * @param string $projectUid
+     * 
+     * @return array
+     */
+    public function entertainmentMemberWorkload(string $projectUid): array
+    {
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $users = \App\Models\User::role([BaseRole::Entertainment->value, BaseRole::ProjectManagerEntertainment->value])
+                ->with([
+                    'employee' => function ($query) use ($projectId) {
+                        $query->selectRaw('id,name,uid,employee_id')
+                            ->with([
+                                'songTasks' => function ($taskQuery) use ($projectId) {
+                                    $taskQuery->selectRaw('id,project_song_list_id,employee_id,project_id,status')
+                                        ->where('project_id', $projectId)
+                                        ->with('song:id,name,uid');
+                                }
+                            ]);
+                    }
+                ])
+                ->get();
+
+            $output = collect($users)->map(function ($user) {
+                return [
+                    'uid' => $user->employee->uid,
+                    'name' => $user->employee->name,
+                    'email' => $user->email,
+                    'employee_id' => $user->employee->employee_id,
+                    'tasks' => collect($user->employee->songTasks)->map(function ($task) {
+                        return [
+                            'uid' => $task->song->uid,
+                            'name' => $task->song->name
+                        ];
+                    })
+                ];
+            })->toArray();
+
+            return generalResponse(
+                message: 'success',
+                data: $output
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -6532,6 +6553,7 @@ class ProjectService
                     'task.employee:id,name,nickname'
                 ]
             );
+            $currentName = $song->name;
 
             if (!$song) {
                 throw new SongNotFound();
@@ -6549,11 +6571,39 @@ class ProjectService
                 $requesterId = auth()->id();
                 RequestEditSongJob::dispatch($payload, $projectUid, $songUid, $requesterId)->afterCommit();
 
+                // log this request
+                StoreLogAction::run(
+                    type: TaskSongLogType::RequestToEditSong->value,
+                    payload: [
+                        'project_song_list_id' => $song->id,
+                        'project_id' => $song->project_id,
+                        'employee_id' => null,
+                    ],
+                    params: [
+                        'author' => auth()->user()->load('employee')->employee->nickname
+                    ]
+                );
+
                 goto result;
             }
 
             // do edit when available
-            $this->doEditSong(payload: $payload, songUid: $songUid);
+            $this->doEditSong(payload: ['name' => $payload['song']], songUid: $songUid);
+
+            // log the changes
+            StoreLogAction::run(
+                type: TaskSongLogType::EditSong->value,
+                payload: [
+                    'project_song_list_id' => $song->id,
+                    'project_id' => $song->project_id,
+                    'employee_id' => null,
+                ],
+                params: [
+                    'author' => auth()->user()->load('employee')->employee->nickname,
+                    'currentName' => $currentName,
+                    'newName' => $payload['song']
+                ]
+            );
 
             result:
             // get current data
@@ -6580,6 +6630,152 @@ class ProjectService
     }
 
     /**
+     * Function to approve edit request
+     * This function will notify the changes to PM project and current worker
+     * 
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function confirmEditSong(string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+
+            $detail = $this->projectSongListRepo->show(
+                uid: $songUid,
+                select: 'id,name,target_name',
+                relation: [
+                    'task:id,project_song_list_id,employee_id'
+                ],
+                where: "uid = '{$songUid}' and is_request_edit = 1 and is_request_delete = 0"
+            );
+
+            if (!$detail) {
+                throw new SongNotFound();
+            }
+
+            $currentWorkerId = $detail->task->employee_id;
+            $currentName = $detail->name;
+            $newName = $detail->target_name;
+
+            $this->doEditSong(
+                payload: [
+                    'name' => $detail->target_name,
+                    'target_name' => null,
+                    'is_request_edit' => false,
+                    'is_request_delete' => false,
+                ],
+                songUid: $songUid
+            );
+
+            // logging task
+            $user = $this->employeeRepo->show(
+                uid: 'id',
+                select: 'id,nickname',
+                where: "user_id = " . auth()->id()
+            );
+
+            $event = $this->repo->show(
+                uid: $projectUid,
+                select: 'id,name'
+            );
+
+            $this->entertainmentTaskSongLogService->storeLog(
+                type: TaskSongLogType::ApprovedRequestEdit->value,
+                payload: [
+                    'project_song_list_id' => $songId,
+                    'project_id' => $projectId,
+                    'employee_id' => null,
+                ],
+                params: [
+                    'pm' => $user->nickname ?? 'Unknown',
+                    'event' => $event->name,
+                    'currentName' => $currentName,
+                    'newName' => $newName
+                ]
+            );
+
+            $currentData = $this->detailCacheAction->handle($projectUid);
+
+            SongApprovedToBeEditedJob::dispatch($currentName, $newName, $currentWorkerId, $projectId)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: 'success',
+                error: false,
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to delete song
+     * 
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function confirmDeleteSong(string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+
+            $detail = $this->projectSongListRepo->show(
+                uid: $songUid,
+                select: 'id,name,target_name',
+                relation: [
+                    'task:id,project_song_list_id,employee_id'
+                ],
+                where: "uid = '{$songUid}' and is_request_edit = 0 and is_request_delete = 1"
+            );
+
+            if (!$detail) {
+                throw new SongNotFound();
+            }
+
+            $currentSongName = $detail->name;
+            $currentWorker = $detail->task->employee_id;
+
+            // detach people
+            $this->entertainmentTaskSongRepo->delete(0, "employee_id = " . $currentWorker . " and project_song_list_id = {$songId}");
+
+            // delete data
+            $this->projectSongListRepo->delete($songId);
+
+            ConfirmDeleteSongJob::dispatch($currentSongName, $currentWorker, $projectUid)->afterCommit();
+
+            // reformat cache
+            $detailData = $this->detailCacheAction->handle($projectUid);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successDeleteSong'),
+                error: false,
+                data: [
+                    'full_detail' => $detailData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Update song
      * 
      * @param array $payload
@@ -6589,11 +6785,70 @@ class ProjectService
      */
     public function doEditSong(array $payload, string $songUid): bool
     {
-        $this->projectSongListRepo->update([
-            'name' => $payload['song']
-        ], $songUid);
+        $this->projectSongListRepo->update($payload, $songUid);
 
         return true;
+    }
+
+    /**
+     * Reject edit song
+     * 
+     * @param array $payload
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function rejectEditSong(array $payload, string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+
+            $this->projectSongListRepo->update([
+                'reason' => $payload['reason'],
+                'is_request_delete' => 0,
+                'is_request_edit' => 0,
+                'target_name' => null
+            ], $songUid);
+
+            $author = $this->employeeRepo->show(
+                uid: 'id',
+                select: 'id,nickname',
+                where: "user_id = " . auth()->id()
+            );
+
+            StoreLogAction::run(
+                type: TaskSongLogType::RejectRequestEdit->value,
+                payload: [
+                    'project_song_list_id' => $songId,
+                    'entertainment_task_song_id' => 0,
+                    'project_id' => $projectId,
+                    'employee_id' => null,
+                ],
+                params: [
+                    'pm' => $author->nickname,
+                ]
+            );
+
+            RejectRequestEditSongJob::dispatch($payload, $projectUid, $songUid)->afterCommit();
+
+            $currentData = $this->detailCacheAction->handle($projectUid);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.requestEditSongHasBeenRejected'),
+                error: false,
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
     }
 
     /**
@@ -6631,7 +6886,8 @@ class ProjectService
                 // request changes to entertainment first
                 $this->projectSongListRepo->update([
                     'is_request_edit' => false,
-                    'is_request_delete' => true
+                    'is_request_delete' => true,
+                    'target_name' => null
                 ], $songUid);
 
                 // send notification to PM entertainment
@@ -6641,7 +6897,7 @@ class ProjectService
                 goto result;
             }
 
-            $this->doDeleteSong($songUid, $song);
+            $this->doDeleteSong($song->id, $song);
 
             result:
             // get current data
@@ -6674,16 +6930,16 @@ class ProjectService
     /**
      * Actual function to delete song
      * 
-     * @param string $songUid
+     * @param int $songId
      * @param object $song
      * 
      * @return void
      */
-    public function doDeleteSong(string $songUid, object $song): void
+    public function doDeleteSong(int $songId, object $song): void
     {
         $songName = $song->name;
         $projectName = $song->project->name;
-        $this->projectSongListRepo->delete(id: $songUid);
+        $this->projectSongListRepo->delete(id: $songId);
 
         $requesterId = auth()->id();
         DeleteSongJob::dispatch($songName, $projectName, $requesterId)->afterCommit();
@@ -6703,7 +6959,6 @@ class ProjectService
         DB::beginTransaction();
         try {
             $employeeId = $this->generalService->getIdFromUid($payload['employee_uid'], new Employee());
-            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
 
             $song = $this->projectSongListRepo->show($songUid, 'id');
 
@@ -6711,16 +6966,29 @@ class ProjectService
                 throw new SongNotFound();
             }
 
-            $this->entertainmentTaskSongRepo->store([
-                'project_song_list_id' => $songId,
-                'status' => TaskSongStatus::Active->value,
-                'employee_id' => $employeeId
-            ]);
+            // check assignment to prevent double job
+            $currentSongTask = $this->entertainmentTaskSongRepo->show(
+                uid: $songUid,
+                select: 'id,employee_id',
+                relation: [
+                    'employee:id,nickname'
+                ],
+                where: "employee_id = {$employeeId} and project_song_list_id = {$song->id}"
+            );
 
-            DistributeSongJob::dispatch($payload['employee_uid'], $projectUid, $songUid)->afterCommit();
+            if ($currentSongTask) {
+                DB::rollBack();
 
-            // get current data
-            $currentData = $this->renewCache($projectUid);
+                return generalResponse(
+                    message: __("notification.employeeAlreadyAssignedForThisSong", ['name' => $currentSongTask->employee->nickname]),
+                    error: false,
+                );
+            }
+
+            DistributeSong::run($payload, $projectUid, $songUid, $this->generalService);
+
+            // get current datad
+            $currentData = $this->detailCacheAction->handle($projectUid);
 
             DB::commit();
 
@@ -6738,6 +7006,688 @@ class ProjectService
         }
     }
 
+    /**
+     * Function to get detail information of selected song
+     * 
+     * @param sting $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function detailSong(string $projectUid, string $songUid): array
+    {
+        try {
+            $user = auth()->user();
+            $data = $this->projectSongListRepo->show(
+                uid: $songUid,
+                select: 'id,project_id,uid,name,is_request_edit,is_request_delete,target_name',
+                relation: [
+                    'project:id,uid,name,project_date',
+                    'logs:id,project_song_list_id,text,param_text,created_at',
+                    'task:id,project_song_list_id,employee_id,status,created_at',
+                    'task.employee:id,name,employee_id,uid',
+                    'task.results:id,task_id,nas_path,note',
+                    'task.results.images:id,result_id,path',
+                    'task.revises:project_song_list_id,entertainment_task_song_id,id,reason,created_at'
+                ]
+            );
+            // format results
+            if (($data->task) && (!$data->task->results->isEmpty())) {
+                $path = asset("storage/projects/{$data->project_id}/entertainment/song/{$data->id}");
+                $results = collect($data->task->results)->map(function($item) use ($path) {
+                    return [
+                        'images' => collect($item->images)->map(function ($image) use ($path) {
+                            return $path . '/' . $image->path;
+                        })->toArray(),
+                        'note' => $item->note,
+                        'nas_path' => $item->nas_path
+                    ];
+                })->toArray();
+            }
+
+            $data = $this->formatSingleSongStatus($data);
+
+            $task = null;
+
+            if ($data->task) {
+                $task = [
+                    'employee_uid' => $data->task->employee->uid,
+                    'name' => $data->task->employee->name,
+                    'employee_id' => $data->task->employee->employee_id,
+                    'status' => TaskSongStatus::getLabel($data->task->status),
+                    'status_color' => TaskSongStatus::getColor($data->task->status),
+                    'revises' => $data->task->revises
+                ];
+            }
+
+            $logs = [
+                'main' => [],
+                'more' => []
+            ];
+            $moreLogs = [];
+            if (count($data->logs) > 0) {
+                $rawLogs = collect($data->logs)->map(function ($logItem) {
+                    return [
+                        'text' => $logItem->formatted_text,
+                        'time' => date('d F Y H:i', strtotime($logItem->created_at))
+                    ];
+                })->toArray();
+
+                $mainLogs = array_splice($rawLogs, 0, 3);
+                $moreLogs = $rawLogs;
+
+                $logs['main'] = $mainLogs;
+                $logs['more'] = $moreLogs;
+            }
+
+            $allowedStatusToAction = [
+                TaskSongStatus::OnFirstReview->value,
+                TaskSongStatus::OnLastReview->value
+            ];
+
+            if ($user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
+                $allowedStatusToAction = [
+                    TaskSongStatus::OnFirstReview->value,
+                ];
+            }
+            if ($user->hasRole(BaseRole::ProjectManager->value) || $user->hasRole(BaseRole::ProjectManagerAdmin->value)) {
+                $allowedStatusToAction = [
+                    TaskSongStatus::OnLastReview->value
+                ];
+            }
+
+            $canTaskAction = !$data->task ? false : (in_array($data->task->status, $allowedStatusToAction) ? true : false);
+
+            $output = [
+                'uid' => $data->uid,
+                'name' => $data->name,
+                'status_text' => $data->status_text,
+                'status_color' => $data->status_color,
+                'status_request' => $data->status_request,
+                'can_take_action' => $canTaskAction,
+                'target_name' => $data->target_name,
+                'is_request_edit' => $data->is_request_edit,
+                'is_request_delete' => $data->is_request_delete,
+                'is_complete' => !$data->task ? false : ($data->task->status == TaskSongStatus::Completed->value || $data->task->status == TaskSongStatus::Revise->value ? true : false),
+                'results' => $results ?? [],
+                'project' => [
+                    'uid' => $data->project->uid,
+                    'name' => $data->project->name,
+                    'project_date' => $data->project->project_date ? date('d F Y', strtotime($data->project->project_date)) : '-',
+                ],
+                'worker' => $task,
+                'logs' => $logs
+            ];
+
+            return generalResponse(
+                message: 'success',
+                error: false,
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Change worker song
+     * 
+     * @param array $payload
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function subtituteSongPic(array $payload, string $projectUid, string $songUid): array
+    {
+        $switch = SwitchSongWorker::run($payload['employee_uid'], $songUid);
+
+        $currentData = $this->detailCacheAction->handle($projectUid);
+
+        if (!$switch['error']) {
+            return generalResponse(
+                message: __('notification.successSubtituteSongPic'),
+                error: false,
+                data: [
+                    'full_detail' => $currentData,
+                ]
+            );
+        } else {
+            return errorResponse($switch['message']);
+        }
+    }
+
+    /**
+     * Function to start work. Time tracker will start here
+     * This function will handle start to work on the first time and start doing revise
+     * 
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function startWorkOnSong(string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+
+            $task = $this->entertainmentTaskSongRepo->show(
+                uid: 'id',
+                select: 'id,time_tracker,status',
+                where: "project_id = {$projectId} AND project_song_list_id = {$songId}"
+            );
+
+            if ($task->status == TaskSongStatus::OnProgress->value) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.songAlreadyInProgress'));
+            }
+            
+            // set time tracker
+            $currentTimeTracker = $task->time_tracker;
+            $currentTimeTracker[] = [
+                'type' => $task->status == TaskSongStatus::Active->value ? 'start_working' : 'revise',
+                'start_time' => date('Y-m-d H:i'),
+                'end_time' => null
+            ];
+
+            $this->entertainmentTaskSongRepo->update(
+                data: [
+                    'status' => TaskSongStatus::OnProgress->value,
+                    'time_tracker' => $currentTimeTracker
+                ],
+                where: "project_song_list_id = {$songId}"
+            );
+
+            // logging
+            StoreLogAction::run(
+                type: TaskSongLogType::StartWorking->value,
+                payload: [
+                    'project_song_list_id' => $songId,
+                    'project_id' => $projectId,
+                    'employee_id' => null,
+                ],
+                params: [
+                    'user' => auth()->user()->load('employee')->employee->nickname
+                ]
+            );
+
+            $currentData = $this->detailCacheAction->handle($projectUid);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.startWorkNow'),
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function used to user to report the task
+     * 
+     * Goal of this function is:
+     * 1. Task status will be change from onprogress to on first review
+     * 2. Time tracker will be updated. Now start time and end time will be filled
+     * 3. Store related proof of work to server
+     * 3. Send notification to both worker and PM
+     * 
+     * @param array $payloas
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function songReportAsDone(array $payload, string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = auth()->user();
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+
+            $task = $this->entertainmentTaskSongRepo->show(
+                uid: 'id,project_id,project_song_list_id,status',
+                select: 'id,time_tracker',
+                relation: [
+                    'project:id,name',
+                    'song:id,name'
+                ],
+                where: "project_id = {$projectId} AND project_song_list_id = {$songId}"
+            );
+
+            if (!$task) {
+                throw new SongHaveNoTask();
+            }
+
+            if ($task->status == TaskSongStatus::OnFirstReview->value || $task->status == TaskSongStatus::OnLastReview->value) {
+                throw new TaskAlreadyBeingChecked();
+            }
+
+            // update time tracker
+            // Tracker is should be exists. If not it'll return an error
+            $currentTracker = $task->time_tracker;
+            $lastTracker = array_pop($currentTracker);
+            $lastTracker['end_time'] = date('Y-m-d H:i');
+            array_push($currentTracker, $lastTracker);
+
+            $this->entertainmentTaskSongRepo->update(
+                data: [
+                    'time_tracker' => $currentTracker,
+                    'status' => TaskSongStatus::OnFirstReview->value
+                ],
+                id: (string) $task->id
+            );
+
+            // logging
+            StoreLogAction::run(
+                type: TaskSongLogType::ReportAsDone->value,
+                payload: [
+                    'project_song_list_id' => $songId,
+                    'project_id' => $projectId,
+                ],
+                params: [
+                    'user' => $user->load('employee')->employee->nickname
+                ]
+            );
+
+            ReportAsDone::run($payload, $projectUid, $songUid, $this->generalService);
+
+            SongReportAsDone::dispatch($task, $user->load('employee')->employee->id)->afterCommit();
+
+            $currentData = $this->detailCacheAction->handle($projectUid);
+
+            DB::commit();
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to approve song task.
+     * This function hit by Project Manager or ROOT
+     * Approve will work with these conditions:
+     * 1. Status should be on progress -> author is PM Entertainment or root
+     * 2. Status should be OnFirstReview -> author is Project Manager or root
+     * 
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function songApproveWork(string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = auth()->user();
+            $userRole = $user->roles[0];
+
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+
+            $task = $this->entertainmentTaskSongRepo->show(
+                uid: 'id',
+                select: 'id,status,employee_id,project_song_list_id,project_id,time_tracker',
+                where: "project_song_list_id = {$songId} and project_id = {$projectId}",
+                relation: [
+                    'employee:id,nickname,telegram_chat_id',
+                    'song:id,name',
+                    'project:id,name',
+                    'project.personInCharges:project_id,pic_id',
+                    'project.personInCharges.employee:id,nickname,telegram_chat_id'
+                ]
+            );
+
+            $currentStatus = $task->status;
+            $payloadUpdate = [];
+
+            // validate before go
+            $rules = [
+                BaseRole::ProjectManagerEntertainment->value => [
+                    TaskSongStatus::OnFirstReview->value
+                ],
+                BaseRole::Root->value => [
+                    TaskSongStatus::OnFirstReview->value
+                ],
+                BaseRole::ProjectManager->value => [
+                    TaskSongStatus::OnLastReview->value,
+                ],
+                BaseRole::ProjectManagerAdmin->value => [
+                    TaskSongStatus::OnLastReview->value,
+                ]
+            ];
+            foreach ($rules as $role => $currentStatusRule) {
+                if ($userRole->name == $role) {
+                    if (!in_array($currentStatus, $currentStatusRule)) {
+                        DB::commit();
+
+                        return errorResponse(__('notification.failedToAproveTask'));
+                    }
+                }
+            }
+
+            if ($currentStatus == TaskSongStatus::OnFirstReview->value) {
+                $payloadUpdate['status'] = TaskSongStatus::OnLastReview->value;
+            } else if ($currentStatus == TaskSongStatus::OnLastReview->value) {
+                $payloadUpdate['status'] = TaskSongStatus::Completed->value;
+            } else if ($currentStatus == TaskSongStatus::OnProgress->value) {
+                $payloadUpdate['status'] = TaskSongStatus::OnFirstReview->value;
+            }
+
+            // update status
+            $this->entertainmentTaskSongRepo->update(
+                data: $payloadUpdate,
+                id: $task->id
+            );
+
+            // record the point if entertainment PM do this action, do not record if this song came from revise task.
+            // to check this song came from revise task or not, we will check the last time tracker type in the entertainment_task_songs
+            // if $currentStatus is onLastReview, thats mean projectPM do this action
+            $timeTracker = $task->time_tracker;
+            $lastTimeTrackerType = $timeTracker[count($timeTracker) - 1]['type'];
+            if ($currentStatus == TaskSongStatus::OnFirstReview->value) {
+                PointRecord::run(
+                    employeeIdentifier: (int) $task->employee_id,
+                    projectIdentifier: (int) $projectId,
+                    taskId: (int) $task->id,
+                    point: 1,
+                );
+            }
+
+            // add logs
+            if (BaseRole::ProjectManagerEntertainment->value == $user->roles[0]['name']) {
+                StoreLogAction::run(
+                    type: TaskSongLogType::ApprovedByEntertainmentPM->value,
+                    payload: [
+                        'project_song_list_id' => $songId,
+                        'project_id' => $projectId,
+                    ],
+                    params: [
+                        'pm' => $user->load('employee')->employee->nickname,
+                        'user' => $task->employee->nickname
+                    ]
+                );
+            } else {
+                // add root, director and other PM log
+                StoreLogAction::run(
+                    type: TaskSongLogType::ApprovedByEventPM->value,
+                    payload: [
+                        'project_song_list_id' => $songId,
+                        'project_id' => $projectId,
+                    ],
+                    params: [
+                        'pm' => $user->load('employee')->employee->nickname,
+                    ]
+                );
+            }
+
+            $currentData = $this->detailCacheAction->handle($projectUid);
+
+            TaskSongApprovedJob::dispatch($task, $user->load('employee'))->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.taskSongHasBeenApproved'),
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to get all entertainment member with the workload around project date
+     * 
+     * @param string $projectUid
+     * 
+     * @return array
+     */
+    public function entertainmentListMember(string $projectUid): array
+    {
+        try {
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: 'id,name,project_date',
+            );
+
+            // validate project
+            if (!$project) {
+                return errorResponse(message: __('notification.projectNotFound'), code: 500);
+            }
+
+            // get the workload -7 days, +7 days and in the selected project date
+            $projectDate = Carbon::parse($project->project_date);
+            $startDate = $projectDate->subDay(7)->format('Y-m-d');
+            $endDate = $projectDate->addDay(7)->format('Y-m-d');
+
+            // get entertainment peoples based on Entertainment Role
+            $entertainments = \App\Models\User::selectRaw('id,employee_id,email')
+                ->with([
+                    'roles',
+                    'employee' => function ($queryEmployee) {
+                        return $queryEmployee->selectRaw('id,uid,name,employee_id')
+                            ->whereRaw("deleted_at IS NULL");
+                    }
+                ])->get()->filter(
+                    fn ($user) => $user->roles->whereIn('name', [BaseRole::Entertainment->value, BaseRole::ProjectManagerEntertainment->value])->toArray()
+                );
+
+            $output = [];
+            foreach ($entertainments->values() as $key => $people) {
+                if ($people->employee) {
+                    $workload = $this->entertainmentTaskSongRepo->list(
+                        select: 'id,project_song_list_id',
+                        where: "employee_id = " . $people->employee->id,
+                        relation: [
+                            'project' => function ($query) use ($startDate, $endDate) {
+                                return $query->whereBetween('projectDate', [$startDate, $endDate]);
+                            }
+                        ]
+                    )->count();
+                    
+                    $output[] = [
+                        'uid' => $people->employee->uid,
+                        'name' => $people->employee->name,
+                        'employee_id' => $people->employee->employee_id,
+                        'workload' => $workload,
+                    ];
+                }
+            }
+
+            return generalResponse(
+                message: 'success',
+                error: false,
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    // TODO: Next development
+    public function bulkAssignWorkerForSong(array $payload, string $projectUid)
+    {
+        DB::beginTransaction();
+        try {
+            $songUids = [];
+
+            foreach ($payload['workers'] as $worker) {
+                foreach ($worker['songs'] as $song) {
+                    $songUids[] = $song;
+                }
+            }
+
+            // validate unique songs
+            $unique = array_unique($songUids);
+            if (count($unique) != count($songUids)) {
+                DB::rollBack();
+
+                return errorResponse(__('notification.duplicateSongOnBulkAssign'));
+            }
+
+            // process
+            foreach ($payload['workers'] as $worker) {
+                foreach ($worker['songs'] as $songUid) {
+                    DistributeSong::run(
+                        [
+                            'employee_uid' => $worker['uid'],
+                        ],
+                        $projectUid,
+                        $songUid,
+                        $this->generalService
+                    );
+                }
+            }
+
+            $currentData = $this->detailCacheAction->handle($projectUid);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.songHasBeenDistributed'),
+                error: false,
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Revise the task of JB
+     * What this function will do?
+     * 1. Change status of task to revise (Base on \App\Enums\Production\TaskSongStatus)
+     * 2. Store image if exists, and store the reason
+     * 3. Inform worker
+     * 4. Add to song logs
+     * 5. Run notification
+     * 
+     * @param array $payload
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return array
+     */
+    public function songRevise(array $payload, string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+            $user = auth()->user();
+
+            $task = $this->entertainmentTaskSongRepo->show(
+                uid: 'id',
+                select: "id,employee_id,status",
+                where: "project_id = {$projectId} and project_song_list_id = {$songId}",
+                relation: [
+                    'employee:id,nickname'
+                ]
+            );
+
+            // validate status
+            if ($task->status == TaskSongStatus::Revise->value) {
+                return errorResponse(__('notification.songAlreadyOnRevise'));
+            }
+            $allowedStatus = [
+                TaskSongStatus::OnFirstReview->value,
+                TaskSongStatus::OnLastReview->value
+            ];
+            if (!in_array($task->status, $allowedStatus)) {
+                return errorResponse(__('notification.songCannotBeRevise'));
+            }
+
+            $newPayload = [
+                'reason' => $payload['reason'],
+                'project_song_list_id' => $songId,
+                'entertainment_task_song_id' => $task->id
+            ];
+
+            if ((isset($payload['images'])) && (!empty($payload['images']))) {
+                foreach ($payload['images'] as $image) {
+                    $name = $this->generalService->uploadImageandCompress(
+                        path: "projects/{$projectId}/song/{$songId}/revise",
+                        compressValue: 0,
+                        image: $image
+                    );
+
+                    if ($name) {
+                        $newPayload['images'][] = $name;
+                    }
+                }
+            }
+
+            // edit status of task
+            $this->entertainmentTaskSongRepo->update([
+                'status' => TaskSongStatus::Revise->value
+            ], $task->id);
+
+            $this->entertainmentTaskSongRevise->store($newPayload);
+
+            // write log
+            StoreLogAction::run(
+                type: TaskSongLogType::RevisedByPM->value,
+                payload: [
+                    'project_song_list_id' => $songId,
+                    'project_id' => $projectId,
+                    'employee_id' => null,
+                ],
+                params: [
+                    'pm' => $user->load('employee')->employee->nickname,
+                    'user' => $task->employee->nickname
+                ]
+            );
+
+            // notification
+            SongReviseJob::dispatch($payload, $projectUid, $songUid, $user->id)->afterCommit();
+
+            // current data
+            $currentData = $this->detailCacheAction->handle($projectUid);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successReviseSong'),
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Function to renew project detail cache
+     * 
+     * @param string $projectUid
+     */
     public function renewCache(string $projectUid)
     {
         // get current data

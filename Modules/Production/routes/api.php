@@ -46,9 +46,23 @@ Route::middleware(['auth:sanctum'])
 
     // songs
     Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');
+    Route::post('project/{projectUid}/bulkAssignWorkerForSong', [ProjectController::class, 'bulkAssignWorkerForSong'])->name('projects.bulkAssignWorkerForSong');
+    Route::get('project/{projectUid}/song/{songUid}', [ProjectController::class, 'detailSong'])->name('projects.detailSongs');
     Route::put('project/{projectUid}/song/{songUid}', [ProjectController::class, 'updateSong'])->name('projects.updateSongs');
     Route::delete('project/{projectUid}/song/{songUid}', [ProjectController::class, 'deleteSong'])->name('projects.deleteSongs');
+    Route::put('project/{projectUid}/song/{songUid}/confirmEditSong', [ProjectController::class, 'confirmEditSong'])->name('projects.confirmEditSong');
+    Route::get('project/{projectUid}/song/{songUid}/approve', [ProjectController::class, 'startWorkOnSong'])->name('projects.startWorkOnSong');
+    Route::get('project/{projectUid}/song/{songUid}/approveUpper', [ProjectController::class, 'songApproveWork'])->name('projects.songApproveWork');
+    Route::post('project/{projectUid}/song/{songUid}/revise', [ProjectController::class, 'songRevise'])->name('projects.songRevise');
+    Route::put('project/{projectUid}/song/{songUid}/confirmDeleteSong', [ProjectController::class, 'confirmDeleteSong'])->name('projects.confirmDeleteSong');
+    Route::post('project/{projectUid}/song/report/{songUid}', [ProjectController::class, 'songReportAsDone'])->name('projects.songReportAsDone');
     Route::post('project/{projectUid}/song/distribute/{songUid}', [ProjectController::class, 'distributeSong'])->name('projects.distributeSong');
+    Route::post('project/{projectUid}/song/reject/{songUid}', [ProjectController::class, 'rejectEditSong'])->name('projects.rejectEditSong');
+    Route::post('project/{projectUid}/song/subtituteSongPic/{songUid}', [ProjectController::class, 'subtituteSongPic'])->name('projects.subtituteSongPic');
+
+    // entertainment
+    Route::get('/project/{projectUid}/entertainment/listMember', [ProjectController::class, 'entertainmentListMember'])->name("projecjts.entertainmentListMember");
+    Route::get('/project/{projectUid}/entertainment/workload', [ProjectController::class, 'entertainmentMemberWorkload'])->name("projecjts.entertainmentMemberWorkload");
 
     Route::get('project/{projectUid}/statusses', [ProjectController::class, 'getProjectStatusses']);
     Route::get('project/{projectUid}/prepareFinalCheck', [ProjectController::class, 'prepareFinalCheck']);
