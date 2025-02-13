@@ -2,16 +2,23 @@
 
 namespace Tests\Feature\Project;
 
+use App\Actions\Project\DetailCache;
+use App\Actions\Project\Entertainment\DistributeSong;
+use App\Actions\Project\Entertainment\StoreLogAction;
 use App\Services\GeneralService;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Exceptions\SongNotFound;
+use Modules\Production\Jobs\DistributeSongJob;
+use Modules\Production\Models\EntertainmentTaskSong;
+use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
 use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Services\ProjectService;
@@ -23,6 +30,14 @@ class DistributeSongTest extends TestCase
 
     private $token;
 
+    private $generalMock;
+
+    private $employees;
+
+    private $projects;
+
+    private $projectSongs;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -32,6 +47,11 @@ class DistributeSongTest extends TestCase
         $this->actingAs($userData['user']);
 
         $this->token = $this->getToken($userData['user']);
+
+        $this->generalMock = $this->instance(
+            abstract: GeneralService::class,
+            instance: Mockery::mock(GeneralService::class)
+        );
     }
 
     /**
@@ -39,50 +59,109 @@ class DistributeSongTest extends TestCase
      */
     public function testDistributeWithDeletedSong(): void
     {
-        $mockGeneral = $this->instance(
-            abstract: GeneralService::class,
-            instance: Mockery::mock(GeneralService::class)
-        );
-
-        $mockSongRepo = $this->instance(
-            abstract: ProjectSongListRepository::class,
-            instance: Mockery::mock(ProjectSongListRepository::class)
-        );
-
-        $this->setProjectConstructor(
-            generalService: $mockGeneral,
-            projectSongListRepo: $mockSongRepo
-        );
-
-        $mockGeneral->shouldReceive('getIdFromUid')
-            ->atMost(1)
-            ->withArgs(function ($uid, $employee) {
-                return $uid === 'uid' && $employee instanceof Employee;
-            })
-            ->andReturn(1)
-            ->shouldReceive('getIdFromUid')
-            ->atMost(1)
-            ->withArgs(function ($uid, $projectSong) {
-                return $uid === 'id' && $projectSong instanceof ProjectSongList;
-            })
+        $this->generalMock->shouldReceive('getIdFromUid')
+            ->once()
+            ->withAnyArgs()
             ->andReturn(1);
 
-        $mockSongRepo->shouldReceive('show')
-            ->atMost(1)
-            ->with('id', 'id')
-            ->andReturnNull();
+        $this->setProjectConstructor(generalService: $this->generalMock);
 
-        $response = $this->projectService->distributeSong(['employee_uid' => 'uid'], 'uid', 'id');
+        $response = $this->projectService->distributeSong(['employee_uid' => 1], 'projectuid', 'songuid');
 
         $this->assertTrue($response['error']);
+
+        $this->assertStringContainsString(__('notification.songNotFound'), $response['message']);
+    }
+
+    protected function runningSeed(bool $withTask = true)
+    {
+        $this->employees = Employee::factory()
+            ->count(2)
+            ->create();
+
+        $this->projects = Project::factory()
+            ->count(1)
+            ->create();
+
+        $this->projectSongs = ProjectSongList::factory()
+            ->count(1)
+            ->create([
+                'project_id' => $this->projects[0]->id,
+                'is_request_edit' => 0,
+                'is_request_delete' => 0,
+                'created_by' => 1,
+            ]);
+
+        if ($withTask) {
+            EntertainmentTaskSong::factory()
+                ->count(1)
+                ->create([
+                    'project_song_list_id' => $this->projectSongs[0]->id,
+                    'employee_id' => $this->employees[0]->id,
+                    'project_id' => $this->projects[0]->id
+                ]);
+        }
+    }
+
+    public function testDistributeSongToPreventDoubleJob(): void
+    {
+        $this->runningSeed(withTask: true);
+
+        $this->generalMock->shouldReceive('getIdFromUid')
+            ->once()
+            ->withAnyArgs()
+            ->andReturn($this->employees[0]->id);
+
+        $this->setProjectConstructor(generalService: $this->generalMock);
+
+        $payload = [
+            'employee_uid' => $this->employees[0]->uid
+        ];
+
+        $response = $this->projectService->distributeSong($payload, $this->projects[0]->uid, $this->projectSongs[0]->uid);
+
+        $this->assertFalse($response['error']);
+        $this->assertStringContainsString(__('notification.employeeAlreadyAssignedForThisSong', ['name' => $this->employees[0]->nickname]), $response['message']);
     }
 
     public function testDistributeSongSuccess(): void
     {
+        $this->runningSeed(withTask: false);
+
+        $this->generalMock->shouldReceive('getIdFromUid')
+            ->once()
+            ->withAnyArgs()
+            ->andReturn($this->employees[1]->id);
+
+        $this->setProjectConstructor(generalService: $this->generalMock);
+
         $payload = [
-            'employee_id' => 'id'
+            'employee_uid' => $this->employees[1]->uid
         ];
 
-        
+        // mock action
+        StoreLogAction::mock()
+            ->shouldReceive('handle')
+            ->withAnyArgs()
+            ->andReturnTrue();
+
+        DetailCache::mock()
+            ->shouldReceive('handle')
+            ->withAnyArgs()
+            ->andReturn($this->projects[0]);
+
+        DistributeSong::mock()
+            ->shouldReceive('handle')
+            ->withAnyArgs()
+            ->andReturnTrue();
+
+        $response = $this->projectService->distributeSong($payload, $this->projects[0]->uid, $this->projectSongs[0]->uid);
+
+        $this->assertFalse($response['error']);
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
     }
 }

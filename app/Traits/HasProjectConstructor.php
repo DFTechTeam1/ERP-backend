@@ -2,6 +2,9 @@
 
 namespace App\Traits;
 
+use App\Actions\Project\DetailCache;
+use App\Actions\Project\DetailProject;
+use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
 use App\Services\TestProjectConstructor;
@@ -13,6 +16,9 @@ use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
+use Modules\Production\Repository\EntertainmentTaskSongResultImageRepository;
+use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
+use Modules\Production\Repository\EntertainmentTaskSongReviseRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -31,6 +37,7 @@ use Modules\Production\Repository\ProjectTaskReviseHistoryRepository;
 use Modules\Production\Repository\ProjectTaskWorktimeRepository;
 use Modules\Production\Repository\ProjectVjRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
+use Modules\Production\Services\EntertainmentTaskSongLogService;
 use Modules\Production\Services\ProjectRepositoryGroup;
 use Modules\Production\Services\ProjectService;
 
@@ -66,7 +73,14 @@ trait HasProjectConstructor
         $customInventoryRepo = null,
         $projectSongListRepo = null,
         $generalService = null,
-        $entertainSongRepo = null
+        $entertainSongRepo = null,
+        $entertainmentTaskSongLogService = null,
+        $userRepo = null,
+        $detailProjectAction = null,
+        $detailCacheAction = null,
+        $entertainmentTaskSongResultRepo = null,
+        $entertainmentTaskSongResultImageRepo = null,
+        $entertainmentTaskSongRevise = null
     )
     {
         $this->projectService = new ProjectService(
@@ -97,7 +111,14 @@ trait HasProjectConstructor
             $customInventoryRepo ? $customInventoryRepo : new CustomInventoryRepository,
             $projectSongListRepo ? $projectSongListRepo : new ProjectSongListRepository,
             $generalService ? $generalService : new GeneralService,
-            $entertainSongRepo ? $entertainSongRepo : new EntertainmentTaskSongRepository
+            $entertainSongRepo ? $entertainSongRepo : new EntertainmentTaskSongRepository,
+            $entertainmentTaskSongLogService ? $entertainmentTaskSongLogService : new EntertainmentTaskSongLogService,
+            $userRepo ? $userRepo : new UserRepository,
+            $detailProjectAction ? $detailProjectAction : new DetailProject,
+            $detailCacheAction ? $detailCacheAction : new DetailCache,
+            $entertainmentTaskSongResultRepo ? $entertainmentTaskSongResultRepo : new EntertainmentTaskSongResultRepository,
+            $entertainmentTaskSongResultImageRepo ? $entertainmentTaskSongResultImageRepo : new EntertainmentTaskSongResultImageRepository,
+            $entertainmentTaskSongRevise ? $entertainmentTaskSongRevise : new EntertainmentTaskSongReviseRepository
         );
     }
 }

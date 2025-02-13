@@ -44,7 +44,7 @@ class DistributeSongJob implements ShouldQueue
         $song = ProjectSongList::selectRaw('id,name')
             ->where('uid', $this->songUid)
             ->first();
-        $project = Project::selectRaw('id,project')
+        $project = Project::selectRaw('id,name')
             ->where('uid', $this->projectUid)
             ->first();
 
