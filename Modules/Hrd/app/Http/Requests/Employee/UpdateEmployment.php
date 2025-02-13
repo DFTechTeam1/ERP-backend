@@ -2,6 +2,8 @@
 
 namespace Modules\Hrd\Http\Requests\Employee;
 
+use App\Enums\Employee\LevelStaff;
+use App\Rules\Employee\BossRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
@@ -14,15 +16,21 @@ class UpdateEmployment extends FormRequest
     public function rules(): array
     {
         return [
-            'position_id' => 'required',
-            'boss_id' => 'nullable',
-            'status' => 'required',
-            'level' => 'required',
+            'branch_id' => 'required',
             'employee_id' => [
                 'required',
                 Rule::unique('employees', 'employee_id')->ignore($this->route('employeeUid'), 'uid'),
             ],
+            'position_id' => 'required',
+            'level_staff' => [
+                'required',
+                Rule::enum(LevelStaff::class),
+            ],
+            'status' => 'required',
             'join_date' => 'required',
+            'boss_id' => [
+                new BossRule(),
+            ]
         ];
     }
 

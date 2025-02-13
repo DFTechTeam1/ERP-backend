@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Hrd\Http\Requests\Employee\AddAsUser;
 use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
 use Modules\Hrd\Http\Requests\Employee\UpdateBasicInfo;
@@ -27,16 +28,59 @@ class EmployeeController extends Controller
      */
     public function list()
     {
+        $selects = [
+            'id', 'uid', 'name',
+            'address',
+            'employee_id',
+            'nickname',
+            'branch_id',
+            'position_id',
+            'level_staff',
+            'status',
+            'join_date',
+            'end_date',
+            'email',
+            'date_of_birth',
+            'place_of_birth',
+            'phone',
+            'religion',
+            'gender',
+            'martial_status',
+            'user_id'
+        ];
+
         return apiResponse(
             $this->employeeService->list(
-                'id,uid,name,email,position_id,employee_id,level_staff,status,join_date,phone,placement,user_id',
+                implode(',', $selects),
                 '',
                 [
                     'position:id,uid,name',
-                    'user:id,uid,email'
+                    'user:id,uid,email,employee_id',
+                    'branch:id,short_name'
                 ]
             )
         );
+    }
+
+    public function generateRandomPassword()
+    {
+        return apiResponse(generalResponse(
+            message: 'Success',
+            error: false,
+            data: [
+                'password' => generateRandomPassword(14),
+            ]
+        ));
+    }
+
+    /**
+     * Get all available status from enums
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllStatus(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->employeeService->getAllStatus());
     }
 
     public function submitImport(Request $request)
@@ -68,6 +112,17 @@ class EmployeeController extends Controller
     public function generateEmployeeID()
     {
         return apiResponse($this->employeeService->generateEmployeeID());
+    }
+
+    /**
+     * Validate employee ID
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateEmployeeID(Request $request): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->employeeService->validateEmployeeID($request->toArray()));
     }
 
     /**
@@ -113,12 +168,12 @@ class EmployeeController extends Controller
     /**
      * Function to assign employee to webapp user
      *
-     * @param Request $request
+     * @param AddAsUser $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function addAsUser(Request $request)
+    public function addAsUser(AddAsUser $request)
     {
-        return apiResponse($this->employeeService->addAsUser($request->user_id));
+        return apiResponse($this->employeeService->addAsUser($request->validated()));
     }
 
     /**
@@ -136,7 +191,6 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->activateAccount($key));
     }
 
-
     /**
      * Create new data
      * @param Create $request
@@ -147,9 +201,7 @@ class EmployeeController extends Controller
         $data = $request->validated();
 
         return apiResponse($this->employeeService->store($data));
-        // return apiResponse($this->employeeService->store($request->all()));
     }
-
 
     /**
      * Update selected data
@@ -186,7 +238,6 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->updateIdentity($request->validated(), $uid));
     }
 
-
     /**
      * Delete specific data
      * @param $uid
@@ -205,9 +256,7 @@ class EmployeeController extends Controller
     public function bulkDelete(Request $request)
     {
         return apiResponse($this->employeeService->bulkDelete(
-            collect($request->ids)->map(function ($item) {
-                return $item['uid'];
-            })->toArray()
+            $request->uids
         ));
     }
 

@@ -7,11 +7,18 @@ use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Modules\Company\Database\Factories\DivisionFactory;
+
 // use Modules\Company\Database\factories\DivisionFactory;
 
 class Division extends Model
 {
     use HasFactory, ModelCreationObserver, ModelObserver;
+
+    protected static function newFactory()
+    {
+        return DivisionFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable.

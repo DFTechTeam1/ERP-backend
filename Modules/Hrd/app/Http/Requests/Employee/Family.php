@@ -12,11 +12,14 @@ class Family extends FormRequest
     public function rules(): array
     {
         return [
-            'id_number' => 'required',
             'name' => 'required',
-            'date_of_birth' => 'nullable',
-            'relation' => 'required',
-            'gender' => 'nullable',
+            'relationship' => 'required',
+            'address' => 'nullable',
+            'id_number' => 'nullable',
+            'gender' => 'required',
+            'date_of_birth' => 'required',
+            'religion' => 'nullable',
+            'martial_status' => 'nullable',
             'job' => 'nullable',
         ];
     }

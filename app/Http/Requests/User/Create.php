@@ -33,7 +33,7 @@ class Create extends FormRequest
             ],
             'employee_id' => 'required_if:is_external_user,0',
             'password' => 'required',
-            'role' => 'required',
+            'role_id' => 'required',
         ];
     }
 

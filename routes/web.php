@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\Employee\Religion;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskStatus;
+use App\Http\Controllers\Api\InteractiveController;
+use App\Http\Controllers\LandingPageController;
 use App\Jobs\PostNotifyCompleteProjectJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Services\Telegram\TelegramService;
@@ -12,23 +15,11 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Modules\Hrd\Services\PerformanceReportService;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Services\TestingService;
 
-Route::get('/', function () {
-    $service = new PerformanceReportService();
-    return $service->importEmployeePoint([
-        'employee_uids' => ['d0d9ffab-bf58-488b-87bb-a8c9c2fb2978'],
-        'all_employee' => 1,
-        'start_date' => '2024-12-25',
-        'end_date' => '2025-01-24'
-    ]);
-    return view('landing');
-});
+Route::get('/', [LandingPageController::class, 'index']);
 
-Route::get('interactive/download', function (\Illuminate\Support\Facades\Request$request) {
-    $date = date('Y-m-d');
-    $deviceId = request('d');
-    return \Illuminate\Support\Facades\Response::download(public_path("storage/interactive/qr/{$deviceId}/{$date}/" . request('file')));
-});
+Route::get('interactive/download', [InteractiveController::class, 'download']);
 
 Route::get('created', function () {
     $customer = \Modules\Production\Models\Project::find(232);

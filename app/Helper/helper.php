@@ -15,6 +15,13 @@ use Intervention\Image\Laravel\Facades\Image;
 use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
+if (!function_exists('isLocal')) {
+    function isLocal()
+    {
+        return App::environment('local') && config('app.url') == 'https://backend.test';
+    }
+}
+
 if (!function_exists('setEmailConfiguration')) {
     function setEmailConfiguration()
     {
@@ -50,6 +57,7 @@ if (!function_exists('successResponse')) {
 
 if (!function_exists('errorMessage')) {
     function errorMessage($message) {
+        Log::debug("Check error", [!$message instanceof Throwable]);
         $arr = ['App\Exceptions\TemplateNotValid'];
 
         if ($message instanceof Throwable) {
@@ -69,7 +77,7 @@ if (!function_exists('errorMessage')) {
             if (in_array(get_class($message), $outputFiles)) {
                 $out = $message->getMessage();
             } else {
-                if (config('app.env') == 'local') {
+                if (config('app.env') == 'local' || config('app.env') == 'testing') {
                     $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
                     $messageError = $out;
                 } else {
@@ -188,7 +196,7 @@ if (!function_exists('getIdFromUid')) {
             ->where("uid", $uid)
             ->first();
 
-        return $data->id;
+        return $data ? $data->id : 0;
     }
 }
 
@@ -298,30 +306,34 @@ if (!function_exists('uploadImageandCompress')) {
         $image,
         string $extTarget = 'webp',
     ) {
-        $path = storage_path("app/public/{$path}");
-
-        $ext = $image->getClientOriginalExtension();
-        $originalName = 'image';
-        $datetime = date('YmdHis');
-
-        $name = "{$originalName}_{$datetime}.{$extTarget}";
-
-        // create file
-        if (!is_dir($path)) {
-            File::makeDirectory($path, 0777, true);
+        try {
+            $path = storage_path("app/public/{$path}");
+    
+            $ext = $image->getClientOriginalExtension();
+            $originalName = 'image';
+            $datetime = strtotime('now') . random_int(1,8);
+    
+            $name = "{$originalName}_{$datetime}.{$extTarget}";
+    
+            // create file
+            if (!is_dir($path)) {
+                File::makeDirectory($path, 0777, true);
+            }
+    
+            $filepath = $path . '/' . $name;
+    
+    //        Image::read($image)->toWebp($compressValue)->save($filepath);
+    
+            $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
+            $newImage = $imageManager->read($image);
+            $newImage->scale(height: 400);
+            $newImage->toWebp(60);
+            $newImage->save($filepath);
+    
+            return $name;
+        } catch (\Throwable $th) {
+            return false;
         }
-
-        $filepath = $path . '/' . $name;
-
-//        Image::read($image)->toWebp($compressValue)->save($filepath);
-
-        $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
-        $newImage = $imageManager->read($image);
-        $newImage->scale(height: 400);
-        $newImage->toWebp(60);
-        $newImage->save($filepath);
-
-        return $name;
     }
 }
 
@@ -350,9 +362,8 @@ if (!function_exists('deleteFolder')) {
 }
 
 if (!function_exists('generateRandomPassword')) {
-    function generateRandomPassword()
+    function generateRandomPassword($length = 10)
     {
-        $length = 10;
         $char = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $charLen = strlen($char);
         $password = '';
@@ -638,27 +649,29 @@ if (!function_exists('parseUserAgent')) {
         $os = 'Unknown';
 
         // Detect browser
-        if (strpos($userAgent, 'Firefox') !== false) {
-            $browser = 'Firefox';
-        } elseif (strpos($userAgent, 'Chrome') !== false) {
-            $browser = 'Chrome';
-        } elseif (strpos($userAgent, 'Safari') !== false) {
-            $browser = 'Safari';
-        } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
-            $browser = 'Internet Explorer';
-        }
-
-        // Detect OS
-        if (strpos($userAgent, 'Windows NT') !== false) {
-            $os = 'Windows';
-        } elseif (strpos($userAgent, 'Mac OS X') !== false) {
-            $os = 'Mac OS';
-        } elseif (strpos($userAgent, 'Linux') !== false) {
-            $os = 'Linux';
-        } elseif (strpos($userAgent, 'Android') !== false) {
-            $os = 'Android';
-        } elseif (strpos($userAgent, 'iPhone') !== false || strpos($userAgent, 'iPad') !== false) {
-            $os = 'iOS';
+        if (!App::runningInConsole()) {
+            if (strpos($userAgent, 'Firefox') !== false) {
+                $browser = 'Firefox';
+            } elseif (strpos($userAgent, 'Chrome') !== false) {
+                $browser = 'Chrome';
+            } elseif (strpos($userAgent, 'Safari') !== false) {
+                $browser = 'Safari';
+            } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
+                $browser = 'Internet Explorer';
+            }
+    
+            // Detect OS
+            if (strpos($userAgent, 'Windows NT') !== false) {
+                $os = 'Windows';
+            } elseif (strpos($userAgent, 'Mac OS X') !== false) {
+                $os = 'Mac OS';
+            } elseif (strpos($userAgent, 'Linux') !== false) {
+                $os = 'Linux';
+            } elseif (strpos($userAgent, 'Android') !== false) {
+                $os = 'Android';
+            } elseif (strpos($userAgent, 'iPhone') !== false || strpos($userAgent, 'iPad') !== false) {
+                $os = 'iOS';
+            }
         }
 
         return ['browser' => $browser, 'os' => $os];
@@ -667,22 +680,25 @@ if (!function_exists('parseUserAgent')) {
 
 if (!function_exists('getUserAgentInfo')) {
     function getUserAgentInfo() {
-        return $_SERVER['HTTP_USER_AGENT'];
+        return App::runningInConsole() ? '' : $_SERVER['HTTP_USER_AGENT'];
     }
 }
 
 if (!function_exists('getClientIp')) {
     function getClientIp() {
+        
         $ip = '';
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            // Check for IP from shared internet
-            $ip = $_SERVER['HTTP_CLIENT_IP'];
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            // Check for IP from a proxy
-            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-        } else {
-            // Fallback to REMOTE_ADDR
-            $ip = $_SERVER['REMOTE_ADDR'];
+        if (!App::runningInConsole()) {
+            if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+                // Check for IP from shared internet
+                $ip = $_SERVER['HTTP_CLIENT_IP'];
+            } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                // Check for IP from a proxy
+                $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+            } else {
+                // Fallback to REMOTE_ADDR
+                $ip = $_SERVER['REMOTE_ADDR'];
+            }
         }
         return $ip;
     }
@@ -740,6 +756,10 @@ if (!function_exists('isAssistantPMRole')) {
 
 if (!function_exists('formatSearchConditions')) {
     function formatSearchConditions(array $filters, string $where) {
+        if (empty($where)) {
+            $where = '';
+        }
+
         foreach ($filters as $data) {
             $value = $data['value'];
 
@@ -771,7 +791,7 @@ if (!function_exists('formatSearchConditions')) {
             $where .= $data['field'] . $condition . $value . ' and ';
         }
         $where = rtrim($where, " and");
-
+        
         return $where;
     }
 }

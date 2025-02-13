@@ -13,10 +13,11 @@ class UpdateIdentity extends FormRequest
     {
         return [
             'id_number' => 'required',
-            'npwp_number' => 'nullable',
-            'bpjs_ketenagakerjaan_number' => 'nullable',
+            // 'npwp_number' => 'nullable',
+            // 'bpjs_ketenagakerjaan_number' => 'nullable',
             'address' => 'required',
             'current_address' => 'required_if:is_residence_same,1',
+            'is_residence_same' => 'nullable',
         ];
     }
 

@@ -11,6 +11,7 @@ use App\Http\Requests\Auth\Login;
 use App\Models\User;
 use App\Repository\UserLoginHistoryRepository;
 use App\Services\EncryptionService;
+use App\Services\UserService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -25,11 +26,19 @@ class LoginController extends Controller
 
     private $loginHistoryRepo;
 
-    public function __construct()
-    {
-        $this->service = new EncryptionService;
+    private $userService;
 
-        $this->loginHistoryRepo = new UserLoginHistoryRepository();
+    public function __construct(
+        UserService $userService,
+        EncryptionService $encryptionService,
+        UserLoginHistoryRepository $userLoginHistoryRepo
+    )
+    {
+        $this->service = $encryptionService;
+
+        $this->userService = $userService;
+
+        $this->loginHistoryRepo = $userLoginHistoryRepo;
     }
 
     /**
@@ -71,142 +80,7 @@ class LoginController extends Controller
         try {
             $validated = $request->validated();
 
-            $user = User::where('email', $validated['email'])
-                ->with(['employee.position', 'roles'])
-                ->first();
-
-            if (!$user) {
-                throw new UserNotFound(__('global.userNotFound'));
-            }
-
-            if (!$user->email_verified_at) {
-                throw new UserNotFound(__('global.userNotActive'));
-            }
-
-            if (!Hash::check($validated['password'], $user->password)) {
-                throw new UserNotFound(__('global.credentialDoesNotMatch'));
-            }
-
-            if (!isset($user->getRoleNames()[0])) {
-                throw new \App\Exceptions\DoNotHaveAppPermission();
-            }
-
-            $role = $user->getRoleNames()[0];
-            $roles = $user->roles;
-
-            $roleId = null;
-            if (count($roles) > 0) {
-                $roleId = $roles[0]->id;
-            }
-            $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
-
-            $expireTime = now()->addHours(24);
-            if ($request->remember_me) {
-                $expireTime = now()->addDays(30);
-            }
-
-            $token = $user->createToken($role, $permissions, $expireTime);
-
-            $menuService = new \App\Services\MenuService();
-            $menus = $menuService->getMenus($user->getAllPermissions());
-
-            $isProjectManager = false;
-
-            $isEmployee = false;
-
-            $isDirector = false;
-
-            $isSuperUser = false;
-
-            $positionAsDirectors = json_decode(getSettingByKey('position_as_directors'), true);
-
-            $positionAsProjectManager = json_decode(getSettingByKey('position_as_project_manager'), true);
-
-            $superUserRole = getSettingByKey('super_user_role');
-
-            if ($roleId == $superUserRole) {
-                $isSuperUser = true;
-            }
-
-            if (
-                ($positionAsDirectors) &&
-                ($user->employee) &&
-                (in_array($user->employee->position->uid, $positionAsDirectors))
-            ) {
-                $isDirector = true;
-            }
-
-            if (
-                ($positionAsProjectManager) &&
-                ($user->employee) &&
-                (in_array($user->employee->position->uid, $positionAsProjectManager))
-            ) {
-                $isProjectManager = true;
-            }
-
-            $emailShow = trim(
-                strip_tags(
-                    html_entity_decode(
-                        $user->email, ENT_QUOTES, 'UTF-8')
-                    )
-                );
-            if (strlen($user->email) > 15) {
-                $emailShow = mb_substr($emailShow, 0, 15) . ' ...';
-            } else {
-                $emailShow = $user->email;
-            }
-            $user['email_show'] = $emailShow;
-
-            $employee = \Modules\Hrd\Models\Employee::select("id")
-                ->find($user->employee_id);
-
-            $notifications = [];
-            if ($employee) {
-                $notifications = formatNotifications($employee->unreadNotifications->toArray());
-            }
-
-            $userIdEncode = Hashids::encode($user->id);
-
-            $payload = [
-                'token' => $token->plainTextToken,
-                'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
-                'user' => $user,
-                'permissions' => $permissions,
-                'role' => $role,
-                'menus' => $menus['data'],
-                'role_id' => $roleId,
-                'app_name' => getSettingByKey('app_name'),
-                'board_start_calcualted' => getSettingByKey('board_start_calcualted'),
-                'is_director' => $isDirector,
-                'is_project_manager' => $isProjectManager,
-                'is_super_user' => $isSuperUser,
-                'notifications' => $notifications,
-                'encrypted_user_id' => $userIdEncode,
-            ];
-
-            // this data is used when changing to other subdomains
-            UserEncryptedToken::updateOrCreate(
-                ['user_id' => $user->id],
-                ['data' => json_encode($payload)]
-            );
-
-            $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
-
-            // store histories
-            $this->loginHistoryRepo->store([
-                'user_id' => $user->id,
-                'ip' => getClientIp(),
-                'browser' => parseUserAgent(getUserAgentInfo())['browser'],
-                'login_at' => Carbon::now(),
-            ]);
-
-            // store to cache for user device information
-            \Illuminate\Support\Facades\Cache::rememberForever('userLogin' . $user->id, function () {
-                return [
-                    'ip' => getClientIp(),
-                    'browser' => parseUserAgent(getUserAgentInfo()),
-                ];
-            });
+            $encryptedPayload = $this->userService->login($validated);
 
             // TODO: further development
             // $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
@@ -217,7 +91,6 @@ class LoginController extends Controller
                     false,
                     [
                         'token' => $encryptedPayload,
-                        $userIdEncode
                     ],
                 ),
             );
@@ -362,7 +235,13 @@ class LoginController extends Controller
         }
     }
 
-    public function changePassword(Request $request)
+    /**
+     * Change password for authenticated user only
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function changePassword(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
             $user = auth()->user();
@@ -374,10 +253,27 @@ class LoginController extends Controller
                 generalResponse(
                     'success',
                     false,
+                    [
+                        'user' => $user
+                    ]
                 )
             );
         } catch (\Throwable $e) {
             return apiResponse(errorResponse($e));
         }
+    }
+
+    /**
+     * Change password for selected user
+     *
+     * @param Request $request
+     * @param string $userUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function userChangePassword(Request $request, string $userUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse(
+            $this->userService->userChangePassword($request->all(), $userUid)
+        );
     }
 }

@@ -23,6 +23,42 @@ enum Religion: string
             return self::Hindu;
         } else if ($data == 'Budha') {
             return self::Budha;
+        } else {
+            return '-';
         }
     }
+
+    public static function getReligion(string $code)
+    {
+        switch ($code) {
+            case self::Islam->value:
+                $output = 'Islam';
+                break;
+
+            case self::Kristen->value:
+                $output = 'Kristen';
+                break;
+
+            case self::Khatolik->value:
+                $output = 'Khatolik';
+                break;
+
+            case self::Hindu->value:
+                $output = 'Hindu';
+                break;
+
+            case self::Budha->value:
+                $output = 'Budha';
+                break;
+
+            case self::Konghucu->value:
+                $output = 'Konghucu';
+                break;
+            
+            default:
+                $output = '-';
+                break;
+        }
+
+        return $output; }
 }

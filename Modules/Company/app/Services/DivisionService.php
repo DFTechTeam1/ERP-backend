@@ -43,20 +43,24 @@ class DivisionService
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
             $search = request('search');
-            if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+
+            if (!empty($search)) { // array
+                $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $order = '';
-            $sortBy = request('sortBy');
-            if(!empty($sortBy)) {
-                foreach ($sortBy as $item) {
-                    if($item['key'] == 'parent_division.name') {
-                        $item['key'] = 'parent_id';
+            $sort = "name asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'name') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
+                    } else {
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
                     }
-                    $orderBy[] = $item['key']." ".$item['order'];
                 }
-                $order = implode(', ', $orderBy);
+
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
             }
 
 
@@ -66,7 +70,8 @@ class DivisionService
                 $relation,
                 $itemsPerPage,
                 $page,
-                $order
+                [],
+                $sort
             )->toArray();
 
             $paginated = [];
@@ -95,6 +100,17 @@ class DivisionService
                 Code::BadRequest->value,
             );
         }
+    }
+
+    public function allDivisions()
+    {
+        $data = $this->repo->list('uid as value, name as title');
+
+        return generalResponse(
+            'success',
+            false,
+            $data->toArray()
+        );
     }
 
     /**
@@ -244,7 +260,7 @@ class DivisionService
             $errorDivisionStatus = false;
 
             foreach ($uids as $uid) {
-                $data = $this->repo->show($uid,'id,name,parent_id',['childDivisions:id,parent_id','positions:id,division_id']);
+                $data = $this->repo->show($uid['uid'],'id,name,parent_id',['childDivisions:id,parent_id','positions:id,division_id']);
                 if($data->childDivisions->count() > 0 || $data->positions->count() > 0) {
                     $errorDivisionName[] = $data->name;
                     $errorDivisionStatus = true;
