@@ -943,6 +943,16 @@ Table "entertainment_task_songs" {
   "updated_at" timestamp
 }
 
+Table "entertainment_task_song_revises" {
+  "id" bigint [pk, increment]
+  "project_song_list_id" bigint [not null]
+  "entertainment_task_song_id" bigint [not null]
+  "reason" varchar [not null]
+  "images" longtext
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
 Table "entertainment_task_song_results" {
   "id" bigint [pk, not null, increment]
   "entertainment_task_song_id" bigint [not null]

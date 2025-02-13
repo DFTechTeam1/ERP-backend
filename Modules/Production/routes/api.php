@@ -53,6 +53,7 @@ Route::middleware(['auth:sanctum'])
     Route::put('project/{projectUid}/song/{songUid}/confirmEditSong', [ProjectController::class, 'confirmEditSong'])->name('projects.confirmEditSong');
     Route::get('project/{projectUid}/song/{songUid}/approve', [ProjectController::class, 'startWorkOnSong'])->name('projects.startWorkOnSong');
     Route::get('project/{projectUid}/song/{songUid}/approveUpper', [ProjectController::class, 'songApproveWork'])->name('projects.songApproveWork');
+    Route::post('project/{projectUid}/song/{songUid}/revise', [ProjectController::class, 'songRevise'])->name('projects.songRevise');
     Route::put('project/{projectUid}/song/{songUid}/confirmDeleteSong', [ProjectController::class, 'confirmDeleteSong'])->name('projects.confirmDeleteSong');
     Route::post('project/{projectUid}/song/report/{songUid}', [ProjectController::class, 'songReportAsDone'])->name('projects.songReportAsDone');
     Route::post('project/{projectUid}/song/distribute/{songUid}', [ProjectController::class, 'distributeSong'])->name('projects.distributeSong');

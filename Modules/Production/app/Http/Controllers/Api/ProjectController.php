@@ -28,6 +28,7 @@ use Modules\Production\Http\Requests\Project\DistributeSong;
 use Modules\Production\Http\Requests\Project\RejectEditSong;
 use Modules\Production\Http\Requests\Project\RequestSong;
 use Modules\Production\Http\Requests\Project\SongReportAsDone;
+use Modules\Production\Http\Requests\Project\SongRevise;
 use Modules\Production\Http\Requests\Project\SubtituteWorkerSong;
 use Modules\Production\Http\Requests\Project\UpdateSong;
 use Modules\Production\Services\TestingService;
@@ -862,6 +863,20 @@ class ProjectController extends Controller
     public function rejectEditSong(RejectEditSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->rejectEditSong($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Revise JB
+     *
+     * @param SongRevise $request
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function songRevise(SongRevise $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->songRevise($request->validated(), $projectUid, $songUid));
     }
 }
 

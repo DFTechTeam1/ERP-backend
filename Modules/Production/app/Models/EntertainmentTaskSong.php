@@ -52,6 +52,11 @@ class EntertainmentTaskSong extends Model
         return $this->belongsTo(Project::class, 'project_id');
     }
 
+    public function revises(): HasMany
+    {
+        return $this->hasMany(EntertainmentTaskSongRevise::class, 'entertainment_task_song_id');
+    }
+
     public function results(): HasMany
     {
         return $this->hasMany(EntertainmentTaskSongResult::class, 'task_id');

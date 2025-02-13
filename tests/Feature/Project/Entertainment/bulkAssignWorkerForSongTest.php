@@ -125,4 +125,9 @@ class bulkAssignWorkerForSongTest extends TestCase
         $this->assertArrayHasKey('data', $response);
         $this->assertArrayHasKey('full_detail', $response['data']);
     }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+    }
 }

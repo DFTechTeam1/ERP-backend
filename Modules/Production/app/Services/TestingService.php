@@ -82,6 +82,14 @@ class TestingService {
         $page = request('page') ?? 1;
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+        $user = auth()->user();
+        if ($user->hasRole(BaseRole::Entertainment->value)) {
+            $whereHas[] = [
+                'relation' => 'entertainmentTaskSong',
+                'query' => "employee_id = " . $user->load('employee')->employee->id
+            ];
+        }
         
         $sorts = '';
         if (!empty(request('sortBy'))) {
@@ -344,6 +352,7 @@ class TestingService {
                 }
             }
 
+            // override logic when user is entertianment
             if (
                 in_array(BaseRole::Entertainment->value, $roleNames) ||
                 in_array(BaseRole::ProjectManagerEntertainment->value, $roleNames)

@@ -93,7 +93,7 @@ class UpdateSongList
         $item['need_worker_approval'] = !$item->task ?
             false :
             (
-                $item->task->status == TaskSongStatus::Active->value && ($item->task->employee->user_id == $this->user->id || $admin || $director || $entertainmentPm) ?
+                $item->task->status == TaskSongStatus::Active->value || $item->task->status == TaskSongStatus::Revise->value && ($item->task->employee->user_id == $this->user->id || $admin || $director || $entertainmentPm) ?
                 true :
                 false
             );

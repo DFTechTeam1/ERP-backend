@@ -18,6 +18,7 @@ use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultImageRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
+use Modules\Production\Repository\EntertainmentTaskSongReviseRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -78,7 +79,8 @@ trait HasProjectConstructor
         $detailProjectAction = null,
         $detailCacheAction = null,
         $entertainmentTaskSongResultRepo = null,
-        $entertainmentTaskSongResultImageRepo = null
+        $entertainmentTaskSongResultImageRepo = null,
+        $entertainmentTaskSongRevise = null
     )
     {
         $this->projectService = new ProjectService(
@@ -115,7 +117,8 @@ trait HasProjectConstructor
             $detailProjectAction ? $detailProjectAction : new DetailProject,
             $detailCacheAction ? $detailCacheAction : new DetailCache,
             $entertainmentTaskSongResultRepo ? $entertainmentTaskSongResultRepo : new EntertainmentTaskSongResultRepository,
-            $entertainmentTaskSongResultImageRepo ? $entertainmentTaskSongResultImageRepo : new EntertainmentTaskSongResultImageRepository
+            $entertainmentTaskSongResultImageRepo ? $entertainmentTaskSongResultImageRepo : new EntertainmentTaskSongResultImageRepository,
+            $entertainmentTaskSongRevise ? $entertainmentTaskSongRevise : new EntertainmentTaskSongReviseRepository
         );
     }
 }
