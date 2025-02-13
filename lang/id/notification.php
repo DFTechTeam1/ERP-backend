@@ -66,5 +66,8 @@ return [
     "songAlreadyApproved" => "Tugas di musik ini sudah di setujui",
     "taskSongHasBeenApproved" => "Tugas ini berhasil di setujui",
     "failedToAproveTask" => "Gagal menyetujui tugas",
-    "entertainmentPMShouldCheckThisFirst" => "PM Entertainment harus menyetujui pekerjaan ini dahulu"
+    "entertainmentPMShouldCheckThisFirst" => "PM Entertainment harus menyetujui pekerjaan ini dahulu",
+    "successReviseSong" => "Berhasil melakukan revisi pada JB",
+    "songAlreadyOnRevise" => "Tugas ini sudah dalam proses pengerjaan revisi",
+    "songCannotBeRevise" => "Musik belum bisa di revisi untuk saat ini"
 ];

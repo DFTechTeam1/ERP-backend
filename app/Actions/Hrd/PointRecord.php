@@ -25,13 +25,20 @@ class PointRecord
         $employeeId = gettype($employeeIdentifier) === 'string' ? $generalService->getIdFromUid($employeeIdentifier, new Employee()) : $employeeIdentifier;
         $projectId = gettype($projectIdentifier) === 'string' ? $generalService->getIdFromUid($projectIdentifier, new Project()) : $projectIdentifier;
 
-        EmployeePoint::create([
-            'employee_id' => $employeeId,
-            'project_id' => $projectId,
-            'point' => $point,
-            'additional_point' => $additionalPoint,
-            'task_type' => $source,
-            'task_id' => $taskId
-        ]);
+        // check current data to prevent double input
+        $check = EmployeePoint::select('id')
+            ->whereRaw("employee_id = {$employeeId} AND project_id = {$projectId} AND task_type = '{$source}' AND task_id = {$taskId}")
+            ->first();
+
+        if (!$check) {
+            EmployeePoint::create([
+                'employee_id' => $employeeId,
+                'project_id' => $projectId,
+                'point' => $point,
+                'additional_point' => $additionalPoint,
+                'task_type' => $source,
+                'task_id' => $taskId
+            ]);
+        }
     }
 }

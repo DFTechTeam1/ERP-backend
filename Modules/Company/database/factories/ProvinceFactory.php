@@ -18,11 +18,7 @@ class ProvinceFactory extends Factory
      * Define the model's default state.
      */
     public function definition(): array
-    {
-        if (self::$sequence > 99) {
-            self::$sequence = 1;
-        }
-        
+    {   
         $code = self::$sequence++;
 
         return [

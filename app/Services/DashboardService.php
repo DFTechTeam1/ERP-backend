@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\System\BaseRole;
 use DateTime;
 use Carbon\Carbon;
 
@@ -526,6 +527,17 @@ class DashboardService {
     public function getProjectSong(): array
     {
         try {
+            $user = auth()->user();
+
+            $whereHas = [];
+
+            if ($user->hasRole(BaseRole::Entertainment->value)) {
+                $whereHas[] = [
+                    'relation' => 'entertainmentTaskSong',
+                    'query' => "employee_id = " . $user->load('employee')->employee->id
+                ];
+            }
+
             $projects = $this->projectRepo->list(
                 select: 'id,name,project_date,uid',
                 where: "project_date >= '" . date('Y-m-d') . "'",
@@ -533,6 +545,7 @@ class DashboardService {
                     'songs:id,project_id,name',
                     'songs.task:id,project_song_list_id,employee_id'
                 ],
+                whereHas: $whereHas,
                 limit: 50
             );
 
