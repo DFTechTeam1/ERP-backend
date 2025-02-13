@@ -58,7 +58,9 @@ class UserRepository {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $orderBy = ''
     )
     {
         $query = $this->model->query();
@@ -73,8 +75,10 @@ class UserRepository {
             $query->with($relation);
         }
 
-        $query->orderBy('updated_at', 'DESC');
-        
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
+        }
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -112,20 +116,24 @@ class UserRepository {
             $key = $this->key;
         }
 
-        return $this->model->whereIn('uid', $ids)->delete();
+        return $this->model->whereIn($key, $ids)->delete();
     }
 
-    public function detail(string $id = '', string $select = '*', string $where = '')
+    public function detail(string $id = '', string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
+        if (!empty($relation)) {
+            $query->with($relation);
+        }
+
         if (!empty($where)) {
             $query->whereRaw($where);
         }
 
-        if (!empty($id)) {
+        if (!empty($id) && empty($where)) {
             $query->where('uid', $id);
         }
 

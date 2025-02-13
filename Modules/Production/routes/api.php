@@ -18,7 +18,9 @@ use Modules\Production\Http\Controllers\ProductionController;
 
 Route::get('production/project/{projectUid}/downloadReferences', [ProjectController::class, 'downloadReferences']);
 
-Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
+Route::middleware(['auth:sanctum'])
+    ->name('production.')
+    ->prefix('production')->group(function () {
     Route::get('eventTypes', [ProjectController::class, 'getEventTypes']);
     Route::get('classList', [ProjectController::class, 'getClassList']);
     Route::get('status', [ProjectController::class, 'getProjectStatus']);
@@ -27,7 +29,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
 
     Route::post('project', [ProjectController::class, 'store']);
-    Route::get('project', [ProjectController::class, 'index']);
+    Route::get('project', [ProjectController::class, 'index'])->name('project-list');
     Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
     Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
     Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
@@ -42,6 +44,26 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
 
+    // songs
+    Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');
+    Route::post('project/{projectUid}/bulkAssignWorkerForSong', [ProjectController::class, 'bulkAssignWorkerForSong'])->name('projects.bulkAssignWorkerForSong');
+    Route::get('project/{projectUid}/song/{songUid}', [ProjectController::class, 'detailSong'])->name('projects.detailSongs');
+    Route::put('project/{projectUid}/song/{songUid}', [ProjectController::class, 'updateSong'])->name('projects.updateSongs');
+    Route::delete('project/{projectUid}/song/{songUid}', [ProjectController::class, 'deleteSong'])->name('projects.deleteSongs');
+    Route::put('project/{projectUid}/song/{songUid}/confirmEditSong', [ProjectController::class, 'confirmEditSong'])->name('projects.confirmEditSong');
+    Route::get('project/{projectUid}/song/{songUid}/approve', [ProjectController::class, 'startWorkOnSong'])->name('projects.startWorkOnSong');
+    Route::get('project/{projectUid}/song/{songUid}/approveUpper', [ProjectController::class, 'songApproveWork'])->name('projects.songApproveWork');
+    Route::post('project/{projectUid}/song/{songUid}/revise', [ProjectController::class, 'songRevise'])->name('projects.songRevise');
+    Route::put('project/{projectUid}/song/{songUid}/confirmDeleteSong', [ProjectController::class, 'confirmDeleteSong'])->name('projects.confirmDeleteSong');
+    Route::post('project/{projectUid}/song/report/{songUid}', [ProjectController::class, 'songReportAsDone'])->name('projects.songReportAsDone');
+    Route::post('project/{projectUid}/song/distribute/{songUid}', [ProjectController::class, 'distributeSong'])->name('projects.distributeSong');
+    Route::post('project/{projectUid}/song/reject/{songUid}', [ProjectController::class, 'rejectEditSong'])->name('projects.rejectEditSong');
+    Route::post('project/{projectUid}/song/subtituteSongPic/{songUid}', [ProjectController::class, 'subtituteSongPic'])->name('projects.subtituteSongPic');
+
+    // entertainment
+    Route::get('/project/{projectUid}/entertainment/listMember', [ProjectController::class, 'entertainmentListMember'])->name("projecjts.entertainmentListMember");
+    Route::get('/project/{projectUid}/entertainment/workload', [ProjectController::class, 'entertainmentMemberWorkload'])->name("projecjts.entertainmentMemberWorkload");
+
     Route::get('project/{projectUid}/statusses', [ProjectController::class, 'getProjectStatusses']);
     Route::get('project/{projectUid}/prepareFinalCheck', [ProjectController::class, 'prepareFinalCheck']);
     Route::get('project/scheduler/{projectUid}', [ProjectController::class, 'getAllSchedulerProjects']);
@@ -51,7 +73,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::get('project/{projectUid}/getPicForSubtitute', [ProjectController::class, 'getPicForSubtitute']);
     Route::get('project/{projectUid}/readyToGo', [ProjectController::class, 'readyToGo']);
     Route::delete('project/{projectUid}/removeAllVJ', [ProjectController::class, 'removeAllVJ']);
-    Route::post('project/{id}/references', [ProjectController::class, 'storeReferences']);
+    Route::post('project/{id}/references', [ProjectController::class, 'storeReferences'])->name('store-reference');
     Route::post('project/{projectUid}/completeProject', [ProjectController::class, 'completeProject']);
     Route::post('project/{projectUid}/assignVj', [ProjectController::class, 'assignVJ']);
     Route::get('project/getTargetPicsAndTaskList/{projectUid}', [ProjectController::class, 'getTargetPicsAndTaskList']); // get pic list for request team member (exclude logged accont)
@@ -61,7 +83,7 @@ Route::middleware(['auth:sanctum'])->prefix('production')->group(function () {
     Route::post('project/{projectUid}/changeStatus', [ProjectController::class, 'changeStatus']);
     Route::get('project/{id}/getBoards', [ProjectController::class, 'getProjectBoards']);
     Route::get('project/{id}/getProjectTeams', [ProjectController::class, 'getProjectTeams']);
-    Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask']);
+    Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask'])->name('storeTask');
     Route::post('project/{taskId}/description', [ProjectController::class, 'storeDescription']);
     Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
     Route::post('project/{taskId}/manualMoveBoard', [ProjectController::class, 'manualMoveBoard']);

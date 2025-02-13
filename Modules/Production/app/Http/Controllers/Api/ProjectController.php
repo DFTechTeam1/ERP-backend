@@ -3,9 +3,11 @@
 namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\UserRoleManagement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
+use Modules\Production\Http\Requests\Project\BulkAssignSong;
 use Modules\Production\Http\Requests\Project\HoldTask;
 use Modules\Production\Http\Requests\Project\LoanTeamMember;
 use Modules\Production\Http\Requests\Project\ChangeStatus;
@@ -22,14 +24,29 @@ use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Http\Requests\Project\CompleteProject;
+use Modules\Production\Http\Requests\Project\DistributeSong;
+use Modules\Production\Http\Requests\Project\RejectEditSong;
+use Modules\Production\Http\Requests\Project\RequestSong;
+use Modules\Production\Http\Requests\Project\SongReportAsDone;
+use Modules\Production\Http\Requests\Project\SongRevise;
+use Modules\Production\Http\Requests\Project\SubtituteWorkerSong;
+use Modules\Production\Http\Requests\Project\UpdateSong;
+use Modules\Production\Services\TestingService;
 
 class ProjectController extends Controller
 {
     private $service;
 
-    public function __construct()
+    private $testingService;
+
+    public function __construct(
+        ProjectService $projectService,
+        TestingService $testingService
+    )
     {
-        $this->service = new ProjectService();
+        $this->service = $projectService;
+
+        $this->testingService = $testingService;
     }
 
     /**
@@ -37,7 +54,7 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        return apiResponse($this->service->list(
+        return apiResponse($this->testingService->list(
             'id,uid,name,project_date,venue,event_type,collaboration,note,marketing_id,status,classification,led_area,led_detail,project_class_id',
             '',
             [
@@ -656,6 +673,210 @@ class ProjectController extends Controller
     public function getEmployeeTaskList(string $projectUid, int $employeeId)
     {
         return apiResponse($this->service->getEmployeeTaskList($projectUid, $employeeId));
+    }
+
+    /**
+     * Store song for selected project
+     *
+     * @param RequestSong $request
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeSongs(RequestSong $request, string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->storeSongs($request->validated(), $projectUid));
+    }
+
+    /**
+     * Change worker song
+     *
+     * @param SubtituteWorkerSong $request
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function subtituteSongPic(SubtituteWorkerSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->subtituteSongPic($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Start work on selected song task
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function startWorkOnSong(string $projectUid, string $songUid)
+    {
+        return apiResponse($this->service->startWorkOnSong($projectUid, $songUid));
+    }
+
+    /**
+     * Function to bulk assign
+     *
+     * @param BulkAssignSong $request
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function bulkAssignWorkerForSong(BulkAssignSong $request, string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->bulkAssignWorkerForSong($request->validated(), $projectUid));
+    }
+
+    /**
+     * Function to get detail of song
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function detailSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->detailSong($projectUid, $songUid));
+    }
+
+    /**
+     * Function to update song
+     *
+     * @param UpdateSong $request
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateSong(UpdateSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->updateSong($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Store the result of work
+     *
+     * @param SongReportAsDone $request
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function songReportAsDone(SongReportAsDone $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->songReportAsDone($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Approve JB by root, PM or director
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function songApproveWork(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->songApproveWork($projectUid, $songUid));
+    }
+
+    /**
+     * Request changes is being approved
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function confirmEditSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->confirmEditSong($projectUid, $songUid));
+    }
+
+    /**
+     * Delete song
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function confirmDeleteSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->confirmDeleteSong($projectUid, $songUid));
+    }
+
+    /**
+     * Function to delete single song
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->deleteSong($projectUid, $songUid));
+    }
+
+    /**
+     * Function get get all entertainment list with the workload
+     * 
+     * @param $projectUid
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function entertainmentListMember(string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->entertainmentListMember($projectUid));
+    }
+
+    /**
+     * Get entertainment wokrload detail
+     *
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function entertainmentMemberWorkload(string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->entertainmentMemberWorkload($projectUid));
+    }
+
+    /**
+     * Distribute song to selected player
+     * One song one player
+     *
+     * @param DistributeSong $request
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function distributeSong(DistributeSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->distributeSong(
+            payload: $request->validated(),
+            projectUid: $projectUid,
+            songUid: $songUid
+        ));
+    }
+
+    /**
+     * Function to reject request edit song
+     * Can be done by PM entertainment
+     *
+     * @param RejectEditSong $request
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function rejectEditSong(RejectEditSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->rejectEditSong($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Revise JB
+     *
+     * @param SongRevise $request
+     * @param string $projectUid
+     * @param string $songUid
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function songRevise(SongRevise $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->songRevise($request->validated(), $projectUid, $songUid));
     }
 }
 

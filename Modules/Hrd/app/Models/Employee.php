@@ -2,8 +2,16 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Enums\Employee\Gender;
+use App\Enums\Employee\LevelStaff;
+use App\Enums\Employee\MartialStatus;
+use App\Enums\Employee\PtkpStatus;
+use App\Enums\Employee\Religion;
+use App\Enums\Employee\SalaryType;
+use App\Enums\Employee\Status;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
+use Database\Factories\Hrd\EmployeeFactory as HrdEmployeeFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,15 +23,46 @@ use Modules\Company\Models\Position;
 use Modules\Hrd\Database\factories\EmployeeFactory;
 use Modules\Inventory\Models\InventoryRequest;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use KodePandai\Indonesia\Models\Village;
 use Modules\Hrd\Observers\EmployeeObserver;
 use Modules\Hrd\Observers\EmployeeObserverObserver;
 use Illuminate\Notifications\Notifiable;
+use Modules\Company\Models\Branch;
+use Modules\Company\Models\IndonesiaCity;
+use Modules\Company\Models\IndonesiaDistrict;
+use Modules\Company\Models\IndonesiaVillage;
+use Modules\Company\Models\Province;
+use Modules\Production\Models\EntertainmentTaskSong;
+use Modules\Production\Models\ProjectTaskPic;
 
 // #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
 {
     use HasFactory, ModelObserver, ModelCreationObserver, SoftDeletes, Notifiable;
+
+    protected static function newFactory()
+    {
+        return HrdEmployeeFactory::new();
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'gender' => Gender::class,
+            'religion' => Religion::class,
+            'status' => Status::class,
+            'martial_status' => MartialStatus::class,
+            'level_staff' => LevelStaff::class,
+            'salary_type' => SalaryType::class,
+            'ptkp_status' => PtkpStatus::class
+        ];
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -31,56 +70,66 @@ class Employee extends Model
     protected $fillable = [
         'uid',
         'name',
-        'employee_id',
         'nickname',
         'email',
+        'date_of_birth',
+        'place_of_birth',
+        'martial_status',
+        'religion',
         'phone',
         'id_number',
-        'religion',
-        'martial_status',
         'address',
+        'current_address',
+        'position_id',
+        'employee_id',
+        'level_staff',
+        'boss_id',
+        'status',
+        'branch_id',
+        'join_date',
+        'gender',
+
+        // new
+        'ptkp_status',
+        'basic_salary',
+        'salary_type',
+
+        'bpjs_ketenagakerjaan_number',
+        'npwp_number',
+
         'province_id',
         'city_id',
         'district_id',
         'village_id',
         'postal_code',
-        'current_address',
         'blood_type',
-        'date_of_birth',
-        'place_of_birth',
-        'dependant',
-        'gender',
         'bank_detail',
-        'relation_contact',
         'education',
         'education_name',
         'education_major',
         'education_year',
-        'position_id',
-        'boss_id',
-        'level_staff',
-        'status',
-        'placement',
-        'join_date',
+        'relation_contact',
         'start_review_probation_date',
-        'probation_status',
         'end_probation_date',
-        'company_name',
+        'probation_status',
         'bpjs_status',
-        'bpjs_ketenagakerjaan_number',
         'bpjs_kesehatan_number',
-        'npwp_number',
         'bpjs_photo',
         'npwp_photo',
         'id_number_photo',
         'kk_photo',
+
+        // 'placement',
+        // 'dependant',
+        // 'company_name',
+        
         'created_by',
         'updated_by',
         'user_id',
         'line_id',
         'end_date',
         'resign_reason',
-        'telegram_chat_id'
+        'telegram_chat_id',
     ];
 
     protected $appends = [
@@ -91,16 +140,55 @@ class Employee extends Model
         'initial',
         'gender_text',
         'martial_text',
+        'blood_type_text',
+        'religion_text'
     ];
+
+    public function bloodTypeText(): Attribute
+    {
+        $out = '-';
+        if (isset($this->attributes['blood_type'])) {
+            $cases = \App\Enums\Employee\BloodType::cases();
+            foreach ($cases as $case) {
+                if ($case->value == $this->attributes['blood_type']) {
+                    $out = $case->value;
+                    break;
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
+
+    public function religionText(): Attribute
+    {
+        $out = '-';
+        if (isset($this->attributes['religion'])) {
+            $cases = \App\Enums\Employee\Religion::cases();
+            foreach ($cases as $case) {
+                if ($case->value == $this->attributes['religion']) {
+                    $out = Religion::getReligion($this->attributes['religion']);
+                    break;
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn() => $out,
+        );
+    }
 
     public function genderText(): Attribute
     {
         $out = '-';
-        if ($this->gender) {
+        if (isset($this->attributes['gender'])) {
             $cases = \App\Enums\Employee\Gender::cases();
             foreach ($cases as $case) {
-                if ($case->value == $this->gender) {
+                if ($case->value == $this->attributes['gender']) {
                     $out = $case->label();
+                    break;
                 }
             }
         }
@@ -113,10 +201,11 @@ class Employee extends Model
     public function martialText(): Attribute
     {
         $out = '-';
-        if ($this->martial_status) {
+
+        if (isset($this->attributes['martial_status'])) {
             $cases = \App\Enums\Employee\MartialStatus::cases();
             foreach ($cases as $case) {
-                if ($case->value == $this->martial_status) {
+                if ($case->value == $this->attributes['martial_status']) {
                     $out = $case->label();
                 }
             }
@@ -149,9 +238,9 @@ class Employee extends Model
 
         $out = '-';
 
-        if ($this->status) {
+        if (isset($this->attributes['status'])) {
             foreach ($statuses as $status) {
-                if ($status->value == $this->status) {
+                if ($status->value == $this->attributes['status']) {
                     $out = $status->label();
                     break;
                 }
@@ -183,6 +272,11 @@ class Employee extends Model
         );
     }
 
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPic::class, 'employee_id', 'id');
+    }
+
     public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class, 'position_id', 'id');
@@ -198,6 +292,11 @@ class Employee extends Model
         return $this->hasOne(\App\Models\User::class, 'employee_id');
     }
 
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
     public function boss()
     {
         return $this->belongsTo(Employee::class, 'boss_id', 'id');
@@ -206,6 +305,36 @@ class Employee extends Model
     public function projects(): HasMany
     {
         return $this->hasMany(\Modules\Production\Models\ProjectPersonInCharge::class, 'pic_id');
+    }
+
+    public function province(): BelongsTo
+    {
+        return $this->belongsTo(Province::class, 'province_id', 'code');
+    }
+
+    public function points(): HasMany
+    {
+        return $this->hasMany(EmployeePoint::class, 'employee_id');
+    }
+
+    public function songTasks(): HasMany
+    {
+        return $this->hasMany(EntertainmentTaskSong::class, 'employee_id');
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(IndonesiaCity::class, 'city_id', 'code');
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(IndonesiaDistrict::class, 'district_id', 'code');
+    }
+
+    public function village(): BelongsTo
+    {
+        return $this->belongsTo(IndonesiaVillage::class, 'village_id', 'code');
     }
 
     public function fullAddress(): Attribute
@@ -268,6 +397,22 @@ class Employee extends Model
     {
         return Attribute::make(
             get: fn (?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
+        );
+    }
+
+    public function bankDetail(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => ($value) ? json_decode($value, true) : [],
+            set: fn($value) => $value ? json_encode($value) : NULL
+        );
+    }
+
+    public function relationContact(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => ($value) ? json_decode($value, true) : [],
+            set: fn($value) => $value ? json_encode($value) : NULL
         );
     }
 

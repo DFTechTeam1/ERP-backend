@@ -90,8 +90,8 @@ class PositionController extends Controller
      */
     public function bulkDelete(Request $request)
     {
-        $data = $request->input('uids');
+        $data = $request->input('ids');
 
-        return $this->positionService->bulkDelete($data, 'uid');
+        return apiResponse($this->positionService->bulkDelete($data, 'uid'));
     }
 }

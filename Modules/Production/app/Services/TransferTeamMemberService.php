@@ -6,6 +6,7 @@ use App\Enums\Production\TransferTeamStatus;
 use Carbon\Carbon;
 use App\Enums\ErrorCode\Code;
 use \Illuminate\Support\Facades\DB;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
 
 class TransferTeamMemberService {
@@ -18,13 +19,17 @@ class TransferTeamMemberService {
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        TransferTeamMemberRepository $repo,
+        EmployeeRepository $employeeRepo,
+        ProjectService $projectService
+    )
     {
-        $this->repo = new TransferTeamMemberRepository;
+        $this->repo = $repo;
 
-        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
+        $this->employeeRepo = $employeeRepo;
 
-        $this->projectService = new \Modules\Production\Services\ProjectService;
+        $this->projectService = $projectService;
     }
 
     /**
@@ -58,9 +63,9 @@ class TransferTeamMemberService {
             $roleId = $roles[0]->id;
 
             $superUserRole = getSettingByKey('super_user_role');
-            $isSuperUserRole = $roleId == $superUserRole;
+            $isSuperUserRole = $superUserRole == $roleId;
 
-            if ($roleId != getSettingByKey('super_user_role')) {
+            if ($roleId != $superUserRole) {
                 if (empty($where)) {
                     $where = "request_to = {$user->employee_id} or requested_by = {$user->employee_id}";
                 } else {
@@ -91,10 +96,10 @@ class TransferTeamMemberService {
 
                 $haveApproveAction = $item->request_to == $user->employee_id ? true : false;
 
-                // override approve action and cancel
+                // override haveApproveAction, haveCancelAction when root
                 if ($isSuperUserRole) {
-                    $haveApproveAction = true;
                     $haveCancelAction = true;
+                    $haveApproveAction = true;
                 }
 
                 $haveAction = $item->status == \App\Enums\Production\TransferTeamStatus::Canceled->value || $item->status == \App\Enums\Production\TransferTeamStatus::Completed->value || $item->status == \App\Enums\Production\TransferTeamStatus::Reject->value || $item->status == \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value ? true : false;

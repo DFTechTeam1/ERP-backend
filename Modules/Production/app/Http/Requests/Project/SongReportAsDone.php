@@ -1,0 +1,29 @@
+<?php
+
+namespace Modules\Production\Http\Requests\Project;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class SongReportAsDone extends FormRequest
+{
+    /**
+     * Get the validation rules that apply to the request.
+     */
+    public function rules(): array
+    {
+        return [
+            'images' => 'array|required',
+            'images.*' => 'required',
+            'nas_path' => 'required',
+            'note' => 'nullable',
+        ];
+    }
+
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+}

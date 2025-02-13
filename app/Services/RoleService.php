@@ -2,8 +2,13 @@
 
 namespace App\Services;
 
+use App\Exceptions\RoleHasRelation as ExceptionsRoleHasRelation;
+use App\Http\Requests\RoleHasRelation;
+use App\Models\User;
 use App\Repository\RoleRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Spatie\Permission\Models\Role;
 
 class RoleService {
     private $repo;
@@ -23,16 +28,37 @@ class RoleService {
         $page = request('page') ?? 1;
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-        $search = request('search');
-
         $where = '';
 
+        $search = request('search');
+
+            if (!empty($search)) { // array
+                $where = formatSearchConditions($search['filters'], $where);
+            }
+
+            $sort = "name asc";
+            if (request('sort')) {
+                $sort = "";
+                foreach (request('sort') as $sortList) {
+                    if ($sortList['field'] == 'name') {
+                        $sort = $sortList['field'] . " {$sortList['order']},";
+                    } else {
+                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                    }
+                }
+
+                $sort = rtrim($sort, ",");
+                $sort = ltrim($sort, ',');
+            }
+
         $paginated = $this->repo->pagination(
-            'id as uid,name',
+            'id as uid,name,is_permanent',
             $where,
             [],
             $itemsPerPage,
-            $page
+            $page,
+            [],
+            $sort
         );
 
         $totalData = $this->repo->list('id', $where)->count();
@@ -161,7 +187,9 @@ class RoleService {
                     'id' => $data->id,
                     'name' => $data->name,
                     'permissions' => $permissions,
+                    'is_permanent' => $data->is_permanent
                 ],
+                'raw' => $data
             ],
         );
     }
@@ -198,6 +226,15 @@ class RoleService {
     public function bulkDelete(array $ids): array
     {
         try {
+            // check relation
+            foreach ($ids as $id) {
+                $role = Role::findById($id);
+                $user = User::role($role->name)->get();
+                if ($user->count()) {
+                    throw new ExceptionsRoleHasRelation();
+                }
+            }
+
             $this->repo->bulkDelete($ids, 'id');
 
             return generalResponse(

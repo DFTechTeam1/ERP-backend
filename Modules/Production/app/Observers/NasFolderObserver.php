@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Observers;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Modules\Production\Models\NasFolderCreation;
 use Modules\Production\Models\Project;
@@ -144,6 +145,7 @@ class NasFolderObserver
                     $check->status = 1;
                     $check->current_folder_name = $schema['updated_name'];
                     $check->current_path = json_encode($currentPathExisting);
+                    $check->updated_at = Carbon::now();
                     $check->save();
                 }
             }

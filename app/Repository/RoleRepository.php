@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 
 class RoleRepository {
@@ -19,7 +20,7 @@ class RoleRepository {
 
     public function show($id)
     {
-        return $this->model->findById($id);
+        return $this->model->findById($id, 'sanctum');
     }
 
     /**
@@ -64,7 +65,9 @@ class RoleRepository {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $orderBy = ''
     )
     {
         $query = $this->model->query();
@@ -77,6 +80,10 @@ class RoleRepository {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
         }
         
         return $query->skip($page)->take($itemsPerPage)->get();

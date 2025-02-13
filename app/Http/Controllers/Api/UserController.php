@@ -12,9 +12,9 @@ class UserController extends Controller
 {
     private $service;
 
-    public function __construct()
+    public function __construct(UserService $service)
     {
-        $this->service = new UserService();
+        $this->service = $service;
     }
 
     /**
@@ -64,10 +64,6 @@ class UserController extends Controller
 
     public function bulkDelete(Request $request)
     {
-        return apiResponse($this->service->bulkDelete(
-            collect($request->ids)->map(function ($item) {
-                return $item['uid'];
-            })->toArray()
-        ));
+        return apiResponse($this->service->bulkDelete($request->uids));
     }
 }

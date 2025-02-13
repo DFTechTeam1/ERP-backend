@@ -25,16 +25,22 @@ class Update extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => 'required',
             'nickname' => 'required',
-            'employee_id' => [
-                'required',
-                new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'employee_id'),
-            ],
             'email' => [
                 'required',
                 new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'email'),
+            ],
+            'date_of_birth' => 'required',
+            'place_of_birth' => 'required',
+            'martial_status' => [
+                'required',
+                Rule::enum(MartialStatus::class),
+            ],
+            'religion' => [
+                'required',
+                Rule::enum(Religion::class),
             ],
             'phone' => 'required',
             'id_number' => [
@@ -43,40 +49,15 @@ class Update extends FormRequest
                 'min:16',
                 new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'id_number'),
             ],
-            'religion' => [
-                'required',
-                Rule::enum(Religion::class),
-            ],
-            'martial_status' => [
-                'required',
-                Rule::enum(MartialStatus::class),
-            ],
             'address' => 'required',
-            'province_id' => 'nullable',
-            'city_id' => 'nullable',
-            'district_id' => 'nullable',
-            'village_id' => 'nullable',
-            'postal_code' => 'required',
-            'is_residence_same' => 'nullable',
             'current_address' => 'required_if:is_residence_same,1',
-            'blood_type' => 'nullable',
-            'date_of_birth' => 'required',
-            'place_of_birth' => 'required',
-            'dependents' => 'nullable',
-            'gender' => [
-                'required',
-                Rule::enum(Gender::class),
-            ],
-            'banks' => 'nullable',
-            'educations.education' => 'required',
-            'educations.education_name' => 'required',
-            'educations.graduation_year' => 'required',
-            'educations.education_major' => 'required',
-            'relation.name' => 'required',
-            'relation.phone' => 'required',
-            'relation.relation' => 'required',
+            'is_residence_same' => 'nullable',
             'position_id' => 'required',
-            'level' => [
+            'employee_id' => [
+                'required',
+                new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'employee_id'),
+            ],
+            'level_staff' => [
                 'required',
                 Rule::enum(LevelStaff::class),
             ],
@@ -87,11 +68,40 @@ class Update extends FormRequest
                 'required',
                 Rule::enum(Status::class),
             ],
-            'placement' => 'required',
+            'branch_id' => 'required',
             'join_date' => 'required',
+            'gender' => [
+                'required',
+                Rule::enum(Gender::class),
+            ],
+            'ptkp_status' => 'required',
+            'basic_salary' => 'required',
+            'salary_type' => 'required',
+
+            'bpjs_ketenagakerjaan_number' => 'nullable',
+            'npwp_number' => 'nullable',
+
+            'province_id' => 'nullable',
+            'city_id' => 'nullable',
+            'district_id' => 'nullable',
+            'village_id' => 'nullable',
+            'postal_code' => 'nullable',
+            'blood_type' => 'nullable',
+            'bank_detail' => 'nullable',
+            'education' => 'nullable',
+            'education_name' => 'nullable',
+            'education_major' => 'nullable',
+            'education_year' => 'nullable',
+            'relation_contact.name' => 'nullable',
+            'relation_contact.phone' => 'nullable',
+            'relation_contact.relation' => 'nullable',
             'start_review_date' => 'nullable',
             'end_probation_date' => 'nullable',
-            'company' => 'required',
+            'invite_to_erp' => 'nullable',
+            'password' => 'required_if:invite_to_erp,1',
+            'invite_to_talenta' => 'nullable',
+            'role_id' => 'required_if:invite_to_erp,1',
+            
             'id_number_photo' => [
                 'nullable',
                 File::types(['jpeg', 'jpg', 'png', 'webp'])
@@ -108,8 +118,9 @@ class Update extends FormRequest
                 'nullable',
                 File::types(['jpeg', 'jpg', 'png', 'webp'])
             ],
-            'deleted_image' => 'nullable',
         ];
+
+        return $rules;
     }
 
     /**

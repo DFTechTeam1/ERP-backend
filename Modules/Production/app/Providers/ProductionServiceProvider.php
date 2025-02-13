@@ -5,6 +5,10 @@ namespace Modules\Production\Providers;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Production\Console\ClearAllCache;
+use Modules\Production\Console\UpdateTaskIdentifier;
+use Modules\Production\Repository\ProjectBoardRepository;
+use Modules\Production\Repository\ProjectTaskHoldRepository;
+use Modules\Production\Repository\ProjectTaskRepository;
 
 class ProductionServiceProvider extends ServiceProvider
 {
@@ -31,6 +35,13 @@ class ProductionServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(RouteServiceProvider::class);
+        // $this->app->singleton(\Modules\Production\Services\ProjectRepositoryGroup::class, function ($app) {
+        //     return new \Modules\Production\Services\ProjectRepositoryGroup(
+        //         $app->make(ProjectBoardRepository::class),
+        //         $app->make(ProjectTaskHoldRepository::class),
+        //         $app->make(ProjectTaskRepository::class)
+        //     );
+        // });
     }
 
     /**
@@ -39,7 +50,8 @@ class ProductionServiceProvider extends ServiceProvider
     protected function registerCommands(): void
     {
         $this->commands([
-            ClearAllCache::class
+            ClearAllCache::class,
+            UpdateTaskIdentifier::class
         ]);
     }
 

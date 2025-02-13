@@ -91,6 +91,7 @@ class EmployeeRepository extends EmployeeInterface
         array $relation = [],
         int $itemsPerPage,
         int $page,
+        array $whereHas = [],
         string $orderBy = ''
     )
     {
