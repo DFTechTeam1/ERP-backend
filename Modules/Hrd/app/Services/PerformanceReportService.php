@@ -3,9 +3,11 @@
 namespace Modules\Hrd\Services;
 
 use App\Enums\Employee\Status;
+use App\Enums\System\BaseRole;
 use Carbon\Carbon;
 use DateTime;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Repository\EmployeePointRepository;
 
 class PerformanceReportService {
     private $repo;
@@ -22,6 +24,8 @@ class PerformanceReportService {
 
     private $endDate;
 
+    private $newEmployeePointRepo;
+
     public function __construct()
     {
         $this->taskPicLogRepo = new \Modules\Production\Repository\ProjectTaskPicLogRepository();
@@ -33,6 +37,8 @@ class PerformanceReportService {
         $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
 
         $this->employeePointRepo = new \Modules\Hrd\Repository\EmployeeTaskPointRepository();
+
+        $this->newEmployeePointRepo = new EmployeePointRepository();
     }
 
     protected function getTotalProjectEmployee(int $employeeId)
@@ -108,7 +114,25 @@ class PerformanceReportService {
         return $output;
     }
 
-    public function performanceDetail(string $employeeUid)
+    public function performanceReportEntertainment()
+    {
+        $data = $this->newEmployeePointRepo->list(
+            select: 'id,employee_id,point,additional_point,project_id,task_id',
+            where: "type = 'entertainment' AND created_at BETWEEN '" . $this->startDate . "' AND '" . $this->endDate . "'",
+            relation: [
+                'project:id,name',
+                'entertainmentTask:id,project_song_list_id'
+            ]
+        );
+    }
+
+    /**
+     * Render performance report
+     *
+     * @param string $employeeUid
+     * @return array
+     */
+    public function performanceDetail(string $employeeUid): array
     {
         // validate date filter
         $this->startDate = date('Y-m-d', strtotime('-7 days'));
@@ -129,12 +153,17 @@ class PerformanceReportService {
 
         $employee = $this->repo->show(
             $employeeUid, 
-            'id,name,nickname,employee_id,email,position_id,boss_id', 
+            'id,name,nickname,employee_id,email,position_id,boss_id,user_id', 
             [
                 'position:id,name', 
-                'boss:id,nickname'
+                'boss:id,nickname',
+                'user:id,email'
             ]
         );
+
+        if ($employee->user->hasRole(BaseRole::Entertainment->value)) {
+            return $this->performanceReportEntertainment();
+        }
         
         $totalProject = $this->getTotalProjectEmployee($employee->id);
 

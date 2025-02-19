@@ -21,6 +21,11 @@ Enum "employees_gender_enum" {
   "male"
 }
 
+Enum "employee_points_task_type" {
+  "production"
+  "entertainment"
+}
+
 Enum "salaray_type_enum" {
   "month"
   "daily"
@@ -238,6 +243,48 @@ Table "employee_task_points" {
   "created_by" int [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
+}
+
+// This table is used with NEW WORKFLOW. WILL IMPLEMENT ON ENTERTAINMENT POINT FIRST.
+// TODO: Pointing production point to this table
+Table "employee_points" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [not null]
+  "point" integer [default: 0]
+  "additional_point" integer [default: 0]
+  "project_id" bigint [not null]
+  "task_type" employee_points_task_type
+  "task_id" varchar(255) [not null]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
+// REFACTORED EMPLOYEE POINTS
+Table "employee_points" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "total_point" integer [not null, default: 0]
+  "type" enum [note: "entertainment,production"]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
+Table "employee_point_projects" {
+  "id" bigint [pk, not null, increment]
+  "employee_point_id" bigint [not null]
+  "project_id" bigint [not null]
+  "total_point" integer [not null]
+  "additional_point" integer [not null, default: 0]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
+Table "employee_point_project_details" {
+  "id" bigint [pk, not null, increment]
+  "employee_point_project_id" bigint [not null]
+  "task_id" bigint [not null]
+  "created_at" timestamp
+  "updated_at" timestamp
 }
 
 Table "employees" {
@@ -971,19 +1018,7 @@ Table "entertainment_task_song_result_images" {
   "updated_at" timestamp
 }
 
-// This table is used with NEW WORKFLOW. WILL IMPLEMENT ON ENTERTAINMENT POINT FIRST.
-// TODO: Pointing production point to this table
-Table "employee_points" {
-  "id" bigint [pk, not null, increment]
-  "employee_id" bigint [not null]
-  "point" integer [default: 0]
-  "additional_point" integer [default: 0]
-  "project_id" bigint [not null]
-  "source_id" integer [not null]
-  "source_type" varchar(255) [not null]
-  "created_at" timestamp
-  "updated_at" timestamp
-}
+
 
 Table "request_inventories" {
   "id" bigint [pk, not null, increment]

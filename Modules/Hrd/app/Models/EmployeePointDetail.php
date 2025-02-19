@@ -5,13 +5,12 @@ namespace Modules\Hrd\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Modules\Production\Models\EntertainmentTaskSong;
-use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectTask;
 
-// use Modules\Hrd\Database\Factories\EmployeePointFactory;
+// use Modules\Hrd\Database\Factories\EmployeePointDetailFactory;
 
-class EmployeePoint extends Model
+class EmployeePointDetail extends Model
 {
     use HasFactory;
 
@@ -19,15 +18,15 @@ class EmployeePoint extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'employee_id',
-        'total_point',
-        'additional_point',
-        'type'
+        'employee_point_id',
+        'type',
+        'task_id',
+        'point'
     ];
 
-    // protected static function newFactory(): EmployeePointFactory
+    // protected static function newFactory(): EmployeePointDetailFactory
     // {
-    //     // return EmployeePointFactory::new();
+    //     // return EmployeePointDetailFactory::new();
     // }
 
     public function entertainmentTask(): BelongsTo
@@ -35,8 +34,8 @@ class EmployeePoint extends Model
         return $this->belongsTo(EntertainmentTaskSong::class, 'task_id');
     }
 
-    public function project(): BelongsTo
+    public function productionTask(): BelongsTo
     {
-        return $this->belongsTo(Project::class, 'project_id');
+        return $this->belongsTo(ProjectTask::class, 'task_id');
     }
 }
