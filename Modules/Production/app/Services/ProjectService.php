@@ -9,7 +9,9 @@ use App\Actions\Project\Entertainment\DistributeSong;
 use App\Actions\Project\Entertainment\ReportAsDone;
 use App\Actions\Project\Entertainment\StoreLogAction;
 use App\Actions\Project\Entertainment\SwitchSongWorker;
+use App\Actions\Project\FormatBoards;
 use App\Actions\Project\FormatTaskPermission;
+use App\Actions\Project\GetProjectTeams;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Enums\Production\Entertainment\TaskSongLogType;
@@ -1072,7 +1074,7 @@ class ProjectService
      * @param \Illuminate\Database\Eloquent\Collection $project
      * @return array
      */
-    protected function getProjectTeams($project): array
+    public function getProjectTeams($project): array
     {
         $where = '';
         $pics = [];
@@ -1201,6 +1203,8 @@ class ProjectService
                 return $team;
             })->toArray();
 
+            // THIS CAUSE PM WHO DO NOT HAVE ANY TEAM MEMBER CANNOT SEE TRANSFER AND SPECIAL EMPLOYEE
+            // SHO THIS SHOULD BE RUNNING OUTSIDE OF THIS 'IF' CONDITION
             $teams = collect($teams)->merge($transfers)->toArray();
 
             $teams = collect($teams)->merge($specialEmployee)->toArray();
@@ -2144,28 +2148,29 @@ class ProjectService
             $pics = $projectTeams['pics'];
             $picIds = $projectTeams['picUids'];
 
-            $currentData = getCache('detailProject' . $project->id);
-            $currentData['venue'] = $project->venue;
-            $currentData['city_name'] = $city->name;
-            $currentData['country_id'] = $project->country_id;
-            $currentData['state_id'] = $project->state_id;
-            $currentData['city_id'] = $project->city_id;
-            $currentData['event_type'] = $project->event_type_text;
-            $currentData['event_type_raw'] = $project->event_type;
-            $currentData['collaboration'] = $project->collaboration;
-            $currentData['status'] = $project->status_text;
-            $currentData['status_raw'] = $project->status;
-            $currentData['led_area'] = $project->led_area;
-            $currentData['led_detail'] = json_decode($project->led_detail, true);
-            $currentData['note'] = $project->note ?? '-';
-            $currentData['client_portal'] = $project->client_portal;
-            $currentData['pic'] = implode(', ', $pics);
-            $currentData['pic_ids'] = $picIds;
-            $currentData['teams'] = $teams;
+            // $currentData = getCache('detailProject' . $project->id);
+            // $currentData['venue'] = $project->venue;
+            // $currentData['city_name'] = $city->name;
+            // $currentData['country_id'] = $project->country_id;
+            // $currentData['state_id'] = $project->state_id;
+            // $currentData['city_id'] = $project->city_id;
+            // $currentData['event_type'] = $project->event_type_text;
+            // $currentData['event_type_raw'] = $project->event_type;
+            // $currentData['collaboration'] = $project->collaboration;
+            // $currentData['status'] = $project->status_text;
+            // $currentData['status_raw'] = $project->status;
+            // $currentData['led_area'] = $project->led_area;
+            // $currentData['led_detail'] = json_decode($project->led_detail, true);
+            // $currentData['note'] = $project->note ?? '-';
+            // $currentData['client_portal'] = $project->client_portal;
+            // $currentData['pic'] = implode(', ', $pics);
+            // $currentData['pic_ids'] = $picIds;
+            // $currentData['teams'] = $teams;
 
-            $currentData = $this->formatTasksPermission($currentData, $project->id);
+            // $currentData = $this->formatTasksPermission($currentData, $project->id);
 
-            storeCache('detailProject' . $project->id, $currentData);
+            // storeCache('detailProject' . $project->id, $currentData);
+            $currentData = $this->detailCacheAction->handle($id, ['status' => $project->status_text, 'status_raw' => $project->status, 'status_color' => $project->status_color]);
 
             DB::commit();
 
@@ -2511,17 +2516,9 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskUid);
 
-            $currentData = getCache('detailProject' . $task->project->id);
-            if (!$currentData) {
-                $this->show($task->project->uid);
-                $currentData = getCache('detailProject' . $task->project->id);
-            }
-            $boards = $this->formattedBoards($task->project->uid);
-            $currentData['boards'] = $boards;
-
-            storeCache('detailProject' . $task->project_id, $currentData);
-
-            $this->formatTasksPermission($currentData, $task->project_id);
+            $currentData = $this->detailCacheAction->handle($task->project->uid, [
+                'boards' => FormatBoards::run($task->project->uid)
+            ]);
 
             // TODO: CHECK AGAIN ACTION WHEN ASSIGN TO PROJECT MANAGER
             if ($currentData['status_raw'] != \App\Enums\Production\ProjectStatus::Draft->value) {
@@ -2721,21 +2718,10 @@ class ProjectService
                 );
             }
 
-            $boards = $this->formattedBoards($board->project->uid);
-            $currentData = getCache('detailProject' . $board->project->id);
-            $currentData['boards'] = $boards;
-
-            // $project = $this->repo->show($board->project->uid)
-            $teams = $this->getProjectTeams((object)$board->project);
-            $currentData['teams'] = $teams['teams'];
-
-            $projectTasks = $this->taskRepo->list('*', 'project_id = ' . $board->project_id, [
-                'board:id,name,project_id'
-            ]);
-            $progress = $this->formattedProjectProgress($projectTasks, $board->project->id);
-            $currentData['progress'] = $progress;
-
-            storeCache('detailProject' . $board->project_id, $currentData);
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $board->project->uid,
+                forceUpdateAll: true
+            );
 
             DB::commit();
 
@@ -4538,14 +4524,11 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskUid);
 
-            $boards = $this->formattedBoards($projectUid);
-            $currentData['boards'] = $boards;
-
-            $currentData['boards'] = $boards;
-
-            storeCache('detailProject' . $projectId, $currentData);
-
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            // update cache
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $projectUid,
+                forceUpdateAll: true
+            );
 
             return generalResponse(
                 __('global.taskHasBeenApproved'),
@@ -5338,7 +5321,7 @@ class ProjectService
         }
     }
 
-    public function getTaskTeamForReview(string $projectUid)
+    public function getTaskTeamForReview(string $projectUid): array
     {
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
@@ -5362,7 +5345,7 @@ class ProjectService
         })
         ->groupBy('employee_id')
         ->toArray();
-
+        
         $output = [];
         foreach ($data as $employeeId => $employee) {
             $output[$employeeId] = [
