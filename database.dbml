@@ -281,7 +281,7 @@ Table "employee_point_projects" {
 
 Table "employee_point_project_details" {
   "id" bigint [pk, not null, increment]
-  "employee_point_project_id" bigint [not null]
+  "point_id" bigint [not null]
   "task_id" bigint [not null]
   "created_at" timestamp
   "updated_at" timestamp

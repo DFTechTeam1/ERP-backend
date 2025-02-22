@@ -7,6 +7,8 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
+
 class GeneralService {
     public function getIdFromUid(string $uid, $model)
     {
@@ -55,5 +57,18 @@ class GeneralService {
         string $extTarget = 'webp',
     ) {
         return uploadImageandCompress($path, $compressValue, $image, $extTarget);
+    }
+
+    public function reportPerformanceDefaultDate(): array
+    {
+        $now = Carbon::now();
+
+        $startDate = $now->copy()->subMonthNoOverflow()->day(24);
+        $endDate = $now->copy()->day(23);
+
+        return [
+            'start' => $startDate,
+            'end' => $endDate
+        ];
     }
 }

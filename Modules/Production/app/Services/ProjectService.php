@@ -1205,10 +1205,14 @@ class ProjectService
 
             // THIS CAUSE PM WHO DO NOT HAVE ANY TEAM MEMBER CANNOT SEE TRANSFER AND SPECIAL EMPLOYEE
             // SHO THIS SHOULD BE RUNNING OUTSIDE OF THIS 'IF' CONDITION
-            $teams = collect($teams)->merge($transfers)->toArray();
+            // $teams = collect($teams)->merge($transfers)->toArray();
 
-            $teams = collect($teams)->merge($specialEmployee)->toArray();
+            // $teams = collect($teams)->merge($specialEmployee)->toArray();
         }
+
+        $teams = collect($teams)->merge($transfers)->toArray();
+
+        $teams = collect($teams)->merge($specialEmployee)->toArray();
 
         // get task on selected project
         $outputTeam = [];
@@ -5006,17 +5010,14 @@ class ProjectService
 
             $project = $this->repo->show($projectUid, 'id,status,uid');
 
-            $currentData = getCache('detailProject' . $projectId);
-
-            if (!$currentData) {
-                $currentData = $this->reinitDetailCache($project);
-            }
-
-            $currentData['status_raw'] = $project->status;
-            $currentData['status'] = $project->status_text;
-            $currentData['status_color'] = $project->status_color;
-
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $projectUid,
+                necessaryUpdate: [
+                    'status_raw' => $project->status,
+                    'status' => $project->status_text,
+                    'status_color' => $project->status_color
+                ]
+            );
 
             DB::commit();
 
@@ -5331,7 +5332,7 @@ class ProjectService
         $teams = $projectTeams['teams'];
         $pics = $projectTeams['picUids'];
 
-        $histories = $this->taskPicHistory->list('id,project_id,project_task_id,employee_id', 'project_id = ' . $projectId, ['employee:id,name,employee_id,uid,nickname']);
+        $histories = $this->taskPicHistory->list('DISTINCT project_id,project_task_id,employee_id', 'project_id = ' . $projectId, ['employee:id,name,employee_id,uid,nickname']);
 
         $data = collect((object) $histories)->map(function ($item) {
             return [
@@ -5355,7 +5356,8 @@ class ProjectService
                 'point' => count($employee),
                 'additional_point' => 0,
                 'can_decrease_point' => false,
-                'can_increase_point' => true
+                'can_increase_point' => true,
+                'tasks' => collect($employee)->pluck('project_task_id')->toArray()
             ];
         }
 
@@ -5370,7 +5372,8 @@ class ProjectService
                     'point' => 0,
                     'additional_point' => 0,
                     'can_decrease_point' => false,
-                    'can_increase_point' => true
+                    'can_increase_point' => true,
+                    'tasks' => []
                 ]);
             }
         }
@@ -5383,7 +5386,7 @@ class ProjectService
         return generalResponse(
             'success',
             false,
-            $output,
+            $output
         );
     }
 
@@ -5404,17 +5407,7 @@ class ProjectService
         try {
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
-            foreach ($data['points'] as $point) {
-                $this->employeeTaskPoint->store([
-                    'employee_id' => getIdFromUid($point['uid'], new \Modules\Hrd\Models\Employee()),
-                    'project_id' => $projectId,
-                    'point' => $point['point'] - $point['additional_point'],
-                    'additional_point' => $point['additional_point'],
-                    'total_point' => $point['point'],
-                    'total_task' => $point['total_task'],
-                    'created_by' => auth()->user()->employee_id ?? 0,
-                ]);
-            }
+            PointRecord::run($data, $projectUid, 'production');
 
             $this->repo->update([
                 'feedback' => $data['feedback'],
@@ -5429,13 +5422,10 @@ class ProjectService
             // update project status cache
             $project = $this->repo->show($projectUid, 'id,status');
 
-            $currentData = getCache('detailProject' . $projectId);
-            $currentData['feedback'] = $data['feedback'];
-            $currentData['status_raw'] = $project->status;
-            $currentData['status'] = $project->status_text;
-            $currentData['status_color'] = $project->status_color;
-
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $projectUid,
+                forceUpdateAll: true
+            );
 
             DB::commit();
 
@@ -7329,7 +7319,7 @@ class ProjectService
                 select: 'id,status,employee_id,project_song_list_id,project_id,time_tracker',
                 where: "project_song_list_id = {$songId} and project_id = {$projectId}",
                 relation: [
-                    'employee:id,nickname,telegram_chat_id',
+                    'employee:id,nickname,telegram_chat_id,uid',
                     'song:id,name',
                     'project:id,name',
                     'project.personInCharges:project_id,pic_id',
@@ -7341,28 +7331,28 @@ class ProjectService
             $payloadUpdate = [];
 
             // validate before go
-            $rules = [
-                BaseRole::ProjectManagerEntertainment->value => [
-                    TaskSongStatus::OnFirstReview->value
-                ],
-                BaseRole::Root->value => [
-                    TaskSongStatus::OnFirstReview->value
-                ],
-                BaseRole::ProjectManager->value => [
-                    TaskSongStatus::OnLastReview->value,
-                ],
-                BaseRole::ProjectManagerAdmin->value => [
-                    TaskSongStatus::OnLastReview->value,
-                ]
+            $allowedStatuses = [
+                BaseRole::ProjectManagerEntertainment->value => [TaskSongStatus::OnFirstReview->value],
+                BaseRole::Root->value => [TaskSongStatus::OnFirstReview->value],
+                BaseRole::ProjectManager->value => [TaskSongStatus::OnLastReview->value],
+                BaseRole::ProjectManagerAdmin->value => [TaskSongStatus::OnLastReview->value]
             ];
-            foreach ($rules as $role => $currentStatusRule) {
-                if ($userRole->name == $role) {
-                    if (!in_array($currentStatus, $currentStatusRule)) {
-                        DB::commit();
-
-                        return errorResponse(__('notification.failedToAproveTask'));
-                    }
+            
+            // Check if role has permission for current status
+            $isAllowed = false;
+            foreach ($allowedStatuses as $role => $statuses) {
+                if ($userRole->name === $role && in_array($currentStatus, $statuses)) {
+                    $isAllowed = true;
+                    break;
                 }
+            }
+
+            if (!$isAllowed) {
+                DB::commit();
+                return generalResponse(
+                    message: __('notification.failedToAproveTask'),
+                    error: true
+                );
             }
 
             if ($currentStatus == TaskSongStatus::OnFirstReview->value) {
@@ -7373,25 +7363,33 @@ class ProjectService
                 $payloadUpdate['status'] = TaskSongStatus::OnFirstReview->value;
             }
 
+            // record the point if entertainment PM do this action, do not record if this song came from revise task.
+            // to check this song came from revise task or not, we will check the last time tracker type in the entertainment_task_songs
+            // if $currentStatus is onLastReview, thats mean projectPM do this action
+            if ($currentStatus == TaskSongStatus::OnFirstReview->value) {
+                // build payload for point record
+                $pointPayload = [
+                    'points' => [
+                        [
+                            'uid' => $task->employee->uid,
+                            'point' => 1,
+                            'additional_point' => 0,
+                            'tasks' => [$task->id]
+                        ],
+                    ]
+                ];
+                PointRecord::run(
+                    $pointPayload,
+                    $projectUid,
+                    'entertainment'
+                );
+            }
+
             // update status
             $this->entertainmentTaskSongRepo->update(
                 data: $payloadUpdate,
                 id: $task->id
             );
-
-            // record the point if entertainment PM do this action, do not record if this song came from revise task.
-            // to check this song came from revise task or not, we will check the last time tracker type in the entertainment_task_songs
-            // if $currentStatus is onLastReview, thats mean projectPM do this action
-            $timeTracker = $task->time_tracker;
-            $lastTimeTrackerType = $timeTracker[count($timeTracker) - 1]['type'];
-            if ($currentStatus == TaskSongStatus::OnFirstReview->value) {
-                PointRecord::run(
-                    employeeIdentifier: (int) $task->employee_id,
-                    projectIdentifier: (int) $projectId,
-                    taskId: (int) $task->id,
-                    point: 1,
-                );
-            }
 
             // add logs
             if (BaseRole::ProjectManagerEntertainment->value == $user->roles[0]['name']) {
@@ -7420,10 +7418,9 @@ class ProjectService
                 );
             }
 
-            $currentData = $this->detailCacheAction->handle($projectUid);
-
             TaskSongApprovedJob::dispatch($task, $user->load('employee'))->afterCommit();
-
+            $currentData = $this->detailCacheAction->handle($projectUid);
+ 
             DB::commit();
 
             return generalResponse(
@@ -7434,7 +7431,6 @@ class ProjectService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
-
             return errorResponse($th);
         }
     }

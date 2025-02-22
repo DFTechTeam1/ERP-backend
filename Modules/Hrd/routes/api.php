@@ -64,6 +64,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
 Route::middleware('auth:sanctum')
     ->prefix('performanceReport')
     ->group(function () {
+    Route::post('export', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'export']);
     Route::get('/{employeeId}', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'performanceDetail']);
     Route::get('getTeams', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'getTeams']);
     Route::get('getMembers/{leaderId}', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'getMembers']);
