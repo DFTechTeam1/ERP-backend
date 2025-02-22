@@ -76,10 +76,10 @@
                             @foreach ($project->tasks as $tIndex => $task)
                                 <tr>
                                     @if ($pIndex === 0 && $tIndex === 0)
-                                        <td rowspan="{{ $eventRowSpan }}">{{ $employee->name }}</td>
-                                        <td rowspan="{{ $eventRowSpan }}">{{ $employee->employee_id }}</td>
-                                        <td rowspan="{{ $eventRowSpan }}">{{ $employee->position->name }}</td>
-                                        <td rowspan="{{ $eventRowSpan }}">{{ $event->total_point }}</td>
+                                        <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $employee->name }}</td>
+                                        <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $employee->employee_id }}</td>
+                                        <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $employee->position->name }}</td>
+                                        <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $event->total_point }}</td>
                                     @endif
 
                                     @if ($tIndex === 0)

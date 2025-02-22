@@ -3,9 +3,18 @@
 namespace Modules\Production\Repository\Interface;
 
 abstract class ProjectInterface {
-    abstract function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [], string $orderBy = '', int $limit = 0, array $isGetDistance = []);
+    abstract function list(
+        string $select = '*',
+        string $where = "",
+        array $relation = [],
+        array $whereHas = [],
+        string $orderBy = '',
+        int $limit = 0,
+        array $isGetDistance = [],
+        array $has = []
+    );
 
-    abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
+    abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage = 10, int $page = 1, array $has = []);
 
     abstract function show(string $uid, string $select = '*', array $relation = [], string $where = '');
 
