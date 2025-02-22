@@ -3,31 +3,17 @@
 namespace Modules\Hrd\Services;
 
 use App\Enums\ErrorCode\Code;
-use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
-use Modules\Hrd\Repository\EmployeePointRepository;
 
-class EmployeePointService {
+class EmployeePointProjectService {
     private $repo;
-
-    private $pointProjectRepo;
-
-    private $pointProjectDetailRepo;
 
     /**
      * Construction Data
      */
-    public function __construct(
-        EmployeePointRepository $repo,
-        EmployeePointProjectRepository $pointProjectRepo,
-        EmployeePointProjectDetailRepository $pointProjectDetailRepo
-    )
+    public function __construct()
     {
-        $this->repo = $repo;
-
-        $this->pointProjectRepo = $pointProjectRepo;
-
-        $this->pointProjectDetailRepo = $pointProjectDetailRepo;
+        $this->repo = new EmployeePointProjectRepository;
     }
 
     /**
@@ -76,83 +62,6 @@ class EmployeePointService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }
-
-    /**
-     * Get detail employee point
-     *
-     * @param integer $employeeId
-     * @return \Modules\Hrd\Models\EmployeePoint
-     */
-    public function renderEachEmployeePoint(int $employeeId = 17, string $startDate = '', string $endDate = '')
-    {
-        $whereHas = [];
-
-        if (!empty($startDate) && !empty($endDate)) {
-            $whereHas[] = [
-                'relation' => 'projects.project',
-                'query' => "project_date BETWEEN '{$startDate}' AND '{$endDate}'"
-            ];
-        } else if (!empty($startDate) && empty($endDate)) {
-            $whereHas[] = [
-                'relation' => 'projects.project',
-                'query' => "project_date >= '{$startDate}'"
-            ];
-        } else if (empty($startDate) && !empty($endDate)) {
-            $whereHas[] = [
-                'relation' => 'projects.project',
-                'query' => "project_date <= '{$endDate}'"
-            ];
-        }
-
-        $point = $this->repo->show(
-            uid: 'id',
-            select: 'id,employee_id,total_point,type',
-            relation: [
-                'projects:id,employee_point_id,project_id,total_point,additional_point',
-                'projects.project:id,name,project_date',
-                'employee:id,name,nickname,email,employee_id,position_id',
-                'employee.position:id,name'
-            ],
-            whereHas: $whereHas,
-            where: "employee_id = {$employeeId}"
-        );
-
-        // get detail information
-        if ($point) {
-            $relation = [];
-            if ($point->type == 'production') {
-                $relation = [
-                    'productionTask:id,name,created_at'
-                ];
-            } else {
-                $relation = [
-                    'entertainmentTask:id,project_song_list_id,created_at',
-                    'entertainmentTask.song:id,name'
-                ];
-            }
-
-            $pointType = $point->type;
-    
-            $projects = collect($point->projects)->map(function ($item) use ($relation, $pointType) {
-                $tasks = $this->pointProjectDetailRepo->list(
-                    select: 'id,task_id,point_id',
-                    where: "point_id = {$item->id}",
-                    relation: $relation
-                );
-    
-                $item['tasks'] = $tasks;
-                $item['type'] = $pointType;
-    
-                return $item;
-            });
-    
-            $point['detail_projects'] = $projects;
-    
-            unset($point['projects']);
-        }
-
-        return $point;
     }
 
     public function datatable()

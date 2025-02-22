@@ -139,7 +139,7 @@ class SongApproveByPmTest extends TestCase
             ->andReturn($this->projects[0]);
 
         $response = $this->projectService->songApproveWork($this->projects[0]->uid, $this->projectSongs[0]->uid);
-        Log::error($response);
+        
         Bus::assertDispatched(TaskSongApprovedJob::class);
 
         $this->assertFalse($response['error']);
@@ -152,10 +152,7 @@ class SongApproveByPmTest extends TestCase
         $this->assertDatabaseHas('entertainment_task_song_logs', ['text' => 'log.songApprovedByEntertainmentPM']);
 
         // check point
-        $this->assertDatabaseHas('employee_points', ['employee_id' => $this->employees[0]->id, 'point' => 1, 'additional_point' => 0, 'task_type' => 'entertainment', 'task_id' => $this->task[0]->id]);
-
-        DB::table('employee_points')
-            ->truncate();
+        $this->assertDatabaseHas('employee_points', ['employee_id' => $this->employees[0]->id, 'total_point' => 1, 'type' => 'entertainment']);
         
         $this->clearUserTables();
     }
@@ -189,7 +186,7 @@ class SongApproveByPmTest extends TestCase
         $this->assertDatabaseHas('entertainment_task_song_logs', ['text' => 'log.songApprovedByEntertainmentPM']);
 
         // check point
-        $this->assertDatabaseEmpty('employee_points');
+        $this->assertDatabaseCount('employee_points', 1);
 
         $this->clearUserTables();
     }

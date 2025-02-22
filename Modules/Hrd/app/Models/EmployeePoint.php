@@ -5,6 +5,7 @@ namespace Modules\Hrd\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\Project;
@@ -21,7 +22,6 @@ class EmployeePoint extends Model
     protected $fillable = [
         'employee_id',
         'total_point',
-        'additional_point',
         'type'
     ];
 
@@ -35,8 +35,13 @@ class EmployeePoint extends Model
         return $this->belongsTo(EntertainmentTaskSong::class, 'task_id');
     }
 
-    public function project(): BelongsTo
+    public function projects(): HasMany
     {
-        return $this->belongsTo(Project::class, 'project_id');
+        return $this->hasMany(EmployeePointProject::class, 'employee_point_id');
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
     }
 }

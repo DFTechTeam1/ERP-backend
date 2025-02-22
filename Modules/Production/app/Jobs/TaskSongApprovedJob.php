@@ -42,7 +42,6 @@ class TaskSongApprovedJob implements ShouldQueue
         }
 
         // send to project PM
-        Log::debug("task detail job >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", [$this->task]);
         if ($this->task->status != TaskSongStatus::Completed->value) {
             foreach ($this->task->project->personInCharges as $pic) {
                 if ($pic->employee->telegram_chat_id) {
