@@ -2,20 +2,38 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\System\BaseRole;
-use Illuminate\Http\Request;
-use Modules\Hrd\Services\TalentaService;
+use App\Enums\Employee\Status;
+use App\Enums\Production\WorkType;
+use Carbon\Carbon;
+use Illuminate\Database\Query\JoinClause;
+use Illuminate\Support\Facades\DB;
+use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
+use Modules\Hrd\Repository\EmployeePointProjectRepository;
+use Modules\Hrd\Repository\EmployeePointRepository;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Services\EmployeePointService;
+use Modules\Hrd\Services\PerformanceReportService;
 use Modules\Production\Services\ProjectRepositoryGroup;
 
 class LandingPageController extends Controller
 {
     private $projectRepoGroup;
 
+    private $employeePointService;
+
+    private $reportService;
+
     public function __construct(
-        ProjectRepositoryGroup $projectRepoGroup
+        ProjectRepositoryGroup $projectRepoGroup,
+        EmployeePointService $employeePointService,
+        PerformanceReportService $reportService
     )
     {
         $this->projectRepoGroup = $projectRepoGroup;
+
+        $this->employeePointService = $employeePointService;
+
+        $this->reportService = $reportService;
     }
 
     public function index()
