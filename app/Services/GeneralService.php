@@ -50,6 +50,10 @@ class GeneralService {
         return getCache($cacheId);
     }
 
+    public function storeCache(string $key, $value, $ttl = 60 * 60 * 6) {
+        storeCache($key, $value, $ttl);
+    }
+
     public function uploadImageandCompress(
         string $path,
         int $compressValue,

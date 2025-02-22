@@ -2,9 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\Cache\CacheKey;
+use App\Enums\Production\ProjectStatus;
 use App\Enums\System\BaseRole;
 use DateTime;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class DashboardService {
     private $projectRepo;
@@ -31,6 +35,8 @@ class DashboardService {
 
     private $endDate;
 
+    private $generalService;
+
     public function __construct(
         \Modules\Production\Repository\ProjectRepository $projectRepo,
         \Modules\Inventory\Repository\InventoryRepository $inventoryRepo,
@@ -38,9 +44,12 @@ class DashboardService {
         \Modules\Company\Repository\PositionRepository $positionRepo,
         \Modules\Production\Repository\ProjectTaskPicRepository $projectTaskPicRepo,
         \Modules\Production\Repository\ProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
-        \Modules\Production\Repository\ProjectTaskPicLogRepository $projectTaskPicLogRepo
+        \Modules\Production\Repository\ProjectTaskPicLogRepository $projectTaskPicLogRepo,
+        GeneralService $generalService
     )
     {
+        $this->generalService = $generalService;
+
         $this->projectRepo = $projectRepo;
 
         $this->inventoryRepo = $inventoryRepo;
@@ -181,16 +190,13 @@ class DashboardService {
             }
         ]);
 
-        $tasks = collect($tasks)->filter(function ($filter) {
+        $tasks = collect((object) $tasks)->filter(function ($filter) {
             return $filter->project;
         });
 
         $group = collect($tasks)->groupBy("project_id")->toArray();
 
         $keys = array_keys($group);
-
-        logging('task production', $tasks->toArray());
-        logging('group production', $group);
 
         $totalTask = [];
         foreach ($group as $detail) {
@@ -519,10 +525,73 @@ class DashboardService {
         );
     }
 
+    public function needCompleteProject(): array
+    {
+        try {
+            $user = auth()->user();
+            $cacheId = CacheKey::ProjectNeedToBeComplete->value . auth()->id();
+
+            $output = $this->generalService->getCache($cacheId);
+
+            if (!$output) {
+                $output = Cache::remember($cacheId, 60 * 60 * 2, function () use ($user) {
+                    $status = [
+                        ProjectStatus::Completed->value,
+                        ProjectStatus::Draft->value
+                    ];
+                    $whereHas = [];
+        
+                    if ($user->hasRole(BaseRole::ProjectManager->value)) {
+                        $whereHas[] = [
+                            'relation' => 'personInCharges',
+                            'query' => "pic_id = " . $user->load('employee')->employee->id
+                        ];
+                    }
+        
+                    $where = "project_date < NOW() AND status NOT IN (" . implode(',', $status) . ")";
+        
+                    $data = $this->projectRepo->list(
+                        select: 'id,uid,name,project_date,status,classification', 
+                        where: $where,
+                        relation: [
+                            'personInCharges:id,project_id,pic_id',
+                            'personInCharges.employee:id,nickname'
+                        ],
+                        has: [
+                            'personInCharges'
+                        ],
+                        whereHas: $whereHas,
+                        orderBy: "id DESC",
+                    );
+                    
+                    $data = collect((object) $data)->map(function ($project) {
+                        $listPics = collect($project->personInCharges)->pluck('employee.nickname')->toArray();
+        
+                        $project['pics'] = $listPics;
+                        $project['project_date_format'] = date('d F Y', strtotime($project->project_date));
+        
+                        unset($project['personInCharges']);
+        
+                        return $project;
+                    })->toArray();
+    
+                    return $data;
+                });
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     /**
      * Get all project songs for entertainment division
      *
-     * @return void
+     * @return array
      */
     public function getProjectSong(): array
     {
