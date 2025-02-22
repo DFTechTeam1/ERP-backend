@@ -31,10 +31,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('employee_points', function (Blueprint $table) {
-            $table->dropForeign(['employee_id']);
-        });
-
+        if (checkForeignKey('employee_points', 'employee_id')) {
+            Schema::table('employee_points', function (Blueprint $table) {
+                $table->dropForeign(['employee_id']);
+            });
+        }
+        
         Schema::dropIfExists('employee_points');
     }
 };

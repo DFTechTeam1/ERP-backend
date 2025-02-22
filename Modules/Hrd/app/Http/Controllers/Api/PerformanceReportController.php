@@ -2,16 +2,41 @@
 
 namespace Modules\Hrd\Http\Controllers\Api;
 
+use App\Enums\Employee\Status;
+use App\Exports\PerformanceReportExport;
 use App\Http\Controllers\Controller;
+use App\Services\GeneralService;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use Modules\Hrd\Http\Requests\Employee\PerformanceReport;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Services\EmployeePointService;
+use Modules\Hrd\Services\PerformanceReportService;
 
 class PerformanceReportController extends Controller
 {
     private $service;
 
-    public function __construct()
+    private $generalService;
+
+    private $employeeRepo;
+
+    private $employeePointService;
+    
+    public function __construct(
+        PerformanceReportService $service,
+        GeneralService $generalService,
+        EmployeeRepository $employeeRepo,
+        EmployeePointService $employeePointService
+    )
     {
-        $this->service = new \Modules\Hrd\Services\PerformanceReportService;
+        $this->service = $service;
+
+        $this->employeeRepo = $employeeRepo;
+
+        $this->generalService = $generalService;
+
+        $this->employeePointService = $employeePointService;
     }
 
     /**
@@ -37,6 +62,38 @@ class PerformanceReportController extends Controller
         //
 
         return response()->json([]);
+    }
+
+    public function export(PerformanceReport $request)
+    {
+        
+
+        // $employees = $this->employeeRepo->list(
+        //     select: 'id,name,employee_id,position_id',
+        //     where: "status NOT IN (". Status::Inactive->value .")",
+        //     relation: [
+        //         'position:id,name'
+        //     ]
+        // );
+
+        // $employeeIds = collect($employees)->pluck('id')->toArray();
+
+        // $data = [];
+        
+        // foreach ($employees as $employee) {
+        //     $pointData = $this->employeePointService->renderEachEmployeePoint($employee->id, $startDate, $endDate) ?? [];
+
+        //     if ($pointData) {
+        //         $data[] = $pointData;
+        //     } else {
+        //         $data[] = [
+        //             'employee' => $employee,
+        //             'detail_projects' => []
+        //         ];
+        //     }
+        // }
+
+        return apiResponse($this->service->export($request->validated()));
     }
 
     /**

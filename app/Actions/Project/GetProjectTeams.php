@@ -144,10 +144,16 @@ class GetProjectTeams
                 return $team;
             })->toArray();
 
-            $teams = collect($teams)->merge($transfers)->toArray();
+            // THIS CAUSE PM WHO DO NOT HAVE ANY TEAM MEMBER CANNOT SEE TRANSFER AND SPECIAL EMPLOYEE
+            // SHO THIS SHOULD BE RUNNING OUTSIDE OF THIS 'IF' CONDITION
+            // $teams = collect($teams)->merge($transfers)->toArray();
 
-            $teams = collect($teams)->merge($specialEmployee)->toArray();
+            // $teams = collect($teams)->merge($specialEmployee)->toArray();
         }
+
+        $teams = collect($teams)->merge($transfers)->toArray();
+
+        $teams = collect($teams)->merge($specialEmployee)->toArray();
 
         // get task on selected project
         $outputTeam = [];

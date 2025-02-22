@@ -2,12 +2,12 @@
 
 namespace Modules\Hrd\Repository\Interface;
 
-abstract class EmployeePointInterface {
+abstract class EmployeePointProjectInterface {
     abstract function list(string $select = '*', string $where = "", array $relation = []);
 
     abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
 
-    abstract function show(string $uid, string $select = '*', array $relation = [], string $where = '', array $whereHas = []);
+    abstract function show(string $uid, string $select = '*', array $relation = []);
 
     abstract function store(array $data);
 

@@ -2,17 +2,17 @@
 
 namespace Modules\Hrd\Repository;
 
-use Modules\Hrd\Models\EmployeePoint;
-use Modules\Hrd\Repository\Interface\EmployeePointInterface;
+use Modules\Hrd\Models\EmployeePointProjectDetail;
+use Modules\Hrd\Repository\Interface\EmployeePointProjectDetailInterface;
 
-class EmployeePointRepository extends EmployeePointInterface {
+class EmployeePointProjectDetailRepository extends EmployeePointProjectDetailInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EmployeePoint();
+        $this->model = new EmployeePointProjectDetail();
         $this->key = 'id';
     }
 
@@ -80,25 +80,13 @@ class EmployeePointRepository extends EmployeePointInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '', array $whereHas = [])
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where("id", $uid);
-        }
-
-        if (!empty($whereHas)) {
-            foreach ($whereHas as $whereRelation) {
-                $query->whereHas($whereRelation['relation'], function ($query) use ($whereRelation) {
-                    $query->whereRaw($whereRelation['query']);
-                });
-            }
-        }
+        $query->where("uid", $uid);
         
         if ($relation) {
             $query->with($relation);
