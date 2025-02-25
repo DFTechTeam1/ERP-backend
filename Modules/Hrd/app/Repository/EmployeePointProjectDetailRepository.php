@@ -1,19 +1,18 @@
 <?php
 
-namespace Modules\Production\Repository;
+namespace Modules\Hrd\Repository;
 
-use Illuminate\Support\Facades\Log;
-use Modules\Production\Models\Project;
-use Modules\Production\Repository\Interface\ProjectInterface;
+use Modules\Hrd\Models\EmployeePointProjectDetail;
+use Modules\Hrd\Repository\Interface\EmployeePointProjectDetailInterface;
 
-class ProjectRepository extends ProjectInterface {
+class EmployeePointProjectDetailRepository extends EmployeePointProjectDetailInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Project();
+        $this->model = new EmployeePointProjectDetail();
         $this->key = 'id';
     }
 
@@ -25,16 +24,7 @@ class ProjectRepository extends ProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
-        array $whereHas = [],
-        string $orderBy = '',
-        int $limit = 0,
-        array $isGetDistance = [],
-        array $has = []
-    )
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
@@ -44,30 +34,8 @@ class ProjectRepository extends ProjectInterface {
             $query->whereRaw($where);
         }
 
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                    $qd->whereRaw($queryItem['query']);
-                });
-            }
-        }
-
-        if (!empty($has)) {
-            foreach ($has as $hasQuery) {
-                $query->has($hasQuery);
-            }
-        }
-
         if ($relation) {
             $query->with($relation);
-        }
-
-        if (!empty($orderBy)) {
-            $query->orderByRaw($orderBy);
-        }
-
-        if ($limit > 0) {
-            $query->limit($limit);
         }
 
         return $query->get();
@@ -85,11 +53,8 @@ class ProjectRepository extends ProjectInterface {
         string $select = '*',
         string $where = "",
         array $relation = [],
-        int $itemsPerPage = 10,
-        int $page = 1,
-        array $whereHas = [],
-        string $sortBy = '',
-        array $has = []
+        int $itemsPerPage,
+        int $page
     )
     {
         $query = $this->model->query();
@@ -100,30 +65,10 @@ class ProjectRepository extends ProjectInterface {
             $query->whereRaw($where);
         }
 
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                    $qd->whereRaw($queryItem['query']);
-                });
-            }
-        }
-
-        if (!empty($has)) {
-            foreach ($has as $hasQuery) {
-                $query->has($hasQuery);
-            }
-        }
-
         if ($relation) {
             $query->with($relation);
         }
-
-        if (empty($sortBy)) {
-            $query->orderBy('project_date', 'DESC');
-        } else {
-            $query->orderByRaw($sortBy);
-        }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -135,23 +80,14 @@ class ProjectRepository extends ProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(
-        string $uid = '',
-        string $select = '*',
-        array $relation = [],
-        string $where = ''
-    )
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where("uid", $uid);
-        } else {
-            $query->whereRaw($where);
-        }
-
+        $query->where("uid", $uid);
+        
         if ($relation) {
             $query->with($relation);
         }
@@ -191,7 +127,7 @@ class ProjectRepository extends ProjectInterface {
 
         $query->update($data);
 
-        return $query->first();
+        return $query;
     }
 
     /**
@@ -218,9 +154,6 @@ class ProjectRepository extends ProjectInterface {
             $key = $this->key;
         }
 
-        $data = $this->model->whereIn($key, $ids)->get();
-        foreach ($data as $project) {
-            $project->delete();
-        }
+        return $this->model->whereIn($key, $ids)->delete();
     }
 }

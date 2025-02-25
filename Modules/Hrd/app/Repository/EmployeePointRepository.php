@@ -80,13 +80,25 @@ class EmployeePointRepository extends EmployeePointInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '', array $whereHas = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("id", $uid);
+        if (!empty($where)) {
+            $query->whereRaw($where);
+        } else {
+            $query->where("id", $uid);
+        }
+
+        if (!empty($whereHas)) {
+            foreach ($whereHas as $whereRelation) {
+                $query->whereHas($whereRelation['relation'], function ($query) use ($whereRelation) {
+                    $query->whereRaw($whereRelation['query']);
+                });
+            }
+        }
         
         if ($relation) {
             $query->with($relation);
