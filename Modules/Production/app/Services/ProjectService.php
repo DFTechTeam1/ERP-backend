@@ -5434,7 +5434,7 @@ class ProjectService
             $needCompleteCache = $this->generalService->getCache(CacheKey::ProjectNeedToBeComplete->value . auth()->id());
             if ($needCompleteCache) {
                 $needCompleteCache = collect($needCompleteCache)->filter(function ($filter) use ($projectUid) {
-                    return $filter['uid'] == $projectUid;
+                    return $filter['uid'] != $projectUid;
                 })->values()->toArray();
                 
                 $this->generalService->storeCache(CacheKey::ProjectNeedToBeComplete->value . auth()->id(), $needCompleteCache);
