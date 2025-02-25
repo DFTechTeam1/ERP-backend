@@ -536,8 +536,8 @@ class DashboardService {
             if (!$output) {
                 $output = Cache::remember($cacheId, 60 * 60 * 2, function () use ($user) {
                     $status = [
-                        ProjectStatus::Completed->value,
-                        ProjectStatus::Draft->value
+                        ProjectStatus::OnGoing->value,
+                        ProjectStatus::ReadyToGo->value,
                     ];
                     $whereHas = [];
         
@@ -548,7 +548,7 @@ class DashboardService {
                         ];
                     }
         
-                    $where = "project_date < NOW() AND status NOT IN (" . implode(',', $status) . ")";
+                    $where = "project_date < NOW() AND status IN (" . implode(',', $status) . ")";
         
                     $data = $this->projectRepo->list(
                         select: 'id,uid,name,project_date,status,classification', 
