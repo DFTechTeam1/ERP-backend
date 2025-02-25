@@ -25,7 +25,7 @@ class FormatTaskPermission
 
         $project['songs'] = UpdateSongList::run($projectId);
 
-        $project['feedback_given'] = count($project['report']) > 0 ? true : false;
+        $project['feedback_given'] = $project['feedback'] ? true : false;
 
         $employeeId = $user->employee_id;
         $superUserRole = isSuperUserRole();

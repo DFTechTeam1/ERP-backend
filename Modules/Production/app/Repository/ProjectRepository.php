@@ -25,7 +25,16 @@ class ProjectRepository extends ProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [], string $orderBy = '', int $limit = 0, array $isGetDistance = [])
+    public function list(
+        string $select = '*',
+        string $where = "",
+        array $relation = [],
+        array $whereHas = [],
+        string $orderBy = '',
+        int $limit = 0,
+        array $isGetDistance = [],
+        array $has = []
+    )
     {
         $query = $this->model->query();
 
@@ -40,6 +49,12 @@ class ProjectRepository extends ProjectInterface {
                 $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
                     $qd->whereRaw($queryItem['query']);
                 });
+            }
+        }
+
+        if (!empty($has)) {
+            foreach ($has as $hasQuery) {
+                $query->has($hasQuery);
             }
         }
 
@@ -70,10 +85,11 @@ class ProjectRepository extends ProjectInterface {
         string $select = '*',
         string $where = "",
         array $relation = [],
-        int $itemsPerPage,
-        int $page,
+        int $itemsPerPage = 10,
+        int $page = 1,
         array $whereHas = [],
-        string $sortBy = ''
+        string $sortBy = '',
+        array $has = []
     )
     {
         $query = $this->model->query();
@@ -89,6 +105,12 @@ class ProjectRepository extends ProjectInterface {
                 $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
                     $qd->whereRaw($queryItem['query']);
                 });
+            }
+        }
+
+        if (!empty($has)) {
+            foreach ($has as $hasQuery) {
+                $query->has($hasQuery);
             }
         }
 
