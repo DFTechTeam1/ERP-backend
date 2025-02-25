@@ -70,5 +70,6 @@ return [
     "entertainmentPMShouldCheckThisFirst" => "PM Entertainment should check this first",
     "successReviseSong" => "Success revise this JB",
     "songAlreadyOnRevise" => "This song has been already on revise",
-    "songCannotBeRevise" => "Song cannot be revise yet"
+    "songCannotBeRevise" => "Song cannot be revise yet",
+    "cannotDeleteCompletedTask" => "Cannot delete completed task"
 ];

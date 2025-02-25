@@ -12,6 +12,7 @@ use App\Actions\Project\Entertainment\SwitchSongWorker;
 use App\Actions\Project\FormatBoards;
 use App\Actions\Project\FormatTaskPermission;
 use App\Actions\Project\GetProjectTeams;
+use App\Actions\Project\ProjectTaskStateEvent;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
@@ -2606,8 +2607,15 @@ class ProjectService
     {
         try {
             $task = $this->taskRepo->show($taskUid, 'id,project_id', [
-                'project:id,uid'
+                'project:id,uid',
+                'states:id,project_task_id'
             ]);
+
+            // check project state
+            // if there any relation with project state (Which mean task is already completed), then task will not be deleted
+            if ($task->states->count() > 0) {
+                return errorResponse(__('notification.cannotDeleteCompletedTask'));
+            }
 
             $projectUid = $task->project->uid;
             $projectId = $task->project->id;
@@ -4769,6 +4777,8 @@ class ProjectService
      * Project task status will be complete (refer to \App\Enums\Production\TaskStatus.php)
      * Set working time to finish (refer to \App\Enums\Production\WorkType.php)
      * Detach ALL PIC
+     * 
+     * Store project task state to 'project_task_state' table
      *
      * @param string $projectUid
      * @param string $taskUid
@@ -4784,6 +4794,9 @@ class ProjectService
             }
             $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+
+            // write project task state
+            ProjectTaskStateEvent::run($projectUid, $taskUid);
 
             // this variable is to alert current pics which is the worker
             $currentTaskData = $this->taskRepo->show($taskUid, 'current_pics,current_board,project_board_id');
