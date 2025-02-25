@@ -12,6 +12,7 @@ use App\Actions\Project\Entertainment\SwitchSongWorker;
 use App\Actions\Project\FormatBoards;
 use App\Actions\Project\FormatTaskPermission;
 use App\Actions\Project\GetProjectTeams;
+use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Enums\Production\Entertainment\TaskSongLogType;
@@ -5407,7 +5408,9 @@ class ProjectService
         try {
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
-            PointRecord::run($data, $projectUid, 'production');
+            if (!empty($data['points'])) {
+                PointRecord::run($data, $projectUid, 'production');
+            }
 
             $this->repo->update([
                 'feedback' => $data['feedback'],
@@ -5427,7 +5430,18 @@ class ProjectService
                 forceUpdateAll: true
             );
 
+            // modify cache if exists
+            $needCompleteCache = $this->generalService->getCache(CacheKey::ProjectNeedToBeComplete->value . auth()->id());
+            if ($needCompleteCache) {
+                $needCompleteCache = collect($needCompleteCache)->filter(function ($filter) use ($projectUid) {
+                    return $filter['uid'] == $projectUid;
+                })->values()->toArray();
+                
+                $this->generalService->storeCache(CacheKey::ProjectNeedToBeComplete->value . auth()->id(), $needCompleteCache);
+            }
+
             DB::commit();
+
 
             return generalResponse(
                 __('global.projectIsCompleted'),
