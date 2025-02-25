@@ -411,10 +411,12 @@ class TestingService {
 //                    $assistantTaskCondition = $this->getProjectTaskRelationQuery($employee);
 
                 } else {
-                    $whereHas[] = [
-                        'relation' => 'personInCharges',
-                        'query' => 'pic_id = ' . $this->user->employee_id,
-                    ];
+                    if (!auth()->user()->hasRole(BaseRole::ProjectManagerAdmin->value)) {
+                        $whereHas[] = [
+                            'relation' => 'personInCharges',
+                            'query' => 'pic_id = ' . $this->user->employee_id,
+                        ];
+                    }
                 }
             }
 

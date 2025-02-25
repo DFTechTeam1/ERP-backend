@@ -69,5 +69,6 @@ return [
     "entertainmentPMShouldCheckThisFirst" => "PM Entertainment harus menyetujui pekerjaan ini dahulu",
     "successReviseSong" => "Berhasil melakukan revisi pada JB",
     "songAlreadyOnRevise" => "Tugas ini sudah dalam proses pengerjaan revisi",
-    "songCannotBeRevise" => "Musik belum bisa di revisi untuk saat ini"
+    "songCannotBeRevise" => "Musik belum bisa di revisi untuk saat ini",
+    "cannotDeleteCompletedTask" => "Tidak bisa menghapus task yang sudah selesai"
 ];

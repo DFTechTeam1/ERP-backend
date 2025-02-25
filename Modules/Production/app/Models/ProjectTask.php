@@ -58,6 +58,11 @@ class ProjectTask extends Model
         return $this->hasMany(ProjectTaskPic::class, 'project_task_id');
     }
 
+    public function states(): HasMany
+    {
+        return $this->hasMany(ProjectTaskState::class, 'project_task_id');
+    }
+
     public function revises(): HasMany
     {
         return $this->hasMany(ProjectTaskReviseHistory::class, 'project_task_id');
