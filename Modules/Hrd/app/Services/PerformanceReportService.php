@@ -3,9 +3,22 @@
 namespace Modules\Hrd\Services;
 
 use App\Enums\Employee\Status;
+use App\Enums\System\BaseRole;
+use App\Exports\PerformanceReportExport;
+use App\Services\GeneralService;
 use Carbon\Carbon;
 use DateTime;
+use Maatwebsite\Excel\Facades\Excel;
+use Modules\Company\Models\Position;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
+use Modules\Hrd\Repository\EmployeePointProjectRepository;
+use Modules\Hrd\Repository\EmployeePointRepository;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\EmployeeTaskPointRepository;
+use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
+use Modules\Production\Repository\ProjectTaskPicLogRepository;
 
 class PerformanceReportService {
     private $repo;
@@ -22,17 +35,38 @@ class PerformanceReportService {
 
     private $endDate;
 
-    public function __construct()
+    private $newEmployeePointRepo;
+
+    private $employeePointService;
+
+    private $generalService;
+
+    public function __construct(
+        ProjectTaskPicLogRepository $taskPicLogRepo,
+        EmployeeRepository $repo,
+        ProjectTaskPicHistoryRepository $taskPicHistoryRepo,
+        ProjectRepository $projectRepo,
+        EmployeeTaskPointRepository $employeePointRepo,
+        EmployeePointRepository $newEmployeePointRepo,
+        EmployeePointService $employeePointService,
+        GeneralService $generalService
+    )
     {
-        $this->taskPicLogRepo = new \Modules\Production\Repository\ProjectTaskPicLogRepository();
+        $this->taskPicLogRepo = $taskPicLogRepo;
 
-        $this->repo = new \Modules\Hrd\Repository\EmployeeRepository();
+        $this->repo = $repo;
 
-        $this->taskPicHistoryRepo = new \Modules\Production\Repository\ProjectTaskPicHistoryRepository();
+        $this->taskPicHistoryRepo = $taskPicHistoryRepo;
 
-        $this->projectRepo = new \Modules\Production\Repository\ProjectRepository();
+        $this->projectRepo = $projectRepo;
 
-        $this->employeePointRepo = new \Modules\Hrd\Repository\EmployeeTaskPointRepository();
+        $this->employeePointRepo = $employeePointRepo;
+
+        $this->newEmployeePointRepo = $newEmployeePointRepo;
+
+        $this->employeePointService = $employeePointService;
+
+        $this->generalService = $generalService;
     }
 
     protected function getTotalProjectEmployee(int $employeeId)
@@ -108,7 +142,13 @@ class PerformanceReportService {
         return $output;
     }
 
-    public function performanceDetail(string $employeeUid)
+    /**
+     * Render performance report
+     *
+     * @param string $employeeUid
+     * @return array
+     */
+    public function performanceDetail(string $employeeUid): array
     {
         // validate date filter
         $this->startDate = date('Y-m-d', strtotime('-7 days'));
@@ -129,16 +169,45 @@ class PerformanceReportService {
 
         $employee = $this->repo->show(
             $employeeUid, 
-            'id,name,nickname,employee_id,email,position_id,boss_id', 
+            'id,name,nickname,employee_id,email,position_id,boss_id,user_id', 
             [
                 'position:id,name', 
-                'boss:id,nickname'
+                'boss:id,nickname',
+                'user:id,email'
             ]
         );
-        
-        $totalProject = $this->getTotalProjectEmployee($employee->id);
 
-        $point = $this->getEmployeePoint($employee->id);
+        $newFormatPoint = $this->employeePointService->renderEachEmployeePoint($employee->id, $this->startDate, $this->endDate);
+
+        // format response
+        $formatPoint = [];
+        if ($newFormatPoint) {
+            $reportType = $newFormatPoint->type;
+            $formatPoint = collect($newFormatPoint->detail_projects)->map(function ($item) use ($reportType) {
+                return [
+                    'project_name' => $item->project->name,
+                    'point' => $item->point,
+                    'additional_point' => $item->additional_point,
+                    'total_point' => $item->total_point,
+                    'tasks' => collect($item->tasks)->map(function ($task) use ($reportType) {
+                        $taskName = '';
+                        $taskTime = '';
+                        if ($reportType == 'production') {
+                            $taskName = $task->productionTask->name;
+                            $taskTime = date('d F Y', strtotime($task->productionTask->created_at));
+                        } else {
+                            $taskName = $task->entertainmentTask->song->name;
+                            $taskTime = date('d F Y', strtotime($task->entertainmentTask->created_at));
+                        }
+
+                        return [
+                            'name' => $taskName,
+                            'assigned_at' => $taskTime
+                        ];
+                    })
+                ];
+            });
+        }
 
         $picLog = $this->taskPicLogRepo->list('*', 'employee_id = ' . $employee->id);
         $picLog = collect($picLog)->groupBy('project_task_id')->toArray();
@@ -172,15 +241,16 @@ class PerformanceReportService {
                 'position' => $employee->position->name,
                 'boss' => $employee->boss_id ? $employee->boss->nickname : '-',
                 'period' => date('d F', strtotime($this->startDate)) . ' - ' . date('d F', strtotime($this->endDate)),
-                'total_point' => collect($point)->pluck('total_point')->sum(),
+                'total_point' => $newFormatPoint ? $newFormatPoint->total_point : 0,
             ],
             'chart' => [
                 'labels' => [__('global.completed'), __('global.revise'), __('global.waitingApproval'), __('global.onProgress')],
                 'series' => $series,
                 'show_chart' => $showChart,
             ],
-            'total_project' => $totalProject,
-            'point_detail' => $point,
+            'total_project' => $newFormatPoint ? count($newFormatPoint->detail_projects) : 0,
+            // 'point_detail' => $newFormatPoint ? $newFormatPoint->detail_projects : [],
+            'point_detail' => $formatPoint,
         ];
 
         return generalResponse(
@@ -201,8 +271,8 @@ class PerformanceReportService {
      * $payload will have
      * bool all_employee -> required (false or true)
      * array employee_uids -> nullable, required if all_employee is false
-     * string date_start -> nullable
-     * end date_start -> nullable
+     * string start_date -> nullable
+     * string end_date -> nullable
      * 
      * Default date is 1 period
      * 
@@ -227,7 +297,7 @@ class PerformanceReportService {
     
             // get date range
             if (empty($payload['start_date']) && empty($payload['end_date'])) {
-                $where = $this->setDefaultPeriodQueryForPoint($where);
+                $formatDate = $this->setDefaultPeriodQueryForPoint();
             } else if (!empty($payload['start_date']) && !empty($payload['end_date'])) {
                 $formatDate = $this->formatPointQueryDate($payload);
                 
@@ -248,15 +318,15 @@ class PerformanceReportService {
 
             $points = [];
             foreach ($employeeUids as $employeeId) {
-                $pointResult = $this->getEmployeePoint($employeeId, $payload['start_date'], $payload['end_date']);
+                $pointResult = $this->employeePointService->renderEachEmployeePoint($employeeId, $formatDate['start'], $formatDate['end']);
 
-                if (count($pointResult) > 0) {
-                    $pointResult = collect($pointResult)->filter(function ($filter) {
-                        return $filter['point'] > 0;
-                    })->values()->toArray();
+                // if (($pointResult) && (count($pointResult->detail_projects) > 0)) {
+                //     $pointResult = collect($pointResult)->filter(function ($filter) {
+                //         return $filter['total_point'] > 0;
+                //     })->values()->toArray();
 
-                    $points[] = $pointResult;
-                }
+                // }
+                $points[] = $pointResult ? $pointResult->total_point : 0;
             }
 
             $excel = new \App\Services\ExcelService();
@@ -351,15 +421,98 @@ class PerformanceReportService {
         ];
     }
 
-    public function setDefaultPeriodQueryForPoint(string $where = ''): string
+    public function setDefaultPeriodQueryForPoint(): array
     {
         $now = Carbon::now();
 
         $start = $now->copy()->subMonthNoOverflow()->day(24);
         $end = $now->copy()->day(23);
 
-        $where .= "DATE(created_at) BETWEEN {$start} AND {$end}";
+        return [
+            'start' => $start,
+            'end' => $end
+        ];
+    }
 
-        return $where;
+    /**
+     * Export performance report
+     *
+     * @param array $payload
+     * @return array
+     */
+    public function export(array $payload): array
+    {
+        try {
+            if (!$payload['start_date']) {
+                $default = $this->generalService->reportPerformanceDefaultDate();
+                $startDate = $default['start'];
+                $endDate = $default['end'];
+            } else {
+                $startDate = $payload['start_date'];
+                $endDate = $payload['end_date'];
+            }
+
+            // get employee and point data
+            $where = "status NOT IN (" . Status::Inactive->value . ")";
+
+            if ($payload['all_employee'] == 0) {
+                if (!empty($payload['employee_uids'])) {
+                    $employeeIds = collect($payload['employee_uids'])->map(function ($item) {
+                        return $this->generalService->getIdFromUid($item, new Employee());
+                    })->toArray();
+
+                    $where .= " AND id IN (" . implode(',', $employeeIds) . ")";
+                }
+    
+                if (!empty($payload['position_uids'])) {
+                    $positionIds = collect($payload['position_uids'])->map(function ($position) {
+                        return $this->generalService->getIdFromUid($position, new Position());
+                    })->toArray();
+    
+                    $where .= " AND position_id IN (" . implode(',', $positionIds) . ")";
+                }
+            }
+
+            $employees = $this->repo->list(
+                select: 'id,name,employee_id,position_id',
+                where: $where,
+                relation: [
+                    'position:id,name'
+                ]
+            );
+
+            $pointService = new EmployeePointService(
+                new EmployeePointRepository,
+                new EmployeePointProjectRepository,
+                new EmployeePointProjectDetailRepository
+            );
+            
+            $data = [];
+            foreach ($employees as $employee) {
+                $pointData = $pointService->renderEachEmployeePoint($employee->id, $startDate, $endDate) ?? [];
+    
+                if ($pointData) {
+                    $data[] = $pointData;
+                } else {
+                    $data[] = [
+                        'employee' => $employee,
+                        'detail_projects' => []
+                    ];
+                }
+            }
+
+            $filename = 'performance_report_' . $startDate . '-' . $endDate . '.xlsx';
+            Excel::store(new PerformanceReportExport($startDate, $endDate, $employees), "hrd/performance_report/{$filename}", 'public');
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'path' => asset("storage/hrd/performance_report/{$filename}"),
+                    'data' => $data
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

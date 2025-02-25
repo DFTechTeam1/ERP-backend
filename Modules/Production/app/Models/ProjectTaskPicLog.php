@@ -2,6 +2,8 @@
 
 namespace Modules\Production\Models;
 
+use App\Enums\Production\WorkType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,6 +34,11 @@ class ProjectTaskPicLog extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'employee_id');
+    }
+
+    public function scopeAssigned(Builder $query): void
+    {
+        $query->where("work_type", WorkType::Assigned->value);
     }
 
     public function statusText(): Attribute

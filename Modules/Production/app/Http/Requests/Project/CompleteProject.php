@@ -13,7 +13,11 @@ class CompleteProject extends FormRequest
     {
         return [
             'feedback' => 'required',
-            'points' => 'required',
+            'points' => 'nullable',
+            'points.*.uid' => 'nullable',
+            'points.*.point' => 'nullable',
+            'points.*.additional_point' => 'nullable',
+            'points.*.tasks' => 'nullable|array',
         ];
     }
 

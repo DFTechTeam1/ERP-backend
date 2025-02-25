@@ -220,6 +220,7 @@ Route::middleware('auth:sanctum')
         Route::get('dashboard/projectCalendar', [DashboardController::class, 'getProjectCalendar']);
         Route::get('dashboard/projectDeadline', [DashboardController::class, 'getProjectDeadline']);
         Route::get('dashboard/projectSong', [DashboardController::class, 'getProjectSong']);
+        Route::get('dashboard/needCompleteProject', [DashboardController::class, 'needCompleteProject']);
         Route::get('dashboard/getReport', [DashboardController::class, 'getReport']);
     });
 
