@@ -16,6 +16,7 @@ use Modules\Company\Models\IndonesiaVillage;
 use Modules\Company\Models\Province;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Production\Models\Project;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 

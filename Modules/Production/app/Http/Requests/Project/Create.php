@@ -18,7 +18,7 @@ class Create extends FormRequest
             'project_date' => 'required',
             'event_type' => 'required',
             'venue' => 'required',
-            'marketing_id' => 'required',
+            'marketing_id' => 'required|array',
             'collaboration' => 'nullable',
             'note' => 'nullable',
             'classification' => 'required',

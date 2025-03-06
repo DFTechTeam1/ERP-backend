@@ -28,7 +28,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('tasks', [ProjectController::class, 'getAllTasks']);
     Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
 
-    Route::post('project', [ProjectController::class, 'store']);
+    Route::post('project', [ProjectController::class, 'store'])->name('project.store');
     Route::get('project', [ProjectController::class, 'index'])->name('project-list');
     Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
     Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
@@ -91,7 +91,7 @@ Route::middleware(['auth:sanctum'])
     Route::post('project/{projectId}/manualChangeTaskBoard', [ProjectController::class, 'manualChangeTaskBoard']);
     Route::post('project/{projectId}/proofOfWork/{taskId}', [ProjectController::class, 'proofOfWork']);
     Route::delete('project/{taskUid}/task', [ProjectController::class, 'deleteTask']);
-    Route::put('project/basic/{projectId}', [ProjectController::class, 'updateBasic']);
+    Route::put('project/basic/{projectId}', [ProjectController::class, 'updateBasic'])->name('project.update-basic');
     Route::put('project/moreDetail/{id}', [ProjectController::class, 'updateMoreDetail']);
     Route::post('project/{projectId}/equipment', [ProjectController::class, 'requestEquipment']);
     Route::get('project/{projectId}/equipment', [ProjectController::class, 'listEquipment']);
