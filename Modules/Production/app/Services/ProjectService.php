@@ -12,6 +12,7 @@ use App\Actions\Project\Entertainment\SwitchSongWorker;
 use App\Actions\Project\FormatBoards;
 use App\Actions\Project\FormatTaskPermission;
 use App\Actions\Project\GetProjectTeams;
+use App\Actions\Project\SaveTaskState;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
@@ -4774,7 +4775,7 @@ class ProjectService
      * @param string $taskUid
      * @return array
      */
-    public function markAsCompleted(string $projectUid, string $taskUid, object $employee = null): array
+    public function markAsCompleted(string $projectUid, string $taskUid, ?object $employee = null): array
     {
         DB::beginTransaction();
         try {
@@ -4861,6 +4862,9 @@ class ProjectService
                     'full_detail' => $currentData,
                 ];
             }
+
+            // save task state
+            SaveTaskState::run($projectUid, $taskUid);
 
             \Modules\Production\Jobs\TaskIsCompleteJob::dispatch($currentPicIds, $taskId)->afterCommit();
 
