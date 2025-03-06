@@ -58,6 +58,8 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
+use Modules\Company\Repository\CityRepository;
+use Modules\Company\Repository\StateRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Production\Exceptions\AttributeReferenceMissing;
@@ -159,6 +161,10 @@ class ProjectService
 
     private $entertainmentTaskSongRevise;
 
+    private $cityRepo;
+
+    private $stateRepo;
+
     /**
      * Construction Data
      */
@@ -197,7 +203,9 @@ class ProjectService
         DetailCache $detailCacheAction,
         EntertainmentTaskSongResultRepository $entertainmentTaskSongResultRepo,
         EntertainmentTaskSongResultImageRepository $entertainmentTaskSongResultImageRepo,
-        EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise
+        EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise,
+        CityRepository $cityRepo,
+        StateRepository $stateRepo
     )
     {   
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
@@ -269,6 +277,10 @@ class ProjectService
         $this->customItemRepo = $customItemRepo;
 
         $this->projectSongListRepo = $projectSongListRepo;
+
+        $this->cityRepo = $cityRepo;
+
+        $this->stateRepo = $stateRepo;
     }
 
     /**
@@ -2031,9 +2043,15 @@ class ProjectService
             }
             $data['led_detail'] = json_encode($ledDetail);
 
-            $city = \Modules\Company\Models\City::select('name')->find($data['city_id']);
-            $state = \Modules\Company\Models\State::select('name')->find($data['state_id']);
-
+            $city = $this->cityRepo->show(
+                uid: $data['city_id'],
+                select: 'name',
+            );
+            $state = $this->stateRepo->show(
+                uid: $data['state_id'],
+                select: 'name'
+            );
+            
             $coordinate = $this->geocoding->getCoordinate($city->name . ', ' . $state->name);
             if (count($coordinate) > 0) {
                 $data['longitude'] = $coordinate['longitude'];
@@ -2043,6 +2061,7 @@ class ProjectService
             $data['project_class_id'] = $data['classification'];
 
             $classification = $this->projectClassRepo->show($data['classification'], 'id,name');
+            logging('CLASSIFICATION CHECK >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', [$classification->name]);
 
             $data['classification'] = $classification->name;
 

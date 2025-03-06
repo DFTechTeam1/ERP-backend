@@ -9,8 +9,10 @@ use App\Services\GeneralService;
 use App\Services\Geocoding;
 use App\Services\TestProjectConstructor;
 use App\Services\UserRoleManagement;
+use Modules\Company\Repository\CityRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
+use Modules\Company\Repository\StateRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
@@ -80,7 +82,9 @@ trait HasProjectConstructor
         $detailCacheAction = null,
         $entertainmentTaskSongResultRepo = null,
         $entertainmentTaskSongResultImageRepo = null,
-        $entertainmentTaskSongRevise = null
+        $entertainmentTaskSongRevise = null,
+        $cityRepo = null,
+        $stateRepo = null
     )
     {
         $this->projectService = new ProjectService(
@@ -118,7 +122,9 @@ trait HasProjectConstructor
             $detailCacheAction ? $detailCacheAction : new DetailCache,
             $entertainmentTaskSongResultRepo ? $entertainmentTaskSongResultRepo : new EntertainmentTaskSongResultRepository,
             $entertainmentTaskSongResultImageRepo ? $entertainmentTaskSongResultImageRepo : new EntertainmentTaskSongResultImageRepository,
-            $entertainmentTaskSongRevise ? $entertainmentTaskSongRevise : new EntertainmentTaskSongReviseRepository
+            $entertainmentTaskSongRevise ? $entertainmentTaskSongRevise : new EntertainmentTaskSongReviseRepository,
+            $cityRepo ? $cityRepo : new CityRepository,
+            $stateRepo ? $stateRepo : new StateRepository
         );
     }
 }

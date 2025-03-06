@@ -1258,13 +1258,27 @@ Table "users" {
 }
 
 Table "nas_folder_creations" {
-    "id" bigint [pk, not null, increment]
-    "project_name" varchar(255) [not null]
-    "project_id" bigint [not null]
-    "folder_path" longtext [not null, note: '["2024/01_Januari_Event_Name/Brief", "2024/01_Januari_Event_Name/Asset_3D", "2024/01_Januari_Event_Name/Asset_Footage"]']
-    "status" bool [default: 1]
-    "created_at" timestamp [default: NULL]
-    "updated_at" timestamp [default: NULL]
+  "id" bigint [pk, not null, increment]
+  "project_name" varchar(255) [not null]
+  "project_id" bigint [not null]
+  "folder_path" longtext [not null, note: '["2024/01_Januari_Event_Name/Brief", "2024/01_Januari_Event_Name/Asset_3D", "2024/01_Januari_Event_Name/Asset_Footage"]']
+  "status" bool [default: 1]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "nas_folder_creation_backups" {
+  "id" bigint [pk, not null, increment]
+  "shared_folder" varchar [not null]
+  "year" year [not null]
+  "month_name" varchar [not null]
+  "project_name" varchar [not null]
+  "prefix_project_name" varchar [not null]
+  "child_folders" longtext [not null]
+  "project_id" bigint [not null]
+  "status" tinyint [default: 1 note: '0 is complete, 1 is ready, 2 is onging, 3 is failed']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "project_logs" {

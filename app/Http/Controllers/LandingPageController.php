@@ -13,6 +13,7 @@ use Modules\Hrd\Repository\EmployeePointRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
 use Modules\Hrd\Services\PerformanceReportService;
+use Modules\Production\Models\Project;
 use Modules\Production\Services\ProjectRepositoryGroup;
 
 class LandingPageController extends Controller
@@ -36,8 +37,79 @@ class LandingPageController extends Controller
         $this->reportService = $reportService;
     }
 
+    protected function folders()
+    {
+        return [
+            "BRIEF",
+            "ASSET_3D",
+            "ASSET_FOOTAGE",
+            "FINAL_RENDER",
+            "ASSET_SEMENTARA",
+            "PREVIEW",
+            "SKETSA",
+            "TC",
+            "RAW",
+            "AUDIO"
+        ];
+    }
+
+    protected function minifyFolders()
+    {
+        return [
+            "FINAL_RENDER",
+            "PREVIEW",
+            'RAW',
+            'OLD'
+        ];
+    }
+
+    protected function pregName(string $name)
+    {
+        return preg_replace('/[.,\"~@\/]/', '', $name);
+    }
+
     public function index()
     {
+        $customer = Project::latest()->first();
+        $name = $this->pregName(name: $customer->name);
+        $name = stringToPascalSnakeCase($name);
+
+        $date = date('d', strtotime($customer->project_date));
+        $month = date('m', strtotime($customer->project_date));
+        $monthText = MonthInBahasa(date('m', strtotime($customer->project_date)));
+        $subFolder1 = strtoupper($month . '_' . $monthText);
+        $prefixName = strtoupper($date . "_" . $monthText);
+
+        $subFolder2 = $prefixName . '_' . $name;
+
+        $year = date('Y', strtotime($customer->project_date));
+
+        $parent =  "/{$year}/{$subFolder1}/{$subFolder2}";
+
+        $toBeCreatedParents = [];
+        $toBeCreatedNames = [];
+        foreach ($this->folders() as $folder) {
+            $toBeCreatedParents[] = $parent;
+            $toBeCreatedNames[] = $folder;
+        }
+
+        // set current path
+        $currentPath = [];
+        foreach ($toBeCreatedParents as $keyFolder => $folder) {
+            $currentPath[] = $folder . "/" . $toBeCreatedNames[$keyFolder];
+        }
+
+        $sharedFolder = getSettingByKey('nas_current_root');
+
+        return [
+            'shared_folder' => $sharedFolder,
+            'year' => $year,
+            'month_name' => $subFolder1,
+            'project_name' => $name,
+            'prefix_project_name' => $prefixName,
+            'child_folders' => $this->folders(),
+            'project_id' => $customer->id,
+        ];
         return view('landing');
     }
 
