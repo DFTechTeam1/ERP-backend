@@ -93,12 +93,7 @@ class DivisionService
                 ],
             );
         } catch (\Throwable $th) {
-            return generalResponse(
-                errorMessage('message'),
-                true,
-                [],
-                Code::BadRequest->value,
-            );
+            return errorResponse($th);
         }
     }
 
