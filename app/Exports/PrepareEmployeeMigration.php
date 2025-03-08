@@ -1,48 +1,21 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Exports;
 
-use App\Enums\Employee\Religion;
-use App\Enums\Employee\Status;
-use App\Enums\Production\WorkType;
-use App\Exports\PrepareEmployeeMigration;
-use Carbon\Carbon;
-use Illuminate\Database\Query\JoinClause;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Contracts\View\View;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromView;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Modules\Company\Models\Position;
 use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
-use Modules\Hrd\Repository\EmployeePointProjectRepository;
-use Modules\Hrd\Repository\EmployeePointRepository;
-use Modules\Hrd\Repository\EmployeeRepository;
-use Modules\Hrd\Services\EmployeePointService;
-use Modules\Hrd\Services\PerformanceReportService;
-use Modules\Production\Services\ProjectRepositoryGroup;
 
-class LandingPageController extends Controller
+class PrepareEmployeeMigration implements FromView, ShouldAutoSize
 {
-    private $projectRepoGroup;
-
-    private $employeePointService;
-
-    private $reportService;
-
-    public function __construct(
-        ProjectRepositoryGroup $projectRepoGroup,
-        EmployeePointService $employeePointService,
-        PerformanceReportService $reportService
-    )
-    {
-        $this->projectRepoGroup = $projectRepoGroup;
-
-        $this->employeePointService = $employeePointService;
-
-        $this->reportService = $reportService;
-    }
-
-    public function index()
+    /**
+    * @return \Illuminate\Contracts\View\View
+    */
+    public function view(): View
     {
         $employees = array(
             array('id' => '1','name' => 'Wesley Wiyadi','position_id' => '1'),
@@ -112,41 +85,63 @@ class LandingPageController extends Controller
             array('id' => '65','name' => 'Noval Oktafian','position_id' => '7'),
             array('id' => '66','name' => 'Yumna Syarifah','position_id' => '4')
         );
+
+        $schemas = [
+            'Lead Project Manager' => 'Direktur Utama',
+            'Head of Creative' => 'Direktur',
+            'Project Manager' => 'Project Manager',
+            'Animator' => 'Animator',
+            'Compositor' => 'Compositor',
+            '3D Modeller' => '3D Modeller',
+            '3D Generalist' => '3D Generalist',
+            'Marcomm Staff' => 'Marcomm Staff',
+            'Admin Staff' => 'Finance Admin',
+            'HR Generalist' => 'HR Generalist',
+            'Lead Marcomm' => 'Lead Marcomm',
+            'Operator' => 'Operator',
+            'Graphic Designer' => 'Graphic Designer',
+            'Marketing Staff' => 'Marketing Staff',
+            'IT Technical Support' => 'IT Technical Support',
+            'Assistant Project Manager' => 'Assistant Project Manager',
+            'HR & TA Admin' => 'HR & GA Admin',
+            'Full Stack Developer' => 'Full Stack Developer',
+            'Visual Jockey' => 'Operator',
+            '3D Animator' => '3D Animator',
+        ];
+
+        $all = [];
         foreach ($employees as $employee) {
-            Employee::where('id', $employee['id'])
-                ->update(['position_id' => $employee['position_id']]);
-        }
-        return Excel::download(new PrepareEmployeeMigration, 'employee_updated.xlsx');
-        return view('landing');
-    }
+            $currentPosition = Position::selectRaw('id,name')
+                ->where('id', $employee['position_id'])
+                ->first();
 
-    public function sendToNAS()
-    {
-        $filePath = public_path('images/user.png');
-        $username = "ilhamgumilang"; // Change this to NAS username
-        $password = "Ilham..123"; // Change this to NAS password
-    
-        $curl = curl_init();
-    
-        curl_setopt_array($curl, [
-            CURLOPT_URL => 'http://192.168.100.105:3500',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
-            CURLOPT_USERPWD => "$username:$password",
-            CURLOPT_POSTFIELDS => [
-                'file' => new \CURLFile($filePath)
-            ],
-        ]);
-    
-        $response = curl_exec($curl);
-        if ($response === false) {
-            throw new \Exception('Upload failed: ' . curl_error($curl));
-        }
-    
-        curl_close($curl);
+            // loop schemas
+            if (isset($schemas[$currentPosition->name])) {
+                $newPositionName = $schemas[$currentPosition->name];
+            }
 
-        echo json_encode($response);
+            $newPosition = PositionBackup::selectRaw('id,name')
+                ->where('name', $newPositionName)
+                ->first();
+
+            $employeeData = Employee::selectRaw('id,name,position_id,employee_id')->where('id', $employee['id'])
+                ->first();
+
+            $all[] = [
+                'id' => $employee['id'],
+                'name' => $employee['name'],
+                'employee_id' => $employeeData->employee_id,
+                'current_position' => [
+                    'id' => $currentPosition->id,
+                    'name' => $currentPosition->name
+                ],
+                'new_position' => [
+                    'id' => $newPosition ? $newPosition->id : '',
+                    'name' => $newPosition ? $newPosition->name : ''
+                ]
+            ];
+        }
+
+        return view('hrd::prepare-export-employee', compact('all'));
     }
-    
 }

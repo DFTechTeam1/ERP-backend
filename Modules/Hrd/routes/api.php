@@ -31,6 +31,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees','list');
         Route::post('employees','store')->name('employees.store');
         Route::get('employees/all','getAll');
+        Route::post('employees/export','export');
         Route::get('employees/checkEmail', 'checkEmail');
         Route::get('employees/checkIdNumber', 'checkIdNumber');
         Route::get('employees/generateEmployeeId', 'generateEmployeeID');

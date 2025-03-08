@@ -32,6 +32,8 @@ use Modules\Company\Models\Branch;
 use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\IndonesiaVillage;
+use Modules\Company\Models\JobLevel;
+use Modules\Company\Models\PositionBackup;
 use Modules\Company\Models\Province;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\ProjectTaskPic;
@@ -58,7 +60,6 @@ class Employee extends Model
             'religion' => Religion::class,
             'status' => Status::class,
             'martial_status' => MartialStatus::class,
-            'level_staff' => LevelStaff::class,
             'salary_type' => SalaryType::class,
             'ptkp_status' => PtkpStatus::class
         ];
@@ -130,6 +131,8 @@ class Employee extends Model
         'end_date',
         'resign_reason',
         'telegram_chat_id',
+        'job_level_id',
+        'is_sync_with_talenta',
     ];
 
     protected $appends = [
@@ -279,7 +282,12 @@ class Employee extends Model
 
     public function position(): BelongsTo
     {
-        return $this->belongsTo(Position::class, 'position_id', 'id');
+        return $this->belongsTo(PositionBackup::class, 'position_id', 'id');
+    }
+
+    public function jobLevel(): BelongsTo
+    {
+        return $this->belongsTo(JobLevel::class, 'job_level_id');
     }
 
     public function families(): HasMany
