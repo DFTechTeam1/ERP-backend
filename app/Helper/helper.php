@@ -589,7 +589,7 @@ if (!function_exists('isDirector')) {
         $out = false;
         if ($directorPosition && !isSuperUserRole()) {
             $directorPosition = collect($directorPosition)->map(function ($item) {
-                return getidFromUid($item, new \Modules\Company\Models\Position());
+                return getidFromUid($item, new \Modules\Company\Models\PositionBackup());
             })->toArray();
 
             $user = auth()->user();

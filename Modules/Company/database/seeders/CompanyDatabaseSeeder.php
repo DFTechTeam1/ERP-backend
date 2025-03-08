@@ -16,6 +16,8 @@ class CompanyDatabaseSeeder extends Seeder
         $this->call([
             DivisionSeeder::class,
             PositionSeeder::class,
+            BankSeeder::class,
+            JobLevelSeeder::class
         ]);
     }
 }

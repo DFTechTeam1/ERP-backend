@@ -3,6 +3,7 @@
 namespace Modules\Company\Repository;
 
 use Modules\Company\Models\Position;
+use Modules\Company\Models\PositionBackup;
 use Modules\Company\Repository\Interface\PositionInterface;
 
 class PositionRepository extends PositionInterface {
@@ -12,7 +13,7 @@ class PositionRepository extends PositionInterface {
 
     public function __construct()
     {
-        $this->model = new Position();
+        $this->model = new PositionBackup();
         $this->key = 'uid';
     }
 

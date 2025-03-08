@@ -25,7 +25,7 @@ class GetProjectTeams
 
         if ($productionPositions = json_decode(getSettingByKey('position_as_production'), true)) {
             $productionPositions = collect($productionPositions)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\Position());
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
             })->toArray();
         }
 
@@ -55,7 +55,7 @@ class GetProjectTeams
         $specialEmployee = [];
         $specialIds = [];
         if ($specialPosition) {
-            $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\Position());
+            $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\PositionBackup());
 
             $specialEmployee = $employeeRepo->list('id,uid,name,nickname,email,position_id', 'position_id = ' . $specialPosition, ['position:id,name'])->toArray();
 

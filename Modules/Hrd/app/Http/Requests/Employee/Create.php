@@ -50,7 +50,7 @@ class Create extends FormRequest
                 'required',
                 'max:16',
                 'min:16',
-                Rule::unique('employees', 'id_number'),
+                Rule::unique('employees', 'id_number')->where('status', '!=', Status::Deleted->value),
             ],
             'address' => 'required',
             'current_address' => 'required_if:is_residence_same,1',
@@ -60,9 +60,8 @@ class Create extends FormRequest
                 'required',
                 Rule::unique('employees', 'employee_id'),
             ],
-            'level_staff' => [
+            'job_level_id' => [
                 'required',
-                Rule::enum(LevelStaff::class),
             ],
             'boss_id' => [
                 new BossRule(),
@@ -101,6 +100,7 @@ class Create extends FormRequest
             'start_review_date' => 'nullable',
             'end_probation_date' => 'nullable',
             'invite_to_erp' => 'nullable',
+            'user_email' => 'required_if:invite_to_erp,1',
             'password' => 'required_if:invite_to_erp,1',
             'invite_to_talenta' => 'nullable',
             'role_id' => 'required_if:invite_to_erp,1',
