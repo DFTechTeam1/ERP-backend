@@ -58,8 +58,10 @@ class Update extends FormRequest
                 new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'employee_id'),
             ],
             'level_staff' => [
-                'required',
-                Rule::enum(LevelStaff::class),
+                'nullable',
+            ],
+            'job_level_id' => [
+                'nullable',
             ],
             'boss_id' => [
                 new BossRule(),

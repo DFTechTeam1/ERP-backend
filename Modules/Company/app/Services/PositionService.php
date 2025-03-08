@@ -113,7 +113,7 @@ class PositionService {
         }
         $data = $this->repo->list($select, $where);
 
-        $data = collect($data)->map(function ($item) {
+        $data = collect((object) $data)->map(function ($item) {
             return [
                 'title' => $item->name,
                 'value' => $item->uid,
