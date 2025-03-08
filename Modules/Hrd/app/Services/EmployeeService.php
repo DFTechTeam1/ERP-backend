@@ -303,7 +303,7 @@ class EmployeeService
 
         if ($positionAsVJ) {
             $positionAsVJ = collect($positionAsVJ)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\Position());
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
             })->toArray();
 
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
@@ -982,7 +982,7 @@ class EmployeeService
             $projectManagerPosition = json_decode(getSettingByKey('position_as_project_manager'), true);
 
             $projectManagerPosition = collect($projectManagerPosition)->map(function ($item ) {
-                return getIdFromUid($item, new \Modules\Company\Models\Position());
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
             })->toArray();
 
             $condition = implode("','", $projectManagerPosition);
@@ -1592,7 +1592,7 @@ class EmployeeService
     public function updateEmployment(array $payload, string $employeeUid): array
     {
         try {
-            $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\Position());
+            $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\PositionBackup());
             if (
                 (isset($payload['boss_id'])) &&
                 ($payload['boss_id'])

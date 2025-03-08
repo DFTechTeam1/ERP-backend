@@ -35,16 +35,16 @@ class ManualAssignEmployeeAsUser extends Command
 
         $directorPosition = json_decode(getSettingByKey('position_as_directors'), true);
         $directorPosition = collect($directorPosition)->map(function ($item) {
-            return getIdFromUid($item, new \Modules\Company\Models\Position());
+            return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
         })->toArray();
 
         $pmPosition = json_decode(getSettingByKey('position_as_project_manager'), true);
         $pmPosition = collect($pmPosition)->map(function ($item) {
-            return getIdFromUid($item, new \Modules\Company\Models\Position());
+            return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
         })->toArray();
 
         $marketingPosition = getSettingByKey('position_as_marketing');
-        $marketingPosition = getIdFromUid($marketingPosition, new \Modules\Company\Models\Position());
+        $marketingPosition = getIdFromUid($marketingPosition, new \Modules\Company\Models\PositionBackup());
 
 
         $projectManagerRole = Role::findByName('project manager');

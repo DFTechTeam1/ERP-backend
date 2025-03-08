@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use DateTime;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Company\Models\Position;
+use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
@@ -466,7 +467,7 @@ class PerformanceReportService {
     
                 if (!empty($payload['position_uids'])) {
                     $positionIds = collect($payload['position_uids'])->map(function ($position) {
-                        return $this->generalService->getIdFromUid($position, new Position());
+                        return $this->generalService->getIdFromUid($position, new PositionBackup());
                     })->toArray();
     
                     $where .= " AND position_id IN (" . implode(',', $positionIds) . ")";
