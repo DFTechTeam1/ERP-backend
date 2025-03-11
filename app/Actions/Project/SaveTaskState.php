@@ -28,10 +28,10 @@ class SaveTaskState
         // get task detail
         $task = $this->taskRepo->show(
             uid: $taskUid,
-            select: 'id,current_pic,project_id,project_board_id'
+            select: 'id,current_pics,project_id,project_board_id'
         );
 
-        $currentPic = json_decode($task->current_pic, true);
+        $currentPic = json_decode($task->current_pics, true);
 
         // insert to state table
         foreach ($currentPic as $pic) {
