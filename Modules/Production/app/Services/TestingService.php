@@ -525,12 +525,30 @@ class TestingService {
                     }
                 }
 
+                $projectIsComplete = $item->status == \App\Enums\production\ProjectStatus::Completed->value;
+                $noPic = count($pics) == 0 ? true : false;
+                $isFinalCheck = $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false;
+                $haveVj = $item->vjs->count() > 0 ? true : false;
+
+                /**
+                 * Determine user can take these action or not
+                 * 1. Detail
+                 * 2. Delete
+                 * 3. Change status
+                 * 4. Assign PIC
+                 * 5. Subtitute PIC
+                 * 6. Final Check
+                 * 7. Remove all VJ
+                 * 8. Assign VJ
+                 * 9. Return Equipment
+                 */
+
                 return [
                     'uid' => $item->uid,
                     'id' => $item->id,
                     'marketing' => $marketing,
                     'pic' => count($pics) > 0  ? implode(', ', $pics) : __('global.undetermined'),
-                    'no_pic' => count($pics) == 0 ? true : false,
+                    'no_pic' => $noPic,
                     'pic_eid' => $picEid,
                     'name' => $item->name,
                     'project_date' => date('d F Y', strtotime($item->project_date)),
@@ -542,13 +560,24 @@ class TestingService {
                     'status' => $status,
                     'status_color' => $statusColor,
                     'status_raw' => $item->status,
-                    'project_is_complete' => $item->status == \App\Enums\production\ProjectStatus::Completed->value,
+                    'project_is_complete' => $projectIsComplete,
                     'vj' => $vj,
-                    'have_vj' => $item->vjs->count() > 0 ? true : false,
-                    'is_final_check' => $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false,
+                    'have_vj' => $haveVj,
+                    'is_final_check' => $isFinalCheck,
                     'need_return_equipment' => $needReturnEquipment,
                     'roles' => $roles,
-                    'number_of_equipments' => $item->equipments->count()
+                    'number_of_equipments' => $item->equipments->count(),
+                    'action' => [
+                        'delete' => $this->user->can('delete_project') ? true : false,
+                        'detail' => true,
+                        'change_status' => $this->user->can('change_project_status') && !$projectIsComplete,
+                        'assign_pic' => $this->user->can('assign_pic') && $noPic,
+                        'subtitute_pic' => $this->user->can('assign_pic') && !$noPic,
+                        'final_check' => $this->user->can('final_check') && !$noPic && !$isFinalCheck,
+                        'remove_all_vj' => $this->user->can('assign_vj') && !$projectIsComplete && !$noPic && $haveVj,
+                        'assign_vj' => $this->user->can('assign_vj') && !$projectIsComplete && !$haveVj && !$noPic,
+                        'return_equipment' => $projectIsComplete && $needReturnEquipment,
+                    ]
                 ];
             });
 

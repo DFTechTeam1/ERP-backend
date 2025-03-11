@@ -1083,7 +1083,7 @@ class ProjectService
 
         if ($productionPositions = json_decode(getSettingByKey('position_as_production'), true)) {
             $productionPositions = collect($productionPositions)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\Position());
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
             })->toArray();
         }
 
@@ -1113,7 +1113,7 @@ class ProjectService
         $specialEmployee = [];
         $specialIds = [];
         if ($specialPosition) {
-            $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\Position());
+            $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\PositionBackup());
 
             $specialEmployee = $this->employeeRepo->list('id,uid,name,nickname,email,position_id', 'position_id = ' . $specialPosition, ['position:id,name'])->toArray();
 
@@ -5041,7 +5041,7 @@ class ProjectService
 
             if (count($projectManagerPosition) > 0) {
                 $projectManagerPosition = collect($projectManagerPosition)->map(function ($item) {
-                    return getIdFromUid($item, new \Modules\Company\Models\Position());
+                    return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
                 })->toArray();
 
                 $positionIds = implode("','", $projectManagerPosition);
@@ -5147,13 +5147,13 @@ class ProjectService
 
             if ($bossIsPMEntertainment) {
                 $operatorPosition = collect($operatorPosition)->map(function ($item) {
-                    return getIdFromUid($item, new \Modules\Company\Models\Position());
+                    return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
                 })->toArray();
                 $positionCondition = "'";
                 $positionCondition .= implode("','", $operatorPosition) . "'";
             } else {
                 $productionPosition = collect($productionPosition)->map(function ($item) {
-                    return getIdFromUid($item, new \Modules\Company\Models\Position());
+                    return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
                 })->toArray();
                 $positionCondition = "'";
                 $positionCondition .= implode("','", $productionPosition) . "'";
