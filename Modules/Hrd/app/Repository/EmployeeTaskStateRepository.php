@@ -2,18 +2,17 @@
 
 namespace Modules\Hrd\Repository;
 
-use Illuminate\Support\Facades\DB;
-use Modules\Hrd\Models\EmployeePoint;
-use Modules\Hrd\Repository\Interface\EmployeePointInterface;
+use Modules\Hrd\Models\EmployeeTaskState;
+use Modules\Hrd\Repository\Interface\EmployeeTaskStateInterface;
 
-class EmployeePointRepository extends EmployeePointInterface {
+class EmployeeTaskStateRepository extends EmployeeTaskStateInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EmployeePoint();
+        $this->model = new EmployeeTaskState();
         $this->key = 'id';
     }
 
@@ -81,24 +80,16 @@ class EmployeePointRepository extends EmployeePointInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '', array $whereHas = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
-            $query->whereRaw($where);
-        } else {
+        if (empty($where)) {
             $query->where("id", $uid);
-        }
-
-        if (!empty($whereHas)) {
-            foreach ($whereHas as $whereRelation) {
-                $query->whereHas($whereRelation['relation'], function ($query) use ($whereRelation) {
-                    $query->whereRaw($whereRelation['query']);
-                });
-            }
+        } else {
+            $query->whereRaw($where);
         }
         
         if ($relation) {
@@ -110,31 +101,6 @@ class EmployeePointRepository extends EmployeePointInterface {
         return $data;
     }
 
-    public function rawSql(string $table, string $select, array $relation = [], string $where = '')
-    {
-        $query = DB::table($table);
-
-        if (!empty($relation)) {
-            foreach ($relation as $relationData) {
-                $query->join(
-                    $relationData['table'],
-                    $relationData['first'],
-                    $relationData['operator'],
-                    $relationData['second'],
-                    isset($relationData['type']) ? $relationData['type'] : 'inner',
-                );
-            }
-        }
-
-        $query->selectRaw($select);
-
-        if (!empty($where)) {
-            $query->whereRaw($where);
-        }
-
-        return $query->get();
-    }
-
     /**
      * Store Data
      *
@@ -144,6 +110,13 @@ class EmployeePointRepository extends EmployeePointInterface {
     public function store(array $data)
     {
         return $this->model->create($data);
+    }
+
+    public function updateOrInsert(array $key, array $updatedValue)
+    {
+        $query = $this->model->query();
+
+        return $query->updateOrCreate($key, $updatedValue);
     }
 
     /**

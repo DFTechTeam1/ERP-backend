@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Production\Models\Project;
 
 // use Modules\Hrd\Database\Factories\EmployeePointProjectFactory;
@@ -21,7 +22,7 @@ class EmployeePointProject extends Model
     protected $fillable = [
         'employee_point_id',
         'project_id',
-        'total_point',
+        'total_point', // total point per project -> point + additional_point
         'additional_point'
     ];
 
@@ -56,5 +57,10 @@ class EmployeePointProject extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id');
+    }
+
+    public function employeePoint(): HasOne
+    {
+        return $this->hasOne(EmployeePoint::class, 'employee_point_id');
     }
 }
