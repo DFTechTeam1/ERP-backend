@@ -10,8 +10,18 @@ use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\RelationFamily;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\SalaryType;
+use Modules\Company\Repository\JobLevelRepository;
 
 class MasterService {
+    private $jobLevelRepo;
+
+    public function __construct(
+        JobLevelRepository $jobLevelRepo
+    )
+    {
+        $this->jobLevelRepo = $jobLevelRepo;
+    }
+
     /**
      * Get all religions from enums
      *
@@ -130,18 +140,14 @@ class MasterService {
      */
     public function getLevelStaff(): array
     {
-        $bloodTypes = LevelStaff::cases();
-        $bloodTypes = collect($bloodTypes)->map(function ($item) {
-            return [
-                'title' => LevelStaff::generateLabel($item->value),
-                'value' => $item->value
-            ];
-        })->toArray();
+        $jobLevels = $this->jobLevelRepo->list(
+            select: 'uid as value,name as title',
+        )->toArray();
 
         return generalResponse(
             message: 'success',
             error: false,
-            data: $bloodTypes
+            data: $jobLevels
         );
     }
 

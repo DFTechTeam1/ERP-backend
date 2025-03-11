@@ -9,6 +9,7 @@ use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\EmployeeException;
+use App\Exports\EmployeeExport;
 use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
@@ -22,7 +23,11 @@ use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
+use Maatwebsite\Excel\Facades\Excel;
+use Modules\Company\Models\JobLevel;
 use Modules\Company\Models\Position;
+use Modules\Company\Models\PositionBackup;
+use Modules\Company\Repository\JobLevelRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\EmployeeHasRelation;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
@@ -56,6 +61,7 @@ class EmployeeService
     private $kkPhotoTmp;
     private $userService;
     private $generalService;
+    private $jobLevelRepo;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -69,7 +75,8 @@ class EmployeeService
         EmployeeFamilyRepository $employeeFamilyRepo,
         EmployeeEmergencyContactRepository $employeeEmergencyRepo,
         UserService $userService,
-        GeneralService $generalService
+        GeneralService $generalService,
+        JobLevelRepository $jobLevelRepo
     )
     {
         $this->repo = $employeeRepo;
@@ -95,6 +102,8 @@ class EmployeeService
         $this->employeeEmergencyRepo = $employeeEmergencyRepo;
 
         $this->generalService = $generalService;
+
+        $this->jobLevelRepo = $jobLevelRepo;
     }
 
     /**
@@ -181,8 +190,8 @@ class EmployeeService
                     'religion' => Religion::getReligion(code: $item->religion->value),
                     'gender' => Gender::getGender(code: $item->gender->value),
                     'position' => $item->position->name,
-                    'level_staff' => __("global.{$item->level_staff->value}"),
-                    'status' => $item->status_text,
+                    'level_staff' => !$item->jobLevel ? '-' : $item->jobLevel->name,
+                    'status' => $item->status_text, 
                     'status_color' => $item->status_color,
                     'join_date' => date('d F Y', strtotime($item->join_date)),
                     'phone' => $item->phone,
@@ -212,6 +221,23 @@ class EmployeeService
                 [],
                 Code::BadRequest->value,
             );
+        }
+    }
+
+    public function export(array $payload): array
+    {
+        try {
+            $filename = 'employees_' . strtotime('now') . '.xlsx';
+            Excel::store(new EmployeeExport($payload), 'employees/export/' . $filename, 'public');
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'link' => asset('storage/employees/export/' . $filename)
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
         }
     }
 
@@ -277,7 +303,7 @@ class EmployeeService
 
         if ($positionAsVJ) {
             $positionAsVJ = collect($positionAsVJ)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\Position());
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
             })->toArray();
 
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
@@ -605,6 +631,13 @@ class EmployeeService
             $data['approval_line'] = $bossData->name;
         }
 
+        $jobLevel = $this->jobLevelRepo->show(
+            uid: 0,
+            select: 'id,uid',
+            where: "id = " . $data['job_level_id']
+        );
+        $data['job_level_uid'] = $jobLevel->uid;
+
         return $data->toArray();
     }
 
@@ -671,10 +704,14 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
-            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new Position());
+            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
             if (!empty($data['boss_id'])) { 
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
+
+            $jobLevel = $this->jobLevelRepo->show(uid: $data['job_level_id'], select: 'id,name');
+            $data['job_level_id'] = $jobLevel->id;
+            $data['level_staff'] = $jobLevel->name;
 
             $employee = $this->repo->store(
                 collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray()
@@ -786,7 +823,7 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
-            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new Position());
+            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
             if (!empty($data['boss_id'])) {
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
@@ -794,6 +831,8 @@ class EmployeeService
             if ((isset($data['is_residence_same'])) && ($data['is_residence_same'])) {
                 $data['current_address'] = $data['address'];
             }
+
+            $data['job_level_id'] = $this->generalService->getIdFromUid($data['job_level_id'], new JobLevel());
 
             $this->repo->update(
                 collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray(),
@@ -903,6 +942,7 @@ class EmployeeService
 
                 $this->repo->update([
                     'status' => Status::Deleted->value,
+                    'email' => $employee->email . '_deleted'
                 ], uid: $id);
             }
 
@@ -942,7 +982,7 @@ class EmployeeService
             $projectManagerPosition = json_decode(getSettingByKey('position_as_project_manager'), true);
 
             $projectManagerPosition = collect($projectManagerPosition)->map(function ($item ) {
-                return getIdFromUid($item, new \Modules\Company\Models\Position());
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
             })->toArray();
 
             $condition = implode("','", $projectManagerPosition);
@@ -1552,7 +1592,7 @@ class EmployeeService
     public function updateEmployment(array $payload, string $employeeUid): array
     {
         try {
-            $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\Position());
+            $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\PositionBackup());
             if (
                 (isset($payload['boss_id'])) &&
                 ($payload['boss_id'])
