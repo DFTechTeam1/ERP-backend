@@ -14,10 +14,13 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\RegistersEventListeners;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
 {
@@ -121,6 +124,16 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
         $service = new ExcelService();
 
         $sheet = $event->sheet->getDelegate();
+
+        $highesSheet = $sheet->getHighestRow();
+        for ($row = 2; $row <= $highesSheet; $row++) {
+            $cell = 'F' . $row;
+            $sheet->getCell($cell)->setValueExplicit(
+                $sheet->getCell($cell)->getValue(),
+                DataType::TYPE_STRING
+            );
+        }
+
         $service->bulkComment([
             // A1
             ['sheet' => $sheet, 'coordinate' => 'A1', 'comment' => 'ERP:', 'bold' => true],
