@@ -104,4 +104,42 @@ class ExcelService {
             $this->spreadsheet->removeSheetByIndex($sheetIndex);
         }
     }
+
+    /**
+     * Set cell comment in bulk
+     *
+     * @param array $items
+     * @return void
+     */
+    public function bulkComment(array $items): void
+    {
+        foreach ($items as $sheet) {
+            $this->setComment(
+                sheet: $sheet['sheet'],
+                coordinate: $sheet['coordinate'],
+                comment: $sheet['comment'],
+                isBold: $sheet['bold'] ?? false
+            );
+        }
+    }
+
+    /**
+     * Set cell comment
+     *
+     * @param mixed $sheet
+     * @param string $coordinate
+     * @param string $comment
+     * @param boolean $isBold
+     * @return void
+     */
+    public function setComment(mixed $sheet, string $coordinate, string $comment, bool $isBold = false): void
+    {
+        $richText = $sheet->getComment($coordinate)
+            ->getText()
+            ->createTextRun($comment);
+
+        if ($isBold) {
+            $richText->getFont()->setBold(true);
+        }
+    }
 }
