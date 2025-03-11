@@ -4,6 +4,9 @@ namespace Modules\Hrd\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Production\Models\ProjectTask;
+
 // use Modules\Hrd\Database\Factories\EmployeeTaskStateFactory;
 
 class EmployeeTaskState extends Model
@@ -24,4 +27,9 @@ class EmployeeTaskState extends Model
     // {
     //     // return EmployeeTaskStateFactory::new();
     // }
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(ProjectTask::class, 'project_task_id');
+    }
 }

@@ -60,6 +60,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
+use Modules\Hrd\Repository\EmployeeTaskStateRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Production\Exceptions\AttributeReferenceMissing;
 use Modules\Production\Exceptions\FailedModifyWaitingApprovalSong;
@@ -160,6 +161,8 @@ class ProjectService
 
     private $entertainmentTaskSongRevise;
 
+    private $employeeTaskStateRepo;
+
     /**
      * Construction Data
      */
@@ -198,7 +201,8 @@ class ProjectService
         DetailCache $detailCacheAction,
         EntertainmentTaskSongResultRepository $entertainmentTaskSongResultRepo,
         EntertainmentTaskSongResultImageRepository $entertainmentTaskSongResultImageRepo,
-        EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise
+        EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise,
+        EmployeeTaskStateRepository $employeeTaskStateRepo
     )
     {   
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
@@ -270,6 +274,8 @@ class ProjectService
         $this->customItemRepo = $customItemRepo;
 
         $this->projectSongListRepo = $projectSongListRepo;
+
+        $this->employeeTaskStateRepo = $employeeTaskStateRepo;
     }
 
     /**
@@ -4857,7 +4863,10 @@ class ProjectService
 
                 // $currentData = $this->formatTasksPermission($currentData, $projectId);
 
-                $currentData = $this->detailCacheAction->handle($projectUid);
+                $currentData = $this->detailCacheAction->handle(
+                    projectUid: $projectUid,
+                    forceUpdateAll: true,
+                );
 
                 $payloadOutput = [
                     'task' => $task,
@@ -4866,7 +4875,7 @@ class ProjectService
             }
 
             // save task state
-            SaveTaskState::run($projectUid, $taskUid);
+            SaveTaskState::run($currentPicIds, $taskUid);
 
             \Modules\Production\Jobs\TaskIsCompleteJob::dispatch($currentPicIds, $taskId)->afterCommit();
 
@@ -5332,12 +5341,41 @@ class ProjectService
     public function getTaskTeamForReview(string $projectUid): array
     {
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
-
+ 
         $project = $this->repo->show($projectUid, 'id,uid,event_type,classification,name,project_date');
 
         $projectTeams = $this->getProjectTeams($project);
         $teams = $projectTeams['teams'];
         $pics = $projectTeams['picUids'];
+
+        // format with task details
+        $output = [];
+        foreach ($teams as $team) {
+            $tasks = $this->employeeTaskStateRepo->list(
+                select: 'id,project_id,project_task_id,project_board_id,employee_id',
+                where: "employee_id = {$team['id']}",
+                relation: [
+                    'task:id,name'
+                ]
+            );
+
+            $output[] = [
+                'uid' => $team['uid'],
+                'name' => $team['name'],
+                'total_task' => $tasks->count(),
+                'point' => $tasks->count(),
+                'additional_point' => 0,
+                'can_decrease_point' => false,
+                'can_increase_point' => true,
+                'tasks' => collect($tasks)->pluck('project_task_id')->values()->toArray()
+            ];
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $output
+        );
 
         $histories = $this->taskPicHistory->list('DISTINCT project_id,project_task_id,employee_id', 'project_id = ' . $projectId, ['employee:id,name,employee_id,uid,nickname']);
 
@@ -7353,7 +7391,7 @@ class ProjectService
             // validate before go
             $allowedStatuses = [
                 BaseRole::ProjectManagerEntertainment->value => [TaskSongStatus::OnFirstReview->value],
-                BaseRole::Root->value => [TaskSongStatus::OnFirstReview->value],
+                BaseRole::Root->value => [TaskSongStatus::OnFirstReview->value, TaskSongStatus::OnLastReview->value],
                 BaseRole::ProjectManager->value => [TaskSongStatus::OnLastReview->value],
                 BaseRole::ProjectManagerAdmin->value => [TaskSongStatus::OnLastReview->value]
             ];
@@ -7369,10 +7407,7 @@ class ProjectService
 
             if (!$isAllowed) {
                 DB::commit();
-                return generalResponse(
-                    message: __('notification.failedToAproveTask'),
-                    error: true
-                );
+                return errorResponse(__('notification.failedToAproveTask'));
             }
 
             if ($currentStatus == TaskSongStatus::OnFirstReview->value) {

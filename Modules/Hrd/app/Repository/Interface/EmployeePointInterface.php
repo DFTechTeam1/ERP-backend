@@ -9,6 +9,8 @@ abstract class EmployeePointInterface {
 
     abstract function show(string $uid, string $select = '*', array $relation = [], string $where = '', array $whereHas = []);
 
+    abstract function rawSql(string $table, string $select, array $relation = [], string $where = '');
+
     abstract function store(array $data);
 
     abstract function update(array $data, string $id = '', string $where = '');
