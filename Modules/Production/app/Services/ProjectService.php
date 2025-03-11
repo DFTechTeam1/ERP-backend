@@ -4850,12 +4850,14 @@ class ProjectService
             } else {
                 $task = $this->formattedDetailTask($taskUid);
 
-                $currentData = getCache('detailProject' . $projectId);
+                // $currentData = getCache('detailProject' . $projectId);
 
-                $boards = $this->formattedBoards($task->project->uid);
-                $currentData['boards'] = $boards;
+                // $boards = $this->formattedBoards($task->project->uid);
+                // $currentData['boards'] = $boards;
 
-                $currentData = $this->formatTasksPermission($currentData, $projectId);
+                // $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+                $currentData = $this->detailCacheAction->handle($projectUid);
 
                 $payloadOutput = [
                     'task' => $task,
