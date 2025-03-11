@@ -21,7 +21,7 @@ class SaveTaskState
         $this->employeeStateRepo = new EmployeeTaskStateRepository();
     }
 
-    public function handle(string $projectUid, string $taskUid)
+    public function handle(array $currentPicIds, string $taskUid)
     {
         $this->constructor();
 
@@ -31,10 +31,8 @@ class SaveTaskState
             select: 'id,current_pics,project_id,project_board_id'
         );
 
-        $currentPic = json_decode($task->current_pics, true);
-
         // insert to state table
-        foreach ($currentPic as $pic) {
+        foreach ($currentPicIds as $pic) {
             $this->employeeStateRepo->updateOrInsert(
                 key: [
                     'project_id' => $task->project_id,
