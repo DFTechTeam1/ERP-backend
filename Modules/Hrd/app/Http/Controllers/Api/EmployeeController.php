@@ -56,7 +56,8 @@ class EmployeeController extends Controller
                 [
                     'position:id,uid,name',
                     'user:id,uid,email,employee_id',
-                    'branch:id,short_name'
+                    'branch:id,short_name',
+                    'jobLevel:id,name'
                 ]
             )
         );
@@ -288,6 +289,16 @@ class EmployeeController extends Controller
     public function initFamily(string $employeeUid)
     {
         return apiResponse($this->employeeService->initFamily($employeeUid));
+    }
+
+    /**
+     * Export employees with some conditions
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function export(Request $request)
+    {
+        return apiResponse($this->employeeService->export($request->all()));
     }
 
     /**

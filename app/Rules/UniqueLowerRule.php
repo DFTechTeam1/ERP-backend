@@ -2,6 +2,7 @@
 
 namespace App\Rules;
 
+use App\Enums\Employee\Status;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,7 @@ class UniqueLowerRule implements ValidationRule
                 $query->where('uid', '!=', $this->uid);
             }
         }
+        $query->where('status', '!=', Status::Deleted->value);
         $query->whereRaw("lower({$column}) = '" . strtolower($value) . "'");
 
         if ($query->count() > 0) {

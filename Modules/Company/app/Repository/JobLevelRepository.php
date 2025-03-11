@@ -2,24 +2,18 @@
 
 namespace Modules\Company\Repository;
 
-use Illuminate\Support\Facades\Log;
-use Modules\Company\Models\Division;
-use Modules\Company\Models\DivisionBackup;
-use Modules\Company\Repository\Interface\DivisionInterface;
+use Modules\Company\Models\JobLevel;
+use Modules\Company\Repository\Interface\JobLevelInterface;
 
-class DivisionRepository extends DivisionInterface
-{
+class JobLevelRepository extends JobLevelInterface {
     private $model;
+
     private $key;
 
-    /**
-     * @param $model
-     * @param $key
-     */
     public function __construct()
     {
-        $this->model = new DivisionBackup();
-        $this->key = 'uid';
+        $this->model = new JobLevel();
+        $this->key = 'id';
     }
 
     /**
@@ -30,7 +24,7 @@ class DivisionRepository extends DivisionInterface
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
@@ -47,25 +41,20 @@ class DivisionRepository extends DivisionInterface
         return $query->get();
     }
 
-
     /**
-     * Make paginated data
+     * Paginated data for datatable
      *
      * @param string $select
      * @param string $where
      * @param array $relation
-     * @param int $itemsPerPage
-     * @param int $page
-     * @return \Illuminate\Database\Eloquent\Builder[]|\Illuminate\Database\Eloquent\Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
         string $select = '*',
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page,
-        array $whereHas = [],
-        string $orderBy = ''
+        int $page
     )
     {
         $query = $this->model->query();
@@ -79,11 +68,7 @@ class DivisionRepository extends DivisionInterface
         if ($relation) {
             $query->with($relation);
         }
-
-        if (!empty($orderBy)) {
-            $query->orderByRaw($orderBy);
-        }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -95,19 +80,25 @@ class DivisionRepository extends DivisionInterface
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
+        if (empty($where)) {
+            $query->where("uid", $uid);
+        } else {
+            $query->whereRaw($where);
+        }
+        
         if ($relation) {
             $query->with($relation);
         }
 
-        $data = $query->where('uid', $uid);
+        $data = $query->first();
 
-        return $data->first();
+        return $data;
     }
 
     /**
@@ -116,44 +107,43 @@ class DivisionRepository extends DivisionInterface
      * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function store(array $data)
+    public function store(array $data)
     {
         return $this->model->create($data);
     }
-
 
     /**
      * Update Data
      *
      * @param array $data
-     * @param string $uid
-     * @param string $where
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function update(array $data, string $uid='', string $where='')
+    public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
         if (!empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('uid', $uid);
+            $query->where('uid', $id);
         }
 
         $query->update($data);
 
-        return $query->get();
+        return $query;
     }
 
     /**
      * Delete Data
      *
-     * @param string $uid
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function delete(string $uid)
+    public function delete(int $id)
     {
-        return $this->model->where('uid', $uid)->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**
@@ -162,14 +152,12 @@ class DivisionRepository extends DivisionInterface
      * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function bulkDelete(array $ids, string $key = '')
+    public function bulkDelete(array $ids, string $key = '')
     {
         if (empty($key)) {
             $key = $this->key;
         }
 
-        return $this->model->whereIn($key, $ids)
-            ->delete();
+        return $this->model->whereIn($key, $ids)->delete();
     }
-
 }
