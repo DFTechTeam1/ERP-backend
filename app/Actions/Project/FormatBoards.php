@@ -2,7 +2,9 @@
 
 namespace App\Actions\Project;
 
+use App\Actions\DefineTaskAction;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Hrd\Models\Employee;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 
@@ -15,6 +17,10 @@ class FormatBoards
         $boardRepo = new ProjectBoardRepository();
         $projectPicRepository = new ProjectPersonInChargeRepository();
         $user = auth()->user();
+        $leaderModeller = getSettingByKey('lead_3d_modeller');
+        if ($leaderModeller) {
+            $leaderModeller = getIdFromUid($leaderModeller, new Employee());
+        }
 
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
         $employeeId = $user->employee_id ?? 0;
@@ -29,6 +35,7 @@ class FormatBoards
             'tasks.board',
             'tasks.pics:id,project_task_id,employee_id,status',
             'tasks.pics.employee:id,name,email,uid',
+            'tasks.pics.user:id,employee_id',
             'tasks.medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
             'tasks.taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type',
             'tasks.times:id,project_task_id,employee_id,work_type,time_added',
@@ -55,6 +62,8 @@ class FormatBoards
 
                 unset($outputTask[$keyTask]['time_tracker']);
 
+                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+
                 // check if task already active or not, if not show activating button
                 $isActive = false;
 
@@ -70,11 +79,18 @@ class FormatBoards
                 }
 
                 $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+                $picUids = collect($task->pics)->pluck('employee.uid')->toArray();
 
                 $needUserApproval = false;
                 if ($task->status == \App\Enums\Production\TaskStatus::WaitingApproval->value && (in_array($employeeId, $picIds) || $isDirector || $isProjectPic)) {
                     $needUserApproval = true;
+
+                    // disable user approval if this task is for 3D MODELLER LEADER
+                    if (in_array($leaderModeller, $picUids)) {
+                        $needUserApproval = false;
+                    }
                 }
+                
 
                 $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
 
