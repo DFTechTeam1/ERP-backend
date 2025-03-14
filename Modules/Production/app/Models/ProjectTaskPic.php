@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,6 +30,11 @@ class ProjectTaskPic extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'employee_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'employee_id', 'employee_id');
     }
 
     public function task(): BelongsTo

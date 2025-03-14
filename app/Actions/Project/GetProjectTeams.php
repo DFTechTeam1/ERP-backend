@@ -3,6 +3,7 @@
 namespace App\Actions\Project;
 
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
@@ -52,15 +53,27 @@ class GetProjectTeams
 
         // get special position that will be append on each project manager team members
         $specialPosition = getSettingByKey('special_production_position');
+        $leadModeller = getSettingByKey('lead_3d_modeller');
+
         $specialEmployee = [];
         $specialIds = [];
         if ($specialPosition) {
             $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\PositionBackup());
+            $whereSpecial = "position_id = {$specialPosition}";
+            $isLeadModeller = false;
+            if ($leadModeller != null && $leadModeller != '' && $leadModeller != 'null') {
+                $leadModeller = getIdFromUid($leadModeller, new Employee());
+                $whereSpecial = "id = {$leadModeller}";
+                $isLeadModeller = true;
+            }
 
-            $specialEmployee = $employeeRepo->list('id,uid,name,nickname,email,position_id', 'position_id = ' . $specialPosition, ['position:id,name'])->toArray();
+            logging("WHERE SPECIAL EMPLOYEE", [$whereSpecial]);
 
-            $specialEmployee = collect($specialEmployee)->map(function ($employee) {
+            $specialEmployee = $employeeRepo->list('id,uid,name,nickname,email,position_id', $whereSpecial, ['position:id,name'])->toArray();
+
+            $specialEmployee = collect($specialEmployee)->map(function ($employee) use ($isLeadModeller) {
                 $employee['loan'] = false;
+                $employee['is_lead_modeller'] = $isLeadModeller;
 
                 return $employee;
             })->toArray();
@@ -91,6 +104,10 @@ class GetProjectTeams
             $specialId = implode(',', $specialIds);
             $transferCondition .= " and employee_id NOT IN ($specialId)";
             $employeeCondition .= " and id NOT IN ($specialId)";
+        }
+
+        if ($leadModeller && $specialPosition) {
+            $employeeCondition .= " and position_id NOT IN ({$specialPosition})";
         }
 
         $transfers = $transferTeamRepo->list('id,employee_id', $transferCondition, ['employee:id,name,nickname,uid,email,employee_id,position_id', 'employee.position:id,name']);
