@@ -4,14 +4,15 @@ namespace Modules\Company\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Company\Services\SettingService;
 
 class SettingController extends Controller
 {
     private $service;
 
-    public function __construct()
+    public function __construct(SettingService $service)
     {
-        $this->service = new \Modules\Company\Services\SettingService();
+        $this->service = $service;
     }
 
     /**

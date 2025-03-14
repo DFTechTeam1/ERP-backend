@@ -87,7 +87,7 @@ class PositionRepository extends PositionInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
@@ -97,9 +97,13 @@ class PositionRepository extends PositionInterface {
             $query->with($relation);
         }
 
-        $data = $query->where('uid', $uid);
+        if (empty($where)) {
+            $query->where('uid', $uid);
+        } else {
+            $query->whereRaw($where);
+        }
 
-        return $data->first();
+        return $query->first();
     }
 
     /**
