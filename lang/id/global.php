@@ -194,6 +194,7 @@ return [
     'songEditRequest' => 'Menunggu Persetujuan Edit',
     'songDeleteRequest' => 'Menunggu Persetujuan Hapus',
     'active' => 'Aktif',
+    'waitingToDistributeToModeller' => 'Menunggu di Distribusikan',
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',

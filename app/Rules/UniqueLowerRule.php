@@ -6,6 +6,7 @@ use App\Enums\Employee\Status;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 
 class UniqueLowerRule implements ValidationRule
 {
@@ -48,7 +49,10 @@ class UniqueLowerRule implements ValidationRule
                 $query->where('uid', '!=', $this->uid);
             }
         }
-        $query->where('status', '!=', Status::Deleted->value);
+
+        if (\Illuminate\Support\Str::contains(Route::current()->uri(), 'employees')) {
+            $query->where('status', '!=', Status::Deleted->value);
+        }
         $query->whereRaw("lower({$column}) = '" . strtolower($value) . "'");
 
         if ($query->count() > 0) {
