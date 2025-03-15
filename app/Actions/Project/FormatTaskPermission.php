@@ -112,6 +112,10 @@ class FormatTaskPermission
 
                 $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
 
+                // highlight task for authorized user
+                $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+                $outputTask[$keyTask]['is_mine'] = (bool) in_array($user->employee_id, $picIds);
+
                 // stop action when project status is DRAFT
                 $outputTask[$keyTask]['stop_action'] = $project['status'] == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
 

@@ -800,6 +800,7 @@ class EmployeeService
             $jobLevel = $this->jobLevelRepo->show(uid: $data['job_level_id'], select: 'id,name');
             $data['job_level_id'] = $jobLevel->id;
             $data['level_staff'] = $jobLevel->name;
+            $dadta['avatar_color'] = $this->generalService->generateRandomColor($data['email']);
 
             $employee = $this->repo->store(
                 collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray()

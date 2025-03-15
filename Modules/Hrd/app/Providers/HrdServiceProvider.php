@@ -4,6 +4,7 @@ namespace Modules\Hrd\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Hrd\Console\InitateAvatarColor;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
@@ -44,7 +45,8 @@ class HrdServiceProvider extends ServiceProvider
         $this->commands([
             ManualExportPerformanceReport::class,
             MigrationEmployeePointToNewSchema::class,
-            MakeEmployeeAsSync::class
+            MakeEmployeeAsSync::class,
+            InitateAvatarColor::class
         ]);
     }
 

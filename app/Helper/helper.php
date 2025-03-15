@@ -929,3 +929,11 @@ if (!function_exists('loggingProject')) {
 
     }
 }
+
+if (!function_exists('generateRandomColor')) {
+    function generateRandomColor(string $email) {
+        $hash = md5($email);
+
+        return '#' . substr($hash, 0, 6);
+    }
+}

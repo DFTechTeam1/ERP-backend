@@ -519,6 +519,11 @@ class ProjectController extends Controller
         return apiResponse($this->service->getProjectStatusses($projectUid));
     }
 
+    public function getTaskStatus()
+    {
+        return apiResponse($this->service->getTaskStatus());
+    }
+
     /**
      * Function to change status of selected project
      *
