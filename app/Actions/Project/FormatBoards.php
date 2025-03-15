@@ -34,7 +34,7 @@ class FormatBoards
             'tasks.logs',
             'tasks.board',
             'tasks.pics:id,project_task_id,employee_id,status',
-            'tasks.pics.employee:id,name,email,uid',
+            'tasks.pics.employee:id,name,email,uid,avatar_color',
             'tasks.pics.user:id,employee_id',
             'tasks.medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
             'tasks.taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type',

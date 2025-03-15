@@ -68,7 +68,9 @@ class ProjectTaskRepository extends ProjectTaskInterface {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $sortBy = ""
     )
     {
         $query = $this->model->query();
@@ -81,6 +83,20 @@ class ProjectTaskRepository extends ProjectTaskInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $wh) {
+                $query->whereHas($wh['relation'], function (Builder $query) use ($wh) {
+                    $query->whereRaw($wh['query']);
+                });
+            }
+        }
+
+        if (empty($sortBy)) {
+            $query->orderBy('created_at', 'DESC');
+        } else {
+            $query->orderByRaw($sortBy);
         }
         
         return $query->skip($page)->take($itemsPerPage)->get();

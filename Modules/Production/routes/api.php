@@ -26,6 +26,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('status', [ProjectController::class, 'getProjectStatus']);
 
     Route::get('tasks', [ProjectController::class, 'getAllTasks']);
+    Route::get('tasks/status', [ProjectController::class, 'getTaskStatus']);
     Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
 
     Route::post('project', [ProjectController::class, 'store']);

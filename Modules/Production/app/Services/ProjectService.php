@@ -971,6 +971,8 @@ class ProjectService
             $whereHas
         );
 
+        logging("WHERE HAS", $whereHas);
+
         $data = collect((object) $data)->map(function ($project) {
             return [
                 'title' => $project->title,
@@ -4361,12 +4363,35 @@ class ProjectService
     public function getAllTasks(): array
     {
         try {
+            $itemsPerPage = request('itemsPerPage') ?? 10;
+
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+            $sorts = '';
+            if (!empty(request('sortBy'))) {
+                foreach (request('sortBy') as $sort) {
+                    if ($sort['key'] == 'task_name') {
+                        $sort['key'] = 'name';
+                    }
+                    if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
+                        $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
+                    }
+                }
+
+                $sorts = rtrim($sorts, ',');
+            } else {
+                $sorts .= "created_at desc";
+            }
+
             // check role
+            $user = auth()->user();
             $su = getSettingByKey('super_user_role');
-            $userId = auth()->id();
-            $roles = auth()->user()->roles;
+            $userId = $user->id;
+            $roles = $user->roles;
             $roleId = $roles[0]->id;
-            $employeeId = auth()->user()->employee_id;
+            $employeeId = $user->employee_id;
 
             $showPic = false;
 
@@ -4420,10 +4445,19 @@ class ProjectService
                 }
             }
 
-            $data = $this->taskRepo->list(
-                'id,uid,project_id,project_board_id,name,task_type,end_date,status',
-                $where,
-                [
+            if (!empty(request('status'))) {
+                $status = implode(',', request('status'));
+                if (empty($where)) {
+                    $where = "status IN ({$status})";
+                } else {
+                    $where .= " AND status IN ({$status})";
+                }
+            }
+
+            $data = $this->taskRepo->pagination(
+                select: 'id,uid,project_id,project_board_id,name,task_type,end_date,status',
+                where: $where,
+                relation: [
                     'project:id,name,project_date',
                     'medias',
                     'taskLink',
@@ -4431,8 +4465,13 @@ class ProjectService
                     'pics:id,project_task_id,employee_id',
                     'pics.employee:id,name,nickname'
                 ],
-                $whereHas
+                page: $page,
+                itemsPerPage: $itemsPerPage,
+                whereHas: $whereHas,
+                sortBy: $sorts
             );
+            
+            $totalData = $this->taskRepo->list('id', $where, [], $whereHas)->count();
 
             $onProgress = getSettingByKey('board_start_calculated');
             $backlog = getSettingByKey('board_as_backlog');
@@ -4501,7 +4540,10 @@ class ProjectService
             return generalResponse(
                 'success',
                 false,
-                $output,
+                [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ],
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -5063,7 +5105,25 @@ class ProjectService
         );
     }
 
-    public function getProjectStatusses(string $projectUid)
+    public function getTaskStatus()
+    {
+        $data = \App\Enums\Production\TaskStatus::cases();
+
+        $out = [];
+        foreach ($data as $status) {
+            $out[] = [
+                'value' => $status->value,
+                'title' => $status->label(),
+            ];
+        }
+
+        return generalResponse(
+            message: "Success",
+            data: $out
+        );
+    }
+
+    public function getProjectStatusses(string $projectUid): array
     {
         $project = $this->repo->show($projectUid, 'status');
 
