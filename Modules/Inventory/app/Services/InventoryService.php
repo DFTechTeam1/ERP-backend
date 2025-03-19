@@ -26,6 +26,8 @@ use Modules\Inventory\Repository\UnitRepository;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Company\Services\SettingService;
 use Carbon\Carbon;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Inventory\Repository\BrandRepository;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -65,35 +67,50 @@ class InventoryService {
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        InventoryRepository $repo,
+        UnitRepository $unitRepo,
+        InventoryTypeRepository $inventoryTypeRepo,
+        InventoryItemRepository $inventoryItemRepo,
+        InventoryImageRepository $inventoryImageRepo,
+        ProjectEquipmentRepository $projectEquipmentRepo,
+        BrandRepository $brandRepo,
+        SupplierRepository $supplierRepo,
+        EmployeeRepository $employeeRepo,
+        ProjectRepository $projectRepo,
+        CustomInventoryRepository $customItemRepo,
+        CustomInventoryDetailRepository $customItemDetailRepo,
+        SettingRepository $settingRepo,
+        SettingService $settingService
+    )
     {
-        $this->repo = new InventoryRepository;
+        $this->repo = $repo;
 
-        $this->unitRepo = new UnitRepository;
+        $this->unitRepo = $unitRepo;
 
-        $this->inventoryTypeRepo = new InventoryTypeRepository;
+        $this->inventoryTypeRepo = $inventoryTypeRepo;
 
-        $this->inventoryItemRepo = new InventoryItemRepository;
+        $this->inventoryItemRepo = $inventoryItemRepo;
 
-        $this->inventoryImageRepo = new InventoryImageRepository;
+        $this->inventoryImageRepo = $inventoryImageRepo;
 
-        $this->projectEquipmentRepo = new ProjectEquipmentRepository;
+        $this->projectEquipmentRepo = $projectEquipmentRepo;
 
-        $this->brandRepo = new \Modules\Inventory\Repository\BrandRepository();
+        $this->brandRepo = $brandRepo;
 
-        $this->supplierRepo = new SupplierRepository;
+        $this->supplierRepo = $supplierRepo;
 
-        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
+        $this->employeeRepo = $employeeRepo;
 
-        $this->projectRepo = new ProjectRepository;
+        $this->projectRepo = $projectRepo;
 
-        $this->customItemRepo = new CustomInventoryRepository;
+        $this->customItemRepo = $customItemRepo;
 
-        $this->customItemDetailRepo = new CustomInventoryDetailRepository;
+        $this->customItemDetailRepo = $customItemDetailRepo;
 
-        $this->settingRepo = new SettingRepository;
+        $this->settingRepo = $settingRepo;
 
-        $this->settingService = new SettingService;
+        $this->settingService = $settingService;
     }
 
     /**

@@ -79,6 +79,13 @@ class Create extends FormRequest
             'ptkp_status' => 'required',
             'basic_salary' => 'required',
             'salary_type' => 'required',
+            'tax_configuration' => 'required',
+            'salary_configuration' => 'required',
+            'jht_configuration' => 'required',
+            'employee_tax_status' => 'required',
+            'jp_configuration' => 'required',
+            'overtime_status' => 'required',
+            'bpjs_kesehatan_config' => 'required',
 
             'bpjs_ketenagakerjaan_number' => 'nullable',
             'npwp_number' => 'nullable',
@@ -104,7 +111,7 @@ class Create extends FormRequest
             'password' => 'required_if:invite_to_erp,1',
             'invite_to_talenta' => 'nullable',
             'role_id' => 'required_if:invite_to_erp,1',
-            
+
             'id_number_photo' => [
                 'nullable',
                 File::types(['jpeg', 'jpg', 'png', 'webp'])

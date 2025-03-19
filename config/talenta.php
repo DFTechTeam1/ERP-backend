@@ -7,9 +7,11 @@ return [
 
     'endpoint_list' => [
         'detail_employee' => '/v2/talenta/v3/employees',
+        'all_employee' => '/v2/talenta/v3/employees'
     ],
 
     'endpoint_method' => [
-        'detail_employee' => 'get'
+        'detail_employee' => 'get',
+        'all_employee' => 'get'
     ]
  ];

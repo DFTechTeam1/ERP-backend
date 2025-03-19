@@ -91,6 +91,41 @@ class CompanyController extends Controller
     }
 
     /**
+    * Get salary configuration
+    *
+    * @return \Illuminate\Http\JsonResponse
+    */
+    public function getSalaryConfiguration(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->masterService->getSalaryConfiguration());
+    }
+
+    public function getJhtConfiguration()
+    {
+
+    }
+
+    public function getEmployeeTaxStatus()
+    {
+
+    }
+
+    public function getJpConfiguration()
+    {
+
+    }
+
+    public function getOvertimeStatus()
+    {
+
+    }
+
+    public function getBpjsKesehatanConfiguration()
+    {
+        //
+    }
+
+    /**
      * Get all ptkp types
      *
      */

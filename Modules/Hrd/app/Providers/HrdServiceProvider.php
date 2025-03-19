@@ -8,6 +8,7 @@ use Modules\Hrd\Console\InitateAvatarColor;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
+use Modules\Hrd\Console\SynchronizingTalentUserId;
 
 class HrdServiceProvider extends ServiceProvider
 {
@@ -46,7 +47,8 @@ class HrdServiceProvider extends ServiceProvider
             ManualExportPerformanceReport::class,
             MigrationEmployeePointToNewSchema::class,
             MakeEmployeeAsSync::class,
-            InitateAvatarColor::class
+            InitateAvatarColor::class,
+            SynchronizingTalentUserId::class
         ]);
     }
 
