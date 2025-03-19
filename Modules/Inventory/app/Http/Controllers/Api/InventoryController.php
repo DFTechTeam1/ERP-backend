@@ -13,9 +13,9 @@ class InventoryController extends Controller
 {
     private $service;
 
-    public function __construct()
+    public function __construct(InventoryService $service)
     {
-        $this->service = new InventoryService;
+        $this->service = $service;
     }
 
     public function downloadBrandTemplate()

@@ -3,6 +3,7 @@
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
 use App\Exceptions\UserNotFound;
+use Modules\Hrd\Services\TalentaService;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Http\JsonResponse;
@@ -308,28 +309,28 @@ if (!function_exists('uploadImageandCompress')) {
     ) {
         try {
             $path = storage_path("app/public/{$path}");
-    
+
             $ext = $image->getClientOriginalExtension();
             $originalName = 'image';
             $datetime = strtotime('now') . random_int(1,8);
-    
+
             $name = "{$originalName}_{$datetime}.{$extTarget}";
-    
+
             // create file
             if (!is_dir($path)) {
                 File::makeDirectory($path, 0777, true);
             }
-    
+
             $filepath = $path . '/' . $name;
-    
+
     //        Image::read($image)->toWebp($compressValue)->save($filepath);
-    
+
             $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
             $newImage = $imageManager->read($image);
             $newImage->scale(height: 400);
             $newImage->toWebp(60);
             $newImage->save($filepath);
-    
+
             return $name;
         } catch (\Throwable $th) {
             return false;
@@ -632,7 +633,7 @@ if (!function_exists('parseUserAgent')) {
             } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
                 $browser = 'Internet Explorer';
             }
-    
+
             // Detect OS
             if (strpos($userAgent, 'Windows NT') !== false) {
                 $os = 'Windows';
@@ -659,7 +660,7 @@ if (!function_exists('getUserAgentInfo')) {
 
 if (!function_exists('getClientIp')) {
     function getClientIp() {
-        
+
         $ip = '';
         if (!App::runningInConsole()) {
             if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
@@ -764,7 +765,7 @@ if (!function_exists('formatSearchConditions')) {
             $where .= $data['field'] . $condition . $value . ' and ';
         }
         $where = rtrim($where, " and");
-        
+
         return $where;
     }
 }
@@ -935,5 +936,26 @@ if (!function_exists('generateRandomColor')) {
         $hash = md5($email);
 
         return '#' . substr($hash, 0, 6);
+    }
+}
+
+if (!function_exists('getTalentaUserIdByEmail')) {
+    function getTalentaUserByEmail(string $email) {
+        $talenta = new TalentaService();
+        $talenta->setUrl(type: 'all_employee');
+        $talenta->setUrlParams(params: ['email' => $email]);
+        $response = $talenta->makeRequest();
+
+        $output = null;
+
+        if (isset($response['data'])) {
+            if (
+                (isset($response['data']['employees'])) && (count($response['data']['employees']) > 0)
+            ) {
+                $output = $response['data']['employees'][0]['user_id'];
+            }
+        }
+
+        return $output;
     }
 }

@@ -9,6 +9,7 @@ use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\RelationFamily;
 use App\Enums\Employee\Religion;
+use App\Enums\Employee\SalaryConfiguration;
 use App\Enums\Employee\SalaryType;
 use Modules\Company\Repository\JobLevelRepository;
 
@@ -171,6 +172,29 @@ class MasterService {
             error: false,
             data: $salaryTypes
         );
+    }
+
+    /**
+    * Get all salary configuration types
+    *
+    * @return array
+    */
+    public function getSalaryConfiguration(): array
+    {
+        $salaryConfig = SalaryConfiguration::cases();
+        $salaryConfig = collect($salaryConfig)->map(function ($item) {
+            return [
+                'title' => $item->label(),
+                'value' => $item->value
+            ];
+        })->toArray();
+
+        return generalResponse(
+            message: 'success',
+            error: false,
+            data: $salaryConfig
+        );
+
     }
 
     /**

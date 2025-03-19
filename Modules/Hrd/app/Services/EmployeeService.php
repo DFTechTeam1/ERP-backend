@@ -64,6 +64,7 @@ class EmployeeService
     private $userService;
     private $generalService;
     private $jobLevelRepo;
+    private $talentaService;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -78,9 +79,12 @@ class EmployeeService
         EmployeeEmergencyContactRepository $employeeEmergencyRepo,
         UserService $userService,
         GeneralService $generalService,
-        JobLevelRepository $jobLevelRepo
+        JobLevelRepository $jobLevelRepo,
+        TalentaService $talentaService
     )
     {
+        $this->talentaService = $talentaService;
+
         $this->repo = $employeeRepo;
 
         $this->userService = $userService;
@@ -131,7 +135,7 @@ class EmployeeService
 
             $search = request('search');
 
-            if (!empty($search)) { // array 
+            if (!empty($search)) { // array
                 $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
                 if (!in_array('status', $filterNames)) {
                     $search['filters'] = collect($search['filters'])->merge([
@@ -193,7 +197,7 @@ class EmployeeService
                     'gender' => Gender::getGender(code: $item->gender->value),
                     'position' => $item->position->name,
                     'level_staff' => !$item->jobLevel ? '-' : $item->jobLevel->name,
-                    'status' => $item->status_text, 
+                    'status' => $item->status_text,
                     'status_color' => $item->status_color,
                     'join_date' => date('d F Y', strtotime($item->join_date)),
                     'phone' => $item->phone,
@@ -471,13 +475,13 @@ class EmployeeService
         ];
 
         $key = request()->min_level;
-        
+
         if (!empty(request()->min_level)) {
             $search = array_search($key, $levelStaffOrder);
-            
+
             if ($search > 0) {
                 $splice = array_splice($levelStaffOrder, 0, $search);
-                
+
                 $splice = collect($splice)->map(function ($item) {
                     return "'{$item}'";
                 })->toArray();
@@ -793,7 +797,7 @@ class EmployeeService
         DB::beginTransaction();
         try {
             $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
-            if (!empty($data['boss_id'])) { 
+            if (!empty($data['boss_id'])) {
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
 
@@ -831,8 +835,11 @@ class EmployeeService
             // invite to Talenta
             if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
                 // TODO: Communiate with talenta
+                $talentaPayload = $this->talentaService->buildEmployeePayload($data);
+
+                dd($talentaPayload);
             }
-            
+
             DB::commit();
 
             return generalResponse(
@@ -1036,7 +1043,7 @@ class EmployeeService
             }
 
             // TODO: Check all equipments
-            
+
             // remove access to system
             if ($employee->user) {
                 $this->userService->bulkDelete(
@@ -1716,7 +1723,7 @@ class EmployeeService
     {
         /**
          * What should be done when we delete:
-         * 
+         *
          * 1. Unattach from all tasks he have
          * 2. Make sure all equipment are already given back and in good condition
          * 3. Take back the access from system
