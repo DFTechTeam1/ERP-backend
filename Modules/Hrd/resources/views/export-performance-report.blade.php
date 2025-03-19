@@ -58,7 +58,7 @@
                     @if (count($item['detail_projects']) > 0)
                         @php
                             $event = $item; // Main event
-                            $employee = $event->employee; 
+                            $employee = $event->employee;
                             $totalProjects = count($event->detail_projects);
                             $eventRowSpan = 0;
 
@@ -83,13 +83,13 @@
                                     @endif
 
                                     @if ($tIndex === 0)
-                                        <td rowspan="{{ $projectRowSpan }}">{{ $project['project']['name'] }}</td>
+                                        <td rowspan="{{ $projectRowSpan }}">{{ $project['project']['name'] }} ({{ $project->additional_point }})</td>
                                     @endif
 
                                     @if ($project->type == 'production')
-                                        <td>{{ $task->productionTask->name }}</td>
+                                        <td>{{ $task->productionTask->name }} ({{ $project->additional_point }})</td>
                                     @else
-                                        <td>{{ $task->entertainmentTask->song->name }}</td>
+                                        <td>{{ $task->entertainmentTask->song->name }} ({{ $project->additional_point }})</td>
                                     @endif
                                 </tr>
                             @endforeach
