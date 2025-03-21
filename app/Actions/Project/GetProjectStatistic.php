@@ -3,14 +3,69 @@
 namespace App\Actions\Project;
 
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
+use Modules\Production\Models\Project;
 
 class GetProjectStatistic
 {
     use AsAction;
 
+    /**
+    * Get detail project report
+    * Step to produce:
+    * 1. Get all project pic
+    * 2. Get point based on employee id
+    *
+    */
+    public function getProjectReport(array $project)
+    {
+        $teams = $project['teams'];
+        $projectId = getIdFromUid($project['uid'], new Project());
+
+        $output = [];
+
+        foreach ($teams as $team) {
+            $employeePoint = EmployeePoint::selectRaw('id,employee_id')
+                ->with([
+                    'projects' => function ($query) use($projectId) {
+                        $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point')
+                            ->with(['project:id,name,project_date', 'details:id,point_id'])
+                            ->whereHas('project', function ($queryProject) use($projectId) {
+                                $queryProject->where('id', $projectId);
+                            });
+                    },
+                    'employee:id,name'
+                ])
+                ->where('employee_id', $team['id'])
+                ->first();
+
+            if ($employeePoint) {
+                $output[] = [
+                    'name' => $employeePoint->employee->name,
+                    'employee_id' => $employeePoint->employee_id,
+                    'total_point' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->total_point : 0,
+                    'additional_point' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->additional_point: 0,
+                    'total_task' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->details->count() : 0
+                ];
+            }
+        }
+
+        $firstLine = count($output) > 2 ? array_splice($output, 0, 2) : $output;
+
+        $moreLine = count($output) > 2 ? $output : [];
+
+        $resp = [
+            'first_line' => $firstLine,
+            'more_line' => $moreLine,
+        ];
+
+        return $resp;
+    }
+
     public function handle($project)
     {
+        return $this->getProjectReport($project);
         $employeeTaskPoint = new EmployeeTaskPointRepository();
 
         $projectId = getIdFromUid($project['uid'], new \Modules\Production\Models\Project());
