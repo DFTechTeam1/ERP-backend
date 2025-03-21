@@ -73,4 +73,5 @@ return [
     "songCannotBeRevise" => "Song cannot be revise yet",
     "cannotCombineModeller" => "Cannot combine members with lead modelers",
     "taskHasBeenDistribute" => "Task has been distribute",
+    "failedSaveToTalenta" => 'Failed to save data to talenta'
 ];

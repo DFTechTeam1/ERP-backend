@@ -5,6 +5,7 @@ namespace Modules\Company\Models;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Models\Employee;
 
 // use Modules\Company\Database\Factories\PositionBackupFactory;
@@ -33,7 +34,7 @@ class PositionBackup extends Model
      * Position belongs to division
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function division()
+    public function division(): BelongsTo
     {
         return $this->belongsTo(DivisionBackup::class, 'division_id', 'id');
     }
