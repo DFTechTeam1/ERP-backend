@@ -841,6 +841,7 @@ class EmployeeService
                 $this->talentaService->setUrl('store_employee');
                 $response = $this->talentaService->setUrlParams($this->talentaService->buildEmployeePayload($data));
 
+                // Throw error when it failed
                 if ($response['message'] != 'success') {
                     throw new Exception(__('notification.failedSaveToTalent'));
                 }
