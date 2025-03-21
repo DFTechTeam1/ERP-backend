@@ -60,7 +60,7 @@ class Employee extends Model
             'religion' => Religion::class,
             'status' => Status::class,
             'martial_status' => MartialStatus::class,
-            'salary_type' => SalaryType::class,
+            //'salary_type' => SalaryType::class,
             'ptkp_status' => PtkpStatus::class
         ];
     }
@@ -123,7 +123,7 @@ class Employee extends Model
         // 'placement',
         // 'dependant',
         // 'company_name',
-        
+
         'created_by',
         'updated_by',
         'user_id',
