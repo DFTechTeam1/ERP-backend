@@ -72,4 +72,5 @@ return [
     "songCannotBeRevise" => "Musik belum bisa di revisi untuk saat ini",
     "cannotCombineModeller" => "Tidak bisa menggabung 'Lead Modeller' dengan anggota tim lain",
     "taskHasBeenDistribute" => "Tugas berhasil di distribusikan",
+    "failedSaveToTalenta" => 'Gagal menyimpan data ke Talenta'
 ];

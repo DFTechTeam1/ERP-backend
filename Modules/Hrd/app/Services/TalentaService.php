@@ -114,21 +114,21 @@ class TalentaService {
 
         // get position
         $positionRepo = new PositionRepository();
-        $position = $positionRepo->show(uid: $request['position_id'], select: 'name');
+        $position = $positionRepo->show(uid: $request['position_uid'], select: 'name');
 
         // get job level
         $jobLevelRepo = new JobLevelRepository();
-        $jobLevel = $jobLevelRepo->show(uid: $request['job_level_id'], select: 'name');
+        $jobLevel = $jobLevelRepo->show(uid: $request['job_level_uid'], select: 'name');
 
         $payload = [
-            'created_by' => $createdBy, // required,
+            'created_by' => $createdBy ?? 365229, // required,
             'employee_id' => $request['employee_id'],
             'first_name' => $firstName, // required
             'last_name' => $lastName,
             'email' => $request['email'], // required
             'date_of_birth' => $request['date_of_birth'], // required
             'gender' => $request['gender'] == 'male' ? 1 : 2, // required
-            'martial_status' => $request['martial_status'] == MartialStatus::Single->value ? 1 : 2, // required
+            'marital_status' => $request['martial_status'] == MartialStatus::Single->value ? 1 : 2, // required
             'place_of_birth' => $request['place_of_birth'], // required
             'mobile_phone_number' => $request['phone'],
             'home_phone_number' => null,
@@ -160,7 +160,7 @@ class TalentaService {
             'jht_configuration' => $request['jht_configuration'], // required
             'employee_tax_status' => $request['employee_tax_status'], // required
             'jp_configuration' => $request['jp_configuration'], // required
-            'npp_bpjs_ketenagakerjaan' => null,
+            'npp_bpjs_ketenagakerjaan' => "default",
             'overtime_status' => $request['overtime_status'], // required
             'bpjs_kesehatan_config' => $request['bpjs_kesehatan_config'], // required
             'payment_schedule' => null,
@@ -181,7 +181,7 @@ class TalentaService {
             'bpjs_kesehatan_date' => null,
             'jp_date' => null,
             'prorate_date' => null,
-            'invite_ess' => $request['invite_to_talenta'], // required
+            'invite_ess' => 1, // required
         ];
 
         return $payload;
