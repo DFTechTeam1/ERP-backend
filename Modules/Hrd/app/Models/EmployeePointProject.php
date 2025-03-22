@@ -59,8 +59,8 @@ class EmployeePointProject extends Model
         return $this->belongsTo(Project::class, 'project_id');
     }
 
-    public function employeePoint(): HasOne
+    public function employeePoint(): BelongsTo
     {
-        return $this->hasOne(EmployeePoint::class, 'employee_point_id');
+        return $this->belongsTo(EmployeePoint::class, 'employee_point_id');
     }
 }
