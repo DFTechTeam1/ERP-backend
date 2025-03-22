@@ -33,6 +33,8 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
             select: "id,employee_point_id,project_id,total_point,additional_point",
             relation: [
                 'project:id,name,project_date',
+                'project.personInCharges:id,project_id,pic_id',
+                'project.personInCharges.employee:id,name',
                 'details:id,point_id,task_id',
                 'employeePoint:id,type,employee_id',
                 'employeePoint.employee:id,name,position_id',
@@ -56,6 +58,12 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
             } else if ($type == 'entertainment') {
                 $tasks = collect($project->details)->pluck('entertainmentTask.song.name')->toArray();
             }
+
+            $pics = [];
+            if ($project->project->personInCharges->count() > 0) {
+                $pics = collect($project->project->personInCharges)->pluck('employee.name')->toArray();
+            }
+
             $output[$project->project->name][] = [
                 'tasks' => implode(",", $tasks),
                 'point' => $project->total_point - $project->additional_point,
@@ -63,6 +71,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
                 'total_point' => $project->total_point,
                 'project_name' => $project->project->name,
                 'employee_name' => $project->employeePoint->employee->name,
+                'pics' => implode(',', $pics),
                 'position' => $project->employeePoint->employee->position ? $project->employeePoint->employee->position->name : '-',
             ];
         }
