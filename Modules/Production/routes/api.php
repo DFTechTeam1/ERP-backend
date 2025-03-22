@@ -26,6 +26,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('status', [ProjectController::class, 'getProjectStatus']);
 
     Route::get('tasks', [ProjectController::class, 'getAllTasks']);
+    Route::get('tasks/status', [ProjectController::class, 'getTaskStatus']);
     Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
 
     Route::post('project', [ProjectController::class, 'store']);
@@ -111,6 +112,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask']);
     Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
     Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask']);
+    Route::post('project/{projectUid}/task/{taskUid}/distribute', [ProjectController::class, 'distributeModellerTask']);
     Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask']);
     Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask']);
     Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);

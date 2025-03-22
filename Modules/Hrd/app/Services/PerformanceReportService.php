@@ -179,36 +179,35 @@ class PerformanceReportService {
         );
 
         $newFormatPoint = $this->employeePointService->renderEachEmployeePoint($employee->id, $this->startDate, $this->endDate);
+        // // format response
+        // $formatPoint = [];
+        // if ($newFormatPoint) {
+        //     $reportType = $newFormatPoint->type;
+        //     $formatPoint = collect($newFormatPoint->detail_projects)->map(function ($item) use ($reportType) {
+        //         return [
+        //             'project_name' => $item->project->name,
+        //             'point' => $item->point,
+        //             'additional_point' => $item->additional_point,
+        //             'total_point' => $item->total_point,
+        //             'tasks' => collect($item->tasks)->map(function ($task) use ($reportType) {
+        //                 $taskName = '';
+        //                 $taskTime = '';
+        //                 if ($reportType == 'production') {
+        //                     $taskName = $task->productionTask->name;
+        //                     $taskTime = date('d F Y', strtotime($task->productionTask->created_at));
+        //                 } else {
+        //                     $taskName = $task->entertainmentTask->song->name;
+        //                     $taskTime = date('d F Y', strtotime($task->entertainmentTask->created_at));
+        //                 }
 
-        // format response
-        $formatPoint = [];
-        if ($newFormatPoint) {
-            $reportType = $newFormatPoint->type;
-            $formatPoint = collect($newFormatPoint->detail_projects)->map(function ($item) use ($reportType) {
-                return [
-                    'project_name' => $item->project->name,
-                    'point' => $item->point,
-                    'additional_point' => $item->additional_point,
-                    'total_point' => $item->total_point,
-                    'tasks' => collect($item->tasks)->map(function ($task) use ($reportType) {
-                        $taskName = '';
-                        $taskTime = '';
-                        if ($reportType == 'production') {
-                            $taskName = $task->productionTask->name;
-                            $taskTime = date('d F Y', strtotime($task->productionTask->created_at));
-                        } else {
-                            $taskName = $task->entertainmentTask->song->name;
-                            $taskTime = date('d F Y', strtotime($task->entertainmentTask->created_at));
-                        }
-
-                        return [
-                            'name' => $taskName,
-                            'assigned_at' => $taskTime
-                        ];
-                    })
-                ];
-            });
-        }
+        //                 return [
+        //                     'name' => $taskName,
+        //                     'assigned_at' => $taskTime
+        //                 ];
+        //             })
+        //         ];
+        //     });
+        // }
 
         $picLog = $this->taskPicLogRepo->list('*', 'employee_id = ' . $employee->id);
         $picLog = collect($picLog)->groupBy('project_task_id')->toArray();
@@ -242,16 +241,16 @@ class PerformanceReportService {
                 'position' => $employee->position->name,
                 'boss' => $employee->boss_id ? $employee->boss->nickname : '-',
                 'period' => date('d F', strtotime($this->startDate)) . ' - ' . date('d F', strtotime($this->endDate)),
-                'total_point' => $newFormatPoint ? $newFormatPoint->total_point : 0,
+                'total_point' => $newFormatPoint['total_point'],
             ],
             'chart' => [
                 'labels' => [__('global.completed'), __('global.revise'), __('global.waitingApproval'), __('global.onProgress')],
                 'series' => $series,
                 'show_chart' => $showChart,
             ],
-            'total_project' => $newFormatPoint ? count($newFormatPoint->detail_projects) : 0,
+            'total_project' => $newFormatPoint['total_project'],
             // 'point_detail' => $newFormatPoint ? $newFormatPoint->detail_projects : [],
-            'point_detail' => $formatPoint,
+            'point_detail' => $newFormatPoint['task_details'],
         ];
 
         return generalResponse(

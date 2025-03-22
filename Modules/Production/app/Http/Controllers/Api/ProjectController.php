@@ -24,6 +24,7 @@ use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Http\Requests\Project\CompleteProject;
+use Modules\Production\Http\Requests\Project\DistributeModelerTask;
 use Modules\Production\Http\Requests\Project\DistributeSong;
 use Modules\Production\Http\Requests\Project\RejectEditSong;
 use Modules\Production\Http\Requests\Project\RequestSong;
@@ -181,6 +182,19 @@ class ProjectController extends Controller
     public function storeTask(CreateTask $request, $boardId)
     {
         return apiResponse($this->service->storeTask($request->validated(), (int) $boardId));
+    }
+
+    /**
+     * Distribute task to modeler teams
+     *
+     * @param DistributeModelerTask $request
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function distributeModellerTask(DistributeModelerTask $request, string $projectUid, string $taskUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->distributeModellerTask($request->validated(), $projectUid, $taskUid));
     }
 
     /**
@@ -503,6 +517,11 @@ class ProjectController extends Controller
     public function getProjectStatusses(string $projectUid)
     {
         return apiResponse($this->service->getProjectStatusses($projectUid));
+    }
+
+    public function getTaskStatus()
+    {
+        return apiResponse($this->service->getTaskStatus());
     }
 
     /**

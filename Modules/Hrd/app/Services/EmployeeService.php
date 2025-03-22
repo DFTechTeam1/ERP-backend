@@ -35,6 +35,8 @@ use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
@@ -221,6 +223,92 @@ class EmployeeService
                 [],
                 Code::BadRequest->value,
             );
+        }
+    }
+
+    /**
+     * Get list of 3d Modeller Employee
+     *
+     * @return array
+     */
+    public function get3DModeller(string $projectUid, string $taskUid): array
+    {
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $project = $this->projectRepo->show(uid: $projectUid, select: 'id,project_date');
+            $position = $this->positionRepo->show(uid: 0, select: 'id', where: "name = '3D Modeller'");
+
+            $where = "position_id = '{$position->id}'";
+            $leader = $this->generalService->getSettingByKey('lead_3d_modeller');
+            if (request('except_leader') && $leader) {
+                $where .= " AND uid != '{$leader}'";
+            }
+
+            $employees = $this->repo->list(select: 'id,uid AS value,name AS title', where: $where);
+
+            // get workload
+            $output = [];
+            foreach ($employees as $employee) {
+                $taskInSameProject = $this->taskRepo->list(
+                    select: 'id',
+                    where: "project_id = {$projectId} AND uid != '{$taskUid}'",
+                    whereHas: [
+                        [
+                            'relation' => 'pics',
+                            'query' => "employee_id = {$employee->id}"
+                        ]
+                    ]
+                )->count();
+
+                $startDate = Carbon::parse($project->project_date);
+                $dateRangeNextWeek = [$startDate->addDay()->format('Y-m-d'), $startDate->addDays(7)->format('Y-m-d')];
+                $startDate = Carbon::parse($project->project_date);
+                $dateRangeCurrentWeek = [$startDate->subDay()->format('Y-m-d'), $startDate->subDays(7)->format('Y-m-d')];
+
+                $taskInNextWeek = $this->taskRepo->list(
+                    select: 'id',
+                    where: "uid != '{$taskUid}'",
+                    whereHas: [
+                        [
+                            'relation' => 'project',
+                            'query' => "project_date BETWEEN '{$dateRangeNextWeek[0]}' AND '{$dateRangeNextWeek[1]}'"
+                        ],
+                        [
+                            'relation' => 'pics',
+                            'query' => "employee_id = {$employee->id}"
+                        ]
+                    ]
+                )->count();
+                $taskInCurrentWeek = $this->taskRepo->list(
+                    select: 'id',
+                    where: "uid != '{$taskUid}'",
+                    whereHas: [
+                        [
+                            'relation' => 'project',
+                            'query' => "project_date BETWEEN '{$dateRangeCurrentWeek[1]}' AND '{$dateRangeCurrentWeek[0]}'"
+                        ],
+                        [
+                            'relation' => 'pics',
+                            'query' => "employee_id = {$employee->id}"
+                        ]
+                    ]
+                )->count();
+
+                $output[] = [
+                    'value' => $employee->value,
+                    'title' => $employee->title,
+                    'task_in_selected_project' => $taskInSameProject,
+                    'task_in_next_week' => $taskInNextWeek,
+                    'task_in_current_week' => $taskInCurrentWeek
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
         }
     }
 
@@ -712,6 +800,7 @@ class EmployeeService
             $jobLevel = $this->jobLevelRepo->show(uid: $data['job_level_id'], select: 'id,name');
             $data['job_level_id'] = $jobLevel->id;
             $data['level_staff'] = $jobLevel->name;
+            $dadta['avatar_color'] = $this->generalService->generateRandomColor($data['email']);
 
             $employee = $this->repo->store(
                 collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray()
