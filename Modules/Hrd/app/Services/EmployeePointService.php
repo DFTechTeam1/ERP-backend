@@ -3,6 +3,8 @@
 namespace Modules\Hrd\Services;
 
 use App\Enums\ErrorCode\Code;
+use Illuminate\Support\Facades\Log;
+use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
 use Modules\Hrd\Repository\EmployeePointRepository;
@@ -36,7 +38,7 @@ class EmployeePointService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(
@@ -95,19 +97,17 @@ class EmployeePointService {
             ",
             where: "employee_id = {$employeeId} AND p.project_date BETWEEN '{$startDate}' AND '{$endDate}'",
             relation: [
-                [
-                    'table' => 'employee_point_projects as epp',
-                    'first' => 'es.id',
-                    'operator' => '=',
-                    'second' => 'epp.employee_point_id'
-                ],
-                [
-                    'table' => 'projects AS p',
-                    'first' => 'p.id',
-                    'operator' => '=',
-                    'second' => 'epp.project_id'
-                ],
-            ]
+                'projects' => function ($query) use($startDate, $endDate) {
+                    $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point')
+                        ->with(['project:id,name,project_date'])
+                        ->whereHas('project', function ($q) use ($startDate, $endDate) {
+                            $q->whereBetween('project_date', [$startDate, $endDate]);
+                        });
+                },
+                'employee:id,name,nickname,email,employee_id,position_id',
+                'employee.position:id,name'
+            ],
+            where: "employee_id = {$employeeId}"
         );
 
         $newOutput = [];
@@ -195,7 +195,7 @@ class EmployeePointService {
      * Store data
      *
      * @param array $data
-     * 
+     *
      * @return array
      */
     public function store(array $data): array
@@ -218,7 +218,7 @@ class EmployeePointService {
      * @param array $data
      * @param string $id
      * @param string $where
-     * 
+     *
      * @return array
      */
     public function update(
@@ -237,13 +237,13 @@ class EmployeePointService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
      * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -263,7 +263,7 @@ class EmployeePointService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array
