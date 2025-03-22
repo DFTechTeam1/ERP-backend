@@ -76,4 +76,10 @@ Route::middleware(['auth:sanctum'])
         Route::get('salary-configuration', [CompanyController::class, 'getSalaryConfiguration']);
         Route::get('ptkp-type', [CompanyController::class, 'getPtkpType']);
         Route::get('relation-family', [CompanyController::class, 'getRelationFamily']);
+        Route::get('tax-configuration', [CompanyController::class, 'getTaxConfiguration']);
+        Route::get('employee-tax-status', [CompanyController::class, 'getEmployeeTaxStatus']);
+        Route::get('jht-configuration', [CompanyController::class, 'getJhtConfiguration']);
+        Route::get('overtime-status', [CompanyController::class, 'getOvertimeStatus']);
+        Route::get('bpjs-kesehatan-config', [CompanyController::class, 'getBpjsKesehatanConfig']);
+        Route::get('all-configuration', [CompanyController::class, 'getAllConfiguration']);
     });

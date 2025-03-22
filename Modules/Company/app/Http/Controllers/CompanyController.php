@@ -37,6 +37,76 @@ class CompanyController extends Controller
     }
 
     /**
+     * Get tax configuration
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTaxConfiguration(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->masterService->getTaxConfiguration());
+    }
+
+    /**
+     * Get employee tax status
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getEmployeeTaxStatus(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->masterService->getEmployeeTaxStatus());
+    }
+
+    /**
+     * Get jht configuration
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getJhtConfiguration(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->masterService->getJhtConfiguration());
+    }
+
+    /**
+     * Get overtime status
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOvertimeStatus(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->masterService->getOvertimeStatus());
+    }
+
+    /**
+     * Get BPJS Kesehatan config
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getBpjsKesehatanConfig(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->masterService->getBpjsKesehatanConfig());
+    }
+
+    /**
+     * Get JP Configuration
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getJpConfiguration(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->masterService->getJpConfiguration());
+    }
+
+    /**
+     * Get All configuration
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllConfiguration(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->masterService->getAllConfiguration());
+    }
+
+    /**
      * Get all genders
      *
      */
@@ -98,26 +168,6 @@ class CompanyController extends Controller
     public function getSalaryConfiguration(): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->masterService->getSalaryConfiguration());
-    }
-
-    public function getJhtConfiguration()
-    {
-
-    }
-
-    public function getEmployeeTaxStatus()
-    {
-
-    }
-
-    public function getJpConfiguration()
-    {
-
-    }
-
-    public function getOvertimeStatus()
-    {
-
     }
 
     public function getBpjsKesehatanConfiguration()

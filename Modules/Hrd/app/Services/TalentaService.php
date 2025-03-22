@@ -56,16 +56,18 @@ class TalentaService {
      *
      * @return void
      */
-    protected function generateHmac(): void
+    protected function generateHmac(string $method): void
     {
         $datetime       = Carbon::now()->toRfc7231String();
-        $request_line   = "GET {$this->endpoint} HTTP/1.1";
+        $upperMethod    = strtoupper($method);
+        $request_line   = "{$upperMethod} {$this->endpoint} HTTP/1.1";
         $payload        = implode("\n", ["date: {$datetime}", $request_line]);
         $digest         = hash_hmac('sha256', $payload, config('talenta.client_secret'), true);
         $signature      = base64_encode($digest);
 
         $clientId       = config('talenta.client_id');
-        $completeSecret = "hmac username=\"{$clientId}\", algorithm=\"hmac-sha256\", headers=\"date request-line\", signature=\"{$signature}\"";
+        // $completeSecret = "hmac username=\"{$clientId}\", algorithm=\"hmac-sha256\", headers=\"date request-line\", signature=\"{$signature}\"";
+        $completeSecret = 'hmac username="' . $clientId . '", algorithm="hmac-sha256", headers="date request-line", signature="' . $signature . '"';
 
         $this->token = $completeSecret;
         $this->dateRequest = $datetime;
@@ -77,10 +79,10 @@ class TalentaService {
      */
     public function makeRequest()
     {
-        // generate secret token
-        $this->generateHmac();
-
         $method = $this->requestMethod;
+
+        // generate secret token
+        $this->generateHmac($method);
 
         // make a request
         $response = Http::withHeaders([
@@ -89,6 +91,11 @@ class TalentaService {
             ])
             ->acceptJson()
             ->$method($this->url, $this->payload);
+
+        logging("TALENTA RESPONSE", [
+            'response' => $response->json(),
+            'status' => $response->status()
+        ]);
 
         return $response->json();
     }
