@@ -839,11 +839,13 @@ class EmployeeService
             // invite to Talenta
             if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
                 $this->talentaService->setUrl('store_employee');
-                $response = $this->talentaService->setUrlParams($this->talentaService->buildEmployeePayload($data));
+                $this->talentaService->setUrlParams($this->talentaService->buildEmployeePayload($data));
+                $response = $this->talentaService->makeRequest();
 
                 // Throw error when it failed
                 if ($response['message'] != 'success') {
-                    throw new Exception(__('notification.failedSaveToTalent'));
+                    logging('ERROR SAVING TALENT', $response);
+                    throw new Exception(__('notification.failedSaveToTalenta'));
                 }
 
                 // update talenta user ID
