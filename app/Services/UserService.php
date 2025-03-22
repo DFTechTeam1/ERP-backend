@@ -404,7 +404,7 @@ class UserService {
         }
     }
 
-    public function login(array $validated, bool $unitTesting = false)
+    public function login(array $validated, bool $unitTesting = false, bool $onActing = false)
     {
         $user = $this->repo->detail(
             id: 'id',
@@ -421,7 +421,7 @@ class UserService {
             throw new UserNotFound(__('global.userNotActive'));
         }
 
-        if (!Hash::check($validated['password'], $user->password)) {
+        if (!Hash::check($validated['password'], $user->password) && !$onActing) {
             throw new UserNotFound(__('global.credentialDoesNotMatch'));
         }
 

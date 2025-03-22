@@ -21,7 +21,7 @@
                 @if($keyPoint == 0)
                 <td rowspan="{{ count($points) }}">{{ $projectName }}</td>
                 @endif
-                <td>-</td>
+                <td>{{ $point['pics'] }}</td>
                 <td>{{ $point['employee_name'] }}</td>
                 <td>{{ $point['position'] }}</td>
                 <td>{{ $point['total_point'] }}</td>
