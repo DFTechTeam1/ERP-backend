@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Enums\Production\WorkType;
 use App\Exports\PrepareEmployeeMigration;
@@ -125,9 +124,9 @@ class LandingPageController extends Controller
         $filePath = public_path('images/user.png');
         $username = "ilhamgumilang"; // Change this to NAS username
         $password = "Ilham..123"; // Change this to NAS password
-    
+
         $curl = curl_init();
-    
+
         curl_setopt_array($curl, [
             CURLOPT_URL => 'http://192.168.100.105:3500',
             CURLOPT_RETURNTRANSFER => true,
@@ -138,15 +137,15 @@ class LandingPageController extends Controller
                 'file' => new \CURLFile($filePath)
             ],
         ]);
-    
+
         $response = curl_exec($curl);
         if ($response === false) {
             throw new \Exception('Upload failed: ' . curl_error($curl));
         }
-    
+
         curl_close($curl);
 
         echo json_encode($response);
     }
-    
+
 }
