@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Providers;
 
+use App\Exports\NewTemplatePerformanceReportExport;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
@@ -44,7 +45,8 @@ class HrdServiceProvider extends ServiceProvider
         $this->commands([
             ManualExportPerformanceReport::class,
             MigrationEmployeePointToNewSchema::class,
-            MakeEmployeeAsSync::class
+            MakeEmployeeAsSync::class,
+            NewTemplatePerformanceReportExport::class
         ]);
     }
 
