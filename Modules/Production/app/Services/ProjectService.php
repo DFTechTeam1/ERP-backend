@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Actions\DefineTaskAction;
 use App\Actions\Hrd\PointRecord;
 use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
@@ -12,6 +13,7 @@ use App\Actions\Project\Entertainment\SwitchSongWorker;
 use App\Actions\Project\FormatBoards;
 use App\Actions\Project\FormatTaskPermission;
 use App\Actions\Project\GetProjectTeams;
+use App\Actions\Project\SaveTaskState;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
@@ -59,6 +61,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
+use Modules\Hrd\Repository\EmployeeTaskStateRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Production\Exceptions\AttributeReferenceMissing;
 use Modules\Production\Exceptions\FailedModifyWaitingApprovalSong;
@@ -159,6 +162,8 @@ class ProjectService
 
     private $entertainmentTaskSongRevise;
 
+    private $employeeTaskStateRepo;
+
     /**
      * Construction Data
      */
@@ -197,7 +202,8 @@ class ProjectService
         DetailCache $detailCacheAction,
         EntertainmentTaskSongResultRepository $entertainmentTaskSongResultRepo,
         EntertainmentTaskSongResultImageRepository $entertainmentTaskSongResultImageRepo,
-        EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise
+        EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise,
+        EmployeeTaskStateRepository $employeeTaskStateRepo
     )
     {   
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
@@ -269,6 +275,8 @@ class ProjectService
         $this->customItemRepo = $customItemRepo;
 
         $this->projectSongListRepo = $projectSongListRepo;
+
+        $this->employeeTaskStateRepo = $employeeTaskStateRepo;
     }
 
     /**
@@ -961,6 +969,8 @@ class ProjectService
             $whereHas
         );
 
+        logging("WHERE HAS", $whereHas);
+
         $data = collect((object) $data)->map(function ($project) {
             return [
                 'title' => $project->title,
@@ -1109,16 +1119,28 @@ class ProjectService
         $picUids = array_values(array_unique($picUids));
 
         // get special position that will be append on each project manager team members
+        $specialPosition = $this->generalService->getSettingByKey('special_production_position');
+        $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
         $specialPosition = getSettingByKey('special_production_position');
+        
         $specialEmployee = [];
         $specialIds = [];
         if ($specialPosition) {
             $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\PositionBackup());
+            $whereSpecial = "position_id = {$specialPosition}";
+            $isLeadModeller = false;
+            if ($leadModeller != null && $leadModeller != '' && $leadModeller != 'null') {
+                $leadModeller = $this->generalService->getIdFromUid($leadModeller, new Employee());
+                $whereSpecial = "id = {$leadModeller}";
+                $isLeadModeller = true;
+            }
 
-            $specialEmployee = $this->employeeRepo->list('id,uid,name,nickname,email,position_id', 'position_id = ' . $specialPosition, ['position:id,name'])->toArray();
+            $specialEmployee = $this->employeeRepo->list('id,uid,name,nickname,email,position_id', $whereSpecial, ['position:id,name'])->toArray();
 
-            $specialEmployee = collect($specialEmployee)->map(function ($employee) {
+            $specialEmployee = collect($specialEmployee)->map(function ($employee) use ($isLeadModeller) {
                 $employee['loan'] = false;
+                $employee['image'] = asset('images/user.png');
+                $employee['is_lead_modeller'] = $isLeadModeller;
 
                 return $employee;
             })->toArray();
@@ -1573,6 +1595,8 @@ class ProjectService
         $projectPics = $this->projectPicRepository->list('id,pic_id', 'project_id = ' . $task['project_id']);
         $isProjectPic = in_array($employeeId, collect($projectPics)->pluck('pic_id')->toArray()) || $superUserRole ? true : false;
         $task['is_project_pic'] = $isProjectPic;
+
+        $task['action_list'] = DefineTaskAction::run($task);
 
         $task['is_director'] = $isDirector;
 
@@ -2445,7 +2469,7 @@ class ProjectService
      * @param boolean $isRevise
      * @return array
      */
-    public function assignMemberToTask(array $data, string $taskUid, bool $isForProjectManager = false, bool $isRevise = false)
+    public function assignMemberToTask(array $data, string $taskUid, bool $isForProjectManager = false, bool $isRevise = false, bool $needChangeTaskStatus = true)
     {
         DB::beginTransaction();
         try {
@@ -2454,7 +2478,8 @@ class ProjectService
             $notifiedNewTask = [];
             foreach ($data['users'] as $user) {
 
-                $employeeId = getIdFromUid($user, new \Modules\Hrd\Models\Employee());
+                $employeeId = $this->generalService->getIdFromUid($user, new \Modules\Hrd\Models\Employee());
+                $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
 
                 $checkPic = $this->taskPicRepo->show(0, 'id', [], 'project_task_id = ' . $taskId . ' AND employee_id = ' . $employeeId);
                 if (!$checkPic) {
@@ -2486,11 +2511,14 @@ class ProjectService
                     if ($isForProjectManager) { // set to check by pm
                         $this->setTaskWorkingTime($taskId, $employeeId, \App\Enums\Production\WorkType::CheckByPm->value);
                     } else { // check to assigned
-                        $this->setTaskWorkingTime($taskId, $employeeId, \App\Enums\Production\WorkType::Assigned->value);
+                        // if task assign to 'LEAD MODELLER', do not write working time
+                        if (!$userData->hasPermissionTo('assign_modeller')) {
+                            $this->setTaskWorkingTime($taskId, $employeeId, \App\Enums\Production\WorkType::Assigned->value);
+                        }
                     }
 
                     // change task status
-                    if (!$isRevise) { // see PHPDOC
+                    if (!$isRevise && $needChangeTaskStatus) { // see PHPDOC
                         $this->taskRepo->update([
                             'status' => !$isForProjectManager ? \App\Enums\Production\TaskStatus::WaitingApproval->value : \App\Enums\Production\TaskStatus::CheckByPm->value,
                         ], $taskUid);
@@ -2525,7 +2553,7 @@ class ProjectService
                     if ($isForProjectManager) {
 //                        \Modules\Production\Jobs\AssignCheckByPMJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
                     } else {
-                        \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+                        \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId, $userData)->afterCommit();
                     }
                 }
             }
@@ -2608,11 +2636,9 @@ class ProjectService
 
             $this->taskRepo->bulkDelete([$taskUid], 'uid');
 
-            $boards = $this->formattedBoards($projectUid);
-            $currentData = getCache('detailProject' . $projectId);
-            $currentData['boards'] = $boards;
-
-            storeCache('detailProject' . $projectId, $currentData);
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid)
+            ]);
 
             return generalResponse(
                 __('global.successDeleteTask'),
@@ -2665,6 +2691,21 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
+            // validate pic
+            $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
+            $isForLeadModeller = false;
+            if ((!empty($data['pic'])) && ($leadModeller && count($data['pic']) > 1)) {
+                $selectedModeller = collect($data['pic'])->filter(function ($filter) use ($leadModeller) {
+                    return $filter != $leadModeller;
+                })->values()->toArray();
+            }
+            $isForLeadModeller = $data['pic'][0] == $leadModeller ? true : false;
+            $isValid = !isset($selectedModeller) ? true : (count($data) == count($selectedModeller) ? true : false);
+
+            if (!$isValid) {
+                return errorResponse(message: __('notification.cannotCombineModeller'));
+            }
+
             $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid', 'project.personInCharges']);
             $data['project_id'] = $board->project_id;
             $data['project_board_id'] = $boardId;
@@ -2673,7 +2714,7 @@ class ProjectService
 
             // set as waiting employee approval
             if (!empty($data['pic'])) {
-                $data['status'] = \App\Enums\Production\TaskStatus::WaitingApproval->value;
+                $data['status'] = $isForLeadModeller ? TaskStatus::WaitingDistribute->value : TaskStatus::WaitingApproval->value;
             }
 
             $taskStore = $this->taskRepo->store(collect($data)->except(['pic', 'media'])->toArray());
@@ -2690,11 +2731,12 @@ class ProjectService
             // assign pic and record work timing if needed
             if (!empty($data['pic'])) {
                 $this->assignMemberToTask(
-                    [
+                    data: [
                         'users' => $data['pic'],
                         'removed' => [],
                     ],
-                    $task->uid
+                    taskUid: $task->uid,
+                    needChangeTaskStatus: $isForLeadModeller ? false : true
                 );
 
                 // send notification if needed
@@ -2729,6 +2771,55 @@ class ProjectService
         } catch (\Throwable $th) {
             DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Distribute task to modeler teams
+     *
+     * @param array $payload
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return array
+     */
+    public function distributeModellerTask(array $payload, string $projectUid, string $taskUid): array
+    {
+        try {
+            $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
+            $data = [
+                'users' => $payload['teams'],
+                'removed' => [$leadModeller]
+            ];
+
+            if ($payload['assign_to_me'] == 1) { // auto change status to on progress
+                $this->taskRepo->update([
+                    'status' => TaskStatus::OnProgress->value
+                ], $taskUid);
+            } else {
+                $distribute = $this->assignMemberToTask(
+                    data: $data,
+                    taskUid: $taskUid
+                );
+    
+                if ($distribute['error']) {
+                    return $distribute;
+                }
+            }
+
+            $task = $this->formattedDetailTask($taskUid);
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid)
+            ]);
+
+            return generalResponse(
+                message: __('notification.taskHasBeenDistribute'),
+                data: [
+                    'task' => $task,
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }
@@ -2800,18 +2891,23 @@ class ProjectService
 
             $task = $this->taskRepo->show($taskId, 'id,project_id,project_board_id', [
                 'pics:id,project_task_id,employee_id',
-                'pics.employee:id,uid,name,email'
+                'pics.employee:id,uid,name,email',
+                'pics.user:id,employee_id'
             ]);
 
             $currentTaskPics = $task->pics->toArray();
-            $outSelected = collect($currentTaskPics)->map(function ($item) {
+            $outSelected = collect($task->pics)->map(function ($item) {
+                $isLeadModeller = $item->user->hasPermissionTo('assign_modeller') && $this->generalService->getSettingByKey('lead_3d_modeller') ? true : false;
+
                 return [
                     'selected' => true,
-                    'email' => $item['employee']['email'],
-                    'name' => $item['employee']['name'],
-                    'uid' => $item['employee']['uid'],
-                    'id' => $item['employee']['id'],
-                    'intital' => $item['employee']['initial'],
+                    'email' => $item->employee->email,
+                    'name' => $item->employee->name,
+                    'uid' => $item->employee->uid,
+                    'id' => $item->employee->id,
+                    'intital' => $item->employee->initial,
+                    'image' => asset('images/user.png'),
+                    'is_lead_modeller' => $isLeadModeller
                 ];
             })->toArray();
 
@@ -2827,7 +2923,7 @@ class ProjectService
             $availableKeys = [];
             $available = [];
             foreach ($teams as $team) {
-                if (!in_array($team['uid'], $outSelected)) {
+                if (!in_array($team['uid'], collect($outSelected)->pluck('uid')->toArray())) {
                     $available[] = $team;
                 }
             }
@@ -3627,13 +3723,16 @@ class ProjectService
                 // notified project manager
                 \Modules\Production\Jobs\ProofOfWorkJob::dispatch($projectId, $taskId, auth()->id())->afterCommit();
 
-                $cache = $this->getDetailProjectCache($projectUid);
-                $currentData = $cache['cache'];
+                // $cache = $this->getDetailProjectCache($projectUid);
+                // $currentData = $cache['cache'];
 
-                $boards = $this->formattedBoards($projectUid);
-                $currentData['boards'] = $boards;
+                // $boards = $this->formattedBoards($projectUid);
+                // $currentData['boards'] = $boards;
 
-                storeCache('detailProject' . $projectId, $currentData);
+                // storeCache('detailProject' . $projectId, $currentData);
+                $currentData = $this->detailCacheAction->handle($projectUid, [
+                    'boards' => FormatBoards::run($projectUid)
+                ]);
             } else {
                 // user cancel to upload proof of work
                 $task = $this->formattedDetailTask($taskUid);
@@ -4250,12 +4349,35 @@ class ProjectService
     public function getAllTasks(): array
     {
         try {
+            $itemsPerPage = request('itemsPerPage') ?? 10;
+
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+            $sorts = '';
+            if (!empty(request('sortBy'))) {
+                foreach (request('sortBy') as $sort) {
+                    if ($sort['key'] == 'task_name') {
+                        $sort['key'] = 'name';
+                    }
+                    if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
+                        $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
+                    }
+                }
+
+                $sorts = rtrim($sorts, ',');
+            } else {
+                $sorts .= "created_at desc";
+            }
+
             // check role
+            $user = auth()->user();
             $su = getSettingByKey('super_user_role');
-            $userId = auth()->id();
-            $roles = auth()->user()->roles;
+            $userId = $user->id;
+            $roles = $user->roles;
             $roleId = $roles[0]->id;
-            $employeeId = auth()->user()->employee_id;
+            $employeeId = $user->employee_id;
 
             $showPic = false;
 
@@ -4309,10 +4431,19 @@ class ProjectService
                 }
             }
 
-            $data = $this->taskRepo->list(
-                'id,uid,project_id,project_board_id,name,task_type,end_date,status',
-                $where,
-                [
+            if (!empty(request('status'))) {
+                $status = implode(',', request('status'));
+                if (empty($where)) {
+                    $where = "status IN ({$status})";
+                } else {
+                    $where .= " AND status IN ({$status})";
+                }
+            }
+
+            $data = $this->taskRepo->pagination(
+                select: 'id,uid,project_id,project_board_id,name,task_type,end_date,status',
+                where: $where,
+                relation: [
                     'project:id,name,project_date',
                     'medias',
                     'taskLink',
@@ -4320,8 +4451,13 @@ class ProjectService
                     'pics:id,project_task_id,employee_id',
                     'pics.employee:id,name,nickname'
                 ],
-                $whereHas
+                page: $page,
+                itemsPerPage: $itemsPerPage,
+                whereHas: $whereHas,
+                sortBy: $sorts
             );
+            
+            $totalData = $this->taskRepo->list('id', $where, [], $whereHas)->count();
 
             $onProgress = getSettingByKey('board_start_calculated');
             $backlog = getSettingByKey('board_as_backlog');
@@ -4390,7 +4526,10 @@ class ProjectService
             return generalResponse(
                 'success',
                 false,
-                $output,
+                [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ],
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -4624,12 +4763,9 @@ class ProjectService
             //update cache and finishing process
             $task = $this->formattedDetailTask($taskUid);
 
-            $currentData = getCache('detailProject' . $projectId);
-
-            $boards = $this->formattedBoards($task->project->uid);
-            $currentData['boards'] = $boards;
-
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid)
+            ]);
 
             DB::commit();
 
@@ -4643,8 +4779,10 @@ class ProjectService
             );
         } catch (\Throwable $th) {
             if ($tmpFile) {
-                $path = storage_path("app/public/projects/{$projectId}/task/{$taskId}/revise/{$tmpFile}");
-                deleteImage($path);
+                foreach ($tmpFile as $tmp) {
+                    $path = storage_path("app/public/projects/{$projectId}/task/{$taskId}/revise/{$tmp}");
+                    deleteImage($path);
+                }
             }
 
             DB::rollBack();
@@ -4675,12 +4813,9 @@ class ProjectService
             //update cache and finishing process
             $task = $this->formattedDetailTask($taskUid);
 
-            $currentData = getCache('detailProject' . $projectId);
-
-            $boards = $this->formattedBoards($task->project->uid);
-            $currentData['boards'] = $boards;
-
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid)
+            ]);
 
             DB::commit();
 
@@ -4726,12 +4861,9 @@ class ProjectService
             //update cache and finishing process
             $task = $this->formattedDetailTask($taskUid);
 
-            $currentData = getCache('detailProject' . $projectId);
-
-            $boards = $this->formattedBoards($task->project->uid);
-            $currentData['boards'] = $boards;
-
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid)
+            ]);
 
             DB::commit();
 
@@ -4760,7 +4892,7 @@ class ProjectService
      * @param string $taskUid
      * @return array
      */
-    public function markAsCompleted(string $projectUid, string $taskUid, object $employee = null): array
+    public function markAsCompleted(string $projectUid, string $taskUid, ?object $employee = null): array
     {
         DB::beginTransaction();
         try {
@@ -4835,18 +4967,26 @@ class ProjectService
             } else {
                 $task = $this->formattedDetailTask($taskUid);
 
-                $currentData = getCache('detailProject' . $projectId);
+                // $currentData = getCache('detailProject' . $projectId);
 
-                $boards = $this->formattedBoards($task->project->uid);
-                $currentData['boards'] = $boards;
+                // $boards = $this->formattedBoards($task->project->uid);
+                // $currentData['boards'] = $boards;
 
-                $currentData = $this->formatTasksPermission($currentData, $projectId);
+                // $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+                $currentData = $this->detailCacheAction->handle(
+                    projectUid: $projectUid,
+                    forceUpdateAll: true,
+                );
 
                 $payloadOutput = [
                     'task' => $task,
                     'full_detail' => $currentData,
                 ];
             }
+
+            // save task state
+            SaveTaskState::run($currentPicIds, $taskUid);
 
             \Modules\Production\Jobs\TaskIsCompleteJob::dispatch($currentPicIds, $taskId)->afterCommit();
 
@@ -4951,7 +5091,25 @@ class ProjectService
         );
     }
 
-    public function getProjectStatusses(string $projectUid)
+    public function getTaskStatus()
+    {
+        $data = \App\Enums\Production\TaskStatus::cases();
+
+        $out = [];
+        foreach ($data as $status) {
+            $out[] = [
+                'value' => $status->value,
+                'title' => $status->label(),
+            ];
+        }
+
+        return generalResponse(
+            message: "Success",
+            data: $out
+        );
+    }
+
+    public function getProjectStatusses(string $projectUid): array
     {
         $project = $this->repo->show($projectUid, 'status');
 
@@ -5312,12 +5470,41 @@ class ProjectService
     public function getTaskTeamForReview(string $projectUid): array
     {
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
-
+ 
         $project = $this->repo->show($projectUid, 'id,uid,event_type,classification,name,project_date');
 
         $projectTeams = $this->getProjectTeams($project);
         $teams = $projectTeams['teams'];
         $pics = $projectTeams['picUids'];
+
+        // format with task details
+        $output = [];
+        foreach ($teams as $team) {
+            $tasks = $this->employeeTaskStateRepo->list(
+                select: 'id,project_id,project_task_id,project_board_id,employee_id',
+                where: "employee_id = {$team['id']}",
+                relation: [
+                    'task:id,name'
+                ]
+            );
+
+            $output[] = [
+                'uid' => $team['uid'],
+                'name' => $team['name'],
+                'total_task' => $tasks->count(),
+                'point' => $tasks->count(),
+                'additional_point' => 0,
+                'can_decrease_point' => false,
+                'can_increase_point' => true,
+                'tasks' => collect($tasks)->pluck('project_task_id')->values()->toArray()
+            ];
+        }
+
+        return generalResponse(
+            'success',
+            false,
+            $output
+        );
 
         $histories = $this->taskPicHistory->list('DISTINCT project_id,project_task_id,employee_id', 'project_id = ' . $projectId, ['employee:id,name,employee_id,uid,nickname']);
 
@@ -7333,7 +7520,7 @@ class ProjectService
             // validate before go
             $allowedStatuses = [
                 BaseRole::ProjectManagerEntertainment->value => [TaskSongStatus::OnFirstReview->value],
-                BaseRole::Root->value => [TaskSongStatus::OnFirstReview->value],
+                BaseRole::Root->value => [TaskSongStatus::OnFirstReview->value, TaskSongStatus::OnLastReview->value],
                 BaseRole::ProjectManager->value => [TaskSongStatus::OnLastReview->value],
                 BaseRole::ProjectManagerAdmin->value => [TaskSongStatus::OnLastReview->value]
             ];
@@ -7349,10 +7536,7 @@ class ProjectService
 
             if (!$isAllowed) {
                 DB::commit();
-                return generalResponse(
-                    message: __('notification.failedToAproveTask'),
-                    error: true
-                );
+                return errorResponse(__('notification.failedToAproveTask'));
             }
 
             if ($currentStatus == TaskSongStatus::OnFirstReview->value) {

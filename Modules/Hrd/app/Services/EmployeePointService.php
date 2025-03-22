@@ -88,28 +88,14 @@ class EmployeePointService {
      */
     public function renderEachEmployeePoint(int $employeeId = 17, string $startDate = '', string $endDate = '')
     {
-        $whereHas = [];
-
-        if (!empty($startDate) && !empty($endDate)) {
-            $whereHas[] = [
-                'relation' => 'projects.project',
-                'query' => "project_date BETWEEN '{$startDate}' AND '{$endDate}'"
-            ];
-        } else if (!empty($startDate) && empty($endDate)) {
-            $whereHas[] = [
-                'relation' => 'projects.project',
-                'query' => "project_date >= '{$startDate}'"
-            ];
-        } else if (empty($startDate) && !empty($endDate)) {
-            $whereHas[] = [
-                'relation' => 'projects.project',
-                'query' => "project_date <= '{$endDate}'"
-            ];
-        }
-
-        $point = $this->repo->show(
-            uid: 'id',
-            select: 'id,employee_id,total_point,type',
+        $dummy = $this->repo->rawSql(
+            table: 'employee_points AS es',
+            select: "
+                es.employee_id, es.total_point AS total_point_employee, es.type, es.id,
+                epp.project_id, epp.total_point AS total_point_per_project, epp.additional_point, epp.id as point_id,
+                p.name AS project_name
+            ",
+            where: "employee_id = {$employeeId} AND p.project_date BETWEEN '{$startDate}' AND '{$endDate}'",
             relation: [
                 'projects' => function ($query) use($startDate, $endDate) {
                     $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point')
@@ -124,48 +110,59 @@ class EmployeePointService {
             where: "employee_id = {$employeeId}"
         );
 
-        // get detail information
-        if ($point) {
-            $relation = [];
-            if ($point->type == 'production') {
-                $relation = [
-                    'productionTask:id,name,created_at'
-                ];
-            } else {
+        $newOutput = [];
+        $totalPoint = 0;
+        $totalProject = 0;
+        foreach ($dummy as $dataDummy) {
+            $totalPoint += $dataDummy->total_point_per_project;
+            $totalProject += 1;
+
+            // get tasks
+            $relation = [
+                'productionTask:id,name,created_at'
+            ];
+            if ($dataDummy->type != 'production') {
                 $relation = [
                     'entertainmentTask:id,project_song_list_id,created_at',
                     'entertainmentTask.song:id,name'
                 ];
             }
-
-            $pointType = $point->type;
-
-            $projects = collect($point->projects)->map(function ($item) use ($relation, $pointType) {
-                $tasks = $this->pointProjectDetailRepo->list(
-                    select: 'id,task_id,point_id',
-                    where: "point_id = {$item->id}",
-                    relation: $relation
-                );
-
-                $item['tasks'] = $tasks;
-                $item['type'] = $pointType;
-
-                return $item;
-            });
-
-            $totalPointPerProject = collect($projects)->pluck('total_point')->sum();
-            $totalAdditionalPointPerProject = collect($projects)->pluck('additional_point')->sum();
-            $point['total_point_per_project'] = $totalPointPerProject;
-            $point['total_additional_point_per_project'] = $totalAdditionalPointPerProject;
-
-            $point['detail_projects'] = $projects;
-
-            unset($point['projects']);
+            $tasks = $this->pointProjectDetailRepo->list(
+                select: 'id,task_id,point_id',
+                where: "point_id = {$dataDummy->point_id}",
+                relation: $relation
+            );
+            $outputTasks = [];
+            if ($dataDummy->type == 'production') {
+                $outputTasks = collect((object) $tasks)->map(function ($task) {
+                    return [
+                        'name' => $task->productionTask->name,
+                        'assigned_at' => date('d F Y', strtotime($task->productionTask->created_at))
+                    ];
+                })->toArray();
+            } else {
+                $outputTasks = collect((object) $tasks)->map(function ($task) {
+                    return [
+                        'name' => $task->entertainmentTask->song->name,
+                        'assigned_at' => date('d F Y', strtotime($task->entertainmentTask->created_at))
+                    ];
+                })->toArray();
+            }
+            
+            $newOutput[] = [
+                'project_name' => $dataDummy->project_name,
+                'point' => $dataDummy->total_point_per_project - $dataDummy->additional_point,
+                'additional_point' => $dataDummy->additional_point,
+                'total_point' => $dataDummy->total_point_per_project,
+                'tasks' => $outputTasks
+            ];
         }
-        if (($point) && ($point->employee->employee_id == 'DF015')) {
-            Log::debug("POINT DATA", $point->toArray());
-        }
-        return $point;
+
+        return [
+            'total_point' => $totalPoint,
+            'total_project' => $totalProject,
+            'task_details' => $newOutput
+        ];
     }
 
     public function datatable()

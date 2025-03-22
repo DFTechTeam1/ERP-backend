@@ -63,7 +63,17 @@ class EmployeeController extends Controller
         );
     }
 
-    public function generateRandomPassword()
+    /**
+     * Get list of 3D modeller Employee
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function get3DModeller(string $projectUid, string $taskUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->employeeService->get3DModeller($projectUid, $taskUid));
+    }
+
+    public function generateRandomPassword(): \Illuminate\Http\JsonResponse
     {
         return apiResponse(generalResponse(
             message: 'Success',

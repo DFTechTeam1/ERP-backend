@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ErrorCode\Code;
+use App\Enums\System\BaseRole;
 use App\Exceptions\UserNotFound;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
@@ -57,7 +58,6 @@ if (!function_exists('successResponse')) {
 
 if (!function_exists('errorMessage')) {
     function errorMessage($message) {
-        Log::debug("Check error", [!$message instanceof Throwable]);
         $arr = ['App\Exceptions\TemplateNotValid'];
 
         if ($message instanceof Throwable) {
@@ -489,15 +489,12 @@ if (!function_exists('getPicOfInventory')) {
     function getPicOfInventory() {
         $users = getUserByRole('it support');
         // check permission
-        logging('user data: ', $users->toArray());
 
         $employees = [];
         foreach ($users as $user) {
             $permissions = $user->getPermissionsViaRoles();
             $permissionNames = collect($permissions)->pluck('name')->toArray();
-            logging('permissions data: ', $permissionNames);
             if (in_array('accept_request_equipment', $permissionNames)) {
-                logging('is have permission: ', [$user]);
                 $employees[] = \Modules\Hrd\Models\Employee::selectRaw('id,uid,name,line_id,telegram_chat_id,user_id')
                     ->where('user_id', $user->id)
                     ->first();
@@ -519,8 +516,6 @@ if (!function_exists('isSuperUserRole')) {
                 $out = true;
             }
         }
-
-        logging('isSuperUserRole', [$out]);
 
         return $out;
     }
@@ -554,15 +549,10 @@ if (!function_exists('isProjectPIC')) {
             $projectId = getIdFromUid($projectId, new \Modules\Production\Models\Project());
         }
 
-        logging('isPro pid', [$projectId]);
-        logging('isPro eid', [$employeeId]);
-
         $projectData = \Modules\Production\Models\ProjectPersonInCharge::select('id')
             ->where('project_id', $projectId)
             ->where('pic_id', $employeeId)
             ->first();
-
-        logging('isProjectPIC', [$projectData ? true : false]);
 
         return $projectData ? true : false;
     }
@@ -584,30 +574,13 @@ if (!function_exists('isDirector')) {
      * @return boolean
      */
     function isDirector() {
-        $directorPosition = json_decode(getSettingByKey('position_as_directors'), true);
-
-        $out = false;
-        if ($directorPosition && !isSuperUserRole()) {
-            $directorPosition = collect($directorPosition)->map(function ($item) {
-                return getidFromUid($item, new \Modules\Company\Models\PositionBackup());
-            })->toArray();
-
-            $user = auth()->user();
-            $employee = \Modules\Hrd\Models\Employee::selectRaw('id,position_id')
-                ->find($user->employee_id);
-
-            $out = in_array($employee->position_id, $directorPosition) ? true : false;
-        }
-
-        logging('isDirector', [$out]);
-
-        return $out;
+        return auth()->user()->hasRole(BaseRole::Director->value);
     }
 }
 
 if (!function_exists('isItSupport')) {
     function isItSupport() {
-        return auth()->user()->hasRole('it support');
+        return auth()->user()->hasRole(BaseRole::ItSupport->value);
     }
 }
 
@@ -954,5 +927,13 @@ if (!function_exists('destroyTelegramSession')) {
 if (!function_exists('loggingProject')) {
     function loggingProject(mixed $projectId, string $message) {
 
+    }
+}
+
+if (!function_exists('generateRandomColor')) {
+    function generateRandomColor(string $email) {
+        $hash = md5($email);
+
+        return '#' . substr($hash, 0, 6);
     }
 }

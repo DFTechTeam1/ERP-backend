@@ -75,4 +75,8 @@ class GeneralService {
             'end' => $endDate
         ];
     }
+
+    public function generateRandomColor(string $email) {
+        return generateRandomColor($email);
+    }
 }

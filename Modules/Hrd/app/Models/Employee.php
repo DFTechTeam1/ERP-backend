@@ -133,6 +133,7 @@ class Employee extends Model
         'telegram_chat_id',
         'job_level_id',
         'is_sync_with_talenta',
+        'avatar_color'
     ];
 
     protected $appends = [

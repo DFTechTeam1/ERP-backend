@@ -2,6 +2,7 @@
 
 namespace App\Actions\Project;
 
+use App\Actions\DefineTaskAction;
 use DateTime;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -108,6 +109,12 @@ class FormatTaskPermission
 
             foreach ($board['tasks'] as $keyTask => $task) {
                 $outputTask[$keyTask] = $task;
+
+                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+
+                // highlight task for authorized user
+                $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+                $outputTask[$keyTask]['is_mine'] = (bool) in_array($user->employee_id, $picIds);
 
                 // stop action when project status is DRAFT
                 $outputTask[$keyTask]['stop_action'] = $project['status'] == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;

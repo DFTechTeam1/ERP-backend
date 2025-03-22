@@ -19,16 +19,20 @@ class AssignTaskNotification extends Notification
 
     public $employeeId;
 
+    public $userData;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct($chatIds, $task, $employeeId)
+    public function __construct($chatIds, $task, $employeeId, $userData)
     {
         $this->task = $task;
 
         $this->employeeId = $employeeId;
 
         $this->chatIds = $chatIds;
+
+        $this->userData = $userData;
     }
 
     /**
@@ -60,22 +64,31 @@ class AssignTaskNotification extends Notification
 
     public function toTelegram($notifiable)
     {
-        return [
-            'chatIds' => $this->chatIds,
-            'message' => [
-                'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya.",
-                [
-                    'text' => 'Setujui tugas ini?',
-                    'type' => 'inline_keyboard',
-                    'keyboard' => [
-                        'inline_keyboard' => [
-                            [
-                                ['text' => 'Terima pekerjaan', 'callback_data' => 'idt=ptappv&eid=' . $this->employeeId . '&tid=' . $this->task->id . '&pid=' . $this->task->project->id],
-                            ]
+        $message = [
+            'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya.",
+            [
+                'text' => 'Setujui tugas ini?',
+                'type' => 'inline_keyboard',
+                'keyboard' => [
+                    'inline_keyboard' => [
+                        [
+                            ['text' => 'Terima pekerjaan', 'callback_data' => 'idt=ptappv&eid=' . $this->employeeId . '&tid=' . $this->task->id . '&pid=' . $this->task->project->id],
                         ]
                     ]
                 ]
             ]
+        ];
+
+        // message for lead modeller
+        if ($this->userData->hasPermissionTo('assign_modeller')) {
+            $message = [
+                "Halo, tugas {$this->task->name} di event {$this->task->project->name} siap untuk kamu distribusikan ke tim kamu"
+            ];
+        }
+
+        return [
+            'chatIds' => $this->chatIds,
+            'message' => $message
         ];
     }
 
