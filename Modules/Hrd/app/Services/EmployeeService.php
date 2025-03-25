@@ -1769,4 +1769,39 @@ class EmployeeService
             false
         );
     }
+
+    /**
+     * Get employment report for the dashboard
+     * Provide data that can be converted to Bar Chart
+     *
+     * @return array
+     */
+    public function getEmploymentReport(): array
+    {
+        try {
+            $statuses = Status::getStatusForReport();
+
+            $data = $this->repo->list(
+                select: 'id,name,status',
+                where: "status IN (" . implode(',', $statuses) . ")"
+            );
+
+            $grouping = collect((object) $data)->groupBy('status')->toArray();
+            $output = [];
+            foreach ($grouping as $statusId => $detail) {
+                $statusText = Status::getLabel((int) $statusId);
+
+                $output[$statusText] = count($detail);
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'employment' => $output
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }

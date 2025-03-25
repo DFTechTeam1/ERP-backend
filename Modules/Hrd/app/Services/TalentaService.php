@@ -94,7 +94,8 @@ class TalentaService {
 
         logging("TALENTA RESPONSE", [
             'response' => $response->json(),
-            'status' => $response->status()
+            'status' => $response->status(),
+            'payload' => $this->payload
         ]);
 
         return $response->json();
