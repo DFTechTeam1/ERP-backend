@@ -24,7 +24,7 @@ class EmployeePointProjectRepository extends EmployeePointProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -36,6 +36,14 @@ class EmployeePointProjectRepository extends EmployeePointProjectInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($whereHas)) {
+            foreach ($whereHas as $whereRelation) {
+                $query->whereHas($whereRelation['relation'], function ($query) use ($whereRelation) {
+                    $query->whereRaw($whereRelation['query']);
+                });
+            }
         }
 
         return $query->get();
@@ -68,7 +76,7 @@ class EmployeePointProjectRepository extends EmployeePointProjectInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -87,7 +95,7 @@ class EmployeePointProjectRepository extends EmployeePointProjectInterface {
         $query->selectRaw($select);
 
         $query->where("uid", $uid);
-        
+
         if ($relation) {
             $query->with($relation);
         }

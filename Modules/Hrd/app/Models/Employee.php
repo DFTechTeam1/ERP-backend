@@ -60,7 +60,6 @@ class Employee extends Model
             'religion' => Religion::class,
             'status' => Status::class,
             'martial_status' => MartialStatus::class,
-            // 'salary_type' => SalaryType::class,
             'ptkp_status' => PtkpStatus::class
         ];
     }

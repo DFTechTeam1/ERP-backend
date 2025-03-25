@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Providers;
 
+use App\Exports\NewTemplatePerformanceReportExport;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Hrd\Console\InitateAvatarColor;
@@ -48,7 +49,8 @@ class HrdServiceProvider extends ServiceProvider
             MigrationEmployeePointToNewSchema::class,
             MakeEmployeeAsSync::class,
             InitateAvatarColor::class,
-            SynchronizingTalentUserId::class
+            SynchronizingTalentUserId::class,
+            NewTemplatePerformanceReportExport::class,
         ]);
     }
 

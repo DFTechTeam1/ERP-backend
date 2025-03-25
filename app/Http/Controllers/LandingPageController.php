@@ -2,24 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\Employee\Religion;
-use App\Enums\Employee\Status;
-use App\Enums\Production\WorkType;
-use App\Exports\PrepareEmployeeMigration;
-use Carbon\Carbon;
-use Illuminate\Database\Query\JoinClause;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
-use Modules\Company\Models\Position;
-use Modules\Company\Models\PositionBackup;
-use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
-use Modules\Hrd\Repository\EmployeePointProjectRepository;
-use Modules\Hrd\Repository\EmployeePointRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
 use Modules\Hrd\Services\PerformanceReportService;
-use Modules\Hrd\Services\TalentaService;
 use Modules\Production\Services\ProjectRepositoryGroup;
 
 class LandingPageController extends Controller
@@ -50,19 +35,6 @@ class LandingPageController extends Controller
 
     public function index()
     {
-        $employees = $this->employeeRepo->list(
-            select: 'id,email,talenta_user_id',
-            where: "deleted_at IS NULL AND talenta_user_id IS NULL",
-            limit: 1
-        );
-
-        $talentaService = new TalentaService();
-        $talentaService->setUrl(type: "all_employee");
-        foreach ($employees as $employee) {
-            $talentaService->setUrlParams(['email' => $employee->email]);
-            return $talentaService->makeRequest();
-        }
-
         return view('landing');
     }
 
