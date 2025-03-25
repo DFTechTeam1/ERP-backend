@@ -843,11 +843,9 @@ class ProjectService
 
         if (request('end_date')) {
             $endDate = date('Y-m-d', strtotime(request('end_date')));
-            Log::debug('end date first', [date('Y-m-d', strtotime(request('end_date')))]);
         } else { // set based on selected project date
             $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
         }
-        Log::debug('end data', [$endDate]);
 
 //        if (request('filter_month')) {
 //            $endCarbon = \Carbon\Carbon::parse(request('filter_year') . '-' . request('filter_month') . '-01');
@@ -1106,7 +1104,7 @@ class ProjectService
 
             // check persion in charge role
             // if Assistant, then get teams based his team and his boss team
-            $userPerson = \App\Models\User::selectRaw('id')->where('employee_id', $pic->employee->id)
+            $userPerson = \App\Models\User::selectRaw('id,email')->where('employee_id', $pic->employee->id)
                 ->first();
             if ($userPerson->hasRole('assistant manager')) {
                 // get boss team
@@ -2003,13 +2001,6 @@ class ProjectService
             $output[$keyBoard]['tasks'] = $outputTask;
         }
 
-        Log::debug('check permission', [
-            'superuser' => $superUserRole,
-            'projectpic' => $isProjectPic,
-            'directory' => $isDirector,
-            'assistant' => isAssistantPMRole()
-        ]);
-
         $project['boards'] = $output;
 
         // showreels
@@ -2892,7 +2883,7 @@ class ProjectService
         try {
             $project = $this->repo->show('', '*', [
                 'personInCharges:id,pic_id,project_id',
-                'personInCharges.employee:id,name,employee_id',
+                'personInCharges.employee:id,name,employee_id,boss_id',
             ], 'id = ' . $projectId);
 
             $projectTeams = $this->getProjectTeams($project);
@@ -3085,11 +3076,6 @@ class ProjectService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
-            Log::debug('check continue request', [
-                'message' => $th->getMessage(),
-                'file' => $th->getFile(),
-                'line' => $th->getLine()
-            ]);
 
             return errorResponse($th);
         }

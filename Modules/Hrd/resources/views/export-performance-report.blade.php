@@ -46,7 +46,9 @@
                 <th style="font-weight: bold;">Name</th>
                 <th style="font-weight: bold;">Employee ID</th>
                 <th style="font-weight: bold;">Position</th>
+                <th style="font-weight: bold;">Additionial Point Per Project</th>
                 <th style="font-weight: bold;">Point</th>
+                <th style="font-weight: bold;">Additional Point</th>
                 <th style="font-weight: bold;">Event</th>
                 <th style="font-weight: bold;">Task</th>
             </tr>
@@ -58,7 +60,7 @@
                     @if (count($item['detail_projects']) > 0)
                         @php
                             $event = $item; // Main event
-                            $employee = $event->employee; 
+                            $employee = $event->employee;
                             $totalProjects = count($event->detail_projects);
                             $eventRowSpan = 0;
 
@@ -79,17 +81,19 @@
                                         <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $employee->name }}</td>
                                         <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $employee->employee_id }}</td>
                                         <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $employee->position->name }}</td>
-                                        <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $event->total_point }}</td>
+                                        <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $item['total_additional_point_per_project'] }}</td>
+                                        <td style="vertical-align: middle;" rowspan="{{ $eventRowSpan }}">{{ $item['total_point_per_project'] }}</td>
                                     @endif
 
                                     @if ($tIndex === 0)
+                                        <td rowspan="{{ $projectRowSpan }}">{{ $project->additional_point }}</td>
                                         <td rowspan="{{ $projectRowSpan }}">{{ $project['project']['name'] }}</td>
                                     @endif
 
                                     @if ($project->type == 'production')
                                         <td>{{ $task->productionTask->name }}</td>
                                     @else
-                                        <td>{{ $task->entertainmentTask->song->name }}</td>
+                                        <td>{{ $task->entertainmentTask->song->name }} ({{ $project->additional_point }})</td>
                                     @endif
                                 </tr>
                             @endforeach

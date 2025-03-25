@@ -18,7 +18,7 @@ use Modules\Hrd\Services\EmployeePointService;
 class PerformanceReportExport implements FromView, ShouldAutoSize
 {
     private $startDate;
-    
+
     private $endDate;
 
     private $employees;
@@ -42,7 +42,7 @@ class PerformanceReportExport implements FromView, ShouldAutoSize
             new EmployeePointProjectRepository,
             new EmployeePointProjectDetailRepository
         );
-        
+
         $data = [];
         foreach ($this->employees as $employee) {
             $pointData = $pointService->renderEachEmployeePoint($employee->id, $this->startDate, $this->endDate) ?? [];
@@ -56,7 +56,7 @@ class PerformanceReportExport implements FromView, ShouldAutoSize
                 ];
             }
         }
-        
+
         $startDate = date('d F Y', strtotime($this->startDate));
         $endDate = date('d F Y', strtotime($this->endDate));
         return view('hrd::export-performance-report', compact('data', 'startDate', 'endDate'));
