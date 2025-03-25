@@ -40,6 +40,45 @@ enum Status: int
         };
     }
 
+    public static function getLabel(int $value)
+    {
+        switch ($value) {
+            case static::Permanent->value:
+                $value = __('global.permanent');
+                break;
+
+            case static::Contract->value;
+                $value = __('global.contract');
+                break;
+
+            case static::PartTime->value:
+                $value = __('global.partTime');
+                break;
+
+            case static::Freelance->value:
+                $value = __('global.freelance');
+                break;
+
+            case static::Internship->value:
+                $value = __('global.internship');
+                break;
+
+            case static::Inactive->value:
+                $value = __('global.inactive');
+                break;
+
+            case static::Probation->value:
+                $value = __('global.probation');
+                break;
+
+            default:
+                $value = '-';
+                break;
+        }
+
+        return $value;
+    }
+
     public function statusColor()
     {
         return match ($this) {
@@ -53,5 +92,15 @@ enum Status: int
             static::WaitingHR => 'warning',
             static::Probation => 'brown-lighten-2',
         };
+    }
+
+    public static function getStatusForReport()
+    {
+        return [
+            static::Permanent->value,
+            static::Contract->value,
+            static::PartTime->value,
+            static::Probation->value
+        ];
     }
 }
