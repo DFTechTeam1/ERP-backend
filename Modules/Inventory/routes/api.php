@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Inventory\Http\Controllers\InventoryController;
+use Modules\Inventory\Http\Controllers\Api\InventoryController;
 
 /*
  *--------------------------------------------------------------------------
@@ -17,6 +17,8 @@ use Modules\Inventory\Http\Controllers\InventoryController;
 $namespace = 'Modules\Inventory\Http\Controllers\Api';
 
 Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
+    Route::get('inventories/list-request-equipment', [InventoryController::class, 'getEquipmentForProjectRequest']);
+
     Route::post('inventories/bulk', "{$namespace}\InventoryController@bulkDelete");
     Route::post('inventories/import', "{$namespace}\InventoryController@import");
     Route::get('inventories/getAll', "{$namespace}\InventoryController@getAll");
