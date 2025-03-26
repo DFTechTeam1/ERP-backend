@@ -16,7 +16,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
     protected $startDate;
     protected $endDate;
 
-    public function __construct(string $startDate, string $endDate)
+    public function __construct(string $startDate = '', string $endDate = '')
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
