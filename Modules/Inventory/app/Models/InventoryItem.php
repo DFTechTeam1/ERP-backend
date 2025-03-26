@@ -29,10 +29,10 @@ class InventoryItem extends Model
         'year_of_purchase'
     ];
 
-    protected static function newFactory(): InventoryItemFactory
-    {
-        //return InventoryItemFactory::new();
-    }
+    // protected static function newFactory(): InventoryItemFactory
+    // {
+    //     //return InventoryItemFactory::new();
+    // }
 
     /**
      * Get the attributes that should be cast.
