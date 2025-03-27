@@ -115,7 +115,7 @@ class SettingService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(
@@ -187,7 +187,7 @@ class SettingService {
      * Store data
      *
      * @param array $data
-     * 
+     *
      * @return array
      */
     public function store(array $data, $code = null): array
@@ -201,7 +201,7 @@ class SettingService {
                 $this->storeGeneral($data);
             } else if ($code == 'variables') {
                 $storeVariable = $this->storeVariables($data);
-                if ($storeVariable['error']) {
+                if ($storeVariable) {
                     return $storeVariable;
                 }
             }
@@ -254,7 +254,7 @@ class SettingService {
             select: 'id',
             where: "status = " . TaskStatus::WaitingDistribute->value
         );
-        if (empty($data['lead_3d_modeller']) || $data['lead_3d_modeller'] && $leadModellerTask) {
+        if (empty($data['lead_3d_modeller']) || !$data['lead_3d_modeller'] && $leadModellerTask) {
             return errorResponse('Lead 3D Modeller cannot be empty. There was some tasks that need to be done by Lead Modeller');
         }
 
@@ -300,7 +300,7 @@ class SettingService {
             }
 
             $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
-            
+
             $where = "`key` = '" . (string) $key . "'";
             logging('where store email', [$where]);
             $this->repo->store([
@@ -327,7 +327,7 @@ class SettingService {
 
             $boards[$key]['id'] = $key + 1;
         }
-        
+
         $this->repo->updateOrInsert(
             ['code' => 'kanban'],
             [
@@ -345,7 +345,7 @@ class SettingService {
      * @param array $data
      * @param string $id
      * @param string $where
-     * 
+     *
      * @return array
      */
     public function update(
@@ -364,13 +364,13 @@ class SettingService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
      * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -390,7 +390,7 @@ class SettingService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array
