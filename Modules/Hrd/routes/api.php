@@ -58,7 +58,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::put('employees/{employeeUid}/updateEmployment','updateEmployment')->name('employees.updateEmployment');
         Route::get('employees/{employeeUid}/initEmergency','initEmergency');
         Route::delete('employees/{emergencyUid}/deleteEmergency','deleteEmergency');
-        Route::get('employees/modeller/{projectUid}/{taskUid}', 'get3DModeller');
+        Route::get('employees/modeller/{projectUid?}/{taskUid?}', 'get3DModeller');
 
         Route::post('employees/import', 'import');
     });
