@@ -131,7 +131,7 @@ class EmployeeService
 
             $search = request('search');
 
-            if (!empty($search)) { // array 
+            if (!empty($search)) { // array
                 $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
                 if (!in_array('status', $filterNames)) {
                     $search['filters'] = collect($search['filters'])->merge([
@@ -193,7 +193,7 @@ class EmployeeService
                     'gender' => Gender::getGender(code: $item->gender->value),
                     'position' => $item->position->name,
                     'level_staff' => !$item->jobLevel ? '-' : $item->jobLevel->name,
-                    'status' => $item->status_text, 
+                    'status' => $item->status_text,
                     'status_color' => $item->status_color,
                     'join_date' => date('d F Y', strtotime($item->join_date)),
                     'phone' => $item->phone,
@@ -231,7 +231,7 @@ class EmployeeService
      *
      * @return array
      */
-    public function get3DModeller(string $projectUid, string $taskUid): array
+    public function get3DModeller(?string $projectUid = null, ?string $taskUid = null): array
     {
         try {
             $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
@@ -249,57 +249,59 @@ class EmployeeService
             // get workload
             $output = [];
             foreach ($employees as $employee) {
-                $taskInSameProject = $this->taskRepo->list(
-                    select: 'id',
-                    where: "project_id = {$projectId} AND uid != '{$taskUid}'",
-                    whereHas: [
-                        [
-                            'relation' => 'pics',
-                            'query' => "employee_id = {$employee->id}"
+                if ($projectId) {
+                    $taskInSameProject = $this->taskRepo->list(
+                        select: 'id',
+                        where: "project_id = {$projectId} AND uid != '{$taskUid}'",
+                        whereHas: [
+                            [
+                                'relation' => 'pics',
+                                'query' => "employee_id = {$employee->id}"
+                            ]
                         ]
-                    ]
-                )->count();
+                    )->count();
 
-                $startDate = Carbon::parse($project->project_date);
-                $dateRangeNextWeek = [$startDate->addDay()->format('Y-m-d'), $startDate->addDays(7)->format('Y-m-d')];
-                $startDate = Carbon::parse($project->project_date);
-                $dateRangeCurrentWeek = [$startDate->subDay()->format('Y-m-d'), $startDate->subDays(7)->format('Y-m-d')];
+                    $startDate = Carbon::parse($project->project_date);
+                    $dateRangeNextWeek = [$startDate->addDay()->format('Y-m-d'), $startDate->addDays(7)->format('Y-m-d')];
+                    $startDate = Carbon::parse($project->project_date);
+                    $dateRangeCurrentWeek = [$startDate->subDay()->format('Y-m-d'), $startDate->subDays(7)->format('Y-m-d')];
 
-                $taskInNextWeek = $this->taskRepo->list(
-                    select: 'id',
-                    where: "uid != '{$taskUid}'",
-                    whereHas: [
-                        [
-                            'relation' => 'project',
-                            'query' => "project_date BETWEEN '{$dateRangeNextWeek[0]}' AND '{$dateRangeNextWeek[1]}'"
-                        ],
-                        [
-                            'relation' => 'pics',
-                            'query' => "employee_id = {$employee->id}"
+                    $taskInNextWeek = $this->taskRepo->list(
+                        select: 'id',
+                        where: "uid != '{$taskUid}'",
+                        whereHas: [
+                            [
+                                'relation' => 'project',
+                                'query' => "project_date BETWEEN '{$dateRangeNextWeek[0]}' AND '{$dateRangeNextWeek[1]}'"
+                            ],
+                            [
+                                'relation' => 'pics',
+                                'query' => "employee_id = {$employee->id}"
+                            ]
                         ]
-                    ]
-                )->count();
-                $taskInCurrentWeek = $this->taskRepo->list(
-                    select: 'id',
-                    where: "uid != '{$taskUid}'",
-                    whereHas: [
-                        [
-                            'relation' => 'project',
-                            'query' => "project_date BETWEEN '{$dateRangeCurrentWeek[1]}' AND '{$dateRangeCurrentWeek[0]}'"
-                        ],
-                        [
-                            'relation' => 'pics',
-                            'query' => "employee_id = {$employee->id}"
+                    )->count();
+                    $taskInCurrentWeek = $this->taskRepo->list(
+                        select: 'id',
+                        where: "uid != '{$taskUid}'",
+                        whereHas: [
+                            [
+                                'relation' => 'project',
+                                'query' => "project_date BETWEEN '{$dateRangeCurrentWeek[1]}' AND '{$dateRangeCurrentWeek[0]}'"
+                            ],
+                            [
+                                'relation' => 'pics',
+                                'query' => "employee_id = {$employee->id}"
+                            ]
                         ]
-                    ]
-                )->count();
+                    )->count();
+                }
 
                 $output[] = [
                     'value' => $employee->value,
                     'title' => $employee->title,
-                    'task_in_selected_project' => $taskInSameProject,
-                    'task_in_next_week' => $taskInNextWeek,
-                    'task_in_current_week' => $taskInCurrentWeek
+                    'task_in_selected_project' => $taskInSameProject ?? 0,
+                    'task_in_next_week' => $taskInNextWeek ?? 0,
+                    'task_in_current_week' => $taskInCurrentWeek ?? 0
                 ];
             }
 
@@ -471,13 +473,13 @@ class EmployeeService
         ];
 
         $key = request()->min_level;
-        
+
         if (!empty(request()->min_level)) {
             $search = array_search($key, $levelStaffOrder);
-            
+
             if ($search > 0) {
                 $splice = array_splice($levelStaffOrder, 0, $search);
-                
+
                 $splice = collect($splice)->map(function ($item) {
                     return "'{$item}'";
                 })->toArray();
@@ -793,7 +795,7 @@ class EmployeeService
         DB::beginTransaction();
         try {
             $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
-            if (!empty($data['boss_id'])) { 
+            if (!empty($data['boss_id'])) {
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
 
@@ -832,7 +834,7 @@ class EmployeeService
             if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
                 // TODO: Communiate with talenta
             }
-            
+
             DB::commit();
 
             return generalResponse(
@@ -1036,7 +1038,7 @@ class EmployeeService
             }
 
             // TODO: Check all equipments
-            
+
             // remove access to system
             if ($employee->user) {
                 $this->userService->bulkDelete(
@@ -1716,7 +1718,7 @@ class EmployeeService
     {
         /**
          * What should be done when we delete:
-         * 
+         *
          * 1. Unattach from all tasks he have
          * 2. Make sure all equipment are already given back and in good condition
          * 3. Take back the access from system
