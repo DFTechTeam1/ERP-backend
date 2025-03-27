@@ -73,4 +73,6 @@ return [
     "songCannotBeRevise" => "Song cannot be revise yet",
     "cannotCombineModeller" => "Cannot combine members with lead modelers",
     "taskHasBeenDistribute" => "Task has been distribute",
+    "memberHasBeedRemoved" => "Member has been removed",
+    'memberAdded' => 'Members has been assign to task',
 ];

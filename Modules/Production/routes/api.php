@@ -44,6 +44,8 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/getProjectFolderDetail', [ProjectController::class, 'getProjectFolderDetail']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
+    Route::get('project/{projectUid}/precheck', [ProjectController::class, 'precheck']);
+    Route::post('project/{projectUid}/completeUnfinishedTask', [ProjectController::class, 'completeUnfinishedTask']);
 
     // songs
     Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');

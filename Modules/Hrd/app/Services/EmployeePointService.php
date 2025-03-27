@@ -96,7 +96,7 @@ class EmployeePointService {
                 p.name AS project_name
             ",
             where: "employee_id = {$employeeId} AND p.project_date BETWEEN '{$startDate}' AND '{$endDate}'",
-            relation: [
+            relationRaw: [
                 'projects' => function ($query) use($startDate, $endDate) {
                     $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point')
                         ->with(['project:id,name,project_date'])
@@ -107,7 +107,6 @@ class EmployeePointService {
                 'employee:id,name,nickname,email,employee_id,position_id',
                 'employee.position:id,name'
             ],
-            where: "employee_id = {$employeeId}"
         );
 
         $newOutput = [];
@@ -148,7 +147,7 @@ class EmployeePointService {
                     ];
                 })->toArray();
             }
-            
+
             $newOutput[] = [
                 'project_name' => $dataDummy->project_name,
                 'point' => $dataDummy->total_point_per_project - $dataDummy->additional_point,
