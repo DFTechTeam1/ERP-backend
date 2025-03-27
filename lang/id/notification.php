@@ -72,4 +72,6 @@ return [
     "songCannotBeRevise" => "Musik belum bisa di revisi untuk saat ini",
     "cannotCombineModeller" => "Tidak bisa menggabung 'Lead Modeller' dengan anggota tim lain",
     "taskHasBeenDistribute" => "Tugas berhasil di distribusikan",
+    "memberHasBeedRemoved" => "Member telah di hapus",
+    'memberAdded' => 'Anggota Tim Berhasil di Tugaskan',
 ];
