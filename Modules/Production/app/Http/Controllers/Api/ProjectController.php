@@ -119,6 +119,16 @@ class ProjectController extends Controller
     }
 
     /**
+     * Check all project tasks before user complete the project
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function precheck(string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->precheck(projectUid: $projectUid));
+    }
+
+    /**
      * Show the specified resource.
      */
     public function show($id)
@@ -831,9 +841,9 @@ class ProjectController extends Controller
 
     /**
      * Function get get all entertainment list with the workload
-     * 
+     *
      * @param $projectUid
-     * 
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function entertainmentListMember(string $projectUid): \Illuminate\Http\JsonResponse
@@ -890,12 +900,23 @@ class ProjectController extends Controller
      * @param SongRevise $request
      * @param string $projectUid
      * @param string $songUid
-     * 
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function songRevise(SongRevise $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->songRevise($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Complete all unfinished task
+     *
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function completeUnfinishedTask(string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->completeUnfinishedTask($projectUid));
     }
 }
 

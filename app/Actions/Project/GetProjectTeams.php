@@ -67,8 +67,6 @@ class GetProjectTeams
                 $isLeadModeller = true;
             }
 
-            logging("WHERE SPECIAL EMPLOYEE", [$whereSpecial]);
-
             $specialEmployee = $employeeRepo->list('id,uid,name,nickname,email,position_id', $whereSpecial, ['position:id,name'])->toArray();
 
             $specialEmployee = collect($specialEmployee)->map(function ($employee) use ($isLeadModeller) {

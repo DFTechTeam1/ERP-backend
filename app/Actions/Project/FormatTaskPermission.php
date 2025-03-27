@@ -101,6 +101,7 @@ class FormatTaskPermission
         $projectTasks = $taskRepo->list('*', 'project_id = ' . $projectId, ['board']);
 
         $project['progress'] = FormatProjectProgress::run($projectTasks, $projectId);
+        $project['can_complete_project'] = (bool) $user->hasPermissionTo('complete_project');
 
         foreach ($project['boards'] as $keyBoard => $board) {
             $output[$keyBoard] = $board;
