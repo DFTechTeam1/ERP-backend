@@ -6827,15 +6827,7 @@ class ProjectService
 
             result:
             // get current data
-            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
-            $currentData = $this->generalService->getCache('detailProject' . $projectId);
-
-            if (!$currentData) {
-                $this->show($projectUid);
-                $currentData = $this->generalService->getCache('detailProject' . $projectId);
-            }
-
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = $this->detailCacheAction->run($projectUid);
 
             return generalResponse(
                 $song->task ? __('notification.successUpdateDistributedSong') : __('notification.successUpdateSong'),
@@ -7121,15 +7113,7 @@ class ProjectService
 
             result:
             // get current data
-            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
-            $currentData = $this->generalService->getCache('detailProject' . $projectId);
-
-            if (!$currentData) {
-                $this->show($projectUid);
-                $currentData = $this->generalService->getCache('detailProject' . $projectId);
-            }
-
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            $currentData = $this->detailCacheAction->run($projectUid);
 
             DB::commit();
 
@@ -7971,7 +7955,7 @@ class ProjectService
             $tasks = $tasksProjects['production_tasks'];
             $songs = $tasksProjects['songs'];
 
-            $needToCompleteTasks = $tasks->count() > 0 ? true : false;
+            $needToCompleteTasks = $tasks->count() > 0 || $songs->count() > 0 ? true : false;
 
             return generalResponse(
                 message: "Success",
@@ -8024,7 +8008,7 @@ class ProjectService
                 'task' => function ($query) {
                     $query->selectRaw('id,project_song_list_id,employee_id,status')
                         ->with(['employee:id,nickname'])
-                        ->where('status', '!=', TaskSongStatus::Completed->value);
+                        ->whereNotIn('status', [TaskSongStatus::Completed->value]);
                 }
             ]
         );
