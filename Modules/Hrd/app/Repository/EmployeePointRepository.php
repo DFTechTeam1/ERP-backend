@@ -69,7 +69,7 @@ class EmployeePointRepository extends EmployeePointInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -100,7 +100,7 @@ class EmployeePointRepository extends EmployeePointInterface {
                 });
             }
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -110,12 +110,12 @@ class EmployeePointRepository extends EmployeePointInterface {
         return $data;
     }
 
-    public function rawSql(string $table, string $select, array $relation = [], string $where = '')
+    public function rawSql(string $table, string $select, array $relation = [], string $where = '', array $relationRaw = [])
     {
         $query = DB::table($table);
 
-        if (!empty($relation)) {
-            foreach ($relation as $relationData) {
+        if (!empty($relationRaw)) {
+            foreach ($relationRaw as $relationData) {
                 $query->join(
                     $relationData['table'],
                     $relationData['first'],
@@ -124,6 +124,10 @@ class EmployeePointRepository extends EmployeePointInterface {
                     isset($relationData['type']) ? $relationData['type'] : 'inner',
                 );
             }
+        }
+
+        if (!empty($realtion)) {
+            $query->with($relation);
         }
 
         $query->selectRaw($select);

@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Hrd\Models\Employee;
 
 class DefineTaskAction
 {
@@ -213,7 +214,7 @@ class DefineTaskAction
     public function getReviseDetailButton(object $task, string $key, array $detail): ?array
     {
         $revise = null;
-        
+
         if (($this->hasSuperPower() || $this->isMyCurrentTask || $this->isMyTask) && $task->revises->count() > 0) {
             $revise = $this->buildOutput($key, false, $detail);
         }
@@ -401,13 +402,16 @@ class DefineTaskAction
         $distribute = null;
 
         $leadModeller = getSettingByKey('lead_3d_modeller');
+        $leadModeller = getIdFromUid($leadModeller, new Employee());
         $taskPics = collect($task->pics)->pluck('employee_id')->toArray();
-        if (($this->hasSuperPower() || $this->isMyTask || $this->isMyCurrentTask) && $task->status == TaskStatus::WaitingApproval->value && $leadModeller && $this->user->hasPermissionTo('assign_modeller') && in_array($leadModeller, $taskPics)) {
-        }
-        
-        if ($task->status == TaskStatus::WaitingDistribute->value) {
+
+        if (
+            ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics)) ||
+            ($task->status == TaskStatus::WaitingDistribute->value && $this->hasSuperPower())
+        ) {
             $distribute = $this->buildOutput($key, false, $detail);
         }
+
 
         return $distribute;
     }
@@ -444,7 +448,7 @@ class DefineTaskAction
     protected function getReviseButton(object $task, string $key, array $detail): ?array
     {
         $revise = null;
-        
+
         if ($this->hasSuperPower() && $task->status == TaskStatus::CheckByPm->value) {
             $revise = $this->buildOutput($key, false, $detail);
         }

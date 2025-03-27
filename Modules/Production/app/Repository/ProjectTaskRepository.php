@@ -98,7 +98,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
         } else {
             $query->orderByRaw($sortBy);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -121,7 +121,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
         } else {
             $query->whereRaw($where);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -159,9 +159,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
             $query->where('uid', $id);
         }
 
-        $query->update($data);
-
-        return $query;
+        return $query->update($data);
     }
 
     /**
@@ -173,7 +171,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     public function delete(int $id, string $where = '')
     {
         $query = $this->model->query();
-        
+
         if (empty($where)) {
             $query->where('id', $id);
         } else {
