@@ -47,12 +47,12 @@ class FormatTaskPermission
         }
 
         // define permission to complete project
-        $nowTime = new DateTime('now');
-        $projectDate = new DateTime(date('Y-m-d', strtotime($project['project_date'])));
-        $diff = date_diff($nowTime, $projectDate);
+        // $nowTime = new DateTime('now');
+        // $projectDate = new DateTime(date('Y-m-d', strtotime($project['project_date'])));
+        // $diff = date_diff($nowTime, $projectDate);
         $nowTime = Carbon::now();
         $projectDate = Carbon::parse($project['project_date']);
-        $diff1 = $projectDate->diffInDays($nowTime);
+        $diff = $nowTime->diffInDays($projectDate);
 
         $project['is_time_to_complete_project'] = false;
         if (
@@ -61,7 +61,7 @@ class FormatTaskPermission
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value ||
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::ReadyToGo->value
             ) &&
-            $diff1 <= 7
+            $diff <= 7
         ) {
             $project['is_time_to_complete_project'] = true;
         }

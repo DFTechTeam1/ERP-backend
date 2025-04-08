@@ -75,4 +75,5 @@ return [
     "taskHasBeenDistribute" => "Task has been distribute",
     "memberHasBeedRemoved" => "Member has been removed",
     'memberAdded' => 'Members has been assign to task',
+    "toManyUnfinishedTask" => "To many tasks to complete, please complete manually"
 ];
