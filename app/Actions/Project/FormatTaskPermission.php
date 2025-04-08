@@ -3,6 +3,7 @@
 namespace App\Actions\Project;
 
 use App\Actions\DefineTaskAction;
+use Carbon\Carbon;
 use DateTime;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -46,9 +47,12 @@ class FormatTaskPermission
         }
 
         // define permission to complete project
-        $nowTime = new DateTime('now');
-        $projectDate = new DateTime(date('Y-m-d', strtotime($project['project_date'])));
-        $diff = date_diff($nowTime, $projectDate);
+        // $nowTime = new DateTime('now');
+        // $projectDate = new DateTime(date('Y-m-d', strtotime($project['project_date'])));
+        // $diff = date_diff($nowTime, $projectDate);
+        $nowTime = Carbon::now();
+        $projectDate = Carbon::parse($project['project_date']);
+        $diff = $nowTime->diffInDays($projectDate);
 
         $project['is_time_to_complete_project'] = false;
         if (
@@ -57,7 +61,7 @@ class FormatTaskPermission
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value ||
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::ReadyToGo->value
             ) &&
-            $diff->invert > 0
+            $diff <= 7
         ) {
             $project['is_time_to_complete_project'] = true;
         }
