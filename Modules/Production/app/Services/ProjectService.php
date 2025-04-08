@@ -62,6 +62,7 @@ use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
+use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Hrd\Repository\EmployeeTaskStateRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
@@ -1123,12 +1124,11 @@ class ProjectService
         // get special position that will be append on each project manager team members
         $specialPosition = $this->generalService->getSettingByKey('special_production_position');
         $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
-        $specialPosition = getSettingByKey('special_production_position');
 
         $specialEmployee = [];
         $specialIds = [];
         if ($specialPosition) {
-            $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\PositionBackup());
+            $specialPosition = $this->generalService->getIdFromUid($specialPosition, new PositionBackup());
             $whereSpecial = "position_id = {$specialPosition}";
 
             $isLeadModeller = false;
@@ -1150,6 +1150,11 @@ class ProjectService
 
             $specialIds = collect($specialEmployee)->pluck('id')->toArray();
         }
+
+        logging("SPECIAL EMPLOYEE", $specialEmployee);
+        logging("WHERE SPECIAL", [$whereSpecial]);
+        logging("LEAD MODELER", [$leadModeller]);
+
 
         // get another teams from approved transfer team
         $user = auth()->user();
@@ -1194,6 +1199,13 @@ class ProjectService
         })->toArray();
 
         if ($productionPositions) {
+
+            // remove special position id from production position
+            if ($specialPosition) {
+                $searchSpecialPosition = array_search($specialPosition, $productionPositions);
+                if (isset($productionPositions[$searchSpecialPosition])) unset($productionPositions[$searchSpecialPosition]);
+            }
+
             $productionPositions = implode(',', $productionPositions);
             $employeeCondition .= " and position_id in ({$productionPositions})";
         }
@@ -1216,6 +1228,7 @@ class ProjectService
                 ]
             ]
         );
+        logging("TEAMS", $teams->toArray());
 
         if (count($teams) > 0) {
             $teams = collect($teams)->map(function ($team) {
@@ -1279,7 +1292,7 @@ class ProjectService
             'revises',
             'project:id,uid,status',
             'pics:id,project_task_id,employee_id,status',
-            'pics.employee:id,name,email,uid',
+            'pics.employee:id,name,email,uid,avatar_color',
             'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
             'taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type',
             'proofOfWorks',
@@ -2749,7 +2762,7 @@ class ProjectService
             $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
             $isForLeadModeller = (isset($data['pic'])) && ($data['pic'][0] == $leadModeller) ? true : false;
 
-            $isValid = $this->validatePicTask($data['pic']);
+            $isValid = isset($data['pic']) ? $this->validatePicTask($data['pic']) : true;
 
             if (!$isValid) {
                 return errorResponse(message: __('notification.cannotCombineModeller'));
@@ -8036,6 +8049,10 @@ class ProjectService
             $user = auth()->user();
             $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
             $unfinishedTasks =  $this->getUnfinishedTasks($projectId);
+
+            if (count($unfinishedTasks['production_tasks']) > 7) {
+                return errorResponse(message: __('notification.toManyUnfinishedTask'));
+            }
 
             foreach ($unfinishedTasks['production_tasks'] as $task) {
                 // mark as complete

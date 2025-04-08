@@ -74,4 +74,5 @@ return [
     "taskHasBeenDistribute" => "Tugas berhasil di distribusikan",
     "memberHasBeedRemoved" => "Member telah di hapus",
     'memberAdded' => 'Anggota Tim Berhasil di Tugaskan',
+    "toManyUnfinishedTask" => "Terlalu banyak tugas yang harus diselesaikan. Harap menyelesaikan secara manual"
 ];
