@@ -12,7 +12,7 @@ class FormatBoards
 {
     use AsAction;
 
-    public function handle(string $projectUid)
+    public function handle(string $projectUid, ?string $filterSearch = '', bool $myTask = false)
     {
         $boardRepo = new ProjectBoardRepository();
         $projectPicRepository = new ProjectPersonInChargeRepository();
@@ -26,21 +26,63 @@ class FormatBoards
         $employeeId = $user->employee_id ?? 0;
         $superUserRole = isSuperUserRole();
 
-        $data = $boardRepo->list('id,project_id,name,sort,based_board_id', 'project_id = ' . $projectId, [
-            'tasks',
-            'tasks.revises',
-            'tasks.project:id,uid,status',
-            'tasks.proofOfWorks',
-            'tasks.logs',
-            'tasks.board',
-            'tasks.pics:id,project_task_id,employee_id,status',
-            'tasks.pics.employee:id,name,email,uid,avatar_color',
-            'tasks.pics.user:id,employee_id',
-            'tasks.medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
-            'tasks.taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type',
-            'tasks.times:id,project_task_id,employee_id,work_type,time_added',
-            'tasks.times.employee:id,uid,name'
-        ]);
+        $relation = [
+            'tasks' => function ($query) use ($filterSearch, $myTask, $employeeId) {
+                $query->selectRaw('*')
+                    ->with([
+                        'revises',
+                        'project:id,uid,status',
+                        'proofOfWorks',
+                        'logs',
+                        'board',
+                        'pics' => function ($queryPic) use ($filterSearch, $myTask, $employeeId) {
+                            $queryPic->selectRaw('id,project_task_id,employee_id,status')
+                                ->with([
+                                    'employee' => function ($queryEmployee) use ($filterSearch, $myTask, $employeeId) {
+                                        $queryEmployee->selectRaw('id,name,email,uid,avatar_color');
+                                    },
+                                    'user:id,employee_id'
+                                ]);
+
+                            // if ($myTask) {
+                            //     $queryPic->whereHas('employee', function ($q) use ($employeeId) {
+                            //         $q->where("id", $employeeId);
+                            //     });
+                            // }
+                        },
+                        'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
+                        'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
+                        'times:id,project_task_id,employee_id,work_type,time_added',
+                        'times.employee:id,uid,name'
+                    ]);
+
+                if ($filterSearch) {
+                    $query->whereLike("name", "%{$filterSearch}%");
+                }
+            },
+        ];
+
+        $data = $boardRepo->list(
+            select: 'id,project_id,name,sort,based_board_id',
+            where: 'project_id = ' . $projectId,
+            relation: $relation,
+        );
+
+        if ($myTask) { // filter only task that have a pics
+            $data = collect((object) $data)->map(function ($mapping) use ($employeeId) {
+                $mapping['tasks_filter'] = collect($mapping->tasks)->filter(function ($filter) use ($employeeId) {
+                    return in_array($employeeId, collect($filter->pics)->pluck('employee_id')->toArray());
+                })->values()->all();
+
+                return $mapping;
+            })->map(function ($map) {
+                unset($map['tasks']);
+
+                $map['tasks'] = $map->tasks_filter;
+
+                return $map;
+            })->all();
+        }
 
         // if logged user is pic or super user role, set as is_project_pic
         $projectPics = $projectPicRepository->list('id,pic_id', 'project_id = ' . $projectId);
@@ -90,7 +132,7 @@ class FormatBoards
                         $needUserApproval = false;
                     }
                 }
-                
+
 
                 $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
 

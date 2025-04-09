@@ -918,5 +918,10 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->completeUnfinishedTask($projectUid));
     }
+
+    public function filterTasks(Request $request, string $projectUid)
+    {
+        return apiResponse($this->service->filterTasks($request->all(), $projectUid));
+    }
 }
 
