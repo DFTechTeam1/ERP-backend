@@ -7536,7 +7536,7 @@ class ProjectService
         }
     }
 
-    protected function mainSongApproveWork(string $projectUid, string $songUid, object $user, bool $sendNotification = true, bool $forceToComplete = false)
+    protected function mainSongApproveWork(string $projectUid, string $songUid, object $user, bool $sendNotification = true, bool $forceToComplete = false, bool $forceRecordPoint = false)
     {
         $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
         $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
@@ -7571,7 +7571,7 @@ class ProjectService
         // record the point if entertainment PM do this action, do not record if this song came from revise task.
         // to check this song came from revise task or not, we will check the last time tracker type in the entertainment_task_songs
         // if $currentStatus is onLastReview, thats mean projectPM do this action
-        if ($currentStatus == TaskSongStatus::OnFirstReview->value) {
+        if ($currentStatus == TaskSongStatus::OnFirstReview->value || $forceRecordPoint) {
             // build payload for point record
             $pointPayload = [
                 'points' => [
@@ -8082,7 +8082,8 @@ class ProjectService
                     songUid: $song->uid,
                     user: $user,
                     sendNotification: false,
-                    forceToComplete: true
+                    forceToComplete: true,
+                    forceRecordPoint: true
                 );
             }
 
