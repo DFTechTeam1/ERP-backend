@@ -8,11 +8,13 @@ use App\Enums\Production\RequestEquipmentStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Inventory\Models\Brand;
 use Modules\Inventory\Models\InventoryType;
 use Modules\Inventory\Models\Supplier;
 use Modules\Inventory\Models\Unit;
 use Modules\Inventory\Models\Inventory;
+use Modules\Inventory\Repository\BrandRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Inventory\Repository\SupplierRepository;
 use Modules\Inventory\Repository\InventoryRepository;
@@ -65,35 +67,50 @@ class InventoryService {
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        InventoryRepository $repo,
+        UnitRepository $unitRepo,
+        InventoryTypeRepository $inventoryTypeRepo,
+        InventoryImageRepository $inventoryImageRepo,
+        InventoryItemRepository $inventoryItemRepo,
+        ProjectEquipmentRepository $projectEquipmentRepo,
+        BrandRepository $brandRepo,
+        SupplierRepository $supplierRepo,
+        EmployeeRepository $employeeRepo,
+        ProjectRepository $projectRepo,
+        CustomInventoryRepository $customInventoryRepo,
+        CustomInventoryDetailRepository $customInventoryDetailRepo,
+        SettingRepository $settingRepo,
+        SettingService $settingService
+    )
     {
-        $this->repo = new InventoryRepository;
+        $this->repo = $repo;
 
-        $this->unitRepo = new UnitRepository;
+        $this->unitRepo = $unitRepo;
 
-        $this->inventoryTypeRepo = new InventoryTypeRepository;
+        $this->inventoryTypeRepo = $inventoryTypeRepo;
 
-        $this->inventoryItemRepo = new InventoryItemRepository;
+        $this->inventoryItemRepo = $inventoryItemRepo;
 
-        $this->inventoryImageRepo = new InventoryImageRepository;
+        $this->inventoryImageRepo = $inventoryImageRepo;
 
-        $this->projectEquipmentRepo = new ProjectEquipmentRepository;
+        $this->projectEquipmentRepo = $projectEquipmentRepo;
 
-        $this->brandRepo = new \Modules\Inventory\Repository\BrandRepository();
+        $this->brandRepo = $brandRepo;
 
-        $this->supplierRepo = new SupplierRepository;
+        $this->supplierRepo = $supplierRepo;
 
-        $this->employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
+        $this->employeeRepo = $employeeRepo;
 
-        $this->projectRepo = new ProjectRepository;
+        $this->projectRepo = $projectRepo;
 
-        $this->customItemRepo = new CustomInventoryRepository;
+        $this->customItemRepo = $customInventoryRepo;
 
-        $this->customItemDetailRepo = new CustomInventoryDetailRepository;
+        $this->customItemDetailRepo = $customInventoryDetailRepo;
 
-        $this->settingRepo = new SettingRepository;
+        $this->settingRepo = $settingRepo;
 
-        $this->settingService = new SettingService;
+        $this->settingService = $settingService;
     }
 
     /**
@@ -693,7 +710,8 @@ class InventoryService {
             "type = 'itemvj'",
             [
                 'items:id,inventory_id,custom_inventory_id,qty',
-                'items.inventory:id,uid,name'
+                'items.inventory:id,inventory_id',
+                'items.inventory.inventory:id,name'
             ]
         );
 
@@ -740,6 +758,36 @@ class InventoryService {
                 ];
             })->toArray()
         );
+    }
+
+    /**
+     * Get equipment list for project request
+     *
+     * @return array
+     */
+    public function getEquipmentForProjectRequest(): array
+    {
+        try {
+            $type = request('type');
+
+            if ($type == 'inventory_item') {
+                $inventories = $this->repo->list(
+                    select: 'id,name,stock,item_type,brand_id',
+                    where: "warehouse_id = 2 AND stock > 0"
+                );
+            } else {
+                $inventories = $this->customItemRepo->list(
+                    select: 'id,build_series,name,type,location,default_request_item,barcode'
+                );
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: $inventories->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 
     public function getAll()

@@ -24,6 +24,7 @@ use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Http\Requests\Project\CompleteProject;
+use Modules\Production\Http\Requests\Project\DistributeModelerTask;
 use Modules\Production\Http\Requests\Project\DistributeSong;
 use Modules\Production\Http\Requests\Project\RejectEditSong;
 use Modules\Production\Http\Requests\Project\RequestSong;
@@ -118,6 +119,16 @@ class ProjectController extends Controller
     }
 
     /**
+     * Check all project tasks before user complete the project
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function precheck(string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->precheck(projectUid: $projectUid));
+    }
+
+    /**
      * Show the specified resource.
      */
     public function show($id)
@@ -181,6 +192,19 @@ class ProjectController extends Controller
     public function storeTask(CreateTask $request, $boardId)
     {
         return apiResponse($this->service->storeTask($request->validated(), (int) $boardId));
+    }
+
+    /**
+     * Distribute task to modeler teams
+     *
+     * @param DistributeModelerTask $request
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function distributeModellerTask(DistributeModelerTask $request, string $projectUid, string $taskUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->distributeModellerTask($request->validated(), $projectUid, $taskUid));
     }
 
     /**
@@ -505,6 +529,11 @@ class ProjectController extends Controller
         return apiResponse($this->service->getProjectStatusses($projectUid));
     }
 
+    public function getTaskStatus()
+    {
+        return apiResponse($this->service->getTaskStatus());
+    }
+
     /**
      * Function to change status of selected project
      *
@@ -812,9 +841,9 @@ class ProjectController extends Controller
 
     /**
      * Function get get all entertainment list with the workload
-     * 
+     *
      * @param $projectUid
-     * 
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function entertainmentListMember(string $projectUid): \Illuminate\Http\JsonResponse
@@ -871,12 +900,28 @@ class ProjectController extends Controller
      * @param SongRevise $request
      * @param string $projectUid
      * @param string $songUid
-     * 
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function songRevise(SongRevise $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->songRevise($request->validated(), $projectUid, $songUid));
+    }
+
+    /**
+     * Complete all unfinished task
+     *
+     * @param string $projectUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function completeUnfinishedTask(string $projectUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->completeUnfinishedTask($projectUid));
+    }
+
+    public function filterTasks(Request $request, string $projectUid)
+    {
+        return apiResponse($this->service->filterTasks($request->all(), $projectUid));
     }
 }
 

@@ -13,9 +13,11 @@ class InventoryController extends Controller
 {
     private $service;
 
-    public function __construct()
+    public function __construct(
+        InventoryService $service
+    )
     {
-        $this->service = new InventoryService;
+        $this->service = $service;
     }
 
     public function downloadBrandTemplate()
@@ -84,6 +86,11 @@ class InventoryController extends Controller
     public function itemList($uid)
     {
         return apiResponse($this->service->itemList($uid));
+    }
+
+    public function getEquipmentForProjectRequest(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->getEquipmentForProjectRequest());
     }
 
     /**

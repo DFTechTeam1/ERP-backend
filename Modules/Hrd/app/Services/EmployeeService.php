@@ -35,6 +35,8 @@ use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
@@ -129,7 +131,7 @@ class EmployeeService
 
             $search = request('search');
 
-            if (!empty($search)) { // array 
+            if (!empty($search)) { // array
                 $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
                 if (!in_array('status', $filterNames)) {
                     $search['filters'] = collect($search['filters'])->merge([
@@ -191,7 +193,7 @@ class EmployeeService
                     'gender' => Gender::getGender(code: $item->gender->value),
                     'position' => $item->position->name,
                     'level_staff' => !$item->jobLevel ? '-' : $item->jobLevel->name,
-                    'status' => $item->status_text, 
+                    'status' => $item->status_text,
                     'status_color' => $item->status_color,
                     'join_date' => date('d F Y', strtotime($item->join_date)),
                     'phone' => $item->phone,
@@ -221,6 +223,94 @@ class EmployeeService
                 [],
                 Code::BadRequest->value,
             );
+        }
+    }
+
+    /**
+     * Get list of 3d Modeller Employee
+     *
+     * @return array
+     */
+    public function get3DModeller(?string $projectUid = null, ?string $taskUid = null): array
+    {
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $project = $this->projectRepo->show(uid: $projectUid, select: 'id,project_date');
+            $position = $this->positionRepo->show(uid: 0, select: 'id', where: "name = '3D Modeller'");
+
+            $where = "position_id = '{$position->id}'";
+            $leader = $this->generalService->getSettingByKey('lead_3d_modeller');
+            if (request('except_leader') && $leader) {
+                $where .= " AND uid != '{$leader}'";
+            }
+
+            $employees = $this->repo->list(select: 'id,uid AS value,name AS title', where: $where);
+
+            // get workload
+            $output = [];
+            foreach ($employees as $employee) {
+                if ($projectId) {
+                    $taskInSameProject = $this->taskRepo->list(
+                        select: 'id',
+                        where: "project_id = {$projectId} AND uid != '{$taskUid}'",
+                        whereHas: [
+                            [
+                                'relation' => 'pics',
+                                'query' => "employee_id = {$employee->id}"
+                            ]
+                        ]
+                    )->count();
+
+                    $startDate = Carbon::parse($project->project_date);
+                    $dateRangeNextWeek = [$startDate->addDay()->format('Y-m-d'), $startDate->addDays(7)->format('Y-m-d')];
+                    $startDate = Carbon::parse($project->project_date);
+                    $dateRangeCurrentWeek = [$startDate->subDay()->format('Y-m-d'), $startDate->subDays(7)->format('Y-m-d')];
+
+                    $taskInNextWeek = $this->taskRepo->list(
+                        select: 'id',
+                        where: "uid != '{$taskUid}'",
+                        whereHas: [
+                            [
+                                'relation' => 'project',
+                                'query' => "project_date BETWEEN '{$dateRangeNextWeek[0]}' AND '{$dateRangeNextWeek[1]}'"
+                            ],
+                            [
+                                'relation' => 'pics',
+                                'query' => "employee_id = {$employee->id}"
+                            ]
+                        ]
+                    )->count();
+                    $taskInCurrentWeek = $this->taskRepo->list(
+                        select: 'id',
+                        where: "uid != '{$taskUid}'",
+                        whereHas: [
+                            [
+                                'relation' => 'project',
+                                'query' => "project_date BETWEEN '{$dateRangeCurrentWeek[1]}' AND '{$dateRangeCurrentWeek[0]}'"
+                            ],
+                            [
+                                'relation' => 'pics',
+                                'query' => "employee_id = {$employee->id}"
+                            ]
+                        ]
+                    )->count();
+                }
+
+                $output[] = [
+                    'value' => $employee->value,
+                    'title' => $employee->title,
+                    'task_in_selected_project' => $taskInSameProject ?? 0,
+                    'task_in_next_week' => $taskInNextWeek ?? 0,
+                    'task_in_current_week' => $taskInCurrentWeek ?? 0
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
         }
     }
 
@@ -383,13 +473,13 @@ class EmployeeService
         ];
 
         $key = request()->min_level;
-        
+
         if (!empty(request()->min_level)) {
             $search = array_search($key, $levelStaffOrder);
-            
+
             if ($search > 0) {
                 $splice = array_splice($levelStaffOrder, 0, $search);
-                
+
                 $splice = collect($splice)->map(function ($item) {
                     return "'{$item}'";
                 })->toArray();
@@ -705,13 +795,14 @@ class EmployeeService
         DB::beginTransaction();
         try {
             $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
-            if (!empty($data['boss_id'])) { 
+            if (!empty($data['boss_id'])) {
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
 
             $jobLevel = $this->jobLevelRepo->show(uid: $data['job_level_id'], select: 'id,name');
             $data['job_level_id'] = $jobLevel->id;
             $data['level_staff'] = $jobLevel->name;
+            $dadta['avatar_color'] = $this->generalService->generateRandomColor($data['email']);
 
             $employee = $this->repo->store(
                 collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray()
@@ -743,7 +834,7 @@ class EmployeeService
             if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
                 // TODO: Communiate with talenta
             }
-            
+
             DB::commit();
 
             return generalResponse(
@@ -947,7 +1038,7 @@ class EmployeeService
             }
 
             // TODO: Check all equipments
-            
+
             // remove access to system
             if ($employee->user) {
                 $this->userService->bulkDelete(
@@ -1627,7 +1718,7 @@ class EmployeeService
     {
         /**
          * What should be done when we delete:
-         * 
+         *
          * 1. Unattach from all tasks he have
          * 2. Make sure all equipment are already given back and in good condition
          * 3. Take back the access from system

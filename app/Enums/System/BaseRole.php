@@ -16,4 +16,5 @@ enum BaseRole: string {
     case RegularEmployee = 'regulare employee';
     case AssistantProjectManger = 'assistant manager';
     case ProjectManagerEntertainment = 'project manager entertainment';
+    case LeadModeller = 'lead modeller';
 }

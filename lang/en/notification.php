@@ -70,5 +70,10 @@ return [
     "entertainmentPMShouldCheckThisFirst" => "PM Entertainment should check this first",
     "successReviseSong" => "Success revise this JB",
     "songAlreadyOnRevise" => "This song has been already on revise",
-    "songCannotBeRevise" => "Song cannot be revise yet"
+    "songCannotBeRevise" => "Song cannot be revise yet",
+    "cannotCombineModeller" => "Cannot combine members with lead modelers",
+    "taskHasBeenDistribute" => "Task has been distribute",
+    "memberHasBeedRemoved" => "Member has been removed",
+    'memberAdded' => 'Members has been assign to task',
+    "toManyUnfinishedTask" => "To many tasks to complete, please complete manually"
 ];

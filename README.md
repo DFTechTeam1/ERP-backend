@@ -64,3 +64,13 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+
+## Here are the steps to update the live site
+- php artisan migrate
+- Setting lead of modeller (If Needed)
+- php artisan db:seed --class=RolePermissionSetting
+- php artisan db:seed --class=MenuSeeder
+- php artisan cache:clear
+- update role and permission
+- php artisan hrd:initate-avatar-color

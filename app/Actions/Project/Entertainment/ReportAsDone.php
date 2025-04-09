@@ -43,8 +43,6 @@ class ReportAsDone
             }
         }
 
-        Log::debug('images', $images);
-
         $taskRepo = new EntertainmentTaskSongRepository();
         $repo = new EntertainmentTaskSongResultRepository();
 

@@ -9,8 +9,8 @@ enum TaskStatus: int
     case Revise = 3;
     case Completed = 4;
     case WaitingApproval = 5;
-
     case OnHold = 6;
+    case WaitingDistribute = 7; // waiting lead modeller to distribute the task
 
     public function label()
     {
@@ -21,6 +21,7 @@ enum TaskStatus: int
             static::Completed => __("global.completed"),
             static::WaitingApproval => __("global.waitingApproval"),
             static::OnHold => __("global.onHold"),
+            static::WaitingDistribute => __("global.waitingToDistributeToModeller")
         };
     }
 
@@ -32,6 +33,7 @@ enum TaskStatus: int
             static::Revise => 'orange-darken-1',
             static::Completed => 'success',
             static::WaitingApproval => 'grey-lighten-1',
+            static::WaitingDistribute => 'grey-lighten-1',
             static::OnHold => 'yellow-darken-3',
         };
     }

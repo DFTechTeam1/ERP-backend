@@ -18,6 +18,8 @@ class ProjectTask extends Model
 {
     use HasFactory, ModelObserver, HasTaskIdentifier;
 
+    const DEFAULTIMAGEPROOF = 'default-complete.jpg';
+
     /**
      * The attributes that are mass assignable.
      */
