@@ -24,7 +24,7 @@ class ProjectBoardRepository extends ProjectBoardInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -32,6 +32,14 @@ class ProjectBoardRepository extends ProjectBoardInterface {
 
         if (!empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                    $qd->whereRaw($queryItem['query']);
+                });
+            }
         }
 
         if ($relation) {
@@ -68,7 +76,7 @@ class ProjectBoardRepository extends ProjectBoardInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -87,7 +95,7 @@ class ProjectBoardRepository extends ProjectBoardInterface {
         $query->selectRaw($select);
 
         // $query->where("id", $uid);
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -139,7 +147,7 @@ class ProjectBoardRepository extends ProjectBoardInterface {
     public function delete(int $id = 0, string $where = '')
     {
         $query = $this->model->query();
-        
+
         if (empty($where)) {
             $query->where('id', $id);
         } else {

@@ -8104,4 +8104,23 @@ class ProjectService
             return errorResponse($th);
         }
     }
+
+    public function filterTasks(array $payload, string $projectUid): array
+    {
+        try {
+            $myTask = $payload['my_task']; // search only user task
+            $search = $payload['search']; // this is used to search by task name and pic name
+
+            $boards = FormatBoards::run($projectUid, $search, (bool) $myTask);
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'boards' => $boards
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }
