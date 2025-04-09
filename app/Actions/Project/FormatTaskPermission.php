@@ -2,6 +2,8 @@
 
 namespace App\Actions\Project;
 
+use App\Actions\DefineTaskAction;
+use Carbon\Carbon;
 use DateTime;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -45,9 +47,12 @@ class FormatTaskPermission
         }
 
         // define permission to complete project
-        $nowTime = new DateTime('now');
-        $projectDate = new DateTime(date('Y-m-d', strtotime($project['project_date'])));
-        $diff = date_diff($nowTime, $projectDate);
+        // $nowTime = new DateTime('now');
+        // $projectDate = new DateTime(date('Y-m-d', strtotime($project['project_date'])));
+        // $diff = date_diff($nowTime, $projectDate);
+        $nowTime = Carbon::now();
+        $projectDate = Carbon::parse($project['project_date']);
+        $diff = $nowTime->diffInDays($projectDate);
 
         $project['is_time_to_complete_project'] = false;
         if (
@@ -56,7 +61,7 @@ class FormatTaskPermission
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value ||
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::ReadyToGo->value
             ) &&
-            $diff->invert > 0
+            $diff <= 7
         ) {
             $project['is_time_to_complete_project'] = true;
         }
@@ -100,6 +105,7 @@ class FormatTaskPermission
         $projectTasks = $taskRepo->list('*', 'project_id = ' . $projectId, ['board']);
 
         $project['progress'] = FormatProjectProgress::run($projectTasks, $projectId);
+        $project['can_complete_project'] = (bool) $user->hasPermissionTo('complete_project');
 
         foreach ($project['boards'] as $keyBoard => $board) {
             $output[$keyBoard] = $board;
@@ -108,6 +114,12 @@ class FormatTaskPermission
 
             foreach ($board['tasks'] as $keyTask => $task) {
                 $outputTask[$keyTask] = $task;
+
+                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+
+                // highlight task for authorized user
+                $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+                $outputTask[$keyTask]['is_mine'] = (bool) in_array($user->employee_id, $picIds);
 
                 // stop action when project status is DRAFT
                 $outputTask[$keyTask]['stop_action'] = $project['status'] == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;

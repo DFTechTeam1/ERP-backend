@@ -98,6 +98,18 @@ class UpdateSongList
                 false
             );
 
+        // permission
+        $canEdit = $this->user->hasPermissionTo('edit_request_song') ? true : false;
+        $canDelete = $this->user->hasPermissionTo('delete_request_song') ? true : false;
+        $canDistribute =!$item->task && $this->user->hasPermissionTo('distribute_request_song') ? true : false;
+        $canStartWork = ($this->user->hasPermissionTo('song_proof_of_work') && $item['my_own'] && $item['need_worker_approval'] && !$item['need_to_be_done']) ? true : false;
+        $canApproveWork = ($this->user->hasPermissionTo('song_proof_of_work') && $item['my_own'] && $item['need_to_be_done']) ? true : false;
+        $item['can_edit'] = $canEdit;
+        $item['can_delete'] = $canDelete;
+        $item['can_distribute'] = $canDistribute;
+        $item['can_start_work']= $canStartWork;
+        $item['can_approve_work'] = $canApproveWork;
+
         return $item;
     }
 

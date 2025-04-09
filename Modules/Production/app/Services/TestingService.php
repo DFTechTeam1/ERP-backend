@@ -7,6 +7,7 @@ use App\Services\UserRoleManagement;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Services\EmployeeRepoGroup;
+use Modules\Production\Repository\ProjectTaskPicRepository;
 
 class TestingService {
     private $projectGroupRepo;
@@ -17,12 +18,17 @@ class TestingService {
 
     private $user;
 
+    private $taskPicRepo;
+
     public function __construct(
         ProjectRepositoryGroup $projectGroupRepo,
         EmployeeRepoGroup $employeeRepoGroup,
-        UserRoleManagement $userRoleManagement
+        UserRoleManagement $userRoleManagement,
+        ProjectTaskPicRepository $taskPicRepo
     )
     {
+        $this->taskPicRepo = $taskPicRepo;
+
         $this->projectGroupRepo = $projectGroupRepo;
 
         $this->employeeRepoGroup = $employeeRepoGroup;
@@ -51,6 +57,18 @@ class TestingService {
         } else { // get based on task
             $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = ' . $employee->id);
             $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
+
+            // get from project_task_pics table
+            $taskPics = $this->taskPicRepo->list(
+                select: 'project_task_id',
+                where: "employee_id = {$employee->id}"
+            );
+            if ($taskPics->count() > 0) {
+                $taskIds = collect($taskIds)
+                    ->merge(
+                        collect($taskPics)->pluck('project_task_id')->toArray()
+                    )->unique()->values()->toArray();
+            }
 
             if (count($taskIds) > 0) {
                 $queryNewHas = 'id IN (' . implode(',', $taskIds) . ')';
@@ -90,7 +108,7 @@ class TestingService {
                 'query' => "employee_id = " . $user->load('employee')->employee->id
             ];
         }
-        
+
         $sorts = '';
         if (!empty(request('sortBy'))) {
             foreach (request('sortBy') as $sort) {
@@ -363,7 +381,7 @@ class TestingService {
             $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id', [], 'id = ' . $this->user->employee_id);
 
             // get project that only related to authorized user
-            if ($isProductionRole || $isEntertainmentRole) {
+            if ($isProductionRole || $isEntertainmentRole || $this->user->hasRole(BaseRole::LeadModeller->value)) {
 
                 if ($employeeId) {
                     // $taskIds = $this->taskPicLogRepo->list('id,project_task_id', 'employee_id = ' . $employeeId->id);
@@ -474,7 +492,7 @@ class TestingService {
                 $marketing = $item->marketing ? $item->marketing->name : '-';
 
                 $marketingData = collect($item->marketings)->pluck('marketing.name')->toArray();
-                $marketing = $item->marketings[0]->marketing->name;
+                $marketing = $item->marketings[0]->marketing ? $item->marketings[0]->marketing->name : '';
                 if ($item->marketings->count() > 1) {
                     $marketing .= ", and +" . $item->marketings->count() - 1 . " more";
                 }

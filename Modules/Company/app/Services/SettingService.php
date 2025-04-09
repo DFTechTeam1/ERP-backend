@@ -3,17 +3,27 @@
 namespace Modules\Company\Services;
 
 use App\Enums\ErrorCode\Code;
+use App\Enums\Production\TaskStatus;
+use Exception;
 use Modules\Company\Repository\SettingRepository;
+use Modules\Production\Repository\ProjectTaskRepository;
 
 class SettingService {
     private $repo;
 
+    private $taskRepo;
+
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        SettingRepository $repo,
+        ProjectTaskRepository $taskRepo
+    )
     {
-        $this->repo = new SettingRepository;
+        $this->repo = $repo;
+
+        $this->taskRepo = $taskRepo;
     }
 
     protected function formattedGlobalSetting($code = null)
@@ -105,7 +115,7 @@ class SettingService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(
@@ -177,7 +187,7 @@ class SettingService {
      * Store data
      *
      * @param array $data
-     * 
+     *
      * @return array
      */
     public function store(array $data, $code = null): array
@@ -190,7 +200,10 @@ class SettingService {
             } else if ($code == 'general') {
                 $this->storeGeneral($data);
             } else if ($code == 'variables') {
-                $this->storeVariables($data);
+                $storeVariable = $this->storeVariables($data);
+                if ($storeVariable) {
+                    return $storeVariable;
+                }
             }
 
             cachingSetting();
@@ -236,6 +249,15 @@ class SettingService {
 
     public function storeVariables(array $data)
     {
+        $leadModellerTask = $this->taskRepo->show(
+            uid: 0,
+            select: 'id',
+            where: "status = " . TaskStatus::WaitingDistribute->value
+        );
+        if (empty($data['lead_3d_modeller']) || !$data['lead_3d_modeller'] && $leadModellerTask) {
+            return errorResponse('Lead 3D Modeller cannot be empty. There was some tasks that need to be done by Lead Modeller');
+        }
+
         foreach ($data as $key => $value) {
             $this->repo->deleteByKey($key);
 
@@ -278,7 +300,7 @@ class SettingService {
             }
 
             $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
-            
+
             $where = "`key` = '" . (string) $key . "'";
             logging('where store email', [$where]);
             $this->repo->store([
@@ -305,7 +327,7 @@ class SettingService {
 
             $boards[$key]['id'] = $key + 1;
         }
-        
+
         $this->repo->updateOrInsert(
             ['code' => 'kanban'],
             [
@@ -323,7 +345,7 @@ class SettingService {
      * @param array $data
      * @param string $id
      * @param string $where
-     * 
+     *
      * @return array
      */
     public function update(
@@ -342,13 +364,13 @@ class SettingService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
      * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -368,7 +390,7 @@ class SettingService {
      * Delete bulk data
      *
      * @param array $ids
-     * 
+     *
      * @return array
      */
     public function bulkDelete(array $ids): array

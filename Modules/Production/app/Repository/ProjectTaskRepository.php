@@ -68,7 +68,9 @@ class ProjectTaskRepository extends ProjectTaskInterface {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $sortBy = ""
     )
     {
         $query = $this->model->query();
@@ -82,7 +84,21 @@ class ProjectTaskRepository extends ProjectTaskInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $wh) {
+                $query->whereHas($wh['relation'], function (Builder $query) use ($wh) {
+                    $query->whereRaw($wh['query']);
+                });
+            }
+        }
+
+        if (empty($sortBy)) {
+            $query->orderBy('created_at', 'DESC');
+        } else {
+            $query->orderByRaw($sortBy);
+        }
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -105,7 +121,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
         } else {
             $query->whereRaw($where);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -143,9 +159,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
             $query->where('uid', $id);
         }
 
-        $query->update($data);
-
-        return $query;
+        return $query->update($data);
     }
 
     /**
@@ -157,7 +171,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     public function delete(int $id, string $where = '')
     {
         $query = $this->model->query();
-        
+
         if (empty($where)) {
             $query->where('id', $id);
         } else {

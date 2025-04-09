@@ -16,14 +16,18 @@ class AssignTaskJob implements ShouldQueue
 
     public $taskId;
 
+    public $userData;
+
     /**
      * Create a new job instance.
      */
-    public function __construct(array $employeeIds, int $taskId)
+    public function __construct(array $employeeIds, int $taskId, object $userData)
     {
         $this->employeeIds = $employeeIds;
 
         $this->taskId = $taskId;
+
+        $this->userData = $userData;
     }
 
     /**
@@ -46,7 +50,7 @@ class AssignTaskJob implements ShouldQueue
 
                 \Illuminate\Support\Facades\Notification::send(
                     $employees,
-                    new \Modules\Production\Notifications\AssignTaskNotification([$data->telegram_chat_id], $task, $employee)
+                    new \Modules\Production\Notifications\AssignTaskNotification([$data->telegram_chat_id], $task, $employee, $this->userData)
                 );
             }
 

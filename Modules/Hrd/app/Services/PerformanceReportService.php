@@ -4,6 +4,7 @@ namespace Modules\Hrd\Services;
 
 use App\Enums\Employee\Status;
 use App\Enums\System\BaseRole;
+use App\Exports\NewTemplatePerformanceReportExport;
 use App\Exports\PerformanceReportExport;
 use App\Services\GeneralService;
 use Carbon\Carbon;
@@ -110,8 +111,8 @@ class PerformanceReportService {
         $output = [];
         foreach ($data as $point) {
             $task = $this->taskPicHistoryRepo->list(
-                'id,project_task_id', 
-                'project_id = ' . $point->project_id . ' and employee_id = ' . $employeeId, 
+                'id,project_task_id',
+                'project_id = ' . $point->project_id . ' and employee_id = ' . $employeeId,
                 [
                     'task:id,name',
                     'taskLog' => function ($logQuery) {
@@ -123,7 +124,7 @@ class PerformanceReportService {
             );
 
             $task = collect((object) $task)->map(function ($mapping) {
-                
+
                 return [
                     'name' => $mapping->taskLog[0]->task->name,
                     'assigned_at' => $mapping->taskLog[0]->time_added,
@@ -169,46 +170,45 @@ class PerformanceReportService {
         }
 
         $employee = $this->repo->show(
-            $employeeUid, 
-            'id,name,nickname,employee_id,email,position_id,boss_id,user_id', 
+            $employeeUid,
+            'id,name,nickname,employee_id,email,position_id,boss_id,user_id',
             [
-                'position:id,name', 
+                'position:id,name',
                 'boss:id,nickname',
                 'user:id,email'
             ]
         );
 
         $newFormatPoint = $this->employeePointService->renderEachEmployeePoint($employee->id, $this->startDate, $this->endDate);
+        // // format response
+        // $formatPoint = [];
+        // if ($newFormatPoint) {
+        //     $reportType = $newFormatPoint->type;
+        //     $formatPoint = collect($newFormatPoint->detail_projects)->map(function ($item) use ($reportType) {
+        //         return [
+        //             'project_name' => $item->project->name,
+        //             'point' => $item->point,
+        //             'additional_point' => $item->additional_point,
+        //             'total_point' => $item->total_point,
+        //             'tasks' => collect($item->tasks)->map(function ($task) use ($reportType) {
+        //                 $taskName = '';
+        //                 $taskTime = '';
+        //                 if ($reportType == 'production') {
+        //                     $taskName = $task->productionTask->name;
+        //                     $taskTime = date('d F Y', strtotime($task->productionTask->created_at));
+        //                 } else {
+        //                     $taskName = $task->entertainmentTask->song->name;
+        //                     $taskTime = date('d F Y', strtotime($task->entertainmentTask->created_at));
+        //                 }
 
-        // format response
-        $formatPoint = [];
-        if ($newFormatPoint) {
-            $reportType = $newFormatPoint->type;
-            $formatPoint = collect($newFormatPoint->detail_projects)->map(function ($item) use ($reportType) {
-                return [
-                    'project_name' => $item->project->name,
-                    'point' => $item->point,
-                    'additional_point' => $item->additional_point,
-                    'total_point' => $item->total_point,
-                    'tasks' => collect($item->tasks)->map(function ($task) use ($reportType) {
-                        $taskName = '';
-                        $taskTime = '';
-                        if ($reportType == 'production') {
-                            $taskName = $task->productionTask->name;
-                            $taskTime = date('d F Y', strtotime($task->productionTask->created_at));
-                        } else {
-                            $taskName = $task->entertainmentTask->song->name;
-                            $taskTime = date('d F Y', strtotime($task->entertainmentTask->created_at));
-                        }
-
-                        return [
-                            'name' => $taskName,
-                            'assigned_at' => $taskTime
-                        ];
-                    })
-                ];
-            });
-        }
+        //                 return [
+        //                     'name' => $taskName,
+        //                     'assigned_at' => $taskTime
+        //                 ];
+        //             })
+        //         ];
+        //     });
+        // }
 
         $picLog = $this->taskPicLogRepo->list('*', 'employee_id = ' . $employee->id);
         $picLog = collect($picLog)->groupBy('project_task_id')->toArray();
@@ -242,16 +242,16 @@ class PerformanceReportService {
                 'position' => $employee->position->name,
                 'boss' => $employee->boss_id ? $employee->boss->nickname : '-',
                 'period' => date('d F', strtotime($this->startDate)) . ' - ' . date('d F', strtotime($this->endDate)),
-                'total_point' => $newFormatPoint ? $newFormatPoint->total_point : 0,
+                'total_point' => $newFormatPoint['total_point'],
             ],
             'chart' => [
                 'labels' => [__('global.completed'), __('global.revise'), __('global.waitingApproval'), __('global.onProgress')],
                 'series' => $series,
                 'show_chart' => $showChart,
             ],
-            'total_project' => $newFormatPoint ? count($newFormatPoint->detail_projects) : 0,
+            'total_project' => $newFormatPoint['total_project'],
             // 'point_detail' => $newFormatPoint ? $newFormatPoint->detail_projects : [],
-            'point_detail' => $formatPoint,
+            'point_detail' => $newFormatPoint['task_details'],
         ];
 
         return generalResponse(
@@ -274,9 +274,9 @@ class PerformanceReportService {
      * array employee_uids -> nullable, required if all_employee is false
      * string start_date -> nullable
      * string end_date -> nullable
-     * 
+     *
      * Default date is 1 period
-     * 
+     *
      * @param array $payload
      * @return void
      */
@@ -284,7 +284,7 @@ class PerformanceReportService {
     {
         try {
             $where = '';
-    
+
             // get the employee ids
             if ($payload['all_employee'] == 1) {
                 $employeeUids = $this->getAllEmployeeIdForPoint();
@@ -295,23 +295,23 @@ class PerformanceReportService {
             }
             $employeeUidsCombine = implode(',', $employeeUids);
             $where .= "employee_id IN ({$employeeUidsCombine})";
-    
+
             // get date range
             if (empty($payload['start_date']) && empty($payload['end_date'])) {
                 $formatDate = $this->setDefaultPeriodQueryForPoint();
             } else if (!empty($payload['start_date']) && !empty($payload['end_date'])) {
                 $formatDate = $this->formatPointQueryDate($payload);
-                
+
                 $where .= $where .= "DATE(created_at) BETWEEN {$formatDate['start']} AND {$formatDate['end']}";
             } else if (!empty($payload['start_date']) && empty($payload['end_date'])) {
                 $payload['end_date'] = date('Y-m-d');
                 $formatDate = $this->formatPointQueryDate($payload);
-                
+
                 $where .= $where .= "DATE(created_at) BETWEEN {$formatDate['start']} AND {$formatDate['end']}";
             } else if (empty($payload['start_date']) && !empty($payload['end_date'])) {
                 $payload['start_end'] = date('Y-m-d');
                 $formatDate = $this->formatPointQueryDate($payload);
-                
+
                 $where .= $where .= "DATE(created_at) BETWEEN {$formatDate['start']} AND {$formatDate['end']}";
             }
 
@@ -338,7 +338,7 @@ class PerformanceReportService {
             $excel->setValue('A1', 'REPORT PERFORMANCE REPORT ' . $this->startDate . ' - ' . $this->endDate);
             $excel->mergeCells('A1:H1');
             $excel->setAsBold('A1');
-            
+
             // header
             $excel->setValue('A4', 'Nama');
             $excel->setValue('B4', 'Employee ID');
@@ -364,7 +364,7 @@ class PerformanceReportService {
             foreach ($points as $formatPoint) {
                 $projectKey = 5;
                 foreach ($formatPoint as $projectPoint) {
-                    
+
                     // set tasks
                     foreach ($projectPoint['tasks'] as $task) {
                         $excel->setValue("A{$indexTask}", $projectPoint['employee']['name']);
@@ -375,7 +375,7 @@ class PerformanceReportService {
                         $excel->setValue("F{$indexTask}", $projectPoint['point']);
                         $excel->setValue("G{$indexTask}", $projectPoint['additional_point']);
                         $excel->setValue("H{$indexTask}", $projectPoint['total_point']);
-    
+
                         $indexTask++;
                     }
 
@@ -387,7 +387,7 @@ class PerformanceReportService {
             $excel->autoSize(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
 
             $excel->save(public_path('point.xlsx'));
-            
+
             return generalResponse(
                 message: 'success',
                 error: false,
@@ -435,12 +435,6 @@ class PerformanceReportService {
         ];
     }
 
-    /**
-     * Export performance report
-     *
-     * @param array $payload
-     * @return array
-     */
     public function export(array $payload): array
     {
         try {
@@ -453,67 +447,18 @@ class PerformanceReportService {
                 $endDate = $payload['end_date'];
             }
 
-            // get employee and point data
-            $where = "status NOT IN (" . Status::Inactive->value . ")";
-
-            if ($payload['all_employee'] == 0) {
-                if (!empty($payload['employee_uids'])) {
-                    $employeeIds = collect($payload['employee_uids'])->map(function ($item) {
-                        return $this->generalService->getIdFromUid($item, new Employee());
-                    })->toArray();
-
-                    $where .= " AND id IN (" . implode(',', $employeeIds) . ")";
-                }
-    
-                if (!empty($payload['position_uids'])) {
-                    $positionIds = collect($payload['position_uids'])->map(function ($position) {
-                        return $this->generalService->getIdFromUid($position, new PositionBackup());
-                    })->toArray();
-    
-                    $where .= " AND position_id IN (" . implode(',', $positionIds) . ")";
-                }
-            }
-
-            $employees = $this->repo->list(
-                select: 'id,name,employee_id,position_id',
-                where: $where,
-                relation: [
-                    'position:id,name'
-                ]
-            );
-
-            $pointService = new EmployeePointService(
-                new EmployeePointRepository,
-                new EmployeePointProjectRepository,
-                new EmployeePointProjectDetailRepository
-            );
-            
-            $data = [];
-            foreach ($employees as $employee) {
-                $pointData = $pointService->renderEachEmployeePoint($employee->id, $startDate, $endDate) ?? [];
-    
-                if ($pointData) {
-                    $data[] = $pointData;
-                } else {
-                    $data[] = [
-                        'employee' => $employee,
-                        'detail_projects' => []
-                    ];
-                }
-            }
-
-            $filename = 'performance_report_' . $startDate . '-' . $endDate . '.xlsx';
-            Excel::store(new PerformanceReportExport($startDate, $endDate, $employees), "hrd/performance_report/{$filename}", 'public');
+            $filename = "hrd/performance_report_{$startDate}_{$endDate}.xlsx";
+            Excel::store(new NewTemplatePerformanceReportExport($startDate, $endDate), $filename, 'public');
 
             return generalResponse(
                 message: "Success",
                 data: [
-                    'path' => asset("storage/hrd/performance_report/{$filename}"),
-                    'data' => $data
+                    'path' => asset("storage/{$filename}"),
                 ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }
+
 }

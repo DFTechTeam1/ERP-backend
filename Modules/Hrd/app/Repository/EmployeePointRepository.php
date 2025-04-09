@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Repository;
 
+use Illuminate\Support\Facades\DB;
 use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Repository\Interface\EmployeePointInterface;
 
@@ -68,7 +69,7 @@ class EmployeePointRepository extends EmployeePointInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -99,7 +100,7 @@ class EmployeePointRepository extends EmployeePointInterface {
                 });
             }
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -107,6 +108,35 @@ class EmployeePointRepository extends EmployeePointInterface {
         $data = $query->first();
 
         return $data;
+    }
+
+    public function rawSql(string $table, string $select, array $relation = [], string $where = '', array $relationRaw = [])
+    {
+        $query = DB::table($table);
+
+        if (!empty($relationRaw)) {
+            foreach ($relationRaw as $relationData) {
+                $query->join(
+                    $relationData['table'],
+                    $relationData['first'],
+                    $relationData['operator'],
+                    $relationData['second'],
+                    isset($relationData['type']) ? $relationData['type'] : 'inner',
+                );
+            }
+        }
+
+        if (!empty($realtion)) {
+            $query->with($relation);
+        }
+
+        $query->selectRaw($select);
+
+        if (!empty($where)) {
+            $query->whereRaw($where);
+        }
+
+        return $query->get();
     }
 
     /**

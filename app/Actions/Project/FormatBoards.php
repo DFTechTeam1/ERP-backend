@@ -2,7 +2,9 @@
 
 namespace App\Actions\Project;
 
+use App\Actions\DefineTaskAction;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Hrd\Models\Employee;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 
@@ -10,30 +12,77 @@ class FormatBoards
 {
     use AsAction;
 
-    public function handle(string $projectUid)
+    public function handle(string $projectUid, ?string $filterSearch = '', bool $myTask = false)
     {
         $boardRepo = new ProjectBoardRepository();
         $projectPicRepository = new ProjectPersonInChargeRepository();
         $user = auth()->user();
+        $leaderModeller = getSettingByKey('lead_3d_modeller');
+        if ($leaderModeller) {
+            $leaderModeller = getIdFromUid($leaderModeller, new Employee());
+        }
 
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
         $employeeId = $user->employee_id ?? 0;
         $superUserRole = isSuperUserRole();
 
-        $data = $boardRepo->list('id,project_id,name,sort,based_board_id', 'project_id = ' . $projectId, [
-            'tasks',
-            'tasks.revises',
-            'tasks.project:id,uid,status',
-            'tasks.proofOfWorks',
-            'tasks.logs',
-            'tasks.board',
-            'tasks.pics:id,project_task_id,employee_id,status',
-            'tasks.pics.employee:id,name,email,uid',
-            'tasks.medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
-            'tasks.taskLink:id,project_id,project_task_id,media,display_name,related_task_id,type',
-            'tasks.times:id,project_task_id,employee_id,work_type,time_added',
-            'tasks.times.employee:id,uid,name'
-        ]);
+        $relation = [
+            'tasks' => function ($query) use ($filterSearch, $myTask, $employeeId) {
+                $query->selectRaw('*')
+                    ->with([
+                        'revises',
+                        'project:id,uid,status',
+                        'proofOfWorks',
+                        'logs',
+                        'board',
+                        'pics' => function ($queryPic) use ($filterSearch, $myTask, $employeeId) {
+                            $queryPic->selectRaw('id,project_task_id,employee_id,status')
+                                ->with([
+                                    'employee' => function ($queryEmployee) use ($filterSearch, $myTask, $employeeId) {
+                                        $queryEmployee->selectRaw('id,name,email,uid,avatar_color');
+                                    },
+                                    'user:id,employee_id'
+                                ]);
+
+                            // if ($myTask) {
+                            //     $queryPic->whereHas('employee', function ($q) use ($employeeId) {
+                            //         $q->where("id", $employeeId);
+                            //     });
+                            // }
+                        },
+                        'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
+                        'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
+                        'times:id,project_task_id,employee_id,work_type,time_added',
+                        'times.employee:id,uid,name'
+                    ]);
+
+                if ($filterSearch) {
+                    $query->whereLike("name", "%{$filterSearch}%");
+                }
+            },
+        ];
+
+        $data = $boardRepo->list(
+            select: 'id,project_id,name,sort,based_board_id',
+            where: 'project_id = ' . $projectId,
+            relation: $relation,
+        );
+
+        if ($myTask) { // filter only task that have a pics
+            $data = collect((object) $data)->map(function ($mapping) use ($employeeId) {
+                $mapping['tasks_filter'] = collect($mapping->tasks)->filter(function ($filter) use ($employeeId) {
+                    return in_array($employeeId, collect($filter->pics)->pluck('employee_id')->toArray());
+                })->values()->all();
+
+                return $mapping;
+            })->map(function ($map) {
+                unset($map['tasks']);
+
+                $map['tasks'] = $map->tasks_filter;
+
+                return $map;
+            })->all();
+        }
 
         // if logged user is pic or super user role, set as is_project_pic
         $projectPics = $projectPicRepository->list('id,pic_id', 'project_id = ' . $projectId);
@@ -55,6 +104,8 @@ class FormatBoards
 
                 unset($outputTask[$keyTask]['time_tracker']);
 
+                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+
                 // check if task already active or not, if not show activating button
                 $isActive = false;
 
@@ -70,11 +121,18 @@ class FormatBoards
                 }
 
                 $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+                $picUids = collect($task->pics)->pluck('employee.uid')->toArray();
 
                 $needUserApproval = false;
                 if ($task->status == \App\Enums\Production\TaskStatus::WaitingApproval->value && (in_array($employeeId, $picIds) || $isDirector || $isProjectPic)) {
                     $needUserApproval = true;
+
+                    // disable user approval if this task is for 3D MODELLER LEADER
+                    if (in_array($leaderModeller, $picUids)) {
+                        $needUserApproval = false;
+                    }
                 }
+
 
                 $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
 

@@ -26,6 +26,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('status', [ProjectController::class, 'getProjectStatus']);
 
     Route::get('tasks', [ProjectController::class, 'getAllTasks']);
+    Route::get('tasks/status', [ProjectController::class, 'getTaskStatus']);
     Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
 
     Route::post('project', [ProjectController::class, 'store']);
@@ -43,10 +44,13 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/getProjectFolderDetail', [ProjectController::class, 'getProjectFolderDetail']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
+    Route::get('project/{projectUid}/precheck', [ProjectController::class, 'precheck']);
+    Route::post('project/{projectUid}/completeUnfinishedTask', [ProjectController::class, 'completeUnfinishedTask']);
 
     // songs
     Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');
     Route::post('project/{projectUid}/bulkAssignWorkerForSong', [ProjectController::class, 'bulkAssignWorkerForSong'])->name('projects.bulkAssignWorkerForSong');
+    Route::post('project/{projectUid}/tasks/filter', [ProjectController::class, 'filterTasks']);
     Route::get('project/{projectUid}/song/{songUid}', [ProjectController::class, 'detailSong'])->name('projects.detailSongs');
     Route::put('project/{projectUid}/song/{songUid}', [ProjectController::class, 'updateSong'])->name('projects.updateSongs');
     Route::delete('project/{projectUid}/song/{songUid}', [ProjectController::class, 'deleteSong'])->name('projects.deleteSongs');
@@ -111,6 +115,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask']);
     Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
     Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask']);
+    Route::post('project/{projectUid}/task/{taskUid}/distribute', [ProjectController::class, 'distributeModellerTask']);
     Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask']);
     Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask']);
     Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);

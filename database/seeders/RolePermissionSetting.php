@@ -64,6 +64,7 @@ class RolePermissionSetting extends Seeder
             ['is_permanent' => true, 'name' => $this->getFinanceRole(), 'permissions' => $this->getRolePermissions($this->getFinanceRole())],
             ['is_permanent' => false, 'name' => $this->getRegularRole(), 'permissions' => $this->getRolePermissions($this->getRegularRole())],
             ['is_permanent' => true, 'name' => $this->getAssistantProjectManagerRole(), 'permissions' => []],
+            ['is_permanent' => true, 'name' => $this->getLeadModeller(), 'permissions' => []],
         ];
 
         foreach ($roles as $role) {
@@ -167,6 +168,11 @@ class RolePermissionSetting extends Seeder
     protected function getDirectorRole()
     {
         return BaseRole::Director->value;
+    }
+
+    protected function getLeadModeller()
+    {
+        return BaseRole::LeadModeller->value;
     }
 
     protected function getProductionRole()
@@ -298,6 +304,11 @@ class RolePermissionSetting extends Seeder
     protected function employeePermission()
     {
         return [
+            ['name' => 'assign_modeller', 'group' => 'employee', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getLeadModeller()
+            ]],
             ['name' => 'create_employee', 'group' => 'employee', 'used' => [
                 $this->getRootRole(),
                 $this->getHrdRole(),
@@ -695,6 +706,12 @@ class RolePermissionSetting extends Seeder
     protected function projectPermission()
     {
         return [
+            ['name' => 'complete_project', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerAdminRole(),
+                $this->getProjectManagerRole()
+            ]],
             ['name' => 'reject_song_proof_of_work', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
