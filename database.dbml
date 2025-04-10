@@ -360,6 +360,15 @@ Table "employees" {
   }
 }
 
+Table "employee_active_reports" {
+    "id" bigint [pk, increment, not null]
+    "month" tinyint [not null]
+    "year" year [not null]
+    "number_of_employee" int [not null]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
+}
+
 Table "employee_task_states" {
   "id" bigint [not null, increment, pk]
   "project_id" bigint [not null, ref: > projects.id]
