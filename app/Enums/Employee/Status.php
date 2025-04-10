@@ -40,6 +40,36 @@ enum Status: int
         };
     }
 
+    public static function generateLabel(int $value)
+    {
+        return match ($value) {
+            static::Deleted->value => __('global.deleted'),
+            static::Permanent->value => __('global.permanent'),
+            static::Contract->value => __('global.contract'),
+            static::PartTime->value => __('global.partTime'),
+            static::Freelance->value => __('global.freelance'),
+            static::Internship->value => __('global.internship'),
+            static::Inactive->value => __('global.inactive'),
+            static::WaitingHR->value => __('global.waitingHr'),
+            static::Probation->value => __('global.probation'),
+        };
+    }
+
+    public static function generateChartColor(int $value)
+    {
+        return match ($value) {
+            static::Deleted->value => generateRandomColor(__('global.deleted')),
+            static::Permanent->value => '#009bde',
+            static::Contract->value => '#f96d01',
+            static::PartTime->value => generateRandomColor(__('global.partTime')),
+            static::Freelance->value => generateRandomColor(__('global.freelance')),
+            static::Internship->value => generateRandomColor(__('global.internship')),
+            static::Inactive->value => generateRandomColor(__('global.inactive')),
+            static::WaitingHR->value => generateRandomColor(__('global.waitingHr')),
+            static::Probation->value => '#5b37d4',
+        };
+    }
+
     public function statusColor()
     {
         return match ($this) {

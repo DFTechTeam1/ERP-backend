@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Services;
 
+use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Gender;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\ProbationStatus;
@@ -12,10 +13,12 @@ use App\Exceptions\EmployeeException;
 use App\Exports\EmployeeExport;
 use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
+use App\Services\ChartService;
 use App\Services\GeneralService;
 use App\Services\UserService;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -32,6 +35,7 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\EmployeeHasRelation;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Repository\EmployeeActiveReportRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -64,6 +68,8 @@ class EmployeeService
     private $userService;
     private $generalService;
     private $jobLevelRepo;
+    private $chart;
+    private $employeeActiveRepo;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -78,7 +84,9 @@ class EmployeeService
         EmployeeEmergencyContactRepository $employeeEmergencyRepo,
         UserService $userService,
         GeneralService $generalService,
-        JobLevelRepository $jobLevelRepo
+        JobLevelRepository $jobLevelRepo,
+        ChartService $chartService,
+        EmployeeActiveReportRepository $employeeActiveRepo
     )
     {
         $this->repo = $employeeRepo;
@@ -106,6 +114,10 @@ class EmployeeService
         $this->generalService = $generalService;
 
         $this->jobLevelRepo = $jobLevelRepo;
+
+        $this->chart = $chartService;
+
+        $this->employeeActiveRepo = $employeeActiveRepo;
     }
 
     /**
@@ -1743,5 +1755,291 @@ class EmployeeService
             __('notification.successResign'),
             false
         );
+    }
+
+    /**
+     * Get employment detail as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * Here we only show 3 Employee status like Permanent, Contract and Probation
+     *
+     * @return array
+     */
+    public function getEmploymentChart(object $employees): array
+    {
+        try {
+            $output = Cache::get(CacheKey::HrDashboardEmploymentStatus->value);
+            if (!$output) {
+                $output = Cache::rememberForever(CacheKey::HrDashboardEmploymentStatus->value, function () use ($employees) {
+                    $statuses = [
+                        Status::Permanent->value,
+                        Status::Contract->value,
+                        Status::Probation->value
+                    ];
+
+                    $series = [];
+                    $table = [
+                        ['title' => 'Total', 'value' => $employees->count(), 'type' => 'header']
+                    ];
+                    foreach ($statuses as $status) {
+                        $totalPerStatus = collect((object) $employees)->filter(function ($filter) use ($status) {
+                            return $filter->status->value == $status;
+                        })->count();
+
+                        // create series configuration
+                        $series[] = [
+                            'name' => Status::generateLabel($status),
+                            'data' => [$totalPerStatus],
+                            'color' => Status::generateChartColor($status)
+                        ];
+
+                        // add more $table configuration
+                        $percentage = $totalPerStatus / $employees->count() * 100;
+                        $table[] = [
+                            'title' => Status::generateLabel($status),
+                            'value' => $totalPerStatus,
+                            'valuePercentage' => number_format(num: $percentage, decimals: 0) . '%',
+                            'color' => Status::generateChartColor($status),
+                            'type' => 'body',
+                        ];
+                    }
+
+                    $options = [
+                        'chart' => [
+                            'type' => 'bar',
+                            'height' => 50,
+                            'stacked' => true,
+                            'theme' => 'dark',
+                            'toolbar' => [
+                                'show' => false
+                            ]
+                        ],
+                        'plotOptions' => [
+                            'bar' => [
+                                'horizontal' => true,
+                                'dataLabels' => [
+                                    'total' => [
+                                        'enabled' => true,
+                                        'offsetX' => 0,
+                                        'style' => [
+                                            'fontSize' => '13px'
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ],
+                        'stroke' => [
+                            'width' => 1,
+                            'colors' => ['#fff'],
+                            'dashArray' => 0
+                        ],
+                        'legend' => [
+                            'show' => false,
+                        ],
+                        'xaxis' => [
+                            'labels' => [
+                                'show' => false,
+                            ],
+                            'axisborder' => [
+                                'show' => false,
+                            ],
+                            'axisTicks' => [
+                                'show' => false,
+                            ],
+                            'crosshairs' => [
+                                'show' => false,
+                            ],
+                        ],
+                        'yaxis' => [
+                            'labels' => [
+                                'show' => false,
+                            ],
+                            'axisborder' => [
+                                'show' => false,
+                            ],
+                            'axisTicks' => [
+                                'show' => false,
+                            ],
+                            'crosshairs' => [
+                                'show' => false,
+                            ],
+                        ],
+                        'tooltip' => [
+                            'enabled' => true,
+                            'style' => [
+                                'backgroundColor' => '#000',
+                                'fontSize' => '12px'
+                            ],
+                            'theme' => 'dark',
+                        ],
+                    ];
+
+                    return [
+                        'series' => $series,
+                        'table' => $table,
+                        'options' => $options
+                    ];
+                });
+            }
+
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get length of service as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * Here we divide by 3 categories: 0-1 yr, 1-3 yr, 3-5 yr, 5-10 yr
+     *
+     * @return array
+     */
+    public function getLengthOfServiceChart(object $employees): array
+    {
+        try {
+            $output = Cache::get(CacheKey::HrDashboardLoS->value);
+            if (!$output) {
+                $output = Cache::rememberForever(CacheKey::HrDashboardLoS->value, function () use ($employees) {
+                    // 0 - 1 year
+                    $firstData = collect($employees)->filter(function ($filter) {
+                        return $filter->length_of_service_year <= 1;
+                    })->count();
+
+                    // 1 - 3 year
+                    $secondData = collect($employees)->filter(function ($filter) {
+                        return $filter->length_of_service_year >= 1.1 && $filter->length_of_service_year <= 3;
+                    })->count();
+
+                    // 3 - 5 year
+                    $thirdData = collect($employees)->filter(function ($filter) {
+                        return $filter->length_of_service_year >= 3.1 && $filter->length_of_service_year <= 5;
+                    })->count();
+
+                    // 5 - 10
+                    $lastData = collect($employees)->filter(function ($filter) {
+                        return $filter->length_of_service_year >= 5.1;
+                    })->count();
+
+                    $series = $this->chart->buildBarSeries(name: 'Length of Service', data: [$firstData, $secondData, $thirdData, $lastData]);
+
+                    $options = $this->chart->buildBarOptions(xaxisCategories: ["0-1 yr", "1-3 yr", "3-5 yr", "5-10 yr"]);
+
+                    return [
+                        'series' => $series,
+                        "options" => $options
+                    ];
+                });
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get active staff as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * Here we only displays data for the past 3 months
+     *
+     * @return array
+     */
+    public function getActiveStaffChart(): array
+    {
+        try {
+            $now = Carbon::now();
+            $months = [
+                $now,
+                Carbon::now()->subMonths(1),
+                Carbon::now()->subMonths(2),
+            ];
+
+            $data = [];
+            foreach ($months as $month) {
+                // get data per month
+                $active = $this->employeeActiveRepo->show(uid: 'select', select: 'id,number_of_employee', where: "month = {$month->format('m')} AND year = {$month->format('Y')}");
+
+                $data[] = $active->number_of_employee ?? 0;
+            }
+
+            $series = $this->chart->buildBarSeries(name: 'Length of Service', data: $data);
+
+            $options = $this->chart->buildBarOptions(xaxisCategories: collect($months)->map(function ($item) {
+                return $item->format('M');
+            })->toArray());
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'series' => $series,
+                    "options" => $options,
+                    'months' => $months
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get gender diversity as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * @return array
+     */
+    public function getGenderDiversityChart(object $employees): array
+    {
+        try {
+            $male = collect($employees)->filter(function ($filter) {
+                return $filter->gender->value == Gender::Male->value;
+            })->count();
+
+            $female = collect($employees)->filter(function ($filter) {
+                return $filter->gender->value == Gender::Female->value;
+            })->count();
+
+            $series = [$male, $female];
+
+            $options = [
+                "chart" => [
+                    "width" => 200,
+                    "height" => 200,
+                    "type" => "pie"
+                ],
+                "labels" => [Gender::Male->label(), Gender::Female->label()],
+                "legend" => [
+                    "show" => true
+                ],
+            ];
+
+            $total = array_sum([$male, $female]);
+            $table = [
+                ["title" => "Total", "value" => $total, "type" => "header"],
+                ["title" => Gender::Male->label(), "value" => $male, "valuePercentage" => number_format(num: $male / $total * 100), "color" => "#009bde", "type" => "body"],
+                ["title" => Gender::Female->label(), "value" => $female, "valuePercentage" => number_format(num: $female / $total * 100), "color" => "#f96d01", "type" => "body"],
+            ];
+
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    "series" => $series,
+                    "table" => $table,
+                    "options" => $options
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

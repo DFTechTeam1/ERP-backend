@@ -11,6 +11,7 @@ use App\Enums\Employee\SalaryType;
 use App\Enums\Employee\Status;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
+use Carbon\Carbon;
 use Database\Factories\Hrd\EmployeeFactory as HrdEmployeeFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
@@ -145,8 +146,29 @@ class Employee extends Model
         'gender_text',
         'martial_text',
         'blood_type_text',
-        'religion_text'
+        'religion_text',
+        'length_of_service_year'
     ];
+
+    /**
+     * Determines how long to work in years
+     *
+     * @return Attribute
+     */
+    public function lengthOfServiceYear(): Attribute
+    {
+        $out = 0;
+        if (isset($this->attributes['join_date'])) {
+            $joinDate = Carbon::parse($this->attributes['join_date']);
+
+            $out = Carbon::now()->diffInYears($joinDate);
+            $out = number_format(num: $joinDate->diffInYears(Carbon::now()), decimals: 1);
+        }
+
+        return Attribute::make(
+            get: fn() => (float) $out
+        );
+    }
 
     public function bloodTypeText(): Attribute
     {

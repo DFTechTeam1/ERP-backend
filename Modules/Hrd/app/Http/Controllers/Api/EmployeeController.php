@@ -2,25 +2,36 @@
 
 namespace Modules\Hrd\Http\Controllers\Api;
 
+use App\Enums\Cache\CacheKey;
+use App\Enums\Employee\Status;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Http\Requests\Employee\AddAsUser;
 use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
 use Modules\Hrd\Http\Requests\Employee\UpdateBasicInfo;
 use Modules\Hrd\Http\Requests\Employee\UpdateIdentity;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeeService;
 
 class EmployeeController extends Controller
 {
-    private EmployeeService $employeeService;
+    private $employeeService;
 
-    public function __construct(EmployeeService $employeeService)
+    private $repo;
+
+    public function __construct(
+        EmployeeService $employeeService,
+        EmployeeRepository $repo
+    )
     {
         $this->employeeService = $employeeService;
+
+        $this->repo = $repo;
     }
     /**
      * Get list of data
@@ -374,5 +385,50 @@ class EmployeeController extends Controller
     public function resign(\Modules\Hrd\Http\Requests\Employee\Resign $request, string $employeeUid)
     {
         return apiResponse($this->employeeService->resign($request->validated(), $employeeUid));
+    }
+
+    /**
+     * Get employment chart options for frontend
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getEmploymentChart(): \Illuminate\Http\JsonResponse
+    {
+        $employees = $this->repo->list(
+            select: "id,name,nickname,status,join_date",
+            where: "deleted_at IS NULL"
+        );
+
+        return apiResponse($this->employeeService->getEmploymentChart($employees));
+    }
+
+    /**
+     * Get all element for dashboard chart
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDashboardElement(): \Illuminate\Http\JsonResponse
+    {
+        $employees = Cache::get(CacheKey::HrDashboardEmoloyeeList->value);
+        if (!$employees) {
+            $employees = Cache::rememberForever(CacheKey::HrDashboardEmoloyeeList->value, function () {
+                return $this->repo->list(
+                    select: "id,name,nickname,status,join_date,gender",
+                    where: "deleted_at IS NULL AND status NOT IN (" . Status::Deleted->value . "," . Status::Inactive->value . ") AND end_date IS NULL"
+                );
+            });
+        }
+
+        return apiResponse(
+            generalResponse(
+                message: "Success",
+                data: [
+                    'employmentStatus' => $this->employeeService->getEmploymentChart($employees)['data'],
+                    'lengthOfService' => $this->employeeService->getLengthOfServiceChart(employees: $employees)['data'],
+                    'activeStaff' => $this->employeeService->getActiveStaffChart()['data'],
+                    'genderDiversity' => $this->employeeService->getGenderDiversityChart(employees: $employees)['data'],
+                ]
+            )
+        );
     }
 }
