@@ -4,6 +4,7 @@ namespace Modules\Hrd\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Hrd\Console\AutoUpdateEmployeeTimeoff;
 use Modules\Hrd\Console\InitateAvatarColor;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
@@ -48,7 +49,8 @@ class HrdServiceProvider extends ServiceProvider
             MigrationEmployeePointToNewSchema::class,
             MakeEmployeeAsSync::class,
             InitateAvatarColor::class,
-            UpdateEmployeeActivePerMonth::class
+            UpdateEmployeeActivePerMonth::class,
+            AutoUpdateEmployeeTimeoff::class
         ]);
     }
 
