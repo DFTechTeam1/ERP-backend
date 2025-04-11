@@ -2,7 +2,9 @@
 
 namespace Modules\Hrd\Console;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Modules\Hrd\Models\EmployeeTimeoff;
 use Modules\Hrd\Services\TalentaService;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
@@ -33,34 +35,39 @@ class AutoUpdateEmployeeTimeoff extends Command
     public function handle()
     {
         $talenta = new TalentaService();
-        
+
         $talenta->setUrl(type: 'timeoff_list');
         $talenta->setUrlParams(params: [
-            'start_date' => date('Y-m-d'),
-            'end_date' => date('Y-m-d'),
+            'start_date' => Carbon::now()->startOfMonth()->toDateString(),
+            'end_date' => Carbon::now()->endOfMonth()->toDateString(),
+            'status' => 'approved'
         ]);
 
         $response = $talenta->makeRequest();
 
         if (
-            ($response) && 
+            ($response) &&
             (
                 (isset($response['data'])) &&
                 (isset($response['data']['time_off']))
             )
         ) {
-            $payload = [];
             foreach ($response['data']['time_off'] as $timeOff) {
-                $payload[] = [
+                $payload = [
                     'time_off_id' => $timeOff['id'],
                     'talenta_user_id' => $timeOff['user_id'],
                     'policy_name' => $timeOff['policy_name'],
                     'request_type' => $timeOff['request_type'],
                     'file_url' => $timeOff['file_url'] ?? null,
+                    'start_date' => $timeOff['start_date'],
+                    'end_date' => $timeOff['end_date'],
+                    'status' => $timeOff['status'],
                 ];
+
+                EmployeeTimeoff::create($payload);
             }
 
-            $this->info(json_encode($payload));
+            $this->info("Successfully update " . count($response['data']['time_off']) . " timeoff data");
         }
     }
 

@@ -350,6 +350,8 @@ Table "employees" {
   "resign_reason" varchar(255) [default: NULL]
   "telegram_chat_id" varchar(255) [default: NULL]
 
+  "talenta_user_id" bigint
+
   // deleted
   "dependant" varchar(10) [default: NULL, note: 'tanggungan']
   "placement" varchar(255) [default: NULL]
@@ -358,6 +360,20 @@ Table "employees" {
   Indexes {
     position_id [name: "employees_position_id_foreign"]
   }
+}
+
+Table "employee_timeoffs" {
+    "id" bigint [pk, increment, not null]
+    "time_off_id" bigint [not null, note: "This data came from Talenta server"]
+    "talenta_user_id" bigint [not null, ref: > employees.talenta_user_id, note: "This data came from Talenta server"]
+    "policy_name" varchar(255) [note: "This data came from Talenta server"]
+    "request_type" varchar(100) [note: "This data came from Talenta server"]
+    "file_url" text [note: "This data came from Talenta server"]
+    "start_date" date [note: "This data came from Talenta server"]
+    "end_date" date [note: "This data came from Talenta server"]
+    "status" varchar(100) [note: "This data came from Talenta server"]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
 }
 
 Table "employee_active_reports" {

@@ -9,6 +9,7 @@ use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\SalaryType;
 use App\Enums\Employee\Status;
+use App\Traits\FlushCacheOnModelChange;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Carbon\Carbon;
@@ -42,7 +43,7 @@ use Modules\Production\Models\ProjectTaskPic;
 // #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
 {
-    use HasFactory, ModelObserver, ModelCreationObserver, SoftDeletes, Notifiable;
+    use HasFactory, ModelObserver, ModelCreationObserver, SoftDeletes, Notifiable, FlushCacheOnModelChange;
 
     protected static function newFactory()
     {
@@ -134,7 +135,9 @@ class Employee extends Model
         'telegram_chat_id',
         'job_level_id',
         'is_sync_with_talenta',
-        'avatar_color'
+        'avatar_color',
+
+        'talenta_user_id',
     ];
 
     protected $appends = [

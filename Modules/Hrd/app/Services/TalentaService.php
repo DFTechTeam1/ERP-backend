@@ -25,13 +25,21 @@ class TalentaService {
     /**
      * Set endpoint and main url
      *
-     * @param string $type
+     * @param string $type              Please check talenta configuration file to make sure
+     * @param ?string $env               Will be prod or dev
      * @return void
      */
-    public function setUrl(string $type)
+    public function setUrl(string $type, ?string $env = null)
     {
         $this->endpoint = config("talenta.endpoint_list.{$type}");
-        $this->url = config('talenta.base_uri') . $this->endpoint;
+
+        $uri = config('talenta.base_uri');
+        if ($env) {
+            $uriKey = "{$env}_uri";
+            $uri = config("talenta.{$uriKey}");
+        }
+        $this->url = $uri . $this->endpoint;
+
         $this->requestMethod = config("talenta.endpoint_method.{$type}");
     }
 
@@ -77,6 +85,14 @@ class TalentaService {
 
         $method = $this->requestMethod;
 
+        logging("TALENTA REQUEST DETAIL", [
+            'method' => $method,
+            'url' => $this->url,
+            'payload' => $this->payload,
+            'token' => $this->token,
+            'date' => $this->dateRequest
+        ]);
+
         // make a request
         $response = Http::withHeaders([
                 'Authorization' => $this->token,
@@ -84,6 +100,10 @@ class TalentaService {
             ])
             ->acceptJson()
             ->$method($this->url, $this->payload);
+
+        if ($response->failed()) {
+            Log::error("ERROR TALENTA SERVICE", [$response->throw()]);
+        }
 
         return $response->json();
     }
