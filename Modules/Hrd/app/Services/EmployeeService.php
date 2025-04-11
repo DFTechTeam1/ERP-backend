@@ -2042,4 +2042,16 @@ class EmployeeService
             return errorResponse($th);
         }
     }
+
+    public function getJobLevelChart(object $employees): array
+    {
+        try {
+            
+            return generalResponse(
+                message: "Success"
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }
