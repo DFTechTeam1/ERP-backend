@@ -12,4 +12,5 @@ enum CacheKey: string
     case HrDashboardLoS = "hrDashboardLoS";
     case HrDashboardActiveStaff = "hrDashboardActiveStaff";
     case HrDashboardGenderDiversity = "hrDashboardGenderDiversity";
+    case HrDashboardJobLevel = "hrDashboardJobLevel";
 }

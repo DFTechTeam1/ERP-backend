@@ -39,6 +39,7 @@ use Modules\Hrd\Repository\EmployeeActiveReportRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\EmployeeTimeoffRepository;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -70,6 +71,7 @@ class EmployeeService
     private $jobLevelRepo;
     private $chart;
     private $employeeActiveRepo;
+    private $employeeTimeoffRepo;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -86,7 +88,8 @@ class EmployeeService
         GeneralService $generalService,
         JobLevelRepository $jobLevelRepo,
         ChartService $chartService,
-        EmployeeActiveReportRepository $employeeActiveRepo
+        EmployeeActiveReportRepository $employeeActiveRepo,
+        EmployeeTimeoffRepository $employeeTimeoffRepo
     )
     {
         $this->repo = $employeeRepo;
@@ -118,6 +121,8 @@ class EmployeeService
         $this->chart = $chartService;
 
         $this->employeeActiveRepo = $employeeActiveRepo;
+
+        $this->employeeTimeoffRepo = $employeeTimeoffRepo;
     }
 
     /**
@@ -1804,75 +1809,8 @@ class EmployeeService
                         ];
                     }
 
-                    $options = [
-                        'chart' => [
-                            'type' => 'bar',
-                            'height' => 50,
-                            'stacked' => true,
-                            'theme' => 'dark',
-                            'toolbar' => [
-                                'show' => false
-                            ]
-                        ],
-                        'plotOptions' => [
-                            'bar' => [
-                                'horizontal' => true,
-                                'dataLabels' => [
-                                    'total' => [
-                                        'enabled' => true,
-                                        'offsetX' => 0,
-                                        'style' => [
-                                            'fontSize' => '13px'
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'stroke' => [
-                            'width' => 1,
-                            'colors' => ['#fff'],
-                            'dashArray' => 0
-                        ],
-                        'legend' => [
-                            'show' => false,
-                        ],
-                        'xaxis' => [
-                            'labels' => [
-                                'show' => false,
-                            ],
-                            'axisborder' => [
-                                'show' => false,
-                            ],
-                            'axisTicks' => [
-                                'show' => false,
-                            ],
-                            'crosshairs' => [
-                                'show' => false,
-                            ],
-                        ],
-                        'yaxis' => [
-                            'labels' => [
-                                'show' => false,
-                            ],
-                            'axisborder' => [
-                                'show' => false,
-                            ],
-                            'axisTicks' => [
-                                'show' => false,
-                            ],
-                            'crosshairs' => [
-                                'show' => false,
-                            ],
-                        ],
-                        'tooltip' => [
-                            'enabled' => true,
-                            'style' => [
-                                'backgroundColor' => '#000',
-                                'fontSize' => '12px'
-                            ],
-                            'theme' => 'dark',
-                        ],
-                    ];
+                    // called chart service function to create stacked bar option
+                    $options = $this->chart->buildStackedBarOptions();
 
                     return [
                         'series' => $series,
@@ -2043,12 +1981,88 @@ class EmployeeService
         }
     }
 
+    /**
+     * Get all job level of the company as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * @return array
+     */
     public function getJobLevelChart(object $employees): array
     {
         try {
-            
+            $output = Cache::get(CacheKey::HrDashboardJobLevel->value);
+            if (!$output || empty($output)) {
+                $output = Cache::rememberForever(CacheKey::HrDashboardJobLevel->value, function () use ($employees) {
+                    $jobLevels = $this->jobLevelRepo->list(
+                        select: 'id,name'
+                    );
+
+                    $series = [];
+                    $table = [
+                        ['title' => 'Total', 'value' => $employees->count(), 'type' => 'header']
+                    ];
+                    foreach ($jobLevels as $jobLevel) {
+                        $numberOfJob = collect($employees)->filter(function ($filter) use ($jobLevel) {
+                            return $filter->job_level_id == $jobLevel->id;
+                        })->count();
+
+                        // generate color of each job level
+                        $color = generateRandomColor($jobLevel->name);
+
+                        // create series
+                        $series[] = [
+                            'name'=> $jobLevel->name,
+                            'data' => [$numberOfJob],
+                            'color' => $color
+                        ];
+
+                        // create table data
+                        $table[] = [
+                            'title' => $jobLevel->name,
+                            'value' => $numberOfJob,
+                            'valuePercentage' => number_format($numberOfJob / $employees->count() * 100),
+                            'color' => $color,
+                            'type' => 'body'
+                        ];
+                    }
+
+                    // called chart service function to create stacked bar option
+                    $options = $this->chart->buildStackedBarOptions();
+
+                    return [
+                        'series' => $series,
+                        'table' => $table,
+                        'options' => $options
+                    ];
+                });
+            }
+
             return generalResponse(
-                message: "Success"
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function getEmployeeOffChart(): array
+    {
+        try {
+            $today = Carbon::today();
+            $timeoffs = $this->employeeTimeoffRepo->list(
+                select: "id,time_off_id,talenta_user_id,policy_name,request_type,file_url,start_date,end_date,status",
+                relation: [
+                    'employee:id,employee_id,nickname,name,talenta_user_id'
+                ],
+                where: "start_date <= '{$today}' AND end_date >= '{$today}'"
+            );
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'timeoff' => $timeoffs
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

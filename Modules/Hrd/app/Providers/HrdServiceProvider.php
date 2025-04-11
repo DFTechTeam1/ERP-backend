@@ -10,6 +10,7 @@ use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
+use Modules\Hrd\Console\UpdateTalentaUserIdToEmployeesTable;
 
 class HrdServiceProvider extends ServiceProvider
 {
@@ -50,7 +51,8 @@ class HrdServiceProvider extends ServiceProvider
             MakeEmployeeAsSync::class,
             InitateAvatarColor::class,
             UpdateEmployeeActivePerMonth::class,
-            AutoUpdateEmployeeTimeoff::class
+            AutoUpdateEmployeeTimeoff::class,
+            UpdateTalentaUserIdToEmployeesTable::class
         ]);
     }
 

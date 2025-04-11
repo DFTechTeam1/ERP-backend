@@ -413,7 +413,7 @@ class EmployeeController extends Controller
         if (!$employees) {
             $employees = Cache::rememberForever(CacheKey::HrDashboardEmoloyeeList->value, function () {
                 return $this->repo->list(
-                    select: "id,name,nickname,status,join_date,gender",
+                    select: "id,name,nickname,status,join_date,gender,job_level_id",
                     where: "deleted_at IS NULL AND status NOT IN (" . Status::Deleted->value . "," . Status::Inactive->value . ") AND end_date IS NULL"
                 );
             });
@@ -427,6 +427,8 @@ class EmployeeController extends Controller
                     'lengthOfService' => $this->employeeService->getLengthOfServiceChart(employees: $employees)['data'],
                     'activeStaff' => $this->employeeService->getActiveStaffChart()['data'],
                     'genderDiversity' => $this->employeeService->getGenderDiversityChart(employees: $employees)['data'],
+                    'jobLevel' => $this->employeeService->getJobLevelChart(employees: $employees)['data'],
+                    'timeOff' => $this->employeeService->getEmployeeOffChart()['data']
                 ]
             )
         );
