@@ -70,8 +70,6 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
             $query->whereRaw($where);
         }
 
-        Log::debug('WHERE CHECK', [$where]);
-
         $query->with([
             'position:id,name,division_id',
             'position.division:id,name',

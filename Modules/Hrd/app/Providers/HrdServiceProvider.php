@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Providers;
 
+use App\Exports\NewTemplatePerformanceReportExport;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Hrd\Console\AutoUpdateEmployeeTimeoff;
@@ -11,6 +12,7 @@ use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Hrd\Console\UpdateTalentaUserIdToEmployeesTable;
+use Modules\Hrd\Console\SynchronizingTalentUserId;
 
 class HrdServiceProvider extends ServiceProvider
 {
@@ -52,7 +54,9 @@ class HrdServiceProvider extends ServiceProvider
             InitateAvatarColor::class,
             UpdateEmployeeActivePerMonth::class,
             AutoUpdateEmployeeTimeoff::class,
-            UpdateTalentaUserIdToEmployeesTable::class
+            UpdateTalentaUserIdToEmployeesTable::class,
+            SynchronizingTalentUserId::class,
+            NewTemplatePerformanceReportExport::class,
         ]);
     }
 

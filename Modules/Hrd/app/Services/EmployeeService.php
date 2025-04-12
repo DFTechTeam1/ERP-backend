@@ -72,6 +72,7 @@ class EmployeeService
     private $chart;
     private $employeeActiveRepo;
     private $employeeTimeoffRepo;
+    private $talentaService;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -89,9 +90,12 @@ class EmployeeService
         JobLevelRepository $jobLevelRepo,
         ChartService $chartService,
         EmployeeActiveReportRepository $employeeActiveRepo,
-        EmployeeTimeoffRepository $employeeTimeoffRepo
+        EmployeeTimeoffRepository $employeeTimeoffRepo,
+        TalentaService $talentaService,
     )
     {
+        $this->talentaService = $talentaService;
+
         $this->repo = $employeeRepo;
 
         $this->userService = $userService;
@@ -814,6 +818,10 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
+            $positionData = $this->positionRepo->show(uid: $data['position_id'], select: 'id,division_id', relation: ['division:id,uid']);
+            $data['division_id'] = $positionData->division->uid;
+            $data['position_uid'] = $data['position_id'];
+            $data['job_level_uid'] = $data['job_level_id'];
             $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
             if (!empty($data['boss_id'])) {
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
@@ -822,7 +830,7 @@ class EmployeeService
             $jobLevel = $this->jobLevelRepo->show(uid: $data['job_level_id'], select: 'id,name');
             $data['job_level_id'] = $jobLevel->id;
             $data['level_staff'] = $jobLevel->name;
-            $dadta['avatar_color'] = $this->generalService->generateRandomColor($data['email']);
+            $data['avatar_color'] = $this->generalService->generateRandomColor($data['email']);
 
             $employee = $this->repo->store(
                 collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray()
@@ -852,7 +860,26 @@ class EmployeeService
 
             // invite to Talenta
             if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
-                // TODO: Communiate with talenta
+                $this->talentaService->setUrl('store_employee');
+                $this->talentaService->setUrlParams($this->talentaService->buildEmployeePayload($data));
+                $response = $this->talentaService->makeRequest();
+
+                // Throw error when it failed
+                if ($response['message'] != 'success') {
+                    logging('ERROR SAVING TALENT', $response);
+                    throw new Exception(__('notification.failedSaveToTalenta'));
+                }
+
+                // update talenta user ID
+                $this->talentaService->setUrl('detail_employee');
+                $this->talentaService->setUrlParams(['email' => $data['email']]);
+                $currentTalentaEmployee = $this->talentaService->makeRequest();
+
+                $talentaUserId = $currentTalentaEmployee['data']['employees'][0]['user_id'];
+
+                $this->repo->update([
+                    'talenta_user_id' => $talentaUserId
+                ], $employee->uid);
             }
 
             DB::commit();

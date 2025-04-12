@@ -3,6 +3,7 @@
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
 use App\Exceptions\UserNotFound;
+use Modules\Hrd\Services\TalentaService;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Http\JsonResponse;
@@ -937,5 +938,26 @@ if (!function_exists('generateRandomColor')) {
         $hash = md5($email);
 
         return '#' . substr($hash, 0, 6);
+    }
+}
+
+if (!function_exists('getTalentaUserIdByEmail')) {
+    function getTalentaUserByEmail(string $email) {
+        $talenta = new TalentaService();
+        $talenta->setUrl(type: 'all_employee');
+        $talenta->setUrlParams(params: ['email' => $email]);
+        $response = $talenta->makeRequest();
+
+        $output = null;
+
+        if (isset($response['data'])) {
+            if (
+                (isset($response['data']['employees'])) && (count($response['data']['employees']) > 0)
+            ) {
+                $output = $response['data']['employees'][0]['user_id'];
+            }
+        }
+
+        return $output;
     }
 }

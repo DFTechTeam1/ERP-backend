@@ -4,14 +4,22 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Hrd\Services\EmployeeService;
 
 class DashboardController extends Controller
 {
     private $service;
 
-    public function __construct(\App\Services\DashboardService $service)
+    private $employeeService;
+
+    public function __construct(
+        \App\Services\DashboardService $service,
+        EmployeeService $employeeService
+    )
     {
         $this->service = $service;
+
+        $this->employeeService = $employeeService;
     }
 
     /**
@@ -41,10 +49,18 @@ class DashboardController extends Controller
     {
         return apiResponse($this->service->getProjectCalendars());
     }
-    
+
     public function getProjectDeadline()
     {
         return apiResponse($this->service->getProjectDeadline());
+    }
+
+    public function getHrReport(string $type)
+    {
+        $type = ucfirst($type);
+        $function = "get{$type}Report";
+
+        return apiResponse($this->employeeService->{$function}());
     }
 
     /**
