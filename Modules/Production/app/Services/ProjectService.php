@@ -332,11 +332,31 @@ class ProjectService
         try {
             $this->projectVjRepo->delete(0, 'project_id = ' . getIdFromUid($projectUid, new \Modules\Production\Models\Project()));
 
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: "id",
+                relation: [
+                    'vjs:id,project_id,employee_id',
+                    'vjs.employee:id,nickname'
+                ]
+            );
+
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $projectUid,
+                necessaryUpdate: [
+                    // update vj
+                    'vjs' => $project->vjs
+                ]
+            );
+
             DB::commit();
 
             return generalResponse(
                 __('global.allVjisRemoved'),
                 false,
+                [
+                    'full_detail' => $currentData
+                ]
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -1581,7 +1601,7 @@ class ProjectService
     public function show(string $uid): array
     {
         try {
-            $output = $this->detailProjectAction->handle($uid, $this->repo);
+            $output = $this->detailProjectAction->handle($uid, $this->repo, $this->entertainmentTaskSongRepo);
 
             $serviceEncrypt = new \App\Services\EncryptionService();
             $encrypts = $serviceEncrypt->encrypt(json_encode($output), env('SALT_KEY'));
@@ -1597,7 +1617,10 @@ class ProjectService
                 $outputData
             );
         } catch (\Throwable $th) {
-            return errorResponse($th);
+            return errorResponse(
+                message: $th,
+                code: $th->getCode()
+            );
         }
     }
 
@@ -5722,11 +5745,31 @@ class ProjectService
 
             \Modules\Production\Jobs\AssignVjJob::dispatch($project, $data)->afterCommit();
 
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: "id",
+                relation: [
+                    'vjs:id,project_id,employee_id',
+                    'vjs.employee:id,nickname'
+                ]
+            );
+
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $projectUid,
+                necessaryUpdate: [
+                    // update vj
+                    'vjs' => $project->vjs
+                ]
+            );
+
             DB::commit();
 
             return generalResponse(
                 __("global.vjHasBeenAssigned"),
                 false,
+                [
+                    'full_detail' => $currentData
+                ]
             );
         } catch (\Throwable $th) {
             DB::rollBack();
