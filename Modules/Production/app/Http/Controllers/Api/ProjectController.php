@@ -792,6 +792,20 @@ class ProjectController extends Controller
     }
 
     /**
+     *  Here we'll remove pic from selected song
+     * Step to produce:
+     * 1. Delete pic from entertainment_task_song table
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function removePicSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->removePicSong($projectUid, $songUid));
+    }
+
+    /**
      * Approve JB by root, PM or director
      *
      * @param string $projectUid
