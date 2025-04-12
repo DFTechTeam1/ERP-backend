@@ -308,28 +308,28 @@ if (!function_exists('uploadImageandCompress')) {
     ) {
         try {
             $path = storage_path("app/public/{$path}");
-    
+
             $ext = $image->getClientOriginalExtension();
             $originalName = 'image';
             $datetime = strtotime('now') . random_int(1,8);
-    
+
             $name = "{$originalName}_{$datetime}.{$extTarget}";
-    
+
             // create file
             if (!is_dir($path)) {
                 File::makeDirectory($path, 0777, true);
             }
-    
+
             $filepath = $path . '/' . $name;
-    
+
     //        Image::read($image)->toWebp($compressValue)->save($filepath);
-    
+
             $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
             $newImage = $imageManager->read($image);
             $newImage->scale(height: 400);
             $newImage->toWebp(60);
             $newImage->save($filepath);
-    
+
             return $name;
         } catch (\Throwable $th) {
             return false;
@@ -632,7 +632,7 @@ if (!function_exists('parseUserAgent')) {
             } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
                 $browser = 'Internet Explorer';
             }
-    
+
             // Detect OS
             if (strpos($userAgent, 'Windows NT') !== false) {
                 $os = 'Windows';
@@ -659,7 +659,7 @@ if (!function_exists('getUserAgentInfo')) {
 
 if (!function_exists('getClientIp')) {
     function getClientIp() {
-        
+
         $ip = '';
         if (!App::runningInConsole()) {
             if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
@@ -761,10 +761,12 @@ if (!function_exists('formatSearchConditions')) {
                 $condition = " >= ";
             }
 
-            $where .= $data['field'] . $condition . $value . ' and ';
+            $connector = $data['type'] ?? 'and';
+            $where .= $data['field'] . $condition . $value . " {$connector} ";
         }
         $where = rtrim($where, " and");
-        
+        $where = rtrim($where, " or");
+
         return $where;
     }
 }
