@@ -4,6 +4,7 @@ namespace App\Actions\Project;
 
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Production\Models\Project;
+use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\ProjectRepository;
 
 class DetailCache
@@ -13,7 +14,7 @@ class DetailCache
     public function handle(string $projectUid, array $necessaryUpdate = [], bool $forceUpdateAll = false)
     {
         $projectId = getIdFromUid($projectUid, new Project());
-        
+
         if ($forceUpdateAll) {
             clearCache('detailProject' . $projectId);
         }
@@ -21,9 +22,9 @@ class DetailCache
         // get current data
         $currentData = getCache('detailProject' . $projectId);
 
-        
+
         if (!$currentData) {
-            DetailProject::run($projectUid, new ProjectRepository);
+            DetailProject::run($projectUid, new ProjectRepository, new EntertainmentTaskSongRepository);
             $currentData = getCache('detailProject' . $projectId);
         }
 
