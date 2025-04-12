@@ -74,6 +74,7 @@ use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Jobs\DeleteSongJob;
 use Modules\Production\Jobs\DistributeSongJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
+use Modules\Production\Jobs\RemovePicFromSong;
 use Modules\Production\Jobs\RequestDeleteSongJob;
 use Modules\Production\Jobs\RequestEditSongJob;
 use Modules\Production\Jobs\RequestSongJob;
@@ -8163,6 +8164,56 @@ class ProjectService
                 ]
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Here we'll remove pic from selected song
+     * Step to produce:
+     * 1. Delete pic from entertainment_task_song table
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return array
+     */
+    public function removePicSong(string $projectUid, string $songUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+
+            $currentTask = $this->entertainmentTaskSongRepo->show(
+                uid: 'uid',
+                select: "id,project_song_list_id,employee_id,project_id",
+                where: "project_song_list_id = {$songId}",
+                relation: [
+                    'employee:id,nickname,telegram_chat_id',
+                    'project:id,name',
+                    'song:id,name'
+                ]
+            );
+
+            $this->entertainmentTaskSongRepo->delete(id: 0, where: "project_song_list_id = {$songId} and project_id = {$projectId}");
+
+            // send notification to the pic
+            RemovePicFromSong::dispatch($currentTask)->afterCommit();
+
+            // refresh all cache
+            $currentData = $this->detailCacheAction->run(projectUid: $projectUid, forceUpdateAll: true);
+
+            DB::commit();
+
+            return generalResponse(
+                message: "Success remove PIC",
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
