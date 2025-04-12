@@ -63,6 +63,7 @@ Route::middleware(['auth:sanctum'])
     Route::post('project/{projectUid}/song/distribute/{songUid}', [ProjectController::class, 'distributeSong'])->name('projects.distributeSong');
     Route::post('project/{projectUid}/song/reject/{songUid}', [ProjectController::class, 'rejectEditSong'])->name('projects.rejectEditSong');
     Route::post('project/{projectUid}/song/subtituteSongPic/{songUid}', [ProjectController::class, 'subtituteSongPic'])->name('projects.subtituteSongPic');
+    Route::get('project/{projectUid}/song/removePic/{songUid}', [ProjectController::class, 'removePicSong'])->name('projects.removePicSong');
 
     // entertainment
     Route::get('/project/{projectUid}/entertainment/listMember', [ProjectController::class, 'entertainmentListMember'])->name("projecjts.entertainmentListMember");
