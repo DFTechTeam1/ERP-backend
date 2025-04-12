@@ -2,29 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Project\DetailProject;
-use App\Actions\Project\GetProjectStatistic;
-use App\Enums\Employee\Religion;
-
-use App\Enums\Employee\Status;
-use App\Enums\Production\WorkType;
-use App\Exports\NewTemplatePerformanceReportExport;
-use App\Exports\PrepareEmployeeMigration;
-use Carbon\Carbon;
-use Illuminate\Database\Query\JoinClause;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
-use Modules\Company\Models\Position;
-use Modules\Company\Models\PositionBackup;
-use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
-use Modules\Hrd\Repository\EmployeePointProjectRepository;
-use Modules\Hrd\Repository\EmployeePointRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
 use Modules\Hrd\Services\PerformanceReportService;
-use Modules\Production\Models\Project;
-use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Services\ProjectRepositoryGroup;
 
 class LandingPageController extends Controller
@@ -35,10 +15,13 @@ class LandingPageController extends Controller
 
     private $reportService;
 
+    private $employeeRepo;
+
     public function __construct(
         ProjectRepositoryGroup $projectRepoGroup,
         EmployeePointService $employeePointService,
-        PerformanceReportService $reportService
+        PerformanceReportService $reportService,
+        EmployeeRepository $employeeRepo
     )
     {
         $this->projectRepoGroup = $projectRepoGroup;
@@ -46,6 +29,8 @@ class LandingPageController extends Controller
         $this->employeePointService = $employeePointService;
 
         $this->reportService = $reportService;
+
+        $this->employeeRepo = $employeeRepo;
     }
 
     public function index()

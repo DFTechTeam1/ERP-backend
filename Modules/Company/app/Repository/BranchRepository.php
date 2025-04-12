@@ -70,7 +70,7 @@ class BranchRepository extends BranchInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -82,14 +82,18 @@ class BranchRepository extends BranchInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("id", $uid);
-        
+        if (empty($where)) {
+            $query->where("id", $uid);
+        } else {
+            $query->whereRaw($where);
+        }
+
         if ($relation) {
             $query->with($relation);
         }
