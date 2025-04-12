@@ -46,9 +46,15 @@ class ProjectRepository extends ProjectInterface {
 
         if (count($whereHas) > 0) {
             foreach ($whereHas as $queryItem) {
-                $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                    $qd->whereRaw($queryItem['query']);
-                });
+                if (!isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
             }
         }
 
@@ -102,9 +108,15 @@ class ProjectRepository extends ProjectInterface {
 
         if (count($whereHas) > 0) {
             foreach ($whereHas as $queryItem) {
-                $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                    $qd->whereRaw($queryItem['query']);
-                });
+                if (!isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
             }
         }
 
