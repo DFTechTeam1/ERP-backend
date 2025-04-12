@@ -87,7 +87,17 @@ class TestingService {
         return $newWhereHas;
     }
 
-    public function listForEntertainment(string $select = '*', string $where = '', array $relation = [])
+    /**
+     * Show project list for entertainment and project manager entertainment
+     *
+     * If user is have role 'entertainment', Show projects where the user is VJ and has a task on music
+     *
+     * @param string $select
+     * @param string $where
+     * @param array $relation
+     * @return array
+     */
+    public function listForEntertainment(string $select = '*', string $where = '', array $relation = []): array
     {
         $relation[] = 'songs:id,uid,project_id,name,is_request_edit,is_request_delete';
         $relation[] = 'songs.task:id,project_song_list_id,employee_id';
@@ -106,6 +116,13 @@ class TestingService {
             $whereHas[] = [
                 'relation' => 'entertainmentTaskSong',
                 'query' => "employee_id = " . $user->load('employee')->employee->id
+            ];
+
+            // condition to get project by vj
+            $whereHas[] = [
+                'relation' => 'vjs',
+                'query' => "employee_id = " . $user->load('employee')->employee->id,
+                'type' => 'or'
             ];
         }
 
@@ -129,6 +146,8 @@ class TestingService {
             $whereHas,
             $sorts
         );
+
+        logging("PAGINATED", $paginated->toArray());
 
         $eventTypes = \App\Enums\Production\EventType::cases();
         $classes = \App\Enums\Production\Classification::cases();
@@ -197,6 +216,10 @@ class TestingService {
                 }
             }
 
+            $projectIsComplete = $item->status == \App\Enums\production\ProjectStatus::Completed->value;
+            $noPic = count($pics) == 0 ? true : false;
+            $haveVj = $item->vjs->count() > 0 ? true : false;
+
             return [
                 'uid' => $item->uid,
                 'id' => $item->id,
@@ -220,7 +243,12 @@ class TestingService {
                 'is_final_check' => $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false,
                 'need_return_equipment' => $needReturnEquipment,
                 'songs' => $item->songs,
-                'number_of_equipments' => $item->equipments->count()
+                'number_of_equipments' => $item->equipments->count(),
+                'action' => [
+                    'detail' => true,
+                    'remove_all_vj' => $this->user->can('assign_vj') && !$projectIsComplete && !$noPic && $haveVj,
+                    'assign_vj' => $this->user->can('assign_vj') && !$projectIsComplete && !$haveVj && !$noPic,
+                ]
             ];
         });
 

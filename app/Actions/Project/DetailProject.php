@@ -2,19 +2,55 @@
 
 namespace App\Actions\Project;
 
+use App\Enums\System\BaseRole;
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\ProjectRepository;
 
 class DetailProject
 {
     use AsAction;
 
-    public function handle(string $uid, ProjectRepository $repo)
+    public function handle(string $uid, ProjectRepository $repo, EntertainmentTaskSongRepository $entertainmentTaskSongRepo)
     {
         $projectId = getIdFromUid($uid, new \Modules\Production\Models\Project());
         $output = getCache('detailProject' . $projectId);
+
+        /**
+         * Validate project for entertainment role
+         */
+        $user = Auth::user();
+        $haveTask = true;
+        $isVj = true;
+        if ($user->hasRole(BaseRole::Entertainment->value)) {
+            // check if project task, if user do not have a task in this project, throw error
+            $user->load('employee');
+            $task = $entertainmentTaskSongRepo->list(
+                select: 'id',
+                where: "employee_id = {$user->employee->id}"
+            );
+
+            if ($task->count() == 0) $haveTask = false;
+
+            // check if user is a vj in this project
+            $project = $repo->show(
+                uid: $uid,
+                select: "id",
+                relation: [
+                    'vjs:id,project_id,employee_id'
+                ]
+            );
+            if (!in_array($user->employee->id, collect($project->vjs)->pluck('employee_id')->toArray())) $isVj = false;
+
+            if (!$isVj && !$haveTask) {
+                throw new AuthorizationException(message: "You're not allowed to access this page", code: 403);
+            }
+        }
+
 
         if (!$output) {
             $data = $repo->show($uid, '*', [
@@ -30,6 +66,8 @@ class DetailProject
                 'state:id,name',
                 'city:id,name',
                 'projectClass:id,name,maximal_point',
+                'vjs:id,project_id,employee_id',
+                'vjs.employee:id,nickname'
             ]);
 
             $progress = FormatProjectProgress::run($data->tasks, $projectId);
@@ -126,6 +164,7 @@ class DetailProject
                 'showreels' => $data->showreels_path,
                 'person_in_charges' => $data->personInCharges,
                 'project_maximal_point' => $data->projectClass->maximal_point,
+                'vjs' => $data->vjs
             ];
 
             storeCache('detailProject' . $data->id, $output);
