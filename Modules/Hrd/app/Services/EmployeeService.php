@@ -2076,22 +2076,39 @@ class EmployeeService
         }
     }
 
+    /**
+     * Get who is off today
+     *
+     * Step to produce:
+     *
+     * @return array
+     */
     public function getEmployeeOffChart(): array
     {
         try {
-            $today = Carbon::today();
+            $todayUnixTimestamp = Carbon::today()->timestamp;
+            $firstMonthUnixTimestamp = Carbon::now()->startOfMonth()->timestamp;
+            $lastMonthUnixTimestamp = Carbon::now()->endOfMonth()->timestamp;
+
+            // get all timeoff in this month
             $timeoffs = $this->employeeTimeoffRepo->list(
-                select: "id,time_off_id,talenta_user_id,policy_name,request_type,file_url,start_date,end_date,status",
+                select: "id,time_off_id,talenta_user_id,policy_name,request_type,file_url,start_date,end_date,status,UNIX_TIMESTAMP(start_date) AS start_timestamp,UNIX_TIMESTAMP(end_date) AS end_timestamp",
                 relation: [
                     'employee:id,employee_id,nickname,name,talenta_user_id'
                 ],
-                where: "start_date <= '{$today}' AND end_date >= '{$today}'"
+                where: "UNIX_TIMESTAMP(start_date) >= {$firstMonthUnixTimestamp} AND UNIX_TIMESTAMP(end_date) <= {$lastMonthUnixTimestamp}"
             );
+
+            // get today timeoff
+            $todayTimeoff = collect((object) $timeoffs)->filter(function ($filter) use($todayUnixTimestamp) {
+                return $todayUnixTimestamp >= $filter->start_timestamp && $todayUnixTimestamp <= $filter->end_timestamp;
+            })->values();
 
             return generalResponse(
                 message: "Success",
                 data: [
-                    'timeoff' => $timeoffs
+                    'today' => $todayTimeoff,
+                    'timeoff' => $timeoffs,
                 ]
             );
         } catch (\Throwable $th) {
