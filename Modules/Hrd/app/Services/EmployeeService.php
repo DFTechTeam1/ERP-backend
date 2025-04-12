@@ -150,6 +150,8 @@ class EmployeeService
 
             if (!empty($search)) { // array
                 $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
+
+                // append status filter when user is not search for filter. This status filter will be as default filter
                 if (!in_array('status', $filterNames)) {
                     $search['filters'] = collect($search['filters'])->merge([
                         [
@@ -738,12 +740,13 @@ class EmployeeService
             $data['approval_line'] = $bossData->name;
         }
 
+        $currentJobLevelId = $data['job_level_id'] != null ? $data['job_level_id'] : 0;
         $jobLevel = $this->jobLevelRepo->show(
             uid: 0,
             select: 'id,uid',
-            where: "id = " . $data['job_level_id']
+            where: "id = " . $currentJobLevelId
         );
-        $data['job_level_uid'] = $jobLevel->uid;
+        $data['job_level_uid'] = $jobLevel ? $jobLevel->uid : null;
 
         return $data->toArray();
     }
