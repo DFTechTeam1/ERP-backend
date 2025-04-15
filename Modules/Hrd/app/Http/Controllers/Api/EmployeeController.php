@@ -423,11 +423,11 @@ class EmployeeController extends Controller
             generalResponse(
                 message: "Success",
                 data: [
-                    'employmentStatus' => $this->employeeService->getEmploymentChart($employees)['data'],
-                    'lengthOfService' => $this->employeeService->getLengthOfServiceChart(employees: $employees)['data'],
-                    'activeStaff' => $this->employeeService->getActiveStaffChart()['data'],
-                    'genderDiversity' => $this->employeeService->getGenderDiversityChart(employees: $employees)['data'],
-                    'jobLevel' => $this->employeeService->getJobLevelChart(employees: $employees)['data'],
+                    // 'employmentStatus' => $this->employeeService->getEmploymentChart($employees)['data'],
+                    // 'lengthOfService' => $this->employeeService->getLengthOfServiceChart(employees: $employees)['data'],
+                    // 'activeStaff' => $this->employeeService->getActiveStaffChart()['data'],
+                    // 'genderDiversity' => $this->employeeService->getGenderDiversityChart(employees: $employees)['data'],
+                    // 'jobLevel' => $this->employeeService->getJobLevelChart(employees: $employees)['data'],
                     'timeOff' => $this->employeeService->getEmployeeOffChart()['data']
                 ]
             )

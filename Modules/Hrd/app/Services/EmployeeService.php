@@ -2086,9 +2086,9 @@ class EmployeeService
     public function getEmployeeOffChart(): array
     {
         try {
-            $todayUnixTimestamp = Carbon::today()->timestamp;
             $firstMonthUnixTimestamp = Carbon::now()->startOfMonth()->timestamp;
             $lastMonthUnixTimestamp = Carbon::now()->endOfMonth()->timestamp;
+            $todayUnixTimestamp = Carbon::yesterday()->timestamp;
 
             // get all timeoff in this month
             $timeoffs = $this->employeeTimeoffRepo->list(
@@ -2108,7 +2108,7 @@ class EmployeeService
                 message: "Success",
                 data: [
                     'today' => $todayTimeoff,
-                    'timeoff' => $timeoffs,
+                    // 'timeoff' => $timeoffs,
                 ]
             );
         } catch (\Throwable $th) {
