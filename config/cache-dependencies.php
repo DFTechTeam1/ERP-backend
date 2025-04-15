@@ -12,6 +12,7 @@ return [
         CacheKey::HrDashboardLoS->value,
         CacheKey::HrDashboardActiveStaff->value,
         CacheKey::HrDashboardGenderDiversity->value,
-        CacheKey::HrDashboardJobLevel->value
+        CacheKey::HrDashboardJobLevel->value,
+        CacheKey::HrDashboardAgeAverage->value
     ]
 ];

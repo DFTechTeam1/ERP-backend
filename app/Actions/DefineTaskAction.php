@@ -406,8 +406,13 @@ class DefineTaskAction
         $taskPics = collect($task->pics)->pluck('employee_id')->toArray();
 
         if (
-            ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics)) ||
-            ($task->status == TaskStatus::WaitingDistribute->value && $this->hasSuperPower())
+            (
+                in_array($this->user->employee_id, $taskPics)
+            ) &&
+            (
+                ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics)) ||
+                ($task->status == TaskStatus::WaitingDistribute->value && $this->hasSuperPower())
+            )
         ) {
             $distribute = $this->buildOutput($key, false, $detail);
         }

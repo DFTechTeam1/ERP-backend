@@ -13,7 +13,7 @@ class ChartService {
     public function buildBarSeries(string $name, array $data): array
     {
         return [
-            [ 'name' => 'Length of Service', 'data' => $data ]
+            [ 'name' => $name, 'data' => $data ]
         ];
     }
 
