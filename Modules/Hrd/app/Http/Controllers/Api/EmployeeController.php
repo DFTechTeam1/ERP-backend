@@ -15,6 +15,7 @@ use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
 use Modules\Hrd\Http\Requests\Employee\UpdateBasicInfo;
 use Modules\Hrd\Http\Requests\Employee\UpdateIdentity;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeeService;
 
@@ -409,8 +410,6 @@ class EmployeeController extends Controller
      */
     public function getDashboardElement(): \Illuminate\Http\JsonResponse
     {
-        Cache::forget(CacheKey::HrDashboardEmoloyeeList->value);
-
         $employees = Cache::get(CacheKey::HrDashboardEmoloyeeList->value);
         if (!$employees) {
             $employees = Cache::rememberForever(CacheKey::HrDashboardEmoloyeeList->value, function () {
@@ -425,11 +424,11 @@ class EmployeeController extends Controller
             generalResponse(
                 message: "Success",
                 data: [
-                    // 'employmentStatus' => $this->employeeService->getEmploymentChart($employees)['data'],
-                    // 'lengthOfService' => $this->employeeService->getLengthOfServiceChart(employees: $employees)['data'],
-                    // 'activeStaff' => $this->employeeService->getActiveStaffChart()['data'],
-                    // 'genderDiversity' => $this->employeeService->getGenderDiversityChart(employees: $employees)['data'],
-                    // 'jobLevel' => $this->employeeService->getJobLevelChart(employees: $employees)['data'],
+                    'employmentStatus' => $this->employeeService->getEmploymentChart($employees)['data'],
+                    'lengthOfService' => $this->employeeService->getLengthOfServiceChart(employees: $employees)['data'],
+                    'activeStaff' => $this->employeeService->getActiveStaffChart()['data'],
+                    'genderDiversity' => $this->employeeService->getGenderDiversityChart(employees: $employees)['data'],
+                    'jobLevel' => $this->employeeService->getJobLevelChart(employees: $employees)['data'],
                     'ageAverage' => $this->employeeService->getAgeAverageChart(employees: $employees)['data']
                 ]
             )
