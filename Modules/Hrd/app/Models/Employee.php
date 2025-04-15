@@ -149,8 +149,25 @@ class Employee extends Model
         'martial_text',
         'blood_type_text',
         'religion_text',
-        'length_of_service_year'
+        'length_of_service_year',
+        'human_age'
     ];
+
+    public function humanAge(): Attribute
+    {
+        $output = 0;
+
+        if (isset($this->attributes['date_of_birth'])) {
+            $now = Carbon::now();
+            $birth = Carbon::parse($this->attributes['date_of_birth']);
+
+            $output = number_format(num: $birth->diffInYears($now));
+        }
+
+        return Attribute::make(
+            get: fn() => $output
+        );
+    }
 
     /**
      * Determines how long to work in years
