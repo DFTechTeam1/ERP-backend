@@ -8,8 +8,10 @@ use App\Enums\Employee\ProbationStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
+use App\Enums\System\BaseRole;
 use App\Exceptions\EmployeeException;
 use App\Exports\EmployeeExport;
+use App\Models\User;
 use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
@@ -402,7 +404,15 @@ class EmployeeService
 
             $position = implode(',', $positionAsVJ);
 
-            $data = $this->repo->list('uid,name,id', "position_id IN (" . $position . ") and status != " . \App\Enums\Employee\Status::Inactive->value)->toArray();
+            $where = "position_id IN (" . $position . ") and status != " . \App\Enums\Employee\Status::Inactive->value;
+
+            // add position project manager entertainment
+            $projectManagerEntertainment = User::role(BaseRole::ProjectManagerEntertainment->value)->first();
+            if ($projectManagerEntertainment) {
+                $where .= " OR id = " . $projectManagerEntertainment->employee_id;
+            }
+
+            $data = $this->repo->list('uid,name,id', $where)->toArray();
 
             $output = collect($data)->map(function ($employee) use ($project) {
                 // check the calendar
