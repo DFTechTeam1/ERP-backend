@@ -9,8 +9,10 @@ use App\Enums\Employee\ProbationStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
+use App\Enums\System\BaseRole;
 use App\Exceptions\EmployeeException;
 use App\Exports\EmployeeExport;
+use App\Models\User;
 use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Services\ChartService;
@@ -425,7 +427,15 @@ class EmployeeService
 
             $position = implode(',', $positionAsVJ);
 
-            $data = $this->repo->list('uid,name,id', "position_id IN (" . $position . ") and status != " . \App\Enums\Employee\Status::Inactive->value)->toArray();
+            $where = "position_id IN (" . $position . ") and status != " . \App\Enums\Employee\Status::Inactive->value;
+
+            // add position project manager entertainment
+            $projectManagerEntertainment = User::role(BaseRole::ProjectManagerEntertainment->value)->first();
+            if ($projectManagerEntertainment) {
+                $where .= " OR id = " . $projectManagerEntertainment->employee_id;
+            }
+
+            $data = $this->repo->list('uid,name,id', $where)->toArray();
 
             $output = collect($data)->map(function ($employee) use ($project) {
                 // check the calendar
@@ -2110,6 +2120,57 @@ class EmployeeService
                     'today' => $todayTimeoff,
                     // 'timeoff' => $timeoffs,
                 ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function getAgeAverageChart(object $employees): array
+    {
+        try {
+            $output = Cache::get(CacheKey::HrDashboardAgeAverage->value);
+            if (!$output) {
+                $output = Cache::rememberForever(CacheKey::HrDashboardAgeAverage->value, function () use ($employees) {
+                    // < 18 yr
+                    $firstData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age < 18;
+                    })->count();
+
+                    // 18 - 24
+                    $secondData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age >= 18 && $filter->human_age < 24;
+                    })->count();
+
+                    // 25 - 34
+                    $thirdData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age > 24 && $filter->human_age <= 34;
+                    })->count();
+
+                    // 35 - 49 yr
+                    $fourthData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age > 34 && $filter->human_age <= 49;
+                    })->count();
+
+                    // 50++ yr
+                    $lastData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age > 49;
+                    })->count();
+
+                    $series = $this->chart->buildBarSeries(name: 'Age Average', data: [$firstData, $secondData, $thirdData, $fourthData, $lastData]);
+
+                    $options = $this->chart->buildBarOptions(xaxisCategories: ["< 18", "18 - 24", "25 - 34", "35 - 49", "50+"]);
+
+                    return [
+                        'series' => $series,
+                        "options" => $options
+                    ];
+                });
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: $output
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
