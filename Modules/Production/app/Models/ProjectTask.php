@@ -41,6 +41,7 @@ class ProjectTask extends Model
         'current_pics',
         'current_board',
         'is_approved',
+        'is_modeler_task',
     ];
 
     protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail', 'task_status', 'task_status_color', 'revise_detail'];

@@ -21,6 +21,10 @@ class DefineTaskAction
 
     private $isMyCurrentTask;
 
+    private $leadModelerUid;
+
+    private $showForLeadModeler;
+
     protected function getAvailableButton(): array
     {
         return [
@@ -158,6 +162,14 @@ class DefineTaskAction
         $this->defineMyTask($task);
         $this->defineMyCurrentTask($task);
 
+        $leadModelerUid = getSettingByKey('lead_3d_modeller');
+        $this->leadModelerUid = getIdFromUid($leadModelerUid, new Employee());
+
+        $this->showForLeadModeler = false;
+        if ($task->is_modeler_task && $this->user->employee_id == $this->leadModelerUid) {
+            $this->showForLeadModeler = true;
+        }
+
         $output = [];
         foreach ($this->getAvailableButton() as $button => $detail) {
             $caps = ucfirst($button);
@@ -182,9 +194,21 @@ class DefineTaskAction
     {
         $dates = null;
 
-        if (($this->hasSuperPower() && $this->user->hasPermissionTo('add_task_deadline'))) {
-        }
-        $dates = $this->buildOutput($key, $this->hasSuperPower() ? false : (!$this->isMyTask ? true : ($task->status == TaskStatus::WaitingApproval->value ? true : false)), $detail);
+        $dates = $this->buildOutput(
+            key: $key,
+            disabled: $this->hasSuperPower() || $this->showForLeadModeler ?
+            false :
+            (
+                !$this->isMyTask ?
+                true :
+                (
+                    $task->status == TaskStatus::WaitingApproval->value ?
+                    true :
+                    false
+                )
+            ),
+            detail: $detail
+        );
 
         return $dates;
     }
@@ -204,7 +228,7 @@ class DefineTaskAction
     {
         $members = null;
 
-        if ($this->hasSuperPower()) {
+        if ($this->hasSuperPower() || $this->showForLeadModeler) {
             $members = $this->buildOutput($key, false, $detail);
         }
 
@@ -235,9 +259,21 @@ class DefineTaskAction
     {
         $attach = null;
 
-        if ($this->isMyTask || $this->hasSuperPower()) {
-        }
-        $attach = $this->buildOutput($key, $this->hasSuperPower() ? false : (!$this->isMyTask ? true : ($this->isMyTask && TaskStatus::WaitingApproval->value == $task->status ? true : false)), $detail);
+        $attach = $this->buildOutput(
+            key: $key,
+            disabled: $this->hasSuperPower() || $this->showForLeadModeler ?
+            false :
+            (
+                !$this->isMyTask ?
+                true :
+                (
+                    $this->isMyTask && TaskStatus::WaitingApproval->value == $task->status ?
+                    true :
+                    false
+                )
+            ),
+            detail: $detail
+        );
 
         return $attach;
     }
