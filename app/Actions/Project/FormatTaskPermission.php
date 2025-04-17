@@ -179,19 +179,19 @@ class FormatTaskPermission
                 if (
                     ($this->user->hasPermissionTo('edit_task_description')) &&
                     (hasSuperPower(projectId: $projectId) ||
-                    hasLittlePower(taskPics: $task['pics']))
+                    hasLittlePower(task: $task))
                 ) $outputTask[$keyTask]['can_edit_description'] = true;
 
                 if (
                     ($this->user->hasPermissionTo('add_task_description')) &&
                     (hasSuperPower(projectId: $projectId) ||
-                    hasLittlePower(taskPics: $task['pics']))
+                    hasLittlePower(task: $task))
                 ) $outputTask[$keyTask]['can_add_description'] = true;
 
                 if (
                     ($this->user->hasPermissionTo('delete_task_description')) &&
                     (hasSuperPower(projectId: $projectId) ||
-                    hasLittlePower(taskPics: $task['pics']))
+                    hasLittlePower(task: $task))
                 ) $outputTask[$keyTask]['can_delete_description'] = true;
 
                 $outputTask[$keyTask]['show_hold_button'] = $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value || $task['status'] == \App\Enums\Production\TaskStatus::Revise->value;
@@ -203,7 +203,7 @@ class FormatTaskPermission
                 $outputTask[$keyTask]['can_delete_attachment'] = false;
                 if (
                     hasSuperPower(projectId: $projectId) ||
-                    hasLittlePower(taskPics: $task['pics'])
+                    hasLittlePower(task: $task)
                 ) $outputTask[$keyTask]['can_delete_attachment'] = true;
 
                 // push 'is_project_pic' to task collection

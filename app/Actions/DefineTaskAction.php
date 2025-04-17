@@ -443,7 +443,7 @@ class DefineTaskAction
 
         if (
             (
-                in_array($this->user->employee_id, $taskPics)
+                (in_array($this->user->employee_id, $taskPics) || $this->hasSuperPower())
             ) &&
             (
                 ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics)) ||
