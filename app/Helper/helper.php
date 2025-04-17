@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
+use Modules\Hrd\Models\Employee;
 use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
@@ -957,6 +958,48 @@ if (!function_exists('getTalentaUserIdByEmail')) {
                 $output = $response['data']['employees'][0]['user_id'];
             }
         }
+    }
+}
+
+/**
+ * Define authorized user is has a super power or not
+ *
+ * @param int $projectId
+ * @return boolean
+ */
+if (!function_exists('hasSuperPower')) {
+    function hasSuperPower(int $projectId): bool {
+        $user = auth()->user();
+        $employeeId = $user->employee_id;
+        $isProjectPic = isProjectPIC($projectId, $employeeId);
+        $isDirector = isDirector();
+
+        return $isDirector || $isProjectPic || $user->hasRole(BaseRole::Root->value) ? true : false;
+    }
+}
+
+/**
+ * Define user have just LITTLE POWER or not
+ * This LITTLE POWER IS SAME WITH LEAD MODELER POSITION
+ *
+ * @param object $taskPics
+ * @return boolean
+ */
+if (!function_exists('hasLittlePower')) {
+    function hasLittlePower(object $task): bool {
+        $taskPics = $task['pics'];
+
+        $user = auth()->user();
+        $leadModeller = getSettingByKey('lead_3d_modeller');
+        $leadModeller = getIdFromUid($leadModeller, new Employee());
+
+        $output = (bool) ($leadModeller) &&
+        (
+            in_array($leadModeller, collect($taskPics)->pluck('employee_id')->toArray()) &&
+            $leadModeller == $user->employee_id
+        );
+
+        if ($user->employee_id == $leadModeller && $task['is_modeler_task']) $output = true;
 
         return $output;
     }
