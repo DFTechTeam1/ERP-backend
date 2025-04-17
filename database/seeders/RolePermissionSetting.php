@@ -655,6 +655,18 @@ class RolePermissionSetting extends Seeder
                 $this->getProjectManagerRole(),
                 $this->getProjectManagerAdminRole(),
             ]],
+            ['name' => 'add_task_description', 'group' => 'task', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+            ]],
+            ['name' => 'delete_task_description', 'group' => 'task', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+            ]],
             ['name' => 'delete_task', 'group' => 'task', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
@@ -677,6 +689,15 @@ class RolePermissionSetting extends Seeder
                 $this->getProjectManagerEntertainmentRole(),
             ]],
             ['name' => 'add_task_attachment', 'group' => 'task', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+                $this->getProductionRole(),
+                $this->getEntertainmentRole(),
+                $this->getProjectManagerEntertainmentRole(),
+            ]],
+            ['name' => 'delete_task_attachment', 'group' => 'task', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
                 $this->getProjectManagerRole(),
