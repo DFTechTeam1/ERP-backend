@@ -2973,20 +2973,6 @@ class ProjectService
                 $payload['assign_to_me'] = 1;
             }
 
-            logging("payload", $payload);
-
-            /**
-             * If this request teams contain all member of 3D modeler including lead modeler, it'll cause the anonymous issue
-             * Lead modeler will not appear in the task, but other member do.
-             * We need to take off the lead modeler from the task first, than reassign
-             */
-            $this->detachTaskPic(
-                ids: [$leadModeller],
-                taskId: $taskId,
-                removeFromHistory: true,
-                doLogging: true
-            );
-
             if ($payload['assign_to_me'] == 1) { // auto change status to on progress
                 $this->taskRepo->update([
                     'status' => TaskStatus::OnProgress->value
