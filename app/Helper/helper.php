@@ -964,11 +964,21 @@ if (!function_exists('hasSuperPower')) {
  * @return boolean
  */
 if (!function_exists('hasLittlePower')) {
-    function hasLittlePower(object $taskPics): bool {
+    function hasLittlePower(object $task): bool {
+        $taskPics = $task['pics'];
+
         $user = auth()->user();
         $leadModeller = getSettingByKey('lead_3d_modeller');
         $leadModeller = getIdFromUid($leadModeller, new Employee());
 
-        return (bool) ($leadModeller) && (in_array($leadModeller, collect($taskPics)->pluck('employee_id')->toArray()) && $leadModeller == $user->employee_id);
+        $output = (bool) ($leadModeller) &&
+        (
+            in_array($leadModeller, collect($taskPics)->pluck('employee_id')->toArray()) &&
+            $leadModeller == $user->employee_id
+        );
+
+        if ($user->employee_id == $leadModeller && $task['is_modeler_task']) $output = true;
+
+        return $output;
     }
 }
