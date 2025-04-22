@@ -88,42 +88,48 @@ class DashboardController extends Controller
      */
     public function getLogs(): \Illuminate\Http\JsonResponse
     {
-        $output = [];
-        $entry = '';
-        $file = File::lines(storage_path('logs/laravel.log'));
-        foreach ($file as $line) {
-                // New log entry starts with timestamp
-            if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line)) {
-                // Store previous entry if it was an ERROR
-                if ($entry && str_contains($entry, '.ERROR:')) {
-                    $output[] = $entry;
+        try {
+            $output = [];
+            $entry = '';
+            $file = File::lines(storage_path('logs/laravel.log'));
+            foreach ($file as $line) {
+                    // New log entry starts with timestamp
+                if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line)) {
+                    // Store previous entry if it was an ERROR
+                    if ($entry && str_contains($entry, '.ERROR:')) {
+                        $output[] = $entry;
+                    }
+                    $entry = $line;
+                } else {
+                    $entry .= "\n" . $line;
                 }
-                $entry = $line;
-            } else {
-                $entry .= "\n" . $line;
             }
+
+            if ($entry && str_contains($entry, '.ERROR:')) {
+                $output[] = $entry;
+            }
+
+            // only return a view of characters
+            $output = collect($output)->map(function ($mapping, $key) {
+                $mapping = \Illuminate\Support\Str::limit($mapping, 500);
+
+                return [
+                    'log' => $mapping,
+                    'id' => $key + 1
+                ];
+            })->all();
+            $output = array_reverse($output);
+
+            return apiResponse(
+                generalResponse(
+                    message: "Success",
+                    data: $output
+                )
+            );
+        } catch (\Throwable $th) {
+            return apiResponse(
+                errorResponse($th)
+            );
         }
-
-        if ($entry && str_contains($entry, '.ERROR:')) {
-            $output[] = $entry;
-        }
-
-        // only return a view of characters
-        $output = collect($output)->map(function ($mapping, $key) {
-            $mapping = \Illuminate\Support\Str::limit($mapping, 500);
-
-            return [
-                'log' => $mapping,
-                'id' => $key + 1
-            ];
-        })->all();
-        $output = array_reverse($output);
-
-        return apiResponse(
-            generalResponse(
-                message: "Success",
-                data: $output
-            )
-        );
     }
 }

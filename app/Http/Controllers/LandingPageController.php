@@ -53,39 +53,6 @@ class LandingPageController extends Controller
 
     public function index()
     {
-        try {
-            $output = [];
-            $entry = '';
-            $file = File::lines(storage_path('logs/laravel.log'));
-            foreach ($file as $line) {
-                 // New log entry starts with timestamp
-                if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line)) {
-                    // Store previous entry if it was an ERROR
-                    if ($entry && str_contains($entry, '.ERROR:')) {
-                        $output[] = $entry;
-                    }
-                    $entry = $line;
-                } else {
-                    $entry .= "\n" . $line;
-                }
-            }
-
-            if ($entry && str_contains($entry, '.ERROR:')) {
-                $output[] = $entry;
-            }
-
-            // only return a view of characters
-            $output = collect($output)->map(function ($mapping) {
-                $mapping = Str::limit($mapping, 500);
-
-                return $mapping;
-            })->all();
-            $output = array_reverse($output);
-
-            return $output;
-        } catch (\Throwable $th) {
-            return errorResponse($th);
-        }
         // $employees = array(
         //     array('id' => '1','name' => 'Wesley Wiyadi','position_id' => '1'),
         //     array('id' => '2','name' => 'Edwin Chandra Wijaya Ngo','position_id' => '2'),
