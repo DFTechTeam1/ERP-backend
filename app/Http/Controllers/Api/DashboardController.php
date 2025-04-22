@@ -129,6 +129,7 @@ class DashboardController extends Controller
                 )
             );
         } catch (\Throwable $th) {
+            Log::debug("ERROR LOG", [$th]);
             return apiResponse(
                 errorResponse($th)
             );
