@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -91,20 +92,41 @@ class DashboardController extends Controller
     {
         try {
             $output = [];
-            $entry = '';
-            Log::debug('file', [file_exists(storage_path('logs/laravel.log'))]);
-            Log::debug('READ FILE', [File::lines(storage_path('logs/laravel.log'))]);
-            $file = File::lines(storage_path('logs/laravel.log'));
-            foreach ($file as $line) {
-                    // New log entry starts with timestamp
+            $range = [Carbon::now()->subDay()->format('Y-m-d'), Carbon::now()->format('Y-m-d')];
+            foreach ($range as $perDate) {
+                $logPerDate = $this->readLogs($perDate);
+                $output = array_merge($output, $logPerDate);
+            }
+
+            return apiResponse(
+                generalResponse(
+                    message: "Success",
+                    data: $output
+                )
+            );
+        } catch (\Throwable $th) {
+            return apiResponse(
+                errorResponse($th)
+            );
+        }
+    }
+
+    protected function readLogs(string $date)
+    {
+        $output = [];
+        $entry = '';
+
+        $path = storage_path("logs/laravel-{$date}.log");
+        if (file_exists($path)) {
+            $file = fopen($path, 'r');
+            while(($line = fgets($file)) != false) {
                 if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line)) {
-                    // Store previous entry if it was an ERROR
                     if ($entry && str_contains($entry, '.ERROR:')) {
-                        $output[] = $entry;
+                        $output[] = \Illuminate\Support\Str::limit($entry, 500);
                     }
                     $entry = $line;
                 } else {
-                    $entry .= "\n" . $line;
+                    $entry .= $line;
                 }
             }
 
@@ -121,19 +143,10 @@ class DashboardController extends Controller
                     'id' => $key + 1
                 ];
             })->all();
-            $output = array_reverse($output);
-
-            return apiResponse(
-                generalResponse(
-                    message: "Success",
-                    data: $output
-                )
-            );
-        } catch (\Throwable $th) {
-            Log::debug("ERROR LOG", [$th]);
-            return apiResponse(
-                errorResponse($th)
-            );
         }
+
+        $output =  array_reverse($output);
+
+        return $output;
     }
 }
