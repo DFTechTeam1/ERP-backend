@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -92,6 +93,7 @@ class DashboardController extends Controller
             $output = [];
             $entry = '';
             $file = File::lines(storage_path('logs/laravel.log'));
+            Log::debug('file', [$file]);
             foreach ($file as $line) {
                     // New log entry starts with timestamp
                 if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line)) {
