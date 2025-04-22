@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class DashboardController extends Controller
 {
@@ -41,7 +42,7 @@ class DashboardController extends Controller
     {
         return apiResponse($this->service->getProjectCalendars());
     }
-    
+
     public function getProjectDeadline()
     {
         return apiResponse($this->service->getProjectDeadline());
@@ -77,5 +78,51 @@ class DashboardController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Function to get all logs
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getLogs(): \Illuminate\Http\JsonResponse
+    {
+        $output = [];
+        $entry = '';
+        $file = File::lines(storage_path('logs/laravel.log'));
+        foreach ($file as $line) {
+                // New log entry starts with timestamp
+            if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line)) {
+                // Store previous entry if it was an ERROR
+                if ($entry && str_contains($entry, '.ERROR:')) {
+                    $output[] = $entry;
+                }
+                $entry = $line;
+            } else {
+                $entry .= "\n" . $line;
+            }
+        }
+
+        if ($entry && str_contains($entry, '.ERROR:')) {
+            $output[] = $entry;
+        }
+
+        // only return a view of characters
+        $output = collect($output)->map(function ($mapping, $key) {
+            $mapping = \Illuminate\Support\Str::limit($mapping, 500);
+
+            return [
+                'log' => $mapping,
+                'id' => $key + 1
+            ];
+        })->all();
+        $output = array_reverse($output);
+
+        return apiResponse(
+            generalResponse(
+                message: "Success",
+                data: $output
+            )
+        );
     }
 }

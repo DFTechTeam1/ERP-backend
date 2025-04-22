@@ -472,7 +472,11 @@ if (!function_exists('curlRequest')) {
 
 if (!function_exists('logging')) {
     function logging($key, array $value) {
-        \Illuminate\Support\Facades\Log::debug($key, $value);
+        if ($key == 'error: ') {
+            \Illuminate\Support\Facades\Log::error($key, $value);
+        } else {
+            \Illuminate\Support\Facades\Log::debug($key, $value);
+        }
     }
 }
 
