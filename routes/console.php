@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\ClearLogSchedule;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -10,6 +11,9 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 Schedule::command(ClearAllCache::class)->dailyAt('00.10');
+
+// clear logs
+Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 
 \Illuminate\Support\Facades\Schedule::call(new \App\Schedules\PostNotifyCompleteProject)->dailyAt('00:01');
 
