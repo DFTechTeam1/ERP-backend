@@ -1576,20 +1576,23 @@ class ProjectService
 
     public function updateDetailProjectFromOtherService(string $projectUid)
     {
-        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+        // $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
-        $currentData = getCache('detailProject' . $projectId);
+        // $currentData = getCache('detailProject' . $projectId);
 
-        if ($currentData) {
-            $boards = $this->formattedBoards($projectUid);
-            $currentData['boards'] = $boards;
+        // if ($currentData) {
+        //     $boards = $this->formattedBoards($projectUid);
+        //     $currentData['boards'] = $boards;
 
-            $currentData['boards'] = $boards;
+        //     $currentData['boards'] = $boards;
 
-            storeCache('detailProject' . $projectId, $currentData);
+        //     storeCache('detailProject' . $projectId, $currentData);
 
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
-        }
+        //     $currentData = $this->formatTasksPermission($currentData, $projectId);
+        // }
+        $this->detailCacheAction->handle($projectUid, [
+            'boards' => FormatBoards::run($projectUid)
+        ]);
     }
 
     /**
