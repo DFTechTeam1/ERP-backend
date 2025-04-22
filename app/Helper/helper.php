@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
+use Modules\Hrd\Models\Employee;
 use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
@@ -308,28 +309,28 @@ if (!function_exists('uploadImageandCompress')) {
     ) {
         try {
             $path = storage_path("app/public/{$path}");
-    
+
             $ext = $image->getClientOriginalExtension();
             $originalName = 'image';
             $datetime = strtotime('now') . random_int(1,8);
-    
+
             $name = "{$originalName}_{$datetime}.{$extTarget}";
-    
+
             // create file
             if (!is_dir($path)) {
                 File::makeDirectory($path, 0777, true);
             }
-    
+
             $filepath = $path . '/' . $name;
-    
+
     //        Image::read($image)->toWebp($compressValue)->save($filepath);
-    
+
             $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
             $newImage = $imageManager->read($image);
             $newImage->scale(height: 400);
             $newImage->toWebp(60);
             $newImage->save($filepath);
-    
+
             return $name;
         } catch (\Throwable $th) {
             return false;
@@ -471,7 +472,11 @@ if (!function_exists('curlRequest')) {
 
 if (!function_exists('logging')) {
     function logging($key, array $value) {
-        \Illuminate\Support\Facades\Log::debug($key, $value);
+        if ($key == 'error: ') {
+            \Illuminate\Support\Facades\Log::error($key, $value);
+        } else {
+            \Illuminate\Support\Facades\Log::debug($key, $value);
+        }
     }
 }
 
@@ -632,7 +637,7 @@ if (!function_exists('parseUserAgent')) {
             } elseif (strpos($userAgent, 'MSIE') !== false || strpos($userAgent, 'Trident') !== false) {
                 $browser = 'Internet Explorer';
             }
-    
+
             // Detect OS
             if (strpos($userAgent, 'Windows NT') !== false) {
                 $os = 'Windows';
@@ -659,7 +664,7 @@ if (!function_exists('getUserAgentInfo')) {
 
 if (!function_exists('getClientIp')) {
     function getClientIp() {
-        
+
         $ip = '';
         if (!App::runningInConsole()) {
             if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
@@ -764,7 +769,7 @@ if (!function_exists('formatSearchConditions')) {
             $where .= $data['field'] . $condition . $value . ' and ';
         }
         $where = rtrim($where, " and");
-        
+
         return $where;
     }
 }
@@ -935,5 +940,49 @@ if (!function_exists('generateRandomColor')) {
         $hash = md5($email);
 
         return '#' . substr($hash, 0, 6);
+    }
+}
+
+/**
+ * Define authorized user is has a super power or not
+ *
+ * @param int $projectId
+ * @return boolean
+ */
+if (!function_exists('hasSuperPower')) {
+    function hasSuperPower(int $projectId): bool {
+        $user = auth()->user();
+        $employeeId = $user->employee_id;
+        $isProjectPic = isProjectPIC($projectId, $employeeId);
+        $isDirector = isDirector();
+
+        return $isDirector || $isProjectPic || $user->hasRole(BaseRole::Root->value) ? true : false;
+    }
+}
+
+/**
+ * Define user have just LITTLE POWER or not
+ * This LITTLE POWER IS SAME WITH LEAD MODELER POSITION
+ *
+ * @param object $taskPics
+ * @return boolean
+ */
+if (!function_exists('hasLittlePower')) {
+    function hasLittlePower(object $task): bool {
+        $taskPics = $task['pics'];
+
+        $user = auth()->user();
+        $leadModeller = getSettingByKey('lead_3d_modeller');
+        $leadModeller = getIdFromUid($leadModeller, new Employee());
+
+        $output = (bool) ($leadModeller) &&
+        (
+            in_array($leadModeller, collect($taskPics)->pluck('employee_id')->toArray()) &&
+            $leadModeller == $user->employee_id
+        );
+
+        if ($user->employee_id == $leadModeller && $task['is_modeler_task']) $output = true;
+
+        return $output;
     }
 }

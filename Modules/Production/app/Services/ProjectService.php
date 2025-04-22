@@ -1249,7 +1249,6 @@ class ProjectService
                 ]
             ]
         );
-        logging("TEAMS", $teams->toArray());
 
         if (count($teams) > 0) {
             $teams = collect($teams)->map(function ($team) {
@@ -1577,20 +1576,23 @@ class ProjectService
 
     public function updateDetailProjectFromOtherService(string $projectUid)
     {
-        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+        // $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
 
-        $currentData = getCache('detailProject' . $projectId);
+        // $currentData = getCache('detailProject' . $projectId);
 
-        if ($currentData) {
-            $boards = $this->formattedBoards($projectUid);
-            $currentData['boards'] = $boards;
+        // if ($currentData) {
+        //     $boards = $this->formattedBoards($projectUid);
+        //     $currentData['boards'] = $boards;
 
-            $currentData['boards'] = $boards;
+        //     $currentData['boards'] = $boards;
 
-            storeCache('detailProject' . $projectId, $currentData);
+        //     storeCache('detailProject' . $projectId, $currentData);
 
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
-        }
+        //     $currentData = $this->formatTasksPermission($currentData, $projectId);
+        // }
+        $this->detailCacheAction->handle($projectUid, [
+            'boards' => FormatBoards::run($projectUid)
+        ]);
     }
 
     /**
@@ -1698,6 +1700,47 @@ class ProjectService
         $task['is_active'] = $isActive;
 
         $task['has_task_access'] = $haveTaskAccess;
+
+        // define user can add, edit or delete the task description
+        $task['can_add_description'] = false;
+        $task['can_edit_description'] = false;
+        $task['can_delete_description'] = false;
+        $user = auth()->user();
+        /**
+         * Who can modify the description?
+         * 1. Project Manager
+         * 2. Root
+         * 3. Project Manager Admin
+         * 4. Lead Modeller
+         * 5. Who own the modify description role
+         * 6. Who are the PIC's of this event
+         */
+        if (
+            ($user->hasPermissionTo('edit_task_description')) &&
+            (hasSuperPower(projectId: $task['project_id']) ||
+            hasLittlePower(task: $task))
+        ) $task['can_edit_description'] = true;
+
+        if (
+            ($user->hasPermissionTo('add_task_description')) &&
+            (hasSuperPower(projectId: $task['project_id']) ||
+            hasLittlePower(task: $task))
+        ) $task['can_add_description'] = true;
+
+        if (
+            ($user->hasPermissionTo('delete_task_description')) &&
+            (hasSuperPower(projectId: $task['project_id']) ||
+            hasLittlePower(task: $task))
+        ) $task['can_delete_description'] = true;
+
+        /**
+         * Define who can modify task attachment result
+         */
+        $task['can_delete_attachment'] = false;
+        if (
+            hasSuperPower(projectId: $task['project_id']) ||
+            hasLittlePower(task: $task)
+        ) $task['can_delete_attachment'] = true;
 
         return $task;
     }
@@ -2463,14 +2506,9 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskId);
 
-            $currentData = getCache('detailProject' . $task->project_id);
-
-            $boards = $this->formattedBoards($task->project->uid);
-            $currentData['boards'] = $boards;
-
-            $currentData['boards'] = $boards;
-
-            $currentData = $this->formatTasksPermission($currentData, $task->project_id);
+            $currentData = $this->detailCacheAction->handle($task->project->uid, [
+                'boards' => FormatBoards::run($task->project->uid)
+            ]);
 
             DB::commit();
 
@@ -2514,8 +2552,11 @@ class ProjectService
         DB::beginTransaction();
         try {
             // validate pic
+            /**
+             * Cannot combine lead modeler with other employee
+             */
             $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
-            $isForLeadModeller = (isset($data['users'])) && (!empty($data['users'])) && ($data['users'][0] == $leadModeller) ? true : false;
+            $isForLeadModeller = (isset($data['users'])) && (!empty($data['users'])) && (count($data['users'])  == 1) && ($data['users'][0] == $leadModeller) ? true : false;
 
             $isValid = $this->validatePicTask($data['users']);
 
@@ -2535,7 +2576,7 @@ class ProjectService
                 if (!$checkPic) {
                     $taskDetail = $this->taskRepo->show($taskUid, 'id,project_id');
 
-                    // add to pic history
+                    // add to pic historyk
                     $this->taskPicHistory->store([
                         'project_id' => $taskDetail->project_id,
                         'project_task_id' => $taskId,
@@ -2571,8 +2612,6 @@ class ProjectService
                         }
                     }
 
-
-
                     $this->loggingTask([
                         'task_id' => $taskId,
                         'employee_uid' => $user
@@ -2580,9 +2619,12 @@ class ProjectService
                 }
             }
 
-
-
-            $this->detachTaskPic($data['removed'], $taskId, true, true);
+            $this->detachTaskPic(
+                ids: $data['removed'],
+                taskId: $taskId,
+                isEmployeeUid: true,
+                removeFromHistory: true
+            );
 
             // change task status
             if (!$isRevise && $needChangeTaskStatus) { // see PHPDOC
@@ -2630,6 +2672,12 @@ class ProjectService
                 }
             }
 
+            /**
+             * We have is_modeler_task column in project task do define task is for modeler team or not
+             * Because of that we need update the column every pic is removed or new pic is assigned
+             */
+
+
             DB::commit();
 
             $message = __('notification.memberAdded');
@@ -2659,8 +2707,14 @@ class ProjectService
      * @param boolean $isEmployeeUid
      * @return void
      */
-    public function detachTaskPic(array $ids, int $taskId, bool $isEmployeeUid = true, bool $removeFromHistory = false, string $message = '')
-    {
+    public function detachTaskPic(
+        array $ids,
+        int $taskId,
+        bool $isEmployeeUid = true,
+        bool $removeFromHistory = false,
+        string $message = '',
+        bool $doLogging = true // sometime we don't need to log the action
+    ) {
         foreach ($ids as $removedUser) {
             if ($isEmployeeUid) {
                 $removedEmployeeId = getIdFromUid($removedUser, new \Modules\Hrd\Models\Employee());
@@ -2684,11 +2738,13 @@ class ProjectService
                 $logMessage = $message;
             }
 
-            $this->loggingTask([
-                'task_id' => $taskId,
-                'employee_uid' => $removedUser,
-                'message' => $logMessage
-            ], 'removeMemberTask');
+            if ($doLogging) {
+                $this->loggingTask([
+                    'task_id' => $taskId,
+                    'employee_uid' => $removedUser,
+                    'message' => $logMessage
+                ], 'removeMemberTask');
+            }
         }
     }
 
@@ -2755,12 +2811,40 @@ class ProjectService
     {
         // validate pic
         $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
+        $specialPosition = $this->generalService->getSettingByKey('special_production_position');
+        $specialPosition = $this->generalService->getIdFromUid($specialPosition, new PositionBackup());
+
         if ((isset($payloadUser)) && (!empty($payloadUser)) && ($leadModeller && count($payloadUser) > 1)) {
             $selectedModeller = collect($payloadUser)->filter(function ($filter) use ($leadModeller) {
                 return $filter != $leadModeller;
             })->values()->toArray();
         }
         $isValid = !isset($selectedModeller) ? true : (count($payloadUser) == count($selectedModeller) ? true : false);
+
+        if (count($payloadUser) > 1) {
+            $employees = $this->employeeRepo->list(
+                select: "id,position_id",
+                where: "uid IN ('" . implode("','", $payloadUser) . "')"
+            );
+            $positionIds = collect($employees)->pluck('position_id')->toArray();
+
+            $filterSpecialPosition = collect($positionIds)->filter(function ($filter) use($specialPosition) {
+                return $filter == $specialPosition;
+            })->values()->count();
+            $filterRegularPosition = collect($positionIds)->filter(function ($filter) use ($specialPosition) {
+                return $filter != $specialPosition;
+            })->values()->count();
+
+            if ($filterSpecialPosition > 0 && $filterRegularPosition > 0) {
+                $isValid = false;
+            }
+
+            // skip if all users are 3d modeller
+            if ($filterSpecialPosition == count($payloadUser)) {
+                $isValid = true;
+            }
+        }
+
 
         return $isValid;
     }
@@ -2873,10 +2957,24 @@ class ProjectService
     {
         try {
             $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
+            $taskId = $this->generalService->getIdFromUid($taskUid, new ProjectTask());
+
+            // check special position
+            $specialPosition = $this->generalService->getSettingByKey('special_production_position');
+            $specialPosition = $this->generalService->getIdFromUid($specialPosition, new PositionBackup());
+            $specialEmployees = $this->employeeRepo->list(
+                select: 'id',
+                where: "position_id = {$specialPosition}"
+            )->count();
+
             $data = [
                 'users' => $payload['teams'],
-                'removed' => [$leadModeller]
+                'removed' => $specialEmployees == count($payload['teams']) ? [] : [$leadModeller]
             ];
+
+            if (count($payload['teams']) == 1 && $leadModeller == $payload['teams'][0]) {
+                $payload['assign_to_me'] = 1;
+            }
 
             if ($payload['assign_to_me'] == 1) { // auto change status to on progress
                 $this->taskRepo->update([
@@ -2892,6 +2990,13 @@ class ProjectService
                     return $distribute;
                 }
             }
+
+            /**
+             * Mark the task as modeler task
+             */
+            $this->taskRepo->update([
+                'is_modeler_task' => true
+            ], $taskUid);
 
             $task = $this->formattedDetailTask($taskUid);
             $currentData = $this->detailCacheAction->handle($projectUid, [
@@ -2959,7 +3064,77 @@ class ProjectService
     }
 
     /**
+     * This function is only used for LEAD MODELER account
+     * If he open the 'members' button in the detail task, it will call this function
+     *
+     * @param string $taskUid
+     * @return array
+     */
+    protected function getProject3DMember(string $taskUid): array
+    {
+        $specialEmployee = $this->generalService->getSettingByKey('special_production_position');
+        $positionId = $this->generalService->getIdFromUid($specialEmployee, new PositionBackup());
+
+        $employees = $this->employeeRepo->list(
+            select: 'uid,id,name,email',
+            where: "position_id = {$positionId}"
+        );
+
+        // define who are still idle who are not
+        $task = $this->taskRepo->show(
+            uid: $taskUid,
+            select: 'id,name',
+            relation: [
+                'pics:id,project_task_id,employee_id'
+            ]
+        );
+        $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+
+        // return [
+        //     'selected' => true,
+        //     'email' => $item->employee->email,
+        //     'name' => $item->employee->name,
+        //     'uid' => $item->employee->uid,
+        //     'id' => $item->employee->id,
+        //     'intital' => $item->employee->initial,
+        //     'image' => asset('images/user.png'),
+        //     'is_lead_modeller' => $isLeadModeller,
+        //     'is_modeler' => (bool) $task->is_modeler_task
+        // ];
+
+        $selectedEmployees = collect((object) $employees)->filter(function ($filter) use ($picIds) {
+            return in_array($filter->id, $picIds);
+        })->map(function($mapping) {
+            $mapping['image'] = asset('images/user.png');
+            $mapping['selected'] = true;
+
+            return $mapping;
+        })->values();
+
+        $availableEmployees = collect((object) $employees)->filter(function ($filter) use ($picIds) {
+            return !in_array($filter->id, $picIds);
+        })->map(function($mapping) {
+            $mapping['image'] = asset('images/user.png');
+            $mapping['selected'] = false;
+
+            return $mapping;
+        })->values();
+
+        $out = [
+            'selected' => $selectedEmployees,
+            'available' => $availableEmployees,
+        ];
+
+        return generalResponse(
+            message: "Success",
+            data: $out
+        );
+    }
+
+    /**
      * Get teams in selected project
+     * If authenticated user is lead modeler, then only show the 3d modeler
+     * Otherwise show other employee
      *
      * @param string $projectId
      * @return array
@@ -2967,6 +3142,12 @@ class ProjectService
     public function getProjectMembers(int $projectId, string $taskId)
     {
         try {
+            $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
+            $leadModeller = $this->generalService->getIdFromUid($leadModeller, new Employee());
+            if (auth()->user()->employee_id == $leadModeller) {
+                return $this->getProject3DMember($taskId);
+            }
+
             $project = $this->repo->show('', '*', [
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id,boss_id',
@@ -2975,14 +3156,14 @@ class ProjectService
             $projectTeams = $this->getProjectTeams($project);
             $teams = $projectTeams['teams'];
 
-            $task = $this->taskRepo->show($taskId, 'id,project_id,project_board_id', [
+            $task = $this->taskRepo->show($taskId, 'id,project_id,project_board_id,is_modeler_task', [
                 'pics:id,project_task_id,employee_id',
                 'pics.employee:id,uid,name,email',
                 'pics.user:id,employee_id'
             ]);
 
             $currentTaskPics = $task->pics->toArray();
-            $outSelected = collect($task->pics)->map(function ($item) {
+            $outSelected = collect($task->pics)->map(function ($item) use ($task) {
                 $isLeadModeller = $item->user->hasPermissionTo('assign_modeller') && $this->generalService->getSettingByKey('lead_3d_modeller') ? true : false;
 
                 return [
@@ -2993,7 +3174,8 @@ class ProjectService
                     'id' => $item->employee->id,
                     'intital' => $item->employee->initial,
                     'image' => asset('images/user.png'),
-                    'is_lead_modeller' => $isLeadModeller
+                    'is_lead_modeller' => $isLeadModeller,
+                    'is_modeler' => (bool) $task->is_modeler_task
                 ];
             })->toArray();
 
@@ -3008,8 +3190,11 @@ class ProjectService
 
             $availableKeys = [];
             $available = [];
-            foreach ($teams as $team) {
+            foreach ($teams as $keyTeam => $team) {
                 if (!in_array($team['uid'], collect($outSelected)->pluck('uid')->toArray())) {
+                    if ($team) {
+                        $team['is_modeler'] = false;
+                    }
                     $available[] = $team;
                 }
             }
@@ -3474,14 +3659,9 @@ class ProjectService
 
         $task = $this->formattedDetailTask($taskUid);
 
-        $cache = $this->getDetailProjectCache($projectUid);
-        $currentData = $cache['cache'];
-        $projectId = $cache['projectId'];
-
-        $boards = $this->formattedBoards($projectUid);
-        $currentData['boards'] = $boards;
-
-        storeCache('detailProject' . $projectId, $currentData);
+        $currentData = $this->detailCacheAction->handle($projectUid, [
+            'boards' => FormatBoards::run($projectUid)
+        ]);
 
         return generalResponse(
             __('global.successUploadAttachment'),
@@ -3507,14 +3687,9 @@ class ProjectService
 
         $task = $this->formattedDetailTask($taskUid);
 
-        $cache = $this->getDetailProjectCache($projectUid);
-        $currentData = $cache['cache'];
-        $projectId = $cache['projectId'];
-
-        $boards = $this->formattedBoards($projectUid);
-        $currentData['boards'] = $boards;
-
-        storeCache('detailProject' . $projectId, $currentData);
+        $currentData = $this->detailCacheAction->handle($projectUid, [
+            'boards' => FormatBoards::run($projectUid)
+        ]);
 
         return generalResponse(
             __('global.successUploadAttachment'),
@@ -3581,14 +3756,9 @@ class ProjectService
 
         $task = $this->formattedDetailTask($taskUid);
 
-        $cache = $this->getDetailProjectCache($projectUid);
-        $currentData = $cache['cache'];
-        $projectId = $cache['projectId'];
-
-        $boards = $this->formattedBoards($projectUid);
-        $currentData['boards'] = $boards;
-
-        storeCache('detailProject' . $projectId, $currentData);
+        $currentData = $this->detailCacheAction->handle($projectUid, [
+            'boards' => FormatBoards::run($projectUid)
+        ]);
 
         return generalResponse(
             __('global.successUploadAttachment'),
@@ -3674,14 +3844,9 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskUid);
 
-            $cache = $this->getDetailProjectCache($projectUid);
-            $currentData = $cache['cache'];
-            $projectId = $cache['projectId'];
-
-            $boards = $this->formattedBoards($projectUid);
-            $currentData['boards'] = $boards;
-
-            storeCache('detailProject' . $projectId, $currentData);
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid)
+            ]);
 
             DB::commit();
 
@@ -3710,7 +3875,6 @@ class ProjectService
         try {
             $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
 
-            logging("CHECK ABILITY", [$data['nas_link'] && (isset($data['preview']) || $useDefaultImage)]);
             if ($data['nas_link'] && (isset($data['preview']) || $useDefaultImage)) {
                 $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());;
                 $selectedProjectId = $projectId;
@@ -3763,12 +3927,13 @@ class ProjectService
 
                 // set current pic
                 $currentPics = $this->taskPicRepo->list('employee_id', 'project_task_id = ' . $taskId);
-                logging("CURREN PIC DATA", $currentPics->toArray());
                 $payloadUpdate['current_pics'] = json_encode(collect($currentPics)->pluck('employee_id')->toArray());
+                $payloadUpdate['is_modeler_task'] = false;
 
-                $update = $this->taskRepo->update($payloadUpdate, '', "id = " . $taskId);
-                logging("UPDATE TASK STATUS", [$update]);
-                logging("TASK ID", [$taskId]);
+                $this->taskRepo->update(
+                    data: $payloadUpdate,
+                    where: "id = " . $taskId
+                );
 
                 // set worktime as finish to current task pic
                 $currentTaskPic = $this->taskPicRepo->list('id,employee_id', 'project_task_id = ' . $taskId);
@@ -4778,6 +4943,14 @@ class ProjectService
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
         $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask());
 
+        // define special employee
+        $specialPosition = $this->generalService->getSettingByKey('special_production_position');
+        $specialPosition = $this->generalService->getIdFromUid($specialPosition, new PositionBackup());
+        $specialEmployees = $this->employeeRepo->list(
+            select: 'id,uid',
+            where: "position_id = {$specialPosition}"
+        );
+
         DB::beginTransaction();
         try {
             // upload file
@@ -4814,6 +4987,7 @@ class ProjectService
                 'status' => \App\Enums\Production\TaskStatus::Revise->value,
 //                'project_board_id' => $currentTaskData->current_board,
                 'current_board' => null,
+                'is_modeler_task' => in_array($currentPicUids[0], collect($specialEmployees)->pluck('uid')->toArray()) ? true : false // set to TRUE if current pic contain 3D modeler employee
             ], $taskUid);
 
             // update worktime log for project manager
