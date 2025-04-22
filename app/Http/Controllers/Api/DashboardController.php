@@ -92,7 +92,8 @@ class DashboardController extends Controller
         try {
             $output = [];
             $entry = '';
-            Log::debug('file');
+            Log::debug('file', [file_exists(storage_path('logs/laravel.log'))]);
+            Log::debug('READ FILE', [File::lines(storage_path('logs/laravel.log'))]);
             $file = File::lines(storage_path('logs/laravel.log'));
             foreach ($file as $line) {
                     // New log entry starts with timestamp
