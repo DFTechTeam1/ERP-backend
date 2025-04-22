@@ -206,6 +206,7 @@ Route::get('users/activate/{key}', [UserController::class, 'activate']);
 
 Route::middleware('auth:sanctum')
     ->group(function () {
+        Route::get('logs', [DashboardController::class, 'getLogs']);
         Route::post('users/bulk', [UserController::class, 'bulkDelete'])->name('api.users.bulk-delete');
         Route::apiResource('users', UserController::class)->names('api.users');
 

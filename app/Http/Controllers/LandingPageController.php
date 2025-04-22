@@ -13,6 +13,8 @@ use App\Exports\PrepareEmployeeMigration;
 use Carbon\Carbon;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Company\Models\Position;
 use Modules\Company\Models\PositionBackup;
@@ -26,6 +28,7 @@ use Modules\Hrd\Services\PerformanceReportService;
 use Modules\Production\Models\Project;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Services\ProjectRepositoryGroup;
+use \Illuminate\Support\Str;
 
 class LandingPageController extends Controller
 {
@@ -50,6 +53,39 @@ class LandingPageController extends Controller
 
     public function index()
     {
+        try {
+            $output = [];
+            $entry = '';
+            $file = File::lines(storage_path('logs/laravel.log'));
+            foreach ($file as $line) {
+                 // New log entry starts with timestamp
+                if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line)) {
+                    // Store previous entry if it was an ERROR
+                    if ($entry && str_contains($entry, '.ERROR:')) {
+                        $output[] = $entry;
+                    }
+                    $entry = $line;
+                } else {
+                    $entry .= "\n" . $line;
+                }
+            }
+
+            if ($entry && str_contains($entry, '.ERROR:')) {
+                $output[] = $entry;
+            }
+
+            // only return a view of characters
+            $output = collect($output)->map(function ($mapping) {
+                $mapping = Str::limit($mapping, 500);
+
+                return $mapping;
+            })->all();
+            $output = array_reverse($output);
+
+            return $output;
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
         // $employees = array(
         //     array('id' => '1','name' => 'Wesley Wiyadi','position_id' => '1'),
         //     array('id' => '2','name' => 'Edwin Chandra Wijaya Ngo','position_id' => '2'),
