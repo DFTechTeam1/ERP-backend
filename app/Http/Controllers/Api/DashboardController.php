@@ -82,6 +82,7 @@ class DashboardController extends Controller
 
     /**
      * Function to get all logs
+     * This function is only for email account that already registered in the config/allowed_email.php
      *
      * @return \Illuminate\Http\JsonResponse
      */
