@@ -37,6 +37,8 @@ class DashboardService {
 
     private $generalService;
 
+    private $user;
+
     public function __construct(
         \Modules\Production\Repository\ProjectRepository $projectRepo,
         \Modules\Inventory\Repository\InventoryRepository $inventoryRepo,
@@ -97,6 +99,7 @@ class DashboardService {
         ];
 
         $user = auth()->user();
+        $this->user = $user;
 
         $this->isEmployee = $user->is_employee;
         $this->isProjectManager = $user->is_project_manager;
@@ -105,7 +108,7 @@ class DashboardService {
         $output = [];
         if ($this->isDirector || auth()->user()->email == 'admin@admin.com') {
             $output = $this->getReportDirector();
-        } else if ($this->isProjectManager) {
+        } else if ($this->isProjectManager || $user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
             $output = $this->getReportProjectManager();
         } else if ($this->isEmployee) {
             $output = $this->getReportProduction();
@@ -238,17 +241,24 @@ class DashboardService {
         // get upcomoing event (2 weeks for now)
         $startDate = date('Y-m-d', strtotime('-14 days'));
         $endDate = date('Y-m-d');
+        $whereHas = [];
+
+        if (!$this->user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
+            $whereHas = [
+                [
+                    'relation' => 'personInCharges',
+                    'query' => "pic_id = " . $this->user->employee_id,
+                ]
+            ];
+        }
+
         $upcomingProject = $this->projectRepo->list(
             'id,classification,name,project_date',
             "project_date >= '{$startDate}' and project_date <= '{$endDate}'",
             [],
-            [
-                [
-                    'relation' => 'personInCharges',
-                    'query' => "pic_id = " . auth()->user()->employee_id,
-                ]
-            ]
+            $whereHas
         );
+
         $upcomingGroup = collect($upcomingProject)->groupBy('project_date')->toArray();
         $upcomingSeries = [];
         foreach ($upcomingGroup as $group) {
@@ -442,9 +452,9 @@ class DashboardService {
             ->format('d');
         $endDate = $year . '-' . $month . '-' . $getLastDay;
 
+        $user = auth()->user();
         $superUserRole = getSettingByKey('super_user_role');
         $projectManagerRole = getSettingByKey('project_manager_role');
-        $user = auth()->user();
         $roles = $user->roles;
         $roleId = $roles[0]->id;
         $employeeId = $user->employee_id;
@@ -458,7 +468,7 @@ class DashboardService {
                 'relation' => 'personInCharges',
                 'query' => 'pic_id = ' . $employeeId,
             ];
-        } else if (isDirector() || isItSupport()) {
+        } else if (isDirector() || isItSupport() || $user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
             $whereHas = [];
         } else if ($roleId != $superUserRole && $roleId != $projectManagerRole) {
             $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
@@ -485,8 +495,6 @@ class DashboardService {
             'personInCharges.employee:id,uid,name',
             'vjs.employee:id,nickname'
         ], $whereHas, 'project_date ASC');
-
-        logging('dashboard project calendar', ['where' => $where, 'wherehas' => $whereHas]);
 
         $out = [];
         foreach ($data as $projectKey => $project) {
@@ -540,18 +548,18 @@ class DashboardService {
                         ProjectStatus::ReadyToGo->value,
                     ];
                     $whereHas = [];
-        
+
                     if ($user->hasRole(BaseRole::ProjectManager->value)) {
                         $whereHas[] = [
                             'relation' => 'personInCharges',
                             'query' => "pic_id = " . $user->load('employee')->employee->id
                         ];
                     }
-        
+
                     $where = "project_date < NOW() AND status IN (" . implode(',', $status) . ")";
-        
+
                     $data = $this->projectRepo->list(
-                        select: 'id,uid,name,project_date,status,classification', 
+                        select: 'id,uid,name,project_date,status,classification',
                         where: $where,
                         relation: [
                             'personInCharges:id,project_id,pic_id',
@@ -563,18 +571,18 @@ class DashboardService {
                         whereHas: $whereHas,
                         orderBy: "id DESC",
                     );
-                    
+
                     $data = collect((object) $data)->map(function ($project) {
                         $listPics = collect($project->personInCharges)->pluck('employee.nickname')->toArray();
-        
+
                         $project['pics'] = $listPics;
                         $project['project_date_format'] = date('d F Y', strtotime($project->project_date));
-        
+
                         unset($project['personInCharges']);
-        
+
                         return $project;
                     })->toArray();
-    
+
                     return $data;
                 });
             }

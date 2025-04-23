@@ -32,16 +32,26 @@ class DashboardController extends Controller
         return apiResponse($this->service->getProjectSong());
     }
 
-    public function needCompleteProject()
+    /**
+     * Get list of project that need to be completed
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function needCompleteProject(): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->needCompleteProject());
     }
 
-    public function getProjectCalendar()
+    /**
+     * Get projects to be consumed by frontend calendar
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProjectCalendar(): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->getProjectCalendars());
     }
-    
+
     public function getProjectDeadline()
     {
         return apiResponse($this->service->getProjectDeadline());
