@@ -410,6 +410,15 @@ class EmployeeController extends Controller
      */
     public function getDashboardElement(): \Illuminate\Http\JsonResponse
     {
+        // $map = config('cache-dependencies');
+
+        // $class = get_class(new Employee());
+        // if (isset($map[$class])) {
+        //     foreach ($map[$class] as $cacheKey) {
+        //         Cache::forget($cacheKey);
+        //     }
+        // }
+
         $employees = Cache::get(CacheKey::HrDashboardEmoloyeeList->value);
         if (!$employees) {
             $employees = Cache::rememberForever(CacheKey::HrDashboardEmoloyeeList->value, function () {

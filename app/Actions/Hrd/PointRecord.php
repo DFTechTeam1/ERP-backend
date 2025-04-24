@@ -20,7 +20,7 @@ class PointRecord
      * Rule for entertainment:
      * 1. Only update the employee_point_project_details when employee already have a point in selected project
      * 2. Entertainment only have a single point event they worked on a lot of tasks in the single project
-     * 
+     *
      * Complete step is:
      * 1. Check data by employee_id in the employee_points table
      *
@@ -34,15 +34,15 @@ class PointRecord
     ) {
         try {
             $generalService = new GeneralService();
-    
+
             $projectId = $generalService->getIdFromUid($projectUid, new Project());
             foreach ($payload['points'] as $data) {
                 $employeeId = $generalService->getIdFromUid($data['uid'], new Employee());
-    
+
                 $currentPoint = EmployeePoint::selectRaw('id')
                     ->where('employee_id', $employeeId)
                     ->first();
-    
+
                 if (!$currentPoint) {
                     $currentPoint = EmployeePoint::create([
                         'employee_id' => $employeeId,
@@ -50,7 +50,7 @@ class PointRecord
                         'type' => $type
                     ]);
                 }
-    
+
                 $pointProject = EmployeePointProject::select('id')
                     ->where('employee_point_id', $currentPoint->id)
                     ->where('project_id', $projectId)
@@ -63,7 +63,7 @@ class PointRecord
                         'additional_point' => $data['additional_point']
                     ]);
                 }
-    
+
                 // add detail
                 foreach ($data['tasks'] as $task) {
                     EmployeePointProjectDetail::create([
@@ -71,7 +71,7 @@ class PointRecord
                         'task_id' => $task
                     ]);
                 }
-    
+
                 // update total point
                 $parent = EmployeePoint::select('id')
                     ->where('employee_id', $employeeId)
@@ -85,10 +85,10 @@ class PointRecord
                         'total_point' => $totalPoint
                     ]);
             }
-    
+
             return true;
         } catch (\Throwable $th) {
-            Log::debug('error point record >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', [$th]);
+            Log::error('error point record >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', [$th]);
             return false;
         }
     }

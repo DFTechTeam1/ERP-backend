@@ -69,6 +69,7 @@ Route::middleware(['auth:sanctum'])
     ->group(function () {
         Route::get('religions', [CompanyController::class, 'getReligions']);
         Route::get('genders', [CompanyController::class, 'getGenders']);
+        Route::get('banks', [CompanyController::class, 'getBanks']);
         Route::get('martial-status', [CompanyController::class, 'getMartialStatus']);
         Route::get('blood-type', [CompanyController::class, 'getBloodType']);
         Route::get('level-staff', [CompanyController::class, 'getLevelStaff']);

@@ -147,7 +147,7 @@ class TalentaService {
             'place_of_birth' => $request['place_of_birth'], // required
             'mobile_phone_number' => $request['phone'],
             'home_phone_number' => null,
-            'blood_type' => empty($request['blood_type']) ? $request['blood_type'] : null,
+            'blood_type' => isset($request['blood_type']) ? $request['blood_type'] : null,
             'religion' => Religion::generateTalentaVariable($request['religion']), // required
             'branch' => $branch->name, // required
             'organization_name' => $division->name, // required

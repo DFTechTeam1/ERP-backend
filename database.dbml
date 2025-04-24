@@ -311,9 +311,16 @@ Table "employees" {
   "gender" employees_gender_enum [not null]
 
   // new
-  "ptkp_status" varchar(5) [not null]
-  "basic_salry" decimal [not null, default: 0]
-  "salary_type" salaray_type_enum [not null]
+    "ptkp_status" varchar(5) [not null]
+    "basic_salry" decimal [not null, default: 0]
+    "salary_type" salaray_type_enum [not null]
+    "tax_configuration" varchar(100),
+    "employee_tax_status" varchar(100),
+    "salary_configuration" varchar(100),
+    "jht_configuration" varchar(100),
+    "jp_configuration" varchar(100),
+    "overtime_status" varchar(100),
+    "bpjs_kesehatan_config" varchar(100),
 
   "bpjs_ketenagakerjaan_number" varchar(50) [default: NULL]
   "npwp_number" varchar(50) [default: NULL]
@@ -360,6 +367,16 @@ Table "employees" {
   Indexes {
     position_id [name: "employees_position_id_foreign"]
   }
+}
+
+table "employee_resigns" {
+    "id" bigint [pk, increment, not null]
+    "employee_id" bigint [ref: > employees.id]
+    "reason" text [not null]
+    "resign_date" date [not null]
+    "severance" decimal [not null, default: 0]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
 }
 
 Table "employee_timeoffs" {

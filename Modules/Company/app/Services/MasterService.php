@@ -8,7 +8,6 @@ use App\Enums\Employee\EmployeeTaxStatus;
 use App\Enums\Employee\Gender;
 use App\Enums\Employee\JhtConfiguration;
 use App\Enums\Employee\JpConfiguration;
-use App\Enums\Employee\LevelStaff;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\OvertimeStatus;
 use App\Enums\Employee\PtkpStatus;
@@ -17,16 +16,22 @@ use App\Enums\Employee\Religion;
 use App\Enums\Employee\SalaryConfiguration;
 use App\Enums\Employee\SalaryType;
 use App\Enums\Employee\TaxConfiguration;
+use Modules\Company\Repository\BankRepository;
 use Modules\Company\Repository\JobLevelRepository;
 
 class MasterService {
     private $jobLevelRepo;
 
+    private $bankRepo;
+
     public function __construct(
-        JobLevelRepository $jobLevelRepo
+        JobLevelRepository $jobLevelRepo,
+        BankRepository $bankRepo
     )
     {
         $this->jobLevelRepo = $jobLevelRepo;
+
+        $this->bankRepo = $bankRepo;
     }
 
     /**
@@ -238,6 +243,29 @@ class MasterService {
             message: 'success',
             error: false,
             data: $genders
+        );
+    }
+
+    /**
+     * Get all genders from enums
+     *
+     * @return array
+     */
+    public function getBanks(): array
+    {
+        $banks = $this->bankRepo->list(
+            select: 'id,name,bank_code'
+        );
+
+        return generalResponse(
+            message: 'success',
+            error: false,
+            data: collect((object) $banks)->map(function ($bank) {
+                return [
+                    'title' => $bank->name,
+                    'value' => $bank->bank_code
+                ];
+            })->toArray()
         );
     }
 

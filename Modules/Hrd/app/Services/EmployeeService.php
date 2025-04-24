@@ -37,10 +37,12 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\EmployeeHasRelation;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeeResign;
 use Modules\Hrd\Repository\EmployeeActiveReportRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\EmployeeResignRepository;
 use Modules\Hrd\Repository\EmployeeTimeoffRepository;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectTask;
@@ -75,6 +77,7 @@ class EmployeeService
     private $employeeActiveRepo;
     private $employeeTimeoffRepo;
     private $talentaService;
+    private $employeeResignRepo;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -94,6 +97,7 @@ class EmployeeService
         EmployeeActiveReportRepository $employeeActiveRepo,
         EmployeeTimeoffRepository $employeeTimeoffRepo,
         TalentaService $talentaService,
+        EmployeeResignRepository $employeeResignRepo
     )
     {
         $this->talentaService = $talentaService;
@@ -129,6 +133,8 @@ class EmployeeService
         $this->employeeActiveRepo = $employeeActiveRepo;
 
         $this->employeeTimeoffRepo = $employeeTimeoffRepo;
+
+        $this->employeeResignRepo = $employeeResignRepo;
     }
 
     /**
@@ -393,7 +399,11 @@ class EmployeeService
      */
     public function validateEmployeeID(array $data): array
     {
-        $where = "employee_id = '" . $data['employee_id'] . "'";
+        $notAllowed = [
+            Status::Deleted->value,
+            Status::Inactive->value
+        ];
+        $where = "employee_id = '" . $data['employee_id'] . "' AND status NOT IN (" . implode(',', $notAllowed) . ")" ;
 
         if ($data['uid']) {
             $where .= " and uid != '{$data['uid']}'";
@@ -681,6 +691,12 @@ class EmployeeService
 
         $data = $this->repo->show($uid, $select, $relation);
 
+        if ($data['address'] && $data['current_address'] == null) {
+            $data['is_residence_same'] = true;
+        } else {
+            $data['is_residence_same'] = false;
+        }
+
         // get projects and tasks if any
         $projects = [];
         $asPicProjects = $this->projectRepo->list('id,name,uid,project_date,created_at', '', [], [
@@ -869,28 +885,28 @@ class EmployeeService
             }
 
             // invite to Talenta
-            if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
-                $this->talentaService->setUrl('store_employee');
-                $this->talentaService->setUrlParams($this->talentaService->buildEmployeePayload($data));
-                $response = $this->talentaService->makeRequest();
+            // if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
+            //     $this->talentaService->setUrl('store_employee');
+            //     $this->talentaService->setUrlParams($this->talentaService->buildEmployeePayload($data));
+            //     $response = $this->talentaService->makeRequest();
 
-                // Throw error when it failed
-                if ($response['message'] != 'success') {
-                    logging('ERROR SAVING TALENT', $response);
-                    throw new Exception(__('notification.failedSaveToTalenta'));
-                }
+            //     // Throw error when it failed
+            //     if ($response['message'] != 'success') {
+            //         logging('ERROR SAVING TALENT', $response);
+            //         throw new Exception(__('notification.failedSaveToTalenta'));
+            //     }
 
-                // update talenta user ID
-                $this->talentaService->setUrl('detail_employee');
-                $this->talentaService->setUrlParams(['email' => $data['email']]);
-                $currentTalentaEmployee = $this->talentaService->makeRequest();
+            //     // update talenta user ID
+            //     $this->talentaService->setUrl('detail_employee');
+            //     $this->talentaService->setUrlParams(['email' => $data['email']]);
+            //     $currentTalentaEmployee = $this->talentaService->makeRequest();
 
-                $talentaUserId = $currentTalentaEmployee['data']['employees'][0]['user_id'];
+            //     $talentaUserId = $currentTalentaEmployee['data']['employees'][0]['user_id'];
 
-                $this->repo->update([
-                    'talenta_user_id' => $talentaUserId
-                ], $employee->uid);
-            }
+            //     $this->repo->update([
+            //         'talenta_user_id' => $talentaUserId
+            //     ], $employee->uid);
+            // }
 
             DB::commit();
 
@@ -976,9 +992,9 @@ class EmployeeService
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
 
-            if ((isset($data['is_residence_same'])) && ($data['is_residence_same'])) {
-                $data['current_address'] = $data['address'];
-            }
+            // if ((isset($data['is_residence_same'])) && ($data['is_residence_same'])) {
+            //     $data['current_address'] = $data['address'];
+            // }
 
             $data['job_level_id'] = $this->generalService->getIdFromUid($data['job_level_id'], new JobLevel());
 
@@ -1764,6 +1780,43 @@ class EmployeeService
     }
 
     /**
+     * This function is consumed by cron job. Check Modules\Hrd\app\Console\CheckEmployeeResign.php
+     *
+     * @return void
+     */
+    public function checkEmployeeWhoResignToday(): void
+    {
+        try {
+            $notAllowed = [
+                Status::Inactive->value,
+                Status::Deleted->value
+            ];
+
+            $employees = $this->repo->list(
+                select: 'id,uid,status',
+                where: "status NOT IN (" . implode(',', $notAllowed) . ")",
+                whereHas: [
+                    [
+                        'relation' => 'resignData',
+                        'query' => "DATE(resign_date) <= NOW()"
+                    ]
+                ]
+            );
+
+            foreach ($employees as $employee) {
+                $this->repo->update(
+                    data: [
+                        'status' => Status::Inactive->value
+                    ],
+                    uid: $employee->uid
+                );
+            }
+        } catch (\Throwable $th) {
+            errorResponse($th);
+        }
+    }
+
+    /**
      * Employee is resign
      *
      * @param array<string, string> $data
@@ -1773,33 +1826,62 @@ class EmployeeService
      */
     public function resign(array $data, string $employeeUid)
     {
-        /**
-         * What should be done when we delete:
-         *
-         * 1. Unattach from all tasks he have
-         * 2. Make sure all equipment are already given back and in good condition
-         * 3. Take back the access from system
-         * 4. Tack back the access from email
-         * 5. Tack back the access from talenta
-         * 6. Write a history for a record
-         * 7. Change status
-         * 8. Don't DELETE UNTIL THE DESIRE TIME REACHED
-         */
+        DB::beginTransaction();
+        try {
+            /**
+             * What should be done when we delete:
+             *
+             * 1. Unattach from all tasks he have
+             * 2. Make sure all equipment are already given back and in good condition
+             * 3. Take back the access from system
+             * 4. Tack back the access from email
+             * 5. Tack back the access from talenta
+             * 6. Write a history for a record
+             * 7. Change status
+             * 8. Don't DELETE UNTIL THE DESIRE TIME REACHED
+             */
 
-        $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
 
-        $this->repo->update([
-            'end_date' => date('Y-m-d'),
-            'resign_reason' => $data['reason'],
-            'status' => \App\Enums\Employee\Status::Inactive->value,
-        ], $employeeUid);
+            $employee = $this->repo->show(
+                uid: $employeeUid,
+                select: 'id,email'
+            );
 
-        \App\Models\User::where('employee_id', $employeeId)->delete();
+            $payloadUpdate = [
+                'end_date' => $data['resign_date'],
+                'resign_reason' => $data['reason'],
+            ];
 
-        return generalResponse(
-            __('notification.successResign'),
-            false
-        );
+            /**
+             * Update status when resign date is less or same with now date
+             */
+            $resignDate = Carbon::parse($data['resign_date']);
+            $now = Carbon::now();
+            $diff = $now->diffInDays($resignDate, false);
+            if ($diff <= 0) {
+                $payloadUpdate['status'] = \App\Enums\Employee\Status::Inactive->value;
+
+                // delete user immediately
+                \App\Models\User::where('employee_id', $employeeId)->delete();
+            }
+
+            $this->repo->update($payloadUpdate, $employeeUid);
+
+            // store to employee resign table as a note
+            $employee->resignData()->save(new EmployeeResign($data));
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.successResign'),
+                false
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
     }
 
     /**
@@ -2060,7 +2142,7 @@ class EmployeeService
                         $table[] = [
                             'title' => $jobLevel->name,
                             'value' => $numberOfJob,
-                            'valuePercentage' => number_format($numberOfJob / $employees->count() * 100),
+                            'valuePercentage' => number_format($numberOfJob / $employees->count() * 100) . '%',
                             'color' => $color,
                             'type' => 'body'
                         ];
@@ -2089,7 +2171,6 @@ class EmployeeService
     /**
      * Get who is off today
      *
-     * Step to produce:
      *
      * @return array
      */
@@ -2126,6 +2207,12 @@ class EmployeeService
         }
     }
 
+    /**
+     * Get age average chart -> Bar Chart
+     *
+     * @param object $employees
+     * @return array
+     */
     public function getAgeAverageChart(object $employees): array
     {
         try {

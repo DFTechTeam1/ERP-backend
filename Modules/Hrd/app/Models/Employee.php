@@ -62,7 +62,7 @@ class Employee extends Model
             'religion' => Religion::class,
             'status' => Status::class,
             'martial_status' => MartialStatus::class,
-            'ptkp_status' => PtkpStatus::class
+            // 'ptkp_status' => PtkpStatus::class
         ];
     }
 
@@ -95,6 +95,13 @@ class Employee extends Model
         'ptkp_status',
         'basic_salary',
         'salary_type',
+        'tax_configuration',
+        'employee_tax_status',
+        'salary_configuration',
+        'jht_configuration',
+        'jp_configuration',
+        'overtime_status',
+        'bpjs_kesehatan_config',
 
         'bpjs_ketenagakerjaan_number',
         'npwp_number',
@@ -320,6 +327,11 @@ class Employee extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(ProjectTaskPic::class, 'employee_id', 'id');
+    }
+
+    public function resignData(): HasOne
+    {
+        return $this->hasOne(EmployeeResign::class, 'employee_id');
     }
 
     public function position(): BelongsTo
