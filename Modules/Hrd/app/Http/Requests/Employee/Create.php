@@ -58,7 +58,7 @@ class Create extends FormRequest
             'position_id' => 'required',
             'employee_id' => [
                 'required',
-                Rule::unique('employees', 'employee_id'),
+                Rule::unique('employees', 'employee_id')->whereNotIn('status', [Status::Deleted->value, Status::Inactive->value]),
             ],
             'job_level_id' => [
                 'required',

@@ -49,7 +49,7 @@ class UserService {
 
         $this->loginHistoryRepo = $userLogHistoryRepo;
 
-        $this->generalService = $generalService; 
+        $this->generalService = $generalService;
 
         $this->roleService = $roleService;
     }
@@ -75,7 +75,7 @@ class UserService {
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
         $where = '';
-        
+
         $search = request('search');
 
         if (!empty($search)) { // array
@@ -184,7 +184,7 @@ class UserService {
             }
         }
 
-        if (!$data['is_external_user']) {    
+        if (!$data['is_external_user']) {
             $currentProjectManagerRole = json_decode($this->generalService->getSettingByKey('project_manager_role'), true) ?? [];
             if (
                 ($currentProjectManagerRole) &&
@@ -355,8 +355,12 @@ class UserService {
                     uid: 'id',
                     select: 'id,name,email,uid',
                     relation: [
-                        'tasks:id,project_task_id,employee_id',
-                        'projects:id,project_id,pic_id'
+                        'projects' => function ($query) {
+                            $query->selectRaw('id,project_id,pic_id')
+                                ->whereHas('project', function ($queryProject) {
+                                    $queryProject->whereRaw('DATE(project_date) > NOW()');
+                                });
+                        }
                     ],
                     where: "user_id = " . $user->id
                 );
@@ -364,7 +368,7 @@ class UserService {
                 if (
                     ($employee) &&
                     (
-                        $employee->projects->count() > 0 || $employee->tasks->count() > 0
+                        $employee->projects->count() > 0
                     )
                 ) {
                     DB::rollBack();

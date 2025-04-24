@@ -70,7 +70,7 @@ class EmployeeRepository extends EmployeeInterface
         if (!empty($limit)) {
             $query->limit($limit);
         }
-        
+
         return $query->get();
     }
 
@@ -173,9 +173,11 @@ class EmployeeRepository extends EmployeeInterface
             $query->where('uid', $uid);
         }
 
-        $query->update($data);
+        $model = $query->first();
+        $model->fill($data);
+        $model->save();
 
-        return $query->get();
+        return $model;
     }
 
     /**

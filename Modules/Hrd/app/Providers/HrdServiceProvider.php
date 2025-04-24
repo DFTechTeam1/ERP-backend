@@ -5,6 +5,7 @@ namespace Modules\Hrd\Providers;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Hrd\Console\AutoUpdateEmployeeTimeoff;
+use Modules\Hrd\Console\CheckEmployeeResign;
 use Modules\Hrd\Console\InitateAvatarColor;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
@@ -12,6 +13,7 @@ use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Hrd\Console\UpdateTalentaUserIdToEmployeesTable;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
+use Modules\Hrd\Console\UpdateBankIdInBankDetail;
 
 class HrdServiceProvider extends ServiceProvider
 {
@@ -54,7 +56,9 @@ class HrdServiceProvider extends ServiceProvider
             UpdateEmployeeActivePerMonth::class,
             AutoUpdateEmployeeTimeoff::class,
             UpdateTalentaUserIdToEmployeesTable::class,
-            SynchronizingTalentUserId::class
+            SynchronizingTalentUserId::class,
+            UpdateBankIdInBankDetail::class,
+            CheckEmployeeResign::class
         ]);
     }
 

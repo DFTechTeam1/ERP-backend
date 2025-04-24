@@ -4,6 +4,7 @@ use App\Console\Commands\ClearLogSchedule;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use Modules\Hrd\Console\CheckEmployeeResign;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Production\Console\ClearAllCache;
@@ -26,3 +27,5 @@ Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 \Illuminate\Support\Facades\Schedule::command(\App\Console\Commands\pruneInteractiveAsset::class)->everyMinute();
 
 \Illuminate\Support\Facades\Schedule::command(UpdateEmployeeActivePerMonth::class)->lastDayOfMonth('23:00');
+
+Schedule::command(CheckEmployeeResign::class)->dailyAt('00:15');

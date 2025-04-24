@@ -116,6 +116,15 @@ class CompanyController extends Controller
     }
 
     /**
+     * Get all banks
+     *
+     */
+    public function getBanks()
+    {
+        return apiResponse($this->masterService->getBanks());
+    }
+
+    /**
      * Get all martial status
      *
      */
