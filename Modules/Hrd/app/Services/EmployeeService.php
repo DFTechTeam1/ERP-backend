@@ -209,7 +209,17 @@ class EmployeeService
                 $sort
             );
 
-            $paginated = collect($employees)->map(function ($item) {
+            $now = Carbon::now();
+            $paginated = collect($employees)->map(function ($item) use ($now) {
+                // define action to cancel resign
+                $canCancelResign = false;
+                if ($item->resignData) {
+                    $resignData = Carbon::parse($item->resignData->resign_date);
+                    if ($now->diffInDays($resignData, false) > 0) {
+                        $canCancelResign = true;
+                    }
+                }
+
                 return [
                     'uid' => $item->uid,
                     'name' => $item->name,
@@ -233,6 +243,8 @@ class EmployeeService
                     'employee_id' => $item->employee_id,
                     'user_id' => $item->user_id,
                     'user' => $item->user,
+                    'is_resign' => $item->resignData ? true : false,
+                    'can_cancel_resign' => $canCancelResign
                 ];
             })->toArray();
 
@@ -1793,7 +1805,7 @@ class EmployeeService
             ];
 
             $employees = $this->repo->list(
-                select: 'id,uid,status',
+                select: 'id,uid,status,user_id',
                 where: "status NOT IN (" . implode(',', $notAllowed) . ")",
                 whereHas: [
                     [
@@ -1802,6 +1814,7 @@ class EmployeeService
                     ]
                 ]
             );
+            $userIds = collect($employees)->pluck('user_id')->toArray();
 
             foreach ($employees as $employee) {
                 $this->repo->update(
@@ -1811,7 +1824,13 @@ class EmployeeService
                     uid: $employee->uid
                 );
             }
+
+            // delete erp account
+            $this->userRepo->bulkDelete(
+                ids: $userIds,
+            );
         } catch (\Throwable $th) {
+            // write log
             errorResponse($th);
         }
     }
@@ -2258,6 +2277,44 @@ class EmployeeService
             return generalResponse(
                 message: "Success",
                 data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Cancel resign of selected employee
+     *
+     * What to do in this function:
+     * 1. Delete resign reason
+     * 2. Delete resign_dae in the employees table
+     *
+     * This function only worked when resign date is greater than now
+     *
+     * @param string $employeeUid
+     * @return array
+     */
+    public function cancelResign(string $employeeUid): array
+    {
+        try {
+            $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee());
+
+            $this->repo->update(
+                data: [
+                    'end_date' => NULL,
+                    'reason' => NULL
+                ],
+                uid: $employeeUid
+            );
+
+            $this->employeeResignRepo->delete(
+                id: 0,
+                where: "employee_id = {$employeeId}"
+            );
+
+            return generalResponse(
+                message: __('notification.resignationHasBeenCanceled')
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

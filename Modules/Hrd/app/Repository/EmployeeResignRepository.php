@@ -68,7 +68,7 @@ class EmployeeResignRepository extends EmployeeResignInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -87,7 +87,7 @@ class EmployeeResignRepository extends EmployeeResignInterface {
         $query->selectRaw($select);
 
         $query->where("uid", $uid);
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -136,10 +136,17 @@ class EmployeeResignRepository extends EmployeeResignInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(int $id, string $where = '')
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
+        $query = $this->model->query();
+
+        if (empty($where)) {
+            $query->where('id', $id);
+        } else  {
+            $query->whereRaw($where);
+        }
+
+        return $query->delete();
     }
 
     /**

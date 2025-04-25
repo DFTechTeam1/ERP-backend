@@ -1,0 +1,78 @@
+{
+    "old": [
+        {
+            "name": "Dashboard",
+            "type": "regular",
+            "childs": [
+                { "path": "/admin/dashboard", "slug": "dashboard", "lang_id": "Dashboard", "lang_en": "Dashboard", "icon": "menus/dashboard.png", "permission": "dashboard_access" },
+                { "path": "/admin/setting", "slug": "setting", "lang_id": "Pengaturan", "lang_en": "Settings", "icon": "menus/setting.png", "permission": "list_setting" }
+            ]
+        },
+        {
+            "name": "Production",
+            "type": "regular",
+            "childs": [
+                { "path": "/admin/production/projects", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "menus/projects.png", "permission": "list_project" },
+                { "path": "/admin/production/files", "slug": "files", "lang_id": "Files", "lang_en": "Files", "icon": "menus/folder.png", "permission": "list_file_manager" },
+                { "path": "/admin/production/tasks", "slug": "task", "lang_id": "Tugas", "lang_en": "Tasks", "icon": "menus/task.png", "permission": "list_task" },
+                { "path": "/admin/production/team-transfer", "slug": "team-transfer", "lang_id": "Team Transfer", "lang_en": "Team Transfer", "icon": "menus/transfer.png", "permission": "list_team_transfer" }
+            ]
+        },
+        {
+            "name": "HRD",
+            "type": "module",
+            "childs": []
+        },
+        {
+            "name": "Inventories",
+            "type": "module",
+            "childs": []
+        },
+        {
+            "name": "Master",
+            "type": "module",
+            "childs": []
+        }
+    ],
+    "new": [
+        {
+            "name": "Dashboard",
+            "type": "regular",
+            "childs": [
+                { "path": "/dashboard", "lang_id": "Dashboard", "lang_en": "Dashboard", "icon": "pi pi-chart-line", "permission": "dashboard_hrd" },
+                { "path": "/logs", "lang_id": "Logs", "lang_en": "Logs", "icon": "pi pi-microchip", "permission": "list_logs" }
+            ]
+        },
+        {
+            "name": "HRD",
+            "type": "regular",
+            "childs": [
+                { "path": "/employees", "lang_id": "Karyawan", "lang_en": "Employees", "icon": "pi pi-users", "permission": "list_employee" },
+                { "path": "/roles", "lang_id": "Hak Akses", "lang_en": "Roles", "icon": "pi pi-cloud", "permission": "list_role" },
+                { "path": "/users", "lang_id": "User", "lang_en": "Users", "icon": "pi pi-user", "permission": "list_user" }
+            ]
+        },
+        {
+            "name": "Master",
+            "type": "regular",
+            "childs": [
+                { "path": "/branches", "lang_id": "Kantor", "lang_en": "Branches", "icon": "pi pi-sitemap", "permission": "list_branch" },
+                { "path": "/divisions", "lang_id": "Divisi", "lang_en": "Divisions", "icon": "pi pi-align-justify", "permission": "list_division" },
+                { "path": "/positions", "lang_id": "Posisi", "lang_en": "Positions", "icon": "pi pi-align-justify", "permission": "list_position" }
+            ]
+        },
+        {
+            "name": "Inventory",
+            "type": "regular",
+            "childs": [
+                { "path": "/suppliers", "lang_id": "Pemasok", "lang_en": "Suppliers", "icon": "pi pi-truck", "permission": "list_supplier" },
+                { "path": "/brands", "lang_id": "Merek", "lang_en": "Brands", "icon": "pi pi-file", "permission": "list_branch" },
+                { "path": "/units", "lang_id": "Units", "lang_en": "Units", "icon": "pi pi-briefcase", "permission": "list_unit" },
+                { "path": "/inventory-types", "lang_id": "Tipe Inventori", "lang_en": "Inventory Types", "icon": "pi pi-briefcase", "permission": "list_inventory_type" },
+                { "path": "/inventories", "lang_id": "Inventori", "lang_en": "Inventories", "icon": "pi pi-box", "permission": "list_inventory" },
+                { "path": "/custom-inventories", "lang_id": "Custom Inventories", "lang_en": "Custom Inventories", "icon": "pi pi-gift", "permission": "list_inventory" },
+                { "path": "/request-inventories", "lang_id": "Request Inventories", "lang_en": "Request Inventories", "icon": "pi pi-inbox", "permission": "list_inventory" }
+            ]
+        }
+    ]
+}
