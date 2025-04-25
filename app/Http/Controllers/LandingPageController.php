@@ -10,6 +10,7 @@ use App\Enums\Employee\Status;
 use App\Enums\Production\WorkType;
 use App\Exports\NewTemplatePerformanceReportExport;
 use App\Exports\PrepareEmployeeMigration;
+use App\Models\Menu;
 use Carbon\Carbon;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +58,28 @@ class LandingPageController extends Controller
 
     public function index()
     {
+        $menus = Menu::get();
+        $menus = collect($menus)->groupBy('app_type')->all();
+
+        $parents = Menu::where('parent_id', null)
+            ->get();
+
+        $output = [];
+        foreach($parents as $key => $parent) {
+            $parent['icon'] = asset($parent['icon']);
+            $output[$key] = $parent;
+
+            $child = [];
+            if ($parent['link'] == '') {
+                $child = Menu::where('id', $parent->id)
+                    ->where('link', '!=', '')->get();
+            }
+
+            $output[$key]['childs'] = $child;
+        }
+        $output = collect($output)->groupBy('app_type')->all();
+
+        return $output;
         // $employees = array(
         //     array('id' => '1','name' => 'Wesley Wiyadi','position_id' => '1'),
         //     array('id' => '2','name' => 'Edwin Chandra Wijaya Ngo','position_id' => '2'),

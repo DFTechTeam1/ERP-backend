@@ -75,5 +75,6 @@ return [
     "memberHasBeedRemoved" => "Member telah di hapus",
     'memberAdded' => 'Anggota Tim Berhasil di Tugaskan',
     "toManyUnfinishedTask" => "Terlalu banyak tugas yang harus diselesaikan. Harap menyelesaikan secara manual",
-    "failedSaveToTalenta" => 'Gagal menyimpan data ke Talenta'
+    "failedSaveToTalenta" => 'Gagal menyimpan data ke Talenta',
+    "resignationHasBeenCanceled" => "Berhasil membatalkan pengundaran diri karyawan"
 ];

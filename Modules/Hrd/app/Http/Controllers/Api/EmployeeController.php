@@ -69,7 +69,8 @@ class EmployeeController extends Controller
                     'position:id,uid,name',
                     'user:id,uid,email,employee_id',
                     'branch:id,short_name',
-                    'jobLevel:id,name'
+                    'jobLevel:id,name',
+                    'resignData:id,employee_id,resign_date'
                 ]
             )
         );
@@ -383,9 +384,27 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->updateEmployment($request->validated(), $employeeUid));
     }
 
-    public function resign(\Modules\Hrd\Http\Requests\Employee\Resign $request, string $employeeUid)
+    /**
+     * Mark selected employee as resign employee
+     *
+     * @param \Modules\Hrd\Http\Requests\Employee\Resign $request
+     * @param string $employeeUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function resign(\Modules\Hrd\Http\Requests\Employee\Resign $request, string $employeeUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->employeeService->resign($request->validated(), $employeeUid));
+    }
+
+    /**
+     * Cancel resign of selected employee
+     *
+     * @param string $employeeUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cancelResign(string $employeeUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->employeeService->cancelResign($employeeUid));
     }
 
     /**
