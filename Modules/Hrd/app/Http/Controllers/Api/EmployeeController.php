@@ -2,25 +2,37 @@
 
 namespace Modules\Hrd\Http\Controllers\Api;
 
+use App\Enums\Cache\CacheKey;
+use App\Enums\Employee\Status;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Http\Requests\Employee\AddAsUser;
 use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
 use Modules\Hrd\Http\Requests\Employee\UpdateBasicInfo;
 use Modules\Hrd\Http\Requests\Employee\UpdateIdentity;
+use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeeService;
 
 class EmployeeController extends Controller
 {
-    private EmployeeService $employeeService;
+    private $employeeService;
 
-    public function __construct(EmployeeService $employeeService)
+    private $repo;
+
+    public function __construct(
+        EmployeeService $employeeService,
+        EmployeeRepository $repo
+    )
     {
         $this->employeeService = $employeeService;
+
+        $this->repo = $repo;
     }
     /**
      * Get list of data
@@ -57,7 +69,8 @@ class EmployeeController extends Controller
                     'position:id,uid,name',
                     'user:id,uid,email,employee_id',
                     'branch:id,short_name',
-                    'jobLevel:id,name'
+                    'jobLevel:id,name',
+                    'resignData:id,employee_id,resign_date'
                 ]
             )
         );
@@ -371,8 +384,82 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->updateEmployment($request->validated(), $employeeUid));
     }
 
-    public function resign(\Modules\Hrd\Http\Requests\Employee\Resign $request, string $employeeUid)
+    /**
+     * Mark selected employee as resign employee
+     *
+     * @param \Modules\Hrd\Http\Requests\Employee\Resign $request
+     * @param string $employeeUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function resign(\Modules\Hrd\Http\Requests\Employee\Resign $request, string $employeeUid): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->employeeService->resign($request->validated(), $employeeUid));
+    }
+
+    /**
+     * Cancel resign of selected employee
+     *
+     * @param string $employeeUid
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cancelResign(string $employeeUid): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->employeeService->cancelResign($employeeUid));
+    }
+
+    /**
+     * Get employment chart options for frontend
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getEmploymentChart(): \Illuminate\Http\JsonResponse
+    {
+        $employees = $this->repo->list(
+            select: "id,name,nickname,status,join_date",
+            where: "deleted_at IS NULL"
+        );
+
+        return apiResponse($this->employeeService->getEmploymentChart($employees));
+    }
+
+    /**
+     * Get all element for dashboard chart
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDashboardElement(): \Illuminate\Http\JsonResponse
+    {
+        // $map = config('cache-dependencies');
+
+        // $class = get_class(new Employee());
+        // if (isset($map[$class])) {
+        //     foreach ($map[$class] as $cacheKey) {
+        //         Cache::forget($cacheKey);
+        //     }
+        // }
+
+        $employees = Cache::get(CacheKey::HrDashboardEmoloyeeList->value);
+        if (!$employees) {
+            $employees = Cache::rememberForever(CacheKey::HrDashboardEmoloyeeList->value, function () {
+                return $this->repo->list(
+                    select: "id,name,nickname,status,join_date,gender,job_level_id,date_of_birth",
+                    where: "deleted_at IS NULL AND status NOT IN (" . Status::Deleted->value . "," . Status::Inactive->value . ") AND end_date IS NULL"
+                );
+            });
+        }
+
+        return apiResponse(
+            generalResponse(
+                message: "Success",
+                data: [
+                    'employmentStatus' => $this->employeeService->getEmploymentChart($employees)['data'],
+                    'lengthOfService' => $this->employeeService->getLengthOfServiceChart(employees: $employees)['data'],
+                    'activeStaff' => $this->employeeService->getActiveStaffChart()['data'],
+                    'genderDiversity' => $this->employeeService->getGenderDiversityChart(employees: $employees)['data'],
+                    'jobLevel' => $this->employeeService->getJobLevelChart(employees: $employees)['data'],
+                    'ageAverage' => $this->employeeService->getAgeAverageChart(employees: $employees)['data']
+                ]
+            )
+        );
     }
 }

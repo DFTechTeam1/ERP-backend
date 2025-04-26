@@ -9,8 +9,10 @@ use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\SalaryType;
 use App\Enums\Employee\Status;
+use App\Traits\FlushCacheOnModelChange;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
+use Carbon\Carbon;
 use Database\Factories\Hrd\EmployeeFactory as HrdEmployeeFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
@@ -41,7 +43,7 @@ use Modules\Production\Models\ProjectTaskPic;
 // #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
 {
-    use HasFactory, ModelObserver, ModelCreationObserver, SoftDeletes, Notifiable;
+    use HasFactory, ModelObserver, ModelCreationObserver, SoftDeletes, Notifiable, FlushCacheOnModelChange;
 
     protected static function newFactory()
     {
@@ -60,8 +62,7 @@ class Employee extends Model
             'religion' => Religion::class,
             'status' => Status::class,
             'martial_status' => MartialStatus::class,
-            //'salary_type' => SalaryType::class,
-            'ptkp_status' => PtkpStatus::class
+            // 'ptkp_status' => PtkpStatus::class
         ];
     }
 
@@ -94,6 +95,13 @@ class Employee extends Model
         'ptkp_status',
         'basic_salary',
         'salary_type',
+        'tax_configuration',
+        'employee_tax_status',
+        'salary_configuration',
+        'jht_configuration',
+        'jp_configuration',
+        'overtime_status',
+        'bpjs_kesehatan_config',
 
         'bpjs_ketenagakerjaan_number',
         'npwp_number',
@@ -133,7 +141,9 @@ class Employee extends Model
         'telegram_chat_id',
         'job_level_id',
         'is_sync_with_talenta',
-        'avatar_color'
+        'avatar_color',
+
+        'talenta_user_id',
     ];
 
     protected $appends = [
@@ -145,8 +155,46 @@ class Employee extends Model
         'gender_text',
         'martial_text',
         'blood_type_text',
-        'religion_text'
+        'religion_text',
+        'length_of_service_year',
+        'human_age'
     ];
+
+    public function humanAge(): Attribute
+    {
+        $output = 0;
+
+        if (isset($this->attributes['date_of_birth'])) {
+            $now = Carbon::now();
+            $birth = Carbon::parse($this->attributes['date_of_birth']);
+
+            $output = number_format(num: $birth->diffInYears($now));
+        }
+
+        return Attribute::make(
+            get: fn() => $output
+        );
+    }
+
+    /**
+     * Determines how long to work in years
+     *
+     * @return Attribute
+     */
+    public function lengthOfServiceYear(): Attribute
+    {
+        $out = 0;
+        if (isset($this->attributes['join_date'])) {
+            $joinDate = Carbon::parse($this->attributes['join_date']);
+
+            $out = Carbon::now()->diffInYears($joinDate);
+            $out = number_format(num: $joinDate->diffInYears(Carbon::now()), decimals: 1);
+        }
+
+        return Attribute::make(
+            get: fn() => (float) $out
+        );
+    }
 
     public function bloodTypeText(): Attribute
     {
@@ -279,6 +327,11 @@ class Employee extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(ProjectTaskPic::class, 'employee_id', 'id');
+    }
+
+    public function resignData(): HasOne
+    {
+        return $this->hasOne(EmployeeResign::class, 'employee_id');
     }
 
     public function position(): BelongsTo

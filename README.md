@@ -74,3 +74,8 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 - php artisan cache:clear
 - update role and permission
 - php artisan hrd:initate-avatar-color
+
+## Step to create new employee
+- Prepare business email
+- Prepare NAS Account
+- Register in the ERP

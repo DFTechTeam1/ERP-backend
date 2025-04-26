@@ -2,10 +2,10 @@
 
 namespace App\Enums\Employee;
 
-enum SalaryType: string
+enum SalaryType: int
 {
-    case Monthly = 'month';
-    case Daily = 'daily';
+    case Monthly = 1;
+    case Daily = 2;
 
     public function label()
     {

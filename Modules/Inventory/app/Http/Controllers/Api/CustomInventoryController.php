@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use \Modules\Inventory\Http\Requests\Inventory\Custom\Build;
 use Modules\Inventory\Http\Requests\Inventory\Custom\UpdateBuild;
 use Modules\Inventory\Services\CustomInventoryService;
+use Modules\Inventory\Services\InventoryService;
 
 class CustomInventoryController extends Controller
 {
@@ -14,11 +15,14 @@ class CustomInventoryController extends Controller
 
     private $customService;
 
-    public function __construct()
+    public function __construct(
+        InventoryService $inventoryService,
+        CustomInventoryService $customInventoryService
+    )
     {
-        $this->service = new \Modules\Inventory\Services\InventoryService;
+        $this->service = $inventoryService;
 
-        $this->customService = new CustomINventoryService;
+        $this->customService = $customInventoryService;
     }
 
     public function getItemList()
