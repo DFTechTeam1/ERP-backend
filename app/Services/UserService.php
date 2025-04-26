@@ -433,6 +433,8 @@ class UserService {
             throw new \App\Exceptions\DoNotHaveAppPermission();
         }
 
+        $menuService = new \App\Services\MenuService();
+
         $role = $user->getRoleNames()[0];
         $roles = $user->roles;
 
@@ -449,8 +451,7 @@ class UserService {
 
         $token = $user->createToken($role, $permissions, $expireTime);
 
-        $menuService = new \App\Services\MenuService();
-        $menus = $menuService->getMenus($user->getAllPermissions());
+        $menus = $menuService->getNewFormattedMenu($user->getAllPermissions()->toArray(), $roles->toArray());
 
         $isProjectManager = false;
 
@@ -515,7 +516,7 @@ class UserService {
             'user' => $user,
             'permissions' => $permissions,
             'role' => $role,
-            'menus' => $menus['data'],
+            'menus' => $menus,
             'role_id' => $roleId,
             'app_name' => $this->generalService->getSettingByKey('app_name'),
             'board_start_calcualted' => $this->generalService->getSettingByKey('board_start_calcualted'),

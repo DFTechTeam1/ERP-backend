@@ -2,10 +2,34 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Project\DetailProject;
+use App\Actions\Project\GetProjectStatistic;
+use App\Enums\Employee\Religion;
+
+use App\Enums\Employee\Status;
+use App\Enums\Production\WorkType;
+use App\Exports\NewTemplatePerformanceReportExport;
+use App\Exports\PrepareEmployeeMigration;
+use App\Models\Menu;
+use Carbon\Carbon;
+use Illuminate\Database\Query\JoinClause;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use Modules\Company\Models\Position;
+use Modules\Company\Models\PositionBackup;
+use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
+use Modules\Hrd\Repository\EmployeePointProjectRepository;
+use Modules\Hrd\Repository\EmployeePointRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
 use Modules\Hrd\Services\PerformanceReportService;
 use Modules\Production\Services\ProjectRepositoryGroup;
+use \Illuminate\Support\Str;
 
 class LandingPageController extends Controller
 {
