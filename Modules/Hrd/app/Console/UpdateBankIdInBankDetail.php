@@ -41,7 +41,7 @@ class UpdateBankIdInBankDetail extends Command
             $bankDetail = $employee->bank_detail;
 
             foreach ($bankDetail as $key => $bankData) {
-                $currentBankName = $bankData['bank_name'];
+                $currentBankName = $bankData['bank_name'] ?? 0;
 
                 // get bank id from database
                 $bank = Bank::selectRaw('bank_code')
@@ -51,7 +51,6 @@ class UpdateBankIdInBankDetail extends Command
                 if ($bank) { // update when bank is exists
                     $bankData['bank_id'] = $bank->bank_code;
                     $bankDetail[$key]['bank_id'] = $bank->bank_code;
-
                 }
 
                 unset($bankDetail[$key]['bank_name']);
