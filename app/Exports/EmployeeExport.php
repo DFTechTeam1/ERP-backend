@@ -58,13 +58,17 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
             $where .= " AND position_id IN {$wherePosition}";
         }
 
+        if (!empty($this->payload['employee_ids'])) {
+            $employeeUids = "'" . implode("','", $this->payload['employee_ids']) . "'";
+            $whereUid = "({$employeeUids})";
+            $where  .= " AND uid IN {$whereUid}";
+        }
+
         $query = Employee::query();
 
         if (!empty($where)) {
             $query->whereRaw($where);
         }
-
-        Log::debug('WHERE CHECK', [$where]);
 
         $query->with([
             'position:id,name,division_id',
@@ -106,7 +110,7 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
                 case Religion::Konghucu->value:
                     $religionCode = 7;
                     break;
-                
+
                 default:
                     $religionCode = 7;
                     break;
@@ -139,7 +143,7 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
             ['sheet' => $sheet, 'coordinate' => 'A1', 'comment' => 'ERP:', 'bold' => true],
             ['sheet' => $sheet, 'coordinate' => 'A1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'A1', 'comment' => 'Wajib diisi & tidak boleh sama', 'bold' => false],
-            
+
             // E1
             ['sheet' => $sheet, 'coordinate' => 'E1', 'comment' => 'ERP:', 'bold' => true],
             ['sheet' => $sheet, 'coordinate' => 'E1', 'comment' => "\r\n", 'bold' => false],

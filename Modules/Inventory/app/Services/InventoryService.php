@@ -28,6 +28,8 @@ use Modules\Inventory\Repository\UnitRepository;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Company\Services\SettingService;
 use Carbon\Carbon;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Inventory\Repository\BrandRepository;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 

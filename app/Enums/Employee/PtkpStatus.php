@@ -4,14 +4,14 @@ namespace App\Enums\Employee;
 
 enum PtkpStatus: string
 {
-    case TK0 = 'tk0';
-    case TK1 = 'tk1';
-    case TK2 = 'tk2';
-    case TK3 = 'tk3';
-    case K0 = 'k0';
-    case K1 = 'k1';
-    case K2 = 'k2';
-    case K3 = 'k3';
+    case TK0 = '1';
+    case TK1 = '2';
+    case TK2 = '3';
+    case TK3 = '4';
+    case K0 = '5';
+    case K1 = '6';
+    case K2 = '7';
+    case K3 = '8';
 
     public function label()
     {

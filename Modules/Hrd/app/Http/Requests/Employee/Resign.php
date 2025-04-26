@@ -13,6 +13,8 @@ class Resign extends FormRequest
     {
         return [
             'reason' => 'required',
+            'resign_date' => 'date_format:Y-m-d|required',
+            'severance' => 'required',
         ];
     }
 

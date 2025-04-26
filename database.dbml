@@ -311,9 +311,16 @@ Table "employees" {
   "gender" employees_gender_enum [not null]
 
   // new
-  "ptkp_status" varchar(5) [not null]
-  "basic_salry" decimal [not null, default: 0]
-  "salary_type" salaray_type_enum [not null]
+    "ptkp_status" varchar(5) [not null]
+    "basic_salry" decimal [not null, default: 0]
+    "salary_type" salaray_type_enum [not null]
+    "tax_configuration" varchar(100),
+    "employee_tax_status" varchar(100),
+    "salary_configuration" varchar(100),
+    "jht_configuration" varchar(100),
+    "jp_configuration" varchar(100),
+    "overtime_status" varchar(100),
+    "bpjs_kesehatan_config" varchar(100),
 
   "bpjs_ketenagakerjaan_number" varchar(50) [default: NULL]
   "npwp_number" varchar(50) [default: NULL]
@@ -350,6 +357,8 @@ Table "employees" {
   "resign_reason" varchar(255) [default: NULL]
   "telegram_chat_id" varchar(255) [default: NULL]
 
+  "talenta_user_id" bigint
+
   // deleted
   "dependant" varchar(10) [default: NULL, note: 'tanggungan']
   "placement" varchar(255) [default: NULL]
@@ -358,6 +367,39 @@ Table "employees" {
   Indexes {
     position_id [name: "employees_position_id_foreign"]
   }
+}
+
+table "employee_resigns" {
+    "id" bigint [pk, increment, not null]
+    "employee_id" bigint [ref: > employees.id]
+    "reason" text [not null]
+    "resign_date" date [not null]
+    "severance" decimal [not null, default: 0]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
+}
+
+Table "employee_timeoffs" {
+    "id" bigint [pk, increment, not null]
+    "time_off_id" bigint [not null, note: "This data came from Talenta server"]
+    "talenta_user_id" bigint [not null, ref: > employees.talenta_user_id, note: "This data came from Talenta server"]
+    "policy_name" varchar(255) [note: "This data came from Talenta server"]
+    "request_type" varchar(100) [note: "This data came from Talenta server"]
+    "file_url" text [note: "This data came from Talenta server"]
+    "start_date" date [note: "This data came from Talenta server"]
+    "end_date" date [note: "This data came from Talenta server"]
+    "status" varchar(100) [note: "This data came from Talenta server"]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
+}
+
+Table "employee_active_reports" {
+    "id" bigint [pk, increment, not null]
+    "month" tinyint [not null]
+    "year" year [not null]
+    "number_of_employee" int [not null]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
 }
 
 Table "employee_task_states" {

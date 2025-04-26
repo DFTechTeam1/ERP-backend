@@ -69,10 +69,18 @@ Route::middleware(['auth:sanctum'])
     ->group(function () {
         Route::get('religions', [CompanyController::class, 'getReligions']);
         Route::get('genders', [CompanyController::class, 'getGenders']);
+        Route::get('banks', [CompanyController::class, 'getBanks']);
         Route::get('martial-status', [CompanyController::class, 'getMartialStatus']);
         Route::get('blood-type', [CompanyController::class, 'getBloodType']);
         Route::get('level-staff', [CompanyController::class, 'getLevelStaff']);
         Route::get('salary-type', [CompanyController::class, 'getSalaryType']);
+        Route::get('salary-configuration', [CompanyController::class, 'getSalaryConfiguration']);
         Route::get('ptkp-type', [CompanyController::class, 'getPtkpType']);
         Route::get('relation-family', [CompanyController::class, 'getRelationFamily']);
+        Route::get('tax-configuration', [CompanyController::class, 'getTaxConfiguration']);
+        Route::get('employee-tax-status', [CompanyController::class, 'getEmployeeTaxStatus']);
+        Route::get('jht-configuration', [CompanyController::class, 'getJhtConfiguration']);
+        Route::get('overtime-status', [CompanyController::class, 'getOvertimeStatus']);
+        Route::get('bpjs-kesehatan-config', [CompanyController::class, 'getBpjsKesehatanConfig']);
+        Route::get('all-configuration', [CompanyController::class, 'getAllConfiguration']);
     });
