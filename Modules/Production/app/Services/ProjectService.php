@@ -4087,10 +4087,9 @@ class ProjectService
 
         $this->changeTaskBoardProcess($data, $projectUid);
 
-        $boards = $this->formattedBoards($projectUid);
-        $currentData['boards'] = $boards;
-
-        storeCache('detailProject' . $projectId, $currentData);
+        $currentData = $this->detailCacheAction->handle($projectUid, [
+            'boards' => FormatBoards::run($projectUid)
+        ]);
 
         return generalResponse(
             'success',
