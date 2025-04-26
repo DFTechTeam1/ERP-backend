@@ -3576,14 +3576,9 @@ class ProjectService
 
             $task = $this->formattedDetailTask($data['task_id']);
 
-            $cache = $this->getDetailProjectCache($projectUid);
-            $currentData = $cache['cache'];
-            $projectId = $cache['projectId'];
-
-            $boards = $this->formattedBoards($projectUid);
-            $currentData['boards'] = $boards;
-
-            storeCache('detailProject' . $projectId, $currentData);
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid)
+            ]);
 
             DB::commit();
 
