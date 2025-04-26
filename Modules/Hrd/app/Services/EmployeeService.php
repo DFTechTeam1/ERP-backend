@@ -875,7 +875,7 @@ class EmployeeService
                         'email',
                         'role_id'
                     ])
-                    ->merge(['employee_id' => $employee->id, 'is_external_user' => 0])
+                    ->merge(['employee_id' => $employee->uid, 'is_external_user' => 0])
                     ->toArray()
                 );
 
@@ -1685,7 +1685,6 @@ class EmployeeService
             $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
 
             $payload['employee_id'] = $employeeId;
-            logging('payload', $payload);
             $this->employeeEmergencyRepo->store($payload);
 
             DB::commit();
