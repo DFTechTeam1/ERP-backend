@@ -1,5 +1,25 @@
-Project ERP {
-    database_type: 'MySql'
+
+Enum "employee_families_relationship_enum" {
+  "father"
+  "mother"
+  "sibling"
+  "child"
+  "other"
+}
+
+Enum "employee_inventory_items_inventory_source_enum" {
+  "custom"
+  "inventory"
+}
+
+Enum "employee_point_details_type_enum" {
+  "entertainment"
+  "production"
+}
+
+Enum "employee_points_type_enum" {
+  "production"
+  "entertainment"
 }
 
 Enum "employees_religion_enum" {
@@ -8,7 +28,7 @@ Enum "employees_religion_enum" {
   "kristen"
   "budha"
   "hindu"
-  "khonghucu"
+  "konghucu"
 }
 
 Enum "employees_martial_status_enum" {
@@ -21,16 +41,6 @@ Enum "employees_gender_enum" {
   "male"
 }
 
-Enum "employee_points_task_type" {
-  "production"
-  "entertainment"
-}
-
-Enum "salaray_type_enum" {
-  "month"
-  "daily"
-}
-
 Enum "employees_education_enum" {
   "smp"
   "sma"
@@ -41,31 +51,10 @@ Enum "employees_education_enum" {
   "s3"
 }
 
-Enum "employees_level_staff_enum" {
-  "manager"
-  "staff"
-  "lead"
-  "junior_staff"
-}
-
-Enum "relationship_enum" {
-  "father"
-  "mother"
-  "sibling"
-  "spouse"
-  "child"
-  "cousin"
-  "nibling"
-  "parent_in_law"
-  "brother_in_law"
-  "sister_in_law"
-  "uncle"
-  "aunt"
-  "grandfather"
-  "grandmother"
-  "friend"
-  "coworker"
-  "others"
+Enum "nas_folder_creations_type_enum" {
+  "create"
+  "update"
+  "delete"
 }
 
 Enum "project_task_worktimes_work_type_enum" {
@@ -112,6 +101,22 @@ Table "addons" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "banks" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "bank_code" tinyint [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "branches" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "short_name" varchar(50) [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "brands" {
   "id" bigint [pk, not null, increment]
   "created_at" timestamp [default: NULL]
@@ -137,18 +142,16 @@ Table "cities" {
   "country_id" bigint [not null]
   "state_id" bigint [not null]
   "name" varchar(255) [not null]
-  "country_code" varchar(3) [not null]
+  "country_code" varchar(255) [not null]
 }
 
 Table "countries" {
   "id" bigint [pk, not null, increment]
-  "iso2" varchar(2) [not null]
   "name" varchar(255) [not null]
-  "status" tinyint [not null, default: '1']
-  "phone_code" varchar(5) [not null]
-  "iso3" varchar(3) [not null]
-  "region" varchar(255) [not null]
-  "subregion" varchar(255) [not null]
+  "iso3" varchar(255) [not null]
+  "iso2" varchar(255) [not null]
+  "phone_code" varchar(255) [not null]
+  "currency" varchar(255) [not null]
 }
 
 Table "custom_inventories" {
@@ -167,16 +170,27 @@ Table "custom_inventories" {
 Table "custom_inventory_details" {
   "id" bigint [pk, not null, increment]
   "custom_inventory_id" bigint [not null]
+  "inventory_id" bigint [not null]
   "qty" int [not null]
   "price" double [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
-  "inventory_id" bigint [not null]
 
   Indexes {
     custom_inventory_id [name: "custom_inventory_details_custom_inventory_id_foreign"]
-    inventory_id [name: "inventory_id"]
+    inventory_id [name: "custom_inventory_details_inventory_id_foreign"]
   }
+}
+
+Table "division_backups" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "parent_id" int [default: NULL]
+  "uid" char(36) [not null]
+  "created_by" int [default: NULL]
+  "updated_by" int [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "divisions" {
@@ -194,6 +208,28 @@ Table "document_templates" {
   "id" bigint [pk, not null, increment]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
+}
+
+Table "employee_active_reports" {
+  "id" bigint [pk, not null, increment]
+  "month" tinyint [not null]
+  "year" year [not null]
+  "number_of_employee" int [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "employee_custom_inventories" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [not null]
+  "custom_inventory_id" bigint [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    employee_id [name: "employee_custom_inventories_employee_id_foreign"]
+    custom_inventory_id [name: "employee_custom_inventories_custom_inventory_id_foreign"]
+  }
 }
 
 Table "employee_emergency_contacts" {
@@ -216,19 +252,114 @@ Table "employee_families" {
   "uid" char(36) [not null]
   "employee_id" bigint [not null]
   "name" varchar(255) [not null]
-  "relationship" relationship_enum [default: NULL]
-  "address" varchar(255) [NULL]
-  "id_number" varchar(16) [not null]
-  "gender" varchar(10) [default: NULL]
   "date_of_birth" date [default: NULL]
-  "religion" varchar(255) [not null]
-  "martial_status" varchar(255) [NOT NULL]
+  "id_number" varchar(16) [default: NULL]
+  "gender" varchar(10) [default: NULL]
   "job" varchar(255) [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "relationship" employee_families_relationship_enum [not null]
+  "address" varchar(255) [default: NULL]
+  "religion" varchar(255) [default: NULL]
+  "martial_status" varchar(255) [default: NULL]
+
+  Indexes {
+    employee_id [name: "employee_families_employee_id_foreign"]
+  }
+}
+
+Table "employee_inventory_items" {
+  "id" bigint [pk, not null, increment]
+  "employee_inventory_master_id" bigint [not null]
+  "inventory_item_id" bigint [not null]
+  "inventory_status" bigint [not null, default: '1', note: '1 for active, 2 for disable']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "inventory_source" employee_inventory_items_inventory_source_enum [not null]
+  "inventory_source_id" int [not null, default: '0']
+
+  Indexes {
+    employee_inventory_master_id [name: "employee_inventory_items_employee_inventory_master_id_foreign"]
+    inventory_item_id [name: "employee_inventory_items_inventory_item_id_foreign"]
+  }
+}
+
+Table "employee_inventory_masters" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "custom_inventory_id" longtext
+
+  Indexes {
+    employee_id [name: "employee_inventory_masters_employee_id_foreign"]
+  }
+}
+
+Table "employee_point_details" {
+  "id" bigint [pk, not null, increment]
+  "employee_point_id" bigint [not null]
+  "task_id" bigint [not null]
+  "point" int [not null]
+  "type" employee_point_details_type_enum [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 
   Indexes {
-    employee_id [name: "employee_families_employee_id_foreign"]
+    employee_point_id [name: "employee_point_details_employee_point_id_foreign"]
+  }
+}
+
+Table "employee_point_project_details" {
+  "id" bigint [pk, not null, increment]
+  "point_id" bigint [not null]
+  "task_id" bigint [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    point_id [name: "employee_point_project_details_point_id_foreign"]
+  }
+}
+
+Table "employee_point_projects" {
+  "id" bigint [pk, not null, increment]
+  "employee_point_id" bigint [not null]
+  "project_id" bigint [not null]
+  "total_point" int [not null, note: 'point + additional point']
+  "additional_point" int [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    employee_point_id [name: "employee_point_projects_employee_point_id_foreign"]
+  }
+}
+
+Table "employee_points" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [not null]
+  "total_point" int [not null, note: 'This is a global total point for each employee']
+  "type" employee_points_type_enum [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    employee_id [name: "employee_points_employee_id_foreign"]
+  }
+}
+
+Table "employee_resigns" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [default: NULL]
+  "reason" text [not null]
+  "resign_date" date [not null]
+  "severance" decimal(20,2) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    employee_id [name: "employee_resigns_employee_id_foreign"]
   }
 }
 
@@ -245,46 +376,28 @@ Table "employee_task_points" {
   "updated_at" timestamp [default: NULL]
 }
 
-// This table is used with NEW WORKFLOW. WILL IMPLEMENT ON ENTERTAINMENT POINT FIRST.
-// TODO: Pointing production point to this table
-Table "employee_points" {
+Table "employee_task_states" {
   "id" bigint [pk, not null, increment]
+  "project_id" bigint [not null]
+  "project_task_id" bigint [not null]
+  "project_board_id" bigint [not null]
   "employee_id" bigint [not null]
-  "point" integer [default: 0]
-  "additional_point" integer [default: 0]
-  "project_id" bigint [not null]
-  "task_type" employee_points_task_type
-  "task_id" varchar(255) [not null]
-  "created_at" timestamp
-  "updated_at" timestamp
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
-// REFACTORED EMPLOYEE POINTS
-Table "employee_points" {
+Table "employee_timeoffs" {
   "id" bigint [pk, not null, increment]
-  "employee_id" bigint [not null, ref: > employees.id]
-  "total_point" integer [not null, default: 0]
-  "type" enum [note: "entertainment,production"]
-  "created_at" timestamp
-  "updated_at" timestamp
-}
-
-Table "employee_point_projects" {
-  "id" bigint [pk, not null, increment]
-  "employee_point_id" bigint [not null]
-  "project_id" bigint [not null]
-  "total_point" integer [not null]
-  "additional_point" integer [not null, default: 0]
-  "created_at" timestamp
-  "updated_at" timestamp
-}
-
-Table "employee_point_project_details" {
-  "id" bigint [pk, not null, increment]
-  "point_id" bigint [not null]
-  "task_id" bigint [not null]
-  "created_at" timestamp
-  "updated_at" timestamp
+  "time_off_id" bigint [not null, note: 'This data came from Talenta server']
+  "talenta_user_id" bigint [default: NULL]
+  "policy_name" varchar(255) [default: NULL, note: 'This data came from Talenta server']
+  "request_type" varchar(100) [default: NULL, note: 'This data came from Talenta server']
+  "file_url" varchar(255) [default: NULL, note: 'This data came from Talenta server']
+  "start_date" date [default: NULL, note: 'This data came from Talenta server']
+  "end_date" date [default: NULL, note: 'This data came from Talenta server']
+  "status" varchar(100) [default: NULL, note: 'This data came from Talenta server']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "employees" {
@@ -293,55 +406,35 @@ Table "employees" {
   "name" varchar(255) [not null]
   "nickname" varchar(255) [default: NULL]
   "email" varchar(255) [not null]
-  "date_of_birth" date [not null]
-  "place_of_birth" varchar(255) [not null]
-  "martial_status" employees_martial_status_enum [not null]
-  "religion" employees_religion_enum [not null]
   "phone" varchar(15) [not null]
   "id_number" varchar(16) [not null]
+  "religion" employees_religion_enum [not null]
+  "martial_status" employees_martial_status_enum [not null]
   "address" varchar(255) [not null]
+  "postal_code" varchar(6) [default: NULL]
   "current_address" varchar(255) [default: NULL]
-  "position_id" bigint [not null]
-  "employee_id" varchar(150) [not null]
-  "level_staff" employees_level_staff_enum [not null]
-  "boss_id" int [default: NULL]
-  "status" tinyint [not null, note: '1 for permanenet, 2 for contract, 3 for part time, 4 for freelance, 5 for internship, 6 for inactive, 7 for waiting HR checking (usually comes from self-filling after the contract)']
-  "branch_id" bigint [not null]
-  "join_date" date [not null]
-  "gender" employees_gender_enum [not null]
-
-  // new
-    "ptkp_status" varchar(5) [not null]
-    "basic_salry" decimal [not null, default: 0]
-    "salary_type" salaray_type_enum [not null]
-    "tax_configuration" varchar(100),
-    "employee_tax_status" varchar(100),
-    "salary_configuration" varchar(100),
-    "jht_configuration" varchar(100),
-    "jp_configuration" varchar(100),
-    "overtime_status" varchar(100),
-    "bpjs_kesehatan_config" varchar(100),
-
-  "bpjs_ketenagakerjaan_number" varchar(50) [default: NULL]
-  "npwp_number" varchar(50) [default: NULL]
-
-  "province_id" int [default: NULL]
-  "city_id" int [default: NULL]
-  "district_id" bigint [default: NULL]
-  "village_id" bigint [default: NULL]
-  "postal_code" varchar(6) [not null]
   "blood_type" varchar(2) [default: NULL]
-  "bank_detail" json [default: NULL, note: 'Format: [{"bank_name": "", "account_number": "", "account_holder_name": "", "is_active": ""}]']
-  "education" employees_education_enum [not null]
+  "date_of_birth" date [not null]
+  "place_of_birth" varchar(255) [default: NULL]
+  "gender" employees_gender_enum [not null]
+  "bank_detail" longtext [note: 'Format: [{"bank_name": "", "account_number": "", "account_holder_name": "", "is_active": ""}]']
+  "relation_contact" longtext [note: 'Format: {"name": "", "phone": "", "relationship": ""}']
+  "education" employees_education_enum [default: NULL]
   "education_name" varchar(255) [default: NULL]
   "education_major" varchar(255) [default: NULL]
   "education_year" year [default: NULL]
-  "relation_contact" json [default: NULL, note: 'Format: {"name": "", "phone": "", "relationship": ""}']
+  "position_id" bigint [not null]
+  "boss_id" int [default: NULL]
+  "level_staff" varchar(255) [default: NULL]
+  "status" tinyint [not null, note: '1 for permanenet, 2 for contract, 3 for part time, 4 for freelance, 5 for internship, 6 for inactive, 7 for waiting HR checking (usually comes from self-filling after the contract)']
+  "join_date" date [not null]
   "start_review_probation_date" date [default: NULL]
-  "end_probation_date" date [default: NULL]
   "probation_status" tinyint [default: NULL]
+  "end_probation_date" date [default: NULL]
   "bpjs_status" tinyint [default: NULL]
+  "bpjs_ketenagakerjaan_number" varchar(50) [default: NULL]
   "bpjs_kesehatan_number" varchar(50) [default: NULL]
+  "npwp_number" varchar(50) [default: NULL]
   "bpjs_photo" varchar(255) [default: NULL]
   "npwp_photo" varchar(255) [default: NULL]
   "id_number_photo" varchar(255) [default: NULL]
@@ -351,66 +444,107 @@ Table "employees" {
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "deleted_at" timestamp [default: NULL]
+  "employee_id" varchar(150) [not null]
+  "province_id" int [default: NULL]
+  "city_id" int [default: NULL]
+  "district_id" bigint [default: NULL]
+  "village_id" bigint [default: NULL]
   "user_id" int [default: NULL]
   "line_id" varchar(255) [default: NULL]
   "end_date" date [default: NULL]
   "resign_reason" varchar(255) [default: NULL]
   "telegram_chat_id" varchar(255) [default: NULL]
-
-  "talenta_user_id" bigint
-
-  // deleted
-  "dependant" varchar(10) [default: NULL, note: 'tanggungan']
-  "placement" varchar(255) [default: NULL]
-  "company_name" varchar(255) [default: NULL]
+  "branch_id" int [default: NULL]
+  "ptkp_status" varchar(5) [default: NULL]
+  "basic_salary" decimal(20,2) [not null, default: '0.00']
+  "salary_type" tinyint [not null]
+  "is_residence_same" tinyint(1) [not null, default: '0']
+  "job_level_id" bigint [default: NULL]
+  "is_sync_with_talenta" tinyint(1) [not null, default: '0']
+  "avatar_color" varchar(255) [default: NULL]
+  "talenta_user_id" varchar(100) [default: NULL]
+  "tax_configuration" varchar(255) [default: NULL]
+  "employee_tax_status" varchar(255) [default: NULL]
+  "salary_configuration" varchar(255) [default: NULL]
+  "jht_configuration" varchar(255) [default: NULL]
+  "jp_configuration" varchar(255) [default: NULL]
+  "overtime_status" varchar(255) [default: NULL]
+  "bpjs_kesehatan_config" varchar(255) [default: NULL]
 
   Indexes {
     position_id [name: "employees_position_id_foreign"]
   }
 }
 
-table "employee_resigns" {
-    "id" bigint [pk, increment, not null]
-    "employee_id" bigint [ref: > employees.id]
-    "reason" text [not null]
-    "resign_date" date [not null]
-    "severance" decimal [not null, default: 0]
-    "created_at" timestamp [default: NULL]
-    "updated_at" timestamp [default: NULL]
-}
-
-Table "employee_timeoffs" {
-    "id" bigint [pk, increment, not null]
-    "time_off_id" bigint [not null, note: "This data came from Talenta server"]
-    "talenta_user_id" bigint [not null, ref: > employees.talenta_user_id, note: "This data came from Talenta server"]
-    "policy_name" varchar(255) [note: "This data came from Talenta server"]
-    "request_type" varchar(100) [note: "This data came from Talenta server"]
-    "file_url" text [note: "This data came from Talenta server"]
-    "start_date" date [note: "This data came from Talenta server"]
-    "end_date" date [note: "This data came from Talenta server"]
-    "status" varchar(100) [note: "This data came from Talenta server"]
-    "created_at" timestamp [default: NULL]
-    "updated_at" timestamp [default: NULL]
-}
-
-Table "employee_active_reports" {
-    "id" bigint [pk, increment, not null]
-    "month" tinyint [not null]
-    "year" year [not null]
-    "number_of_employee" int [not null]
-    "created_at" timestamp [default: NULL]
-    "updated_at" timestamp [default: NULL]
-}
-
-Table "employee_task_states" {
-  "id" bigint [not null, increment, pk]
-  "project_id" bigint [not null, ref: > projects.id]
-  "project_task_id" bigint [not null, ref: > project_tasks.id]
-  "project_board_id" bigint [not null, ref: > project_boards.id]
-  "employee_id" bigint [not null, ref: > employees.id]
+Table "entertainment_task_song_logs" {
+  "id" bigint [pk, not null, increment]
+  "project_song_list_id" bigint [not null]
+  "entertainment_task_song_id" bigint [not null, default: '0']
+  "project_id" bigint [default: NULL]
+  "text" varchar(255) [not null]
+  "employee_id" int [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
-}``
+  "param_text" longtext
+
+  Indexes {
+    project_song_list_id [name: "entertainment_task_song_logs_project_song_list_id_foreign"]
+    entertainment_task_song_id [name: "entertainment_task_song_logs_entertainment_task_song_id_foreign"]
+  }
+}
+
+Table "entertainment_task_song_result_images" {
+  "id" bigint [pk, not null, increment]
+  "result_id" bigint [not null]
+  "path" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    result_id [name: "entertainment_task_song_result_images_result_id_foreign"]
+  }
+}
+
+Table "entertainment_task_song_results" {
+  "id" bigint [pk, not null, increment]
+  "task_id" bigint [not null]
+  "nas_path" varchar(255) [not null]
+  "employee_id" bigint [not null]
+  "note" varchar(255) [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    task_id [name: "entertainment_task_song_results_task_id_foreign"]
+  }
+}
+
+Table "entertainment_task_song_revises" {
+  "id" bigint [pk, not null, increment]
+  "project_song_list_id" bigint [not null]
+  "entertainment_task_song_id" bigint [not null]
+  "reason" varchar(255) [not null]
+  "images" longtext
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "entertainment_task_songs" {
+  "id" bigint [pk, not null, increment]
+  "project_song_list_id" bigint [not null]
+  "status" tinyint [not null]
+  "employee_id" bigint [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "project_id" bigint [not null]
+  "time_tracker" longtext [note: '''will be like: [{type: \'\'start_working\'\', start_time: \'\'2025-01-10 10:00\'\', \'\'end_time\'\': null}]. Type will be start_working, start_revise''']
+
+  Indexes {
+    project_song_list_id [name: "entertainment_task_songs_project_song_list_id_foreign"]
+    employee_id [name: "entertainment_task_songs_employee_id_foreign"]
+    project_id [name: "entertainment_task_songs_project_id_foreign"]
+  }
+}
 
 Table "failed_jobs" {
   "id" bigint [pk, not null, increment]
@@ -429,7 +563,7 @@ Table "failed_jobs" {
 Table "form_interactive_responses" {
   "id" bigint [pk, not null, increment]
   "form_interactive_id" int [not null]
-  "response" json [not null]
+  "response" longtext [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -438,7 +572,7 @@ Table "form_interactives" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
   "name" varchar(255) [not null]
-  "forms" json [not null]
+  "forms" longtext [not null]
   "qrcode" varchar(255) [default: NULL]
   "background" varchar(255) [default: NULL]
   "created_at" timestamp [default: NULL]
@@ -447,7 +581,7 @@ Table "form_interactives" {
 
 Table "indonesia_cities" {
   "code" char(4) [pk, not null]
-  "province_code" char(2) [not null]
+  "province_code" varchar(10) [not null]
   "name" varchar(255) [not null]
   "latitude" varchar(255) [default: NULL]
   "longitude" varchar(255) [default: NULL]
@@ -470,7 +604,7 @@ Table "indonesia_districts" {
 }
 
 Table "indonesia_provinces" {
-  "code" char(2) [pk, not null]
+  "code" varchar(10) [pk, not null]
   "name" varchar(255) [not null]
   "latitude" varchar(255) [default: NULL]
   "longitude" varchar(255) [default: NULL]
@@ -487,6 +621,15 @@ Table "indonesia_villages" {
   Indexes {
     district_code [name: "indonesia_villages_district_code_foreign"]
   }
+}
+
+Table "interactive_images" {
+  "id" bigint [pk, not null, increment]
+  "identifier" varchar(255) [not null]
+  "qrcode" varchar(255) [not null]
+  "filepath" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "inventories" {
@@ -541,12 +684,6 @@ Table "inventory_items" {
   }
 }
 
-Table "employee_inventory_masters" {
-    "id" bigint [pk, not null, increment]
-    "employee_id" bigint [not null]
-    inventory_item_id bigint [not null]
-}
-
 Table "inventory_maintenance_requests" {
   "id" bigint [pk, not null, increment]
   "created_at" timestamp [default: NULL]
@@ -581,7 +718,7 @@ Table "inventory_types" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
   "name" varchar(255) [not null]
-  "slug" varchar(20) [not null]
+  "slug" varchar(50) [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -597,6 +734,16 @@ Table "job_batches" {
   "cancelled_at" int [default: NULL]
   "created_at" int [not null]
   "finished_at" int [default: NULL]
+}
+
+Table "job_levels" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "uid" char(36) [not null]
+  "created_by" int [default: NULL]
+  "updated_by" int [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "jobs" {
@@ -617,7 +764,7 @@ Table "line_messages" {
   "id" bigint [pk, not null, increment]
   "type" varchar(255) [default: NULL]
   "user_id" varchar(255) [default: NULL]
-  "message" json [not null]
+  "message" longtext [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -665,6 +812,22 @@ Table "model_has_roles" {
     (role_id, model_id, model_type) [pk]
     (model_id, model_type) [name: "model_has_roles_model_id_model_type_index"]
   }
+}
+
+Table "nas_folder_creations" {
+  "id" bigint [pk, not null, increment]
+  "project_name" varchar(255) [not null]
+  "project_id" int [not null]
+  "folder_path" longtext [not null]
+  "status" tinyint(1) [not null, default: '1']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "type" nas_folder_creations_type_enum [not null, default: 'create']
+  "last_folder_name" longtext [not null]
+  "current_folder_name" varchar(255) [default: NULL]
+  "server_response" longtext
+  "failed_reason" varchar(255) [default: NULL]
+  "current_path" longtext
 }
 
 Table "notification_templates" {
@@ -723,6 +886,17 @@ Table "personal_access_tokens" {
     token [unique, name: "personal_access_tokens_token_unique"]
     (tokenable_type, tokenable_id) [name: "personal_access_tokens_tokenable_type_tokenable_id_index"]
   }
+}
+
+Table "position_backups" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "name" varchar(255) [not null]
+  "division_id" bigint [not null]
+  "created_by" int [default: NULL]
+  "updated_by" int [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "positions" {
@@ -786,6 +960,18 @@ Table "project_equipment" {
   }
 }
 
+Table "project_logs" {
+  "id" bigint [pk, not null, increment]
+  "project_id" bigint [not null]
+  "message" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    project_id [name: "project_logs_project_id_foreign"]
+  }
+}
+
 Table "project_marketings" {
   "id" bigint [pk, not null, increment]
   "project_id" bigint [not null]
@@ -825,6 +1011,24 @@ Table "project_references" {
   }
 }
 
+Table "project_song_lists" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "project_id" bigint [not null]
+  "name" varchar(255) [not null]
+  "is_request_edit" tinyint(1) [not null, default: '0']
+  "is_request_delete" tinyint(1) [not null, default: '0']
+  "created_by" bigint [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "target_name" varchar(255) [default: NULL]
+  "reason" varchar(255) [default: NULL]
+
+  Indexes {
+    project_id [name: "project_song_lists_project_id_foreign"]
+  }
+}
+
 Table "project_task_attachments" {
   "id" bigint [pk, not null, increment]
   "project_task_id" bigint [not null]
@@ -839,6 +1043,22 @@ Table "project_task_attachments" {
   Indexes {
     project_task_id [name: "project_task_attachments_project_task_id_foreign"]
     project_id [name: "project_task_attachments_project_id_foreign"]
+  }
+}
+
+Table "project_task_holds" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "project_task_id" bigint [not null]
+  "reason" varchar(255) [not null]
+  "hold_at" timestamp [default: NULL]
+  "end_at" timestamp [default: NULL]
+  "hold_by" int [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    project_task_id [name: "project_task_holds_project_task_id_foreign"]
   }
 }
 
@@ -901,7 +1121,7 @@ Table "project_task_proof_of_works" {
   "project_task_id" bigint [not null]
   "project_id" int [not null]
   "nas_link" varchar(255) [default: NULL]
-  "preview_image" json [default: NULL]
+  "preview_image" longtext
   "created_by" int [default: NULL]
   "updated_by" int [default: NULL]
   "created_at" timestamp [default: NULL]
@@ -918,7 +1138,7 @@ Table "project_task_revise_histories" {
   "id" bigint [pk, not null, increment]
   "project_task_id" bigint [not null]
   "project_id" int [default: NULL]
-  "selected_user" json [default: NULL, note: 'who is working on this revise task']
+  "selected_user" longtext [note: 'who is working on this revise task']
   "reason" varchar(255) [default: NULL]
   "file" varchar(255) [default: NULL]
   "revise_by" int [default: NULL, note: 'who is create this revise reason (base on employee id)']
@@ -950,7 +1170,6 @@ Table "project_task_worktimes" {
 Table "project_tasks" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
-  "task_identifier_id" varchar(4) [unique, note: "used as relation key with HR data"]
   "project_id" bigint [not null]
   "project_board_id" bigint [not null]
   "start_date" date [default: NULL]
@@ -963,13 +1182,16 @@ Table "project_tasks" {
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "task_type" project_tasks_task_type_enum [default: NULL]
-  "performance_time" json [default: NULL, note: '''will be [{type: \'\'on_progress\'\', start_at: \'\'2024-05-24 20:00:00\'\', end_at: \'\'\'\'}]. and will be have type: on_progress, review_by_pm, review_by_client''']
+  "performance_time" longtext [note: '''will be [{type: \'\'on_progress\'\', start_at: \'\'2024-05-24 20:00:00\'\', end_at: \'\'\'\'}]. and will be have type: on_progress, review_by_pm, review_by_client''']
   "status" tinyint [default: NULL, note: '1 for on process, 2 for check by pm, 3 for revise, 4 for completed']
-  "current_pics" json [default: NULL, note: 'This column will be update in every task movement. Format will be array of id like [1,2,3]']
+  "current_pics" longtext [note: 'This column will be update in every task movement. Format will be array of id like [1,2,3]']
   "current_board" int [default: NULL]
   "is_approved" tinyint [not null, default: '0']
+  "task_identifier_id" varchar(4) [default: NULL]
+  "is_modeler_task" tinyint(1) [not null, default: '0', note: 'This column is to detect this task is assign to modeler team or not']
 
   Indexes {
+    task_identifier_id [unique, name: "project_tasks_task_identifier_id_unique"]
     project_id [name: "project_tasks_project_id_foreign"]
     project_board_id [name: "project_tasks_project_board_id_foreign"]
   }
@@ -1005,7 +1227,7 @@ Table "projects" {
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "led_area" double [not null, default: '0']
-  "led_detail" json [default: NULL]
+  "led_detail" longtext
   "uid" char(36) [not null]
   "showreels" varchar(255) [default: NULL]
   "country_id" int [default: NULL]
@@ -1020,58 +1242,6 @@ Table "projects" {
   "feedback" text
 }
 
-Table "project_song_lists" {
-  "id" bigint [pk, not null, increment]
-  "uid" char(16) [not null]
-  "project_id" bigint [not null]
-  "name" varchar(255) [not null]
-  "is_request_edit" tinyint(1) [default: '0']
-  "is_request_delete" tinyint(1) [default: '0']
-  "created_at" timestamp
-  "created_by" bigint
-  "updated_at" timestamp
-}
-
-Table "entertainment_task_songs" {
-  "id" bigint [pk, not null, increment]
-  "project_song_list_id" bigint [not null]
-  "status" enum
-  "employee_id" bigint [not null]
-  "time_tracker" longtext [note: "will be like: [{type: 'start_working', start_time: '2025-01-10 10:00', 'end_time': null}]. Type will be start_working, start_revise"]
-  "created_at" timestamp
-  "updated_at" timestamp
-}
-
-Table "entertainment_task_song_revises" {
-  "id" bigint [pk, increment]
-  "project_song_list_id" bigint [not null]
-  "entertainment_task_song_id" bigint [not null]
-  "reason" varchar [not null]
-  "images" longtext
-  "created_at" timestamp
-  "updated_at" timestamp
-}
-
-Table "entertainment_task_song_results" {
-  "id" bigint [pk, not null, increment]
-  "entertainment_task_song_id" bigint [not null]
-  "nas_path" varchar(255) [not null]
-  "employee_id" bigint [not null]
-  "note" text
-  "created_at" timestamp
-  "updated_at" timestamp
-}
-
-Table "entertainment_task_song_result_images" {
-  "id" bigint [pk, not null, increment]
-  "entertainment_task_song_result_id" bigint
-  "path" varchar(255)
-  "created_at" timestamp
-  "updated_at" timestamp
-}
-
-
-
 Table "request_inventories" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
@@ -1080,12 +1250,12 @@ Table "request_inventories" {
   "price" double [not null, default: '0']
   "quantity" tinyint [not null, default: '0']
   "purchase_source" varchar(255) [default: NULL]
-  "purchase_link" json [default: NULL]
+  "purchase_link" longtext
   "status" tinyint [not null, default: '1', note: '1 for requested, 2 for approved, 3 for rejected']
   "requested_by" int [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
-  "approval_target" json [default: NULL]
+  "approval_target" longtext
   "store_name" varchar(255) [default: NULL]
   "approved_by" int [default: NULL]
   "rejected_by" int [default: NULL]
@@ -1107,6 +1277,7 @@ Table "roles" {
   "guard_name" varchar(255) [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
+  "is_permanent" tinyint(1) [not null, default: '0']
 
   Indexes {
     (name, guard_name) [unique, name: "roles_name_guard_name_unique"]
@@ -1140,7 +1311,7 @@ Table "states" {
   "id" bigint [pk, not null, increment]
   "country_id" bigint [not null]
   "name" varchar(255) [not null]
-  "country_code" varchar(3) [default: NULL]
+  "country_code" varchar(255) [not null]
 }
 
 Table "suppliers" {
@@ -1183,6 +1354,15 @@ Table "telegram_report_tasks" {
   "nas_link" varchar(255) [default: NULL]
   "file_id" varchar(255) [default: NULL]
   "mime_type" varchar(255) [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "telegram_sessions" {
+  "id" bigint [pk, not null, increment]
+  "chat_id" varchar(255) [not null]
+  "value" varchar(255) [not null]
+  "status" tinyint(1) [not null, default: '1']
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -1273,6 +1453,35 @@ Table "user_encrypted_tokens" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "user_inventories" {
+  "id" bigint [pk, not null, increment]
+  "inventory_id" bigint [not null]
+  "quantity" tinyint [not null, default: '1']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "user_inventory_master_id" bigint [not null]
+  "inventory_type" varchar(20) [not null]
+  "custom_inventory_id" int [default: NULL]
+
+  Indexes {
+    inventory_id [name: "user_inventories_inventory_id_foreign"]
+    user_inventory_master_id [name: "user_inventories_user_inventory_master_id_foreign"]
+  }
+}
+
+Table "user_inventory_masters" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "employee_id" bigint [not null]
+  "total_inventory" int [not null, default: '0']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    employee_id [name: "user_inventory_masters_employee_id_foreign"]
+  }
+}
+
 Table "user_login_histories" {
   "id" bigint [pk, not null, increment]
   "user_id" int [not null]
@@ -1302,68 +1511,56 @@ Table "users" {
   "is_director" tinyint(1) [default: NULL]
   "reset_password_token_exp" timestamp [default: NULL]
   "reset_password_token_claim" tinyint(1) [default: NULL]
-  "name" varchar(255) [default: NULL, note: 'come from filament resource']
+  "deleted_at" timestamp [default: NULL]
 
   Indexes {
     email [unique, name: "users_email_unique"]
   }
 }
 
-Table "nas_folder_creations" {
-    "id" bigint [pk, not null, increment]
-    "project_name" varchar(255) [not null]
-    "project_id" bigint [not null]
-    "folder_path" longtext [not null, note: '["2024/01_Januari_Event_Name/Brief", "2024/01_Januari_Event_Name/Asset_3D", "2024/01_Januari_Event_Name/Asset_Footage"]']
-    "status" bool [default: 1]
-    "created_at" timestamp [default: NULL]
-    "updated_at" timestamp [default: NULL]
-}
-
-Table "project_logs" {
-    "id" bigint [pk, not null, increment]
-    "project_id" bigint [not null]
-    "message" varchar(255) [not null]
-    "created_at" timestamp [default: NULL]
-    "updated_at" timestamp [default: NULL]
-}
-
-Table "branches" {
-  "id" bigint [pk, increment, not null]
-  "name" varchar(255) [not null]
-  "short_name" varchar(50) [not null]
-  "created_at" timestamp [default: NULL]
-  "updated_at" timestamp [default: NULL]
-}
-
-Table "interactive_images" {
-  "id" bigint [pk, increment, not null]
-  "qrcode" varchar(255) [not null]
-  "filepath" varchar(255) [not null]
-  "created_at" timestamp [default: NULL]
-  "updated_at" timestamp [default: NULL]
-}
-
-Table "employees"."branch_id" < "branches"."id"
-
-Ref: "project_logs"."project_id" < "projects.id"
-
-Ref: "nas_folder_creation"."project_id" < "projects"."id"
-
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
 
-Ref "custom_inventory_details_ibfk_1":"inventory_items"."id" < "custom_inventory_details"."inventory_id"
+Ref "employee_custom_inventories_custom_inventory_id_foreign":"custom_inventories"."id" < "employee_custom_inventories"."custom_inventory_id" [delete: cascade]
+
+Ref "employee_custom_inventories_employee_id_foreign":"employees"."id" < "employee_custom_inventories"."employee_id" [delete: cascade]
 
 Ref "employee_emergency_contacts_employee_id_foreign":"employees"."id" < "employee_emergency_contacts"."employee_id" [delete: cascade]
 
 Ref "employee_families_employee_id_foreign":"employees"."id" < "employee_families"."employee_id" [delete: cascade]
 
-Ref "employees_position_id_foreign":"positions"."id" < "employees"."position_id"
+Ref "employee_inventory_items_employee_inventory_master_id_foreign":"employee_inventory_masters"."id" < "employee_inventory_items"."employee_inventory_master_id" [delete: cascade]
 
-Ref "indonesia_cities_province_code_foreign":"indonesia_provinces"."code" < "indonesia_cities"."province_code" [update: cascade, delete: restrict]
+Ref "employee_inventory_items_inventory_item_id_foreign":"inventory_items"."id" < "employee_inventory_items"."inventory_item_id" [delete: cascade]
 
-Ref "indonesia_districts_city_code_foreign":"indonesia_cities"."code" < "indonesia_districts"."city_code" [update: cascade, delete: restrict]
+Ref "employee_inventory_masters_employee_id_foreign":"employees"."id" < "employee_inventory_masters"."employee_id" [delete: cascade]
 
-Ref "indonesia_villages_district_code_foreign":"indonesia_districts"."code" < "indonesia_villages"."district_code" [update: cascade, delete: restrict]
+Ref "employee_point_details_employee_point_id_foreign":"employee_points"."id" < "employee_point_details"."employee_point_id" [delete: cascade]
+
+Ref "employee_point_project_details_point_id_foreign":"employee_point_projects"."id" < "employee_point_project_details"."point_id" [delete: cascade]
+
+Ref "employee_point_projects_employee_point_id_foreign":"employee_points"."id" < "employee_point_projects"."employee_point_id" [delete: cascade]
+
+Ref "employee_points_employee_id_foreign":"employees"."id" < "employee_points"."employee_id"
+
+Ref "employee_resigns_employee_id_foreign":"employees"."id" < "employee_resigns"."employee_id" [delete: set null]
+
+Ref "employees_position_id_foreign":"position_backups"."id" < "employees"."position_id"
+
+Ref "entertainment_task_song_logs_project_song_list_id_foreign":"project_song_lists"."id" < "entertainment_task_song_logs"."project_song_list_id" [delete: cascade]
+
+Ref "entertainment_task_song_result_images_result_id_foreign":"entertainment_task_song_results"."id" < "entertainment_task_song_result_images"."result_id" [delete: cascade]
+
+Ref "entertainment_task_song_results_task_id_foreign":"entertainment_task_songs"."id" < "entertainment_task_song_results"."task_id" [delete: cascade]
+
+Ref "entertainment_task_songs_employee_id_foreign":"employees"."id" < "entertainment_task_songs"."employee_id"
+
+Ref "entertainment_task_songs_project_id_foreign":"projects"."id" < "entertainment_task_songs"."project_id"
+
+Ref "entertainment_task_songs_project_song_list_id_foreign":"project_song_lists"."id" < "entertainment_task_songs"."project_song_list_id" [delete: cascade]
+
+Ref "indonesia_districts_city_code_foreign":"indonesia_cities"."code" < "indonesia_districts"."city_code" [update: cascade]
+
+Ref "indonesia_villages_district_code_foreign":"indonesia_districts"."code" < "indonesia_villages"."district_code" [update: cascade]
 
 Ref "inventory_images_inventory_id_foreign":"inventories"."id" < "inventory_images"."inventory_id" [delete: cascade]
 
@@ -1379,15 +1576,21 @@ Ref "project_boards_project_id_foreign":"projects"."id" < "project_boards"."proj
 
 Ref "project_equipment_project_id_foreign":"projects"."id" < "project_equipment"."project_id" [delete: cascade]
 
+Ref "project_logs_project_id_foreign":"projects"."id" < "project_logs"."project_id" [delete: cascade]
+
 Ref "project_marketings_project_id_foreign":"projects"."id" < "project_marketings"."project_id" [delete: cascade]
 
 Ref "project_person_in_charges_project_id_foreign":"projects"."id" < "project_person_in_charges"."project_id"
 
 Ref "project_references_project_id_foreign":"projects"."id" < "project_references"."project_id" [delete: cascade]
 
+Ref "project_song_lists_project_id_foreign":"projects"."id" < "project_song_lists"."project_id"
+
 Ref "project_task_attachments_project_id_foreign":"projects"."id" < "project_task_attachments"."project_id" [delete: cascade]
 
 Ref "project_task_attachments_project_task_id_foreign":"project_tasks"."id" < "project_task_attachments"."project_task_id" [delete: cascade]
+
+Ref "project_task_holds_project_task_id_foreign":"project_tasks"."id" < "project_task_holds"."project_task_id" [delete: cascade]
 
 Ref "project_task_pic_histories_project_id_foreign":"projects"."id" < "project_task_pic_histories"."project_id" [delete: cascade]
 

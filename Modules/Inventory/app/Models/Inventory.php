@@ -91,7 +91,10 @@ class Inventory extends Model
     {
         $out = asset('images/noimage.png');
 
-        if (count($this->images) > 0) {
+        if (
+            (count($this->images) > 0) &&
+            (is_file(storage_path('app/public/inventory/' . $this->images[0]->image)))
+        ) {
             $out = asset("storage/inventory/{$this->images[0]->image}");
         }
         return new Attribute(

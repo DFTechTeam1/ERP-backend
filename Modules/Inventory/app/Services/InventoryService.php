@@ -612,7 +612,8 @@ class InventoryService {
                     'name' => $item->name,
                     'stock' => count($item->items) . ' ' . $unit,
                     'brand' => $item->brand ? $item->brand->name : '-',
-                    'image' => $item->image ? asset("storage/{$this->imageFolder}/{$item->image->image}") : asset('images/noimage.png'),
+                    'image' => $item->display_image,
+                    // 'image' => $item->image ? asset("storage/{$this->imageFolder}/{$item->image->image}") : asset('images/noimage.png'),
                     'year_of_purchase' => $item->year_of_purchase ?? '-',
                     'purchase_price' => config('company.currency') . ' ' . number_format(collect($item->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')),
                     'items' => collect($item->items)->map(function ($inventoryItem) {
@@ -703,7 +704,7 @@ class InventoryService {
         );
     }
 
-    public function getBundleInventories()
+    public function getBundleInventories(): array
     {
         $data = $this->customItemRepo->list(
             'id,type,name,uid',
@@ -711,7 +712,7 @@ class InventoryService {
             [
                 'items:id,inventory_id,custom_inventory_id,qty',
                 'items.inventory:id,inventory_id',
-                'items.inventory.inventory:id,name'
+                'items.inventory.inventory:id,uid,name'
             ]
         );
 
@@ -733,13 +734,20 @@ class InventoryService {
                 'title' => $item->name,
                 'value' => $item->uid,
                 'location' => '',
-                'items' => $items
+                'items' => collect($item->items)->map(function ($itemData) {
+                    return [
+                        'id' => $itemData->id,
+                        'name' => $itemData->inventory->inventory->name,
+                        'qty' => 1
+                    ];
+                })->all()
             ];
         }
 
         return generalResponse(
             'success',
             false,
+            // $data->toArray()
             $output
         );
     }
