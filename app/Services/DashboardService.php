@@ -453,7 +453,7 @@ class DashboardService {
 
         $whereHas = [];
 
-        if ($roleId != $superUserRole && in_array($roleId, $projectManagerRole)) {
+        if ($roleId != $superUserRole && in_array($roleId, $projectManagerRole) && $roles[0]->name != BaseRole::ProjectManagerAdmin->value) {
             $whereHas[] = [
                 'relation' => 'personInCharges',
                 'query' => 'pic_id = ' . $employeeId,
