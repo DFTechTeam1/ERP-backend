@@ -1,3 +1,17 @@
+Enum "project_request_equipment_type" {
+    "bundle"
+    "equipment"
+}
+
+Enum "request_equipment_status" {
+    "ready"
+    "requested"
+    "decline"
+    "cancel"
+    "return"
+    "onevent"
+    "complete_and_return"
+}
 
 Enum "employee_families_relationship_enum" {
   "father"
@@ -958,6 +972,26 @@ Table "project_equipment" {
   Indexes {
     project_id [name: "project_equipment_project_id_foreign"]
   }
+}
+
+Table "project_equipments" {
+    "id" bigint [pk, not null, increment]
+    "project_id" bigint [ref: > projects.id]
+    "total_equipment" int [default: 0]
+    "status" request_equipment_status
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
+}
+
+Table "project_equipment_details" {
+    "id" bigint [pk, not null, increment]
+    "project_equipment_id" bigint [ref: > project_equipment.id]
+    "inventory_item_id" bigint [ref: > inventory_items.id]
+    "custom_inventory_id" bigint
+    "qty" int [default: 1]
+    "equipment_type" project_request_equipment_type
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
 }
 
 Table "project_logs" {
