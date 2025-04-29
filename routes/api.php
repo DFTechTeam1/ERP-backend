@@ -206,6 +206,7 @@ Route::get('users/activate/{key}', [UserController::class, 'activate']);
 
 Route::middleware('auth:sanctum')
     ->group(function () {
+        Route::get('logs', [DashboardController::class, 'getLogs']);
         Route::post('users/bulk', [UserController::class, 'bulkDelete'])->name('api.users.bulk-delete');
         Route::apiResource('users', UserController::class)->names('api.users');
 
@@ -222,6 +223,9 @@ Route::middleware('auth:sanctum')
         Route::get('dashboard/projectSong', [DashboardController::class, 'getProjectSong']);
         Route::get('dashboard/needCompleteProject', [DashboardController::class, 'needCompleteProject']);
         Route::get('dashboard/getReport', [DashboardController::class, 'getReport']);
+
+        // Dashboard for human resources
+        Route::get('dashboard/hr/{type}', [DashboardController::class , 'getHrReport']);
     });
 
 Route::post('line-webhook', [\Modules\LineMessaging\Http\Controllers\Api\LineController::class, 'webhook']);
