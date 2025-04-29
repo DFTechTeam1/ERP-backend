@@ -7,11 +7,14 @@ use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
 use App\Jobs\PostNotifyCompleteProjectJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
+use App\Models\User;
 use App\Services\Telegram\TelegramService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Modules\Hrd\Services\PerformanceReportService;
 use Modules\Production\Models\ProjectTask;
@@ -21,11 +24,18 @@ Route::get('/', [LandingPageController::class, 'index']);
 
 Route::get('interactive/download', [InteractiveController::class, 'download']);
 
-Route::get('created', function () {
-    $customer = \Modules\Production\Models\Project::find(232);
-    $customer->name = 'coba ubah';
-    $observer = new \Modules\Production\Observers\NasFolderObserver();
-    $observer->updated($customer);
+Route::get('send-email-testing', function () {
+    if (App::environment(['production'])) {
+        return view('onlyForLocal');
+    }
+
+    $user = User::latest()->first();
+    $password = generateRandomPassword(length: 20);
+
+    $service = new \App\Services\EncryptionService();
+    $encrypt = $service->encrypt($user->email, env('SALT_KEY'));
+
+    Notification::send($user, new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt, $password));
 });
 
 Route::get('barcode', function () {
