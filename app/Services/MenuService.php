@@ -19,7 +19,8 @@ class MenuService {
             BaseRole::Root->value,
             BaseRole::Director->value,
             BaseRole::Hrd->value,
-            BaseRole::Finance->value
+            BaseRole::Finance->value,
+            BaseRole::ItSupport->value
         ];
         $menus = file_get_contents(storage_path('app/public/menu/menu.json'));
         $menus = json_decode($menus, true);
