@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\System\BaseRole;
 use App\Repository\MenuRepository;
 
 class MenuService {
@@ -10,6 +11,54 @@ class MenuService {
     public function __construct()
     {
         $this->repo = new MenuRepository();
+    }
+
+    public function getNewFormattedMenu(array $permissionData = [], array $roles)
+    {
+        $allowedRoleForOfficeMenu = [
+            BaseRole::Root->value,
+            BaseRole::Director->value,
+            BaseRole::Hrd->value,
+            BaseRole::Finance->value
+        ];
+        $menus = file_get_contents(storage_path('app/public/menu/menu.json'));
+        $menus = json_decode($menus, true);
+
+        // get menu based on permission
+        $old = $menus['old'];
+        $new = $menus['new'];
+        $old = collect($old)->map(function ($oldMenu) use($permissionData) {
+            $childs = collect($oldMenu['childs'])->filter(function ($filter) use ($permissionData) {
+                return in_array($filter['permission'], collect($permissionData)->pluck('name')->toArray());
+            })->all();
+
+            $oldMenu['childs'] = $childs;
+
+            return $oldMenu;
+        })->filter(function ($filter) use ($allowedRoleForOfficeMenu, $roles) {
+            $userRole = $roles[0]['name'];
+
+            if (in_array($userRole, $allowedRoleForOfficeMenu)) {
+                return $filter;
+            } else {
+                return $filter['type'] == 'regular';
+            }
+        })->values()->all();
+
+        $new = collect($new)->map(function ($map) use ($permissionData) {
+            $childs = collect($map['childs'])->filter(function ($child) use($permissionData) {
+                return in_array($child['permission'], collect($permissionData)->pluck('name')->toArray());
+            })->values()->all();
+
+            $map['childs'] = $childs;
+
+            return $map;
+        })->all();
+
+        return [
+            'old'=> $old, // this menu is for old interface
+            'new' => $new // this menu is for new interface
+        ];
     }
 
     public function getMenus($permissionsData = null)
@@ -23,7 +72,7 @@ class MenuService {
         if (!empty($permissions)) {
             $permissions = collect($permissions)->pluck('name')->all();
         }
-            
+
         $data = $this->repo->list();
         $menuGroups = \App\Enums\Menu\Group::cases();
 
@@ -61,7 +110,7 @@ class MenuService {
                             $child[] = $d;
                         }
                     }
-                    
+
                 }
             }
 
@@ -108,7 +157,7 @@ class MenuService {
      * @param string $select
      * @param string $where
      * @param array $relation
-     * 
+     *
      * @return array
      */
     public function list(

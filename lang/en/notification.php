@@ -75,5 +75,7 @@ return [
     "taskHasBeenDistribute" => "Task has been distribute",
     "memberHasBeedRemoved" => "Member has been removed",
     'memberAdded' => 'Members has been assign to task',
-    "toManyUnfinishedTask" => "To many tasks to complete, please complete manually"
+    "toManyUnfinishedTask" => "To many tasks to complete, please complete manually",
+    "failedSaveToTalenta" => 'Failed to save data to talenta',
+    "resignationHasBeenCanceled" => "Resignation has been canceled"
 ];

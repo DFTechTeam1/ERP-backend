@@ -145,9 +145,9 @@
                     <td class="npwp"></td>
                     <td class="taxable-date"></td>
                     <td class="ptkp-status">1</td>
-                    <td class="bank-name"></td>
-                    <td class="bank-account"></td>
-                    <td class="bank-account-holder"></td>
+                    <td class="bank-name">{{ $employee->bank_detail[0]['bank_id'] }}</td>
+                    <td class="bank-account"> {{ $employee->bank_detail[0]['account_number'] }}</td>
+                    <td class="bank-account-holder">{{ $employee->bank_detail[0]['account_holder_name'] }}</td>
                     <td class="bpjs-ketenagakerjaan"></td>
                     <td class="bpjs-kesehatan"></td>
                     <td class="resign-date"></td>

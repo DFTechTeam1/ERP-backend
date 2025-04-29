@@ -5,6 +5,7 @@ namespace Modules\Company\Services;
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\PositionException;
 use Modules\Company\Models\Division;
+use Modules\Company\Models\DivisionBackup;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
 
@@ -179,7 +180,7 @@ class PositionService {
     public function store(array $data): array
     {
         try {
-            $data['division_id'] = getIdFromUid($data['division_id'], new Division());
+            $data['division_id'] = getIdFromUid($data['division_id'], new DivisionBackup());
 
             $this->repo->store($data);
 

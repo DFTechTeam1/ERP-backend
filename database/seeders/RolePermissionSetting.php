@@ -228,6 +228,11 @@ class RolePermissionSetting extends Seeder
     protected function dashboardPermission()
     {
         return [
+            ['name' => 'dashboard_hrd', 'group' => 'dashboard', 'used' => [
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dashboard_access', 'group' => 'dashboard', 'used' => [
                 $this->getProjectManagerEntertainmentRole(),
                 $this->getProjectManagerRole(),
@@ -240,6 +245,10 @@ class RolePermissionSetting extends Seeder
                 $this->getProductionRole(),
                 $this->getDirectorRole(),
                 $this->getMarketingRole(),
+                $this->getRootRole(),
+            ]],
+            ['name' => 'list_logs', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
                 $this->getRootRole(),
             ]],
         ];

@@ -2,9 +2,9 @@
 
 namespace Modules\Hrd\Services;
 
+use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Gender;
 use App\Enums\Employee\MartialStatus;
-use App\Enums\Employee\ProbationStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
@@ -14,37 +14,33 @@ use App\Exports\EmployeeExport;
 use App\Models\User;
 use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
+use App\Services\ChartService;
 use App\Services\GeneralService;
+use App\Services\MenuService;
 use App\Services\UserService;
 use Carbon\Carbon;
-use Exception;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Laravel\Facades\Image;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Company\Models\JobLevel;
-use Modules\Company\Models\Position;
 use Modules\Company\Models\PositionBackup;
 use Modules\Company\Repository\JobLevelRepository;
 use Modules\Company\Repository\PositionRepository;
-use Modules\Hrd\Exceptions\EmployeeHasRelation;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeeResign;
+use Modules\Hrd\Repository\EmployeeActiveReportRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\EmployeeResignRepository;
+use Modules\Hrd\Repository\EmployeeTimeoffRepository;
 use Modules\Production\Models\Project;
-use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectVjRepository;
-use Modules\Production\Services\ProjectService;
 
 class EmployeeService
 {
@@ -66,6 +62,11 @@ class EmployeeService
     private $userService;
     private $generalService;
     private $jobLevelRepo;
+    private $chart;
+    private $employeeActiveRepo;
+    private $employeeTimeoffRepo;
+    private $talentaService;
+    private $employeeResignRepo;
 
     public function __construct(
         EmployeeRepository $employeeRepo,
@@ -80,9 +81,16 @@ class EmployeeService
         EmployeeEmergencyContactRepository $employeeEmergencyRepo,
         UserService $userService,
         GeneralService $generalService,
-        JobLevelRepository $jobLevelRepo
+        JobLevelRepository $jobLevelRepo,
+        ChartService $chartService,
+        EmployeeActiveReportRepository $employeeActiveRepo,
+        EmployeeTimeoffRepository $employeeTimeoffRepo,
+        TalentaService $talentaService,
+        EmployeeResignRepository $employeeResignRepo
     )
     {
+        $this->talentaService = $talentaService;
+
         $this->repo = $employeeRepo;
 
         $this->userService = $userService;
@@ -108,6 +116,14 @@ class EmployeeService
         $this->generalService = $generalService;
 
         $this->jobLevelRepo = $jobLevelRepo;
+
+        $this->chart = $chartService;
+
+        $this->employeeActiveRepo = $employeeActiveRepo;
+
+        $this->employeeTimeoffRepo = $employeeTimeoffRepo;
+
+        $this->employeeResignRepo = $employeeResignRepo;
     }
 
     /**
@@ -135,6 +151,8 @@ class EmployeeService
 
             if (!empty($search)) { // array
                 $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
+
+                // append status filter when user is not search for filter. This status filter will be as default filter
                 if (!in_array('status', $filterNames)) {
                     $search['filters'] = collect($search['filters'])->merge([
                         [
@@ -180,7 +198,17 @@ class EmployeeService
                 $sort
             );
 
-            $paginated = collect($employees)->map(function ($item) {
+            $now = Carbon::now();
+            $paginated = collect($employees)->map(function ($item) use ($now) {
+                // define action to cancel resign
+                $canCancelResign = false;
+                if ($item->resignData) {
+                    $resignData = Carbon::parse($item->resignData->resign_date);
+                    if ($now->diffInDays($resignData, false) > 0) {
+                        $canCancelResign = true;
+                    }
+                }
+
                 return [
                     'uid' => $item->uid,
                     'name' => $item->name,
@@ -204,6 +232,8 @@ class EmployeeService
                     'employee_id' => $item->employee_id,
                     'user_id' => $item->user_id,
                     'user' => $item->user,
+                    'is_resign' => $item->resignData ? true : false,
+                    'can_cancel_resign' => $canCancelResign
                 ];
             })->toArray();
 
@@ -370,7 +400,11 @@ class EmployeeService
      */
     public function validateEmployeeID(array $data): array
     {
-        $where = "employee_id = '" . $data['employee_id'] . "'";
+        $notAllowed = [
+            Status::Deleted->value,
+            Status::Inactive->value
+        ];
+        $where = "employee_id = '" . $data['employee_id'] . "' AND status NOT IN (" . implode(',', $notAllowed) . ")" ;
 
         if ($data['uid']) {
             $where .= " and uid != '{$data['uid']}'";
@@ -658,6 +692,12 @@ class EmployeeService
 
         $data = $this->repo->show($uid, $select, $relation);
 
+        if ($data['address'] && $data['current_address'] == null) {
+            $data['is_residence_same'] = true;
+        } else {
+            $data['is_residence_same'] = false;
+        }
+
         // get projects and tasks if any
         $projects = [];
         $asPicProjects = $this->projectRepo->list('id,name,uid,project_date,created_at', '', [], [
@@ -731,12 +771,13 @@ class EmployeeService
             $data['approval_line'] = $bossData->name;
         }
 
+        $currentJobLevelId = $data['job_level_id'] != null ? $data['job_level_id'] : 0;
         $jobLevel = $this->jobLevelRepo->show(
             uid: 0,
             select: 'id,uid',
-            where: "id = " . $data['job_level_id']
+            where: "id = " . $currentJobLevelId
         );
-        $data['job_level_uid'] = $jobLevel->uid;
+        $data['job_level_uid'] = $jobLevel ? $jobLevel->uid : null;
 
         return $data->toArray();
     }
@@ -804,6 +845,10 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
+            $positionData = $this->positionRepo->show(uid: $data['position_id'], select: 'id,division_id', relation: ['division:id,uid']);
+            $data['division_id'] = $positionData->division->uid;
+            $data['position_uid'] = $data['position_id'];
+            $data['job_level_uid'] = $data['job_level_id'];
             $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
             if (!empty($data['boss_id'])) {
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
@@ -812,7 +857,7 @@ class EmployeeService
             $jobLevel = $this->jobLevelRepo->show(uid: $data['job_level_id'], select: 'id,name');
             $data['job_level_id'] = $jobLevel->id;
             $data['level_staff'] = $jobLevel->name;
-            $dadta['avatar_color'] = $this->generalService->generateRandomColor($data['email']);
+            $data['avatar_color'] = $this->generalService->generateRandomColor($data['email']);
 
             $employee = $this->repo->store(
                 collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray()
@@ -830,7 +875,7 @@ class EmployeeService
                         'email',
                         'role_id'
                     ])
-                    ->merge(['employee_id' => $employee->id, 'is_external_user' => 0])
+                    ->merge(['employee_id' => $employee->uid, 'is_external_user' => 0])
                     ->toArray()
                 );
 
@@ -841,9 +886,28 @@ class EmployeeService
             }
 
             // invite to Talenta
-            if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
-                // TODO: Communiate with talenta
-            }
+            // if ((isset($data['invite_to_talenta'])) && ($data['invite_to_talenta'])) {
+            //     $this->talentaService->setUrl('store_employee');
+            //     $this->talentaService->setUrlParams($this->talentaService->buildEmployeePayload($data));
+            //     $response = $this->talentaService->makeRequest();
+
+            //     // Throw error when it failed
+            //     if ($response['message'] != 'success') {
+            //         logging('ERROR SAVING TALENT', $response);
+            //         throw new Exception(__('notification.failedSaveToTalenta'));
+            //     }
+
+            //     // update talenta user ID
+            //     $this->talentaService->setUrl('detail_employee');
+            //     $this->talentaService->setUrlParams(['email' => $data['email']]);
+            //     $currentTalentaEmployee = $this->talentaService->makeRequest();
+
+            //     $talentaUserId = $currentTalentaEmployee['data']['employees'][0]['user_id'];
+
+            //     $this->repo->update([
+            //         'talenta_user_id' => $talentaUserId
+            //     ], $employee->uid);
+            // }
 
             DB::commit();
 
@@ -929,9 +993,9 @@ class EmployeeService
                 $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
             }
 
-            if ((isset($data['is_residence_same'])) && ($data['is_residence_same'])) {
-                $data['current_address'] = $data['address'];
-            }
+            // if ((isset($data['is_residence_same'])) && ($data['is_residence_same'])) {
+            //     $data['current_address'] = $data['address'];
+            // }
 
             $data['job_level_id'] = $this->generalService->getIdFromUid($data['job_level_id'], new JobLevel());
 
@@ -1621,7 +1685,6 @@ class EmployeeService
             $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
 
             $payload['employee_id'] = $employeeId;
-            logging('payload', $payload);
             $this->employeeEmergencyRepo->store($payload);
 
             DB::commit();
@@ -1717,6 +1780,50 @@ class EmployeeService
     }
 
     /**
+     * This function is consumed by cron job. Check Modules\Hrd\app\Console\CheckEmployeeResign.php
+     *
+     * @return void
+     */
+    public function checkEmployeeWhoResignToday(): void
+    {
+        try {
+            $notAllowed = [
+                Status::Inactive->value,
+                Status::Deleted->value
+            ];
+
+            $employees = $this->repo->list(
+                select: 'id,uid,status,user_id',
+                where: "status NOT IN (" . implode(',', $notAllowed) . ")",
+                whereHas: [
+                    [
+                        'relation' => 'resignData',
+                        'query' => "DATE(resign_date) <= NOW()"
+                    ]
+                ]
+            );
+            $userIds = collect($employees)->pluck('user_id')->toArray();
+
+            foreach ($employees as $employee) {
+                $this->repo->update(
+                    data: [
+                        'status' => Status::Inactive->value
+                    ],
+                    uid: $employee->uid
+                );
+            }
+
+            // delete erp account
+            $this->userRepo->bulkDelete(
+                ids: $userIds,
+            );
+        } catch (\Throwable $th) {
+            // write log
+            errorResponse($th);
+        }
+    }
+
+    /**
      * Employee is resign
      *
      * @param array<string, string> $data
@@ -1726,32 +1833,479 @@ class EmployeeService
      */
     public function resign(array $data, string $employeeUid)
     {
-        /**
-         * What should be done when we delete:
-         *
-         * 1. Unattach from all tasks he have
-         * 2. Make sure all equipment are already given back and in good condition
-         * 3. Take back the access from system
-         * 4. Tack back the access from email
-         * 5. Tack back the access from talenta
-         * 6. Write a history for a record
-         * 7. Change status
-         * 8. Don't DELETE UNTIL THE DESIRE TIME REACHED
-         */
+        DB::beginTransaction();
+        try {
+            /**
+             * What should be done when we delete:
+             *
+             * 1. Unattach from all tasks he have
+             * 2. Make sure all equipment are already given back and in good condition
+             * 3. Take back the access from system
+             * 4. Tack back the access from email
+             * 5. Tack back the access from talenta
+             * 6. Write a history for a record
+             * 7. Change status
+             * 8. Don't DELETE UNTIL THE DESIRE TIME REACHED
+             */
 
-        $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
 
-        $this->repo->update([
-            'end_date' => date('Y-m-d'),
-            'resign_reason' => $data['reason'],
-            'status' => \App\Enums\Employee\Status::Inactive->value,
-        ], $employeeUid);
+            $employee = $this->repo->show(
+                uid: $employeeUid,
+                select: 'id,email'
+            );
 
-        \App\Models\User::where('employee_id', $employeeId)->delete();
+            $payloadUpdate = [
+                'end_date' => $data['resign_date'],
+                'resign_reason' => $data['reason'],
+            ];
 
-        return generalResponse(
-            __('notification.successResign'),
-            false
-        );
+            /**
+             * Update status when resign date is less or same with now date
+             */
+            $resignDate = Carbon::parse($data['resign_date']);
+            $now = Carbon::now();
+            $diff = $now->diffInDays($resignDate, false);
+            if ($diff <= 0) {
+                $payloadUpdate['status'] = \App\Enums\Employee\Status::Inactive->value;
+
+                // delete user immediately
+                \App\Models\User::where('employee_id', $employeeId)->delete();
+            }
+
+            $this->repo->update($payloadUpdate, $employeeUid);
+
+            // store to employee resign table as a note
+            $employee->resignData()->save(new EmployeeResign($data));
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.successResign'),
+                false
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get employment detail as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * Here we only show 3 Employee status like Permanent, Contract and Probation
+     *
+     * @return array
+     */
+    public function getEmploymentChart(object $employees): array
+    {
+        try {
+            $output = Cache::get(CacheKey::HrDashboardEmploymentStatus->value);
+            if (!$output) {
+                $output = Cache::rememberForever(CacheKey::HrDashboardEmploymentStatus->value, function () use ($employees) {
+                    $statuses = [
+                        Status::Permanent->value,
+                        Status::Contract->value,
+                        Status::Probation->value
+                    ];
+
+                    $series = [];
+                    $table = [
+                        ['title' => 'Total', 'value' => $employees->count(), 'type' => 'header']
+                    ];
+                    foreach ($statuses as $status) {
+                        $totalPerStatus = collect((object) $employees)->filter(function ($filter) use ($status) {
+                            return $filter->status->value == $status;
+                        })->count();
+
+                        // create series configuration
+                        $series[] = [
+                            'name' => Status::generateLabel($status),
+                            'data' => [$totalPerStatus],
+                            'color' => Status::generateChartColor($status)
+                        ];
+
+                        // add more $table configuration
+                        $percentage = $totalPerStatus / $employees->count() * 100;
+                        $table[] = [
+                            'title' => Status::generateLabel($status),
+                            'value' => $totalPerStatus,
+                            'valuePercentage' => number_format(num: $percentage, decimals: 0) . '%',
+                            'color' => Status::generateChartColor($status),
+                            'type' => 'body',
+                        ];
+                    }
+
+                    // called chart service function to create stacked bar option
+                    $options = $this->chart->buildStackedBarOptions();
+
+                    return [
+                        'series' => $series,
+                        'table' => $table,
+                        'options' => $options
+                    ];
+                });
+            }
+
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get length of service as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * Here we divide by 3 categories: 0-1 yr, 1-3 yr, 3-5 yr, 5-10 yr
+     *
+     * @return array
+     */
+    public function getLengthOfServiceChart(object $employees): array
+    {
+        try {
+            $output = Cache::get(CacheKey::HrDashboardLoS->value);
+            if (!$output) {
+                $output = Cache::rememberForever(CacheKey::HrDashboardLoS->value, function () use ($employees) {
+                    // 0 - 1 year
+                    $firstData = collect($employees)->filter(function ($filter) {
+                        return $filter->length_of_service_year <= 1;
+                    })->count();
+
+                    // 1 - 3 year
+                    $secondData = collect($employees)->filter(function ($filter) {
+                        return $filter->length_of_service_year >= 1.1 && $filter->length_of_service_year <= 3;
+                    })->count();
+
+                    // 3 - 5 year
+                    $thirdData = collect($employees)->filter(function ($filter) {
+                        return $filter->length_of_service_year >= 3.1 && $filter->length_of_service_year <= 5;
+                    })->count();
+
+                    // 5 - 10
+                    $lastData = collect($employees)->filter(function ($filter) {
+                        return $filter->length_of_service_year >= 5.1;
+                    })->count();
+
+                    $series = $this->chart->buildBarSeries(name: 'Length of Service', data: [$firstData, $secondData, $thirdData, $lastData]);
+
+                    $options = $this->chart->buildBarOptions(xaxisCategories: ["0-1 yr", "1-3 yr", "3-5 yr", "5-10 yr"]);
+
+                    return [
+                        'series' => $series,
+                        "options" => $options
+                    ];
+                });
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get active staff as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * Here we only displays data for the past 3 months
+     *
+     * @return array
+     */
+    public function getActiveStaffChart(): array
+    {
+        try {
+            $now = Carbon::now();
+            $months = [
+                $now,
+                Carbon::now()->subMonths(1),
+                Carbon::now()->subMonths(2),
+            ];
+
+            $data = [];
+            foreach ($months as $month) {
+                // get data per month
+                $active = $this->employeeActiveRepo->show(uid: 'select', select: 'id,number_of_employee', where: "month = {$month->format('m')} AND year = {$month->format('Y')}");
+
+                $data[] = $active->number_of_employee ?? 0;
+            }
+
+            $series = $this->chart->buildBarSeries(name: 'Length of Service', data: $data);
+
+            $options = $this->chart->buildBarOptions(xaxisCategories: collect($months)->map(function ($item) {
+                return $item->format('M');
+            })->toArray());
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'series' => $series,
+                    "options" => $options,
+                    'months' => $months
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get gender diversity as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * @return array
+     */
+    public function getGenderDiversityChart(object $employees): array
+    {
+        try {
+            $male = collect($employees)->filter(function ($filter) {
+                return $filter->gender->value == Gender::Male->value;
+            })->count();
+
+            $female = collect($employees)->filter(function ($filter) {
+                return $filter->gender->value == Gender::Female->value;
+            })->count();
+
+            $series = [$male, $female];
+
+            $options = [
+                "chart" => [
+                    "width" => 200,
+                    "height" => 200,
+                    "type" => "pie"
+                ],
+                "labels" => [Gender::Male->label(), Gender::Female->label()],
+                "legend" => [
+                    "show" => true
+                ],
+            ];
+
+            $total = array_sum([$male, $female]);
+            $table = [
+                ["title" => "Total", "value" => $total, "type" => "header"],
+                ["title" => Gender::Male->label(), "value" => $male, "valuePercentage" => number_format(num: $male / $total * 100), "color" => "#009bde", "type" => "body"],
+                ["title" => Gender::Female->label(), "value" => $female, "valuePercentage" => number_format(num: $female / $total * 100), "color" => "#f96d01", "type" => "body"],
+            ];
+
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    "series" => $series,
+                    "table" => $table,
+                    "options" => $options
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get all job level of the company as a chart option that can be comsumed on the frontend
+     * Frontend is used Apexchart
+     *
+     * @return array
+     */
+    public function getJobLevelChart(object $employees): array
+    {
+        try {
+            $output = Cache::get(CacheKey::HrDashboardJobLevel->value);
+            if (!$output || empty($output)) {
+                $output = Cache::rememberForever(CacheKey::HrDashboardJobLevel->value, function () use ($employees) {
+                    $jobLevels = $this->jobLevelRepo->list(
+                        select: 'id,name'
+                    );
+
+                    $series = [];
+                    $table = [
+                        ['title' => 'Total', 'value' => $employees->count(), 'type' => 'header']
+                    ];
+                    foreach ($jobLevels as $jobLevel) {
+                        $numberOfJob = collect($employees)->filter(function ($filter) use ($jobLevel) {
+                            return $filter->job_level_id == $jobLevel->id;
+                        })->count();
+
+                        // generate color of each job level
+                        $color = generateRandomColor($jobLevel->name);
+
+                        // create series
+                        $series[] = [
+                            'name'=> $jobLevel->name,
+                            'data' => [$numberOfJob],
+                            'color' => $color
+                        ];
+
+                        // create table data
+                        $table[] = [
+                            'title' => $jobLevel->name,
+                            'value' => $numberOfJob,
+                            'valuePercentage' => number_format($numberOfJob / $employees->count() * 100) . '%',
+                            'color' => $color,
+                            'type' => 'body'
+                        ];
+                    }
+
+                    // called chart service function to create stacked bar option
+                    $options = $this->chart->buildStackedBarOptions();
+
+                    return [
+                        'series' => $series,
+                        'table' => $table,
+                        'options' => $options
+                    ];
+                });
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get who is off today
+     *
+     *
+     * @return array
+     */
+    public function getEmployeeOffChart(): array
+    {
+        try {
+            $firstMonthUnixTimestamp = Carbon::now()->startOfMonth()->timestamp;
+            $lastMonthUnixTimestamp = Carbon::now()->endOfMonth()->timestamp;
+            $todayUnixTimestamp = Carbon::yesterday()->timestamp;
+
+            // get all timeoff in this month
+            $timeoffs = $this->employeeTimeoffRepo->list(
+                select: "id,time_off_id,talenta_user_id,policy_name,request_type,file_url,start_date,end_date,status,UNIX_TIMESTAMP(start_date) AS start_timestamp,UNIX_TIMESTAMP(end_date) AS end_timestamp",
+                relation: [
+                    'employee:id,employee_id,nickname,name,talenta_user_id'
+                ],
+                where: "UNIX_TIMESTAMP(start_date) >= {$firstMonthUnixTimestamp} AND UNIX_TIMESTAMP(end_date) <= {$lastMonthUnixTimestamp}"
+            );
+
+            // get today timeoff
+            $todayTimeoff = collect((object) $timeoffs)->filter(function ($filter) use($todayUnixTimestamp) {
+                return $todayUnixTimestamp >= $filter->start_timestamp && $todayUnixTimestamp <= $filter->end_timestamp;
+            })->values();
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'today' => $todayTimeoff,
+                    // 'timeoff' => $timeoffs,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get age average chart -> Bar Chart
+     *
+     * @param object $employees
+     * @return array
+     */
+    public function getAgeAverageChart(object $employees): array
+    {
+        try {
+            $output = Cache::get(CacheKey::HrDashboardAgeAverage->value);
+            if (!$output) {
+                $output = Cache::rememberForever(CacheKey::HrDashboardAgeAverage->value, function () use ($employees) {
+                    // < 18 yr
+                    $firstData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age < 18;
+                    })->count();
+
+                    // 18 - 24
+                    $secondData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age >= 18 && $filter->human_age < 24;
+                    })->count();
+
+                    // 25 - 34
+                    $thirdData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age > 24 && $filter->human_age <= 34;
+                    })->count();
+
+                    // 35 - 49 yr
+                    $fourthData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age > 34 && $filter->human_age <= 49;
+                    })->count();
+
+                    // 50++ yr
+                    $lastData = collect($employees)->filter(function ($filter) {
+                        return $filter->human_age > 49;
+                    })->count();
+
+                    $series = $this->chart->buildBarSeries(name: 'Age Average', data: [$firstData, $secondData, $thirdData, $fourthData, $lastData]);
+
+                    $options = $this->chart->buildBarOptions(xaxisCategories: ["< 18", "18 - 24", "25 - 34", "35 - 49", "50+"]);
+
+                    return [
+                        'series' => $series,
+                        "options" => $options
+                    ];
+                });
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Cancel resign of selected employee
+     *
+     * What to do in this function:
+     * 1. Delete resign reason
+     * 2. Delete resign_dae in the employees table
+     *
+     * This function only worked when resign date is greater than now
+     *
+     * @param string $employeeUid
+     * @return array
+     */
+    public function cancelResign(string $employeeUid): array
+    {
+        try {
+            $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee());
+
+            $this->repo->update(
+                data: [
+                    'end_date' => NULL,
+                    'reason' => NULL
+                ],
+                uid: $employeeUid
+            );
+
+            $this->employeeResignRepo->delete(
+                id: 0,
+                where: "employee_id = {$employeeId}"
+            );
+
+            return generalResponse(
+                message: __('notification.resignationHasBeenCanceled')
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

@@ -31,6 +31,8 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees','list');
         Route::post('employees','store')->name('employees.store');
         Route::get('employees/all','getAll');
+        Route::get('employees/employmentChart','getEmploymentChart');
+        Route::get('employees/dashboardElement','getDashboardElement');
         Route::post('employees/export','export');
         Route::get('employees/checkEmail', 'checkEmail');
         Route::get('employees/checkIdNumber', 'checkIdNumber');
@@ -47,6 +49,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::post('employees/submitImport', 'submitImport');
         Route::get('employees/getVJ/{projectUid}','getVJ');
         Route::post('employees/{employeeUid}/resign','resign');
+        Route::get('employees/{employeeUid}/cancelResign','cancelResign');
         Route::put('employees/{uid}/basicInfo','updateBasicInfo')->name('employees.updateBasicInfo');
         Route::put('employees/{uid}/identity','updateIdentity')->name('employees.updateIdentity');
         Route::post('employees/{employeeUid}/storeFamily','storeFamily')->name('employees.storeFamily');
