@@ -698,6 +698,14 @@ Table "inventory_items" {
   }
 }
 
+Table "employee_equipments" {
+    "id" bigint [pk, not null, increment]
+    "employee_id" bigint [ref: > employees.id]
+    "inventory_item_id" bigint [ref: > inventory_items.id]
+    "created_at" timestamp [default: NULL]
+    "updated_at" timestamp [default: NULL]
+}
+
 Table "inventory_maintenance_requests" {
   "id" bigint [pk, not null, increment]
   "created_at" timestamp [default: NULL]
@@ -840,13 +848,7 @@ Table "nas_folder_creations" {
   "last_folder_name" longtext [not null]
   "current_folder_name" varchar(255) [default: NULL]
   "server_response" longtext
-  "failed_reason" varchar(255) [default: NULL]
-  "current_path" longtext
-}
-
-Table "notification_templates" {
-  "id" bigint [pk, not null, increment]
-  "created_at" timestamp [default: NULL]
+  "failed_reaso••••••••at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
 
