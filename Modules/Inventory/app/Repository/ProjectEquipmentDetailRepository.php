@@ -2,17 +2,17 @@
 
 namespace Modules\Inventory\Repository;
 
-use Modules\Inventory\Models\InventoryItem;
-use Modules\Inventory\Repository\Interface\InventoryItemInterface;
+use Modules\Inventory\Models\ProjectEquipmentDetail;
+use Modules\Inventory\Repository\Interface\ProjectEquipmentDetailInterface;
 
-class InventoryItemRepository extends InventoryItemInterface {
+class ProjectEquipmentDetailRepository extends ProjectEquipmentDetailInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new InventoryItem();
+        $this->model = new ProjectEquipmentDetail();
         $this->key = 'id';
     }
 
@@ -24,7 +24,7 @@ class InventoryItemRepository extends InventoryItemInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [], array $whereDoesntHave = [])
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
@@ -36,32 +36,6 @@ class InventoryItemRepository extends InventoryItemInterface {
 
         if ($relation) {
             $query->with($relation);
-        }
-
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                if (!isset($queryItem['type'])) {
-                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                        $qd->whereRaw($queryItem['query']);
-                    });
-                } else {
-                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                        $qd->whereRaw($queryItem['query']);
-                    });
-                }
-            }
-        }
-
-        if (!empty($whereDoesntHave)) {
-            foreach ($whereDoesntHave as $not) {
-                if ((isset($not['query'])) && (!empty($not['query']))) {
-                    $query->whereDoesntHave($not['relation'], function ($queryNot) use($not) {
-                        $queryNot->whereRaw($not['query']);
-                    });
-                } else {
-                    $query->whereDoesntHave($not['relation']);
-                }
-            }
         }
 
         return $query->get();
@@ -94,7 +68,7 @@ class InventoryItemRepository extends InventoryItemInterface {
         if ($relation) {
             $query->with($relation);
         }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -106,18 +80,14 @@ class InventoryItemRepository extends InventoryItemInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where("uid", $uid);
-        } else {
-            $query->whereRaw($where);
-        }
-
+        $query->where("uid", $uid);
+        
         if ($relation) {
             $query->with($relation);
         }
@@ -166,31 +136,10 @@ class InventoryItemRepository extends InventoryItemInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $key = 'id')
+    public function delete(int $id)
     {
-        return $this->model->where($key, $id)
+        return $this->model->whereIn('id', $id)
             ->delete();
-    }
-
-    /**
-     * Multiple update and create
-     *
-     * @param array $data
-     * @param array $uniqueColumns
-     * @param array $updatedColumns
-     * @return void
-     */
-    public function upsert(
-        array $data,
-        array $uniqueColumns,
-        array $updatedColumns
-    )
-    {
-        return $this->model->upsert(
-            $data,
-            $uniqueColumns,
-            $updatedColumns
-        );
     }
 
     /**

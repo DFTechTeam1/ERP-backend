@@ -4,6 +4,8 @@ namespace Modules\Inventory\Services;
 
 use App\Enums\ErrorCode\Code;
 use App\Enums\Inventory\InventoryStatus;
+use App\Enums\Inventory\Location;
+use App\Enums\Inventory\Warehouse;
 use App\Enums\Production\RequestEquipmentStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -618,13 +620,14 @@ class InventoryService {
                     'purchase_price' => config('company.currency') . ' ' . number_format(collect($item->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')),
                     'items' => collect($item->items)->map(function ($inventoryItem) {
                         return [
+                            'user' => $inventoryItem->status == InventoryStatus::InUse && $inventoryItem->employee ? $inventoryItem->employee->nickname : null,
                             'id' => $inventoryItem->id,
                             'inventory_code' => $inventoryItem->inventory_code,
                             'status' => $inventoryItem->status_text,
                             'purchase_price' => $inventoryItem->purchase_price ? number_format($inventoryItem->purchase_price) : '0',
                             'warranty' => $inventoryItem->warranty ?? '-',
                             'year_of_purchase' => $inventoryItem->year_of_purchase ?? '-',
-                            'qrcode' => $inventoryItem->qrcode ? asset("storage/{$inventoryItem->qrcode}") : asset('images/noimage.png'),
+                            'qrcode' => ($inventoryItem->qrcode) && (is_file(storage_path('app/public/' . $inventoryItem->qrcode))) ? asset("storage/{$inventoryItem->qrcode}") : asset('images/noimage.png'),
                         ];
                     }),
                     'locations' => $location,
@@ -738,7 +741,8 @@ class InventoryService {
                     return [
                         'id' => $itemData->id,
                         'name' => $itemData->inventory->inventory->name,
-                        'qty' => 1
+                        'qty' => 1,
+                        'inventory_item_id' => $itemData->inventory_id
                     ];
                 })->all()
             ];
@@ -754,7 +758,20 @@ class InventoryService {
 
     public function getAllInventoryItems()
     {
-        $data = $this->inventoryItemRepo->list('id,inventory_id,status', '', ['inventory:id,name']);
+        $data = $this->inventoryItemRepo->list(
+            select: 'id,inventory_id,status',
+            relation: ['inventory:id,name'],
+            where: "user_id is null and current_location = " . Location::InWarehouse->value,
+            whereDoesntHave: [
+                ['relation' => 'customInventory']
+            ],
+            whereHas: [
+                [
+                    'relation' => 'inventory',
+                    'query' => 'warehouse_id = ' . Warehouse::Entertainment->value
+                ]
+            ]
+        );
 
         return generalResponse(
             'success',
@@ -1315,7 +1332,14 @@ class InventoryService {
         }
     }
 
-    protected function addItems($inventory, array $data)
+    /**
+     * Function to create inventory items
+     *
+     * @param object $inventory
+     * @param array $data
+     * @return void
+     */
+    protected function addItems(object $inventory, array $data): void
     {
         try {
             // create inventory code
@@ -1356,7 +1380,7 @@ class InventoryService {
             // store items
             $inventory->items()->createMany($itemLoactions);
         } catch (\Throwable $th) {
-            Log::error($th);
+            errorResponse($th);
         }
     }
 

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Inventory\Database\factories\InventoryItemFactory;
 
 class InventoryItem extends Model
@@ -61,6 +62,11 @@ class InventoryItem extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'user_id');
+    }
+
+    public function customInventory(): HasOne
+    {
+        return $this->hasOne(CustomInventoryDetail::class, 'inventory_id');
     }
 
     public function location(): Attribute

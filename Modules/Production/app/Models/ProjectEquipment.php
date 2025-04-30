@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Modules\Production\Database\Factories\ProjectEquipmentFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Inventory\Models\ProjectEquipmentDetail;
 
 class ProjectEquipment extends Model
 {
@@ -19,29 +21,26 @@ class ProjectEquipment extends Model
      */
     protected $fillable = [
         'project_id',
-        'inventory_id',
-        'qty',
+        'total_equipment',
         'status',
-        'project_date',
-        'created_by',
-        'updated_by',
-        'uid',
-        'is_checked_pic',
-        'inventory_code',
-        'is_good_condition',
-        'detail_condition',
+        'type'
     ];
 
     protected $appends = ['status_text', 'status_color'];
 
-    public function inventory(): BelongsTo
-    {
-        return $this->belongsTo(\Modules\Inventory\Models\Inventory::class, 'inventory_id');
-    }
+    // public function inventory(): BelongsTo
+    // {
+    //     return $this->belongsTo(\Modules\Inventory\Models\Inventory::class, 'inventory_id');
+    // }
 
-    public function userCreated(): BelongsTo
+    // public function userCreated(): BelongsTo
+    // {
+    //     return $this->belongsTo(\App\Models\User::class, 'created_by');
+    // }
+
+    public function details(): HasMany
     {
-        return $this->belongsTo(\App\Models\User::class, 'created_by');
+        return $this->hasMany(ProjectEquipmentDetail::class, 'project_equipment_id');
     }
 
     public function statusText(): Attribute
