@@ -36,6 +36,10 @@ class SendEmailActivationJob implements ShouldQueue
         $service = new \App\Services\EncryptionService();
         $encrypt = $service->encrypt($this->user->email, env('SALT_KEY'));
 
+        logging('SEND EMAIL ACTIVATION', [
+            'encrypt' => $encrypt
+        ]);
+
         Notification::send($this->user, new \Modules\Hrd\Notifications\UserEmailActivation($this->user, $encrypt, $this->password));
     }
 }
