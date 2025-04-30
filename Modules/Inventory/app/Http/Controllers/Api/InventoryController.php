@@ -59,7 +59,8 @@ class InventoryController extends Controller
             'id,uid,name,item_type,brand_id,supplier_id,description,year_of_purchase,unit_id,purchase_price,warranty',
             '',
             [
-                'items:id,inventory_code,status,inventory_id,current_location,purchase_price,warranty,year_of_purchase,qrcode',
+                'items:id,inventory_code,status,inventory_id,current_location,purchase_price,warranty,year_of_purchase,qrcode,user_id',
+                'items.employee:id,nickname',
                 'image:id,image,inventory_id',
                 'brand:id,name',
                 'unit:id,name',
