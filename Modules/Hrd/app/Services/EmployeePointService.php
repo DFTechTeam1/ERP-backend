@@ -82,85 +82,153 @@ class EmployeePointService {
 
     /**
      * Get detail employee point
+     * Step to produce:
+     * 1. Search employee_id in the employee_points table
+     * 2. Search detail point projects in the empoloyee_point_projects by passing employee_points.id
+     * 3. Search the detail of tasks in the employee_point_project_details by passing employee_point_projects.id
+     * 4. Get the detail of task based on employee_points.type production or entertainment
      *
      * @param integer $employeeId
      * @return \Modules\Hrd\Models\EmployeePoint
      */
     public function renderEachEmployeePoint(int $employeeId = 17, string $startDate = '', string $endDate = '')
     {
-        $dummy = $this->repo->rawSql(
-            table: 'employee_points AS es',
-            select: "
-                es.employee_id, es.total_point AS total_point_employee, es.type, es.id,
-                epp.project_id, epp.total_point AS total_point_per_project, epp.additional_point, epp.id as point_id,
-                p.name AS project_name
-            ",
-            where: "employee_id = {$employeeId} AND p.project_date BETWEEN '{$startDate}' AND '{$endDate}'",
-            relationRaw: [
-                'projects' => function ($query) use($startDate, $endDate) {
-                    $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point')
-                        ->with(['project:id,name,project_date'])
-                        ->whereHas('project', function ($q) use ($startDate, $endDate) {
-                            $q->whereBetween('project_date', [$startDate, $endDate]);
-                        });
-                },
-                'employee:id,name,nickname,email,employee_id,position_id',
-                'employee.position:id,name'
-            ],
+        $data = $this->repo->show(
+            uid: 'string',
+            select: 'id,employee_id,type',
+            where: "employee_id = {$employeeId}",
         );
 
-        $newOutput = [];
         $totalPoint = 0;
         $totalProject = 0;
-        foreach ($dummy as $dataDummy) {
-            $totalPoint += $dataDummy->total_point_per_project;
-            $totalProject += 1;
+        $taskDetail = [];
 
-            // get tasks
+        if ($data) {
             $relation = [
-                'productionTask:id,name,created_at'
+                'project:id,name AS project_name',
+                'details:id,point_id,task_id',
+                'details.productionTask:id,name,created_at'
             ];
-            if ($dataDummy->type != 'production') {
+            if ($data->type != 'production') {
                 $relation = [
-                    'entertainmentTask:id,project_song_list_id,created_at',
-                    'entertainmentTask.song:id,name'
+                    'project:id,name AS project_name',
+                    'details:id,point_id,task_id',
+                    'details.entertainmentTask:id,project_song_list_id,created_at',
+                    'details.entertainmentTask.song:id,name'
                 ];
             }
-            $tasks = $this->pointProjectDetailRepo->list(
-                select: 'id,task_id,point_id',
-                where: "point_id = {$dataDummy->point_id}",
-                relation: $relation
+            $details = $this->pointProjectRepo->list(
+                select: 'id,employee_point_id,project_id,total_point AS total_point_per_project,additional_point',
+                where: "employee_point_id = {$data->id}",
+                relation: $relation,
+                whereHas: [
+                    ['relation' => 'project', 'query' => "project_date BETWEEN '{$startDate}' AND '{$endDate}'"]
+                ]
             );
-            $outputTasks = [];
-            if ($dataDummy->type == 'production') {
-                $outputTasks = collect((object) $tasks)->map(function ($task) {
-                    return [
-                        'name' => $task->productionTask->name,
-                        'assigned_at' => date('d F Y', strtotime($task->productionTask->created_at))
-                    ];
-                })->toArray();
-            } else {
-                $outputTasks = collect((object) $tasks)->map(function ($task) {
-                    return [
-                        'name' => $task->entertainmentTask->song->name,
-                        'assigned_at' => date('d F Y', strtotime($task->entertainmentTask->created_at))
-                    ];
-                })->toArray();
-            }
 
-            $newOutput[] = [
-                'project_name' => $dataDummy->project_name,
-                'point' => $dataDummy->total_point_per_project - $dataDummy->additional_point,
-                'additional_point' => $dataDummy->additional_point,
-                'total_point' => $dataDummy->total_point_per_project,
-                'tasks' => $outputTasks
-            ];
+            $data['point_details'] = $details;
+            $totalPoint = collect($details)->pluck('total_point_per_project')->sum();
+            $totalProject = $details->count();
+            $taskDetail = [];
+            foreach ($details as $detail) {
+                $outputTasks = [];
+                foreach ($detail->details as $task) {
+                    if ($data->type == 'production') {
+                        $outputTasks[] = [
+                            'name' => $task->productionTask->name,
+                            'assigned_at' => date('d F Y, H:i', strtotime($task->productionTask->created_at))
+                        ];
+                    } else {
+                        $outputTasks[] = [
+                            'name' => $task->entertainmentTask->song->name,
+                            'assigned_at' => date('d F Y, H:i', strtotime($task->entertainmentTask->created_at))
+                        ];
+                    }
+                }
+
+                $taskDetail[] = [
+                    'project_name' => $detail->project->project_name,
+                    'point' => $detail->total_point_per_project - $detail->additional_point,
+                    'additional_point' => $detail->additional_point,
+                    'total_point' => $detail->total_point_per_project,
+                    'tasks' => $outputTasks
+                ];
+            }
         }
+
+        // $dummy = $this->repo->rawSql(
+        //     table: 'employee_points AS es',
+        //     select: "
+        //         es.employee_id, es.total_point AS total_point_employee, es.type, es.id,
+        //         epp.project_id, epp.total_point AS total_point_per_project, epp.additional_point, epp.id as point_id,
+        //         p.name AS project_name
+        //     ",
+        //     where: "employee_id = {$employeeId} AND p.project_date BETWEEN '{$startDate}' AND '{$endDate}'",
+        //     relationRaw: [
+        //         'projects' => function ($query) use($startDate, $endDate) {
+        //             $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point')
+        //                 ->with(['project:id,name,project_date'])
+        //                 ->whereHas('project', function ($q) use ($startDate, $endDate) {
+        //                     $q->whereBetween('project_date', [$startDate, $endDate]);
+        //                 });
+        //         },
+        //         'employee:id,name,nickname,email,employee_id,position_id',
+        //         'employee.position:id,name'
+        //     ],
+        // );
+
+        // $newOutput = [];
+        // $totalPoint = 0;
+        // $totalProject = 0;
+        // foreach ($dummy as $dataDummy) {
+        //     $totalPoint += $dataDummy->total_point_per_project;
+        //     $totalProject += 1;
+
+        //     // get tasks
+        //     $relation = [
+        //         'productionTask:id,name,created_at'
+        //     ];
+        //     if ($dataDummy->type != 'production') {
+        //         $relation = [
+        //             'entertainmentTask:id,project_song_list_id,created_at',
+        //             'entertainmentTask.song:id,name'
+        //         ];
+        //     }
+        //     $tasks = $this->pointProjectDetailRepo->list(
+        //         select: 'id,task_id,point_id',
+        //         where: "point_id = {$dataDummy->point_id}",
+        //         relation: $relation
+        //     );
+        //     $outputTasks = [];
+        //     if ($dataDummy->type == 'production') {
+        //         $outputTasks = collect((object) $tasks)->map(function ($task) {
+        //             return [
+        //                 'name' => $task->productionTask->name,
+        //                 'assigned_at' => date('d F Y', strtotime($task->productionTask->created_at))
+        //             ];
+        //         })->toArray();
+        //     } else {
+        //         $outputTasks = collect((object) $tasks)->map(function ($task) {
+        //             return [
+        //                 'name' => $task->entertainmentTask->song->name,
+        //                 'assigned_at' => date('d F Y', strtotime($task->entertainmentTask->created_at))
+        //             ];
+        //         })->toArray();
+        //     }
+
+        //     $newOutput[] = [
+        //         'project_name' => $dataDummy->project_name,
+        //         'point' => $dataDummy->total_point_per_project - $dataDummy->additional_point,
+        //         'additional_point' => $dataDummy->additional_point,
+        //         'total_point' => $dataDummy->total_point_per_project,
+        //         'tasks' => $outputTasks
+        //     ];
+        // }
 
         return [
             'total_point' => $totalPoint,
             'total_project' => $totalProject,
-            'task_details' => $newOutput
+            'task_details' => $taskDetail
         ];
     }
 
