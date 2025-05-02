@@ -989,6 +989,7 @@ Table "project_equipments" {
     "total_equipment" int [default: 0]
     "status" request_equipment_status
     "type" project_request_equipment_type_parent [note: "If there have bundle and standalone inventory, then will be categorize as combine"]
+    "request_by" bigint
     "created_at" timestamp [default: NULL]
     "updated_at" timestamp [default: NULL]
 }
@@ -1000,7 +1001,6 @@ Table "project_equipment_details" {
     "custom_inventory_id" bigint [note: "NULL if empty"]
     "qty" int [default: 1]
     "equipment_type" project_request_equipment_type
-    "created_by" bigint [default: NULL]
     "created_at" timestamp [default: NULL]
     "updated_at" timestamp [default: NULL]
 }

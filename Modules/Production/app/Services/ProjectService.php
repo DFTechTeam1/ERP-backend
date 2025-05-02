@@ -18,6 +18,7 @@ use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Enums\Production\Entertainment\TaskSongLogType;
+use App\Enums\Production\RequestEquipmentStatus;
 use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskSongStatus;
 use App\Enums\Production\TaskStatus;
@@ -61,11 +62,13 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Hrd\Repository\EmployeeTaskStateRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
+use Modules\Inventory\Repository\ProjectEquipmentDetailRepository;
 use Modules\Production\Exceptions\AttributeReferenceMissing;
 use Modules\Production\Exceptions\FailedModifyWaitingApprovalSong;
 use Modules\Production\Exceptions\ProjectNotFound;
@@ -168,6 +171,8 @@ class ProjectService
 
     private $employeeTaskStateRepo;
 
+    private $projectEquipmentDetailRepo;
+
     /**
      * Construction Data
      */
@@ -207,7 +212,8 @@ class ProjectService
         EntertainmentTaskSongResultRepository $entertainmentTaskSongResultRepo,
         EntertainmentTaskSongResultImageRepository $entertainmentTaskSongResultImageRepo,
         EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise,
-        EmployeeTaskStateRepository $employeeTaskStateRepo
+        EmployeeTaskStateRepository $employeeTaskStateRepo,
+        ProjectEquipmentDetailRepository $projectEquipmentDetailRepo
     )
     {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
@@ -281,6 +287,8 @@ class ProjectService
         $this->projectSongListRepo = $projectSongListRepo;
 
         $this->employeeTaskStateRepo = $employeeTaskStateRepo;
+
+        $this->projectEquipmentDetailRepo = $projectEquipmentDetailRepo;
     }
 
     /**
@@ -3261,6 +3269,39 @@ class ProjectService
         }
     }
 
+    public function requestEquipment(array $payload, string $projectUid)
+    {
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+
+            $inventories = [];
+            foreach ($payload['equipments'] as $equipment) {
+                if ($equipment['type'] == 'bundle') {
+                    foreach ($equipment['inventory_ids'] as $inventoryId) {
+                        $inventories[] = $inventoryId;
+                    }
+                } else {
+                    $inventories[] = $equipment['inventory_id'];
+                }
+            }
+
+            $model = $this->projectEquipmentDetailRepo->store([
+                'project_id' => $projectId,
+                'total_equipment' => count($inventories),
+                'status' => RequestEquipmentStatus::Requested->value,
+                'type' => $payload['type'],
+                'request_by' => Auth::user()->load('employee')->employee->id
+            ]);
+            $model->details()->createMany();
+
+            return generalResponse(
+                message: "Success request equipment"
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     /**
      * Store new equipment request to INVENTORY
      *
@@ -3268,7 +3309,7 @@ class ProjectService
      * @param string $projectUid
      * @return array
      */
-    public function requestEquipment(array $data, string $projectUid)
+    public function requestEquipmentBackup(array $data, string $projectUid)
     {
         DB::beginTransaction();
         try {
