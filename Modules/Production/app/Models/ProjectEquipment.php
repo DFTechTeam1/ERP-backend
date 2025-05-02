@@ -14,6 +14,8 @@ class ProjectEquipment extends Model
 {
     use HasFactory, ModelObserver, ModelCreationObserver;
 
+    protected $table = 'project_equipments';
+
     /**
      * The attributes that are mass assignable.
      */
