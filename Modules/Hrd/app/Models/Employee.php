@@ -39,6 +39,7 @@ use Modules\Company\Models\PositionBackup;
 use Modules\Company\Models\Province;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\ProjectTaskPic;
+use Modules\Production\Models\ProjectVj;
 
 // #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
@@ -332,6 +333,11 @@ class Employee extends Model
     public function resignData(): HasOne
     {
         return $this->hasOne(EmployeeResign::class, 'employee_id');
+    }
+
+    public function vjs(): HasMany
+    {
+        return $this->hasMany(ProjectVj::class, 'employee_id');
     }
 
     public function position(): BelongsTo
