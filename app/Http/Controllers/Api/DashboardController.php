@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Hrd\Services\EmployeeService;
 
@@ -46,7 +47,12 @@ class DashboardController extends Controller
         return apiResponse($this->service->needCompleteProject());
     }
 
-    public function getProjectCalendar()
+    /**
+     * Get project list to be displayed in frontend calendar
+     *
+     * @return JsonResponse
+     */
+    public function getProjectCalendar(): JsonResponse
     {
         return apiResponse($this->service->getProjectCalendars());
     }
@@ -162,5 +168,10 @@ class DashboardController extends Controller
         $output =  array_reverse($output);
 
         return $output;
+    }
+
+    public function getVjWorkload()
+    {
+        return apiResponse($this->service->getVjWorkload());
     }
 }

@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\System\BaseRole;
+use App\Repository\UserRepository;
 use DateTime;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -37,6 +39,8 @@ class DashboardService {
 
     private $generalService;
 
+    private $userRepo;
+
     public function __construct(
         \Modules\Production\Repository\ProjectRepository $projectRepo,
         \Modules\Inventory\Repository\InventoryRepository $inventoryRepo,
@@ -45,7 +49,8 @@ class DashboardService {
         \Modules\Production\Repository\ProjectTaskPicRepository $projectTaskPicRepo,
         \Modules\Production\Repository\ProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
         \Modules\Production\Repository\ProjectTaskPicLogRepository $projectTaskPicLogRepo,
-        GeneralService $generalService
+        GeneralService $generalService,
+        UserRepository $userRepo
     )
     {
         $this->generalService = $generalService;
@@ -63,6 +68,8 @@ class DashboardService {
         $this->taskPicHistory = $projectTaskPicHistoryRepo;
 
         $this->taskPicLog = $projectTaskPicLogRepo;
+
+        $this->userRepo = $userRepo;
     }
 
     public function getReport()
@@ -453,31 +460,44 @@ class DashboardService {
 
         $whereHas = [];
 
-        if ($roleId != $superUserRole && in_array($roleId, $projectManagerRole) && $roles[0]->name != BaseRole::ProjectManagerAdmin->value) {
+        if (
+            $roleId != $superUserRole &&
+            in_array($roleId, $projectManagerRole) &&
+            $roles[0]->name != BaseRole::ProjectManagerAdmin->value &&
+            !$user->hasRole(BaseRole::ProjectManagerEntertainment->value)
+        ) {
             $whereHas[] = [
                 'relation' => 'personInCharges',
                 'query' => 'pic_id = ' . $employeeId,
             ];
-        } else if (isDirector() || isItSupport()) {
+        } else if (isDirector() || isItSupport() || $user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
             $whereHas = [];
         } else if ($roleId != $superUserRole && !in_array($roleId, $projectManagerRole)) {
-            $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
 
-            if ($projectTaskPic->count() > 0) {
-                $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
-                $projectTaskIds = implode("','", $projectTasks);
-                $projectTaskIds = "'" . $projectTaskIds;
-                $projectTaskIds .= "'";
-
-                $hasQuery = "id IN (" . $projectTaskIds . ")";
+            if ($user->hasRole(BaseRole::Entertainment->value)) {
+                $whereHas[] = [
+                    'relation' => 'entertainmentTaskSong',
+                    'query' => "employee_id = {$user->employee_id}"
+                ];
             } else {
-                $hasQuery = "id IN (0)";
-            }
+                $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
 
-            $whereHas[] = [
-                'relation' => 'tasks',
-                'query' => $hasQuery,
-            ];
+                if ($projectTaskPic->count() > 0) {
+                    $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
+                    $projectTaskIds = implode("','", $projectTasks);
+                    $projectTaskIds = "'" . $projectTaskIds;
+                    $projectTaskIds .= "'";
+
+                    $hasQuery = "id IN (" . $projectTaskIds . ")";
+                } else {
+                    $hasQuery = "id IN (0)";
+                }
+
+                $whereHas[] = [
+                    'relation' => 'tasks',
+                    'query' => $hasQuery,
+                ];
+            }
         }
 
         $data = $this->projectRepo->list('id,uid,name,project_date,venue', $where, [
@@ -731,5 +751,74 @@ class DashboardService {
             false,
             $out,
         );
+    }
+
+    /**
+     * This function only for 'Project Manager Entertainment' role only
+     *
+     * @return array
+     */
+    public function getVjWorkload(): array
+    {
+        try {
+            $now = Carbon::now()->startOfMonth()->format('Y-m-d');
+            $end = Carbon::now()->endOfMonth()->format('Y-m-d');
+            $whereDate = [$now, $end];
+
+            // get all entertainment users
+            $entertainments = $this->userRepo->list(
+                select: 'id,email,employee_id',
+                whereRole: BaseRole::Entertainment->value,
+                relation: [
+                    'employee:id,nickname,employee_id,uid',
+                    'employee.vjs:id,project_id,employee_id',
+                    'employee.vjs.project' => function ($query) use ($whereDate) {
+                        $query->selectRaw('id,name,project_date')
+                            ->with([
+                                'personInCharges:id,project_id,pic_id',
+                                'personInCharges.employee:id,nickname'
+                            ])
+                            ->whereBetween('project_date', $whereDate);
+                    }
+                ]
+            );
+
+            $output = [];
+            foreach ($entertainments as $employee) {
+                $workload = collect($employee->employee->vjs)->filter(function ($filter) {
+                    return $filter->project;
+                })->values()->map(function ($project) {
+                    return [
+                        'id' => $project->project_id,
+                        'name' => $project->project->name,
+                        'project_date' => Carbon::parse($project->project->project_date)->format('d F Y'),
+                        'status' => $project->project->status_text,
+                        'status_color' => $project->project->status_color,
+                        'pic' => collect($project->project->personInCharges)->map(function ($pic) {
+                            return [
+                                'nickname' => $pic->employee->nickname
+                            ];
+                        })
+                    ];
+                });
+
+                $output[] = [
+                    'uid' => $employee->employee->uid,
+                    'nickname' => $employee->employee->nickname,
+                    'employee_id' => $employee->employee->employee_id,
+                    'workload' => $workload,
+                    'workload_per_month' => $workload->count()
+                ];
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'employees' => $output
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }
