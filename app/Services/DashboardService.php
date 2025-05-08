@@ -761,9 +761,16 @@ class DashboardService {
     public function getVjWorkload(): array
     {
         try {
-            $now = Carbon::now()->startOfMonth()->format('Y-m-d');
-            $end = Carbon::now()->endOfMonth()->format('Y-m-d');
-            $whereDate = [$now, $end];
+            $filter = request('month');
+
+            if ((!empty($filter)) && ($filter != 'null')) {
+                $now = Carbon::parse($filter)->startOfMonth();
+                $end = Carbon::parse($filter)->endOfMonth();
+            } else {
+                $now = Carbon::now()->startOfMonth();
+                $end = Carbon::now()->endOfMonth();
+            }
+            $whereDate = [$now->format('Y-m-d'), $end->format('Y-m-d')];
 
             // get all entertainment users
             $entertainments = $this->userRepo->list(
@@ -794,27 +801,35 @@ class DashboardService {
                         'project_date' => Carbon::parse($project->project->project_date)->format('d F Y'),
                         'status' => $project->project->status_text,
                         'status_color' => $project->project->status_color,
-                        'pic' => collect($project->project->personInCharges)->map(function ($pic) {
-                            return [
-                                'nickname' => $pic->employee->nickname
-                            ];
-                        })
+                        'pic' => collect($project->project->personInCharges)->pluck('employee.nickname')->join(',')
                     ];
                 });
 
                 $output[] = [
                     'uid' => $employee->employee->uid,
-                    'nickname' => $employee->employee->nickname,
+                    'name' => $employee->employee->nickname,
                     'employee_id' => $employee->employee->employee_id,
                     'workload' => $workload,
                     'workload_per_month' => $workload->count()
                 ];
             }
+            $totalWorkload = collect($output)->pluck('workload_per_month')->all();
 
             return generalResponse(
                 message: "Success",
                 data: [
-                    'employees' => $output
+                    'isEmpty' => collect($totalWorkload)->sum() > 0 ? false : true,
+                    'chartTitle' => $now->format('d F') . ' - ' . $end->format('d F Y'),
+                    'chartData' => [
+                        'labels' => collect($output)->pluck('name')->all(),
+                        'datasets' => [
+                            [
+                                'backgroundColor' => ['#41B883', '#E46651', '#00D8FF', '#DD1B16'],
+                                'data' => $totalWorkload
+                            ]
+                        ]
+                    ],
+                    'employees' => $output,
                 ]
             );
         } catch (\Throwable $th) {
