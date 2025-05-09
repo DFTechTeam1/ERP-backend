@@ -223,6 +223,7 @@ Route::middleware('auth:sanctum')
         Route::get('dashboard/projectSong', [DashboardController::class, 'getProjectSong']);
         Route::get('dashboard/needCompleteProject', [DashboardController::class, 'needCompleteProject']);
         Route::get('dashboard/getReport', [DashboardController::class, 'getReport']);
+        Route::get('dashboard/getVjWorkload', [DashboardController::class, 'getVjWorkload']);
 
         // Dashboard for human resources
         Route::get('dashboard/hr/{type}', [DashboardController::class , 'getHrReport']);
