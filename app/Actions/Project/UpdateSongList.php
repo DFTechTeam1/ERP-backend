@@ -78,17 +78,24 @@ class UpdateSongList
         $item['status_of_work'] = !$item->task ? null : TaskSongStatus::getLabel($item->task->status);
         $item['status_of_work_color'] = !$item->task ? null : TaskSongStatus::getColor($item->task->status);
 
-        $item['my_own'] = $admin || $director || $entertainmentPm ?
-            true :
+        $item['my_own'] = !$item->task ?
+            false :
             (
-                !$item->task ?
-                false :
-                (
-                    $item->task->employee->user_id == $this->user->id ?
-                    true :
-                    false
-                )
-            ); // override permission for root, director and project manager
+                $item->task->employee->user_id == $this->user->id ?
+                true :
+                false
+            );
+        // $item['my_own'] = $admin || $director || $entertainmentPm ?
+        //     true :
+        //     (
+        //         !$item->task ?
+        //         false :
+        //         (
+        //             $item->task->employee->user_id == $this->user->id ?
+        //             true :
+        //             false
+        //         )
+        //     ); // override permission for root, director and project manager
         $item['need_to_be_done'] = !$item->task ? false : ($item->task->status == TaskSongStatus::OnProgress->value ? true : false);
         $item['need_worker_approval'] = !$item->task ?
             false :
