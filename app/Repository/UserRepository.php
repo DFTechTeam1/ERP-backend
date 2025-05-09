@@ -11,8 +11,8 @@ class UserRepository {
 
     public function __construct()
     {
-        $this->model = new \App\Models\User();   
-        
+        $this->model = new \App\Models\User();
+
         $this->key = 'id';
     }
 
@@ -27,7 +27,8 @@ class UserRepository {
     public function list(
         string $select = '*',
         string $where = '',
-        array $relation = []
+        array $relation = [],
+        string $whereRole = ''
     )
     {
         $query = $this->model->query();
@@ -36,6 +37,10 @@ class UserRepository {
 
         if (!empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (!empty($whereRole)) {
+            $query->role($whereRole);
         }
 
         if (count($relation) > 0) {
