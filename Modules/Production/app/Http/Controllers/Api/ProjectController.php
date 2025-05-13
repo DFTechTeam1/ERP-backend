@@ -937,5 +937,10 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->filterTasks($request->all(), $projectUid));
     }
+
+    public function getEntertainmentSongWorkload()
+    {
+
+    }
 }
 

@@ -1008,3 +1008,18 @@ if (!function_exists('hasLittlePower')) {
         return $output;
     }
 }
+
+if (!function_exists('applyNestedWhereHas')) {
+    function applyNestedWhereHas($query, array $relations)
+    {
+        foreach ($relations as $relation => $constraintOrNested) {
+            if (is_callable($constraintOrNested)) {
+                $query->whereHas($relation, $constraintOrNested);
+            } elseif (is_array($constraintOrNested)) {
+                $query->whereHas($relation, function ($q) use ($constraintOrNested) {
+                    applyNestedWhereHas($q, $constraintOrNested);
+                });
+            }
+        };
+    }
+}

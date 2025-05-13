@@ -174,4 +174,9 @@ class DashboardController extends Controller
     {
         return apiResponse($this->service->getVjWorkload());
     }
+
+    public function getEntertainmentSongWorkload(): JsonResponse
+    {
+        return apiResponse($this->service->getEntertainmentSongWorkload());
+    }
 }

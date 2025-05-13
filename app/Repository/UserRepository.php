@@ -28,7 +28,8 @@ class UserRepository {
         string $select = '*',
         string $where = '',
         array $relation = [],
-        string $whereRole = ''
+        array $whereRole = [],
+        array $whereHasNested = []
     )
     {
         $query = $this->model->query();
@@ -37,6 +38,10 @@ class UserRepository {
 
         if (!empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (!empty($whereHasNested)) {
+            applyNestedWhereHas($query, $whereHasNested);
         }
 
         if (!empty($whereRole)) {
