@@ -481,9 +481,17 @@ class DashboardService {
         } else if ($roleId != $superUserRole && !in_array($roleId, $projectManagerRole)) {
 
             if ($user->hasRole(BaseRole::Entertainment->value)) {
+                // entertainment task song
                 $whereHas[] = [
                     'relation' => 'entertainmentTaskSong',
                     'query' => "employee_id = {$user->employee_id}"
+                ];
+
+                // vj
+                $whereHas[] = [
+                    'relation' => 'vjs',
+                    'query' => "employee_id = {$user->employee_id}",
+                    'type' => 'or'
                 ];
             } else {
                 $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
