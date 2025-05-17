@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Modules\Production\Repository\EntertainmentTaskSongRepository;
 
 class DashboardService {
     private $projectRepo;
@@ -41,6 +42,8 @@ class DashboardService {
 
     private $userRepo;
 
+    private $entertainmentTaskRepo;
+
     public function __construct(
         \Modules\Production\Repository\ProjectRepository $projectRepo,
         \Modules\Inventory\Repository\InventoryRepository $inventoryRepo,
@@ -50,7 +53,8 @@ class DashboardService {
         \Modules\Production\Repository\ProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
         \Modules\Production\Repository\ProjectTaskPicLogRepository $projectTaskPicLogRepo,
         GeneralService $generalService,
-        UserRepository $userRepo
+        UserRepository $userRepo,
+        EntertainmentTaskSongRepository $entertainmentTaskRepo
     )
     {
         $this->generalService = $generalService;
@@ -70,6 +74,8 @@ class DashboardService {
         $this->taskPicLog = $projectTaskPicLogRepo;
 
         $this->userRepo = $userRepo;
+
+        $this->entertainmentTaskRepo = $entertainmentTaskRepo;
     }
 
     public function getReport()
@@ -475,9 +481,17 @@ class DashboardService {
         } else if ($roleId != $superUserRole && !in_array($roleId, $projectManagerRole)) {
 
             if ($user->hasRole(BaseRole::Entertainment->value)) {
+                // entertainment task song
                 $whereHas[] = [
                     'relation' => 'entertainmentTaskSong',
                     'query' => "employee_id = {$user->employee_id}"
+                ];
+
+                // vj
+                $whereHas[] = [
+                    'relation' => 'vjs',
+                    'query' => "employee_id = {$user->employee_id}",
+                    'type' => 'or'
                 ];
             } else {
                 $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
@@ -775,7 +789,7 @@ class DashboardService {
             // get all entertainment users
             $entertainments = $this->userRepo->list(
                 select: 'id,email,employee_id',
-                whereRole: BaseRole::Entertainment->value,
+                whereRole: [BaseRole::Entertainment->value],
                 relation: [
                     'employee:id,nickname,employee_id,uid',
                     'employee.vjs:id,project_id,employee_id',
@@ -835,5 +849,93 @@ class DashboardService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    public function getEntertainmentSongWorkload()
+    {
+        $filter = request('month');
+
+        if ((!empty($filter)) && ($filter != 'null')) {
+            $now = Carbon::parse($filter)->startOfMonth();
+            $end = Carbon::parse($filter)->endOfMonth();
+        } else {
+            $now = Carbon::now()->startOfMonth();
+            $end = Carbon::now()->endOfMonth();
+        }
+        $whereDate = [$now->format('Y-m-d'), $end->format('Y-m-d')];
+
+        // get all entertainment users
+        $users = $this->userRepo->list(select: 'id', whereRole: [BaseRole::Entertainment->value, BaseRole::ProjectManagerEntertainment->value]);
+
+        $entertainments = $this->employeeRepo->list(
+            select: "id,name,email,employee_id,avatar_color",
+            whereIn: [
+                'key' => 'user_id',
+                'value' => collect($users)->pluck('id')->toArray()
+            ]
+        );
+
+        $outputWorkload = [];
+        $totalWorkload = 0;
+        foreach ($entertainments as $key => $entertainment) {
+            $outputWorkload[] = $entertainment;
+
+            // search the task
+            $workload = $this->entertainmentTaskRepo->list(
+                select: 'id,employee_id,project_id,project_song_list_id',
+                where: "employee_id = {$entertainment->id}",
+                relation: [
+                    'project:id,name,project_date',
+                    'song:id,name'
+                ],
+                whereHasNested: [
+                    'project' => function ($q) use ($whereDate) {
+                        $q->whereBetween('project_date', $whereDate);
+                    }
+                ]
+            );
+
+            $groups = collect((object) $workload)->groupBy('project_id', false)->map(function ($item) use ($totalWorkload) {
+                return [
+                    'name' => $item[0]->project->name,
+                    'project_date' => date('d F Y', strtotime($item[0]->project->project_date)),
+                    'songs' => collect($item)->pluck('song.name')->toArray(),
+                ];
+            })->values();
+            $totalWorkload = collect($groups)->pluck('songs')->map(function ($sum) {
+                return count($sum);
+            })->sum();
+
+            $outputWorkload[$key]['totalWorkload'] = $totalWorkload;
+            $outputWorkload[$key]['workload'] = $groups;
+        }
+
+        // build data and options for the frontend
+        $chart = [
+            'data' => [
+                'labels' => collect($entertainments)->pluck('name')->toArray(),
+                'datasets' => [
+                    [
+                        'label' => 'Workload',
+                        'backgroundColor' => collect($entertainments)->pluck('avatar_color')->toArray(),
+                        'pointBackgroundColor' => 'rgba(255,99,132,1)',
+                        'pointBorderColor' => '#ffffff',
+                        'pointHoverBackgroundColor' => '#fff',
+                        'pointHoverBorderColor' => 'rgba(255,99,132,1)',
+                        'data' => collect($outputWorkload)->pluck('totalWorkload')->toArray()
+                    ]
+                ],
+            ],
+        ];
+
+        return generalResponse(
+            message: "Success",
+            data: [
+                'chart' => $chart,
+                'employees' => $outputWorkload,
+                'is_empty' => !(bool) collect($outputWorkload)->pluck('totalWorkload')->sum() > 0,
+                'chart_title' => $now->format('d F Y') . ' - ' . $end->format('d F Y')
+            ]
+        );
     }
 }
