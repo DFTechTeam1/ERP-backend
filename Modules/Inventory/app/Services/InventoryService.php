@@ -703,7 +703,7 @@ class InventoryService {
         );
     }
 
-    public function getBundleInventories()
+    public function getBundleInventories(): array
     {
         $data = $this->customItemRepo->list(
             'id,type,name,uid',

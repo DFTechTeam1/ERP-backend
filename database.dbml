@@ -2,6 +2,12 @@ Project ERP {
     database_type: 'MySql'
 }
 
+Enum "event_equipment_types" {
+  "mixed"
+  "regular"
+  "custom"
+}
+
 Enum "employees_religion_enum" {
   "katholik"
   "islam"
@@ -784,6 +790,25 @@ Table "project_equipment" {
   Indexes {
     project_id [name: "project_equipment_project_id_foreign"]
   }
+}
+
+Table "event_equipments" {
+  "id" bigint [pk, not null, increment]
+  "project_id" [ref: > projects.id]
+  "type" event_equipment_types
+  "requested_by" bigint [ref: > employees.id]
+  "status" tinyint
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "event_equipment_details" {
+  "id" bigint [pk, not null, increment]
+  "event_equipment_id" [ref: > event_equipments.id]
+  "inventory_item_id" [ref: > inventory_items.id]
+  "custom_detail_id" [note: 'nullable', ref: > custom_inventory_details.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "project_marketings" {
