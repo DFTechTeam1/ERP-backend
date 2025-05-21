@@ -6,7 +6,9 @@ use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\Inventory\Database\Factories\CustomInventoryFactory;
+use Modules\Production\Models\EventEquipment;
 
 class CustomInventory extends Model
 {
@@ -30,5 +32,10 @@ class CustomInventory extends Model
     public function items(): HasMany
     {
         return $this->hasMany(\Modules\Inventory\Models\CustomInventoryDetail::class, 'custom_inventory_id');
+    }
+
+    public function eventEquipments(): MorphMany
+    {
+        return $this->morphMany(EventEquipment::class, 'equipmentable');
     }
 }

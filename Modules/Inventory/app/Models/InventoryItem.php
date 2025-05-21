@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\Inventory\Database\factories\InventoryItemFactory;
+use Modules\Production\Models\EventEquipment;
 
 class InventoryItem extends Model
 {
@@ -52,6 +54,11 @@ class InventoryItem extends Model
         'location',
         'location_badge'
     ];
+
+    public function eventEquipments(): MorphMany
+    {
+        return $this->morphMany(EventEquipment::class, 'equipmentable');
+    }
 
     public function inventory(): BelongsTo
     {
