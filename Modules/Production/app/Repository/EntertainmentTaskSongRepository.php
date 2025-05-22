@@ -24,7 +24,7 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHasNested = [])
     {
         $query = $this->model->query();
 
@@ -32,6 +32,10 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
 
         if (!empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (!empty($whereHasNested)) {
+            applyNestedWhereHas($query, $whereHasNested);
         }
 
         if ($relation) {
@@ -68,7 +72,7 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -91,7 +95,7 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
         } else {
             $query->whereRaw($where);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }

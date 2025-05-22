@@ -2,6 +2,7 @@
 
 namespace App\Actions\Project;
 
+use App\Actions\DefineDetailProjectPermission;
 use App\Actions\DefineTaskAction;
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
@@ -292,6 +293,8 @@ class FormatTaskPermission
         //     $allowedUploadShowreels = true;
         // }
         $project['allowed_upload_showreels'] = $allowedUploadShowreels;
+
+        $project['permission_list'] = DefineDetailProjectPermission::run();
 
         storeCache('detailProject' . $projectId, $project);
         return $project;

@@ -36,7 +36,8 @@ class EmployeeRepository extends EmployeeInterface
         string $orderBy = '',
         string $limit = '',
         array $whereHas = [],
-        array $whereIn = []
+        array $whereIn = [],
+        array $whereHasNested = []
     )
     {
         $query = $this->model->query();
@@ -57,6 +58,10 @@ class EmployeeRepository extends EmployeeInterface
 
         if ($whereIn) {
             $query->whereIn($whereIn['key'], $whereIn['value']);
+        }
+
+        if (!empty($whereHasNested)) {
+            applyNestedWhereHas($query, $whereHasNested);
         }
 
         if ($relation) {
