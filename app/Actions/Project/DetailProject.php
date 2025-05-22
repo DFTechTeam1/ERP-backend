@@ -2,7 +2,9 @@
 
 namespace App\Actions\Project;
 
+use App\Actions\DefineDetailProjectPermission;
 use App\Enums\System\BaseRole;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
@@ -23,9 +25,10 @@ class DetailProject
         /**
          * Validate project for entertainment role
          */
-        $user = Auth::user();
+        $user = auth()->user();
         $haveTask = true;
         $isVj = true;
+        $isEntertainment = (bool) $user->hasRole(BaseRole::Entertainment->value) || $user->hasRole(BaseRole::ProjectManagerEntertainment->value);
         if ($user->hasRole(BaseRole::Entertainment->value)) {
             // check if project task, if user do not have a task in this project, throw error
             $user->load('employee');
@@ -164,7 +167,9 @@ class DetailProject
                 'showreels' => $data->showreels_path,
                 'person_in_charges' => $data->personInCharges,
                 'project_maximal_point' => $data->projectClass->maximal_point,
-                'vjs' => $data->vjs
+                'vjs' => $data->vjs,
+                'permission_list' => DefineDetailProjectPermission::run(),
+                'is_entertainment' => $isEntertainment
             ];
 
             storeCache('detailProject' . $data->id, $output);

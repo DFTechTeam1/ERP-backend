@@ -135,6 +135,8 @@ class TestingService {
             }
 
             $sorts = rtrim($sorts, ',');
+        } else {
+            $sorts = "project_date ASC";
         }
 
         $paginated = $this->projectGroupRepo->projectRepo->pagination(
