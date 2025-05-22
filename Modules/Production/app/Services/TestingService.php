@@ -135,16 +135,18 @@ class TestingService {
             }
 
             $sorts = rtrim($sorts, ',');
+        } else {
+            $sorts = "project_date ASC";
         }
 
         $paginated = $this->projectGroupRepo->projectRepo->pagination(
-            $select,
-            $where,
-            $relation,
-            $itemsPerPage,
-            $page,
-            $whereHas,
-            $sorts
+            select: $select,
+            where: $where,
+            relation: $relation,
+            itemsPerPage: $itemsPerPage,
+            page: $page,
+            whereHas: $whereHas,
+            sortBy: $sorts
         );
 
         logging("PAGINATED", $paginated->toArray());
