@@ -46,7 +46,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
     Route::get('project/{projectUid}/precheck', [ProjectController::class, 'precheck']);
     Route::post('project/{projectUid}/completeUnfinishedTask', [ProjectController::class, 'completeUnfinishedTask']);
-
+    
     // songs
     Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');
     Route::post('project/{projectUid}/bulkAssignWorkerForSong', [ProjectController::class, 'bulkAssignWorkerForSong'])->name('projects.bulkAssignWorkerForSong');
@@ -64,11 +64,13 @@ Route::middleware(['auth:sanctum'])
     Route::post('project/{projectUid}/song/reject/{songUid}', [ProjectController::class, 'rejectEditSong'])->name('projects.rejectEditSong');
     Route::post('project/{projectUid}/song/subtituteSongPic/{songUid}', [ProjectController::class, 'subtituteSongPic'])->name('projects.subtituteSongPic');
     Route::get('project/{projectUid}/song/removePic/{songUid}', [ProjectController::class, 'removePicSong'])->name('projects.removePicSong');
-
+    
     // entertainment
     Route::get('/project/{projectUid}/entertainment/listMember', [ProjectController::class, 'entertainmentListMember'])->name("projecjts.entertainmentListMember");
     Route::get('/project/{projectUid}/entertainment/workload', [ProjectController::class, 'entertainmentMemberWorkload'])->name("projecjts.entertainmentMemberWorkload");
-
+    
+    Route::post('project/customer/add', [ProjectController::class, 'storeCustomer']);
+    Route::get('project/customer/list', [ProjectController::class, 'getCustomer']);
     Route::get('project/{projectUid}/statusses', [ProjectController::class, 'getProjectStatusses']);
     Route::get('project/{projectUid}/prepareFinalCheck', [ProjectController::class, 'prepareFinalCheck']);
     Route::get('project/scheduler/{projectUid}', [ProjectController::class, 'getAllSchedulerProjects']);
