@@ -24,6 +24,7 @@ use Modules\Production\Services\ProjectService;
 use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Http\Requests\Project\CompleteProject;
+use Modules\Production\Http\Requests\Project\Deals\Customer\StoreCustomer;
 use Modules\Production\Http\Requests\Project\DistributeModelerTask;
 use Modules\Production\Http\Requests\Project\DistributeSong;
 use Modules\Production\Http\Requests\Project\RejectEditSong;
@@ -32,6 +33,7 @@ use Modules\Production\Http\Requests\Project\SongReportAsDone;
 use Modules\Production\Http\Requests\Project\SongRevise;
 use Modules\Production\Http\Requests\Project\SubtituteWorkerSong;
 use Modules\Production\Http\Requests\Project\UpdateSong;
+use Modules\Production\Services\CustomerService;
 use Modules\Production\Services\TestingService;
 
 class ProjectController extends Controller
@@ -40,14 +42,19 @@ class ProjectController extends Controller
 
     private $testingService;
 
+    private $customerService;
+
     public function __construct(
         ProjectService $projectService,
-        TestingService $testingService
+        TestingService $testingService,
+        CustomerService $customerService
     )
     {
         $this->service = $projectService;
 
         $this->testingService = $testingService;
+
+        $this->customerService = $customerService;
     }
 
     /**
@@ -941,6 +948,31 @@ class ProjectController extends Controller
     public function getEntertainmentSongWorkload()
     {
 
+    }
+
+    /**
+     * Store new customer
+     * 
+     * @param StoreCustomer $request        This will have structure:
+     * - string $name           Required
+     * - string $phone          Required
+     * - ?string $email         Nullable
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeCustomer(StoreCustomer $request): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->customerService->store($request->validated()));
+    }
+
+    /**
+     * Get all customer list
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getCustomer(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->customerService->getAll());
     }
 }
 

@@ -2,6 +2,17 @@ Project ERP {
     database_type: 'MySql'
 }
 
+Enum "project_deal_equipment_type" {
+  "lasika"
+  "others"
+}
+
+Enum "event_equipment_types" {
+  "mixed"
+  "regular"
+  "custom"
+}
+
 Enum "employees_religion_enum" {
   "katholik"
   "islam"
@@ -314,13 +325,13 @@ Table "employees" {
     "ptkp_status" varchar(5) [not null]
     "basic_salry" decimal [not null, default: 0]
     "salary_type" salaray_type_enum [not null]
-    "tax_configuration" varchar(100),
-    "employee_tax_status" varchar(100),
-    "salary_configuration" varchar(100),
-    "jht_configuration" varchar(100),
-    "jp_configuration" varchar(100),
-    "overtime_status" varchar(100),
-    "bpjs_kesehatan_config" varchar(100),
+    "tax_configuration" varchar(100)
+    "employee_tax_status" varchar(100)
+    "salary_configuration" varchar(100)
+    "jht_configuration" varchar(100)
+    "jp_configuration" varchar(100)
+    "overtime_status" varchar(100)
+    "bpjs_kesehatan_config" varchar(100)
 
   "bpjs_ketenagakerjaan_number" varchar(50) [default: NULL]
   "npwp_number" varchar(50) [default: NULL]
@@ -410,7 +421,7 @@ Table "employee_task_states" {
   "employee_id" bigint [not null, ref: > employees.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
-}``
+}
 
 Table "failed_jobs" {
   "id" bigint [pk, not null, increment]
@@ -786,6 +797,25 @@ Table "project_equipment" {
   }
 }
 
+Table "event_equipments" {
+  "id" bigint [pk, not null, increment]
+  "project_id" bigint [ref: > projects.id]
+  "type" event_equipment_types
+  "requested_by" bigint [ref: > employees.id]
+  "status" tinyint
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "event_equipment_details" {
+  "id" bigint [pk, not null, increment]
+  "event_equipment_id" bigint [ref: > event_equipments.id]
+  "inventory_item_id" bigint [ref: > inventory_items.id]
+  "custom_detail_id" bigint [note: 'nullable', ref: > custom_inventory_details.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "project_marketings" {
   "id" bigint [pk, not null, increment]
   "project_id" bigint [not null]
@@ -987,6 +1017,101 @@ Table "project_vjs" {
     project_id [name: "project_vjs_project_id_foreign"]
     employee_id [name: "project_vjs_employee_id_foreign"]
   }
+}
+
+Table "quotation_items" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "customers" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "email" varchar(255)
+  "phone" varchar(20) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "project_led_settings" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "project_deals" {
+  "id" bigint [pk, increment, not null]
+  "name" varchar(255) [not null]
+  "project_date" date [not null]
+  "customer_id" bigint [ref: > customers.id]
+  "event_type" projects_event_type_enum [default: NULL]
+  "venue" varchar(255) [not null]
+  "marketing_id" int [default: NULL]
+  "collaboration" varchar(255) [default: NULL]
+  "note" text
+  "led_area" double [not null, default: '0']
+  "led_detail" json [default: NULL]
+  "country_id" int [default: NULL]
+  "state_id" int [default: NULL]
+  "city_id" int [default: NULL]
+  "city_name" varchar(255) [default: NULL]
+  "project_class_id" int [default: NULL]
+  "longitude" varchar(150) [default: NULL]
+  "latitude" varchar(150) [default: NULL]
+  "equipment_type" project_deal_equipment_type
+  "is_high_season" bool
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "project_quotations" {
+  "id" bigint [pk, not null, increment]
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "main_ballroom" decimal [default: 0]
+  "prefunction" decimal [default: 0]
+  "high_season_fee" decimal [default: 0]
+  "equipment_fee" decimal [default: 0]
+  "sub_total" decimal [default: 0]
+  "maximum_discount" decimal [default: 0]
+  "total" decimal [default: 0]
+  "maximum_markup_price" decimal [default: 0]
+  "fix_price" decimal [default: 0]
+  "quotation_id" varchar
+  "is_final" bool [default: "false"]
+  "description" text
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "project_quotation_items" {
+  "id" bigint [pk, not null, increment]
+  "quotation_id" bigint [ref: > project_quotations.id]
+  "item_id" bigint [ref: > quotation_items.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "transactions" {
+  "id" bigint [pk, not null, increment]
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "payment_amount" decimal [default: 0]
+  "reference" varchar
+  "note" varchar(255)
+  "trx_id" varchar(255) [not null]
+  "transaction_date" timestamp [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "transaction_images" {
+  "id" bigint [pk, not null, increment]
+  "transaction_id" bigint [ref: > transactions.id]
+  "image" varchar [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "projects" {
@@ -1343,11 +1468,7 @@ Table "interactive_images" {
   "updated_at" timestamp [default: NULL]
 }
 
-Table "employees"."branch_id" < "branches"."id"
-
 Ref: "project_logs"."project_id" < "projects.id"
-
-Ref: "nas_folder_creation"."project_id" < "projects"."id"
 
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
 
