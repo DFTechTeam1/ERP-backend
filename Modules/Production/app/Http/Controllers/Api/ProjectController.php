@@ -974,5 +974,10 @@ class ProjectController extends Controller
     {
         return apiResponse($this->customerService->getAll());
     }
+
+    public function checkHighSeason(Request $request): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->checkHighSeason($request->all()));
+    }
 }
 

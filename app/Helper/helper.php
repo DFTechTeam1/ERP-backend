@@ -1023,3 +1023,25 @@ if (!function_exists('applyNestedWhereHas')) {
         };
     }
 }
+
+if (!function_exists('getPriceSetting')) {
+    function getPriceSetting() {
+        $settings = \Modules\Company\Models\Setting::selectRaw('key,value')
+            ->whereIn("key", [
+                'discount_type',
+                'discount',
+                'markup_type',
+                'markup',
+                'high_season_type',
+                'high_season',
+                'equipment_type',
+                'equipment'
+            ])
+            ->get();
+
+        $output = [];
+        foreach ($settings as $setting) {
+            
+        }
+    }
+}
