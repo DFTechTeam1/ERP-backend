@@ -8385,4 +8385,70 @@ class ProjectService
             return errorResponse($th);
         }
     }
+
+    /**
+     * Check the given date is categorize as 'high season' or not
+     * 
+     * @param array $payload        with this following structure:
+     * - string $project_date
+     * 
+     * @return array
+     */
+    public function checkHighSeason(array $payload): array
+    {
+        try {
+            $projectDate = $payload['project_date'];
+
+            $firstWeek = Carbon::parse($projectDate)->startOfWeek()->format('Y-m-d');
+            $endWeek = Carbon::parse($projectDate)->endOfWeek()->format('Y-m-d');
+
+            $projects = $this->repo->list(
+                select: 'id,project_date,name',
+                where: "project_date BETWEEN '{$firstWeek}' AND '{$endWeek}'"
+            );
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'is_high_season' => $projects->count() > 3 ? true : false,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Calculate project price based on given data
+     * 
+     * @param array $payload            with the following structure
+     * - bool $high_season
+     * - string $project_date
+     * - string $equipment
+     * - array $led_detail {            with the following structure
+     *      - string $name
+     *      - string $textDetail
+     *      - string $total
+     *      - string $totalRaw
+     *      - array $led {              with the following structure
+     *              - string $height
+     *              - string $width
+     *      }
+     * }
+     * 
+     * @return array
+     */
+    public function calculateProjectPrice(array $payload): array
+    {
+        try {
+
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }

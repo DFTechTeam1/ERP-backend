@@ -43,6 +43,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/getProjectYears', [ProjectController::class, 'getProjectYears']);
     Route::get('project/getProjectFolderDetail', [ProjectController::class, 'getProjectFolderDetail']);
     Route::get('project/{id}', [ProjectController::class, 'show']);
+    Route::post('project/checkHighSeason', [ProjectController::class, 'checkHighSeason']);
     Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
     Route::get('project/{projectUid}/precheck', [ProjectController::class, 'precheck']);
     Route::post('project/{projectUid}/completeUnfinishedTask', [ProjectController::class, 'completeUnfinishedTask']);
