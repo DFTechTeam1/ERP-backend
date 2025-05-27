@@ -15,8 +15,10 @@ class PriceLedGuide extends Model
      */
     protected $fillable = [
         'name',
-        'area',
-        'led_range_price'
+        'country_id',
+        'state_id',
+        'city_id',
+        'price'
     ];
 
     // protected static function newFactory(): PriceLedGuideFactory

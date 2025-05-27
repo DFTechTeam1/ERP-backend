@@ -63,7 +63,12 @@ class PriceSettingSeeder extends Seeder
         ];
 
         foreach ($payload as $data) {
+            Setting::where('key', $data['key'])->delete();
+
             Setting::create($data);
         }
+
+        // setting area guide price
+        
     }
 }

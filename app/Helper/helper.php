@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
 use Modules\Hrd\Models\Employee;
+use Modules\Production\Models\Customer;
 use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 

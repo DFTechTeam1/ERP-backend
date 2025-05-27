@@ -14,8 +14,10 @@ return new class extends Migration
         Schema::create('price_led_guides', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('area');
-            $table->string('led_range_price')->default(0);
+            $table->bigInteger('country_id')->nullable();
+            $table->bigInteger('state_id')->nullable();
+            $table->bigInteger('city_id')->nullable();
+            $table->decimal('price', 24, 2)->default(0);
             $table->timestamps();
         });
     }
