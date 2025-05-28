@@ -979,5 +979,10 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->checkHighSeason($request->all()));
     }
+
+    public function getCalculationFormula(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->getCalculationFormula());
+    }
 }
 

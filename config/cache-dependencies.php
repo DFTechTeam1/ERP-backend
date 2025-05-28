@@ -14,5 +14,8 @@ return [
         CacheKey::HrDashboardGenderDiversity->value,
         CacheKey::HrDashboardJobLevel->value,
         CacheKey::HrDashboardAgeAverage->value
+    ],
+    \Modules\Company\Models\Setting::class => [
+        CacheKey::PriceGuideSetting->value,
     ]
 ];
