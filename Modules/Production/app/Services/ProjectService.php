@@ -168,6 +168,8 @@ class ProjectService
 
     private $employeeTaskStateRepo;
 
+    private $settingRepo;
+
     /**
      * Construction Data
      */
@@ -207,7 +209,8 @@ class ProjectService
         EntertainmentTaskSongResultRepository $entertainmentTaskSongResultRepo,
         EntertainmentTaskSongResultImageRepository $entertainmentTaskSongResultImageRepo,
         EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise,
-        EmployeeTaskStateRepository $employeeTaskStateRepo
+        EmployeeTaskStateRepository $employeeTaskStateRepo,
+        \Modules\Company\Repository\SettingRepository $settingRepo
     )
     {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
@@ -281,6 +284,8 @@ class ProjectService
         $this->projectSongListRepo = $projectSongListRepo;
 
         $this->employeeTaskStateRepo = $employeeTaskStateRepo;
+
+        $this->settingRepo = $settingRepo;
     }
 
     /**
@@ -8446,6 +8451,56 @@ class ProjectService
             return generalResponse(
                 message: "Success",
                 data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get all formula and price setting
+     * 
+     * @return array
+     */
+    public function getCalculationFormula(): array
+    {
+        try {
+            $keys = [
+                'discount_type',
+                'discount',
+                'markup_type',
+                'markup',
+                'high_season_type',
+                'high_season',
+                'equipment_type',
+                'equipment'
+            ];
+            $data = $this->settingRepo->list(
+                select: "`key`, `value`",
+                where: "`key` IN ('" . implode("','", $keys) . "')"
+            );
+
+            $highSeasonSetting = $data->filter(function ($filter) {
+                return $filter->key == 'high_season' || $filter->key == 'high_season_type';
+            })->values();
+
+            // validate
+            foreach ($data as $setting) {
+                if (empty($setting['value']) || !$setting) {
+                    return errorResponse('Price formula is not found');
+                }
+            }
+
+            // build formula string
+            $mainLedFormula = "{total_main_led}*{area_price}";
+            $prefunctionFormula = "{total_main_prefunc}*{area_price}";
+
+
+            $highSeasonFormula = "({total_main_price}+{total_prefunc_price})*";
+
+            return generalResponse(
+                message: "Success",
+                data: $highSeasonValue->toArray()
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

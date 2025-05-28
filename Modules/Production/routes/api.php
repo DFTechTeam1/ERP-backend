@@ -35,6 +35,7 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
     Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
     Route::get('project/initEntertainmentTeam', [ProjectController::class, 'initEntertainmentTeam']);
+    Route::get('project/calculation/formula', [ProjectController::class, 'getCalculationFormula']);
     Route::get('project/marketings', [ProjectController::class, 'getMarketingListForProject']);
     Route::get('project/taskType', [ProjectController::class, 'getTaskTypes']);
     Route::get('project/getProjectsFolder', [ProjectController::class, 'getProjectsFolder']);

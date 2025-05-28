@@ -1046,3 +1046,60 @@ if (!function_exists('getPriceSetting')) {
         }
     }
 }
+
+if (!function_exists('setPriceGuideSetting')) {
+    function setPriceGuideSetting() {
+        $keys = [
+            'discount_type',
+            'discount',
+            'markup_type',
+            'markup',
+            'high_season_type',
+            'high_season',
+            'equipment_type',
+            'equipment'
+        ];
+        $settingRepo = new \Modules\Company\Repository\SettingRepository();
+
+        $data = $settingRepo->list(
+            select: "`key`, `value`",
+            where: "`key` IN ('" . implode("','", $keys) . "')"
+        );
+
+        $settings = \Illuminate\Support\Facades\Cache::rememberForever(\App\Enums\Cache\CacheKey::PriceGuideSetting->value, function () use ($data) {
+            return $data;
+        });
+
+        $highSeasonType = $settings->filter(function ($filter) {
+            return $filter->key == 'high_season_type';
+        })->values()[0]->value;
+        $highSeasonValue = $settings->filter(function ($filter) {
+            return $filter->key == 'high_season';
+        })->values()[0]->value;
+
+        $equipmentValue = $settings->filter(function($filter) {
+            
+        })
+
+        // main led formula
+        $mainLedFormula = "{total_main_led}*{area_price_guide}";
+        $prefuncLedFormula = "{total_prefunc_led}*{area_price_guide}";
+        $highSeasonFormula = "{total_led_price}*{$highSeasonValue}/100"; // as percentage
+        $equipmentFormula = 0;
+        if ()
+
+        return $settings;
+    }
+}
+
+if (!function_exists('getPriceGuideSetting')) {
+    function getPriceGuideSetting() {
+        $settings = \Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::PriceGuideSetting->value);
+
+        if (!$settings) {
+            $settings = setPriceGuideSetting();
+        }
+
+        
+    }
+}
