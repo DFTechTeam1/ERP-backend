@@ -1061,14 +1061,14 @@ if (!function_exists('setPriceGuideSetting')) {
         ];
         $settingRepo = new \Modules\Company\Repository\SettingRepository();
 
-        $data = $settingRepo->list(
+        $settings = $settingRepo->list(
             select: "`key`, `value`",
             where: "`key` IN ('" . implode("','", $keys) . "')"
         );
 
-        $settings = \Illuminate\Support\Facades\Cache::rememberForever(\App\Enums\Cache\CacheKey::PriceGuideSetting->value, function () use ($data) {
-            return $data;
-        });
+        // $settings = \Illuminate\Support\Facades\Cache::rememberForever(\App\Enums\Cache\CacheKey::PriceGuideSetting->value, function () use ($data) {
+        //     return $data;
+        // });
 
         $highSeasonType = $settings->filter(function ($filter) {
             return $filter->key == 'high_season_type';
@@ -1078,17 +1078,34 @@ if (!function_exists('setPriceGuideSetting')) {
         })->values()[0]->value;
 
         $equipmentValue = $settings->filter(function($filter) {
-            
-        })
+            return $filter->key == 'equipment';
+        })->values()[0]->value;
+
+        $priceGuides = $settings->filter(function ($filter) {
+            return $filter->code == 'price_guide';
+        })->values()->map(function ($guide) {
+            return [
+                'id' => $guide->value,
+                'text' => $guide->key
+            ];
+        })->toArray();
 
         // main led formula
         $mainLedFormula = "{total_main_led}*{area_price_guide}";
         $prefuncLedFormula = "{total_prefunc_led}*{area_price_guide}";
         $highSeasonFormula = "{total_led_price}*{$highSeasonValue}/100"; // as percentage
-        $equipmentFormula = 0;
-        if ()
+        if ($highSeasonType == 'fix') {
+            $highSeasonFormula = $highSeasonValue;
+        }
+        $equipmentFormula = $equipmentValue;
 
-        return $settings;
+        return [
+            'settings' => $settings,
+            'mainLedFormula' => $mainLedFormula,
+            'prefuncLedFormula' => $prefuncLedFormula,
+            'highSeasonFormula' => $highSeasonFormula,
+            'equipmentFormula' => $equipmentFormula
+        ];
     }
 }
 

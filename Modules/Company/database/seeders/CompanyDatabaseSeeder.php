@@ -18,7 +18,8 @@ class CompanyDatabaseSeeder extends Seeder
             PositionSeeder::class,
             BankSeeder::class,
             JobLevelSeeder::class,
-            ModellerSeeder::class
+            ModellerSeeder::class,
+            CompanySettingSeeder::class
         ]);
     }
 }

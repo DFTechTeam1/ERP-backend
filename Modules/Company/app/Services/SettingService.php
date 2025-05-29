@@ -204,6 +204,8 @@ class SettingService {
                 if ($storeVariable) {
                     return $storeVariable;
                 }
+            } else if ($code == 'company') {
+                $this->storeCompany($data);
             }
 
             cachingSetting();
@@ -218,6 +220,33 @@ class SettingService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    protected function storeCompany(array $data)
+    {
+        foreach ($data as $key => $value) {
+            $this->repo->deleteByKey($key);
+            
+            $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
+
+            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+
+            $where = "`key` = '" . (string) $keyQuery . "'";
+            $check = $this->repo->show('dummy', 'id', [], $where);
+            if ($check) {
+                $this->repo->update([
+                    'value' => $valueData
+                ], 'dummy', 'id = ' . $check->id);
+            } else {
+                $this->repo->store([
+                    'key' => $key,
+                    'value' => $valueData,
+                    'code' => 'company',
+                ]);
+            }
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('setting');
     }
 
     protected function storeGeneral(array $data)

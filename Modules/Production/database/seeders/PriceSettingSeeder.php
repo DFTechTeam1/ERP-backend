@@ -58,7 +58,29 @@ class PriceSettingSeeder extends Seeder
             [
                 'code' => 'price',
                 'key' => 'equipment',
-                'value' => '2500 '
+                'value' => '2500000'
+            ],
+
+            // price guide area
+            [
+                'code' => 'price_guide',
+                'key' => 'Surabaya',
+                'value' => 'surabaya'
+            ],
+            [
+                'code' => 'price_guide',
+                'key' => 'Jakarta',
+                'value' => 'jakarta'
+            ],
+            [
+                'code' => 'price_guide',
+                'key' => 'Jawa',
+                'value' => 'jawa'
+            ],
+            [
+                'code' => 'price_guide',
+                'key' => 'Luar Jawa',
+                'value' => 'luar jawa'
             ],
         ];
 
