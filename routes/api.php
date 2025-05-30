@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 use KodePandai\Indonesia\Models\District;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InteractiveController;
+use Illuminate\Http\File;
 use Illuminate\Support\Facades\Broadcast;
 use Modules\Inventory\Jobs\NewRequestInventoryJob;
 use Modules\Inventory\Services\UserInventoryService;
@@ -38,27 +39,9 @@ Route::post('/onesignal-clicked', function (Request $request) {
 Route::post('interactive/image/{deviceId}', [InteractiveController::class, 'generateImageQrCode']);
 
 Route::get('testing', function () {
-    $items = \Modules\Inventory\Models\UserInventoryMaster::with('items:id,user_inventory_master_id,inventory_id,quantity')
-        ->latest()->first();
+    $file = \Illuminate\Support\Facades\Storage::disk('public')->size('settings/image_17485858746.webp');
 
-    $inventories = collect($items->items)->map(function ($item) {
-        return [
-            'id' => $item->inventory_id,
-            'quantity' => $item->quantity,
-            'user_inventory_master_id' => $item->user_inventory_master_id,
-        ];
-    })->toArray();
-
-    $new = [
-        'id' => 1,
-        'quantity' => 10,
-        'user_inventory_master_id' => 0,
-    ];
-
-    $inventories = collect($inventories)->push($new);
-
-    $service = new UserInventoryService();
-    return $service->addItem($inventories->toArray(), $items);
+    return $file;
 });
 
 Route::get('telegram-login', [\Modules\Telegram\Http\Controllers\TelegramAuthorizationController::class, 'index']);

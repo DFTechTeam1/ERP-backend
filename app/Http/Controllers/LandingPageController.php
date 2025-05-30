@@ -35,7 +35,6 @@ class LandingPageController extends Controller
 
     public function index()
     {
-        return setPriceGuideSetting();
         // $employees = array(
         //     array('id' => '1','name' => 'Wesley Wiyadi','position_id' => '1'),
         //     array('id' => '2','name' => 'Edwin Chandra Wijaya Ngo','position_id' => '2'),
