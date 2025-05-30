@@ -335,6 +335,7 @@ if (!function_exists('uploadImageandCompress')) {
 
             return $name;
         } catch (\Throwable $th) {
+            errorMessage($th);
             return false;
         }
     }

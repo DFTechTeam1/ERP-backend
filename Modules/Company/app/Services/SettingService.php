@@ -13,6 +13,8 @@ class SettingService {
 
     private $taskRepo;
 
+    const LOGO_PATH = "settings";
+
     /**
      * Construction Data
      */
@@ -224,25 +226,44 @@ class SettingService {
 
     protected function storeCompany(array $data)
     {
-        foreach ($data as $key => $value) {
-            $this->repo->deleteByKey($key);
-            
-            $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
+        // get current logo and delete if exists
+        $currentLogo = $this->repo->show(uid: 'uid', select: "value", where: "`key` = 'company_logo'");
 
-            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+        if (
+            ($currentLogo) &&
+            is_file(storage_path('app/public/' . self::LOGO_PATH . "/{$currentLogo}"))
+        ) {
+            unlink(storage_path('app/public/' . self::LOGO_PATH . "/{$currentLogo}"));
+        }
 
-            $where = "`key` = '" . (string) $keyQuery . "'";
-            $check = $this->repo->show('dummy', 'id', [], $where);
+        foreach ($data as $key => $value)  {
+            $check = $this->repo->show(uid: 'uid', select: "id,value", where: "`key` = '{$key}'");
+
+            if (($key == 'company_logo') && ($value)) {
+                $image = uploadImageandCompress(
+                    path: "settings",
+                    compressValue: 0,
+                    image: $value
+                );
+
+                $value = $image;
+            }
+
             if ($check) {
-                $this->repo->update([
-                    'value' => $valueData
-                ], 'dummy', 'id = ' . $check->id);
+                $this->repo->update(
+                    data: [
+                        'value' => $value
+                    ],
+                    id: $check->id
+                );
             } else {
-                $this->repo->store([
-                    'key' => $key,
-                    'value' => $valueData,
-                    'code' => 'company',
-                ]);
+                $this->repo->store(
+                    data: [
+                        "key" => $key,
+                        "value" => $value,
+                        "code" => 'company'
+                    ]
+                );
             }
         }
 
