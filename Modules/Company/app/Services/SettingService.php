@@ -57,6 +57,11 @@ class SettingService {
                     $item['value'] = json_decode($item['value'], true);
                 }
 
+                // format logo
+                if ($item['key'] == 'company_logo') {
+                    $item['value'] = asset('storage/settings/' . $item['value']);
+                }
+
                 return $item;
             })->groupBy('code')->toArray();
         }
