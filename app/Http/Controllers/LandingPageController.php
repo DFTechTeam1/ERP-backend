@@ -33,8 +33,21 @@ class LandingPageController extends Controller
         $this->employeeRepo = $employeeRepo;
     }
 
+    protected function getProjectData()
+    {
+        $data = \Modules\Production\Models\Project::selectRaw('id,name,project_date,status')
+            ->with([
+                'personInCharges:id,pic_id,project_id'
+            ])
+            ->get();
+
+        $output = [];
+    }
+
     public function index()
     {
+
+        return $this->getProjectData();
         // $employees = array(
         //     array('id' => '1','name' => 'Wesley Wiyadi','position_id' => '1'),
         //     array('id' => '2','name' => 'Edwin Chandra Wijaya Ngo','position_id' => '2'),

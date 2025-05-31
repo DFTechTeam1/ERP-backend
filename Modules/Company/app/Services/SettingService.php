@@ -57,6 +57,16 @@ class SettingService {
                     $item['value'] = json_decode($item['value'], true);
                 }
 
+                if (
+                    ($item['key'] == 'company_logo') &&
+                    (
+                        ($item['value']) &&
+                        (is_file(storage_path('app/public/settings/' . $item['value'])))
+                    )
+                ) {
+                    $item['value'] = asset('storage/settings/' . $item['value']);
+                }
+
                 return $item;
             })->groupBy('code')->toArray();
         }
@@ -246,7 +256,11 @@ class SettingService {
                     image: $value
                 );
 
-                $value = $image;
+                if ($image) {
+                    $value = $image;
+                } else {
+                    $value = NULL;
+                }
             }
 
             if ($check) {
