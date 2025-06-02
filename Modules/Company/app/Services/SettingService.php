@@ -43,6 +43,11 @@ class SettingService {
                         $item['value'] = (int) $item['value'];
                     }
 
+                    // format logo
+                    if ($item['key'] == 'company_logo') {
+                        $item['value'] = asset('storage/settings/' . $item['value']);
+                    }
+
                     return $item;
                 })->toArray();
                 $settings = $selected;

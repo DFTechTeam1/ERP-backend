@@ -77,5 +77,6 @@ return [
     'memberAdded' => 'Members has been assign to task',
     "toManyUnfinishedTask" => "To many tasks to complete, please complete manually",
     "failedSaveToTalenta" => 'Failed to save data to talenta',
-    "resignationHasBeenCanceled" => "Resignation has been canceled"
+    "resignationHasBeenCanceled" => "Resignation has been canceled",
+    "successCreateProjectDeals" => "Success create project deals"
 ];
