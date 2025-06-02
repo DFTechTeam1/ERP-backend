@@ -1,42 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Exports;
 
-use Maatwebsite\Excel\Facades\Excel;
-use Modules\Hrd\Repository\EmployeeRepository;
-use Modules\Hrd\Services\EmployeePointService;
-use Modules\Hrd\Services\PerformanceReportService;
-use Modules\Production\Services\ProjectRepositoryGroup;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class LandingPageController extends Controller
+class MasterReportProject implements WithMultipleSheets
 {
-    private $projectRepoGroup;
-
-    private $employeePointService;
-
-    private $reportService;
-
-    private $employeeRepo;
-
-    public function __construct(
-        ProjectRepositoryGroup $projectRepoGroup,
-        EmployeePointService $employeePointService,
-        PerformanceReportService $reportService,
-        EmployeeRepository $employeeRepo
-    )
+    public function sheets(): array
     {
-        $this->projectRepoGroup = $projectRepoGroup;
-
-        $this->employeePointService = $employeePointService;
-
-        $this->reportService = $reportService;
-
-        $this->employeeRepo = $employeeRepo;
-    }
-
-    protected function prepareReport()
-    {
-        return Excel::download(new \App\Exports\MasterReportProject, 'projectReport.xlsx');
         $projects = \Modules\Production\Models\Project::selectRaw('id,name,project_date,country_id,state_id,city_id,venue,collaboration,status,project_class_id')
             ->with([
                 'personInCharges:id,project_id,pic_id',
@@ -55,34 +27,33 @@ class LandingPageController extends Controller
             ])
             ->whereNotNull('status')
             ->orderBy('project_date', 'desc')
-            ->limit(5)
             ->get();
-    
+
         $projects = $projects->map(function ($item) {
             $firstTimeTaskAdded = '-';
             $lastTimeAdded = '-';
-    
+
             if ($item->tasks->count() > 0) {
                 if ($item->tasks[0]->times->count() > 0) {
                     $firstTimeTaskAdded = $item->tasks[0]->times[0]->time_added;
                 }
-    
+
                 if ($item->tasks[$item->tasks->count() - 1]->times->count() > 0) {
                     $lastTimeAdded = $item->tasks[$item->tasks->count() - 1]->times[$item->tasks[$item->tasks->count() - 1]->times->count() - 1]->time_added;
                 }
             }
-    
+
             $item['lastTimeAdded'] = $lastTimeAdded;
             $item['firstTimeTaskAdded'] = $firstTimeTaskAdded;
             $item['year'] = date('Y', strtotime($item->project_date));
             $item['countryName'] = $item->country->name;
             $item['stateName'] = $item->state->name;
             $item['cityName'] = $item->city->name;
-    
+
             return $item;
         });
-    
-        // filter by region
+
+        // grouped by region
         $groupedByRegion = $projects->groupBy('year')
             ->map(function ($mapping) {
                 $mapping = $mapping->groupBy('countryName')
@@ -90,32 +61,31 @@ class LandingPageController extends Controller
                         $country = $country->groupBy('stateName')
                             ->map(function ($state) {
                                 $state = $state->groupBy('cityName');
-    
+
                                 return $state;
                             });
-    
+
                         return $country;
                     });
-    
+
                 return $mapping;
             });
-        return $groupedByRegion;
-    
+
         // grouped based on number of pic
         $singlePic = $projects->filter(function ($filter) {
             return $filter->personInCharges->count() == 1;
         })->values()->map(function ($item) {
             $item['personInChargeId'] = $item->personInCharges[0]->pic_id;
             $item['year'] = date('Y', strtotime($item->project_date));
-    
+
             return $item;
         });
         $groupedSinglePic = $singlePic->groupBy('year')->map(function ($item) {
             $item = $item->groupBy('personInChargeId')->values();
-    
+
             return $item;
         });
-    
+
         // group single pic project based on project_class_id and project_date
         $groupedByClass = $projects->filter(function ($filter) {
             return $filter->personInCharges->count() == 1;
@@ -125,92 +95,46 @@ class LandingPageController extends Controller
             $item['year'] = date('Y', strtotime($item->project_date));
             $item['personInChargeId'] = $item->personInCharges[0]->employee->name;
             $item['projectClassName'] = $item->projectClass->name;
-    
+
             return $item;
         })->groupBy('year')
         ->map(function($item) {
             $item = $item->groupBy('personInChargeId')
                 ->map(function ($itemDetail) {
                     $itemDetail = $itemDetail->groupBy('projectClassName');
-    
+
                     return $itemDetail;
                 });
-    
+
             return $item;
         });
-    
-        $output = [];
-        $a = 0;
-        foreach ($groupedByRegion['2025'] as $countryName => $pics) {
-            $b = 0;
-            foreach ($pics as $stateName => $classes) {
-                $c = 0;
-                foreach ($classes as $project) {
-                    if ($a < 2 && $b < 2) {
-                        $output[$countryName][$stateName][] = $project;
-                    }
-    
-                    $c++;
-                }
-                $b++;
-            }
-    
-            $a++;
-        }
-        return $output;
-    
+
         $multiplePic = $projects->filter(function ($filter) {
             return $filter->personInCharges->count() > 1;
         })->values();
-    
+
         $eastJava = \Modules\Company\Models\State::where('name', 'jawa timur')
             ->first();
-    
+
         $eastJavaProject = $singlePic->filter(function($filter) use ($eastJava) {
             return $filter->state_id == $eastJava->id;
         })->values();
-    
-        return [
-            'projects' => $groupedSinglePic,
-            'totalProject' => $projects->count(),
-            'singlePic' => $singlePic->count(),
-            'multiplePic' => $multiplePic->count(),
-            'jawaTimur' => $eastJavaProject->count()
-        ];
-    }
 
-    public function index()
-    {
-        return view('landing');
-    }
+        $sheets = [];
 
-    public function sendToNAS()
-    {
-        $filePath = public_path('images/user.png');
-        $username = "ilhamgumilang"; // Change this to NAS username
-        $password = "Ilham..123"; // Change this to NAS password
-
-        $curl = curl_init();
-
-        curl_setopt_array($curl, [
-            CURLOPT_URL => 'http://192.168.100.105:3500',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
-            CURLOPT_USERPWD => "$username:$password",
-            CURLOPT_POSTFIELDS => [
-                'file' => new \CURLFile($filePath)
-            ],
-        ]);
-
-        $response = curl_exec($curl);
-        if ($response === false) {
-            throw new \Exception('Upload failed: ' . curl_error($curl));
+        foreach ($groupedSinglePic as $year => $value) {
+            // grouped by year + pic
+            $sheets[] = new \App\Exports\SinglePicProject($year, $value);
         }
 
-        curl_close($curl);
+        foreach ($groupedByClass as $year => $value) {
+            $sheets[] = new \App\Exports\ReportSinglePicProjectGroupByClass($year, $value);
+        }
 
-        echo json_encode($response);
+        foreach ($groupedByRegion as $year => $region) {
+            $sheets[] = new \App\Exports\ReportProjectByRegion($year, $region);
+        }
+
+        return $sheets;
     }
-
 }
