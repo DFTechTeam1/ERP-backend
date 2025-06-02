@@ -6,6 +6,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "barryvdh/laravel-dompdf": "^3.1",
         "brainfoolong/cryptojs-aes-php": "^2.3",
         "chillerlan/php-qrcode": "^5.0",
         "google/apiclient": "^2.17",

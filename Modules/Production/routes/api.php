@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\ProjectController;
+use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Http\Controllers\Api\TeamTransferController;
 use Modules\Production\Http\Controllers\ProductionController;
 
@@ -32,8 +33,11 @@ Route::middleware(['auth:sanctum'])
     Route::post('project', [ProjectController::class, 'store']);
     Route::get('project', [ProjectController::class, 'index'])->name('project-list');
     Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
+    Route::post('project/deals', [ProjectController::class, 'storeProjectDeals']);
+    Route::get('project/deals', [ProjectController::class, 'listProjectDeals']);
     Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
     Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
+    Route::get('project/getQuotationNumber', [ProjectController::class , 'getQuotationNumber']);
     Route::get('project/initEntertainmentTeam', [ProjectController::class, 'initEntertainmentTeam']);
     Route::get('project/calculation/formula', [ProjectController::class, 'getCalculationFormula']);
     Route::get('project/marketings', [ProjectController::class, 'getMarketingListForProject']);
@@ -125,6 +129,10 @@ Route::middleware(['auth:sanctum'])
     Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask']);
     Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
     Route::delete('project/{projectUid}/task/{taskUid}/deleteAttachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
+
+    // Quotations
+    Route::get('quotations', [QuotationController::class, 'index']);
+    Route::post('quotations', [QuotationController::class, 'store']);
 
     Route::get('team-transfers', [TeamTransferController::class, 'index']);
     Route::post('team-transfers/cancel', [TeamTransferController::class, 'cancelRequest']);

@@ -170,6 +170,12 @@ class ProjectService
 
     private $settingRepo;
 
+    private $projectQuotationRepo;
+
+    private $projectDealRepo;
+
+    private $projectDealMarketingRepo;
+
     /**
      * Construction Data
      */
@@ -210,7 +216,10 @@ class ProjectService
         EntertainmentTaskSongResultImageRepository $entertainmentTaskSongResultImageRepo,
         EntertainmentTaskSongReviseRepository $entertainmentTaskSongRevise,
         EmployeeTaskStateRepository $employeeTaskStateRepo,
-        \Modules\Company\Repository\SettingRepository $settingRepo
+        \Modules\Company\Repository\SettingRepository $settingRepo,
+        \Modules\Production\Repository\ProjectQuotationRepository $projectQuotationRepo,
+        \Modules\Production\Repository\ProjectDealRepository $projectDealRepo,
+        \Modules\Production\Repository\ProjectDealMarketingRepository $projectDealMarketingRepo
     )
     {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
@@ -286,6 +295,12 @@ class ProjectService
         $this->employeeTaskStateRepo = $employeeTaskStateRepo;
 
         $this->settingRepo = $settingRepo;
+
+        $this->projectQuotationRepo = $projectQuotationRepo;
+
+        $this->projectDealRepo = $projectDealRepo;
+
+        $this->projectDealMarketingRepo = $projectDealMarketingRepo;
     }
 
     /**
@@ -8500,9 +8515,92 @@ class ProjectService
 
             return generalResponse(
                 message: "Success",
-                data: $highSeasonValue->toArray()
+                data: []
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Generate the available quotation number for the upcoming project deals
+     * 
+     * @return array
+     */
+    public function getQuotationNumber(): array
+    {
+        $total = $this->projectQuotationRepo->list(
+            select: 'id'
+        )->count();
+
+        if ($total == 0 && $this->generalService->getSettingByKey('cutoff_quotation_number')) {
+            $total = $this->generalService->getSettingByKey('cutoff_quotation_number');
+        }
+
+        $defaultLength = 5;
+        if (\Illuminate\Support\Str::length($total) > 5) {
+            $defaultLength = \Illuminate\Support\Str::length($total);
+        }
+
+        // get prefix
+        $prefix = $this->generalService->getSettingByKey('quotation_prefix') ?? '#DFF';
+
+        $quotationNumber = generateSequenceNumber(number: $total + 1, length: $defaultLength);
+        $quotation = $prefix . $quotationNumber;
+        
+        return generalResponse(
+            message: 'Success',
+            data: [
+                'number' => $quotation
+            ]
+        );
+    }
+
+    public function storeProjectDeals(array $payload): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+
+            $project = $this->projectDealRepo->store(
+                collect($payload)
+                    ->except(['marketing_id', 'quotation'])
+                    ->toArray()
+            );
+
+            // insert project details marketing
+            $project->marketings()->createMany(
+                collect($payload['marketing_id'])->map(function ($item) {
+                    return [
+                        'employee_id' => $this->generalService->getIdFromUid($item, new \Modules\Hrd\Models\Employee())
+                    ];
+                })->toArray()
+            );
+
+            // insert quotations
+            $quotation = $project->quotations()->create(
+                collect($payload['quotation'])->except(['items'])->toArray()
+            );
+
+            // insert quotation items
+            $quotation->items()->createMany(
+                collect($payload['quotation']['items'])->map(function ($item) {
+                    return [
+                        'item_id' => $item
+                    ];
+                })->toArray()
+            );
+
+            if ($payload['request_type'] == 'save_and_download') {
+                // generate quotation pdf
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successCreateProjectDeals'),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }

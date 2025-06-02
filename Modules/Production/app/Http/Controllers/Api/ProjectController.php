@@ -44,10 +44,13 @@ class ProjectController extends Controller
 
     private $customerService;
 
+    private $projectDealService;
+
     public function __construct(
         ProjectService $projectService,
         TestingService $testingService,
-        CustomerService $customerService
+        CustomerService $customerService,
+        \Modules\Production\Services\ProjectDealService $projectDealService
     )
     {
         $this->service = $projectService;
@@ -55,6 +58,8 @@ class ProjectController extends Controller
         $this->testingService = $testingService;
 
         $this->customerService = $customerService;
+
+        $this->projectDealService = $projectDealService;
     }
 
     /**
@@ -975,14 +980,45 @@ class ProjectController extends Controller
         return apiResponse($this->customerService->getAll());
     }
 
+    /**
+     * Function to check the project is categorized as high_season or not
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function checkHighSeason(Request $request): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->checkHighSeason($request->all()));
     }
 
+    /**
+     * Get Calculation formula
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getCalculationFormula(): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->getCalculationFormula());
+    }
+
+    /**
+     * Generate the available quotation number for the upcoming project deals
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getQuotationNumber(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->getQuotationNumber());
+    }
+
+    public function storeProjectDeals(\Modules\Production\Http\Requests\Deals\Store $request)
+    {
+        return apiResponse($this->service->storeProjectDeals($request->validated()));
+    }
+
+    public function listProjectDeals()
+    {
+        return apiResponse($this->projectDealService->list());
     }
 }
 
