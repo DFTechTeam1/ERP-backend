@@ -5,8 +5,8 @@ namespace Modules\Inventory\Models;
 use App\Enums\Inventory\RequestInventoryStatus;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Models\Employee;
 use Modules\Inventory\Database\Factories\RequestInventoryFactory;
@@ -17,7 +17,7 @@ class RequestInventory extends Model
 
     protected static function newFactory(): RequestInventoryFactory
     {
-        //return RequestInventoryFactory::new();
+        // return RequestInventoryFactory::new();
     }
 
     protected bool $formatPrice = true;
@@ -43,29 +43,30 @@ class RequestInventory extends Model
     protected function purchaseLink(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => json_decode($value, true),
-            set: fn($value) => json_encode($value)
+            get: fn ($value) => json_decode($value, true),
+            set: fn ($value) => json_encode($value)
         );
     }
 
     protected function approvalTarget(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => json_decode($value, true),
-            set: fn($value) => json_encode($value)
+            get: fn ($value) => json_decode($value, true),
+            set: fn ($value) => json_encode($value)
         );
     }
 
     protected function price(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => $this->formatPrice ? config('company.currency') . ' ' . number_format($value, '0', '.', config('company.pricing_divider')) : $value,
+            get: fn ($value) => $this->formatPrice ? config('company.currency').' '.number_format($value, '0', '.', config('company.pricing_divider')) : $value,
         );
     }
 
     public function withoutFormattingPrice()
     {
         $this->formatPrice = false;
+
         return $this;
     }
 
@@ -86,7 +87,7 @@ class RequestInventory extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
@@ -104,7 +105,7 @@ class RequestInventory extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
@@ -122,7 +123,7 @@ class RequestInventory extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 

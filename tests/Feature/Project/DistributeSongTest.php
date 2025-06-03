@@ -9,24 +9,17 @@ use App\Services\GeneralService;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
 use Modules\Hrd\Models\Employee;
-use Modules\Production\Exceptions\SongNotFound;
-use Modules\Production\Jobs\DistributeSongJob;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
-use Modules\Production\Repository\ProjectSongListRepository;
-use Modules\Production\Services\ProjectService;
 use Tests\TestCase;
 
 class DistributeSongTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -57,7 +50,7 @@ class DistributeSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testDistributeWithDeletedSong(): void
+    public function test_distribute_with_deleted_song(): void
     {
         $this->generalMock->shouldReceive('getIdFromUid')
             ->once()
@@ -98,12 +91,12 @@ class DistributeSongTest extends TestCase
                 ->create([
                     'project_song_list_id' => $this->projectSongs[0]->id,
                     'employee_id' => $this->employees[0]->id,
-                    'project_id' => $this->projects[0]->id
+                    'project_id' => $this->projects[0]->id,
                 ]);
         }
     }
 
-    public function testDistributeSongToPreventDoubleJob(): void
+    public function test_distribute_song_to_prevent_double_job(): void
     {
         $this->runningSeed(withTask: true);
 
@@ -115,7 +108,7 @@ class DistributeSongTest extends TestCase
         $this->setProjectConstructor(generalService: $this->generalMock);
 
         $payload = [
-            'employee_uid' => $this->employees[0]->uid
+            'employee_uid' => $this->employees[0]->uid,
         ];
 
         $response = $this->projectService->distributeSong($payload, $this->projects[0]->uid, $this->projectSongs[0]->uid);
@@ -124,7 +117,7 @@ class DistributeSongTest extends TestCase
         $this->assertStringContainsString(__('notification.employeeAlreadyAssignedForThisSong', ['name' => $this->employees[0]->nickname]), $response['message']);
     }
 
-    public function testDistributeSongSuccess(): void
+    public function test_distribute_song_success(): void
     {
         $this->runningSeed(withTask: false);
 
@@ -136,7 +129,7 @@ class DistributeSongTest extends TestCase
         $this->setProjectConstructor(generalService: $this->generalMock);
 
         $payload = [
-            'employee_uid' => $this->employees[1]->uid
+            'employee_uid' => $this->employees[1]->uid,
         ];
 
         // mock action

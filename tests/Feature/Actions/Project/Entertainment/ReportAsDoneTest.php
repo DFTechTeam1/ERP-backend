@@ -8,12 +8,9 @@ use App\Services\GeneralService;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Bus;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
 use Modules\Hrd\Models\Employee;
-use Modules\Production\Jobs\SongReportAsDone;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
@@ -21,7 +18,7 @@ use Tests\TestCase;
 
 class ReportAsDoneTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     protected function setUp(): void
     {
@@ -35,7 +32,7 @@ class ReportAsDoneTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testFailedUploadFile(): void
+    public function test_failed_upload_file(): void
     {
         $projects = Project::factory()
             ->count(1)
@@ -45,7 +42,7 @@ class ReportAsDoneTest extends TestCase
             ->count(1)
             ->create([
                 'project_id' => $projects[0]->id,
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
         $generalMock = $this->instance(
@@ -71,7 +68,7 @@ class ReportAsDoneTest extends TestCase
         ReportAsDone::run(['images' => ['image' => 1]], $projects[0]->uid, $projectSongs[0]->uid, $generalMock);
     }
 
-    public function testReportIsSuccess(): void
+    public function test_report_is_success(): void
     {
         $projects = Project::factory()
             ->count(1)
@@ -81,7 +78,7 @@ class ReportAsDoneTest extends TestCase
             ->count(1)
             ->create([
                 'project_id' => $projects[0]->id,
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
         $employees = Employee::factory()
@@ -93,7 +90,7 @@ class ReportAsDoneTest extends TestCase
             ->create([
                 'project_id' => $projects[0]->id,
                 'project_song_list_id' => $projectSongs[0]->id,
-                'employee_id' => $employees[0]->id
+                'employee_id' => $employees[0]->id,
             ]);
 
         $generalMock = $this->instance(
@@ -119,7 +116,7 @@ class ReportAsDoneTest extends TestCase
         ReportAsDone::run(
             [
                 'images' => [
-                    'images.png'
+                    'images.png',
                 ],
                 'nas_path' => 'http://nas-path',
             ],
@@ -131,7 +128,7 @@ class ReportAsDoneTest extends TestCase
         $this->assertDatabaseHas('entertainment_task_song_results', [
             'employee_id' => $employees[0]->id,
             'nas_path' => 'http://nas-path',
-            'task_id' => $task[0]->id
+            'task_id' => $task[0]->id,
         ]);
 
         $this->assertDatabaseHas('entertainment_task_song_result_images', [

@@ -9,30 +9,29 @@ use Modules\Production\Models\Project;
 
 class NasFolderObserver
 {
-
     protected function folders()
     {
         return [
-            "BRIEF",
-            "ASSET_3D",
-            "ASSET_FOOTAGE",
-            "FINAL_RENDER",
-            "ASSET_SEMENTARA",
-            "PREVIEW",
-            "SKETSA",
-            "TC",
-            "RAW",
-            "AUDIO"
+            'BRIEF',
+            'ASSET_3D',
+            'ASSET_FOOTAGE',
+            'FINAL_RENDER',
+            'ASSET_SEMENTARA',
+            'PREVIEW',
+            'SKETSA',
+            'TC',
+            'RAW',
+            'AUDIO',
         ];
     }
 
     protected function minifyFolders()
     {
         return [
-            "FINAL_RENDER",
-            "PREVIEW",
+            'FINAL_RENDER',
+            'PREVIEW',
             'RAW',
-            'OLD'
+            'OLD',
         ];
     }
 
@@ -41,7 +40,7 @@ class NasFolderObserver
         return preg_replace('/[.,\"~@\/]/', '', $name);
     }
 
-    protected function createFolderSchema(Project $customer, object $currentData = null): array
+    protected function createFolderSchema(Project $customer, ?object $currentData = null): array
     {
         $name = $this->pregName(name: $customer->name);
         $name = stringToPascalSnakeCase($name);
@@ -49,22 +48,22 @@ class NasFolderObserver
         $date = date('d', strtotime($customer->project_date));
         $month = date('m', strtotime($customer->project_date));
         $monthText = MonthInBahasa(date('m', strtotime($customer->project_date)));
-        $subFolder1 = strtoupper($month . '_' . $monthText);
-        $prefixName = strtoupper($date . "_" . $monthText);
+        $subFolder1 = strtoupper($month.'_'.$monthText);
+        $prefixName = strtoupper($date.'_'.$monthText);
 
-        $subFolder2 = $prefixName . '_' . $name;
+        $subFolder2 = $prefixName.'_'.$name;
 
         // get current folder name
         if ($currentData) {
-            $prefixCurrentName = strtoupper($date . '_' . $monthText);
-            $currentFolderName1 = strtoupper($month . '_' . $monthText);
+            $prefixCurrentName = strtoupper($date.'_'.$monthText);
+            $currentFolderName1 = strtoupper($month.'_'.$monthText);
             $currentName = stringToPascalSnakeCase($this->pregName(name: $currentData->project_name));
-            $currentFolderName = $prefixCurrentName . '_' . $currentName;
+            $currentFolderName = $prefixCurrentName.'_'.$currentName;
         }
 
         $year = date('Y', strtotime($customer->project_date));
 
-        $parent =  "/{$year}/{$subFolder1}/{$subFolder2}";
+        $parent = "/{$year}/{$subFolder1}/{$subFolder2}";
 
         $toBeCreatedParents = [];
         $toBeCreatedNames = [];
@@ -76,14 +75,14 @@ class NasFolderObserver
         // set current path
         $currentPath = [];
         foreach ($toBeCreatedParents as $keyFolder => $folder) {
-            $currentPath[] = $folder . "/" . $toBeCreatedNames[$keyFolder];
+            $currentPath[] = $folder.'/'.$toBeCreatedNames[$keyFolder];
         }
 
         return [
             'folder_path' => $toBeCreatedParents,
             'last_folder_name' => $toBeCreatedNames,
             'current_path' => $currentPath,
-            'updated_name' => $currentFolderName ?? NULL
+            'updated_name' => $currentFolderName ?? null,
         ];
     }
 
@@ -105,8 +104,8 @@ class NasFolderObserver
                 'status' => 1,
                 'type' => 'create',
                 'last_folder_name' => json_encode($schema['last_folder_name']),
-                'current_folder_name' => NULL,
-                'current_path' => json_encode($schema['current_path'])
+                'current_folder_name' => null,
+                'current_path' => json_encode($schema['current_path']),
             ]);
         }
     }
@@ -118,7 +117,7 @@ class NasFolderObserver
      */
     public function updated(Project $customer): void
     {
-        Log::debug("updated project: ", $customer->toArray());
+        Log::debug('updated project: ', $customer->toArray());
 
         // check queue
         $check = NasFolderCreation::selectRaw('*')
@@ -135,7 +134,7 @@ class NasFolderObserver
                     $folderPath = json_decode($check->folder_path, true);
                     $names = json_decode($check->last_folder_name, true);
                     foreach ($folderPath as $keyFd => $fd) {
-                        $currentPathExisting[] = $fd . "/" . $names[$keyFd];
+                        $currentPathExisting[] = $fd.'/'.$names[$keyFd];
                     }
 
                     $check->project_name = $customer->name;
@@ -170,9 +169,9 @@ class NasFolderObserver
                 NasFolderCreation::where('id', $check->id)
                     ->update([
                         'type' => 'delete',
-                        'status' => 1
+                        'status' => 1,
                     ]);
-            } else if ($check->status > 0) {
+            } elseif ($check->status > 0) {
                 NasFolderCreation::where('id', $check->id)
                     ->delete();
 
@@ -184,9 +183,9 @@ class NasFolderObserver
                     'type' => 'delete',
                     'last_folder_name' => json_encode($schema['last_folder_name']),
                     'current_folder_name' => $project->name,
-                    'current_path' => json_encode($schema['current_path'])
+                    'current_path' => json_encode($schema['current_path']),
                 ]);
-            } else if (!$check) {
+            } elseif (! $check) {
                 return NasFolderCreation::create([
                     'project_name' => $project->name,
                     'project_id' => $project->id,
@@ -195,7 +194,7 @@ class NasFolderObserver
                     'type' => 'delete',
                     'last_folder_name' => json_encode($schema['last_folder_name']),
                     'current_folder_name' => $project->name,
-                    'current_path' => json_encode($schema['current_path'])
+                    'current_path' => json_encode($schema['current_path']),
                 ]);
             }
         }

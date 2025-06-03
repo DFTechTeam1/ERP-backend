@@ -10,16 +10,16 @@ enum Warehouse: int
     public function label()
     {
         return match ($this) {
-            static::Office => __('global.office'),
-            static::Entertainment => __('global.entertaintment'),
+            self::Office => __('global.office'),
+            self::Entertainment => __('global.entertaintment'),
         };
     }
 
     public function color()
     {
         return match ($this) {
-            static::Office => 'success',
-            static::Entertainment => 'success',
+            self::Office => 'success',
+            self::Entertainment => 'success',
         };
     }
 }

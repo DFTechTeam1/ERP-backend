@@ -5,14 +5,13 @@ namespace Tests\Feature\Employee;
 use App\Traits\HasEmployeeConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\Sanctum;
 use Modules\Hrd\Models\Employee;
 use Tests\TestCase;
 
 class UpdateBasicInfoTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasEmployeeConstructor;
+    use HasEmployeeConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -21,7 +20,7 @@ class UpdateBasicInfoTest extends TestCase
         parent::setUp();
 
         $userData = $this->auth();
-        
+
         Sanctum::actingAs($userData['user']);
         $this->actingAs($userData['user']);
 
@@ -31,19 +30,19 @@ class UpdateBasicInfoTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testMissingPayloadOnUpdateRequest(): void
+    public function test_missing_payload_on_update_request(): void
     {
         $payload = [
             'name' => '',
-            'email' => ''
+            'email' => '',
         ];
 
         $response = $this->putJson(route('api.employees.updateBasicInfo', ['uid' => '123']), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
-        
+
         $this->assertArrayHasKey('errors', $response);
         $this->assertArrayHasKey('name', $response['errors']);
         $this->assertArrayHasKey('email', $response['errors']);
@@ -51,7 +50,7 @@ class UpdateBasicInfoTest extends TestCase
         parent::tearDown();
     }
 
-    public function testEmailAlreadyTaken(): void
+    public function test_email_already_taken(): void
     {
         $employees = Employee::factory()
             ->count(2)
@@ -59,11 +58,11 @@ class UpdateBasicInfoTest extends TestCase
 
         $payload = [
             'name' => $employees[0]->name,
-            'email' => $employees[1]->email
+            'email' => $employees[1]->email,
         ];
 
         $response = $this->putJson(route('api.employees.updateBasicInfo', ['uid' => $employees[0]->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
@@ -74,7 +73,7 @@ class UpdateBasicInfoTest extends TestCase
         parent::tearDown();
     }
 
-    public function testUpdateBasicInfoSuccess(): void
+    public function test_update_basic_info_success(): void
     {
         $employees = Employee::factory()
             ->count(1)
@@ -97,7 +96,7 @@ class UpdateBasicInfoTest extends TestCase
         ];
 
         $response = $this->putJson(route('api.employees.updateBasicInfo', ['uid' => $employee->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(201);

@@ -13,22 +13,21 @@ class DetailCache
 
     public function handle(string $projectUid, array $necessaryUpdate = [], bool $forceUpdateAll = false)
     {
-        $projectId = getIdFromUid($projectUid, new Project());
+        $projectId = getIdFromUid($projectUid, new Project);
 
         if ($forceUpdateAll) {
-            clearCache('detailProject' . $projectId);
+            clearCache('detailProject'.$projectId);
         }
 
         // get current data
-        $currentData = getCache('detailProject' . $projectId);
+        $currentData = getCache('detailProject'.$projectId);
 
-
-        if (!$currentData) {
+        if (! $currentData) {
             DetailProject::run($projectUid, new ProjectRepository, new EntertainmentTaskSongRepository);
-            $currentData = getCache('detailProject' . $projectId);
+            $currentData = getCache('detailProject'.$projectId);
         }
 
-        if (!empty($necessaryUpdate)) {
+        if (! empty($necessaryUpdate)) {
             foreach ($necessaryUpdate as $key => $value) {
                 $currentData[$key] = $value;
             }

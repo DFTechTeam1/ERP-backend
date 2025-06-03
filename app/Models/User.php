@@ -17,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles, HasApiTokens, ModelObserver, SoftDeletes;
+    use HasApiTokens, HasFactory, HasRoles, ModelObserver, Notifiable, SoftDeletes;
 
     protected $guard_name = 'sanctum';
 
@@ -86,7 +86,7 @@ class User extends Authenticatable
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -98,7 +98,7 @@ class User extends Authenticatable
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

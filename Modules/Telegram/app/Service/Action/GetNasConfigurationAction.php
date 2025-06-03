@@ -5,10 +5,14 @@ namespace Modules\Telegram\Service\Action;
 use App\Services\Telegram\TelegramService;
 use Modules\Nas\Services\NasService;
 
-class GetNasConfigurationAction {
+class GetNasConfigurationAction
+{
     private $chatId;
+
     private $messageId;
+
     private $service;
+
     private $nasService;
 
     protected function setUserIdentity(array $payload)
@@ -19,8 +23,8 @@ class GetNasConfigurationAction {
 
     protected function setService()
     {
-        $this->service = new TelegramService();
-        $this->nasService = new NasService();
+        $this->service = new TelegramService;
+        $this->nasService = new NasService;
     }
 
     public function __invoke(array $payload)

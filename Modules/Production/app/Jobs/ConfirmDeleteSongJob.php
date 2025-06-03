@@ -4,10 +4,10 @@ namespace Modules\Production\Jobs;
 
 use App\Enums\System\BaseRole;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
 use Modules\Production\Notifications\ConfirmDeleteSongNotification;
@@ -49,8 +49,8 @@ class ConfirmDeleteSongJob implements ShouldQueue
 
             $message = "Halo {$employee->nickname}\n";
             $message .= "{$entertainmentPic->employee->nickname} sudah menyetujui untuk menghapus lagu {$this->currentSongName} dari event {$project->name}.\n";
-            $message .= "Kamu bisa memulai tugas yang lain.";
-            
+            $message .= 'Kamu bisa memulai tugas yang lain.';
+
             $employee->notify(new ConfirmDeleteSongNotification([$employee->telegram_chat_id], $message));
         }
     }

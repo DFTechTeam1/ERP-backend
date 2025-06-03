@@ -11,11 +11,8 @@ use App\Services\RoleService;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Mockery;
-use Mockery\MockInterface;
 use Modules\Company\Database\Factories\ProvinceFactory;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -65,7 +62,7 @@ class UserLoginTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testUserNotFound(): void
+    public function test_user_not_found(): void
     {
         // mock method
         $this->userRepoMock
@@ -84,7 +81,7 @@ class UserLoginTest extends TestCase
         $this->service->login(['email' => 'email', 'password' => 'pass']);
     }
 
-    public function testUserIsNotActiveYet(): void
+    public function test_user_is_not_active_yet(): void
     {
         // mock method
         $this->userRepoMock
@@ -98,7 +95,7 @@ class UserLoginTest extends TestCase
             )
             ->andReturn((object) [
                 'email_verified_at' => false,
-                'email' => 'email@email.com'
+                'email' => 'email@email.com',
             ]);
 
         $this->expectException(Exception::class);
@@ -107,7 +104,7 @@ class UserLoginTest extends TestCase
         $this->service->login(['email' => 'email', 'password' => 'pass']);
     }
 
-    public function testPasswordWrong(): void
+    public function test_password_wrong(): void
     {
         // mock method
         $this->userRepoMock
@@ -122,7 +119,7 @@ class UserLoginTest extends TestCase
             ->andReturn((object) [
                 'email_verified_at' => true,
                 'email' => 'email@email.com',
-                'password' => Hash::make('testing')
+                'password' => Hash::make('testing'),
             ]);
 
         $this->expectException(Exception::class);
@@ -131,12 +128,12 @@ class UserLoginTest extends TestCase
         $this->service->login(['email' => 'email', 'password' => 'pass']);
     }
 
-    public function testDoNotHavePermission(): void
+    public function test_do_not_have_permission(): void
     {
         // create user
         $users = User::factory()->count(1)->create();
         $user = $users[0];
-        
+
         // mock method
         $this->userRepoMock
             ->shouldReceive('detail')
@@ -148,7 +145,7 @@ class UserLoginTest extends TestCase
                 ['employee.position', 'roles']
             )
             ->andReturn($user);
-        
+
         // mock Hash facades
         Hash::shouldReceive('check')
             ->once()
@@ -167,7 +164,7 @@ class UserLoginTest extends TestCase
         $employee = Employee::factory()->count(1)->create();
         $users = User::factory()->count(1)->create([
             'employee_id' => $employee[0]->id,
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
         ]);
         $user = $users[0];
 
@@ -237,21 +234,21 @@ class UserLoginTest extends TestCase
         return $user;
     }
 
-    public function testLoginWithoutRememberMe(): void
+    public function test_login_without_remember_me(): void
     {
         $user = $this->prepareDataForLogin();
-                
+
         $response = $this->service->login(['email' => $user->email, 'password' => 'password']);
-        
+
         $this->assertTrue(is_string($response));
     }
 
-    public function testLoginWithRememberMe(): void
+    public function test_login_with_remember_me(): void
     {
         $user = $this->prepareDataForLogin();
-                
+
         $response = $this->service->login(['email' => $user->email, 'password' => 'password', 'remember_me' => true]);
-        
+
         $this->assertTrue(is_string($response));
     }
 

@@ -6,7 +6,6 @@ use App\Enums\ErrorCode\Code;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Validation\Rule;
 
 class Update extends FormRequest
 {
@@ -28,7 +27,7 @@ class Update extends FormRequest
         return [
             'email' => [
                 'required_if:is_external_user,1',
-                new \App\Rules\UniqueLowerRule(new \App\Models\User(), $this->route('user'), 'email'),
+                new \App\Rules\UniqueLowerRule(new \App\Models\User, $this->route('user'), 'email'),
             ],
             'role_id' => 'required',
         ];
@@ -37,7 +36,6 @@ class Update extends FormRequest
     /**
      * Return validation errors as json
      *
-     * @param Validator $validator
      * @return void
      */
     public function failedValidation(Validator $validator)

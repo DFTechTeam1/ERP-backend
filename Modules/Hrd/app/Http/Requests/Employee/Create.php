@@ -2,24 +2,14 @@
 
 namespace Modules\Hrd\Http\Requests\Employee;
 
-use App\Enums\Employee\Education;
 use App\Enums\Employee\Gender;
-use App\Enums\Employee\LevelStaff;
-use App\Enums\Employee\MaritalStatus;
 use App\Enums\Employee\MartialStatus;
-use App\Enums\Employee\ProbationStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Rules\Employee\BossRule;
-use App\Rules\Employee\InactiveEmployeeRule;
-use App\Rules\Employee\OnlyFilledRule;
-use App\Rules\InactiveEmployeeEmailRule;
-use App\Rules\InactiveEmployeeNikRule;
-use App\Rules\UniqueLowerRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
-use Modules\Hrd\Models\Employee;
 
 class Create extends FormRequest
 {
@@ -64,7 +54,7 @@ class Create extends FormRequest
                 'required',
             ],
             'boss_id' => [
-                new BossRule(),
+                new BossRule,
             ],
             'status' => [
                 'required',
@@ -114,19 +104,19 @@ class Create extends FormRequest
 
             'id_number_photo' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                File::types(['jpeg', 'jpg', 'png', 'webp']),
             ],
             'npwp_photo' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                File::types(['jpeg', 'jpg', 'png', 'webp']),
             ],
             'bpjs_photo' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                File::types(['jpeg', 'jpg', 'png', 'webp']),
             ],
             'kk_photo' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                File::types(['jpeg', 'jpg', 'png', 'webp']),
             ],
         ];
 

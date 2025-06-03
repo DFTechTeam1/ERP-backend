@@ -19,13 +19,13 @@ class FormatReferenceFile
                     'media_path' => 'link',
                     'link' => $reference->media_path,
                     'id' => $reference->id,
-                    'name' => $reference->name
+                    'name' => $reference->name,
                 ];
-            } else if (in_array($reference->type, $fileDocumentType)) {
+            } elseif (in_array($reference->type, $fileDocumentType)) {
                 $group['pdf'][] = [
                     'id' => $reference->id,
                     'name' => 'document',
-                    'media_path' => asset('storage/projects/references/' . $projectId) . '/' . $reference->media_path,
+                    'media_path' => asset('storage/projects/references/'.$projectId).'/'.$reference->media_path,
                     'type' => $reference->type,
                 ];
             } else {

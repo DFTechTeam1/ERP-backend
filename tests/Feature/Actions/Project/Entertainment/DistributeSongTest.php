@@ -6,7 +6,6 @@ use App\Actions\Project\Entertainment\DistributeSong;
 use App\Services\GeneralService;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
@@ -33,10 +32,10 @@ class DistributeSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testDistributeSongSuccess(): void
+    public function test_distribute_song_success(): void
     {
         Bus::fake();
-        
+
         $employees = Employee::factory()
             ->count(2)
             ->create();
@@ -59,7 +58,7 @@ class DistributeSongTest extends TestCase
             ->create([
                 'project_song_list_id' => $projectSongs[0]->id,
                 'employee_id' => $employees[0]->id,
-                'project_id' => $projects[0]->id
+                'project_id' => $projects[0]->id,
             ]);
 
         $generalMock = $this->instance(
@@ -81,7 +80,7 @@ class DistributeSongTest extends TestCase
             ->andReturn($projects[0]->id);
 
         $payload = [
-            'employee_uid' => $employees[1]->uid
+            'employee_uid' => $employees[1]->uid,
         ];
 
         DistributeSong::run($payload, $projects[0]->uid, $projectSongs[0]->uid, $generalMock);

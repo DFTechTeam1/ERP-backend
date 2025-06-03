@@ -16,28 +16,28 @@ enum ProjectStatus: int
     public function label()
     {
         return match ($this) {
-            static::OnGoing => __("global.onGoing"),
-            static::Draft => __("global.draft"),
-            static::Revise => __("global.revise"),
-            static::WaitingApprovalClient => __("global.waitingApprovalClient"),
-            static::ApprovedByClient => __("global.approvedByClient"),
-            static::Completed => __("global.completed"),
-            static::ReadyToGo => __("global.readyToGo"),
-            static::Canceled => __("global.canceled"),
+            self::OnGoing => __('global.onGoing'),
+            self::Draft => __('global.draft'),
+            self::Revise => __('global.revise'),
+            self::WaitingApprovalClient => __('global.waitingApprovalClient'),
+            self::ApprovedByClient => __('global.approvedByClient'),
+            self::Completed => __('global.completed'),
+            self::ReadyToGo => __('global.readyToGo'),
+            self::Canceled => __('global.canceled'),
         };
     }
 
     public function color()
     {
         return match ($this) {
-            static::OnGoing => 'deep-purple-lighten-3',
-            static::Draft => 'gray-lighten-3',
-            static::Revise => 'deep-orange-lighten-2',
-            static::WaitingApprovalClient => 'teal-lighten-3',
-            static::ApprovedByClient => 'cyan-lighten-3',
-            static::Completed => 'green-lighten-2',
-            static::ReadyToGo => 'success',
-            static::Canceled => 'brown-darken-2',
+            self::OnGoing => 'deep-purple-lighten-3',
+            self::Draft => 'gray-lighten-3',
+            self::Revise => 'deep-orange-lighten-2',
+            self::WaitingApprovalClient => 'teal-lighten-3',
+            self::ApprovedByClient => 'cyan-lighten-3',
+            self::Completed => 'green-lighten-2',
+            self::ReadyToGo => 'success',
+            self::Canceled => 'brown-darken-2',
         };
     }
 }

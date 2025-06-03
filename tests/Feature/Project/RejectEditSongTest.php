@@ -8,11 +8,9 @@ use App\Services\GeneralService;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
-use Modules\Hrd\Models\Employee;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
@@ -20,7 +18,7 @@ use Tests\TestCase;
 
 class RejectEditSongTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -35,15 +33,15 @@ class RejectEditSongTest extends TestCase
         $this->token = $this->getToken($userData['user']);
     }
 
-    public function testRejectEditSongWithLengthOfReasonMoreThan250(): void
+    public function test_reject_edit_song_with_length_of_reason_more_than250(): void
     {
         $response = $this->postJson(
             route('api.production.projects.rejectEditSong', ['projectUid' => 'id', 'songUid' => 'id']),
             [
-                'reason' => 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.'
+                'reason' => 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt voluptatibus quidem facere quaerat tempora aperiam quasi optio ipsam, suscipit dolores, iure dicta provident molestias enim. Vitae nihil voluptatem quis delectus.',
             ],
             [
-                'Authorization' => 'Bearer ' . $this->token
+                'Authorization' => 'Bearer '.$this->token,
             ]
         );
 
@@ -54,7 +52,7 @@ class RejectEditSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testRejectEditSongIsSuccess(): void
+    public function test_reject_edit_song_is_success(): void
     {
         Bus::fake();
 
@@ -64,7 +62,7 @@ class RejectEditSongTest extends TestCase
         );
 
         $payload = [
-            'reason' => 'tidak mau'
+            'reason' => 'tidak mau',
         ];
 
         $projects = Project::factory()
@@ -78,7 +76,7 @@ class RejectEditSongTest extends TestCase
                 'is_request_edit' => 1,
                 'is_request_delete' => 0,
                 'target_name' => 'ubah',
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
         $generalMock->shouldReceive('getIdFromUid')
@@ -111,7 +109,7 @@ class RejectEditSongTest extends TestCase
             'is_request_edit' => 0,
             'is_request_delete' => 0,
             'target_name' => null,
-            'id' => $projectSongs[0]->id
+            'id' => $projectSongs[0]->id,
         ]);
 
         DetailCache::mock()

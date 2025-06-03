@@ -6,9 +6,7 @@ use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Mockery;
-use Mockery\MockInterface;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
@@ -61,7 +59,7 @@ class GenerateEmployeeIdTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testPrefixEmployeeId(): void
+    public function test_prefix_employee_id(): void
     {
         $this->employeeRepoMock
             ->shouldReceive('list')
@@ -73,14 +71,14 @@ class GenerateEmployeeIdTest extends TestCase
                 'id DESC'
             )
             ->andReturn([]);
-            
+
         $response = $this->service->generateEmployeeID();
-        
+
         $this->assertFalse($response['error']);
         $this->assertStringContainsString('DF', $response['data']['employee_id']);
     }
 
-    public function testFirstEmployeeId(): void
+    public function test_first_employee_id(): void
     {
         $this->employeeRepoMock
             ->shouldReceive('list')
@@ -98,7 +96,7 @@ class GenerateEmployeeIdTest extends TestCase
         $this->assertTrue(\Illuminate\Support\Str::endsWith($response['data']['employee_id'], '1'));
     }
 
-    public function testSecondEmployeeId()
+    public function test_second_employee_id()
     {
         $this->employeeRepoMock
             ->shouldReceive('list')
@@ -112,7 +110,7 @@ class GenerateEmployeeIdTest extends TestCase
             ->andReturn([['id' => 1]]);
 
         $response = $this->service->generateEmployeeID();
-        
+
         $this->assertTrue(\Illuminate\Support\Str::endsWith($response['data']['employee_id'], '2'));
     }
 }

@@ -13,7 +13,7 @@ class RequestSong extends FormRequest
     {
         return [
             'songs' => 'required|array',
-            'songs.*' => 'required'
+            'songs.*' => 'required',
         ];
     }
 

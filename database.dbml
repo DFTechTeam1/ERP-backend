@@ -1054,11 +1054,11 @@ Table "project_led_settings" {
 Table "project_deals" {
   "id" bigint [pk, increment, not null]
   "name" varchar(255) [not null]
+  "client_portal" varchar(255)
   "project_date" date [not null]
   "customer_id" bigint [ref: > customers.id]
   "event_type" projects_event_type_enum [default: NULL]
   "venue" varchar(255) [not null]
-  "marketing_id" int [default: NULL]
   "collaboration" varchar(255) [default: NULL]
   "note" text
   "led_area" double [not null, default: '0']
@@ -1066,12 +1066,19 @@ Table "project_deals" {
   "country_id" int [default: NULL]
   "state_id" int [default: NULL]
   "city_id" int [default: NULL]
-  "city_name" varchar(255) [default: NULL]
   "project_class_id" int [default: NULL]
   "longitude" varchar(150) [default: NULL]
   "latitude" varchar(150) [default: NULL]
   "equipment_type" project_deal_equipment_type
   "is_high_season" bool
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "project_deal_marketings" {
+  "id" bigint [pk, not null, increment]
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "employee_id" bigint [ref: > employees.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -1090,6 +1097,9 @@ Table "project_quotations" {
   "fix_price" decimal [default: 0]
   "quotation_id" varchar
   "is_final" bool [default: "false"]
+  "event_location_guide" varchar
+  "equipment_type" varchar
+  "is_high_season" bool [default: false]
   "description" text
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]

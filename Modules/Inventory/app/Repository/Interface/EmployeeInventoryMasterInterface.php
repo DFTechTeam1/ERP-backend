@@ -2,18 +2,19 @@
 
 namespace Modules\Inventory\Repository\Interface;
 
-abstract class EmployeeInventoryMasterInterface {
-    abstract function list(string $select = '*', string $where = "", array $relation = []);
+abstract class EmployeeInventoryMasterInterface
+{
+    abstract public function list(string $select = '*', string $where = '', array $relation = []);
 
-    abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
+    abstract public function pagination(string $select, string $where, array $relation, int $itemsPerPage, int $page);
 
-    abstract function show(string $uid, string $select = '*', array $relation = [], string $where = '');
+    abstract public function show(string $uid, string $select = '*', array $relation = [], string $where = '');
 
-    abstract function store(array $data);
+    abstract public function store(array $data);
 
-    abstract function update(array $data, string $id = '', string $where = '');
+    abstract public function update(array $data, string $id = '', string $where = '');
 
-    abstract function delete(int $id);
+    abstract public function delete(int $id);
 
-    abstract function bulkDelete(array $ids, string $key = '');
+    abstract public function bulkDelete(array $ids, string $key = '');
 }

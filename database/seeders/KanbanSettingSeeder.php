@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class KanbanSettingSeeder extends Seeder
@@ -24,7 +23,7 @@ class KanbanSettingSeeder extends Seeder
                 ['name' => 'Compositing', 'sort' => 1, 'id' => 2],
                 ['name' => 'Animating', 'sort' => 2, 'id' => 3],
                 ['name' => 'Finalize', 'sort' => 3, 'id' => 4],
-            ])
+            ]),
         ]);
     }
 }

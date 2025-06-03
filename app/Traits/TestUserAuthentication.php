@@ -9,7 +9,6 @@ use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\RoleService;
 use App\Services\UserService;
-use Laravel\Sanctum\Sanctum;
 use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\IndonesiaVillage;
@@ -36,7 +35,7 @@ trait TestUserAuthentication
             ->count(1)
             ->state(['district_code' => $district[0]->code])
             ->create();
-       
+
         $employee = Employee::factory()
             ->count(1)
             ->state([
@@ -59,7 +58,7 @@ trait TestUserAuthentication
 
         return [
             'employee' => $employee,
-            'user' => $user
+            'user' => $user,
         ];
     }
 
@@ -73,11 +72,11 @@ trait TestUserAuthentication
             new GeneralService,
             new RoleService
         );
-        
+
         return $service->login(validated: [
             'email' => $user->email,
             'remember_me' => false,
-            'password' => 'password'
+            'password' => 'password',
         ], unitTesting: true);
     }
 }

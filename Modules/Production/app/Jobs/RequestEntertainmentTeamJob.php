@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class RequestEntertainmentTeamJob implements ShouldQueue
 {
@@ -24,11 +24,8 @@ class RequestEntertainmentTeamJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param array $payload
-     * @param object $project
-     * @param object $entertainmentPic
-     * @param object$requestedEmployee
-     * @param array $employeeIds
+     *
+     * @param  object  $requestedEmployee
      */
     public function __construct(
         array $payload,
@@ -67,11 +64,10 @@ class RequestEntertainmentTeamJob implements ShouldQueue
             $employeeNames = collect((object) $employeeData)->pluck('nickname')->toArray();
             $names = implode(',', $employeeNames);
 
-            $existsEmployeeMessage = "Halo " . $picEmployeeData->nickname . ", " . $requested->nickname . " ingin meminjam {$names} di event " . $this->project->name . " untuk tanggal " . date('d F Y', strtotime($this->project->project_date));
+            $existsEmployeeMessage = 'Halo '.$picEmployeeData->nickname.', '.$requested->nickname." ingin meminjam {$names} di event ".$this->project->name.' untuk tanggal '.date('d F Y', strtotime($this->project->project_date));
         }
 
-        $defaultMessage = 'Halo ' . $picEmployeeData->nickname . ", " . $requested->nickname . " ingin meminjam tim untuk membantu pekerjaan di event " . $this->project->name . " di tanggal " . date('d F Y', strtotime($this->project->project_date)) . ". Kamu bisa memilihkan tim untuk bekerja.";
-
+        $defaultMessage = 'Halo '.$picEmployeeData->nickname.', '.$requested->nickname.' ingin meminjam tim untuk membantu pekerjaan di event '.$this->project->name.' di tanggal '.date('d F Y', strtotime($this->project->project_date)).'. Kamu bisa memilihkan tim untuk bekerja.';
 
         $message = $this->payload['default_select'] ? $defaultMessage : $existsEmployeeMessage;
 
@@ -82,8 +78,8 @@ class RequestEntertainmentTeamJob implements ShouldQueue
             ],
             [
                 'type' => 'text',
-                'text' => 'Silahkan login untuk melihat detail nya'
-            ]
+                'text' => 'Silahkan login untuk melihat detail nya',
+            ],
         ];
 
         $telegramChatIds = [$picEmployeeData->telegram_chat_id];
@@ -96,8 +92,8 @@ class RequestEntertainmentTeamJob implements ShouldQueue
 
         $output = formatNotifications($picEmployeeData->unreadNotifications->toArray());
 
-        $pusher = new \App\Services\PusherNotification();
+        $pusher = new \App\Services\PusherNotification;
 
-        $pusher->send('my-channel-' . $this->entertainmentPic->id, 'notification-event', $output);
+        $pusher->send('my-channel-'.$this->entertainmentPic->id, 'notification-event', $output);
     }
 }

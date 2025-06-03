@@ -3,37 +3,35 @@
 namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\UserRoleManagement;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
-use Modules\Production\Http\Requests\Project\HoldTask;
-use Modules\Production\Http\Requests\Project\LoanTeamMember;
 use Modules\Production\Http\Requests\Project\ChangeStatus;
 use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
+use Modules\Production\Http\Requests\Project\CompleteProject;
 use Modules\Production\Http\Requests\Project\Create;
 use Modules\Production\Http\Requests\Project\CreateDescription;
 use Modules\Production\Http\Requests\Project\CreateTask;
-use Modules\Production\Http\Requests\Project\MoreDetailUpdate;
-use Modules\Production\Http\Requests\Project\StoreReferences;
-use Modules\Production\Http\Requests\Project\UpdateDeadline;
-use Modules\Production\Http\Requests\Project\UploadProofOfWork;
-use Modules\Production\Http\Requests\Project\ReviseTask;
-use Modules\Production\Services\ProjectService;
-use \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
-use Modules\Production\Http\Requests\Project\UploadShowreels;
-use Modules\Production\Http\Requests\Project\CompleteProject;
 use Modules\Production\Http\Requests\Project\Deals\Customer\StoreCustomer;
 use Modules\Production\Http\Requests\Project\DistributeModelerTask;
 use Modules\Production\Http\Requests\Project\DistributeSong;
+use Modules\Production\Http\Requests\Project\HoldTask;
+use Modules\Production\Http\Requests\Project\LoanTeamMember;
+use Modules\Production\Http\Requests\Project\ManualChangeTaskBoard;
+use Modules\Production\Http\Requests\Project\MoreDetailUpdate;
 use Modules\Production\Http\Requests\Project\RejectEditSong;
 use Modules\Production\Http\Requests\Project\RequestSong;
+use Modules\Production\Http\Requests\Project\ReviseTask;
 use Modules\Production\Http\Requests\Project\SongReportAsDone;
 use Modules\Production\Http\Requests\Project\SongRevise;
+use Modules\Production\Http\Requests\Project\StoreReferences;
 use Modules\Production\Http\Requests\Project\SubtituteWorkerSong;
+use Modules\Production\Http\Requests\Project\UpdateDeadline;
 use Modules\Production\Http\Requests\Project\UpdateSong;
+use Modules\Production\Http\Requests\Project\UploadProofOfWork;
+use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Services\CustomerService;
+use Modules\Production\Services\ProjectService;
 use Modules\Production\Services\TestingService;
 
 class ProjectController extends Controller
@@ -44,17 +42,21 @@ class ProjectController extends Controller
 
     private $customerService;
 
+    private $projectDealService;
+
     public function __construct(
         ProjectService $projectService,
         TestingService $testingService,
-        CustomerService $customerService
-    )
-    {
+        CustomerService $customerService,
+        \Modules\Production\Services\ProjectDealService $projectDealService
+    ) {
         $this->service = $projectService;
 
         $this->testingService = $testingService;
 
         $this->customerService = $customerService;
+
+        $this->projectDealService = $projectDealService;
     }
 
     /**
@@ -72,7 +74,7 @@ class ProjectController extends Controller
                 'marketings.marketing:id,name,employee_id',
                 'projectClass:id,name,color',
                 'vjs.employee:id,nickname',
-                'equipments:id,project_id'
+                'equipments:id,project_id',
             ]
         ));
     }
@@ -127,8 +129,6 @@ class ProjectController extends Controller
 
     /**
      * Check all project tasks before user complete the project
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function precheck(string $projectUid): \Illuminate\Http\JsonResponse
     {
@@ -156,8 +156,7 @@ class ProjectController extends Controller
     /**
      * Update basic project information
      *
-     * @param BasicUpdate $request
-     * @param string $uid
+     * @param  string  $uid
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateBasic(BasicUpdate $request, string $projectId)
@@ -168,8 +167,6 @@ class ProjectController extends Controller
     /**
      * Update more detail
      *
-     * @param MoreDetailUpdate $request
-     * @param string $uid
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateMoreDetail(MoreDetailUpdate $request, string $uid)
@@ -180,8 +177,6 @@ class ProjectController extends Controller
     /**
      * Store project references
      *
-     * @param StoreReferences $request
-     * @param string $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function storeReferences(StoreReferences $request, string $id)
@@ -192,8 +187,7 @@ class ProjectController extends Controller
     /**
      * Create new task on selected board
      *
-     * @param CreateTask $request
-     * @param int $boardId
+     * @param  int  $boardId
      * @return \Illuminate\Http\JsonResponse
      */
     public function storeTask(CreateTask $request, $boardId)
@@ -203,11 +197,6 @@ class ProjectController extends Controller
 
     /**
      * Distribute task to modeler teams
-     *
-     * @param DistributeModelerTask $request
-     * @param string $projectUid
-     * @param string $taskUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function distributeModellerTask(DistributeModelerTask $request, string $projectUid, string $taskUid): \Illuminate\Http\JsonResponse
     {
@@ -217,7 +206,6 @@ class ProjectController extends Controller
     /**
      * Delete selected task
      *
-     * @param string $taskUid
      * @return \Illuminate\Http\JsonResponse
      */
     public function deleteTask(string $taskUid)
@@ -238,8 +226,7 @@ class ProjectController extends Controller
     /**
      * Add task description
      *
-     * @param CreateDescription $request
-     * @param string $taskId
+     * @param  string  $taskId
      * @return \Illuminate\Http\JsonResponse
      */
     public function storeDescription(CreateDescription $request, $taskId)
@@ -250,7 +237,7 @@ class ProjectController extends Controller
     /**
      * Get teams of selected project
      *
-     * @param string $projectId
+     * @param  string  $projectId
      * @return \Illuminate\Http\JsonResponse
      */
     public function getProjectMembers($projectId, string $taskId)
@@ -261,8 +248,7 @@ class ProjectController extends Controller
     /**
      * Assign members / employees to selected task
      *
-     * @param Request $request
-     * @param string $taskId
+     * @param  string  $taskId
      * @return \Illuminate\Http\JsonResponse
      */
     public function assignMemberToTask(Request $request, $taskId)
@@ -275,8 +261,6 @@ class ProjectController extends Controller
     /**
      * Delete selected image reference
      *
-     * @param Request $request
-     * @param string $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function deleteReference(Request $request, string $id)
@@ -296,7 +280,7 @@ class ProjectController extends Controller
 
     /**
      * Delete multiple data
-     * @param Request $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function bulkDelete(Request $request)
@@ -310,7 +294,7 @@ class ProjectController extends Controller
 
     /**
      * Delete multiple data
-     * @param string $projectUid
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function removeAllVJ(string $projectUid)
@@ -321,8 +305,6 @@ class ProjectController extends Controller
     /**
      * Store new request equipment
      *
-     * @param \Modules\Production\Http\Requests\Project\RequestEquipment $request
-     * @param string $projectId
      * @return \Illuminate\Http\JsonResponse
      */
     public function requestEquipment(\Modules\Production\Http\Requests\Project\RequestEquipment $request, string $projectId)
@@ -333,7 +315,6 @@ class ProjectController extends Controller
     /**
      * List of project equipments
      *
-     * @param string $projectId
      * @return \Illuminate\Http\JsonResponse
      */
     public function listEquipment(string $projectId)
@@ -344,8 +325,6 @@ class ProjectController extends Controller
     /**
      * Update selected equipment
      *
-     * @param \Modules\Production\Http\Requests\Project\UpdateEquipment $request
-     * @param string $projectId
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateEquipment(\Modules\Production\Http\Requests\Project\UpdateEquipment $request, string $projectId)
@@ -356,8 +335,6 @@ class ProjectController extends Controller
     /**
      * Cancel request equipment
      *
-     * @param Request $request
-     * @param string $projectId
      * @return \Illuminate\Http\JsonResponse
      */
     public function cancelRequestEquipment(Request $request, string $projectId)
@@ -368,8 +345,6 @@ class ProjectController extends Controller
     /**
      * Add project deadline
      *
-     * @param UpdateDeadline $request
-     * @param string $projectId
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateDeadline(UpdateDeadline $request, string $projectId)
@@ -405,8 +380,6 @@ class ProjectController extends Controller
     /**
      * Change board of task (When user move a task)
      *
-     * @param ChangeTaskBoard $request
-     * @param string $projectId
      * @return \Illuminate\Http\JsonResponse
      */
     public function changeTaskBoard(ChangeTaskBoard $request, string $projectId)
@@ -417,8 +390,6 @@ class ProjectController extends Controller
     /**
      * Change board of task (When user move a task)
      *
-     * @param ChangeTaskBoard $request
-     * @param string $projectId
      * @return \Illuminate\Http\JsonResponse
      */
     public function manualMoveBoard(ChangeTaskBoard $request, string $projectId)
@@ -429,8 +400,7 @@ class ProjectController extends Controller
     /**
      * * Change board of task (When user move a task)
      *
-     * @param \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard $request
-     * @param string $projectId
+     * @param  \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard  $request
      */
     public function manualChangeTaskBoard(ManualChangeTaskBoard $request, string $projectId)
     {
@@ -496,9 +466,6 @@ class ProjectController extends Controller
      * 1. string reason -> required
      * 2. blob file -> nullable
      *
-     * @param ReviseTask $request
-     * @param string $projectUid
-     * @param string $taskUid
      * @return \Illuminate\Http\JsonResponse
      */
     public function reviseTask(ReviseTask $request, string $projectUid, string $taskUid)
@@ -544,8 +511,6 @@ class ProjectController extends Controller
     /**
      * Function to change status of selected project
      *
-     * @param ChangeStatus $request
-     * @param string $projectUid
      * @return \Illuminate\Http\JsonResponse
      */
     public function changeStatus(ChangeStatus $request, string $projectUid)
@@ -566,8 +531,6 @@ class ProjectController extends Controller
     /**
      * Function to get pic teams for request team member
      *
-     * @param string $projectUid
-     * @param string $picUid
      * @return \Illuminate\Http\JsonResponse
      */
     public function getPicTeams(string $projectUid, string $picUid)
@@ -603,7 +566,6 @@ class ProjectController extends Controller
     /**
      * Function to get all item for final check
      *
-     * @param string $projectUid
      * @return \Illuminate\Http\JsonResponse
      */
     public function prepareFinalCheck(string $projectUid)
@@ -625,7 +587,7 @@ class ProjectController extends Controller
     {
         $references = $this->service->downloadReferences($projectUid);
         $name = str_replace(' ', '', $references['project']->name);
-        $name .= "_references.zip";
+        $name .= '_references.zip';
 
         return \STS\ZipStream\Facades\Zip::create("{$name}", $references['files']);
     }
@@ -659,7 +621,7 @@ class ProjectController extends Controller
     {
         $references = $this->service->downloadProofOfWork($projectUid, $proofOfWorkId);
         $name = str_replace(' ', '', $references['task']->name);
-        $name .= "_proof_of_work.zip";
+        $name .= '_proof_of_work.zip';
 
         return \STS\ZipStream\Facades\Zip::create("{$name}", $references['files']);
     }
@@ -668,7 +630,7 @@ class ProjectController extends Controller
     {
         $references = $this->service->downloadReviseMedia($projectUid, $reviseId);
         $name = str_replace(' ', '', $references['task']->name);
-        $name .= "_revise.zip";
+        $name .= '_revise.zip';
 
         return \STS\ZipStream\Facades\Zip::create("{$name}", $references['files']);
     }
@@ -713,10 +675,6 @@ class ProjectController extends Controller
 
     /**
      * Store song for selected project
-     *
-     * @param RequestSong $request
-     * @param string $projectUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function storeSongs(RequestSong $request, string $projectUid): \Illuminate\Http\JsonResponse
     {
@@ -725,11 +683,6 @@ class ProjectController extends Controller
 
     /**
      * Change worker song
-     *
-     * @param SubtituteWorkerSong $request
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function subtituteSongPic(SubtituteWorkerSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -739,8 +692,6 @@ class ProjectController extends Controller
     /**
      * Start work on selected song task
      *
-     * @param string $projectUid
-     * @param string $songUid
      * @return \Illuminate\Http\JsonResponse
      */
     public function startWorkOnSong(string $projectUid, string $songUid)
@@ -750,10 +701,6 @@ class ProjectController extends Controller
 
     /**
      * Function to bulk assign
-     *
-     * @param BulkAssignSong $request
-     * @param string $projectUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function bulkAssignWorkerForSong(BulkAssignSong $request, string $projectUid): \Illuminate\Http\JsonResponse
     {
@@ -762,10 +709,6 @@ class ProjectController extends Controller
 
     /**
      * Function to get detail of song
-     *
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function detailSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -774,11 +717,6 @@ class ProjectController extends Controller
 
     /**
      * Function to update song
-     *
-     * @param UpdateSong $request
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function updateSong(UpdateSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -787,11 +725,6 @@ class ProjectController extends Controller
 
     /**
      * Store the result of work
-     *
-     * @param SongReportAsDone $request
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function songReportAsDone(SongReportAsDone $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -802,10 +735,6 @@ class ProjectController extends Controller
      *  Here we'll remove pic from selected song
      * Step to produce:
      * 1. Delete pic from entertainment_task_song table
-     *
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function removePicSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -814,10 +743,6 @@ class ProjectController extends Controller
 
     /**
      * Approve JB by root, PM or director
-     *
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function songApproveWork(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -826,10 +751,6 @@ class ProjectController extends Controller
 
     /**
      * Request changes is being approved
-     *
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function confirmEditSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -838,10 +759,6 @@ class ProjectController extends Controller
 
     /**
      * Delete song
-     *
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function confirmDeleteSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -850,10 +767,6 @@ class ProjectController extends Controller
 
     /**
      * Function to delete single song
-     *
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function deleteSong(string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -862,10 +775,6 @@ class ProjectController extends Controller
 
     /**
      * Function get get all entertainment list with the workload
-     *
-     * @param $projectUid
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function entertainmentListMember(string $projectUid): \Illuminate\Http\JsonResponse
     {
@@ -874,9 +783,6 @@ class ProjectController extends Controller
 
     /**
      * Get entertainment wokrload detail
-     *
-     * @param string $projectUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function entertainmentMemberWorkload(string $projectUid): \Illuminate\Http\JsonResponse
     {
@@ -886,11 +792,6 @@ class ProjectController extends Controller
     /**
      * Distribute song to selected player
      * One song one player
-     *
-     * @param DistributeSong $request
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function distributeSong(DistributeSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -904,11 +805,6 @@ class ProjectController extends Controller
     /**
      * Function to reject request edit song
      * Can be done by PM entertainment
-     *
-     * @param RejectEditSong $request
-     * @param string $projectUid
-     * @param string $songUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function rejectEditSong(RejectEditSong $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -917,12 +813,6 @@ class ProjectController extends Controller
 
     /**
      * Revise JB
-     *
-     * @param SongRevise $request
-     * @param string $projectUid
-     * @param string $songUid
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function songRevise(SongRevise $request, string $projectUid, string $songUid): \Illuminate\Http\JsonResponse
     {
@@ -931,9 +821,6 @@ class ProjectController extends Controller
 
     /**
      * Complete all unfinished task
-     *
-     * @param string $projectUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function completeUnfinishedTask(string $projectUid): \Illuminate\Http\JsonResponse
     {
@@ -945,20 +832,15 @@ class ProjectController extends Controller
         return apiResponse($this->service->filterTasks($request->all(), $projectUid));
     }
 
-    public function getEntertainmentSongWorkload()
-    {
-
-    }
+    public function getEntertainmentSongWorkload() {}
 
     /**
      * Store new customer
-     * 
-     * @param StoreCustomer $request        This will have structure:
-     * - string $name           Required
-     * - string $phone          Required
-     * - ?string $email         Nullable
-     * 
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @param  StoreCustomer  $request  This will have structure:
+     *                                  - string $name           Required
+     *                                  - string $phone          Required
+     *                                  - ?string $email         Nullable
      */
     public function storeCustomer(StoreCustomer $request): \Illuminate\Http\JsonResponse
     {
@@ -967,22 +849,43 @@ class ProjectController extends Controller
 
     /**
      * Get all customer list
-     * 
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getCustomer(): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->customerService->getAll());
     }
 
+    /**
+     * Function to check the project is categorized as high_season or not
+     */
     public function checkHighSeason(Request $request): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->checkHighSeason($request->all()));
     }
 
+    /**
+     * Get Calculation formula
+     */
     public function getCalculationFormula(): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->getCalculationFormula());
     }
-}
 
+    /**
+     * Generate the available quotation number for the upcoming project deals
+     */
+    public function getQuotationNumber(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->getQuotationNumber());
+    }
+
+    public function storeProjectDeals(\Modules\Production\Http\Requests\Deals\Store $request)
+    {
+        return apiResponse($this->service->storeProjectDeals($request->validated()));
+    }
+
+    public function listProjectDeals()
+    {
+        return apiResponse($this->projectDealService->list());
+    }
+}

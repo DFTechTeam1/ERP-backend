@@ -6,7 +6,6 @@ use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Mockery;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
@@ -63,7 +62,7 @@ class ValidateEmployeeIdTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testEmployeeIdWrong(): void
+    public function test_employee_id_wrong(): void
     {
         $this->employeeRepoMock
             ->shouldReceive('show')
@@ -81,7 +80,7 @@ class ValidateEmployeeIdTest extends TestCase
         $this->assertFalse($response['data']['valid']);
     }
 
-    public function testEmployeeIdIsValid(): void
+    public function test_employee_id_is_valid(): void
     {
         $this->employeeRepoMock
             ->shouldReceive('show')

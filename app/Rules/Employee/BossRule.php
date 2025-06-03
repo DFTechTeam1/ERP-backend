@@ -2,10 +2,8 @@
 
 namespace App\Rules\Employee;
 
-use App\Enums\Employee\LevelStaff;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Support\Facades\Log;
 
 class BossRule implements ValidationRule
 {
@@ -16,7 +14,7 @@ class BossRule implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (request()->level_staff != 'manager' && !$value) {
+        if (request()->level_staff != 'manager' && ! $value) {
             $fail('global.bossIdRequired')->translate();
         }
     }

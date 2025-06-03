@@ -15,27 +15,27 @@ class DivisionSeeder extends Seeder
     {
         Schema::disableForeignKeyConstraints();
         Division::truncate();
-        
+
         $divisions = [
             [
                 'name' => 'General',
-                'parent_id' => null
+                'parent_id' => null,
             ],
             [
                 'name' => 'HR',
-                'parent_id' => 1
+                'parent_id' => 1,
             ],
             [
                 'name' => 'Finance',
-                'parent_id' => 1
+                'parent_id' => 1,
             ],
             [
                 'name' => 'IT',
-                'parent_id' => 1
+                'parent_id' => 1,
             ],
             [
                 'name' => 'Marketing',
-                'parent_id' => 1
+                'parent_id' => 1,
             ],
             [
                 'name' => 'Operational',

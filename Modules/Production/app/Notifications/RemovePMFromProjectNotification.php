@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class RemovePMFromProjectNotification extends Notification
 {
@@ -71,7 +70,7 @@ class RemovePMFromProjectNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => 'Halo ' . $this->employee->nickname . ", Event {$this->project->name} tidak jadi kamu kerjakan. Mungkin akan di ganti dengan project yang lebih besar :) Semangat!",
+            'message' => 'Halo '.$this->employee->nickname.", Event {$this->project->name} tidak jadi kamu kerjakan. Mungkin akan di ganti dengan project yang lebih besar :) Semangat!",
         ];
     }
 
@@ -80,8 +79,8 @@ class RemovePMFromProjectNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->employee->nickname . ", Event {$this->project->name} tidak jadi kamu kerjakan. Mungkin akan di ganti dengan project yang lebih besar :) Semangat!",
-            ]
+                'text' => 'Halo '.$this->employee->nickname.", Event {$this->project->name} tidak jadi kamu kerjakan. Mungkin akan di ganti dengan project yang lebih besar :) Semangat!",
+            ],
         ];
 
         return [

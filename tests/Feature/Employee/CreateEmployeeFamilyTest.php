@@ -8,7 +8,6 @@ use App\Enums\Employee\RelationFamily;
 use App\Enums\Employee\Religion;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\Sanctum;
 use Modules\Hrd\Models\Employee;
 use Tests\TestCase;
@@ -33,7 +32,7 @@ class CreateEmployeeFamilyTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testCreateWithMissingPayload(): void
+    public function test_create_with_missing_payload(): void
     {
         $payload = [
             'name' => '',
@@ -43,7 +42,7 @@ class CreateEmployeeFamilyTest extends TestCase
         ];
 
         $response = $this->postJson(route('api.employees.storeFamily', ['employeeUid' => '123']), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
@@ -56,7 +55,7 @@ class CreateEmployeeFamilyTest extends TestCase
         parent::tearDown();
     }
 
-    public function testCreateFamilyIsSuccess(): void
+    public function test_create_family_is_success(): void
     {
         $employees = Employee::factory()
             ->count(1)
@@ -77,7 +76,7 @@ class CreateEmployeeFamilyTest extends TestCase
         ];
 
         $response = $this->postJson(route('api.employees.storeFamily', ['employeeUid' => $employee->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(201);

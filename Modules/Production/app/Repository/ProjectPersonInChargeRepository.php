@@ -5,33 +5,30 @@ namespace Modules\Production\Repository;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\Interface\ProjectPersonInChargeInterfaces;
 
-class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
-
+class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectPersonInCharge();
+        $this->model = new ProjectPersonInCharge;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -45,24 +42,20 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -76,9 +69,6 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -87,10 +77,10 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where("uid", $uid);
+            $query->where('uid', $uid);
         }
 
         if ($relation) {
@@ -105,7 +95,6 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -116,15 +105,14 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -138,7 +126,7 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id, string $where = '')
@@ -157,7 +145,6 @@ class ProjectPersonInChargeRepository extends ProjectPersonInChargeInterfaces {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

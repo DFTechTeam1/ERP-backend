@@ -11,18 +11,18 @@ enum Location: int
     public function label()
     {
         return match ($this) {
-            static::InUser => __('global.inUser'),
-            static::InWarehouse => __('global.inWarehouse'),
-            static::Outgoing => __('global.onVenue'),
+            self::InUser => __('global.inUser'),
+            self::InWarehouse => __('global.inWarehouse'),
+            self::Outgoing => __('global.onVenue'),
         };
     }
 
     public function badgeColor()
     {
         return match ($this) {
-            static::InUser => 'success',
-            static::InWarehouse => 'secondary',
-            static::Outgoing => 'warning',
+            self::InUser => 'success',
+            self::InWarehouse => 'secondary',
+            self::Outgoing => 'warning',
         };
     }
 }

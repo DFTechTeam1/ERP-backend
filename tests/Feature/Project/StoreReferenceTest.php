@@ -4,11 +4,7 @@ namespace Tests\Feature\Project;
 
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
-use Modules\Company\Database\Factories\ProvinceFactory;
 use Modules\Production\Models\Project;
 use Tests\TestCase;
 
@@ -35,39 +31,39 @@ class StoreReferenceTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testPayloadIsMissing(): void
+    public function test_payload_is_missing(): void
     {
         $project = Project::factory()->count(1)->create();
         $payload = [
             'link' => [
-                ['href' => 'google.com']
-            ]
+                ['href' => 'google.com'],
+            ],
         ];
 
         $response = $this->postJson(route('api.production.store-reference', ['id' => $project[0]->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+            'Authorization' => 'Bearer '.$this->getToken($this->user),
         ]);
 
         $response->assertStatus(422);
         $response->assertJsonStructure([
             'message',
-            'errors'
+            'errors',
         ]);
 
         parent::tearDown();
     }
 
-    public function testUploadOnlyLinkReturnSuccess(): void
+    public function test_upload_only_link_return_success(): void
     {
         $project = Project::factory()->count(1)->create();
         $payload = [
             'link' => [
-                ['href' => 'https://google.com', 'name' => 'google.com']
-            ]
+                ['href' => 'https://google.com', 'name' => 'google.com'],
+            ],
         ];
 
         $response = $this->post(route('api.production.store-reference', ['id' => $project[0]->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+            'Authorization' => 'Bearer '.$this->getToken($this->user),
         ]);
 
         $response->assertStatus(201);
@@ -75,13 +71,13 @@ class StoreReferenceTest extends TestCase
             'message',
             'data' => [
                 'full_detail',
-                'references'
+                'references',
             ],
         ]);
         $this->assertDatabaseHas('project_references', [
             'media_path' => 'https://google.com',
             'name' => 'google.com',
-            'type' => 'link'
+            'type' => 'link',
         ]);
 
         parent::tearDown();

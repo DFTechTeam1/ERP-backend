@@ -2,14 +2,12 @@
 
 namespace Tests\Feature\Project\Entertainment;
 
-use App\Actions\Hrd\PointRecord;
 use App\Actions\Project\DetailCache;
 use App\Enums\Production\TaskSongStatus;
 use App\Enums\System\BaseRole;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +22,7 @@ use Tests\TestCase;
 
 class SongApproveByPmTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -53,7 +51,7 @@ class SongApproveByPmTest extends TestCase
             ->count(1)
             ->create([
                 'project_id' => $this->projects[0]->id,
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
         $this->employees = Employee::factory()
@@ -66,7 +64,7 @@ class SongApproveByPmTest extends TestCase
                 'project_id' => $this->projects[0]->id,
                 'project_song_list_id' => $this->projectSongs[0]->id,
                 'employee_id' => $this->employees[0]->id,
-                'status' => $taskStatus
+                'status' => $taskStatus,
             ]);
     }
 
@@ -94,7 +92,7 @@ class SongApproveByPmTest extends TestCase
             'role_has_permissions',
             'permissions',
             'roles',
-            'users'
+            'users',
         ];
         foreach ($tables as $table) {
             DB::table($table)->truncate();
@@ -108,7 +106,7 @@ class SongApproveByPmTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testSongAlreadyApproved(): void
+    public function test_song_already_approved(): void
     {
         $this->registerAuthor(roleName: BaseRole::ProjectManagerEntertainment->value);
 
@@ -117,13 +115,13 @@ class SongApproveByPmTest extends TestCase
         $this->setProjectConstructor();
 
         $response = $this->projectService->songApproveWork($this->projects[0]->uid, $this->projectSongs[0]->uid);
-        
+
         $this->assertTrue($response['error']);
 
         $this->assertStringContainsString(__('notification.failedToAproveTask'), $response['message']);
     }
 
-    public function testApproveTaskReturnSuccess(): void
+    public function test_approve_task_return_success(): void
     {
         $this->registerAuthor(roleName: BaseRole::ProjectManagerEntertainment->value);
 
@@ -139,7 +137,7 @@ class SongApproveByPmTest extends TestCase
             ->andReturn($this->projects[0]);
 
         $response = $this->projectService->songApproveWork($this->projects[0]->uid, $this->projectSongs[0]->uid);
-        
+
         Bus::assertDispatched(TaskSongApprovedJob::class);
 
         $this->assertFalse($response['error']);
@@ -153,11 +151,11 @@ class SongApproveByPmTest extends TestCase
 
         // check point
         $this->assertDatabaseHas('employee_points', ['employee_id' => $this->employees[0]->id, 'total_point' => 1, 'type' => 'entertainment']);
-        
+
         $this->clearUserTables();
     }
 
-    public function testApproveTaskByEventProjectManager(): void
+    public function test_approve_task_by_event_project_manager(): void
     {
         $this->registerAuthor(roleName: BaseRole::ProjectManager->value);
 
@@ -194,7 +192,7 @@ class SongApproveByPmTest extends TestCase
     protected function tearDown(): void
     {
         $this->clearUserTables();
-        
+
         parent::tearDown();
     }
 }

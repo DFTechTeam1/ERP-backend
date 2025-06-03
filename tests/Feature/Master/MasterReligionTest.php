@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\Master;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Modules\Company\Services\MasterService;
 use Tests\TestCase;
 
@@ -15,13 +13,13 @@ class MasterReligionTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new MasterService();
+        $this->service = new MasterService;
     }
 
     /**
      * A basic feature test example.
      */
-    public function testGetAllReligions(): void
+    public function test_get_all_religions(): void
     {
         $response = $this->service->getReligions();
 

@@ -4,14 +4,10 @@ namespace Tests\Feature\Project;
 
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Modules\Production\Jobs\RequestSongJob;
 use Modules\Production\Models\Project;
-use Modules\Production\Notifications\RequestSongNotification;
 use Tests\TestCase;
 
 class RequestSongTest extends TestCase
@@ -34,21 +30,21 @@ class RequestSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testStoreSongWithMissingParameter(): void
+    public function test_store_song_with_missing_parameter(): void
     {
         $payload = [
-            'songs' => []
+            'songs' => [],
         ];
 
         $response = $this->postJson(route('api.production.projects.storeSongs', ['projectUid' => '123']), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('errors', $response);
     }
 
-    public function testStoreSongReturnSuccess(): void
+    public function test_store_song_return_success(): void
     {
         Bus::fake();
 
@@ -61,12 +57,12 @@ class RequestSongTest extends TestCase
         $payload = [
             'songs' => [
                 'Lagu 1',
-                'Lagu 2'
-            ]
+                'Lagu 2',
+            ],
         ];
 
         $response = $this->postJson(route('api.production.projects.storeSongs', ['projectUid' => $project->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(201);

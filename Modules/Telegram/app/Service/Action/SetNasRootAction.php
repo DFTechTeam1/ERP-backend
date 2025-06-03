@@ -3,14 +3,15 @@
 namespace Modules\Telegram\Service\Action;
 
 use App\Services\Telegram\TelegramService;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Modules\Telegram\Enums\TelegramSessionKey;
-use Modules\Telegram\Models\TelegramSession;
 
-class SetNasRootAction {
+class SetNasRootAction
+{
     private $chatId;
+
     private $messageId;
+
     private $service;
 
     protected function setUserIdentity(array $payload)
@@ -21,7 +22,7 @@ class SetNasRootAction {
 
     protected function setService()
     {
-        $this->service = new TelegramService();
+        $this->service = new TelegramService;
     }
 
     public function __invoke(array $payload)

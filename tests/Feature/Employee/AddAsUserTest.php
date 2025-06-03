@@ -3,15 +3,11 @@
 namespace Tests\Feature\Employee;
 
 use App\Models\User;
-use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Traits\HasEmployeeConstructor;
 use App\Traits\TestUserAuthentication;
-use Database\Factories\UserFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
 use Mockery\MockInterface;
@@ -23,7 +19,7 @@ use Tests\TestCase;
 
 class AddAsUserTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasEmployeeConstructor;
+    use HasEmployeeConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -42,15 +38,15 @@ class AddAsUserTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testAddUserWithMissingPayload(): void
+    public function test_add_user_with_missing_payload(): void
     {
         $payload = [
             'user_id' => '',
-            'password' => ''
+            'password' => '',
         ];
 
         $response = $this->postJson(route('api.employees.addAsUser'), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
         $response->assertStatus(422);
         $this->assertArrayHasKey('errors', $response);
@@ -60,7 +56,7 @@ class AddAsUserTest extends TestCase
         parent::tearDown();
     }
 
-    public function testAddExisitingEmail(): void
+    public function test_add_exisiting_email(): void
     {
         $userRepoMock = $this->instance(
             abstract: UserRepository::class,
@@ -75,7 +71,7 @@ class AddAsUserTest extends TestCase
                     ->andReturn(
                         new User([
                             'id' => 1,
-                            'email' => 'email@gmail.com'
+                            'email' => 'email@gmail.com',
                         ])
                     );
             })
@@ -93,7 +89,7 @@ class AddAsUserTest extends TestCase
                     ->andReturn(
                         new Employee([
                             'id' => 1,
-                            'email' => 'email@gmail.com'
+                            'email' => 'email@gmail.com',
                         ])
                     );
             })
@@ -101,7 +97,7 @@ class AddAsUserTest extends TestCase
 
         $payload = [
             'user_id' => 'userid',
-            'password' => 'password'
+            'password' => 'password',
         ];
 
         $this->setConstructor(
@@ -116,7 +112,7 @@ class AddAsUserTest extends TestCase
         parent::tearDown();
     }
 
-    public function testAddAssUserSuccess(): void
+    public function test_add_ass_user_success(): void
     {
         Bus::fake();
 
@@ -126,17 +122,17 @@ class AddAsUserTest extends TestCase
 
         $role = Role::create([
             'name' => 'new role',
-            'guard' => 'sanctum'
+            'guard' => 'sanctum',
         ]);
 
         $payload = [
             'user_id' => $employees[0]->uid,
             'password' => 'password',
-            'role_id' => $role->id
+            'role_id' => $role->id,
         ];
 
         $response = $this->postJson(route('api.employees.addAsUser'), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
         $response->assertStatus(201);
 

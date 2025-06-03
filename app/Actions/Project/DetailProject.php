@@ -7,8 +7,6 @@ use App\Enums\System\BaseRole;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\ProjectRepository;
@@ -19,8 +17,8 @@ class DetailProject
 
     public function handle(string $uid, ProjectRepository $repo, EntertainmentTaskSongRepository $entertainmentTaskSongRepo)
     {
-        $projectId = getIdFromUid($uid, new \Modules\Production\Models\Project());
-        $output = getCache('detailProject' . $projectId);
+        $projectId = getIdFromUid($uid, new \Modules\Production\Models\Project);
+        $output = getCache('detailProject'.$projectId);
 
         /**
          * Validate project for entertainment role
@@ -37,25 +35,28 @@ class DetailProject
                 where: "employee_id = {$user->employee->id}"
             );
 
-            if ($task->count() == 0) $haveTask = false;
+            if ($task->count() == 0) {
+                $haveTask = false;
+            }
 
             // check if user is a vj in this project
             $project = $repo->show(
                 uid: $uid,
-                select: "id",
+                select: 'id',
                 relation: [
-                    'vjs:id,project_id,employee_id'
+                    'vjs:id,project_id,employee_id',
                 ]
             );
-            if (!in_array($user->employee->id, collect($project->vjs)->pluck('employee_id')->toArray())) $isVj = false;
+            if (! in_array($user->employee->id, collect($project->vjs)->pluck('employee_id')->toArray())) {
+                $isVj = false;
+            }
 
-            if (!$isVj && !$haveTask) {
+            if (! $isVj && ! $haveTask) {
                 throw new AuthorizationException(message: "You're not allowed to access this page", code: 403);
             }
         }
 
-
-        if (!$output) {
+        if (! $output) {
             $data = $repo->show($uid, '*', [
                 'marketing:id,name,employee_id',
                 'personInCharges:id,pic_id,project_id',
@@ -70,7 +71,7 @@ class DetailProject
                 'city:id,name',
                 'projectClass:id,name,maximal_point',
                 'vjs:id,project_id,employee_id',
-                'vjs.employee:id,nickname'
+                'vjs.employee:id,nickname',
             ]);
 
             $progress = FormatProjectProgress::run($data->tasks, $projectId);
@@ -169,10 +170,10 @@ class DetailProject
                 'project_maximal_point' => $data->projectClass->maximal_point,
                 'vjs' => $data->vjs,
                 'permission_list' => DefineDetailProjectPermission::run(),
-                'is_entertainment' => $isEntertainment
+                'is_entertainment' => $isEntertainment,
             ];
 
-            storeCache('detailProject' . $data->id, $output);
+            storeCache('detailProject'.$data->id, $output);
         }
 
         $output = FormatTaskPermission::run($output, $projectId);

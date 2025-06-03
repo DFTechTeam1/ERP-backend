@@ -14,7 +14,7 @@ class DeleteInventory extends FormRequest
         return [
             'employee_id' => 'required',
             'inventory_id' => 'required',
-            'type' => 'required'
+            'type' => 'required',
         ];
     }
 

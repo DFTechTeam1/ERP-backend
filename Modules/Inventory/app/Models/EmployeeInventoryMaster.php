@@ -3,12 +3,11 @@
 namespace Modules\Inventory\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Hrd\Models\Employee;
-use Modules\Inventory\Database\Factories\EmployeeInventoryMasterFactory;
 
 class EmployeeInventoryMaster extends Model
 {
@@ -19,14 +18,14 @@ class EmployeeInventoryMaster extends Model
      */
     protected $fillable = [
         'employee_id',
-        'custom_inventory_id'
+        'custom_inventory_id',
     ];
 
     public function customInventoryId(): Attribute
     {
         return Attribute::make(
-            set: fn($value) => json_encode($value),
-            get: fn($value) => json_decode($value, true)
+            set: fn ($value) => json_encode($value),
+            get: fn ($value) => json_decode($value, true)
         );
     }
 
