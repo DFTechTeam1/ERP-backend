@@ -886,6 +886,12 @@ class ProjectController extends Controller
 
     public function listProjectDeals()
     {
-        return apiResponse($this->projectDealService->list());
+        return apiResponse($this->projectDealService->list(
+            select: 'id,project_date,name,venue,city_id,collaboration,status',
+            relation: [
+                'latestQuotation',
+                'city:id,name'
+            ]
+        ));
     }
 }

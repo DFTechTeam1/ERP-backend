@@ -2,18 +2,23 @@
 
 namespace Modules\Production\Services;
 
+use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 
 class ProjectDealService
 {
     private $repo;
 
+    private $marketingRepo;
+
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(ProjectDealRepository $repo, ProjectDealMarketingRepository $marketingRepo)
     {
-        $this->repo = new ProjectDealRepository;
+        $this->repo = $repo;
+
+        $this->marketingRepo = $marketingRepo;
     }
 
     /**
@@ -43,6 +48,20 @@ class ProjectDealService
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
+
+            $paginated->map(function ($item) {
+                $marketing = $this->marketingRepo->list(
+                    select: 'id,employee_id',
+                    where: "project_deal_id = {$item->id}",
+                    relation: [
+                        'employee:id,nickname'
+                    ]
+                );
+
+                $item['marketing'] = implode(',', $marketing->pluck('employee.nickname')->toArray());
+
+                return $item;
+            });
 
             return generalResponse(
                 'Success',
