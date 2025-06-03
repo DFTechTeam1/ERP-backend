@@ -17,70 +17,70 @@ class PriceSettingSeeder extends Seeder
             [
                 'code' => 'price',
                 'key' => 'discount_type',
-                'value' => 'percentage'
+                'value' => 'percentage',
             ],
             [
                 'code' => 'price',
                 'key' => 'discount',
-                'value' => '10'
+                'value' => '10',
             ],
 
             // markup price
             [
                 'code' => 'price',
                 'key' => 'markup_type',
-                'value' => 'percentage'
+                'value' => 'percentage',
             ],
             [
                 'code' => 'price',
                 'key' => 'markup',
-                'value' => '10'
+                'value' => '10',
             ],
 
             // high season
             [
                 'code' => 'price',
                 'key' => 'high_season_type',
-                'value' => 'percentage'
+                'value' => 'percentage',
             ],
             [
                 'code' => 'price',
                 'key' => 'high_season',
-                'value' => '25'
+                'value' => '25',
             ],
 
             // equipment
             [
                 'code' => 'price',
                 'key' => 'equipment_type',
-                'value' => 'fix'
+                'value' => 'fix',
             ],
             [
                 'code' => 'price',
                 'key' => 'equipment',
-                'value' => '2500000'
+                'value' => '2500000',
             ],
 
             // price guide area
             [
                 'code' => 'price_guide',
                 'key' => 'Surabaya',
-                'value' => 'surabaya'
+                'value' => 'surabaya',
             ],
             [
                 'code' => 'price_guide',
                 'key' => 'Jakarta',
-                'value' => 'jakarta'
+                'value' => 'jakarta',
             ],
             [
                 'code' => 'price_guide',
                 'key' => 'Jawa',
-                'value' => 'jawa'
+                'value' => 'jawa',
             ],
             [
                 'code' => 'price_guide',
                 'key' => 'Luar Jawa',
-                'value' => 'luar jawa'
+                'value' => 'luar jawa',
             ],
         ];
 
@@ -91,6 +91,6 @@ class PriceSettingSeeder extends Seeder
         }
 
         // setting area guide price
-        
+
     }
 }

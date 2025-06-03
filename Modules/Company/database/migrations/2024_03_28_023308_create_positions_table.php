@@ -33,7 +33,7 @@ return new class extends Migration
         Schema::table('positions', function (Blueprint $table) {
             $table->dropForeign(['division_id']);
         });
-        
+
         Schema::dropIfExists('positions');
     }
 };

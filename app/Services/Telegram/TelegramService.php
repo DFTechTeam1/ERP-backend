@@ -3,13 +3,12 @@
 namespace App\Services\Telegram;
 
 use App\Enums\Telegram\ChatStatus;
-use App\Enums\Telegram\ChatType;
-use App\Enums\Telegram\CommandList;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Telegram\Models\TelegramChatHistory;
 
-class TelegramService {
+class TelegramService
+{
     private $token;
 
     private $url;
@@ -42,7 +41,6 @@ class TelegramService {
 
         $this->commands = [];
     }
-
 
     protected function getUrl(string $type)
     {
@@ -104,18 +102,20 @@ class TelegramService {
                 break;
         }
 
-        $this->url = $this->url . $this->token . $link;
+        $this->url = $this->url.$this->token.$link;
     }
 
     public function getBotInformation()
     {
         $this->getUrl('info');
+
         return $this->sendRequest();
     }
 
     public function getUpdates()
     {
         $this->getUrl('update');
+
         return $this->sendRequest();
     }
 
@@ -123,6 +123,7 @@ class TelegramService {
     {
         $this->getUrl('chatAction');
         $payload['chat_id'] = $chatId;
+
         return $this->sendRequest('post', $payload);
     }
 
@@ -132,7 +133,7 @@ class TelegramService {
 
         return $this->sendRequest('post', [
             'chat_id' => $chatId,
-            'message_id' => $messageId
+            'message_id' => $messageId,
         ]);
     }
 
@@ -142,7 +143,7 @@ class TelegramService {
         $payload = [
             'chat_id' => $chatId,
             'message_id' => $messageId,
-            'reply_markup' => $keyboard
+            'reply_markup' => $keyboard,
         ];
 
         return $this->sendRequest('post', $payload);
@@ -153,7 +154,7 @@ class TelegramService {
         $this->getUrl('sendPhoto');
         $payload = [
             'chat_id' => $chatId,
-            'media' => $mediaUrl
+            'media' => $mediaUrl,
         ];
 
         return $this->sendRequest('post', $payload);
@@ -166,8 +167,7 @@ class TelegramService {
         array $linkPreview = [],
         string $loginUrl = '',
         string $parseMode = ''
-    )
-    {
+    ) {
         $this->getUrl('message');
         $payload = [
             'chat_id' => $chatId,
@@ -180,17 +180,17 @@ class TelegramService {
             ];
         }
 
-        if (!empty($linkPreview)) {
+        if (! empty($linkPreview)) {
             $payload['link_preview_options'] = $linkPreview;
         }
 
-        if (!empty($loginUrl)) {
+        if (! empty($loginUrl)) {
             $payload['login_url'] = [
-                'url' => $loginUrl
+                'url' => $loginUrl,
             ];
         }
 
-        if (!empty($parseMode)) {
+        if (! empty($parseMode)) {
             $payload['parse_mode'] = $parseMode;
         }
 
@@ -214,14 +214,13 @@ class TelegramService {
         string $chatType = '',
         string $botCommand = '',
         int $status = ChatStatus::Processing->value
-    )
-    {
+    ) {
         TelegramChatHistory::create([
             'chat_id' => $chatId,
             'message' => $message,
             'chat_type' => $chatType,
             'bot_command' => $botCommand,
-            'status' => $status
+            'status' => $status,
         ]);
     }
 
@@ -231,7 +230,7 @@ class TelegramService {
         $payload = [
             'chat_id' => $chatId,
             'text' => $message,
-            'reply_markup' => empty($keyboard) ? (object)[] : $keyboard
+            'reply_markup' => empty($keyboard) ? (object) [] : $keyboard,
         ];
 
         Log::debug('payload', $payload);
@@ -245,6 +244,7 @@ class TelegramService {
     public function getMyCommands()
     {
         $this->getUrl('getMyCommands');
+
         return $this->sendRequest('get');
     }
 
@@ -252,43 +252,48 @@ class TelegramService {
     {
         $this->commands[] = [
             'command' => $command,
-            'description' => $description
+            'description' => $description,
         ];
     }
 
     public function setMyCommand()
     {
         $payload = [
-            'commands' => $this->commands
+            'commands' => $this->commands,
         ];
 
         $this->getUrl('setMyCommand');
+
         return $this->sendRequest('post', $payload);
     }
 
     public function deleteAllCommands()
     {
         $this->getUrl('deleteAllCommands');
+
         return $this->sendRequest('get');
     }
 
     public function getMyName()
     {
         $this->getUrl('getMyName');
+
         return $this->sendRequest('get');
     }
 
     public function getWebhookInfo()
     {
         $this->getUrl('getWebhookInfo');
+
         return $this->sendRequest();
     }
 
     public function setWebhook(string $url)
     {
         $this->getUrl('setWebhook');
+
         return $this->sendRequest('post', [
-            'url' => $url
+            'url' => $url,
         ]);
     }
 

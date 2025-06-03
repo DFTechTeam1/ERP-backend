@@ -3,8 +3,8 @@
 namespace Modules\Company\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Models\Employee;
 
@@ -32,7 +32,6 @@ class PositionBackup extends Model
 
     /**
      * Position belongs to division
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function division(): BelongsTo
     {
@@ -41,6 +40,7 @@ class PositionBackup extends Model
 
     /**
      * Position has many employees
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function employees()

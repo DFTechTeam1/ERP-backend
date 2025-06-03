@@ -3,9 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class UserPermissionGroupSeeder extends Seeder
 {
@@ -16,7 +15,7 @@ class UserPermissionGroupSeeder extends Seeder
     {
         Schema::disableForeignKeyConstraints();
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
-        
+
         $users = User::all();
         foreach ($users as $user) {
             $roles = $user->roles;

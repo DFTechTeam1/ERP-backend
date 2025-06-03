@@ -9,12 +9,8 @@ use App\Services\GeneralService;
 use App\Services\RoleService;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Mockery;
-use Mockery\MockInterface;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -55,7 +51,7 @@ class StoreNewUserTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testStoreEmployeeAsUserIsSuccess(): void
+    public function test_store_employee_as_user_is_success(): void
     {
         Bus::fake();
 
@@ -69,7 +65,7 @@ class StoreNewUserTest extends TestCase
             'email' => 'ilham@gmail.com',
             'employee_id' => $employee->uid,
             'password' => 'password',
-            'role_id' => $role->id
+            'role_id' => $role->id,
         ];
 
         $user = $this->service->mainServiceStoreUser($payload);

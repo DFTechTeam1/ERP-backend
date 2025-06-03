@@ -6,7 +6,6 @@ use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Mockery;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Models\Employee;
@@ -64,12 +63,12 @@ class GetAllEmployeeTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testAllEmployeeWithMinLevelParam(): void
+    public function test_all_employee_with_min_level_param(): void
     {
         // create manager
         $totalManager = 2;
         Employee::factory()->count($totalManager)->create([
-            'level_staff' => 'manager'
+            'level_staff' => 'manager',
         ]);
 
         request()->merge(['min_level', 'manager']);

@@ -7,7 +7,6 @@ use App\Enums\Production\TaskSongStatus;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\Sanctum;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\EntertainmentTaskSong;
@@ -17,7 +16,7 @@ use Tests\TestCase;
 
 class StartWorkSongTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     protected function setUp(): void
     {
@@ -31,7 +30,7 @@ class StartWorkSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testSongAlreadyInProgress(): void
+    public function test_song_already_in_progress(): void
     {
         $projects = Project::factory()
             ->count(1)
@@ -54,7 +53,7 @@ class StartWorkSongTest extends TestCase
                 'project_song_list_id' => $projectSongs[0]->id,
                 'employee_id' => $employees[0]->id,
                 'project_id' => $projects[0]->id,
-                'status' => TaskSongStatus::OnProgress->value
+                'status' => TaskSongStatus::OnProgress->value,
             ]);
 
         $this->setProjectConstructor();
@@ -65,7 +64,7 @@ class StartWorkSongTest extends TestCase
         $this->assertStringContainsString(__('notification.songAlreadyInProgress'), $response['message']);
     }
 
-    public function testSongStartWorkReturnSuccess(): void
+    public function test_song_start_work_return_success(): void
     {
         $projects = Project::factory()
             ->count(1)
@@ -88,7 +87,7 @@ class StartWorkSongTest extends TestCase
                 'project_song_list_id' => $projectSongs[0]->id,
                 'employee_id' => $employees[0]->id,
                 'project_id' => $projects[0]->id,
-                'status' => TaskSongStatus::Active->value
+                'status' => TaskSongStatus::Active->value,
             ]);
 
         $this->setProjectConstructor();
@@ -103,7 +102,7 @@ class StartWorkSongTest extends TestCase
         $this->assertFalse($response['error']);
         $this->assertDatabaseHas('entertainment_task_songs', [
             'status' => TaskSongStatus::OnProgress->value,
-            'id' => $task[0]->id
+            'id' => $task[0]->id,
         ]);
     }
 

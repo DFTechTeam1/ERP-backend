@@ -19,7 +19,7 @@ class JobLevelSeeder extends Seeder
             'Supervisor',
             'Staff',
             'Lead',
-            'Junior Staff'
+            'Junior Staff',
         ];
 
         foreach ($payload as $name) {

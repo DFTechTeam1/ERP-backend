@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class AssignVjJob implements ShouldQueue
 {
@@ -18,10 +18,11 @@ class AssignVjJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param object $project
-     * @param array<string, array<string>> $employees
-     * $employees will have:
-     * employee_id
+     *
+     * @param  object  $project
+     * @param  array<string, array<string>>  $employees
+     *                                                   $employees will have:
+     *                                                   employee_id
      */
     public function __construct($project, array $employees)
     {
@@ -35,7 +36,7 @@ class AssignVjJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $pusher = new \App\Services\PusherNotification();
+        $pusher = new \App\Services\PusherNotification;
 
         $vj = \Modules\Production\Models\ProjectVj::with('creator')->where('project_id', $this->project->id)->first();
 
@@ -54,7 +55,7 @@ class AssignVjJob implements ShouldQueue
 
             $output = formatNotifications($employeeData->unreadNotifications->toArray());
 
-            $pusher->send('my-channel-' . $user->id, 'notification-event', $output);
+            $pusher->send('my-channel-'.$user->id, 'notification-event', $output);
         }
     }
 }

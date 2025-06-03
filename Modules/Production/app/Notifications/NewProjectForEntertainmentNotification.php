@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class NewProjectForEntertainmentNotification extends Notification
 {
@@ -70,7 +69,7 @@ class NewProjectForEntertainmentNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => 'Halo ' . $this->employee->nickname . ". Ada event baru lagi nih. Ini Detailnya: \nevent: " . $this->project->name . " \ntanggal: " . date('d F Y', strtotime($this->project->project_date)),
+            'message' => 'Halo '.$this->employee->nickname.". Ada event baru lagi nih. Ini Detailnya: \nevent: ".$this->project->name." \ntanggal: ".date('d F Y', strtotime($this->project->project_date)),
         ];
     }
 
@@ -80,7 +79,7 @@ class NewProjectForEntertainmentNotification extends Notification
             $messages = [
                 [
                     'type' => 'text',
-                    'text' => 'Halo ' . $this->employee->nickname . ". Ada event baru lagi nih. Ini Detailnya: \nevent: " . $this->project->name . " \ntanggal: " . date('d F Y', strtotime($this->project->project_date)),
+                    'text' => 'Halo '.$this->employee->nickname.". Ada event baru lagi nih. Ini Detailnya: \nevent: ".$this->project->name." \ntanggal: ".date('d F Y', strtotime($this->project->project_date)),
                 ],
             ];
 

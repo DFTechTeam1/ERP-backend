@@ -10,9 +10,8 @@ enum OvertimeStatus: int
     public function label(): string
     {
         return match ($this) {
-            static::Eligible => 'Eligible',
-            static::NonEligible => 'NonEligible',
+            self::Eligible => 'Eligible',
+            self::NonEligible => 'NonEligible',
         };
     }
-
 }

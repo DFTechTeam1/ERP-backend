@@ -3,8 +3,8 @@
 namespace Modules\Addon\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Addon\Database\Factories\AddonFactory;
 
 class Addon extends Model
@@ -28,16 +28,16 @@ class Addon extends Model
     {
         $out = '';
         if ($this->preview_img) {
-            $out = env('APP_URL') . '/storage/addons/' . $this->preview_img;
+            $out = env('APP_URL').'/storage/addons/'.$this->preview_img;
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
     protected static function newFactory(): AddonFactory
     {
-        //return AddonFactory::new();
+        // return AddonFactory::new();
     }
 }

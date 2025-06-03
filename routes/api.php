@@ -1,29 +1,21 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\LoginController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
-use App\Services\Telegram\TelegramService;
 use App\Services\WhatsappService;
-use App\Services\LocalNasService;
-use App\Services\NasConnectionService;
+use Illuminate\Http\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use KodePandai\Indonesia\Models\District;
-use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\InteractiveController;
-use Illuminate\Http\File;
-use Illuminate\Support\Facades\Broadcast;
-use Modules\Inventory\Jobs\NewRequestInventoryJob;
-use Modules\Inventory\Services\UserInventoryService;
-use Modules\Production\Jobs\AssignTaskJob;
-use Modules\Telegram\Http\Controllers\TelegramAuthorizationController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -46,47 +38,44 @@ Route::get('testing', function () {
 
 Route::get('telegram-login', [\Modules\Telegram\Http\Controllers\TelegramAuthorizationController::class, 'index']);
 
-
-Route::get('line-flex', function () {
-
-});
+Route::get('line-flex', function () {});
 
 Route::post('{token}/telegram-webhook', function (Request $request, string $token) {
-    $event = new \Modules\Telegram\Service\Webhook\Telegram();
+    $event = new \Modules\Telegram\Service\Webhook\Telegram;
     $event->categorize($request->all());
 });
 
 Route::get('telegram', function () {
     $model = \Modules\Production\Models\Project::find(232);
-    $observer = new \Modules\Production\Observers\NasFolderObserver();
+    $observer = new \Modules\Production\Observers\NasFolderObserver;
     $observer->updated($model);
 });
 
 Route::get('messages', function () {
-   $invoice = 'https://quicklyevents.com/storage/invoices/1/1706684868139-invoice.pdf';
+    $invoice = 'https://quicklyevents.com/storage/invoices/1/1706684868139-invoice.pdf';
 
-   $payload = [
-       'url' => $invoice
-   ];
+    $payload = [
+        'url' => $invoice,
+    ];
 
-    $service = new WhatsappService();
+    $service = new WhatsappService;
     $service->sendTemplateMessage('booking_confirmation_message_new', $payload, ['6285795327357']);
 });
 
 Route::post('base64', function (Request $request) {
     $base64Image = $request->image;
     // Decode the base64 string
-    $imageParts = explode(";base64,", $base64Image);
+    $imageParts = explode(';base64,', $base64Image);
     if (count($imageParts) != 2) {
         return response()->json([
-            'error' => 'Is not base64 image'
+            'error' => 'Is not base64 image',
         ]);
     }
 
-    $imageTypeAux = explode("image/", $imageParts[0]);
+    $imageTypeAux = explode('image/', $imageParts[0]);
     if (count($imageTypeAux) != 2) {
         return response()->json([
-            'error' => 'Is not base64 image'
+            'error' => 'Is not base64 image',
         ]);
     }
 
@@ -94,16 +83,16 @@ Route::post('base64', function (Request $request) {
     $imageBase64 = base64_decode($imageParts[1]);
 
     // Create a unique file name
-    $fileName = uniqid() . '.' . $imageType;
+    $fileName = uniqid().'.'.$imageType;
 
     // Define the storage path
-    $filePath = 'base64/' . $fileName;
+    $filePath = 'base64/'.$fileName;
 
     // Save the image using Laravel's Storage facade
     \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $imageBase64);
 
     return response()->json([
-        'success' => 'Upload success'
+        'success' => 'Upload success',
     ]);
 });
 
@@ -129,8 +118,8 @@ Route::get('notification/markAsRead/{id}', [\App\Http\Controllers\Api\Notificati
 Route::get('nasTestConnection', function (Request $request) {
     try {
         $data = $request->all();
-        $http = 'http://' . $data['server'] . ':5000/webapi';
-        $login = Http::get($http . '/auth.cgi', [
+        $http = 'http://'.$data['server'].':5000/webapi';
+        $login = Http::get($http.'/auth.cgi', [
             'api' => 'SYNO.API.Auth',
             'version' => '3',
             'method' => 'login',
@@ -142,12 +131,12 @@ Route::get('nasTestConnection', function (Request $request) {
 
         $login = json_decode($login->body(), true);
 
-        if ($login['success'] == FALSE) {
+        if ($login['success'] == false) {
             return errorResponse('Account is not valid');
         }
 
         // get the folder detail
-        $folder = HTTP::get($http . '/entry.cgi', [
+        $folder = HTTP::get($http.'/entry.cgi', [
             'api' => 'SYNO.FileStation.List',
             'version' => '2',
             'method' => 'list',
@@ -157,7 +146,7 @@ Route::get('nasTestConnection', function (Request $request) {
 
         $response = json_decode($folder->body(), true);
 
-        if ($response['success'] == FALSE) {
+        if ($response['success'] == false) {
             return errorResponse('Cannot get folder information');
         }
 
@@ -210,7 +199,7 @@ Route::middleware('auth:sanctum')
         Route::get('dashboard/getEntertainmentSongWorkload', [DashboardController::class, 'getEntertainmentSongWorkload']);
 
         // Dashboard for human resources
-        Route::get('dashboard/hr/{type}', [DashboardController::class , 'getHrReport']);
+        Route::get('dashboard/hr/{type}', [DashboardController::class, 'getHrReport']);
     });
 
 Route::post('line-webhook', [\Modules\LineMessaging\Http\Controllers\Api\LineController::class, 'webhook']);
@@ -218,7 +207,7 @@ Route::post('line-webhook', [\Modules\LineMessaging\Http\Controllers\Api\LineCon
 Route::get('line-message', function () {
     $lineId = request()->get('line_id');
 
-    $service = new \Modules\LineMessaging\Services\LineConnectionService();
+    $service = new \Modules\LineMessaging\Services\LineConnectionService;
 
     $messages = [
         [
@@ -251,7 +240,7 @@ Route::prefix('local')->group(function () {
 Route::get('notification', function () {
     $user = \App\Models\User::selectRaw('*')->first();
 
-    $service = new \App\Services\EncryptionService();
+    $service = new \App\Services\EncryptionService;
     $encrypt = $service->encrypt($user->email, env('SALT_KEY'));
 
     return (new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt))

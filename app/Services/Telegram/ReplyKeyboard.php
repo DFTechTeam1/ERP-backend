@@ -2,7 +2,8 @@
 
 namespace App\Services\Telegram;
 
-class ReplyKeyboard {
+class ReplyKeyboard
+{
     private $keyboard;
 
     public function __construct()

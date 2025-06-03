@@ -7,13 +7,10 @@ use App\Services\GeneralService;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
 use Modules\Hrd\Models\Employee;
-use Modules\Production\Exceptions\SongNotFound;
 use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\Project;
@@ -22,7 +19,7 @@ use Tests\TestCase;
 
 class ConfirmDeleteSongTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -40,7 +37,7 @@ class ConfirmDeleteSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testSongNotFound(): void
+    public function test_song_not_found(): void
     {
         $generalMock = $this->instance(
             abstract: GeneralService::class,
@@ -59,7 +56,7 @@ class ConfirmDeleteSongTest extends TestCase
         $this->assertTrue($response['error']);
     }
 
-    public function testDeleteSongIsSuccess(): void
+    public function test_delete_song_is_success(): void
     {
         Bus::fake();
 
@@ -77,7 +74,7 @@ class ConfirmDeleteSongTest extends TestCase
                 'is_request_edit' => 0,
                 'is_request_delete' => 1,
                 'project_id' => $projects[0]->id,
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
         EntertainmentTaskSong::factory()
@@ -85,7 +82,7 @@ class ConfirmDeleteSongTest extends TestCase
             ->create([
                 'project_song_list_id' => $projectSongs[0]->id,
                 'employee_id' => $employees[0]->id,
-                'project_id' => $projects[0]->id
+                'project_id' => $projects[0]->id,
             ]);
 
         $generalMock = $this->instance(

@@ -2,8 +2,8 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Models\Employee;
 
@@ -18,7 +18,7 @@ class ProjectDealMarketing extends Model
      */
     protected $fillable = [
         'project_deal_id',
-        'employee_id'
+        'employee_id',
     ];
 
     // protected static function newFactory(): ProjectDealMarketingFactory

@@ -2,18 +2,17 @@
 
 namespace Modules\Company\Services;
 
-use App\Enums\ErrorCode\Code;
 use App\Enums\Production\TaskStatus;
-use Exception;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 
-class SettingService {
+class SettingService
+{
     private $repo;
 
     private $taskRepo;
 
-    const LOGO_PATH = "settings";
+    const LOGO_PATH = 'settings';
 
     /**
      * Construction Data
@@ -21,8 +20,7 @@ class SettingService {
     public function __construct(
         SettingRepository $repo,
         ProjectTaskRepository $taskRepo
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->taskRepo = $taskRepo;
@@ -45,7 +43,7 @@ class SettingService {
 
                     // format logo
                     if ($item['key'] == 'company_logo') {
-                        $item['value'] = asset('storage/settings/' . $item['value']);
+                        $item['value'] = asset('storage/settings/'.$item['value']);
                     }
 
                     return $item;
@@ -56,15 +54,15 @@ class SettingService {
             $settings = collect($settings)->map(function ($item) {
                 if ($item['key'] == 'production_staff_role') {
                     $item['value'] = json_decode($item['value'], true);
-                } else if ($item['key'] == 'default_boards') {
+                } elseif ($item['key'] == 'default_boards') {
                     $item['value'] = $this->formatKanbanSetting($item);
-                } else if ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment') {
+                } elseif ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment') {
                     $item['value'] = json_decode($item['value'], true);
                 }
 
                 // format logo
                 if ($item['key'] == 'company_logo') {
-                    $item['value'] = asset('storage/settings/' . $item['value']);
+                    $item['value'] = asset('storage/settings/'.$item['value']);
                 }
 
                 return $item;
@@ -123,19 +121,12 @@ class SettingService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -143,7 +134,7 @@ class SettingService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -176,9 +167,6 @@ class SettingService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -197,26 +185,22 @@ class SettingService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data, $code = null): array
     {
         try {
             if ($code == 'kanban') {
                 $this->storeKanban($data);
-            } else if ($code == 'email') {
+            } elseif ($code == 'email') {
                 $this->storeEmail($data);
-            } else if ($code == 'general') {
+            } elseif ($code == 'general') {
                 $this->storeGeneral($data);
-            } else if ($code == 'variables') {
+            } elseif ($code == 'variables') {
                 $storeVariable = $this->storeVariables($data);
                 if ($storeVariable) {
                     return $storeVariable;
                 }
-            } else if ($code == 'company') {
+            } elseif ($code == 'company') {
                 $this->storeCompany($data);
             }
 
@@ -225,7 +209,7 @@ class SettingService {
             $settings = $this->formattedGlobalSetting();
 
             return generalResponse(
-                __("global.successUpdateSetting"),
+                __('global.successUpdateSetting'),
                 false,
                 $settings
             );
@@ -237,21 +221,21 @@ class SettingService {
     protected function storeCompany(array $data)
     {
         // get current logo and delete if exists
-        $currentLogo = $this->repo->show(uid: 'uid', select: "value", where: "`key` = 'company_logo'");
+        $currentLogo = $this->repo->show(uid: 'uid', select: 'value', where: "`key` = 'company_logo'");
 
         if (
             ($currentLogo) &&
-            is_file(storage_path('app/public/' . self::LOGO_PATH . "/{$currentLogo}"))
+            is_file(storage_path('app/public/'.self::LOGO_PATH."/{$currentLogo}"))
         ) {
-            unlink(storage_path('app/public/' . self::LOGO_PATH . "/{$currentLogo}"));
+            unlink(storage_path('app/public/'.self::LOGO_PATH."/{$currentLogo}"));
         }
 
-        foreach ($data as $key => $value)  {
-            $check = $this->repo->show(uid: 'uid', select: "id,value", where: "`key` = '{$key}'");
+        foreach ($data as $key => $value) {
+            $check = $this->repo->show(uid: 'uid', select: 'id,value', where: "`key` = '{$key}'");
 
             if (($key == 'company_logo') && ($value)) {
                 $image = uploadImageandCompress(
-                    path: "settings",
+                    path: 'settings',
                     compressValue: 0,
                     image: $value
                 );
@@ -262,16 +246,16 @@ class SettingService {
             if ($check) {
                 $this->repo->update(
                     data: [
-                        'value' => $value
+                        'value' => $value,
                     ],
                     id: $check->id
                 );
             } else {
                 $this->repo->store(
                     data: [
-                        "key" => $key,
-                        "value" => $value,
-                        "code" => 'company'
+                        'key' => $key,
+                        'value' => $value,
+                        'code' => 'company',
                     ]
                 );
             }
@@ -287,14 +271,14 @@ class SettingService {
 
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $keyQuery = config('app.env') == 'production' ? '`key` =' : 'key =';
 
-            $where = "`key` = '" . (string) $keyQuery . "'";
+            $where = "`key` = '".(string) $keyQuery."'";
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
                 $this->repo->update([
-                    'value' => $valueData
-                ], 'dummy', 'id = ' . $check->id);
+                    'value' => $valueData,
+                ], 'dummy', 'id = '.$check->id);
             } else {
                 $this->repo->store([
                     'key' => $key,
@@ -312,9 +296,9 @@ class SettingService {
         $leadModellerTask = $this->taskRepo->show(
             uid: 0,
             select: 'id',
-            where: "status = " . TaskStatus::WaitingDistribute->value
+            where: 'status = '.TaskStatus::WaitingDistribute->value
         );
-        if (empty($data['lead_3d_modeller']) || !$data['lead_3d_modeller'] && $leadModellerTask) {
+        if (empty($data['lead_3d_modeller']) || ! $data['lead_3d_modeller'] && $leadModellerTask) {
             return errorResponse('Lead 3D Modeller cannot be empty. There was some tasks that need to be done by Lead Modeller');
         }
 
@@ -323,14 +307,14 @@ class SettingService {
 
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $keyQuery = config('app.env') == 'production' ? '`key` =' : 'key =';
 
-            $where = "`key` = '" . (string) $key . "'";
+            $where = "`key` = '".(string) $key."'";
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
                 $this->repo->update([
-                    'value' => $valueData
-                ], 'dummy', 'id = ' . $check->id);
+                    'value' => $valueData,
+                ], 'dummy', 'id = '.$check->id);
             } else {
                 $this->repo->store([
                     'key' => $key,
@@ -350,23 +334,23 @@ class SettingService {
 
             // change config
             if ($key == 'email_host') {
-                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.host", $value);
-            } else if ($key == 'email_port') {
-                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.port", $value);
-            } else if ($key == 'username') {
-                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.username", $value);
-            } else if ($key == 'password') {
-                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.password", $value);
+                \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.host', $value);
+            } elseif ($key == 'email_port') {
+                \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.port', $value);
+            } elseif ($key == 'username') {
+                \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.username', $value);
+            } elseif ($key == 'password') {
+                \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.password', $value);
             }
 
-            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $keyQuery = config('app.env') == 'production' ? '`key` =' : 'key =';
 
-            $where = "`key` = '" . (string) $key . "'";
+            $where = "`key` = '".(string) $key."'";
             logging('where store email', [$where]);
             $this->repo->store([
                 'key' => $key,
                 'value' => $value,
-                'code' => 'email'
+                'code' => 'email',
             ]);
         }
 
@@ -376,7 +360,6 @@ class SettingService {
     /**
      * Store default kanban boards
      *
-     * @param array $data
      * @return void
      */
     protected function storeKanban(array $data)
@@ -401,19 +384,12 @@ class SettingService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -429,7 +405,6 @@ class SettingService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -448,10 +423,6 @@ class SettingService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

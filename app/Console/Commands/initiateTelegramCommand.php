@@ -30,46 +30,46 @@ class initiateTelegramCommand extends Command
             'local' => [
                 [
                     'name' => 'connection',
-                    'description' => 'Hubungkan akun telegram kamu dengan sistem'
+                    'description' => 'Hubungkan akun telegram kamu dengan sistem',
                 ],
                 [
                     'name' => 'my_project',
-                    'description' => 'Lihat project mu'
+                    'description' => 'Lihat project mu',
                 ],
                 [
                     'name' => 'my_task',
-                    'description' => 'Lihat tugas tugas mu'
+                    'description' => 'Lihat tugas tugas mu',
                 ],
                 [
                     'name' => 'attendance',
-                    'description' => 'Absen jika kamu berada di luar kantor'
+                    'description' => 'Absen jika kamu berada di luar kantor',
                 ],
                 [
                     'name' => 'create_task',
-                    'description' => 'Buat tugas untuk tim mu'
+                    'description' => 'Buat tugas untuk tim mu',
                 ],
                 [
                     'name' => 'manage_nas',
-                    'description' => 'Kelola NAS disini'
-                ]
+                    'description' => 'Kelola NAS disini',
+                ],
             ],
             'production' => [
                 [
                     'name' => 'connection',
-                    'description' => 'Hubungkan akun telegram kamu dengan sistem'
+                    'description' => 'Hubungkan akun telegram kamu dengan sistem',
                 ],
                 [
                     'name' => 'my_project',
-                    'description' => 'Lihat project mu'
+                    'description' => 'Lihat project mu',
                 ],
                 [
                     'name' => 'manage_nas',
-                    'description' => 'Kelola NAS disini'
-                ]
-            ]
+                    'description' => 'Kelola NAS disini',
+                ],
+            ],
         ];
 
-        $telegram = new TelegramService();
+        $telegram = new TelegramService;
 
         $selected = $commands[env('APP_ENV')];
         foreach ($selected as $command) {

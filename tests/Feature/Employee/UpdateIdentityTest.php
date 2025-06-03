@@ -4,7 +4,6 @@ namespace Tests\Feature\Employee;
 
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\Sanctum;
 use Modules\Hrd\Models\Employee;
 use Tests\TestCase;
@@ -29,15 +28,15 @@ class UpdateIdentityTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testMissingPayloadOnUpdate(): void
+    public function test_missing_payload_on_update(): void
     {
         $payload = [
             'address' => '',
-            'id_number' => ''
+            'id_number' => '',
         ];
 
         $response = $this->putJson(route('api.employees.updateIdentity', ['uid' => 'idnumber']), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
@@ -47,17 +46,17 @@ class UpdateIdentityTest extends TestCase
         parent::tearDown();
     }
 
-    public function testCurrentAddressIsMissing(): void
+    public function test_current_address_is_missing(): void
     {
         $payload = [
             'address' => 'Jl. okeoke',
             'id_number' => '1231231',
             'is_residence_same' => 1,
-            'current_address' => ''
+            'current_address' => '',
         ];
 
         $response = $this->putJson(route('api.employees.updateIdentity', ['uid' => 'idnumber']), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
@@ -67,7 +66,7 @@ class UpdateIdentityTest extends TestCase
         parent::tearDown();
     }
 
-    public function testUpdateIdentitySuccess(): void
+    public function test_update_identity_success(): void
     {
         $employees = Employee::factory()
             ->count(1)
@@ -78,11 +77,11 @@ class UpdateIdentityTest extends TestCase
             'address' => $employee->address,
             'is_residence_same' => 1,
             'current_address' => 'my address',
-            'id_number' => $employee->id_number
+            'id_number' => $employee->id_number,
         ];
 
         $response = $this->putJson(route('api.employees.updateIdentity', ['uid' => $employee->uid]), $payload, [
-            'Authorization' => $this->token
+            'Authorization' => $this->token,
         ]);
 
         $response->assertStatus(201);

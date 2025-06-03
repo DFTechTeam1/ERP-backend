@@ -3,9 +3,8 @@
 namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Production\Database\Factories\NasFolderCreationFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class NasFolderCreation extends Model
 {
@@ -22,7 +21,7 @@ class NasFolderCreation extends Model
         'type',
         'last_folder_name',
         'current_folder_name',
-        'current_path'
+        'current_path',
     ];
 
     public function scopeActive(Builder $query)

@@ -50,13 +50,13 @@ enum Religion: string
     {
         if ($data == 'Islam') {
             return self::Islam;
-        } else if ($data == 'Kristen') {
+        } elseif ($data == 'Kristen') {
             return self::Kristen;
-        } else if ($data == 'Katholik') {
+        } elseif ($data == 'Katholik') {
             return self::Khatolik;
-        } else if ($data == 'Hindu') {
+        } elseif ($data == 'Hindu') {
             return self::Hindu;
-        } else if ($data == 'Budha') {
+        } elseif ($data == 'Budha') {
             return self::Budha;
         } else {
             return '-';
@@ -95,5 +95,6 @@ enum Religion: string
                 break;
         }
 
-        return $output; }
+        return $output;
+    }
 }

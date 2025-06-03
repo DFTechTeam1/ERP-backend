@@ -10,7 +10,6 @@ use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Hrd\Models\EmployeePointProjectDetail;
 use Modules\Production\Models\Project;
-use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 
 class PointRecord
 {
@@ -24,30 +23,27 @@ class PointRecord
      * Complete step is:
      * 1. Check data by employee_id in the employee_points table
      *
-     * @param array $payload
-     * @param string $projectUid
-     * @param string $type
      * @return void
      */
     public function handle(
         array $payload, string $projectUid, string $type
     ) {
         try {
-            $generalService = new GeneralService();
+            $generalService = new GeneralService;
 
-            $projectId = $generalService->getIdFromUid($projectUid, new Project());
+            $projectId = $generalService->getIdFromUid($projectUid, new Project);
             foreach ($payload['points'] as $data) {
-                $employeeId = $generalService->getIdFromUid($data['uid'], new Employee());
+                $employeeId = $generalService->getIdFromUid($data['uid'], new Employee);
 
                 $currentPoint = EmployeePoint::selectRaw('id')
                     ->where('employee_id', $employeeId)
                     ->first();
 
-                if (!$currentPoint) {
+                if (! $currentPoint) {
                     $currentPoint = EmployeePoint::create([
                         'employee_id' => $employeeId,
                         'total_point' => 0, // will update in the last process
-                        'type' => $type
+                        'type' => $type,
                     ]);
                 }
 
@@ -55,12 +51,12 @@ class PointRecord
                     ->where('employee_point_id', $currentPoint->id)
                     ->where('project_id', $projectId)
                     ->first();
-                if (!$pointProject) {
+                if (! $pointProject) {
                     $pointProject = EmployeePointProject::create([
                         'employee_point_id' => $currentPoint->id,
                         'project_id' => $projectId,
                         'total_point' => $data['point'],
-                        'additional_point' => $data['additional_point']
+                        'additional_point' => $data['additional_point'],
                     ]);
                 }
 
@@ -68,7 +64,7 @@ class PointRecord
                 foreach ($data['tasks'] as $task) {
                     EmployeePointProjectDetail::create([
                         'point_id' => $pointProject->id,
-                        'task_id' => $task
+                        'task_id' => $task,
                     ]);
                 }
 
@@ -82,13 +78,14 @@ class PointRecord
                 $totalPoint = collect($child)->pluck('total_point')->sum();
                 EmployeePoint::where('employee_id', $employeeId)
                     ->update([
-                        'total_point' => $totalPoint
+                        'total_point' => $totalPoint,
                     ]);
             }
 
             return true;
         } catch (\Throwable $th) {
             Log::error('error point record >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', [$th]);
+
             return false;
         }
     }

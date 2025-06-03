@@ -16,8 +16,8 @@ class Store extends FormRequest
             'name' => [
                 'required',
                 Rule::unique(table: 'quotation_items', column: 'name')
-                    ->ignore($this->route('id'))
-            ]
+                    ->ignore($this->route('id')),
+            ],
         ];
     }
 

@@ -5,8 +5,8 @@ namespace Modules\Hrd\Console;
 use Illuminate\Console\Command;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\TalentaService;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class SynchronizingTalentUserId extends Command
 {
@@ -29,7 +29,7 @@ class SynchronizingTalentUserId extends Command
     {
         parent::__construct();
 
-        $this->employeeRepo = new EmployeeRepository();
+        $this->employeeRepo = new EmployeeRepository;
     }
 
     /**
@@ -40,24 +40,24 @@ class SynchronizingTalentUserId extends Command
         // here we limit only 10 per operation to avoid rate limiter on the API
         $databaseEmployees = $this->employeeRepo->list(
             select: 'id,employee_id,email,uid',
-            where: "deleted_at IS NULL AND talenta_user_id IS NULL",
+            where: 'deleted_at IS NULL AND talenta_user_id IS NULL',
             limit: 1
         );
 
-        $talentaService = new TalentaService();
+        $talentaService = new TalentaService;
         $talentaService->setUrl(type: 'all_employee');
         foreach ($databaseEmployees as $employee) {
-            $talentaService->setUrlParams(params: ["email" => $employee->email]);
+            $talentaService->setUrlParams(params: ['email' => $employee->email]);
 
             $talentaUser = $talentaService->makeRequest();
             if (isset($talentaUser['data'])) {
                 if (isset($talentaUser['data']['employees'])) {
                     if (count($talentaUser['data']['employees']) > 0) {
                         $this->employeeRepo->update([
-                            'talenta_user_id' => $talentaUser['data']['employees'][0]['user_id']
+                            'talenta_user_id' => $talentaUser['data']['employees'][0]['user_id'],
                         ], $employee->uid);
 
-                        $this->info('Success update ' . $employee->email . " data");
+                        $this->info('Success update '.$employee->email.' data');
                     }
                 }
             }

@@ -5,13 +5,14 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Modules\Company\Models\Setting;
 
-class NasService {
+class NasService
+{
     private $url;
-    
+
     public function createUrl(string $type)
     {
         $config = $this->addonConfiguration();
-        $this->url = $config['data']['server'] . ':5000/webapi';
+        $this->url = $config['data']['server'].':5000/webapi';
         if ($type == 'createFolder') {
             $this->url .= '/entry.cgi';
         }
@@ -20,14 +21,13 @@ class NasService {
     /**
      * test connection to given configuration
      *
-     * @param array $data
      * @return array
      */
     public function testConnection(array $data)
     {
         try {
-            $http = 'http://' . $data['server'] . ':5000/webapi';
-            $login = Http::get($http . '/auth.cgi', [
+            $http = 'http://'.$data['server'].':5000/webapi';
+            $login = Http::get($http.'/auth.cgi', [
                 'api' => 'SYNO.API.Auth',
                 'version' => '3',
                 'method' => 'login',
@@ -36,15 +36,15 @@ class NasService {
                 'session' => 'FileStation',
                 'format' => 'sid',
             ]);
-    
+
             $login = json_decode($login->body(), true);
 
-            if ($login['success'] == FALSE) {
+            if ($login['success'] == false) {
                 return errorResponse('Account is not valid');
             }
 
             // get the folder detail
-            $folder = HTTP::get($http . '/entry.cgi', [
+            $folder = HTTP::get($http.'/entry.cgi', [
                 'api' => 'SYNO.FileStation.List',
                 'version' => '2',
                 'method' => 'list',
@@ -54,10 +54,10 @@ class NasService {
 
             $response = json_decode($folder->body(), true);
 
-            if ($response['success'] == FALSE) {
+            if ($response['success'] == false) {
                 return errorResponse('Cannot get folder information');
             }
-    
+
             return generalResponse(
                 __('global.connectionIsSecure'),
                 false,
@@ -70,7 +70,6 @@ class NasService {
     /**
      * Store addon configuration
      *
-     * @param array $data
      * @return array
      */
     public function storeAddonConfiguration(array $data)

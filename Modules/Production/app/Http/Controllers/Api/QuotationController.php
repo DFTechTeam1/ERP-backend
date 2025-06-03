@@ -20,7 +20,7 @@ class QuotationController extends Controller
      */
     public function index()
     {
-        return apiResponse($this->service->list(select: 'id,name'));
+        return apiResponse($this->service->list(select: 'id as value,name as title'));
     }
 
     /**

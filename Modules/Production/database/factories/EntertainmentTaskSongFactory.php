@@ -20,8 +20,7 @@ class EntertainmentTaskSongFactory extends Factory
         return [
             'status' => TaskSongStatus::Active->value,
             'employee_id' => 1,
-            'project_id' => 1
+            'project_id' => 1,
         ];
     }
 }
-

@@ -2,16 +2,15 @@
 
 namespace Modules\Addon\Services;
 
-use App\Enums\ErrorCode\Code;
-use App\Services\LocalNasService;
 use App\Services\NasConnectionService;
+use CURLFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Modules\Addon\Repository\AddonRepository;
-use CURLFile;
 
-class AddonService {
+class AddonService
+{
     private $repo;
 
     private $historyRepo;
@@ -23,7 +22,7 @@ class AddonService {
     {
         $this->repo = new AddonRepository;
 
-        $this->historyRepo = new \Modules\Addon\Repository\AddonUpdateHistoryRepository();
+        $this->historyRepo = new \Modules\Addon\Repository\AddonUpdateHistoryRepository;
     }
 
     /**
@@ -45,27 +44,26 @@ class AddonService {
     /**
      * Send line message to developer based on request
      *
-     * @param array $data
      * @return array
      */
     public function askDeveloper(array $data)
     {
-        $line = new \Modules\LineMessaging\Services\LineConnectionService();
+        $line = new \Modules\LineMessaging\Services\LineConnectionService;
 
         $lineId = getSettingByKey('lineId');
 
-        $message = "Topik pertanyaan: " . $data['topic'] . "\n";
+        $message = 'Topik pertanyaan: '.$data['topic']."\n";
         if ($data['topic'] == 'addon') {
             $addon = $this->repo->show((int) $data['addon'], 'id,name');
-            $message .= "Addon: " . $addon->name . "\n";
+            $message .= 'Addon: '.$addon->name."\n";
         }
-        $message .= "Pengirim: " . $data['name'] . "\n";
-        $message .= "Pesan: " . $data['message'];
+        $message .= 'Pengirim: '.$data['name']."\n";
+        $message .= 'Pesan: '.$data['message'];
 
         $messages = [
             [
-                'type' => 'text', 
-                'text' => "Hello, Ada pertanyaan nih dari " . $data['name'] . "\n",
+                'type' => 'text',
+                'text' => 'Hello, Ada pertanyaan nih dari '.$data['name']."\n",
             ],
             [
                 'type' => 'text',
@@ -83,27 +81,20 @@ class AddonService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
-            $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');;
+            $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -118,7 +109,7 @@ class AddonService {
 
             // dummy
             $paginated = collect($paginated)->map(function ($item) {
-                $item['preview_img'] = env("APP_URL") . '/storage/addons/' . $item->preview_img;
+                $item['preview_img'] = env('APP_URL').'/storage/addons/'.$item->preview_img;
 
                 return $item;
             })->toArray();
@@ -157,15 +148,14 @@ class AddonService {
     /**
      * Get detail data
      *
-     * @param string $uid
-     * @return array
+     * @param  string  $uid
      */
     public function show(int $uid): array
     {
         try {
             $data = $this->repo->show($uid)->toArray();
 
-            $data['preview_img'] = isset($data['preview_img']) ? asset('storage/addons/' . $data['preview_img']) : null;
+            $data['preview_img'] = isset($data['preview_img']) ? asset('storage/addons/'.$data['preview_img']) : null;
 
             return generalResponse(
                 'success',
@@ -184,7 +174,7 @@ class AddonService {
             $addon = $this->repo->show($uid);
             $slugName = str_replace(' ', '_', $addon->name);
 
-            $nasService = new NasConnectionService();
+            $nasService = new NasConnectionService;
             $sharedFolder = getSettingByKey('folder');
 
             // replace file
@@ -192,28 +182,28 @@ class AddonService {
 
             $addonFileMime = $data['main_file']->getClientMimeType();
             $addonFile = uploadImage($data['main_file'], 'addons', true);
-            $upload = $nasService->uploadFile(storage_path('app/public/addons/' . $addonFile), $addonFile, $addonFileMime, "{$sharedFolder}/" . $slugName);
-            $mainFilePayload = $slugName . '/' . $addonFile;
+            $upload = $nasService->uploadFile(storage_path('app/public/addons/'.$addonFile), $addonFile, $addonFileMime, "{$sharedFolder}/".$slugName);
+            $mainFilePayload = $slugName.'/'.$addonFile;
 
             $tutorialVideoPayload = $addon->tutorial_video;
-            if (!empty($data['tutorial_video'])) {
+            if (! empty($data['tutorial_video'])) {
                 $nasService->deleteFolder("{$sharedFolder}/{$addon->tutorial_video}");
 
                 $tutorialVideoMime = $data['tutorial_video']->getClientMimeType();
                 $tutorialVideoFile = uploadImage($data['tutorial_video'], 'addons', true);
-                $uploadTutorialVideo = $nasService->uploadFile(storage_path('app/public/addons/' . $tutorialVideoFile), $tutorialVideoFile, $tutorialVideoMime, "{$sharedFolder}/" . $slugName);
-                $tutorialVideoPayload = $slugName . '/' . $tutorialVideoFile;
+                $uploadTutorialVideo = $nasService->uploadFile(storage_path('app/public/addons/'.$tutorialVideoFile), $tutorialVideoFile, $tutorialVideoMime, "{$sharedFolder}/".$slugName);
+                $tutorialVideoPayload = $slugName.'/'.$tutorialVideoFile;
             }
 
             $previewFile = $addon->preview_img;
-            if (!empty($data['preview_image'])) {
-                if (file_exists(storage_path('app/public/addons/' . $data['preview_image']))) {
-                    unlink(storage_path('app/public/addons/' . $data['preview_image']));
+            if (! empty($data['preview_image'])) {
+                if (file_exists(storage_path('app/public/addons/'.$data['preview_image']))) {
+                    unlink(storage_path('app/public/addons/'.$data['preview_image']));
                 }
 
                 $perviewFileMime = $data['preview_image']->getClientMimeType();
                 $previewFile = uploadImage($data['preview_image'], 'addons', true);
-                $nasService->uploadFile(storage_path('app/public/addons/' . $previewFile), $previewFile, $perviewFileMime, "{$sharedFolder}/" . $slugName);
+                $nasService->uploadFile(storage_path('app/public/addons/'.$previewFile), $previewFile, $perviewFileMime, "{$sharedFolder}/".$slugName);
             }
 
             $this->repo->update([
@@ -243,8 +233,7 @@ class AddonService {
     protected function uploadToLocalNas(
         $file,
         string $targetFolder
-    )
-    {
+    ) {
         $name = $file->getClientOriginalName();
         $mime = $file->getClientMimeType();
         $size = $file->getSize();
@@ -259,7 +248,7 @@ class AddonService {
 
         $curl = curl_init();
 
-        curl_setopt_array($curl, array(
+        curl_setopt_array($curl, [
             CURLOPT_URL => 'https://bright-huge-gopher.ngrok-free.app/api/local/upload',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
@@ -268,10 +257,10 @@ class AddonService {
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => array(
+            CURLOPT_POSTFIELDS => [
                 'targetPath' => $targetFolder,
-                'filedata'=> new CURLFILE(storage_path('app/public/tmp/' . $dummy))),
-            )
+                'filedata' => new CURLFILE(storage_path('app/public/tmp/'.$dummy))],
+        ]
         );
 
         $response = curl_exec($curl);
@@ -283,10 +272,6 @@ class AddonService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     * 
-     * @return array
      */
     public function store(array $data): array
     {
@@ -298,7 +283,7 @@ class AddonService {
 
             $slugName = str_replace(' ', '_', $data['name']);
 
-            $targetPath = $sharedFolder . '/' . $slugName;
+            $targetPath = $sharedFolder.'/'.$slugName;
 
             // upload file in local
             $mime = $data['preview_image']->getClientMimeType();
@@ -307,17 +292,17 @@ class AddonService {
             $datetime = date('YmdHis');
             $name = "uploaded_file_{$datetime}.{$ext}";
             $previewImage = Storage::putFileAs('addons', $data['preview_image'], $name);
-            $path = storage_path('app/public/addons/' . $name);
+            $path = storage_path('app/public/addons/'.$name);
 
             $payload = [
                 'path' => $targetPath,
                 'create_parents' => 'true',
                 'mtime' => '',
                 'overwrite' => 'true',
-                'filename'=> new CURLFile($path, $mime, $name),
+                'filename' => new CURLFile($path, $mime, $name),
             ];
 
-            $response = curlRequest(env('NAS_URL_LOCAL') . '/local/upload', $payload);
+            $response = curlRequest(env('NAS_URL_LOCAL').'/local/upload', $payload);
 
             return generalResponse(
                 'success',
@@ -337,7 +322,7 @@ class AddonService {
 
     public function validateConfiguration()
     {
-        $service = new \App\Services\NasConnectionService();
+        $service = new \App\Services\NasConnectionService;
         $response = $service->initAddonsFolder();
 
         return generalResponse(
@@ -349,19 +334,12 @@ class AddonService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -372,13 +350,12 @@ class AddonService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
-     * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -401,12 +378,12 @@ class AddonService {
             $sharedFolder = getSettingByKey('folder');
 
             if ($type == 'main') {
-                $path = "{$sharedFolder}/" . $addon->main_file;
-            } else if ($type == 'tutorial') {
-                $path = "{$sharedFolder}/" . $addon->tutorial_video;
+                $path = "{$sharedFolder}/".$addon->main_file;
+            } elseif ($type == 'tutorial') {
+                $path = "{$sharedFolder}/".$addon->tutorial_video;
             }
 
-            $nasService = new NasConnectionService();
+            $nasService = new NasConnectionService;
             $download = $nasService->download($path);
 
             return generalResponse(
@@ -421,15 +398,11 @@ class AddonService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
         try {
-            $nasService = new NasConnectionService();
+            $nasService = new NasConnectionService;
             $sharedFolder = getSettingByKey('folder');
 
             foreach ($ids as $id) {
@@ -437,15 +410,15 @@ class AddonService {
                 $slug = str_replace(' ', '_', $addon->name);
 
                 // delete in NAS
-                $delete = $nasService->deleteFolder("{$sharedFolder}/" . $slug);
+                $delete = $nasService->deleteFolder("{$sharedFolder}/".$slug);
                 Log::debug('Delete folder nas: ', [$delete]);
 
                 // delete file
-                if (file_exists(storage_path('app/public/addons/' . $addon->preview_img))) {
-                    unlink(storage_path('app/public/addons/' . $addon->preview_img));
+                if (file_exists(storage_path('app/public/addons/'.$addon->preview_img))) {
+                    unlink(storage_path('app/public/addons/'.$addon->preview_img));
                 }
             }
-        
+
             $this->repo->bulkDelete($ids, 'id');
 
             return generalResponse(

@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Notifications\SongReportAsDoneNotification;
 
@@ -49,12 +49,12 @@ class SongReportAsDone implements ShouldQueue
         if (($entertainmentPic) && ($entertainmentPic->employee->telegram_chat_id)) {
             $message = "Halo {$entertainmentPic->employee->nickname}\n";
             $message .= "{$this->worker->nickname} sudah menyelesaikan tugas di musik {$this->task->song->name} untuk event {$this->task->project->name}.\n";
-            $message .= "Kamu bisa mulai mengecek tugas tersebut";
+            $message .= 'Kamu bisa mulai mengecek tugas tersebut';
 
             $entertainmentPic->notify(new SongReportAsDoneNotification([$entertainmentPic->employee->telegram_chat_id], $message));
         }
     }
-    
+
     protected function sendToWorker()
     {
         // get employee
@@ -62,11 +62,11 @@ class SongReportAsDone implements ShouldQueue
             ->find($this->task->employee_id);
 
         $this->worker = $employee;
-    
+
         if ($employee->telegram_chat_id) {
             $message = "Halo {$employee->nickname}\n";
             $message .= "Tugas JB musik {$this->task->song->name} untuk event {$this->task->project->name} sudah selesai dan akan di cek oleh PM.";
-    
+
             $employee->notify(new SongReportAsDoneNotification([$employee->telegram_chat_id], $message));
         }
     }

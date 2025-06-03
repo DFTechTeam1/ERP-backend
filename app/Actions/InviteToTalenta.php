@@ -31,7 +31,7 @@ class InviteToTalenta
         $talentaUserId = $currentTalentaEmployee['data']['employees'][0]['user_id'];
 
         $this->repo->update([
-            'talenta_user_id' => $talentaUserId
+            'talenta_user_id' => $talentaUserId,
         ], $employee->uid);
     }
 }

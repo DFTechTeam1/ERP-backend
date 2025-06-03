@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class PlayerApproveRequestTeamNotification extends Notification
 {
@@ -58,9 +57,9 @@ class PlayerApproveRequestTeamNotification extends Notification
         return [
             'chatIds' => $this->telegramChatIds,
             'message' => [
-                'Halo ' . $this->transfer->employee->nickname . ', ' . $this->transfer->requestByPerson->nickname . ' membutuhkan bantuan untuk mengerjakan tugas di event ' . $this->transfer->project->name,
-                $this->transfer->requestToPerson->nickname . ' sudah setuju. Kamu akan segera menerima notifikasi tugas yang akan dikerjakan.',
-            ]
+                'Halo '.$this->transfer->employee->nickname.', '.$this->transfer->requestByPerson->nickname.' membutuhkan bantuan untuk mengerjakan tugas di event '.$this->transfer->project->name,
+                $this->transfer->requestToPerson->nickname.' sudah setuju. Kamu akan segera menerima notifikasi tugas yang akan dikerjakan.',
+            ],
         ];
     }
 
@@ -69,11 +68,11 @@ class PlayerApproveRequestTeamNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->transfer->employee->nickname . ', ' . $this->transfer->requestByPerson->nickname . ' membutuhkan bantuan untuk mengerjakan tugas di event ' . $this->transfer->project->name,
+                'text' => 'Halo '.$this->transfer->employee->nickname.', '.$this->transfer->requestByPerson->nickname.' membutuhkan bantuan untuk mengerjakan tugas di event '.$this->transfer->project->name,
             ],
             [
                 'type' => 'text',
-                'text' => $this->transfer->requestToPerson->nickname . ' sudah setuju. Kamu akan segera menerima notifikasi tugas yang akan dikerjakan.',
+                'text' => $this->transfer->requestToPerson->nickname.' sudah setuju. Kamu akan segera menerima notifikasi tugas yang akan dikerjakan.',
             ],
         ];
 

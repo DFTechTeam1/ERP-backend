@@ -20,7 +20,7 @@ class Create extends FormRequest
             'items.*.quantity' => 'required',
             'items.*.purchase_source' => 'nullable',
             'items.*.purchase_link' => 'nullable|array',
-            'items.*.store_name' => 'nullable'
+            'items.*.store_name' => 'nullable',
         ];
     }
 

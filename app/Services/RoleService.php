@@ -3,23 +3,22 @@
 namespace App\Services;
 
 use App\Exceptions\RoleHasRelation as ExceptionsRoleHasRelation;
-use App\Http\Requests\RoleHasRelation;
 use App\Models\User;
 use App\Repository\RoleRepository;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 
-class RoleService {
+class RoleService
+{
     private $repo;
 
     private $permissionRepo;
 
     public function __construct()
     {
-        $this->repo = new RoleRepository();
+        $this->repo = new RoleRepository;
 
-        $this->permissionRepo = new \App\Repository\PermissionRepository();
+        $this->permissionRepo = new \App\Repository\PermissionRepository;
     }
 
     public function list()
@@ -32,24 +31,24 @@ class RoleService {
 
         $search = request('search');
 
-            if (!empty($search)) { // array
-                $where = formatSearchConditions($search['filters'], $where);
-            }
+        if (! empty($search)) { // array
+            $where = formatSearchConditions($search['filters'], $where);
+        }
 
-            $sort = "name asc";
-            if (request('sort')) {
-                $sort = "";
-                foreach (request('sort') as $sortList) {
-                    if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
-                    } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
-                    }
+        $sort = 'name asc';
+        if (request('sort')) {
+            $sort = '';
+            foreach (request('sort') as $sortList) {
+                if ($sortList['field'] == 'name') {
+                    $sort = $sortList['field']." {$sortList['order']},";
+                } else {
+                    $sort .= ','.$sortList['field']." {$sortList['order']},";
                 }
-
-                $sort = rtrim($sort, ",");
-                $sort = ltrim($sort, ',');
             }
+
+            $sort = rtrim($sort, ',');
+            $sort = ltrim($sort, ',');
+        }
 
         $paginated = $this->repo->pagination(
             'id as uid,name,is_permanent',
@@ -91,7 +90,6 @@ class RoleService {
     /**
      * Store Role
      *
-     * @param array $data
      * @return array
      */
     public function store(array $data)
@@ -122,8 +120,6 @@ class RoleService {
     /**
      * Update Role
      *
-     * @param array $data
-     * @param int $id
      * @return array
      */
     public function update(array $data, int $id)
@@ -157,7 +153,7 @@ class RoleService {
                 __('global.successUpdateRole'),
                 false,
                 [
-                    'has_to_logout' => $hasToLogout
+                    'has_to_logout' => $hasToLogout,
                 ]
             );
         } catch (\Throwable $th) {
@@ -174,7 +170,7 @@ class RoleService {
         if (count($permissions) > 0) {
             $permissions = collect($permissions)->map(function ($item) {
                 $item['name'] = str_replace('_', ' ', $item->name);
-    
+
                 return $item;
             })->toArray();
         }
@@ -187,9 +183,9 @@ class RoleService {
                     'id' => $data->id,
                     'name' => $data->name,
                     'permissions' => $permissions,
-                    'is_permanent' => $data->is_permanent
+                    'is_permanent' => $data->is_permanent,
                 ],
-                'raw' => $data
+                'raw' => $data,
             ],
         );
     }
@@ -208,7 +204,7 @@ class RoleService {
             $this->repo->delete($id);
 
             return generalResponse(
-                __("global.successDeleteRole"),
+                __('global.successDeleteRole'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -218,10 +214,6 @@ class RoleService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -231,7 +223,7 @@ class RoleService {
                 $role = Role::findById($id);
                 $user = User::role($role->name)->get();
                 if ($user->count()) {
-                    throw new ExceptionsRoleHasRelation();
+                    throw new ExceptionsRoleHasRelation;
                 }
             }
 

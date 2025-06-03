@@ -3,11 +3,9 @@
 namespace Modules\Hrd\Http\Controllers\Api;
 
 use App\Enums\Employee\Status;
-use App\Exports\PerformanceReportExport;
 use App\Http\Controllers\Controller;
 use App\Services\GeneralService;
 use Illuminate\Http\Request;
-use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Http\Requests\Employee\PerformanceReport;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
@@ -22,14 +20,13 @@ class PerformanceReportController extends Controller
     private $employeeRepo;
 
     private $employeePointService;
-    
+
     public function __construct(
         PerformanceReportService $service,
         GeneralService $generalService,
         EmployeeRepository $employeeRepo,
         EmployeePointService $employeePointService
-    )
-    {
+    ) {
         $this->service = $service;
 
         $this->employeeRepo = $employeeRepo;
@@ -66,7 +63,6 @@ class PerformanceReportController extends Controller
 
     public function export(PerformanceReport $request)
     {
-        
 
         // $employees = $this->employeeRepo->list(
         //     select: 'id,name,employee_id,position_id',
@@ -79,7 +75,7 @@ class PerformanceReportController extends Controller
         // $employeeIds = collect($employees)->pluck('id')->toArray();
 
         // $data = [];
-        
+
         // foreach ($employees as $employee) {
         //     $pointData = $this->employeePointService->renderEachEmployeePoint($employee->id, $startDate, $endDate) ?? [];
 

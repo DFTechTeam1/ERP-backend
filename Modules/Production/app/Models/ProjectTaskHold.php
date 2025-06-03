@@ -3,11 +3,10 @@
 namespace Modules\Production\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Models\Employee;
-use Modules\Production\Database\Factories\ProjectTaskHoldFactory;
 
 class ProjectTaskHold extends Model
 {
@@ -22,7 +21,7 @@ class ProjectTaskHold extends Model
         'reason',
         'hold_at',
         'end_at',
-        'hold_by'
+        'hold_by',
     ];
 
     public function task(): BelongsTo

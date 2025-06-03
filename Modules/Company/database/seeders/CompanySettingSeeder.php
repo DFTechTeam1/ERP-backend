@@ -16,22 +16,22 @@ class CompanySettingSeeder extends Seeder
             [
                 'code' => 'company',
                 'key' => 'company_name',
-                'value' => 'DFactory'
+                'value' => 'DFactory',
             ],
             [
                 'code' => 'company',
                 'key' => 'company_phone',
-                'value' => '+(62) 821 1068 6655'
+                'value' => '+(62) 821 1068 6655',
             ],
             [
                 'code' => 'company',
                 'key' => 'company_email',
-                'value' => 'dfactory.id@gmail.com'
+                'value' => 'dfactory.id@gmail.com',
             ],
             [
                 'code' => 'company',
                 'key' => 'company_address',
-                'value' => 'Kaca Piring 19 / 2nd level Surabaya - East Java'
+                'value' => 'Kaca Piring 19 / 2nd level Surabaya - East Java',
             ],
         ];
 

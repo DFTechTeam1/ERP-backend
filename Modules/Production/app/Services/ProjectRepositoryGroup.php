@@ -12,7 +12,8 @@ use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
 
-class ProjectRepositoryGroup {
+class ProjectRepositoryGroup
+{
     public $projectBoardRepo;
 
     public $projectTaskHoldRepo;
@@ -41,8 +42,7 @@ class ProjectRepositoryGroup {
         ProjectTaskPicHistoryRepository $taskPicHistoryRepo,
         ProjectTaskPicRepository $taskPicRepo,
         ProjectTaskPicLogRepository $taskPicLogRepo
-    )
-    {
+    ) {
         $this->projectRepo = $projectRepo;
         $this->projectBoardRepo = $projectBoardRepo;
         $this->projectTaskHoldRepo = $projectTaskHoldRepo;

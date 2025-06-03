@@ -12,7 +12,7 @@ class StoreLogAction
 
     public function handle(string $type, array $payload, array $params = [])
     {
-        $repo = new EntertainmentTaskSongLogRepository();
+        $repo = new EntertainmentTaskSongLogRepository;
 
         // generate message based on type
         $text = TaskSongLogType::generateText($type, $payload);

@@ -4,7 +4,6 @@ namespace Tests\Feature\User;
 
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -28,10 +27,10 @@ class UserListTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testListUserWithoutAnyParameters(): void
+    public function test_list_user_without_any_parameters(): void
     {
         $response = $this->getJson(route('api.users.index'), [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(201);
@@ -39,8 +38,8 @@ class UserListTest extends TestCase
             'message',
             'data' => [
                 'paginated',
-                'totalData'
-            ]
+                'totalData',
+            ],
         ]);
     }
 

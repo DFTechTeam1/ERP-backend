@@ -4,33 +4,30 @@ namespace App\Repository;
 
 use Spatie\Permission\Models\Permission;
 
-class PermissionRepository {
+class PermissionRepository
+{
     private $model;
 
     public function __construct()
     {
-        $this->model = new Permission();
+        $this->model = new Permission;
     }
 
     /**
      * Get all users
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,31 +41,27 @@ class PermissionRepository {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -79,8 +72,6 @@ class PermissionRepository {
 
     /**
      * Detail Permission
-     *
-     * @param integer $id
      */
     public function show(int $id)
     {

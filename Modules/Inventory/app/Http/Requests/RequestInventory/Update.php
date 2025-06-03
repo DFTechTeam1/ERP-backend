@@ -19,7 +19,7 @@ class Update extends FormRequest
             'quantity' => 'required',
             'purchase_source' => 'nullable',
             'purchase_link' => 'nullable|array',
-            'store_name' => 'nullable'
+            'store_name' => 'nullable',
         ];
     }
 

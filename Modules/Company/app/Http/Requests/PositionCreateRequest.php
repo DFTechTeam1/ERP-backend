@@ -4,8 +4,6 @@ namespace Modules\Company\Http\Requests;
 
 use App\Rules\UniqueLowerRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use Modules\Company\Models\Position;
 use Modules\Company\Models\PositionBackup;
 
 class PositionCreateRequest extends FormRequest
@@ -18,7 +16,7 @@ class PositionCreateRequest extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new PositionBackup())
+                new UniqueLowerRule(new PositionBackup),
             ],
             'division_id' => 'required',
         ];
