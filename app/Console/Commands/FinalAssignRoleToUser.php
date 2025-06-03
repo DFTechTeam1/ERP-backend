@@ -38,11 +38,11 @@ class FinalAssignRoleToUser extends Command
             if ($user->employee) {
                 if ($user->employee->position->name == 'Lead Project Manager' || $user->employee->position->name == 'Head of Creative' || $user->employee->position->name == 'Full Stack Developer') {
                     $role = Role::findByName('director');
-                } else if (
+                } elseif (
                     $user->employee->position->name == 'Project Manager'
                 ) {
                     $role = Role::findByName('project manager');
-                } else if (
+                } elseif (
                     $user->employee->position->name == 'Animator' ||
                     $user->employee->position->name == 'Compositor' ||
                     $user->employee->position->name == '3D Modeller' ||
@@ -51,27 +51,27 @@ class FinalAssignRoleToUser extends Command
                     $user->employee->position->name == '3D Animator'
                 ) {
                     $role = Role::findByName('production');
-                } else if (
+                } elseif (
                     $user->employee->position->name == 'Operator' ||
                     $user->employee->position->name == 'Visual Jockey'
                 ) {
                     $role = Role::findByName('entertainment');
-                } else if (
+                } elseif (
                     $user->employee->position->name == 'Lead Marcomm' ||
                     $user->employee->position->name == 'Marketing Staff' ||
                     $user->employee->position->name == 'Marcomm Staff'
                 ) {
                     $role = Role::findByName('marketing');
-                } else if (
+                } elseif (
                     $user->employee->position->name == 'HR & TA Admin' ||
                     $user->employee->position->name == 'HR Generalist'
                 ) {
                     $role = Role::findByName('hrd');
-                } else if (
+                } elseif (
                     $user->employee->position->name == 'IT Technical Support'
                 ) {
                     $role = Role::findByName('it support');
-                } else if (
+                } elseif (
                     $user->employee->position->name == 'Admin Staff'
                 ) {
                     $role = Role::findByName('finance');

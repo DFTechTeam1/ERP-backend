@@ -32,7 +32,7 @@ return new class extends Migration
         Schema::table('inventory_items', function (Blueprint $table) {
             $table->dropForeign(['inventory_id']);
         });
-        
+
         Schema::dropIfExists('inventory_items');
     }
 };

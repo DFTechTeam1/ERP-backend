@@ -10,8 +10,8 @@ enum EquipmentType: string
     public function label()
     {
         return match ($this) {
-            static::Lasika => 'Lasika',
-            static::Others => 'Others',
+            self::Lasika => 'Lasika',
+            self::Others => 'Others',
         };
     }
 }

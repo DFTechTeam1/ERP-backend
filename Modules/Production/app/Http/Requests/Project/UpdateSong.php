@@ -12,7 +12,7 @@ class UpdateSong extends FormRequest
     public function rules(): array
     {
         return [
-            'song' => 'required'
+            'song' => 'required',
         ];
     }
 

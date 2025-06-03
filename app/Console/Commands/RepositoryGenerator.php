@@ -49,7 +49,7 @@ class RepositoryGenerator extends Command
 
         // validate
         $moduleData = Module::find($module);
-        if (!$moduleData) {
+        if (! $moduleData) {
             $this->error('Module not found');
 
             $this->info('Operation stopped');
@@ -62,20 +62,20 @@ class RepositoryGenerator extends Command
 
         $this->configModulePath = config('modules.paths.modules');
 
-        $this->repositoryDir = $this->configModulePath . "/" . $this->moduleName . "/app/Repository/";
+        $this->repositoryDir = $this->configModulePath.'/'.$this->moduleName.'/app/Repository/';
 
-        if (file_exists($this->repositoryDir . "{$name}Repository.php")) {
+        if (file_exists($this->repositoryDir."{$name}Repository.php")) {
             $this->error('Repository already exists');
             $this->error('Operation stopped');
             exit();
         }
 
         $modulePath = $moduleData->getPath();
-        
-        $modelPath = $modulePath . '/app/Models';
 
-        if (!file_exists("{$modelPath}/$model{$phpExt}")) {
-            Artisan::call('module:make-model ' . $model . ' ' . $module);
+        $modelPath = $modulePath.'/app/Models';
+
+        if (! file_exists("{$modelPath}/$model{$phpExt}")) {
+            Artisan::call('module:make-model '.$model.' '.$module);
         }
 
         $this->buildInterface($name);
@@ -85,29 +85,28 @@ class RepositoryGenerator extends Command
     /**
      * Create Interface
      *
-     * @param string $name
      * @return void
      */
     private function buildInterface(string $name)
     {
-        $dir = $this->configModulePath . "/" . $this->moduleName . "/app/Repository/Interface/";
+        $dir = $this->configModulePath.'/'.$this->moduleName.'/app/Repository/Interface/';
 
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             File::makeDirectory($dir, 0777, true);
         }
 
-        $namespace = $this->namespace . "\\" . $this->moduleName . "\\Repository\\Interface";
+        $namespace = $this->namespace.'\\'.$this->moduleName.'\\Repository\\Interface';
 
         $className = "{$name}Interface";
 
-        $stub = file_get_contents(__DIR__ . '/../../../stubs/repository.interface.stub');
+        $stub = file_get_contents(__DIR__.'/../../../stubs/repository.interface.stub');
 
         $filename = "{$className}.php";
 
-        $targetPath = $dir . $filename;
+        $targetPath = $dir.$filename;
 
         $content = str_replace(
-            ["{{namespace}}", "{{className}}"],
+            ['{{namespace}}', '{{className}}'],
             [$namespace, $className],
             $stub
         );
@@ -120,38 +119,36 @@ class RepositoryGenerator extends Command
     /**
      * Create Repository
      *
-     * @param string $name
-     * @param string $model
-     * 
+     *
      * @return void
      */
     private function buildRepository(string $name, string $model)
     {
-        if (!is_dir($this->repositoryDir)) {
+        if (! is_dir($this->repositoryDir)) {
             File::makeDirectory($this->repositoryDir, 0777, true);
         }
 
-        $namespace = $this->namespace . "\\" . $this->moduleName . "\\Repository";
+        $namespace = $this->namespace.'\\'.$this->moduleName.'\\Repository';
 
         $className = "{$name}Repository";
 
         $filename = "{$className}.php";
 
-        $modelNamespace = $this->namespace . "\\" . $this->moduleName . "\\Models\\{$model}";
+        $modelNamespace = $this->namespace.'\\'.$this->moduleName."\\Models\\{$model}";
 
-        $interfaceNamespace = $this->namespace . "\\" . $this->moduleName . "\\Repository\\Interface\\{$name}Interface";
+        $interfaceNamespace = $this->namespace.'\\'.$this->moduleName."\\Repository\\Interface\\{$name}Interface";
 
         $interface = "{$name}Interface";
 
-        $stub = file_get_contents(__DIR__ . '/../../../stubs/repository.stub');
-        
+        $stub = file_get_contents(__DIR__.'/../../../stubs/repository.stub');
+
         $content = str_replace(
-            ["{{namespace}}", "{{className}}", "{{modelNamespace}}", "{{modelName}}", "{{interfaceNamespace}}", "{{interface}}"],
+            ['{{namespace}}', '{{className}}', '{{modelNamespace}}', '{{modelName}}', '{{interfaceNamespace}}', '{{interface}}'],
             [$namespace, $className, $modelNamespace, $model, $interfaceNamespace, $interface],
             $stub
         );
 
-        $targetPath = $this->repositoryDir . $filename;
+        $targetPath = $this->repositoryDir.$filename;
 
         file_put_contents($targetPath, $content);
 

@@ -3,17 +3,17 @@
 namespace App\Repository;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 
-class RoleRepository {
+class RoleRepository
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Role();
+        $this->model = new Role;
 
         $this->key = 'id';
     }
@@ -26,22 +26,18 @@ class RoleRepository {
     /**
      * Get all users
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -55,26 +51,22 @@ class RoleRepository {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
         string $orderBy = ''
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -82,17 +74,15 @@ class RoleRepository {
             $query->with($relation);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Store new Role
-     *
-     * @param array $data
      */
     public function store(array $data)
     {
@@ -107,7 +97,6 @@ class RoleRepository {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

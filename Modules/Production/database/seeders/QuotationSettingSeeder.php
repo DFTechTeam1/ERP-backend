@@ -15,12 +15,12 @@ class QuotationSettingSeeder extends Seeder
             [
                 'key' => 'quotation_prefix',
                 'value' => '#DF',
-                'code' => 'company'
+                'code' => 'company',
             ],
             [
                 'key' => 'cutoff_quotation_number',
                 'value' => '4101',
-                'code' => 'company'
+                'code' => 'company',
             ],
         ];
 

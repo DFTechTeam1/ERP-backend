@@ -2,30 +2,17 @@
 
 namespace Tests\Feature\Project;
 
-use App\Services\GeneralService;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
-use Mockery\MockInterface;
-use Modules\Production\Exceptions\SongNotFound;
-use Modules\Production\Jobs\RequestEditSongJob;
-use Modules\Production\Models\EntertainmentTaskSong;
-use Modules\Production\Models\Project;
-use Modules\Production\Models\ProjectSongList;
 use Modules\Production\Repository\ProjectSongListRepository;
-use Modules\Production\Services\ProjectService;
 use Tests\TestCase;
-
-use function PHPUnit\Framework\assertStringContainsString;
 
 class UpdateRequestSongTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -43,23 +30,23 @@ class UpdateRequestSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testUpdateSongMissingParameter(): void
+    public function test_update_song_missing_parameter(): void
     {
         $payload = [
-            'song' => ''
+            'song' => '',
         ];
 
         $response = $this->putJson(route('api.production.projects.updateSongs', ['projectUid' => '123', 'songUid' => 'songid']), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
     }
 
-    public function testUpdateSongWithSongIsNotFound(): void
+    public function test_update_song_with_song_is_not_found(): void
     {
         $payload = [
-            'song' => 'song 1'
+            'song' => 'song 1',
         ];
 
         $mockRepo = Mockery::mock(ProjectSongListRepository::class);
@@ -76,7 +63,7 @@ class UpdateRequestSongTest extends TestCase
                 'id,project_id,name',
                 [
                     'task:id,project_song_list_id,employee_id',
-                    'task.employee:id,name,nickname'
+                    'task.employee:id,name,nickname',
                 ]
             )
             ->andReturnNull()
@@ -84,14 +71,14 @@ class UpdateRequestSongTest extends TestCase
             ->atMost(1)
             ->with(
                 [
-                   'name' => 'song 1'
+                    'name' => 'song 1',
                 ],
                 'id'
             )
             ->andReturnTrue();
 
         $response = $this->putJson(route('api.production.projects.updateSongs', ['projectUid' => 'id', 'songUid' => 'id']), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
         $response->assertStatus(400);
     }

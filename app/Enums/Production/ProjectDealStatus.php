@@ -10,16 +10,16 @@ enum ProjectDealStatus: int
     public function label()
     {
         return match ($this) {
-            static::Draft => __("global.draft"),
-            static::Active => __("global.active"),
+            self::Draft => __('global.draft'),
+            self::Active => __('global.active'),
         };
     }
 
     public function color()
     {
         return match ($this) {
-            static::Draft => 'light-blue-lighten-3',
-            static::Active => 'success',
+            self::Draft => 'light-blue-lighten-3',
+            self::Active => 'success',
         };
     }
 }

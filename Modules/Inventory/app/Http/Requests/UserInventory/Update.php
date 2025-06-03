@@ -17,7 +17,7 @@ class Update extends FormRequest
             'inventories.*.quantity' => 'required',
             'inventories.*.current_id' => 'nullable',
             'deleted_inventories' => 'nullable',
-            'deleted_inventories.*.current_id' => 'nullable'
+            'deleted_inventories.*.current_id' => 'nullable',
         ];
     }
 

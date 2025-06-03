@@ -29,4 +29,3 @@ class VillageFactory extends Factory
         ];
     }
 }
-

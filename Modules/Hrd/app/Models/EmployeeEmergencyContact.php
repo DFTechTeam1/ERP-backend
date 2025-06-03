@@ -3,9 +3,8 @@
 namespace Modules\Hrd\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Hrd\Database\Factories\EmployeeEmergencyContactFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class EmployeeEmergencyContact extends Model
 {

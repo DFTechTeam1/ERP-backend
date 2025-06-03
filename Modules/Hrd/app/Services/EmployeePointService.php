@@ -2,14 +2,12 @@
 
 namespace Modules\Hrd\Services;
 
-use App\Enums\ErrorCode\Code;
-use Illuminate\Support\Facades\Log;
-use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
 use Modules\Hrd\Repository\EmployeePointRepository;
 
-class EmployeePointService {
+class EmployeePointService
+{
     private $repo;
 
     private $pointProjectRepo;
@@ -23,8 +21,7 @@ class EmployeePointService {
         EmployeePointRepository $repo,
         EmployeePointProjectRepository $pointProjectRepo,
         EmployeePointProjectDetailRepository $pointProjectDetailRepo
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->pointProjectRepo = $pointProjectRepo;
@@ -34,19 +31,12 @@ class EmployeePointService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -54,7 +44,7 @@ class EmployeePointService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -88,7 +78,6 @@ class EmployeePointService {
      * 3. Search the detail of tasks in the employee_point_project_details by passing employee_point_projects.id
      * 4. Get the detail of task based on employee_points.type production or entertainment
      *
-     * @param integer $employeeId
      * @return \Modules\Hrd\Models\EmployeePoint
      */
     public function renderEachEmployeePoint(int $employeeId = 17, string $startDate = '', string $endDate = '')
@@ -107,14 +96,14 @@ class EmployeePointService {
             $relation = [
                 'project:id,name AS project_name',
                 'details:id,point_id,task_id',
-                'details.productionTask:id,name,created_at'
+                'details.productionTask:id,name,created_at',
             ];
             if ($data->type != 'production') {
                 $relation = [
                     'project:id,name AS project_name',
                     'details:id,point_id,task_id',
                     'details.entertainmentTask:id,project_song_list_id,created_at',
-                    'details.entertainmentTask.song:id,name'
+                    'details.entertainmentTask.song:id,name',
                 ];
             }
             $details = $this->pointProjectRepo->list(
@@ -122,7 +111,7 @@ class EmployeePointService {
                 where: "employee_point_id = {$data->id}",
                 relation: $relation,
                 whereHas: [
-                    ['relation' => 'project', 'query' => "project_date BETWEEN '{$startDate}' AND '{$endDate}'"]
+                    ['relation' => 'project', 'query' => "project_date BETWEEN '{$startDate}' AND '{$endDate}'"],
                 ]
             );
 
@@ -136,12 +125,12 @@ class EmployeePointService {
                     if ($data->type == 'production') {
                         $outputTasks[] = [
                             'name' => $task->productionTask->name,
-                            'assigned_at' => date('d F Y, H:i', strtotime($task->productionTask->created_at))
+                            'assigned_at' => date('d F Y, H:i', strtotime($task->productionTask->created_at)),
                         ];
                     } else {
                         $outputTasks[] = [
                             'name' => $task->entertainmentTask->song->name,
-                            'assigned_at' => date('d F Y, H:i', strtotime($task->entertainmentTask->created_at))
+                            'assigned_at' => date('d F Y, H:i', strtotime($task->entertainmentTask->created_at)),
                         ];
                     }
                 }
@@ -151,7 +140,7 @@ class EmployeePointService {
                     'point' => $detail->total_point_per_project - $detail->additional_point,
                     'additional_point' => $detail->additional_point,
                     'total_point' => $detail->total_point_per_project,
-                    'tasks' => $outputTasks
+                    'tasks' => $outputTasks,
                 ];
             }
         }
@@ -228,7 +217,7 @@ class EmployeePointService {
         return [
             'total_point' => $totalPoint,
             'total_project' => $totalProject,
-            'task_details' => $taskDetail
+            'task_details' => $taskDetail,
         ];
     }
 
@@ -239,9 +228,6 @@ class EmployeePointService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -260,10 +246,6 @@ class EmployeePointService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
@@ -281,19 +263,12 @@ class EmployeePointService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -309,7 +284,6 @@ class EmployeePointService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -328,10 +302,6 @@ class EmployeePointService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

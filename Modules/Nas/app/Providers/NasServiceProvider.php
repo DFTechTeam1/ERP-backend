@@ -38,9 +38,9 @@ class NasServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-         $this->commands([
-             SetNasConfiguration::class
-         ]);
+        $this->commands([
+            SetNasConfiguration::class,
+        ]);
     }
 
     /**

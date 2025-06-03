@@ -2,8 +2,9 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Production\Database\Factories\PriceLedGuideFactory;
 
 class PriceLedGuide extends Model
@@ -18,7 +19,7 @@ class PriceLedGuide extends Model
         'country_id',
         'state_id',
         'city_id',
-        'price'
+        'price',
     ];
 
     // protected static function newFactory(): PriceLedGuideFactory

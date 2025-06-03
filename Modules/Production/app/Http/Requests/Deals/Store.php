@@ -54,11 +54,11 @@ class Store extends FormRequest
             'quotation.equipment_type' => 'nullable',
             'quotation.is_high_season' => 'required',
             'quotation.description' => 'nullable',
-            
+
             'quotation.items' => 'required|array',
             'quotation.items.*' => 'required',
 
-            'request_type' => 'nullable' // this will be save,draft or save_and_download
+            'request_type' => 'nullable', // this will be save,draft or save_and_download
         ];
     }
 

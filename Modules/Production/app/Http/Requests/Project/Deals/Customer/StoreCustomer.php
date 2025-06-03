@@ -16,7 +16,7 @@ class StoreCustomer extends FormRequest
             'name' => [
                 'required',
                 'string',
-                Rule::unique(table: 'customers', column: 'name')
+                Rule::unique(table: 'customers', column: 'name'),
             ],
             'phone' => 'required',
             'email' => 'nullable',

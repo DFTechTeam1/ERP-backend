@@ -3,8 +3,8 @@
 namespace Modules\Inventory\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Inventory\Database\factories\UnitFactory;
 
 class Unit extends Model
@@ -16,13 +16,13 @@ class Unit extends Model
      */
     protected $fillable = [
         'uid',
-        'name'
+        'name',
     ];
 
     protected $hidden = ['id'];
-    
+
     protected static function newFactory(): UnitFactory
     {
-        //return UnitFactory::new();
+        // return UnitFactory::new();
     }
 }

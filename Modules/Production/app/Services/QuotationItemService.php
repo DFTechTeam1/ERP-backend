@@ -2,10 +2,10 @@
 
 namespace Modules\Production\Services;
 
-use App\Enums\ErrorCode\Code;
 use Modules\Production\Repository\QuotationItemRepository;
 
-class QuotationItemService {
+class QuotationItemService
+{
     private $repo;
 
     /**
@@ -13,35 +13,37 @@ class QuotationItemService {
      */
     public function __construct(
         QuotationItemRepository $repo
-    )
-    {
+    ) {
         $this->repo = $repo;
     }
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
+            $all = request('all');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
+            }
+
+            if ($all) {
+                $data = $this->repo->list(select: $select, where: $where, relation: $relation);
+
+                return generalResponse(
+                    message: 'Success',
+                    data: $data->toArray()
+                );
             }
 
             $paginated = $this->repo->pagination(
@@ -73,9 +75,6 @@ class QuotationItemService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -94,10 +93,6 @@ class QuotationItemService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     * 
-     * @return array
      */
     public function store(array $data): array
     {
@@ -115,19 +110,12 @@ class QuotationItemService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -138,13 +126,12 @@ class QuotationItemService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
-     * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -162,10 +149,6 @@ class QuotationItemService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

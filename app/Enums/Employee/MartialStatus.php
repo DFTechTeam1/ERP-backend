@@ -11,7 +11,7 @@ enum MartialStatus: string
     {
         if ($data == 'Single') {
             return self::Single;
-        } else if ($data == 'Married') {
+        } elseif ($data == 'Married') {
             return self::Married;
         }
     }
@@ -26,7 +26,7 @@ enum MartialStatus: string
             case self::Married->value:
                 $output = __('global.married');
                 break;
-            
+
             default:
                 $output = '-';
                 break;
@@ -38,8 +38,8 @@ enum MartialStatus: string
     public function label()
     {
         return match ($this) {
-            static::Single => __('global.single'),
-            static::Married => __('global.married'),
+            self::Single => __('global.single'),
+            self::Married => __('global.married'),
         };
     }
 }

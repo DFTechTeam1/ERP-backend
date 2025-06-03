@@ -7,7 +7,6 @@ use App\Services\GeneralService;
 use App\Services\UserService;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
 use Modules\Company\Database\Factories\ProvinceFactory;
@@ -36,7 +35,7 @@ class GetAllStatusTest extends TestCase
         parent::setUp();
 
         $userData = $this->auth();
-        
+
         Sanctum::actingAs($userData['user']);
         $this->actingAs($userData['user']);
 
@@ -68,17 +67,17 @@ class GetAllStatusTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testGetAllStatusServiceIsWorking(): void
+    public function test_get_all_status_service_is_working(): void
     {
         $response = $this->service->getAllStatus();
 
         $this->assertFalse($response['error']);
     }
 
-    public function testGetStatusRoute(): void
+    public function test_get_status_route(): void
     {
         $response = $this->getJson(route('api.employees.getAllStatus'), [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(201);

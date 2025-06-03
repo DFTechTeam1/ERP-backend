@@ -24,10 +24,10 @@ class InventorySeeder extends Seeder
 
             return $item;
         })->all();
-        $monitor = collect($inventoryTypes)->where("name", 'monitor')->values()[0];
-        $mouse = collect($inventoryTypes)->where("name", 'mouse')->values()[0];
-        $keyboard = collect($inventoryTypes)->where("name", 'keyboard')->values()[0];
-        $laptop = collect($inventoryTypes)->where("name", 'laptop')->values()[0];
+        $monitor = collect($inventoryTypes)->where('name', 'monitor')->values()[0];
+        $mouse = collect($inventoryTypes)->where('name', 'mouse')->values()[0];
+        $keyboard = collect($inventoryTypes)->where('name', 'keyboard')->values()[0];
+        $laptop = collect($inventoryTypes)->where('name', 'laptop')->values()[0];
 
         $brands = \Modules\Inventory\Models\Brand::all();
         $brands = collect($brands)->map(function ($item) {
@@ -87,7 +87,7 @@ class InventorySeeder extends Seeder
 
             $dividerCode = '-';
             for ($a = 0; $a < $d['stock']; $a++) {
-                $inventoryCode = rand(100,900) . $dividerCode . $d['slug'] . $dividerCode . $a + 1;
+                $inventoryCode = rand(100, 900).$dividerCode.$d['slug'].$dividerCode.$a + 1;
                 \Modules\Inventory\Models\InventoryItem::create([
                     'inventory_id' => $inventory->id,
                     'inventory_code' => $inventoryCode,

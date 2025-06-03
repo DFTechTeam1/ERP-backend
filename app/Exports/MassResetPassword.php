@@ -14,8 +14,8 @@ class MassResetPassword implements FromArray
     }
 
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function array(): array
     {
         if (count($this->data) > 0) {

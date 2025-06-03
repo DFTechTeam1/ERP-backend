@@ -2,8 +2,9 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Production\Database\Factories\CustomerFactory;
 
 class Customer extends Model
@@ -16,7 +17,7 @@ class Customer extends Model
     protected $fillable = [
         'name',
         'phone',
-        'customer'
+        'customer',
     ];
 
     // protected static function newFactory(): CustomerFactory

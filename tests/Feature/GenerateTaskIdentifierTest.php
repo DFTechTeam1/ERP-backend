@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Services\ProjectTaskService;
 use Tests\TestCase;
@@ -26,12 +25,12 @@ class GenerateTaskIdentifierTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testTaskIdentifierIs4Length(): void
+    public function test_task_identifier_is4_length(): void
     {
         $this->assertEquals(4, strlen($this->service->generateIdentifier()));
     }
 
-    public function testMassTaskIdentifierUpdate(): void
+    public function test_mass_task_identifier_update(): void
     {
         $this->service->massUpdateIdentifierID();
 

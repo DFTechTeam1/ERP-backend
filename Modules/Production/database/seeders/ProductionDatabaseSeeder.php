@@ -15,7 +15,7 @@ class ProductionDatabaseSeeder extends Seeder
             ProjectSeeder::class,
             PriceSettingSeeder::class,
             QuotationSettingSeeder::class,
-            QuotationItemSeeder::class
+            QuotationItemSeeder::class,
         ]);
     }
 }

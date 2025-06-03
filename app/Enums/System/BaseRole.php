@@ -2,7 +2,8 @@
 
 namespace App\Enums\System;
 
-enum BaseRole: string {
+enum BaseRole: string
+{
     case ProjectManager = 'project manager';
     case Root = 'root';
     case Marketing = 'marketing';

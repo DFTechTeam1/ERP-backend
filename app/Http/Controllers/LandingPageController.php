@@ -22,8 +22,7 @@ class LandingPageController extends Controller
         EmployeePointService $employeePointService,
         PerformanceReportService $reportService,
         EmployeeRepository $employeeRepo
-    )
-    {
+    ) {
         $this->projectRepoGroup = $projectRepoGroup;
 
         $this->employeePointService = $employeePointService;
@@ -39,15 +38,14 @@ class LandingPageController extends Controller
         // $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', compact('image'));
         // return $pdf->download('quotation.pdf');
 
-
         return view('landing');
     }
 
     public function sendToNAS()
     {
         $filePath = public_path('images/user.png');
-        $username = "ilhamgumilang"; // Change this to NAS username
-        $password = "Ilham..123"; // Change this to NAS password
+        $username = 'ilhamgumilang'; // Change this to NAS username
+        $password = 'Ilham..123'; // Change this to NAS password
 
         $curl = curl_init();
 
@@ -58,18 +56,17 @@ class LandingPageController extends Controller
             CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
             CURLOPT_USERPWD => "$username:$password",
             CURLOPT_POSTFIELDS => [
-                'file' => new \CURLFile($filePath)
+                'file' => new \CURLFile($filePath),
             ],
         ]);
 
         $response = curl_exec($curl);
         if ($response === false) {
-            throw new \Exception('Upload failed: ' . curl_error($curl));
+            throw new \Exception('Upload failed: '.curl_error($curl));
         }
 
         curl_close($curl);
 
         echo json_encode($response);
     }
-
 }

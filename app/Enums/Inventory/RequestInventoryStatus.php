@@ -12,20 +12,20 @@ enum RequestInventoryStatus: int
     public function label()
     {
         return match ($this) {
-            static::Requested => __('global.requested'),
-            static::Approved => __('global.approved'),
-            static::Rejected => __('global.rejected'),
-            static::Closed => __('global.closed'),
+            self::Requested => __('global.requested'),
+            self::Approved => __('global.approved'),
+            self::Rejected => __('global.rejected'),
+            self::Closed => __('global.closed'),
         };
     }
 
     public function badgeColor()
     {
         return match ($this) {
-            static::Requested => 'primary',
-            static::Approved => 'info',
-            static::Rejected => 'danger',
-            static::Closed => 'secondary',
+            self::Requested => 'primary',
+            self::Approved => 'info',
+            self::Rejected => 'danger',
+            self::Closed => 'secondary',
         };
     }
 }

@@ -3,18 +3,12 @@
 namespace Modules\Hrd\Services;
 
 use App\Enums\Employee\Status;
-use App\Enums\System\BaseRole;
 use App\Exports\NewTemplatePerformanceReportExport;
-use App\Exports\PerformanceReportExport;
 use App\Services\GeneralService;
 use Carbon\Carbon;
 use DateTime;
 use Maatwebsite\Excel\Facades\Excel;
-use Modules\Company\Models\Position;
-use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
-use Modules\Hrd\Repository\EmployeePointProjectRepository;
 use Modules\Hrd\Repository\EmployeePointRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
@@ -22,7 +16,8 @@ use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskPicLogRepository;
 
-class PerformanceReportService {
+class PerformanceReportService
+{
     private $repo;
 
     private $taskPicHistoryRepo;
@@ -52,8 +47,7 @@ class PerformanceReportService {
         EmployeePointRepository $newEmployeePointRepo,
         EmployeePointService $employeePointService,
         GeneralService $generalService
-    )
-    {
+    ) {
         $this->taskPicLogRepo = $taskPicLogRepo;
 
         $this->repo = $repo;
@@ -73,18 +67,18 @@ class PerformanceReportService {
 
     protected function getTotalProjectEmployee(int $employeeId)
     {
-        $data = $this->taskPicHistoryRepo->list('DISTINCT(project_id)', 'employee_id = ' . $employeeId, [
+        $data = $this->taskPicHistoryRepo->list('DISTINCT(project_id)', 'employee_id = '.$employeeId, [
             'project' => function ($query) {
                 $query->select('id')
                     ->whereBetween('project_date', [$this->startDate, $this->endDate]);
-            }
+            },
         ]);
 
         return collect((object) $data)->filter(function ($item) {
             return $item->project;
         })
-        ->values()
-        ->count();
+            ->values()
+            ->count();
     }
 
     protected function getEmployeePoint(int $employeeId, string $startDate = '', string $endDate = '')
@@ -95,13 +89,13 @@ class PerformanceReportService {
         if (empty($endDate)) {
             $endDate = $this->endDate;
         }
-        $data = $this->employeePointRepo->list('point,additional_point,total_point,project_id,employee_id', 'employee_id = ' . $employeeId, [
+        $data = $this->employeePointRepo->list('point,additional_point,total_point,project_id,employee_id', 'employee_id = '.$employeeId, [
             'project' => function ($q) use ($startDate, $endDate) {
                 $q->selectRaw('id,name')
                     ->whereBetween('project_date', [$startDate, $endDate]);
             },
             'employee:id,name,employee_id,position_id',
-            'employee.position:id,name'
+            'employee.position:id,name',
         ]);
 
         $data = collect((object) $data)->filter(function ($filter) {
@@ -112,14 +106,14 @@ class PerformanceReportService {
         foreach ($data as $point) {
             $task = $this->taskPicHistoryRepo->list(
                 'id,project_task_id',
-                'project_id = ' . $point->project_id . ' and employee_id = ' . $employeeId,
+                'project_id = '.$point->project_id.' and employee_id = '.$employeeId,
                 [
                     'task:id,name',
                     'taskLog' => function ($logQuery) {
                         $logQuery
                             ->with('task:id,name')
                             ->where('work_type', \App\Enums\Production\WorkType::Assigned->value);
-                    }
+                    },
                 ]
             );
 
@@ -137,7 +131,7 @@ class PerformanceReportService {
                 'additional_point' => $point->additional_point,
                 'total_point' => $point->total_point,
                 'tasks' => $task,
-                'employee' => $point->employee
+                'employee' => $point->employee,
             ];
         }
 
@@ -146,9 +140,6 @@ class PerformanceReportService {
 
     /**
      * Render performance report
-     *
-     * @param string $employeeUid
-     * @return array
      */
     public function performanceDetail(string $employeeUid): array
     {
@@ -175,7 +166,7 @@ class PerformanceReportService {
             [
                 'position:id,name',
                 'boss:id,nickname',
-                'user:id,email'
+                'user:id,email',
             ]
         );
 
@@ -210,7 +201,7 @@ class PerformanceReportService {
         //     });
         // }
 
-        $picLog = $this->taskPicLogRepo->list('*', 'employee_id = ' . $employee->id);
+        $picLog = $this->taskPicLogRepo->list('*', 'employee_id = '.$employee->id);
         $picLog = collect($picLog)->groupBy('project_task_id')->toArray();
         $log = [];
         foreach ($picLog as $projectTaskId => $taskLog) {
@@ -241,7 +232,7 @@ class PerformanceReportService {
                 'uid' => $employeeUid,
                 'position' => $employee->position->name,
                 'boss' => $employee->boss_id ? $employee->boss->nickname : '-',
-                'period' => date('d F', strtotime($this->startDate)) . ' - ' . date('d F', strtotime($this->endDate)),
+                'period' => date('d F', strtotime($this->startDate)).' - '.date('d F', strtotime($this->endDate)),
                 'total_point' => $newFormatPoint['total_point'],
             ],
             'chart' => [
@@ -277,7 +268,6 @@ class PerformanceReportService {
      *
      * Default date is 1 period
      *
-     * @param array $payload
      * @return void
      */
     public function importEmployeePoint(array $payload)
@@ -290,7 +280,7 @@ class PerformanceReportService {
                 $employeeUids = $this->getAllEmployeeIdForPoint();
             } else {
                 $employeeUids = collect($payload['employee_uids'])->map(function ($item) {
-                    return getIdFromUid($item, new Employee());
+                    return getIdFromUid($item, new Employee);
                 })->toArray();
             }
             $employeeUidsCombine = implode(',', $employeeUids);
@@ -299,16 +289,16 @@ class PerformanceReportService {
             // get date range
             if (empty($payload['start_date']) && empty($payload['end_date'])) {
                 $formatDate = $this->setDefaultPeriodQueryForPoint();
-            } else if (!empty($payload['start_date']) && !empty($payload['end_date'])) {
+            } elseif (! empty($payload['start_date']) && ! empty($payload['end_date'])) {
                 $formatDate = $this->formatPointQueryDate($payload);
 
                 $where .= $where .= "DATE(created_at) BETWEEN {$formatDate['start']} AND {$formatDate['end']}";
-            } else if (!empty($payload['start_date']) && empty($payload['end_date'])) {
+            } elseif (! empty($payload['start_date']) && empty($payload['end_date'])) {
                 $payload['end_date'] = date('Y-m-d');
                 $formatDate = $this->formatPointQueryDate($payload);
 
                 $where .= $where .= "DATE(created_at) BETWEEN {$formatDate['start']} AND {$formatDate['end']}";
-            } else if (empty($payload['start_date']) && !empty($payload['end_date'])) {
+            } elseif (empty($payload['start_date']) && ! empty($payload['end_date'])) {
                 $payload['start_end'] = date('Y-m-d');
                 $formatDate = $this->formatPointQueryDate($payload);
 
@@ -330,12 +320,12 @@ class PerformanceReportService {
                 $points[] = $pointResult ? $pointResult->total_point : 0;
             }
 
-            $excel = new \App\Services\ExcelService();
+            $excel = new \App\Services\ExcelService;
 
             $excel->createSheet('Report', 0);
             $excel->setActiveSheet('Report');
 
-            $excel->setValue('A1', 'REPORT PERFORMANCE REPORT ' . $this->startDate . ' - ' . $this->endDate);
+            $excel->setValue('A1', 'REPORT PERFORMANCE REPORT '.$this->startDate.' - '.$this->endDate);
             $excel->mergeCells('A1:H1');
             $excel->setAsBold('A1');
 
@@ -405,7 +395,7 @@ class PerformanceReportService {
     {
         $employees = $this->repo->list(
             select: 'id',
-            where: "status NOT IN (". Status::Inactive->value .")"
+            where: 'status NOT IN ('.Status::Inactive->value.')'
         );
 
         return collect($employees)->pluck('id')->toArray();
@@ -418,7 +408,7 @@ class PerformanceReportService {
 
         return [
             'start' => $start,
-            'end' => $end
+            'end' => $end,
         ];
     }
 
@@ -431,14 +421,14 @@ class PerformanceReportService {
 
         return [
             'start' => $start,
-            'end' => $end
+            'end' => $end,
         ];
     }
 
     public function export(array $payload): array
     {
         try {
-            if (!$payload['start_date']) {
+            if (! $payload['start_date']) {
                 $default = $this->generalService->reportPerformanceDefaultDate();
                 $startDate = $default['start'];
                 $endDate = $default['end'];
@@ -451,7 +441,7 @@ class PerformanceReportService {
             Excel::store(new NewTemplatePerformanceReportExport($startDate, $endDate), $filename, 'public');
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'path' => asset("storage/{$filename}"),
                 ]
@@ -460,5 +450,4 @@ class PerformanceReportService {
             return errorResponse($th);
         }
     }
-
 }

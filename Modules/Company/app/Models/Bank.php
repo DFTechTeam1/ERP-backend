@@ -2,8 +2,9 @@
 
 namespace Modules\Company\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Company\Database\Factories\BankFactory;
 
 class Bank extends Model
@@ -15,7 +16,7 @@ class Bank extends Model
      */
     protected $fillable = [
         'name',
-        'bank_code'
+        'bank_code',
     ];
 
     // protected static function newFactory(): BankFactory

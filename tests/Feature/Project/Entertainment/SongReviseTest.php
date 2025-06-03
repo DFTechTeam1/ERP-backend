@@ -7,7 +7,6 @@ use App\Enums\Production\TaskSongStatus;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
@@ -20,7 +19,7 @@ use Tests\TestCase;
 
 class SongReviseTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $projects;
 
@@ -53,7 +52,7 @@ class SongReviseTest extends TestCase
             ->count(1)
             ->create([
                 'project_id' => $this->projects[0]->id,
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
         $this->employees = Employee::factory()
@@ -66,14 +65,14 @@ class SongReviseTest extends TestCase
                 'project_id' => $this->projects[0]->id,
                 'project_song_list_id' => $this->projectSongs[0]->id,
                 'employee_id' => $this->employees[0]->id,
-                'status' => $taskStatus
+                'status' => $taskStatus,
             ]);
     }
 
     /**
      * A basic feature test example.
      */
-    public function testSongAlreadyRevise(): void
+    public function test_song_already_revise(): void
     {
         $this->seeder(taskStatus: TaskSongStatus::Revise->value);
 
@@ -88,10 +87,10 @@ class SongReviseTest extends TestCase
         $this->assertStringContainsString(__('notification.songAlreadyOnRevise'), $response['message']);
     }
 
-    public function testSongReviseReturnFailed(): void
+    public function test_song_revise_return_failed(): void
     {
         $payload = [
-            'reason' => 'tidak cocok'
+            'reason' => 'tidak cocok',
         ];
 
         $this->seeder(taskStatus: TaskSongStatus::OnProgress->value);
@@ -105,12 +104,12 @@ class SongReviseTest extends TestCase
         $this->assertStringContainsString(__('notification.songCannotBeRevise'), $response['message']);
     }
 
-    public function testSongReviseReturnSuccessWithoutImage()
+    public function test_song_revise_return_success_without_image()
     {
         Bus::fake();
 
         $payload = [
-            'reason' => 'tidak cocok'
+            'reason' => 'tidak cocok',
         ];
 
         $this->seeder(taskStatus: TaskSongStatus::OnFirstReview->value);

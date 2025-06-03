@@ -13,7 +13,7 @@ class Create extends FormRequest
     {
         return [
             'name' => 'required',
-            'slug' => 'nullable'
+            'slug' => 'nullable',
         ];
     }
 

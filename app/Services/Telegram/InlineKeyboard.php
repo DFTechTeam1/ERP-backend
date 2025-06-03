@@ -2,13 +2,14 @@
 
 namespace App\Services\Telegram;
 
-class InlineKeyboard {
+class InlineKeyboard
+{
     private $keyboard;
 
     public function __construct()
     {
         $this->keyboard = [
-            'inline_keyboard' => []
+            'inline_keyboard' => [],
         ];
     }
 
@@ -16,7 +17,7 @@ class InlineKeyboard {
     {
         $items = [
             'text' => $text,
-            'callback_data' => $callback
+            'callback_data' => $callback,
         ];
 
         array_push(
@@ -37,11 +38,11 @@ class InlineKeyboard {
 
         if ($isWebApp) {
             $items['web_app'] = [
-                'url' => $url
+                'url' => $url,
             ];
         }
 
-        if (!empty($url)) {
+        if (! empty($url)) {
             $items['url'] = $url;
         }
 
@@ -50,7 +51,6 @@ class InlineKeyboard {
             [$items]
         );
     }
-
 
     public function render()
     {

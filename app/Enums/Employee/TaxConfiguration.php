@@ -11,10 +11,9 @@ enum TaxConfiguration: int
     public function label()
     {
         return match ($this) {
-            static::Gross => 'Taxable',
-            static::GrossUp => 'Non-Taxable',
-            static::Netto => 'Netto'
+            self::Gross => 'Taxable',
+            self::GrossUp => 'Non-Taxable',
+            self::Netto => 'Netto'
         };
     }
-
 }

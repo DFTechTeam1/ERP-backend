@@ -3,8 +3,8 @@
 namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -35,7 +35,7 @@ class ProjectDeal extends Model
         'latitude',
         'equipment_type',
         'is_high_season',
-        'status'
+        'status',
     ];
 
     // protected static function newFactory(): ProjectDealFactory
@@ -45,14 +45,14 @@ class ProjectDeal extends Model
 
     protected $casts = [
         'event_type' => \App\Enums\Production\EventType::class,
-        'equipment_type' => \App\Enums\Production\EquipmentType::class
+        'equipment_type' => \App\Enums\Production\EquipmentType::class,
     ];
 
     public function ledDetail(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => $value ? json_decode($value, true) : null,
-            set: fn($value) => $value ? json_encode($value) : null
+            get: fn ($value) => $value ? json_decode($value, true) : null,
+            set: fn ($value) => $value ? json_encode($value) : null
         );
     }
 

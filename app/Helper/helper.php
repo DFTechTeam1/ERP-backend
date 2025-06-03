@@ -2,31 +2,29 @@
 
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
-use App\Exceptions\UserNotFound;
-use Modules\Hrd\Services\TalentaService;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
 use Modules\Hrd\Models\Employee;
-use Modules\Production\Models\Customer;
+use Modules\Hrd\Services\TalentaService;
 use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
-if (!function_exists('isLocal')) {
+if (! function_exists('isLocal')) {
     function isLocal()
     {
         return App::environment('local') && config('app.url') == 'https://backend.test';
     }
 }
 
-if (!function_exists('setEmailConfiguration')) {
+if (! function_exists('setEmailConfiguration')) {
     function setEmailConfiguration()
     {
         config([
@@ -42,14 +40,13 @@ if (!function_exists('setEmailConfiguration')) {
     }
 }
 
-if (!function_exists('successResponse')) {
+if (! function_exists('successResponse')) {
     function generalResponse(
         string $message,
         $error = false,
         array $data = [],
         int $code = 201
-    ): array
-    {
+    ): array {
         return [
             'error' => $error,
             'message' => $message,
@@ -59,8 +56,9 @@ if (!function_exists('successResponse')) {
     }
 }
 
-if (!function_exists('errorMessage')) {
-    function errorMessage($message) {
+if (! function_exists('errorMessage')) {
+    function errorMessage($message)
+    {
         $arr = ['App\Exceptions\TemplateNotValid'];
 
         if ($message instanceof Throwable) {
@@ -72,7 +70,7 @@ if (!function_exists('errorMessage')) {
                 if ($file != '.' && $file != '..') {
                     $name = explode('.php', $file);
 
-                    $path = "App\Exceptions\\" . $name[0];
+                    $path = "App\Exceptions\\".$name[0];
                     $outputFiles[] = $path;
                 }
             }
@@ -81,19 +79,19 @@ if (!function_exists('errorMessage')) {
                 $out = $message->getMessage();
             } else {
                 if (config('app.env') == 'local' || config('app.env') == 'testing') {
-                    $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
+                    $out = 'Error: '.$message->getMessage().', at line '.$message->getLine().'. Check file '.$message->getFile();
                     $messageError = $out;
                 } else {
                     $out = __('global.failedProcessingData');
                 }
             }
-        } else if (($message instanceof Throwable) && config('app.env') == 'local') {
+        } elseif (($message instanceof Throwable) && config('app.env') == 'local') {
             logging('error: ', [$message]);
-            $out = "Error: " . $message->getMessage() . ', at line ' . $message->getLine() . '. Check file ' . $message->getFile();
-        } else if (($message instanceof Throwable) && config('app.env') != 'local') {
+            $out = 'Error: '.$message->getMessage().', at line '.$message->getLine().'. Check file '.$message->getFile();
+        } elseif (($message instanceof Throwable) && config('app.env') != 'local') {
             logging('error: ', [$message]);
             $out = __('global.failedProcessingData');
-        } else if (!$message instanceof Throwable) {
+        } elseif (! $message instanceof Throwable) {
             logging('error: ', [$message]);
             $out = $message;
         }
@@ -102,7 +100,6 @@ if (!function_exists('errorMessage')) {
         //     $exceptions = File::get(base_path('exceptions.json'));
         //     $exceptionArray = json_decode($exceptions, true);
         //     $arrayKeys = array_keys($exceptionArray);
-
 
         //     foreach ($arrayKeys as $exception) {
         //         $check = "\\App\\Exceptions\\{$exception}";
@@ -118,7 +115,7 @@ if (!function_exists('errorMessage')) {
     }
 }
 
-if (!function_exists('apiResponse')) {
+if (! function_exists('apiResponse')) {
     function apiResponse(array $payload): JsonResponse
     {
         if ($payload['code'] == 422) {
@@ -135,10 +132,10 @@ if (!function_exists('apiResponse')) {
     }
 }
 
-if (!function_exists('errorResponse')) {
+if (! function_exists('errorResponse')) {
     function errorResponse($message, array $data = [], $code = null)
     {
-        $code = !$code ? Code::BadRequest->value : $code;
+        $code = ! $code ? Code::BadRequest->value : $code;
 
         return generalResponse(
             errorMessage($message),
@@ -149,11 +146,11 @@ if (!function_exists('errorResponse')) {
     }
 }
 
-if (!function_exists('createQr')) {
+if (! function_exists('createQr')) {
     function createQr($payload)
     {
         $option = new QROptions;
-        $option->version      = 7;
+        $option->version = 7;
         // $option->outputBase64 = false;
 
         $qrcode = (new QRCode($option))->render($payload);
@@ -162,20 +159,21 @@ if (!function_exists('createQr')) {
     }
 }
 
-if (!function_exists('generateQrcode')) {
-    function generateQrcode($payload, string $filename) {
+if (! function_exists('generateQrcode')) {
+    function generateQrcode($payload, string $filename)
+    {
         $explode = explode('/', $filename);
 
         array_pop($explode);
 
         $path = implode('/', $explode);
 
-         if (!is_dir(storage_path("app/public/{$path}"))) {
-             mkdir(storage_path("app/public/{$path}"), 0777, true);
-         }
-//        \Illuminate\Support\Facades\Storage::makeDirectory($path);
+        if (! is_dir(storage_path("app/public/{$path}"))) {
+            mkdir(storage_path("app/public/{$path}"), 0777, true);
+        }
+        //        \Illuminate\Support\Facades\Storage::makeDirectory($path);
 
-        $fullpath = storage_path('app/public/' . $filename);
+        $fullpath = storage_path('app/public/'.$filename);
 
         $from = [255, 0, 0];
         $to = [0, 0, 255];
@@ -192,32 +190,33 @@ if (!function_exists('generateQrcode')) {
     }
 }
 
-if (!function_exists('getIdFromUid')) {
+if (! function_exists('getIdFromUid')) {
     function getIdFromUid(string $uid, $model)
     {
         $data = $model->select('id')
-            ->where("uid", $uid)
+            ->where('uid', $uid)
             ->first();
 
         return $data ? $data->id : 0;
     }
 }
 
-if (!function_exists('getSlug')) {
+if (! function_exists('getSlug')) {
     function getSlug(string $param)
     {
         $slugString = preg_replace('/[^a-zA-Z0-9\']/', '', $param);
         $slugString = str_replace("'", '', $slugString);
         $slugExplode = str_split($slugString);
 
-        $slug = count($slugExplode) > 2 ? $slugExplode[0] . $slugExplode[1] . $slugExplode[2] : $slugExplode[0] . $slugExplode[1];
+        $slug = count($slugExplode) > 2 ? $slugExplode[0].$slugExplode[1].$slugExplode[2] : $slugExplode[0].$slugExplode[1];
 
         return strtolower($slug);
     }
 }
 
-if (!function_exists('uploadFile')) {
-    function uploadFile(string $path, $file) {
+if (! function_exists('uploadFile')) {
+    function uploadFile(string $path, $file)
+    {
         try {
             $ext = $file->getClientOriginalExtension();
             $datetime = date('YmdHis');
@@ -236,8 +235,9 @@ if (!function_exists('uploadFile')) {
     }
 }
 
-if (!function_exists('uploadAddon')) {
-    function uploadAddon($file) {
+if (! function_exists('uploadAddon')) {
+    function uploadAddon($file)
+    {
         try {
             $mime = $file->getClientMimeType();
             Log::debug('mime in uploadAddon function: ', [$mime]);
@@ -274,13 +274,12 @@ if (!function_exists('uploadAddon')) {
     }
 }
 
-if (!function_exists('uploadImage')) {
+if (! function_exists('uploadImage')) {
     function uploadImage(
         $image,
         string $folderName,
         bool $isOriginalName = false
-    )
-    {
+    ) {
         // sanitize
         $folderName = strtolower(implode('_', explode(' ', $folderName)));
 
@@ -302,7 +301,7 @@ if (!function_exists('uploadImage')) {
     }
 }
 
-if (!function_exists('uploadImageandCompress')) {
+if (! function_exists('uploadImageandCompress')) {
     function uploadImageandCompress(
         string $path,
         int $compressValue,
@@ -314,20 +313,20 @@ if (!function_exists('uploadImageandCompress')) {
 
             $ext = $image->getClientOriginalExtension();
             $originalName = 'image';
-            $datetime = strtotime('now') . random_int(1,8);
+            $datetime = strtotime('now').random_int(1, 8);
 
             $name = "{$originalName}_{$datetime}.{$extTarget}";
 
             // create file
-            if (!is_dir($path)) {
+            if (! is_dir($path)) {
                 File::makeDirectory($path, 0777, true);
             }
 
-            $filepath = $path . '/' . $name;
+            $filepath = $path.'/'.$name;
 
-    //        Image::read($image)->toWebp($compressValue)->save($filepath);
+            //        Image::read($image)->toWebp($compressValue)->save($filepath);
 
-            $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver());
+            $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver);
             $newImage = $imageManager->read($image);
             $newImage->scale(height: 400);
             $newImage->toWebp(60);
@@ -336,24 +335,26 @@ if (!function_exists('uploadImageandCompress')) {
             return $name;
         } catch (\Throwable $th) {
             errorMessage($th);
+
             return false;
         }
     }
 }
 
-if (!function_exists('deleteImage')) {
-    function deleteImage($path) {
+if (! function_exists('deleteImage')) {
+    function deleteImage($path)
+    {
         if (File::exists($path)) {
             unlink($path);
         }
     }
 }
 
-if (!function_exists('deleteFolder')) {
+if (! function_exists('deleteFolder')) {
     function deleteFolder(string $path)
     {
         if (is_dir($path)) {
-            $files = glob($path . '/*', GLOB_MARK);
+            $files = glob($path.'/*', GLOB_MARK);
             if (count($files) > 0) {
                 foreach ($files as $file) {
                     unlink($file);
@@ -365,7 +366,7 @@ if (!function_exists('deleteFolder')) {
     }
 }
 
-if (!function_exists('generateRandomPassword')) {
+if (! function_exists('generateRandomPassword')) {
     function generateRandomPassword($length = 10)
     {
         $char = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -374,11 +375,12 @@ if (!function_exists('generateRandomPassword')) {
         for ($i = 0; $i < $length; $i++) {
             $password .= $char[random_int(0, $charLen - 1)];
         }
+
         return $password;
     }
 }
 
-if (!function_exists('generateRandomSymbol')) {
+if (! function_exists('generateRandomSymbol')) {
     function generateRandomSymbol()
     {
         $length = 1;
@@ -388,16 +390,18 @@ if (!function_exists('generateRandomSymbol')) {
         for ($i = 0; $i < $length; $i++) {
             $symbol .= $char[random_int(0, $charLen - 1)];
         }
+
         return $symbol;
     }
 }
 
-if (!function_exists('getSetting')) {
-    function getSetting($code = '') {
+if (! function_exists('getSetting')) {
+    function getSetting($code = '')
+    {
         $data = \Illuminate\Support\Facades\Cache::get('setting');
 
         $out = $data;
-        if (!empty($code)) {
+        if (! empty($code)) {
             $out = collect($data)->where('code', $code)->toArray();
         }
 
@@ -405,8 +409,9 @@ if (!function_exists('getSetting')) {
     }
 }
 
-if (!function_exists('getSettingByKey')) {
-    function getSettingByKey($key) {
+if (! function_exists('getSettingByKey')) {
+    function getSettingByKey($key)
+    {
         $data = \Illuminate\Support\Facades\Cache::get('setting');
 
         $data = collect($data)->where('key', $key)->values();
@@ -415,11 +420,12 @@ if (!function_exists('getSettingByKey')) {
     }
 }
 
-if (!function_exists('cachingSetting')) {
-    function cachingSetting() {
+if (! function_exists('cachingSetting')) {
+    function cachingSetting()
+    {
         $setting = Cache::get('setting');
 
-        if (!$setting) {
+        if (! $setting) {
             Cache::rememberForever('setting', function () {
                 $data = \Modules\Company\Models\Setting::get();
 
@@ -429,32 +435,35 @@ if (!function_exists('cachingSetting')) {
     }
 }
 
-if (!function_exists('storeCache')) {
-    function storeCache(string $key, $value, $ttl = 60 * 60 * 6) {
+if (! function_exists('storeCache')) {
+    function storeCache(string $key, $value, $ttl = 60 * 60 * 6)
+    {
         Cache::put($key, $value, $ttl);
     }
 }
 
-if (!function_exists('clearCache')) {
-    function clearCache(string $cacheId) {
+if (! function_exists('clearCache')) {
+    function clearCache(string $cacheId)
+    {
         Cache::forget($cacheId);
     }
 }
 
-if (!function_exists('getCache')) {
-    function getCache(string $cacheId) {
+if (! function_exists('getCache')) {
+    function getCache(string $cacheId)
+    {
         return Cache::get($cacheId);
     }
 }
 
-if (!function_exists('curlRequest')) {
+if (! function_exists('curlRequest')) {
     function curlRequest(string $url, array $payload)
     {
         $curl = curl_init();
 
-        curl_setopt_array($curl, array(
+        curl_setopt_array($curl, [
             CURLOPT_URL => $url,
-            CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
+            CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*'],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
@@ -463,7 +472,7 @@ if (!function_exists('curlRequest')) {
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'GET',
             CURLOPT_POSTFIELDS => $payload,
-        ));
+        ]);
 
         $response = curl_exec($curl);
 
@@ -473,8 +482,9 @@ if (!function_exists('curlRequest')) {
     }
 }
 
-if (!function_exists('logging')) {
-    function logging($key, array $value) {
+if (! function_exists('logging')) {
+    function logging($key, array $value)
+    {
         if ($key == 'error: ') {
             \Illuminate\Support\Facades\Log::error($key, $value);
         } else {
@@ -483,18 +493,20 @@ if (!function_exists('logging')) {
     }
 }
 
-if (!function_exists('getUserByRole')) {
-    function getUserByRole(string $roleName) {
+if (! function_exists('getUserByRole')) {
+    function getUserByRole(string $roleName)
+    {
         $users = \App\Models\User::whereHas('roles', function (\Illuminate\Database\Eloquent\Builder $query) use ($roleName) {
-            $query->whereRaw("LOWER(name) = '" . $roleName . "'");
+            $query->whereRaw("LOWER(name) = '".$roleName."'");
         })->get();
 
         return $users;
     }
 }
 
-if (!function_exists('getPicOfInventory')) {
-    function getPicOfInventory() {
+if (! function_exists('getPicOfInventory')) {
+    function getPicOfInventory()
+    {
         $users = getUserByRole('it support');
         // check permission
 
@@ -513,8 +525,9 @@ if (!function_exists('getPicOfInventory')) {
     }
 }
 
-if (!function_exists('isSuperUserRole')) {
-    function isSuperUserRole() {
+if (! function_exists('isSuperUserRole')) {
+    function isSuperUserRole()
+    {
         $role = getSettingByKey('super_user_role');
 
         $userRoles = auth()->user()->roles;
@@ -529,9 +542,10 @@ if (!function_exists('isSuperUserRole')) {
     }
 }
 
-if (!function_exists('isHrdRole')) {
-    function isHrdRole() {
-        $role = \Illuminate\Support\Facades\DB::table("roles")
+if (! function_exists('isHrdRole')) {
+    function isHrdRole()
+    {
+        $role = \Illuminate\Support\Facades\DB::table('roles')
             ->whereRaw("lower(name) = 'hrd'")
             ->first();
 
@@ -551,10 +565,11 @@ if (!function_exists('isHrdRole')) {
     }
 }
 
-if (!function_exists('isProjectPIC')) {
-    function isProjectPIC($projectId, int $employeeId) {
+if (! function_exists('isProjectPIC')) {
+    function isProjectPIC($projectId, int $employeeId)
+    {
         if (gettype($projectId) == 'string') {
-            $projectId = getIdFromUid($projectId, new \Modules\Production\Models\Project());
+            $projectId = getIdFromUid($projectId, new \Modules\Production\Models\Project);
         }
 
         $projectData = \Modules\Production\Models\ProjectPersonInCharge::select('id')
@@ -566,50 +581,55 @@ if (!function_exists('isProjectPIC')) {
     }
 }
 
-if (!function_exists('isEmployee')) {
-    function isEmployee() {
+if (! function_exists('isEmployee')) {
+    function isEmployee()
+    {
         $user = auth()->user();
 
         return $user->is_employee;
     }
 }
 
-if (!function_exists('isDirector')) {
+if (! function_exists('isDirector')) {
     /**
      * Function to check logged user as a director or not
      * THis check by employee position
      *
-     * @return boolean
+     * @return bool
      */
-    function isDirector() {
+    function isDirector()
+    {
         return auth()->user()->hasRole(BaseRole::Director->value);
     }
 }
 
-if (!function_exists('isItSupport')) {
-    function isItSupport() {
+if (! function_exists('isItSupport')) {
+    function isItSupport()
+    {
         return auth()->user()->hasRole(BaseRole::ItSupport->value);
     }
 }
 
-if (!function_exists('snakeToCamel')) {
-    function snakeToCamel(string $word) {
+if (! function_exists('snakeToCamel')) {
+    function snakeToCamel(string $word)
+    {
         return lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $word))));
     }
 }
 
-if (!function_exists('generateSequenceNumber')) {
-    function generateSequenceNumber($number, $length = 4) {
+if (! function_exists('generateSequenceNumber')) {
+    function generateSequenceNumber($number, $length = 4)
+    {
         return str_pad($number, $length, 0, STR_PAD_LEFT);
     }
 }
 
-if (!function_exists('formatNotifications')) {
+if (! function_exists('formatNotifications')) {
     function formatNotifications(array $payload)
     {
         $output = [];
         foreach ($payload as $notification) {
-            if (!$notification['read_at']) {
+            if (! $notification['read_at']) {
                 $output[] = [
                     'id' => $notification['id'],
                     'message' => $notification['data']['message'],
@@ -624,13 +644,14 @@ if (!function_exists('formatNotifications')) {
     }
 }
 
-if (!function_exists('parseUserAgent')) {
-    function parseUserAgent($userAgent) {
+if (! function_exists('parseUserAgent')) {
+    function parseUserAgent($userAgent)
+    {
         $browser = 'Unknown';
         $os = 'Unknown';
 
         // Detect browser
-        if (!App::runningInConsole()) {
+        if (! App::runningInConsole()) {
             if (strpos($userAgent, 'Firefox') !== false) {
                 $browser = 'Firefox';
             } elseif (strpos($userAgent, 'Chrome') !== false) {
@@ -659,21 +680,23 @@ if (!function_exists('parseUserAgent')) {
     }
 }
 
-if (!function_exists('getUserAgentInfo')) {
-    function getUserAgentInfo() {
+if (! function_exists('getUserAgentInfo')) {
+    function getUserAgentInfo()
+    {
         return App::runningInConsole() ? '' : $_SERVER['HTTP_USER_AGENT'];
     }
 }
 
-if (!function_exists('getClientIp')) {
-    function getClientIp() {
+if (! function_exists('getClientIp')) {
+    function getClientIp()
+    {
 
         $ip = '';
-        if (!App::runningInConsole()) {
-            if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        if (! App::runningInConsole()) {
+            if (! empty($_SERVER['HTTP_CLIENT_IP'])) {
                 // Check for IP from shared internet
                 $ip = $_SERVER['HTTP_CLIENT_IP'];
-            } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            } elseif (! empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
                 // Check for IP from a proxy
                 $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
             } else {
@@ -681,11 +704,12 @@ if (!function_exists('getClientIp')) {
                 $ip = $_SERVER['REMOTE_ADDR'];
             }
         }
+
         return $ip;
     }
 }
 
-if (!function_exists('getLengthOfService')) {
+if (! function_exists('getLengthOfService')) {
     function getLengthOfService(string $startDate)
     {
         $start = new DateTime($startDate);
@@ -697,21 +721,22 @@ if (!function_exists('getLengthOfService')) {
         $month = $diff->m;
         $day = $diff->d;
 
-        $text = $day . ' ' . __("global.day");
+        $text = $day.' '.__('global.day');
         if ($month != 0) {
-            $text = $month . ' ' . __('global.month') . ' ' . $text;
+            $text = $month.' '.__('global.month').' '.$text;
         }
 
         if ($year != 0) {
-            $text = $year . ' ' . __("global.year") . ' ' . $text;
+            $text = $year.' '.__('global.year').' '.$text;
         }
 
         return $text;
     }
 }
 
-if (!function_exists('removeDuplicateArray')) {
-    function removeDuplicateArray(array $arr) {
+if (! function_exists('removeDuplicateArray')) {
+    function removeDuplicateArray(array $arr)
+    {
         $serialized = array_map('serialize', $arr);
 
         $unique = array_unique($serialized);
@@ -722,8 +747,9 @@ if (!function_exists('removeDuplicateArray')) {
     }
 }
 
-if (!function_exists('isAssistantPMRole')) {
-    function isAssistantPMRole() {
+if (! function_exists('isAssistantPMRole')) {
+    function isAssistantPMRole()
+    {
         $user = auth()->user();
 
         $out = false;
@@ -735,8 +761,9 @@ if (!function_exists('isAssistantPMRole')) {
     }
 }
 
-if (!function_exists('formatSearchConditions')) {
-    function formatSearchConditions(array $filters, string $where) {
+if (! function_exists('formatSearchConditions')) {
+    function formatSearchConditions(array $filters, string $where)
+    {
         if (empty($where)) {
             $where = '';
         }
@@ -750,45 +777,45 @@ if (!function_exists('formatSearchConditions')) {
 
             if ($data['condition'] == 'contain') {
                 if (gettype($value) == 'array') {
-                    $condition = " in ";
+                    $condition = ' in ';
                     $valueString = implode(',', $value);
                     $value = "({$valueString})";
                 } else {
-                    $condition = " like ";
+                    $condition = ' like ';
                     $value = "'%{$value}%'";
                 }
 
-            } else if ($data['condition'] == 'not_contain') {
+            } elseif ($data['condition'] == 'not_contain') {
                 $condition = ' not like ';
                 $value = "'%{$value}%'";
-            } else if ($data['condition'] == 'equal') {
+            } elseif ($data['condition'] == 'equal') {
                 $condition = ' = ';
-            } else if ($data['condition'] == 'not_equal') {
+            } elseif ($data['condition'] == 'not_equal') {
                 $condition = ' != ';
-            } else if ($data['condition'] == 'more_than') {
-                $condition = " >= ";
+            } elseif ($data['condition'] == 'more_than') {
+                $condition = ' >= ';
             }
 
             $connector = $data['type'] ?? 'and';
-            $where .= $data['field'] . $condition . $value . " {$connector} ";
+            $where .= $data['field'].$condition.$value." {$connector} ";
         }
-        $where = rtrim($where, " and");
-        $where = rtrim($where, " or");
+        $where = rtrim($where, ' and');
+        $where = rtrim($where, ' or');
 
         return $where;
     }
 }
 
-if (!function_exists('uploadBase64')) {
+if (! function_exists('uploadBase64')) {
     function uploadBase64(string $base64Image, string $path)
     {
         // Decode the base64 string
-        $imageParts = explode(";base64,", $base64Image);
+        $imageParts = explode(';base64,', $base64Image);
         if (count($imageParts) != 2) {
             return null;
         }
 
-        $imageTypeAux = explode("image/", $imageParts[0]);
+        $imageTypeAux = explode('image/', $imageParts[0]);
         if (count($imageTypeAux) != 2) {
             return null;
         }
@@ -797,10 +824,10 @@ if (!function_exists('uploadBase64')) {
         $imageBase64 = base64_decode($imageParts[1]);
 
         // Create a unique file name
-        $fileName = uniqid() . '.' . $imageType;
+        $fileName = uniqid().'.'.$imageType;
 
         // Define the storage path
-        $filePath = $path . '/' . $fileName;
+        $filePath = $path.'/'.$fileName;
 
         // Save the image using Laravel's Storage facade
         \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $imageBase64);
@@ -809,18 +836,18 @@ if (!function_exists('uploadBase64')) {
     }
 }
 
-if (!function_exists('generateBarcode')) {
+if (! function_exists('generateBarcode')) {
     function generateBarcode(string $code, string $path)
     {
-        $realPath = storage_path('app/public/' . $path);
-        $service = new \Milon\Barcode\DNS1D();
-        if (!is_dir($realPath)) {
+        $realPath = storage_path('app/public/'.$path);
+        $service = new \Milon\Barcode\DNS1D;
+        if (! is_dir($realPath)) {
             mkdir($realPath, 0777, true);
         }
         $service->setStorPath($realPath);
 
         $barcode = $service->getBarcodePNGPath($code, 'PDF417');
-        if (!$barcode) {
+        if (! $barcode) {
             return null;
         }
 
@@ -828,44 +855,46 @@ if (!function_exists('generateBarcode')) {
     }
 }
 
-
-if (!function_exists('getStructureNasFolder')) {
-    function getStructureNasFolder(): array {
+if (! function_exists('getStructureNasFolder')) {
+    function getStructureNasFolder(): array
+    {
         return [
-            "{year}/{format_name}/Brief",
-            "{year}/{format_name}/Asset_3D",
-            "{year}/{format_name}/Asset_Footage",
-            "{year}/{format_name}/Asset_Render",
-            "{year}/{format_name}/Final_Render",
-            "{year}/{format_name}/Aseet_Sementara",
-            "{year}/{format_name}/Preview",
-            "{year}/{format_name}/Sketsa",
-            "{year}/{format_name}/TC",
-            "{year}/{format_name}/Raw",
-            "{year}/{format_name}/Audio",
+            '{year}/{format_name}/Brief',
+            '{year}/{format_name}/Asset_3D',
+            '{year}/{format_name}/Asset_Footage',
+            '{year}/{format_name}/Asset_Render',
+            '{year}/{format_name}/Final_Render',
+            '{year}/{format_name}/Aseet_Sementara',
+            '{year}/{format_name}/Preview',
+            '{year}/{format_name}/Sketsa',
+            '{year}/{format_name}/TC',
+            '{year}/{format_name}/Raw',
+            '{year}/{format_name}/Audio',
         ];
     }
 }
 
-if (!function_exists('MonthInBahasa')) {
-    function MonthInBahasa($search = ''): array|string {
+if (! function_exists('MonthInBahasa')) {
+    function MonthInBahasa($search = ''): array|string
+    {
         $months = ['Januari', 'Febuari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-        if (!empty($search)) {
+        if (! empty($search)) {
             $explode = str_split($search);
             if ($explode[0] == 0) {
                 $search = $explode[1];
             }
 
-            $months = $months[$search -1];
+            $months = $months[$search - 1];
         }
 
         return $months;
     }
 }
 
-if (!function_exists('stringToPascalSnakeCase')) {
-    function stringToPascalSnakeCase($string) {
+if (! function_exists('stringToPascalSnakeCase')) {
+    function stringToPascalSnakeCase($string)
+    {
         // Remove special characters except spaces and apostrophes
         $string = preg_replace('/[^a-zA-Z0-9\s\']/', '', $string);
 
@@ -879,7 +908,7 @@ if (!function_exists('stringToPascalSnakeCase')) {
     }
 }
 
-if (!function_exists('checkForeignKey')) {
+if (! function_exists('checkForeignKey')) {
     function checkForeignKey($tableName, $columnName)
     {
         return \Illuminate\Support\Facades\DB::table('information_schema.KEY_COLUMN_USAGE')
@@ -891,7 +920,7 @@ if (!function_exists('checkForeignKey')) {
     }
 }
 
-if (!function_exists('putTelegramSession')) {
+if (! function_exists('putTelegramSession')) {
     function putTelegramSession(string $chatId, mixed $value)
     {
         $check = \Modules\Telegram\Models\TelegramSession::select('*')
@@ -909,12 +938,12 @@ if (!function_exists('putTelegramSession')) {
         \Modules\Telegram\Models\TelegramSession::create([
             'chat_id' => $chatId,
             'value' => $value,
-            'status' => 1
+            'status' => 1,
         ]);
     }
 }
 
-if (!function_exists('getTelegramSession')) {
+if (! function_exists('getTelegramSession')) {
     function getTelegramSession(string $chatId)
     {
         $data = TelegramSession::select('*')
@@ -926,7 +955,7 @@ if (!function_exists('getTelegramSession')) {
     }
 }
 
-if (!function_exists('destroyTelegramSession')) {
+if (! function_exists('destroyTelegramSession')) {
     function destroyTelegramSession(string $chatId, string $value)
     {
         TelegramSession::where('chat_id', $chatId)
@@ -934,23 +963,23 @@ if (!function_exists('destroyTelegramSession')) {
     }
 }
 
-if (!function_exists('loggingProject')) {
-    function loggingProject(mixed $projectId, string $message) {
-
-    }
+if (! function_exists('loggingProject')) {
+    function loggingProject(mixed $projectId, string $message) {}
 }
 
-if (!function_exists('generateRandomColor')) {
-    function generateRandomColor(string $email) {
+if (! function_exists('generateRandomColor')) {
+    function generateRandomColor(string $email)
+    {
         $hash = md5($email);
 
-        return '#' . substr($hash, 0, 6);
+        return '#'.substr($hash, 0, 6);
     }
 }
 
-if (!function_exists('getTalentaUserIdByEmail')) {
-    function getTalentaUserByEmail(string $email) {
-        $talenta = new TalentaService();
+if (! function_exists('getTalentaUserIdByEmail')) {
+    function getTalentaUserByEmail(string $email)
+    {
+        $talenta = new TalentaService;
         $talenta->setUrl(type: 'all_employee');
         $talenta->setUrlParams(params: ['email' => $email]);
         $response = $talenta->makeRequest();
@@ -970,11 +999,12 @@ if (!function_exists('getTalentaUserIdByEmail')) {
 /**
  * Define authorized user is has a super power or not
  *
- * @param int $projectId
- * @return boolean
+ * @param  int  $projectId
+ * @return bool
  */
-if (!function_exists('hasSuperPower')) {
-    function hasSuperPower(int $projectId): bool {
+if (! function_exists('hasSuperPower')) {
+    function hasSuperPower(int $projectId): bool
+    {
         $user = auth()->user();
         $employeeId = $user->employee_id;
         $isProjectPic = isProjectPIC($projectId, $employeeId);
@@ -988,16 +1018,17 @@ if (!function_exists('hasSuperPower')) {
  * Define user have just LITTLE POWER or not
  * This LITTLE POWER IS SAME WITH LEAD MODELER POSITION
  *
- * @param object $taskPics
- * @return boolean
+ * @param  object  $taskPics
+ * @return bool
  */
-if (!function_exists('hasLittlePower')) {
-    function hasLittlePower(object $task): bool {
+if (! function_exists('hasLittlePower')) {
+    function hasLittlePower(object $task): bool
+    {
         $taskPics = $task['pics'];
 
         $user = auth()->user();
         $leadModeller = getSettingByKey('lead_3d_modeller');
-        $leadModeller = getIdFromUid($leadModeller, new Employee());
+        $leadModeller = getIdFromUid($leadModeller, new Employee);
 
         $output = (bool) ($leadModeller) &&
         (
@@ -1005,13 +1036,15 @@ if (!function_exists('hasLittlePower')) {
             $leadModeller == $user->employee_id
         );
 
-        if ($user->employee_id == $leadModeller && $task['is_modeler_task']) $output = true;
+        if ($user->employee_id == $leadModeller && $task['is_modeler_task']) {
+            $output = true;
+        }
 
         return $output;
     }
 }
 
-if (!function_exists('applyNestedWhereHas')) {
+if (! function_exists('applyNestedWhereHas')) {
     function applyNestedWhereHas($query, array $relations)
     {
         foreach ($relations as $relation => $constraintOrNested) {
@@ -1022,14 +1055,15 @@ if (!function_exists('applyNestedWhereHas')) {
                     applyNestedWhereHas($q, $constraintOrNested);
                 });
             }
-        };
+        }
     }
 }
 
-if (!function_exists('getPriceSetting')) {
-    function getPriceSetting() {
+if (! function_exists('getPriceSetting')) {
+    function getPriceSetting()
+    {
         $settings = \Modules\Company\Models\Setting::selectRaw('key,value')
-            ->whereIn("key", [
+            ->whereIn('key', [
                 'discount_type',
                 'discount',
                 'markup_type',
@@ -1037,19 +1071,20 @@ if (!function_exists('getPriceSetting')) {
                 'high_season_type',
                 'high_season',
                 'equipment_type',
-                'equipment'
+                'equipment',
             ])
             ->get();
 
         $output = [];
         foreach ($settings as $setting) {
-            
+
         }
     }
 }
 
-if (!function_exists('setPriceGuideSetting')) {
-    function setPriceGuideSetting() {
+if (! function_exists('setPriceGuideSetting')) {
+    function setPriceGuideSetting()
+    {
         $keys = [
             'discount_type',
             'discount',
@@ -1058,13 +1093,13 @@ if (!function_exists('setPriceGuideSetting')) {
             'high_season_type',
             'high_season',
             'equipment_type',
-            'equipment'
+            'equipment',
         ];
-        $settingRepo = new \Modules\Company\Repository\SettingRepository();
+        $settingRepo = new \Modules\Company\Repository\SettingRepository;
 
         $settings = $settingRepo->list(
-            select: "`key`, `value`",
-            where: "`key` IN ('" . implode("','", $keys) . "')"
+            select: '`key`, `value`',
+            where: "`key` IN ('".implode("','", $keys)."')"
         );
 
         // $settings = \Illuminate\Support\Facades\Cache::rememberForever(\App\Enums\Cache\CacheKey::PriceGuideSetting->value, function () use ($data) {
@@ -1078,7 +1113,7 @@ if (!function_exists('setPriceGuideSetting')) {
             return $filter->key == 'high_season';
         })->values()[0]->value;
 
-        $equipmentValue = $settings->filter(function($filter) {
+        $equipmentValue = $settings->filter(function ($filter) {
             return $filter->key == 'equipment';
         })->values()[0]->value;
 
@@ -1087,13 +1122,13 @@ if (!function_exists('setPriceGuideSetting')) {
         })->values()->map(function ($guide) {
             return [
                 'id' => $guide->value,
-                'text' => $guide->key
+                'text' => $guide->key,
             ];
         })->toArray();
 
         // main led formula
-        $mainLedFormula = "{total_main_led}*{area_price_guide}";
-        $prefuncLedFormula = "{total_prefunc_led}*{area_price_guide}";
+        $mainLedFormula = '{total_main_led}*{area_price_guide}';
+        $prefuncLedFormula = '{total_prefunc_led}*{area_price_guide}';
         $highSeasonFormula = "{total_led_price}*{$highSeasonValue}/100"; // as percentage
         if ($highSeasonType == 'fix') {
             $highSeasonFormula = $highSeasonValue;
@@ -1105,19 +1140,19 @@ if (!function_exists('setPriceGuideSetting')) {
             'mainLedFormula' => $mainLedFormula,
             'prefuncLedFormula' => $prefuncLedFormula,
             'highSeasonFormula' => $highSeasonFormula,
-            'equipmentFormula' => $equipmentFormula
+            'equipmentFormula' => $equipmentFormula,
         ];
     }
 }
 
-if (!function_exists('getPriceGuideSetting')) {
-    function getPriceGuideSetting() {
+if (! function_exists('getPriceGuideSetting')) {
+    function getPriceGuideSetting()
+    {
         $settings = \Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::PriceGuideSetting->value);
 
-        if (!$settings) {
+        if (! $settings) {
             $settings = setPriceGuideSetting();
         }
 
-        
     }
 }

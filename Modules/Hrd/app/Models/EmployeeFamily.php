@@ -6,11 +6,10 @@ use App\Enums\Employee\Gender;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\RelationFamily;
 use App\Enums\Employee\Religion;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Hrd\Database\Factories\EmployeeFamilyFactory;
-use \App\Traits\ModelObserver;
+use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class EmployeeFamily extends Model
 {
@@ -37,7 +36,7 @@ class EmployeeFamily extends Model
         'gender_text',
         'religion_text',
         'martial_status_text',
-        'relationship_text'
+        'relationship_text',
     ];
 
     public function genderText(): Attribute
@@ -53,7 +52,7 @@ class EmployeeFamily extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
@@ -70,7 +69,7 @@ class EmployeeFamily extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
@@ -87,7 +86,7 @@ class EmployeeFamily extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
@@ -104,7 +103,7 @@ class EmployeeFamily extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 }

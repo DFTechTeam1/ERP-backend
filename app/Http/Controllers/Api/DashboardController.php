@@ -17,8 +17,7 @@ class DashboardController extends Controller
     public function __construct(
         \App\Services\DashboardService $service,
         EmployeeService $employeeService
-    )
-    {
+    ) {
         $this->service = $service;
 
         $this->employeeService = $employeeService;
@@ -49,8 +48,6 @@ class DashboardController extends Controller
 
     /**
      * Get project list to be displayed in frontend calendar
-     *
-     * @return JsonResponse
      */
     public function getProjectCalendar(): JsonResponse
     {
@@ -105,8 +102,6 @@ class DashboardController extends Controller
     /**
      * Function to get all logs
      * This function is only for email account that already registered in the config/allowed_email.php
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getLogs(): \Illuminate\Http\JsonResponse
     {
@@ -120,7 +115,7 @@ class DashboardController extends Controller
 
             return apiResponse(
                 generalResponse(
-                    message: "Success",
+                    message: 'Success',
                     data: $output
                 )
             );
@@ -139,7 +134,7 @@ class DashboardController extends Controller
         $path = storage_path("logs/laravel-{$date}.log");
         if (file_exists($path)) {
             $file = fopen($path, 'r');
-            while(($line = fgets($file)) != false) {
+            while (($line = fgets($file)) != false) {
                 if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line)) {
                     if ($entry && str_contains($entry, '.ERROR:')) {
                         $output[] = \Illuminate\Support\Str::limit($entry, 500);
@@ -160,12 +155,12 @@ class DashboardController extends Controller
 
                 return [
                     'log' => $mapping,
-                    'id' => $key + 1
+                    'id' => $key + 1,
                 ];
             })->all();
         }
 
-        $output =  array_reverse($output);
+        $output = array_reverse($output);
 
         return $output;
     }

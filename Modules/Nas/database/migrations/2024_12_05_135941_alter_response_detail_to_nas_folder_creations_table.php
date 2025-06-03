@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('nas_folder_creations', function (Blueprint $table) {
             $table->json('server_response')->nullable();
             $table->string('failed_reason')->nullable();
-            $table->json("current_path")->nullable();
+            $table->json('current_path')->nullable();
         });
     }
 

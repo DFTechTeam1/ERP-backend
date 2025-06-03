@@ -15,7 +15,7 @@ return new class extends Migration
             if (checkForeignKey(tableName: 'entertainment_task_song_logs', columnName: 'entertainment_task_song_id')) {
                 $table->dropForeign(['entertainment_task_song_id']);
             }
-            
+
             $table->bigInteger('entertainment_task_song_id')
                 ->default(0)
                 ->change();

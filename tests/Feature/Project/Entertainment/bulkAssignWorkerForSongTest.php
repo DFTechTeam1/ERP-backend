@@ -6,8 +6,6 @@ use App\Actions\Project\DetailCache;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
@@ -16,7 +14,7 @@ use Tests\TestCase;
 
 class bulkAssignWorkerForSongTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     protected function setUp(): void
     {
@@ -30,23 +28,23 @@ class bulkAssignWorkerForSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testUniqueSongDetected(): void
+    public function test_unique_song_detected(): void
     {
         $payload = [
             'workers' => [
                 [
                     'uid' => '123',
                     'songs' => [
-                        1,2
-                    ]
+                        1, 2,
+                    ],
                 ],
                 [
                     'uid' => '1234',
                     'songs' => [
-                        3,2
-                    ]
+                        3, 2,
+                    ],
                 ],
-            ]
+            ],
         ];
 
         $this->setProjectConstructor();
@@ -56,7 +54,7 @@ class bulkAssignWorkerForSongTest extends TestCase
         $this->assertStringContainsString(__('notification.duplicateSongOnBulkAssign'), $response['message']);
     }
 
-    public function testBulkAssignIsSuccess(): void
+    public function test_bulk_assign_is_success(): void
     {
         $employees = Employee::factory()
             ->count(2)
@@ -70,7 +68,7 @@ class bulkAssignWorkerForSongTest extends TestCase
             ->count(10)
             ->create([
                 'project_id' => $projects[0]->id,
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
         $payload = [];
@@ -82,7 +80,7 @@ class bulkAssignWorkerForSongTest extends TestCase
                         $projectSongs[0]->uid,
                         $projectSongs[1]->uid,
                         $projectSongs[2]->uid,
-                    ]
+                    ],
                 ];
             }
 
@@ -93,7 +91,7 @@ class bulkAssignWorkerForSongTest extends TestCase
                         $projectSongs[3]->uid,
                         $projectSongs[4]->uid,
                         $projectSongs[5]->uid,
-                    ]
+                    ],
                 ];
             }
         }
@@ -112,15 +110,15 @@ class bulkAssignWorkerForSongTest extends TestCase
 
         $this->assertDatabaseHas('entertainment_task_songs', [
             'employee_id' => $employees[0]->id,
-            'project_song_list_id' => $projectSongs[0]->id
+            'project_song_list_id' => $projectSongs[0]->id,
         ]);
         $this->assertDatabaseHas('entertainment_task_songs', [
             'employee_id' => $employees[0]->id,
-            'project_song_list_id' => $projectSongs[1]->id
+            'project_song_list_id' => $projectSongs[1]->id,
         ]);
         $this->assertDatabaseHas('entertainment_task_songs', [
             'employee_id' => $employees[1]->id,
-            'project_song_list_id' => $projectSongs[3]->id
+            'project_song_list_id' => $projectSongs[3]->id,
         ]);
         $this->assertArrayHasKey('data', $response);
         $this->assertArrayHasKey('full_detail', $response['data']);
