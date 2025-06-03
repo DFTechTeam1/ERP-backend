@@ -4,8 +4,8 @@ namespace Modules\Hrd\Console;
 
 use Illuminate\Console\Command;
 use Modules\Hrd\Services\EmployeeService;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class CheckEmployeeResign extends Command
 {

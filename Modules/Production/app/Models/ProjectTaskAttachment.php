@@ -2,11 +2,10 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Production\Database\Factories\ProjectTaskAttachmentFactory;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class ProjectTaskAttachment extends Model
 {
@@ -29,13 +28,14 @@ class ProjectTaskAttachment extends Model
 
         if ($this->attributes['type'] == \App\Enums\Production\ProjectTaskAttachment::Media->value) {
             $out = 'media';
-        } else if ($this->attributes['type'] == \App\Enums\Production\ProjectTaskAttachment::ExternalLink->value) {
+        } elseif ($this->attributes['type'] == \App\Enums\Production\ProjectTaskAttachment::ExternalLink->value) {
             $out = 'link';
         } else {
             $out = 'task';
         }
+
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -46,9 +46,9 @@ class ProjectTaskAttachment extends Model
             $name = explode('.', $this->attributes['media']);
             $out = array_pop($name);
         }
-        
+
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -57,13 +57,13 @@ class ProjectTaskAttachment extends Model
         $out = '';
 
         if ($this->attributes['type'] == \App\Enums\Production\ProjectTaskAttachment::Media->value) {
-            $out = asset('storage/projects/' . $this->project_id . '/task/' . $this->project_task_id . '/' . $this->attributes['media']);
-        } else if ($this->attributes['type'] == \App\Enums\Production\ProjectTaskAttachment::ExternalLink->value) {
+            $out = asset('storage/projects/'.$this->project_id.'/task/'.$this->project_task_id.'/'.$this->attributes['media']);
+        } elseif ($this->attributes['type'] == \App\Enums\Production\ProjectTaskAttachment::ExternalLink->value) {
             $out = $this->attributes['media'];
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -78,7 +78,7 @@ class ProjectTaskAttachment extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -86,11 +86,11 @@ class ProjectTaskAttachment extends Model
     {
         $out = '';
         if (isset($this->attributes['updated_at'])) {
-            $out = Carbon::parse($this->updated_at)->diffForHumans() . ' ' . __('global.at') . ' ' . date("H:i", strtotime($this->attributes['updated_at']));
+            $out = Carbon::parse($this->updated_at)->diffForHumans().' '.__('global.at').' '.date('H:i', strtotime($this->attributes['updated_at']));
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

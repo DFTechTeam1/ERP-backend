@@ -16,9 +16,9 @@ class DivisionCreateRequest extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new Division())
+                new UniqueLowerRule(new Division),
             ],
-            'parent_id' => 'nullable'
+            'parent_id' => 'nullable',
         ];
     }
 

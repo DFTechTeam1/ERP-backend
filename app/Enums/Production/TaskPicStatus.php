@@ -12,10 +12,10 @@ enum TaskPicStatus: int
     public function label()
     {
         return match ($this) {
-            static::Approved => __("global.approved"),
-            static::WaitingApproval => __("global.waitingApproval"),
-            static::Revise => __("global.revise"),
-            static::WaitingToDistribute => __('global.waitingToDistributeToModeller')
+            self::Approved => __('global.approved'),
+            self::WaitingApproval => __('global.waitingApproval'),
+            self::Revise => __('global.revise'),
+            self::WaitingToDistribute => __('global.waitingToDistributeToModeller')
         };
     }
 }

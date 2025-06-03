@@ -27,8 +27,7 @@ class BranchController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     * 
-     * @param Create $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Create $request)
@@ -46,8 +45,6 @@ class BranchController extends Controller
 
     /**
      * Get all branches
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getAll(): \Illuminate\Http\JsonResponse
     {

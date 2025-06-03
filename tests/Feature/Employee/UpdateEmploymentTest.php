@@ -5,8 +5,6 @@ namespace Tests\Feature\Employee;
 use App\Enums\Employee\LevelStaff;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Modules\Company\Models\Position;
 use Modules\Hrd\Models\Employee;
@@ -32,14 +30,14 @@ class UpdateEmploymentTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testUpdateEmploymentWithMissingParameter(): void
+    public function test_update_employment_with_missing_parameter(): void
     {
         $payload = [
-            'branch_id' => ''
+            'branch_id' => '',
         ];
 
         $response = $this->putJson(route('api.employees.updateEmployment', ['employeeUid' => '123']), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
@@ -49,15 +47,15 @@ class UpdateEmploymentTest extends TestCase
         parent::tearDown();
     }
 
-    public function testBossIdShouldBeRequired(): void
+    public function test_boss_id_should_be_required(): void
     {
         $payload = [
             'level_staff' => LevelStaff::Staff->value,
-            'boss_id' => ''
+            'boss_id' => '',
         ];
-        
-        $response = $this->putJson(route('api.employees.updateEmployment', ['employeeUid' => '123']), $payload , [
-            'Authorization' => 'Bearer ' . $this->token
+
+        $response = $this->putJson(route('api.employees.updateEmployment', ['employeeUid' => '123']), $payload, [
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
@@ -67,10 +65,10 @@ class UpdateEmploymentTest extends TestCase
         parent::tearDown();
     }
 
-    public function testUpdateEmployeeSuccess(): void
+    public function test_update_employee_success(): void
     {
         $employees = Employee::factory()->count(1)->create([
-            'level_staff' => 'manager'
+            'level_staff' => 'manager',
         ]);
 
         $positionData = Position::select('uid')
@@ -86,11 +84,11 @@ class UpdateEmploymentTest extends TestCase
             'level_staff' => $employees[0]->level_staff,
             'status' => $employees[0]->status,
             'join_date' => $employees[0]->join_date ? date('Y-m-d', strtotime($employees[0]->join_date)) : date('Y-m-d'),
-            'boss_id' => $employees[0]->boss_id
+            'boss_id' => $employees[0]->boss_id,
         ];
 
         $response = $this->putJson(route('api.employees.updateEmployment', ['employeeUid' => $employees[0]->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(201);

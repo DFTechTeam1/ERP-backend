@@ -4,10 +4,10 @@ namespace Modules\Inventory\Jobs;
 
 use App\Enums\Inventory\RequestInventoryStatus;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Notification;
 use Modules\Inventory\Models\RequestInventory;
 use Modules\Inventory\Notifications\ProcessRequestInventoryNotification;
@@ -36,9 +36,9 @@ class ProcessRequestInventory implements ShouldQueue
 
         $message = "Halo {$data->requester->nickname}\n";
         if ($data->status == RequestInventoryStatus::Rejected->value) {
-            $message .= "permintaan barang " . $data->name . " kamu di tolak oleh " . $data->rejectedByEmployee->nickname;
-        } else if ($data->status == RequestInventoryStatus::Approved->value) {
-            $message .= "permintaan barang " . $data->name . " kamu disetujui dan segera diprocess oleh " . $data->approvedByEmployee->nickname;
+            $message .= 'permintaan barang '.$data->name.' kamu di tolak oleh '.$data->rejectedByEmployee->nickname;
+        } elseif ($data->status == RequestInventoryStatus::Approved->value) {
+            $message .= 'permintaan barang '.$data->name.' kamu disetujui dan segera diprocess oleh '.$data->approvedByEmployee->nickname;
         }
 
         Notification::send($data->requester, new ProcessRequestInventoryNotification($data->requester->telegram_chat_id, $message));

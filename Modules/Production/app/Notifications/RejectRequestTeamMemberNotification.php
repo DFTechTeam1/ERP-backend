@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class RejectRequestTeamMemberNotification extends Notification
 {
@@ -55,43 +54,43 @@ class RejectRequestTeamMemberNotification extends Notification
 
     public function toTelegram($notifiable): array
     {
-        $message = 'Halo ' . $this->transfer->requestByPerson->nickname . '. Permintaan anda untuk meminjam ' . $this->transfer->employee->nickname . ' di tolak dengan alasan ' . $this->transfer->reject_reason;
+        $message = 'Halo '.$this->transfer->requestByPerson->nickname.'. Permintaan anda untuk meminjam '.$this->transfer->employee->nickname.' di tolak dengan alasan '.$this->transfer->reject_reason;
 
         $messages = [
             [
                 'type' => 'text',
                 'text' => $message,
-            ]
+            ],
         ];
 
         if ($this->transfer->alternativeEmployee) {
             $messages[] = [
                 'type' => 'text',
-                'text' => $this->transfer->alternativeEmployee->nickname . ' sebagai penggantinya. Kamu sudah bisa mulai memberikan tugas.'
+                'text' => $this->transfer->alternativeEmployee->nickname.' sebagai penggantinya. Kamu sudah bisa mulai memberikan tugas.',
             ];
         }
 
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => collect($messages)->pluck('text')->toArray()
+            'message' => collect($messages)->pluck('text')->toArray(),
         ];
     }
 
     public function toLine($notifiable)
     {
-        $message = 'Halo ' . $this->transfer->requestByPerson->nickname . '. Permintaan anda untuk meminjam ' . $this->transfer->employee->nickname . ' di tolak dengan alasan ' . $this->transfer->reject_reason;
+        $message = 'Halo '.$this->transfer->requestByPerson->nickname.'. Permintaan anda untuk meminjam '.$this->transfer->employee->nickname.' di tolak dengan alasan '.$this->transfer->reject_reason;
 
         $messages = [
             [
                 'type' => 'text',
                 'text' => $message,
-            ]
+            ],
         ];
 
         if ($this->transfer->alternativeEmployee) {
             $messages[] = [
                 'type' => 'text',
-                'text' => $this->transfer->alternativeEmployee->nickname . ' sebagai penggantinya. Kamu sudah bisa mulai memberikan tugas.'
+                'text' => $this->transfer->alternativeEmployee->nickname.' sebagai penggantinya. Kamu sudah bisa mulai memberikan tugas.',
             ];
         }
 

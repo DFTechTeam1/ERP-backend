@@ -2,10 +2,10 @@
 
 namespace Modules\Production\Services;
 
-use App\Enums\ErrorCode\Code;
 use Modules\Production\Repository\CustomerRepository;
 
-class CustomerService {
+class CustomerService
+{
     private $repo;
 
     /**
@@ -18,19 +18,12 @@ class CustomerService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -38,7 +31,7 @@ class CustomerService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -71,8 +64,6 @@ class CustomerService {
 
     /**
      * Get All customers
-     * 
-     * @return array
      */
     public function getAll(): array
     {
@@ -81,17 +72,13 @@ class CustomerService {
         );
 
         return generalResponse(
-            message: "Success",
+            message: 'Success',
             data: $data->toArray()
         );
     }
 
-
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -110,10 +97,6 @@ class CustomerService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     * 
-     * @return array
      */
     public function store(array $data): array
     {
@@ -131,19 +114,12 @@ class CustomerService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -154,13 +130,12 @@ class CustomerService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
-     * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -178,10 +153,6 @@ class CustomerService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

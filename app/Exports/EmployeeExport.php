@@ -6,25 +6,20 @@ use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Services\ExcelService;
 use App\Services\GeneralService;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\Exportable;
-use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\RegistersEventListeners;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
+class EmployeeExport implements FromView, ShouldAutoSize, WithEvents
 {
-    use RegistersEventListeners, Exportable;
+    use Exportable, RegistersEventListeners;
 
     private $payload;
 
@@ -34,39 +29,39 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
     {
         $this->payload = $payload;
 
-        $this->generalService = new GeneralService();
+        $this->generalService = new GeneralService;
     }
 
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function view(): View
     {
         // get all data
-        $where = "deleted_at IS NULL AND status != " . Status::Deleted->value;
+        $where = 'deleted_at IS NULL AND status != '.Status::Deleted->value;
 
         if ($this->payload['only_new'] == 1) {
-            $where .= " AND is_sync_with_talenta = 0";
+            $where .= ' AND is_sync_with_talenta = 0';
         }
 
-        if (!empty($this->payload['position_ids'])) {
+        if (! empty($this->payload['position_ids'])) {
             $positionIds = collect($this->payload['position_ids'])->map(function ($item) {
-                return $this->generalService->getIdFromUid($item, new PositionBackup());
+                return $this->generalService->getIdFromUid($item, new PositionBackup);
             })->toArray();
 
-            $wherePosition = "(" . implode(',', $positionIds) . ")";
+            $wherePosition = '('.implode(',', $positionIds).')';
             $where .= " AND position_id IN {$wherePosition}";
         }
 
-        if (!empty($this->payload['employee_ids'])) {
-            $employeeUids = "'" . implode("','", $this->payload['employee_ids']) . "'";
+        if (! empty($this->payload['employee_ids'])) {
+            $employeeUids = "'".implode("','", $this->payload['employee_ids'])."'";
             $whereUid = "({$employeeUids})";
-            $where  .= " AND uid IN {$whereUid}";
+            $where .= " AND uid IN {$whereUid}";
         }
 
         $query = Employee::query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -74,7 +69,7 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
             'position:id,name,division_id',
             'position.division:id,name',
             'jobLevel:id,name',
-            'branch:id,name'
+            'branch:id,name',
         ]);
 
         $employees = $query->get();
@@ -125,13 +120,13 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
 
     public static function afterSheet(AfterSheet $event)
     {
-        $service = new ExcelService();
+        $service = new ExcelService;
 
         $sheet = $event->sheet->getDelegate();
 
         $highesSheet = $sheet->getHighestRow();
         for ($row = 2; $row <= $highesSheet; $row++) {
-            $cell = 'F' . $row;
+            $cell = 'F'.$row;
             $sheet->getCell($cell)->setValueExplicit(
                 $sheet->getCell($cell)->getValue(),
                 DataType::TYPE_STRING
@@ -174,41 +169,41 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
             ['sheet' => $sheet, 'coordinate' => 'M1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'M1', 'comment' => 'Wajib diisi', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'M1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'M1', 'comment' => "1. untuk Pria", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'M1', 'comment' => '1. untuk Pria', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'M1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'M1', 'comment' => "2. untuk Wanita", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'M1', 'comment' => '2. untuk Wanita', 'bold' => false],
 
             // N1
             ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => 'ERP:', 'bold' => true],
             ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => 'Wajib diisi', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "1. untuk Single", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => '1. untuk Single', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "2. untuk Married", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => '2. untuk Married', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "3. untuk Widow", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => '3. untuk Widow', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => "4. untuk Widower", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'N1', 'comment' => '4. untuk Widower', 'bold' => false],
 
             // O1
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => 'ERP:', 'bold' => true],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => 'Wajib diisi', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "1 : Katolik", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => '1 : Katolik', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "2 : Islam", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => '2 : Islam', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "3: Kristen", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => '3: Kristen', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "4 : Buddha", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => '4 : Buddha', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "5 : Hindu", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => '5 : Hindu', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "6 : Confucius", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => '6 : Confucius', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => "7 : Others", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'O1', 'comment' => '7 : Others', 'bold' => false],
 
             // P1
             ['sheet' => $sheet, 'coordinate' => 'P1', 'comment' => 'ERP:', 'bold' => true],
@@ -271,31 +266,31 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
             ['sheet' => $sheet, 'coordinate' => 'AI1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AI1', 'comment' => 'Isi dengan angka', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AI1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AI1', 'comment' => "1: Monthly", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AI1', 'comment' => '1: Monthly', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AI1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AI1', 'comment' => "2: Daily", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AI1', 'comment' => '2: Daily', 'bold' => false],
 
             // AQ1
             ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => 'ERP:', 'bold' => true],
             ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => 'Wajib diisi', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "0: untuk Not Paid", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => '0: untuk Not Paid', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "1: untuk Paid by Company", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => '1: untuk Paid by Company', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "2: untuk Paid by Employee", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => '2: untuk Paid by Employee', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => "3: default", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AQ1', 'comment' => '3: default', 'bold' => false],
 
             // BD1
             ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => 'ERP:', 'bold' => true],
             ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => 'Isi dengan angka', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => "1: taxable", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => '1: taxable', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => "2: Non Taxable", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'BD1', 'comment' => '2: Non Taxable', 'bold' => false],
 
             // // AM1
             // ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => 'ERP:', 'bold' => true],
@@ -311,42 +306,42 @@ class EmployeeExport implements FromView, WithEvents, ShouldAutoSize
             ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => 'Isi dengan angka', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "1: A", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => '1: A', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "2: B", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => '2: B', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "3: AB", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => '3: AB', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => "4: O", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AM1', 'comment' => '4: O', 'bold' => false],
 
             // AP1
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => 'ERP:', 'bold' => true],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => 'Wajib diisi', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "0: Pegawai Tetap", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '0: Pegawai Tetap', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "1: Pegawai Tidak Tetap", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '1: Pegawai Tidak Tetap', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "2: Bukan Pegawai yang Bersifat Berkesinambungan", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '2: Bukan Pegawai yang Bersifat Berkesinambungan', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "3: Bukan Pegawai yang tidak Bersifat Berkesinambungan", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '3: Bukan Pegawai yang tidak Bersifat Berkesinambungan', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "4: Ekspatriat", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '4: Ekspatriat', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "5: Ekspatriat Dalam Negri", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '5: Ekspatriat Dalam Negri', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "6: Tenaga Ahli yang Bersifat Berkesinambungan", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '6: Tenaga Ahli yang Bersifat Berkesinambungan', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "7: Tenaga Ahli yang Tidak Bersifat Berkesinambungan", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '7: Tenaga Ahli yang Tidak Bersifat Berkesinambungan', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "8: Dewan Komisaris", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '8: Dewan Komisaris', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "9: Tenaga Ahli yang Bersifat Berkesinambungan >1 PK", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '9: Tenaga Ahli yang Bersifat Berkesinambungan >1 PK', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "10: Tenaga Kerja Lepas", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '10: Tenaga Kerja Lepas', 'bold' => false],
             ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "\r\n", 'bold' => false],
-            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => "11: Bukan Pegawai yang Bersifat Berkesinambungan >1 PK", 'bold' => false],
+            ['sheet' => $sheet, 'coordinate' => 'AP1', 'comment' => '11: Bukan Pegawai yang Bersifat Berkesinambungan >1 PK', 'bold' => false],
         ]);
 
     }

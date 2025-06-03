@@ -2,10 +2,10 @@
 
 return [
     'dates' => 'Dates',
-    'completeTheTask' => "Complete The Task",
+    'completeTheTask' => 'Complete The Task',
     'members' => 'Members',
     'reviseDetail' => 'Revise Detail',
-    'attachments' => "Attachments",
+    'attachments' => 'Attachments',
     'proofOfWorks' => 'Proof Of Works',
     'showLogs' => 'Show Logs',
     'showTimeTracker' => 'Show Time Tracker',
@@ -16,5 +16,5 @@ return [
     'distributeTask' => 'Distribute',
     'markAsComplete' => 'Mark As Complete',
     'revise' => 'Revise',
-    'delete' => 'Delete'
+    'delete' => 'Delete',
 ];

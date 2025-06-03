@@ -13,7 +13,7 @@ class SongRevise extends FormRequest
     {
         return [
             'reason' => 'required',
-            'images' => 'nullable|array'
+            'images' => 'nullable|array',
         ];
     }
 

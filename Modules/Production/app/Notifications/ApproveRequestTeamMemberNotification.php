@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class ApproveRequestTeamMemberNotification extends Notification
 {
@@ -57,7 +56,7 @@ class ApproveRequestTeamMemberNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => 'Halo ' . $this->transfer->requestByPerson->name . ', permintaan anda untuk meminjam ' . $this->transfer->employee->nickname . ' telah disetujui. Kamu bisa mulai untuk memberikannya tugas.',
+            'message' => 'Halo '.$this->transfer->requestByPerson->name.', permintaan anda untuk meminjam '.$this->transfer->employee->nickname.' telah disetujui. Kamu bisa mulai untuk memberikannya tugas.',
         ];
     }
 
@@ -66,8 +65,8 @@ class ApproveRequestTeamMemberNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->transfer->requestByPerson->name . ', permintaan anda untuk meminjam ' . $this->transfer->employee->nickname . ' telah disetujui. Kamu bisa mulai untuk memberikannya tugas.',
-            ]
+                'text' => 'Halo '.$this->transfer->requestByPerson->name.', permintaan anda untuk meminjam '.$this->transfer->employee->nickname.' telah disetujui. Kamu bisa mulai untuk memberikannya tugas.',
+            ],
         ];
 
         return [

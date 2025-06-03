@@ -13,11 +13,11 @@ enum RelationFamily: string
     public function label()
     {
         return match ($this) {
-            static::Father => __('global.father'),
-            static::Mother => __('global.mother'),
-            static::Sibling => __('global.sibling'),
-            static::Child => __('global.child'),
-            static::Other => __('global.other'),
+            self::Father => __('global.father'),
+            self::Mother => __('global.mother'),
+            self::Sibling => __('global.sibling'),
+            self::Child => __('global.child'),
+            self::Other => __('global.other'),
         };
     }
 }

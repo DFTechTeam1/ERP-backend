@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table("project_equipment", function (Blueprint $table) {
+        Schema::table('project_equipment', function (Blueprint $table) {
             $table->boolean('is_good_condition')->nullable();
             $table->string('detail_condition')->nullable();
             $table->boolean('is_returned')->nullable();
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table("project_equipment", function (Blueprint $table) {
+        Schema::table('project_equipment', function (Blueprint $table) {
             $table->dropColumn('is_good_condition');
             $table->dropColumn('detail_condition');
             $table->dropColumn('is_returned');

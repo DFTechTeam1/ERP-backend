@@ -7,7 +7,8 @@ use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 
-class EmployeeRepoGroup {
+class EmployeeRepoGroup
+{
     public $employeeRepo;
 
     public $positionRepo;
@@ -21,8 +22,7 @@ class EmployeeRepoGroup {
         PositionRepository $positionRepo,
         EmployeeFamilyRepository $employeeFamilyRepo,
         EmployeeEmergencyContactRepository $employeeEmergencyRepo
-    )
-    {
+    ) {
         $this->employeeRepo = $employeeRepo;
         $this->positionRepo = $positionRepo;
         $this->employeeFamilyRepo = $employeeFamilyRepo;

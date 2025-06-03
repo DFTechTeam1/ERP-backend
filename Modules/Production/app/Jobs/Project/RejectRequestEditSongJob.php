@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs\Project;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectPersonInCharge;
@@ -43,7 +43,7 @@ class RejectRequestEditSongJob implements ShouldQueue
         $reason = $this->payload['reason'];
 
         // notify pm event
-        $projectId = getIdFromUid($this->projectUid, new Project());
+        $projectId = getIdFromUid($this->projectUid, new Project);
         $workers = ProjectPersonInCharge::where("project_id = {$projectId}")
             ->with('employee:id,nickname,email,telegram_chat_id')
             ->get();

@@ -3,9 +3,8 @@
 namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Production\Database\Factories\ProjectReferenceFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class ProjectReference extends Model
 {
@@ -28,11 +27,11 @@ class ProjectReference extends Model
     {
         $out = '-';
         if ($this->media_path && $this->project_id) {
-            $out = asset('storage/projects/references/' . $this->project_id . '/' . $this->media_path);
+            $out = asset('storage/projects/references/'.$this->project_id.'/'.$this->media_path);
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

@@ -11,9 +11,9 @@ enum ProjectTaskAttachment: int
     public function label()
     {
         return match ($this) {
-            static::Media => __("global.media"),
-            static::TaskLink => __("global.taskLink"),
-            static::ExternalLink => __("global.externalLink"),
+            self::Media => __('global.media'),
+            self::TaskLink => __('global.taskLink'),
+            self::ExternalLink => __('global.externalLink'),
         };
     }
 }

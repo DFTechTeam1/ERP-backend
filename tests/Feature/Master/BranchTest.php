@@ -4,12 +4,8 @@ namespace Tests\Feature\Master;
 
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Modules\Company\Models\Branch;
-use Modules\Company\Services\BranchService;
-use Modules\Inventory\Models\Brand;
 use Tests\TestCase;
 
 class BranchTest extends TestCase
@@ -35,123 +31,123 @@ class BranchTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testMissingPayloadOnCreate(): void
+    public function test_missing_payload_on_create(): void
     {
         $payload = [
             'name' => '',
-            'short_name' => ''
+            'short_name' => '',
         ];
 
         $response = $this->postJson(route('api.company.branches.store'), $payload, [
-            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+            'Authorization' => 'Bearer '.$this->getToken($this->user),
         ]);
 
         $response->assertStatus(422);
     }
 
-    public function testUniqueNameValidation(): void
+    public function test_unique_name_validation(): void
     {
         Branch::factory()->count(1)->create([
-            'name' => 'branch 1'
+            'name' => 'branch 1',
         ]);
 
         $payload = [
             'name' => 'branch 1',
-            'short_name' => 'branch1'
+            'short_name' => 'branch1',
         ];
 
         $response = $this->postJson(route('api.company.branches.store'), $payload, [
-            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+            'Authorization' => 'Bearer '.$this->getToken($this->user),
         ]);
 
         $response->assertStatus(422);
         $response->assertJsonStructure([
             'message',
             'errors' => [
-                'name'
-            ]
+                'name',
+            ],
         ]);
         $this->assertStringContainsString('The name has already been taken.', $response['errors']['name'][0]);
     }
 
-    public function testSuccessSaveNewBranch(): void
+    public function test_success_save_new_branch(): void
     {
         $payload = [
             'name' => 'branch',
-            'short_name' => 'branch'
+            'short_name' => 'branch',
         ];
 
         $response = $this->postJson(route('api.company.branches.store'), $payload, [
-            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+            'Authorization' => 'Bearer '.$this->getToken($this->user),
         ]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('branches', ['name' => 'branch']);
     }
 
-    public function testUpdateFailedOnUniqueName(): void
+    public function test_update_failed_on_unique_name(): void
     {
         $branches = Branch::factory()->count(2)->create();
 
         $payload = [
             'name' => $branches[1]->name,
-            'short_name' => 'branch_updated'
+            'short_name' => 'branch_updated',
         ];
 
         $response = $this->putJson(route('api.company.branches.update', ['branch' => $branches[0]->id]), $payload, [
-            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+            'Authorization' => 'Bearer '.$this->getToken($this->user),
         ]);
 
         $response->assertStatus(422);
         $response->assertJsonStructure([
             'message',
             'errors' => [
-                'name'
-            ]
+                'name',
+            ],
         ]);
         $this->assertStringContainsString('exists', $response['errors']['name'][0]);
     }
 
-    public function testSuccessUpdateBranch(): void
+    public function test_success_update_branch(): void
     {
         $branches = Branch::factory()->count(1)->create();
 
         $payload = [
             'name' => 'updated branch',
-            'short_name' => 'branch_updated'
+            'short_name' => 'branch_updated',
         ];
 
         $response = $this->putJson(route('api.company.branches.update', ['branch' => $branches[0]->id]), $payload, [
-            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+            'Authorization' => 'Bearer '.$this->getToken($this->user),
         ]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('branches', ['name' => 'updated branch']);
     }
 
-    public function testBulkDeleteBranch(): void
+    public function test_bulk_delete_branch(): void
     {
         $branches = Branch::factory()->count(1)->create(['name' => 'new']);
 
         $ids = collect($branches)->map(function ($item) {
             return [
-                'uid' => $item->id
+                'uid' => $item->id,
             ];
         })->values()->toArray();
 
         $payload = [
-            'ids' => $ids
+            'ids' => $ids,
         ];
 
         $response = $this->postJson(route('api.company.branches.bulk-delete'), $payload, [
-            'Authorization' => 'Bearer ' . $this->getToken($this->user)
+            'Authorization' => 'Bearer '.$this->getToken($this->user),
         ]);
         $response->assertStatus(201);
 
         $this->assertDatabaseMissing('branches', ['name' => 'new']);
     }
 
-    public function testGetAllBranches(): void
+    public function test_get_all_branches(): void
     {
         Branch::factory()->count(5)->create();
 

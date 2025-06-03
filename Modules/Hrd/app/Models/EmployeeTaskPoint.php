@@ -2,10 +2,9 @@
 
 namespace Modules\Hrd\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Modules\Hrd\Database\Factories\EmployeeTaskPointFactory;
 
 class EmployeeTaskPoint extends Model
 {

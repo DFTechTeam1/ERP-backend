@@ -13,6 +13,6 @@ class UserLoginHistory extends Model
         'user_id',
         'login_at',
         'ip',
-        'browser'
+        'browser',
     ];
 }

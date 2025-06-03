@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\Telegram\TelegramService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Models\Employee;
 use Modules\Telegram\Models\TelegramChatHistory;
@@ -31,7 +30,7 @@ class TelegramAuthorizationController extends Controller
         if ($employeeData->telegram_chat_id) {
             return view('telegram::telegram-error', [
                 'errorMessage' => 'Whoopes!',
-                'errorDescription' => "You're already registered"
+                'errorDescription' => "You're already registered",
             ]);
         }
 
@@ -40,7 +39,7 @@ class TelegramAuthorizationController extends Controller
         unset($auth_data['current_id']);
         $data_check_arr = [];
         foreach ($auth_data as $key => $value) {
-            $data_check_arr[] = $key . '=' . $value;
+            $data_check_arr[] = $key.'='.$value;
         }
         sort($data_check_arr);
 
@@ -50,13 +49,13 @@ class TelegramAuthorizationController extends Controller
         if (strcmp($hash, $check_hash) !== 0) {
             return view('telegram::telegram-error', [
                 'errorMessage' => 'Oops!!',
-                'errorDescription' => 'Data is NOT from Telegram. Who are you???'
+                'errorDescription' => 'Data is NOT from Telegram. Who are you???',
             ]);
         }
         if ((time() - $auth_data['auth_date']) > 86400) {
             return view('telegram::telegram-error', [
                 'errorMessage' => 'Data is outdated',
-                'errorDescription' => 'Timeout for authentication. Please try again'
+                'errorDescription' => 'Timeout for authentication. Please try again',
             ]);
         }
 
@@ -64,7 +63,7 @@ class TelegramAuthorizationController extends Controller
             ->update(['telegram_chat_id' => $auth_data['id']]);
 
         // send a message
-        $service = new TelegramService();
+        $service = new TelegramService;
         $service->sendButtonMessage($auth_data['id'], 'Yeyy! Akunmu sudah terdaftar, silahkan menggunakn semua fitur yang ada di bot ini☄️ ', []);
 
         // close the conversation
@@ -75,7 +74,7 @@ class TelegramAuthorizationController extends Controller
             'chat_id' => $auth_data['id'],
             'first_name' => $auth_data['first_name'],
             'username' => $auth_data['username'] ?? 'Anonymous',
-            'photo_url' => $auth_data['photo_url'] ?? asset('dfactory.webp')
+            'photo_url' => $auth_data['photo_url'] ?? asset('dfactory.webp'),
         ]);
     }
 

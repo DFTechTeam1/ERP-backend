@@ -21,7 +21,7 @@ class UpdateBasicInfo extends FormRequest
             'name' => 'required',
             'email' => [
                 'required',
-                new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'email'),
+                new \App\Rules\UniqueLowerRule(new Employee, $this->route('uid'), 'email'),
             ],
             'nickname' => 'required',
             'phone' => 'required',
@@ -37,7 +37,7 @@ class UpdateBasicInfo extends FormRequest
             ],
             'blood_type' => [
                 'nullable',
-                Rule::enum(BloodType::class)
+                Rule::enum(BloodType::class),
             ],
             'religion' => [
                 'required',

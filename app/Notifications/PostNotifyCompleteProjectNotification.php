@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -32,7 +31,7 @@ class PostNotifyCompleteProjectNotification extends Notification
     public function via(object $notifiable): array
     {
         return [
-            TelegramChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -42,9 +41,9 @@ class PostNotifyCompleteProjectNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-                    ->line('The introduction to the notification.')
-                    ->action('Notification Action', url('/'))
-                    ->line('Thank you for using our application!');
+            ->line('The introduction to the notification.')
+            ->action('Notification Action', url('/'))
+            ->line('Thank you for using our application!');
     }
 
     /**
@@ -64,9 +63,9 @@ class PostNotifyCompleteProjectNotification extends Notification
         return [
             'chatIds' => $this->telegramChatIds,
             'message' => [
-                'Halo ' . $this->payload['employee']['nickname']. ', event ' . $this->payload['project']['name'] . ' sudah selesai dan kamu belum memberi penilaian pada sistem.',
-                'Segera login dan beri penilaian ya :)'
-            ]
+                'Halo '.$this->payload['employee']['nickname'].', event '.$this->payload['project']['name'].' sudah selesai dan kamu belum memberi penilaian pada sistem.',
+                'Segera login dan beri penilaian ya :)',
+            ],
         ];
     }
 
@@ -75,12 +74,12 @@ class PostNotifyCompleteProjectNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->payload['employee']['nickname']. ', event ' . $this->payload['project']['name'] . ' sudah selesai dan kamu belum memberi penilaian pada sistem.',
+                'text' => 'Halo '.$this->payload['employee']['nickname'].', event '.$this->payload['project']['name'].' sudah selesai dan kamu belum memberi penilaian pada sistem.',
             ],
             [
                 'type' => 'text',
-                'text' => 'Segera login dan beri penilaian ya :)'
-            ]
+                'text' => 'Segera login dan beri penilaian ya :)',
+            ],
         ];
 
         return [

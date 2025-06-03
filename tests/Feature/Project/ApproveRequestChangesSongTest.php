@@ -7,28 +7,19 @@ use App\Services\GeneralService;
 use App\Traits\HasProjectConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
 use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Repository\EmployeeRepository;
-use Modules\Production\Exceptions\SongNotFound;
 use Modules\Production\Jobs\SongApprovedToBeEditedJob;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
-use Modules\Production\Repository\ProjectRepository;
-use Modules\Production\Repository\ProjectSongListRepository;
-use Modules\Production\Services\EntertainmentTaskSongLogService;
-use Modules\Production\Services\ProjectService;
-use Modules\Production\Services\ProjectSongListService;
 use Tests\TestCase;
 
 class ApproveRequestChangesSongTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasProjectConstructor;
+    use HasProjectConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -46,7 +37,7 @@ class ApproveRequestChangesSongTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testConfirmEditSongSuccess(): void
+    public function test_confirm_edit_song_success(): void
     {
         Bus::fake();
 
@@ -65,7 +56,7 @@ class ApproveRequestChangesSongTest extends TestCase
                 'created_by' => 1,
                 'is_request_edit' => 1,
                 'is_request_delete' => 0,
-                'target_name' => 'new song'
+                'target_name' => 'new song',
             ]);
 
         EntertainmentTaskSong::factory()
@@ -73,7 +64,7 @@ class ApproveRequestChangesSongTest extends TestCase
             ->create([
                 'project_id' => $projects[0]->id,
                 'employee_id' => $employees[0]->id,
-                'project_song_list_id' => $projectSongs[0]->id
+                'project_song_list_id' => $projectSongs[0]->id,
             ]);
 
         $generalMock = $this->instance(
@@ -108,13 +99,13 @@ class ApproveRequestChangesSongTest extends TestCase
             'uid' => $projectSongs[0]->uid,
             'name' => 'new song',
             'is_request_edit' => false,
-            'is_request_delete' => false
+            'is_request_delete' => false,
         ]);
 
         Bus::assertDispatched(SongApprovedToBeEditedJob::class);
     }
 
-    public function testSongNotFound()
+    public function test_song_not_found()
     {
         $generalMock = $this->instance(
             abstract: GeneralService::class,

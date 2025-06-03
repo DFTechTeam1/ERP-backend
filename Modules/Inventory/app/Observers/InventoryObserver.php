@@ -2,15 +2,15 @@
 
 namespace Modules\Inventory\Observers;
 
-use Modules\Inventory\Models\Inventory;
 use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
+use Modules\Inventory\Models\Inventory;
 
 class InventoryObserver implements ShouldHandleEventsAfterCommit
 {
     /**
      * Handle when data is retrieved
      *
-     * @param Employee $employee
+     * @param  Employee  $employee
      * @return void
      */
     public function retrieved(Inventory $inventory)

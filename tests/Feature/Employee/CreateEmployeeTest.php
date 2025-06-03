@@ -13,22 +13,18 @@ use App\Models\User;
 use App\Traits\HasEmployeeConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Modules\Company\Models\Branch;
 use Modules\Company\Models\Position;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Services\EmployeeService;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class CreateEmployeeTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasEmployeeConstructor;
+    use HasEmployeeConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -48,11 +44,11 @@ class CreateEmployeeTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testCreateEmployeeWithMissingParameter(): void
+    public function test_create_employee_with_missing_parameter(): void
     {
         $payload = [];
         $response = $this->postJson(route('api.employees.store', $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]));
 
         $response->assertStatus(422);
@@ -60,19 +56,19 @@ class CreateEmployeeTest extends TestCase
         parent::tearDown();
     }
 
-    public function testEmailAlreadyExists(): void
+    public function test_email_already_exists(): void
     {
         $uniqueEmail = 'ilham@gmail.com';
         $employees = Employee::factory()->count(1)->create([
-            'email' => $uniqueEmail
+            'email' => $uniqueEmail,
         ]);
 
         $payload = [
-            'email' => $uniqueEmail
+            'email' => $uniqueEmail,
         ];
 
         $response = $this->postJson(route('api.employees.store'), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
@@ -112,32 +108,32 @@ class CreateEmployeeTest extends TestCase
             'basic_salary' => '15000000',
             'salary_type' => SalaryType::Monthly->value,
             'invite_to_talenta' => 0,
-            'invite_to_erp' => 0
+            'invite_to_erp' => 0,
         ];
     }
 
-    public function testSuccessCreateNewEmployeeWithoutCreateErpUser(): void
+    public function test_success_create_new_employee_without_create_erp_user(): void
     {
         $payload = $this->payloadData();
 
         $response = $this->postJson(route('api.employees.store'), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
         $response->assertStatus(201);
-        
+
         $this->assertDatabaseMissing('users', ['email' => $payload['email']]);
 
         parent::tearDown();
     }
 
-    public function testCreateEmployeeAndUserButMissingUserPayload(): void
+    public function test_create_employee_and_user_but_missing_user_payload(): void
     {
         $payload = $this->payloadData();
         $payload['invite_to_erp'] = 1;
         $payload['password'] = 'password';
 
         $response = $this->postJson(route('api.employees.store'), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
         $response->assertStatus(422);
         $this->assertArrayHasKey('errors', $response);
@@ -149,7 +145,7 @@ class CreateEmployeeTest extends TestCase
         parent::tearDown();
     }
 
-    public function testSuccessCreateNewEmployeeWithCreateErpUser(): void
+    public function test_success_create_new_employee_with_create_erp_user(): void
     {
         Bus::fake();
 
@@ -161,17 +157,17 @@ class CreateEmployeeTest extends TestCase
         $payload['role_id'] = $role->id;
 
         $response = $this->postJson(route('api.employees.store'), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
         $response->assertStatus(201);
-        
+
         $this->assertDatabaseHas('users', ['email' => $payload['email']]);
 
         $user = User::where('email', $payload['email'])->first();
 
         // check job is running
         Bus::assertDispatched(SendEmailActivationJob::class);
-        
+
         // check role
         $this->assertTrue($user->hasRole('testing'));
 

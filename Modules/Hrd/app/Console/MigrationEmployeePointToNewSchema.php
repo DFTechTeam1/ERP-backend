@@ -10,10 +10,8 @@ use Illuminate\Support\Facades\Schema;
 use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Hrd\Models\EmployeePointProjectDetail;
-use Modules\Hrd\Models\EmployeeTaskPoint;
-use Modules\Production\Models\ProjectTaskPicHistory;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class MigrationEmployeePointToNewSchema extends Command
 {
@@ -39,7 +37,7 @@ class MigrationEmployeePointToNewSchema extends Command
      * Execute the console command.
      */
     public function handle()
-    {   
+    {
         // first empty points table
         Schema::disableForeignKeyConstraints();
         $tables = ['employee_point_project_details', 'employee_point_projects', 'employee_points'];
@@ -47,18 +45,18 @@ class MigrationEmployeePointToNewSchema extends Command
             DB::table($item)->truncate();
         });
         Schema::enableForeignKeyConstraints();
-        
+
         DB::beginTransaction();
-        
+
         $data = DB::table('project_task_pic_logs as l')
-            ->selectRaw("DISTINCT l.project_task_id,l.employee_id,l.work_type,t.project_id,t.name as task_name,p.name as project_name,tp.point,tp.additional_point")
-            ->join("project_tasks as t", "t.id", "=", "l.project_task_id")
-            ->join("projects as p", "p.id", "t.project_id")
-            ->join("employee_task_points as tp", function (JoinClause $join) {
-                $join->on("tp.project_id", "=", "t.project_id")
-                    ->on("tp.employee_id", "=", "l.employee_id");
+            ->selectRaw('DISTINCT l.project_task_id,l.employee_id,l.work_type,t.project_id,t.name as task_name,p.name as project_name,tp.point,tp.additional_point')
+            ->join('project_tasks as t', 't.id', '=', 'l.project_task_id')
+            ->join('projects as p', 'p.id', 't.project_id')
+            ->join('employee_task_points as tp', function (JoinClause $join) {
+                $join->on('tp.project_id', '=', 't.project_id')
+                    ->on('tp.employee_id', '=', 'l.employee_id');
             })
-            ->whereRaw("l.work_type = '" . WorkType::Assigned->value . "' AND tp.point > 0")
+            ->whereRaw("l.work_type = '".WorkType::Assigned->value."' AND tp.point > 0")
             ->get();
 
         // group by employee id then project id
@@ -96,7 +94,7 @@ class MigrationEmployeePointToNewSchema extends Command
 
                 foreach ($detailPoint as $point) {
                     $details = [
-                        'task_id' => $point->project_task_id
+                        'task_id' => $point->project_task_id,
                     ];
 
                     $pointProjects[$b]['tasks'][] = $details;
@@ -117,25 +115,24 @@ class MigrationEmployeePointToNewSchema extends Command
         // do migrate here
         try {
 
-
             foreach ($format as $readyPayload) {
                 $employeePoint = EmployeePoint::create(
                     collect($readyPayload)->only([
-                        'employee_id', 'total_point', 'type'
+                        'employee_id', 'total_point', 'type',
                     ])->toArray()
                 );
-    
+
                 // employee point projects
                 foreach ($readyPayload['pointProjects'] as $projectPayload) {
                     $projectPoint = EmployeePointProject::create(
                         collect($projectPayload)->except(['tasks'])->merge(['employee_point_id' => $employeePoint->id])->toArray()
                     );
-    
+
                     // employee point project details
                     foreach ($projectPayload['tasks'] as $taskPoint) {
                         EmployeePointProjectDetail::create([
                             'task_id' => $taskPoint['task_id'],
-                            'point_id' => $projectPoint->id
+                            'point_id' => $projectPoint->id,
                         ]);
                     }
                 }
@@ -146,7 +143,7 @@ class MigrationEmployeePointToNewSchema extends Command
         } catch (\Throwable $th) {
             DB::rollBack();
 
-            $this->error('Oops..... ' . $th->getMessage());
+            $this->error('Oops..... '.$th->getMessage());
         }
     }
 

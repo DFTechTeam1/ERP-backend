@@ -2,41 +2,37 @@
 
 namespace Modules\Company\Repository;
 
-use Illuminate\Support\Facades\Log;
-use Modules\Company\Models\Division;
 use Modules\Company\Models\DivisionBackup;
 use Modules\Company\Repository\Interface\DivisionInterface;
 
 class DivisionRepository extends DivisionInterface
 {
     private $model;
+
     private $key;
 
     /**
-     * @param $model
-     * @param $key
+     * @param  $model
+     * @param  $key
      */
     public function __construct()
     {
-        $this->model = new DivisionBackup();
+        $this->model = new DivisionBackup;
         $this->key = 'uid';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -47,32 +43,25 @@ class DivisionRepository extends DivisionInterface
         return $query->get();
     }
 
-
     /**
      * Make paginated data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * @param int $itemsPerPage
-     * @param int $page
      * @return \Illuminate\Database\Eloquent\Builder[]|\Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
         string $orderBy = ''
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -80,7 +69,7 @@ class DivisionRepository extends DivisionInterface
             $query->with($relation);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -90,12 +79,9 @@ class DivisionRepository extends DivisionInterface
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
@@ -113,28 +99,23 @@ class DivisionRepository extends DivisionInterface
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function store(array $data)
+    public function store(array $data)
     {
         return $this->model->create($data);
     }
 
-
     /**
      * Update Data
      *
-     * @param array $data
-     * @param string $uid
-     * @param string $where
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function update(array $data, string $uid='', string $where='')
+    public function update(array $data, string $uid = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $uid);
@@ -148,10 +129,9 @@ class DivisionRepository extends DivisionInterface
     /**
      * Delete Data
      *
-     * @param string $uid
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function delete(string $uid)
+    public function delete(string $uid)
     {
         return $this->model->where('uid', $uid)->delete();
     }
@@ -159,10 +139,9 @@ class DivisionRepository extends DivisionInterface
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function bulkDelete(array $ids, string $key = '')
+    public function bulkDelete(array $ids, string $key = '')
     {
         if (empty($key)) {
             $key = $this->key;
@@ -171,5 +150,4 @@ class DivisionRepository extends DivisionInterface
         return $this->model->whereIn($key, $ids)
             ->delete();
     }
-
 }

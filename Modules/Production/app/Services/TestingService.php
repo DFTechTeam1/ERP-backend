@@ -5,11 +5,11 @@ namespace Modules\Production\Services;
 use App\Enums\System\BaseRole;
 use App\Services\UserRoleManagement;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Services\EmployeeRepoGroup;
 use Modules\Production\Repository\ProjectTaskPicRepository;
 
-class TestingService {
+class TestingService
+{
     private $projectGroupRepo;
 
     private $employeeRepoGroup;
@@ -25,8 +25,7 @@ class TestingService {
         EmployeeRepoGroup $employeeRepoGroup,
         UserRoleManagement $userRoleManagement,
         ProjectTaskPicRepository $taskPicRepo
-    )
-    {
+    ) {
         $this->taskPicRepo = $taskPicRepo;
 
         $this->projectGroupRepo = $projectGroupRepo;
@@ -40,10 +39,6 @@ class TestingService {
 
     /**
      * Function to get selected employee task
-     *
-     * @param object $employee;
-     *
-     * @return array
      */
     protected function getProjectTaskRelationQuery(object $employee): array
     {
@@ -51,11 +46,11 @@ class TestingService {
             $newWhereHas = [
                 [
                     'relation' => 'teamTransfer',
-                    'query' => "employee_id = " . $this->user->employee_id,
+                    'query' => 'employee_id = '.$this->user->employee_id,
                 ],
             ];
         } else { // get based on task
-            $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = ' . $employee->id);
+            $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = '.$employee->id);
             $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
 
             // get from project_task_pics table
@@ -71,7 +66,7 @@ class TestingService {
             }
 
             if (count($taskIds) > 0) {
-                $queryNewHas = 'id IN (' . implode(',', $taskIds) . ')';
+                $queryNewHas = 'id IN ('.implode(',', $taskIds).')';
             } else {
                 $queryNewHas = 'id = 0';
             }
@@ -91,11 +86,6 @@ class TestingService {
      * Show project list for entertainment and project manager entertainment
      *
      * If user is have role 'entertainment', Show projects where the user is VJ and has a task on music
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * @return array
      */
     public function listForEntertainment(string $select = '*', string $where = '', array $relation = []): array
     {
@@ -115,28 +105,28 @@ class TestingService {
         if ($user->hasRole(BaseRole::Entertainment->value)) {
             $whereHas[] = [
                 'relation' => 'entertainmentTaskSong',
-                'query' => "employee_id = " . $user->load('employee')->employee->id
+                'query' => 'employee_id = '.$user->load('employee')->employee->id,
             ];
 
             // condition to get project by vj
             $whereHas[] = [
                 'relation' => 'vjs',
-                'query' => "employee_id = " . $user->load('employee')->employee->id,
-                'type' => 'or'
+                'query' => 'employee_id = '.$user->load('employee')->employee->id,
+                'type' => 'or',
             ];
         }
 
         $sorts = '';
-        if (!empty(request('sortBy'))) {
+        if (! empty(request('sortBy'))) {
             foreach (request('sortBy') as $sort) {
                 if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
-                    $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
+                    $sorts .= $sort['key'].' '.$sort['order'].',';
                 }
             }
 
             $sorts = rtrim($sorts, ',');
         } else {
-            $sorts = "project_date ASC";
+            $sorts = 'project_date ASC';
         }
 
         $paginated = $this->projectGroupRepo->projectRepo->pagination(
@@ -149,7 +139,7 @@ class TestingService {
             $sorts
         );
 
-        logging("PAGINATED", $paginated->toArray());
+        logging('PAGINATED', $paginated->toArray());
 
         $eventTypes = \App\Enums\Production\EventType::cases();
         $classes = \App\Enums\Production\Classification::cases();
@@ -158,7 +148,7 @@ class TestingService {
         $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses) {
             $pics = collect($item->personInCharges)->map(function ($pic) {
                 return [
-                    'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
+                    'name' => $pic->employee->name.'('.$pic->employee->employee_id.')',
                 ];
             })->pluck('name')->values()->toArray();
 
@@ -169,7 +159,7 @@ class TestingService {
             $marketingData = collect($item->marketings)->pluck('marketing.name')->toArray();
             $marketing = $item->marketings[0]->marketing->name;
             if ($item->marketings->count() > 1) {
-                $marketing .= ", and +" . $item->marketings->count() - 1 . " more";
+                $marketing .= ', and +'.$item->marketings->count() - 1 .' more';
             }
 
             $eventType = '-';
@@ -226,7 +216,7 @@ class TestingService {
                 'uid' => $item->uid,
                 'id' => $item->id,
                 'marketing' => $marketing,
-                'pic' => count($pics) > 0  ? implode(', ', $pics) : __('global.undetermined'),
+                'pic' => count($pics) > 0 ? implode(', ', $pics) : __('global.undetermined'),
                 'no_pic' => count($pics) == 0 ? true : false,
                 'pic_eid' => $picEid,
                 'name' => $item->name,
@@ -248,9 +238,9 @@ class TestingService {
                 'number_of_equipments' => $item->equipments->count(),
                 'action' => [
                     'detail' => true,
-                    'remove_all_vj' => $this->user->can('assign_vj') && !$projectIsComplete && !$noPic && $haveVj,
-                    'assign_vj' => $this->user->can('assign_vj') && !$projectIsComplete && !$haveVj && !$noPic,
-                ]
+                    'remove_all_vj' => $this->user->can('assign_vj') && ! $projectIsComplete && ! $noPic && $haveVj,
+                    'assign_vj' => $this->user->can('assign_vj') && ! $projectIsComplete && ! $haveVj && ! $noPic,
+                ],
             ];
         });
 
@@ -269,12 +259,6 @@ class TestingService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
@@ -291,7 +275,7 @@ class TestingService {
             $whereHas = [];
 
             $roles = $this->user->roles;
-            $roleNames = collect($roles)->pluck("name")->toArray();
+            $roleNames = collect($roles)->pluck('name')->toArray();
 
             $isProductionRole = $this->userRoleManagement->isProductionRole();
             $isEntertainmentRole = $this->userRoleManagement->isEntertainmentRole();
@@ -302,7 +286,7 @@ class TestingService {
             // $filterResult = $this->buildFilterResult();
 
             if (request('filter_month') == 'true') {
-                $startMonth = date('Y-m') . '-01';
+                $startMonth = date('Y-m').'-01';
                 $endDateOfMonth = Carbon::createFromDate(
                     (int) date('Y'),
                     (int) date('m'),
@@ -310,7 +294,7 @@ class TestingService {
                 )
                     ->endOfMonth()
                     ->format('d');
-                $endMonth = date('Y-m') . '-' . $endDateOfMonth;
+                $endMonth = date('Y-m').'-'.$endDateOfMonth;
                 if (empty($where)) {
                     $where = "project_date BETWEEN '{$startMonth}' AND '{$endMonth}'";
                 } else {
@@ -319,8 +303,8 @@ class TestingService {
             }
 
             if (request('filter_year') == 'true') {
-                $startMonth = date('Y') . '-01-01';
-                $endMonth = date('Y') . '-12-31';
+                $startMonth = date('Y').'-01-01';
+                $endMonth = date('Y').'-12-31';
 
                 if (empty($where)) {
                     $where = "project_date BETWEEN '{$startMonth}' AND '{$endMonth}'";
@@ -342,50 +326,51 @@ class TestingService {
                 ($search) &&
                 (count($search) > 0)
             ) {
-                if (!empty($search['name']) && empty($where)) {
+                if (! empty($search['name']) && empty($where)) {
                     $name = strtolower($search['name']);
                     $where = "lower(name) LIKE '%{$name}%'";
-                } else if (!empty($search['name']) && !empty($where)) {
+                } elseif (! empty($search['name']) && ! empty($where)) {
                     $name = $search['name'];
                     $where .= " AND lower(name) LIKE '%{$name}%'";
                 }
 
-                if (!empty($search['event_type']) && empty($where)) {
+                if (! empty($search['event_type']) && empty($where)) {
                     $eventType = strtolower($search['event_type']);
                     $where = "event_type = '{$eventType}'";
-                } else if (!empty($search['event_type']) && !empty($where)) {
+                } elseif (! empty($search['event_type']) && ! empty($where)) {
                     $eventType = $search['event_type'];
                     $where .= " AND event_type = '{$eventType}'";
                 }
 
-                if (!empty($search['classification']) && empty($where)) {
+                if (! empty($search['classification']) && empty($where)) {
                     $classification = strtolower($search['classification']);
                     $where = "classification = '{$classification}'";
-                } else if (!empty($search['classification']) && !empty($where)) {
+                } elseif (! empty($search['classification']) && ! empty($where)) {
                     $classification = $search['classification'];
                     $where .= " AND classification = '{$classification}'";
                 }
 
-                if (!empty($search['start_date']) && empty($where)) {
+                if (! empty($search['start_date']) && empty($where)) {
                     $start = date('Y-m-d', strtotime($search['start_date']));
                     $where = "project_date >= '{$start}'";
-                } else if (!empty($search['start_date']) && !empty($where)) {
+                } elseif (! empty($search['start_date']) && ! empty($where)) {
                     $start = date('Y-m-d', strtotime($search['start_date']));
                     $where .= " AND project_date >= '{$start}'";
                 }
 
-                if (!empty($search['end_date']) && empty($where)) {
+                if (! empty($search['end_date']) && empty($where)) {
                     $end = date('Y-m-d', strtotime($search['end_date']));
                     $where = "project_date <= '{$end}'";
-                } else if (!empty($search['end_date']) && !empty($where)) {
+                } elseif (! empty($search['end_date']) && ! empty($where)) {
                     $end = date('Y-m-d', strtotime($search['end_date']));
                     $where .= " AND project_date <= '{$end}'";
                 }
 
-                if (!empty($search['pic']) && empty($whereHas)) {
+                if (! empty($search['pic']) && empty($whereHas)) {
                     $pics = $search['pic'];
                     $pics = collect($pics)->map(function ($pic) {
-                        $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee());
+                        $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee);
+
                         return $picId;
                     })->toArray();
                     $picData = implode(',', $pics);
@@ -408,7 +393,7 @@ class TestingService {
                 return $this->listForEntertainment($select, $where, $relation);
             }
 
-            $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id', [], 'id = ' . $this->user->employee_id);
+            $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id', [], 'id = '.$this->user->employee_id);
 
             // get project that only related to authorized user
             if ($isProductionRole || $isEntertainmentRole || $this->user->hasRole(BaseRole::LeadModeller->value)) {
@@ -443,11 +428,11 @@ class TestingService {
                     $bossId = $employeeId->boss_id;
 
                     if ($bossId) {
-                        $inWhere = "(";
+                        $inWhere = '(';
                         $inWhere .= $this->user->employee_id;
-                        $inWhere .= ",";
+                        $inWhere .= ',';
                         $inWhere .= $bossId;
-                        $inWhere .= ")";
+                        $inWhere .= ')';
 
                         $whereHas[] = [
                             'relation' => 'personInCharges',
@@ -456,23 +441,23 @@ class TestingService {
                     }
 
                     // get assistant task
-//                    $assistantTaskCondition = $this->getProjectTaskRelationQuery($employee);
+                    //                    $assistantTaskCondition = $this->getProjectTaskRelationQuery($employee);
 
                 } else {
-                    if (!auth()->user()->hasRole(BaseRole::ProjectManagerAdmin->value)) {
+                    if (! auth()->user()->hasRole(BaseRole::ProjectManagerAdmin->value)) {
                         $whereHas[] = [
                             'relation' => 'personInCharges',
-                            'query' => 'pic_id = ' . $this->user->employee_id,
+                            'query' => 'pic_id = '.$this->user->employee_id,
                         ];
                     }
                 }
             }
 
             $sorts = '';
-            if (!empty(request('sortBy'))) {
+            if (! empty(request('sortBy'))) {
                 foreach (request('sortBy') as $sort) {
                     if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
-                        $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
+                        $sorts .= $sort['key'].' '.$sort['order'].',';
                     }
                 }
 
@@ -513,7 +498,7 @@ class TestingService {
             $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses, $roles) {
                 $pics = collect($item->personInCharges)->map(function ($pic) {
                     return [
-                        'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
+                        'name' => $pic->employee->name.'('.$pic->employee->employee_id.')',
                     ];
                 })->pluck('name')->values()->toArray();
 
@@ -524,7 +509,7 @@ class TestingService {
                 $marketingData = collect($item->marketings)->pluck('marketing.name')->toArray();
                 $marketing = $item->marketings[0]->marketing ? $item->marketings[0]->marketing->name : '';
                 if ($item->marketings->count() > 1) {
-                    $marketing .= ", and +" . $item->marketings->count() - 1 . " more";
+                    $marketing .= ', and +'.$item->marketings->count() - 1 .' more';
                 }
 
                 $eventType = '-';
@@ -595,7 +580,7 @@ class TestingService {
                     'uid' => $item->uid,
                     'id' => $item->id,
                     'marketing' => $marketing,
-                    'pic' => count($pics) > 0  ? implode(', ', $pics) : __('global.undetermined'),
+                    'pic' => count($pics) > 0 ? implode(', ', $pics) : __('global.undetermined'),
                     'no_pic' => $noPic,
                     'pic_eid' => $picEid,
                     'name' => $item->name,
@@ -618,14 +603,14 @@ class TestingService {
                     'action' => [
                         'delete' => $this->user->can('delete_project') ? true : false,
                         'detail' => true,
-                        'change_status' => $this->user->can('change_project_status') && !$projectIsComplete,
+                        'change_status' => $this->user->can('change_project_status') && ! $projectIsComplete,
                         'assign_pic' => $this->user->can('assign_pic') && $noPic,
-                        'subtitute_pic' => $this->user->can('assign_pic') && !$noPic,
-                        'final_check' => $this->user->can('final_check') && !$noPic && !$isFinalCheck,
-                        'remove_all_vj' => $this->user->can('assign_vj') && !$projectIsComplete && !$noPic && $haveVj,
-                        'assign_vj' => $this->user->can('assign_vj') && !$projectIsComplete && !$haveVj && !$noPic,
+                        'subtitute_pic' => $this->user->can('assign_pic') && ! $noPic,
+                        'final_check' => $this->user->can('final_check') && ! $noPic && ! $isFinalCheck,
+                        'remove_all_vj' => $this->user->can('assign_vj') && ! $projectIsComplete && ! $noPic && $haveVj,
+                        'assign_vj' => $this->user->can('assign_vj') && ! $projectIsComplete && ! $haveVj && ! $noPic,
                         'return_equipment' => $projectIsComplete && $needReturnEquipment,
-                    ]
+                    ],
                 ];
             });
 
@@ -636,7 +621,7 @@ class TestingService {
                     'paginated' => $paginated,
                     'totalData' => $totalData,
                     'itemPerPage' => (int) $itemsPerPage,
-                    'isAllItems' => $isAllItems
+                    'isAllItems' => $isAllItems,
                 ],
             );
         } catch (\Throwable $th) {

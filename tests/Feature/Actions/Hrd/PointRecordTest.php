@@ -5,7 +5,6 @@ namespace Tests\Feature\Actions\Hrd;
 use App\Actions\Hrd\PointRecord;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
 use Tests\TestCase;
@@ -22,7 +21,7 @@ class PointRecordTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testPointRecordReturnSuccess(): void
+    public function test_point_record_return_success(): void
     {
         $projects = Project::factory()
             ->count(1)
@@ -36,18 +35,18 @@ class PointRecordTest extends TestCase
         foreach ($employees as $key => $employee) {
             $tasks = [1];
             if ($key == 1) {
-                $tasks = [2,3];
-            } else if ($key == 2) {
+                $tasks = [2, 3];
+            } elseif ($key == 2) {
                 $tasks = [5];
-            } else if ($key == 3) {
-                $tasks = [10,3];
+            } elseif ($key == 3) {
+                $tasks = [10, 3];
             }
 
             $payload['points'][] = [
                 'uid' => $employee->uid,
                 'point' => count($tasks) + 1,
                 'additional_point' => 1,
-                'tasks' => $tasks
+                'tasks' => $tasks,
             ];
         }
 
@@ -65,7 +64,7 @@ class PointRecordTest extends TestCase
         }
     }
 
-    public function testProductionWithMultipleTaskInOneProject(): void
+    public function test_production_with_multiple_task_in_one_project(): void
     {
         $projects = Project::factory()
             ->count(2)
@@ -81,9 +80,9 @@ class PointRecordTest extends TestCase
                     'uid' => $employees[0]->uid,
                     'point' => 1,
                     'additional_point' => 0,
-                    'tasks' => [25]
+                    'tasks' => [25],
                 ],
-            ]
+            ],
         ];
 
         PointRecord::run($payload, $projects[0]->uid, 'production');
@@ -91,7 +90,7 @@ class PointRecordTest extends TestCase
         // create another point
         $payload['points'][0]['point'] = 3;
         $payload['points'][0]['additional_point'] = 1;
-        $payload['points'][0]['tasks'] = [30,33];
+        $payload['points'][0]['tasks'] = [30, 33];
 
         PointRecord::run($payload, $projects[1]->uid, 'production');
 
@@ -102,7 +101,7 @@ class PointRecordTest extends TestCase
         $this->assertDatabaseHas('employee_point_project_details', ['task_id' => 25]);
     }
 
-    public function testEntertaimentWithMultipleTaskInOneProject(): void
+    public function test_entertaiment_with_multiple_task_in_one_project(): void
     {
         $projects = Project::factory()
             ->count(1)
@@ -118,9 +117,9 @@ class PointRecordTest extends TestCase
                     'uid' => $employees[0]->uid,
                     'point' => 1,
                     'additional_point' => 0,
-                    'tasks' => [45]
+                    'tasks' => [45],
                 ],
-            ]
+            ],
         ];
 
         PointRecord::run($payload, $projects[0]->uid, 'entertainment');

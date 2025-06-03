@@ -2,8 +2,8 @@
 
 namespace Modules\Inventory\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Inventory\Database\Factories\EmployeeCustomInventoryFactory;
 
 class EmployeeCustomInventory extends Model
@@ -15,11 +15,11 @@ class EmployeeCustomInventory extends Model
      */
     protected $fillable = [
         'employee_id',
-        'custom_inventory_id'
+        'custom_inventory_id',
     ];
 
     protected static function newFactory(): EmployeeCustomInventoryFactory
     {
-        //return EmployeeCustomInventoryFactory::new();
+        // return EmployeeCustomInventoryFactory::new();
     }
 }

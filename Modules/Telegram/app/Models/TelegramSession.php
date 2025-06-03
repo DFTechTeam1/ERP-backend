@@ -3,8 +3,9 @@
 namespace Modules\Telegram\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Telegram\Database\Factories\TelegramSessionFactory;
 
 class TelegramSession extends Model
@@ -17,7 +18,7 @@ class TelegramSession extends Model
     protected $fillable = [
         'chat_id',
         'value',
-        'status'
+        'status',
     ];
 
     // protected static function newFactory(): TelegramSessionFactory

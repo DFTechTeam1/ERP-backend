@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Notification;
 
 class RequestEquipmentJob implements ShouldQueue
@@ -17,7 +17,6 @@ class RequestEquipmentJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param object $project
      */
     public function __construct(object $project)
     {
@@ -38,7 +37,7 @@ class RequestEquipmentJob implements ShouldQueue
                 'equipments:id,project_id,inventory_id,qty,created_by',
                 'equipments.userCreated:id,employee_id',
                 'equipments.userCreated.employee:id,name',
-                'equipments.inventory:id,name'
+                'equipments.inventory:id,name',
             ])
             ->find($this->project->id);
 
@@ -47,16 +46,16 @@ class RequestEquipmentJob implements ShouldQueue
 
         $messages[] = [
             'type' => 'text',
-            'text' => 'Halo, ada permintaan equipment nih untuk event '. $project->name .' dari '. $project->equipments[0]->userCreated->employee->name .' dipakai tanggal ' . date('d F Y', strtotime($project->project_date)) . '. Berikut detail nya ya'
+            'text' => 'Halo, ada permintaan equipment nih untuk event '.$project->name.' dari '.$project->equipments[0]->userCreated->employee->name.' dipakai tanggal '.date('d F Y', strtotime($project->project_date)).'. Berikut detail nya ya',
         ];
 
-        $equipmentMessage = "";
+        $equipmentMessage = '';
 
         // chunk into 3
         $equipments = array_chunk(collect($equipments)->toArray(), 3);
         $newInventory = [];
         foreach ($equipments as $eKey => $chunk) {
-            $messageInventory = "";
+            $messageInventory = '';
             foreach ($chunk as $equipment) {
                 $messageInventory .= "Nama: {$equipment['inventory']['name']} \n";
                 $messageInventory .= "Jumlah: {$equipment['qty']} \n";

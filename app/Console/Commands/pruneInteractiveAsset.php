@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\InteractiveImage;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class pruneInteractiveAsset extends Command

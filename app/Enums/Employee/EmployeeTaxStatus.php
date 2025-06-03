@@ -12,11 +12,10 @@ enum EmployeeTaxStatus: int
     public function label(): string
     {
         return match ($this) {
-            static::PegawaiTetap => 'Pegawai Tetap',
-            static::PegawaiTidakTetap => 'Pegawai Tidak Tetap',
-            static::BukanPegawaiYangBersifatBerkesinambungan => 'Bukan Pegawai yang Bersifat Berkesinambungan',
-            static::BukanPegawaiYangTidakBersifat => 'Bukan Pegawai yang Tidak Bersifat'
+            self::PegawaiTetap => 'Pegawai Tetap',
+            self::PegawaiTidakTetap => 'Pegawai Tidak Tetap',
+            self::BukanPegawaiYangBersifatBerkesinambungan => 'Bukan Pegawai yang Bersifat Berkesinambungan',
+            self::BukanPegawaiYangTidakBersifat => 'Bukan Pegawai yang Tidak Bersifat'
         };
     }
-
 }

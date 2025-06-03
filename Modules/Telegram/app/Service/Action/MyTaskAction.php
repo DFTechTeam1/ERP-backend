@@ -3,21 +3,17 @@
 namespace Modules\Telegram\Service\Action;
 
 use App\Enums\Production\TaskStatus;
-use App\Enums\Telegram\ChatStatus;
-use App\Enums\Telegram\ChatType;
-use App\Enums\Telegram\CommandList;
 use App\Models\User;
 use App\Services\Telegram\TelegramService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Models\Employee;
-use Modules\Production\Services\ProjectService;
 use Modules\Telegram\Enums\CallbackIdentity;
-use Modules\Telegram\Models\TelegramChatHistory;
 use Modules\Telegram\Models\TelegramReportTask;
 
-class MyTaskAction {
+class MyTaskAction
+{
     private $service;
 
     private $chatId;
@@ -38,7 +34,7 @@ class MyTaskAction {
 
     protected function setAuth()
     {
-        if (!$this->token) {
+        if (! $this->token) {
             $employee = Employee::select('id')
                 ->where('telegram_chat_id', $this->chatId)
                 ->first();
@@ -55,7 +51,7 @@ class MyTaskAction {
 
     protected function setUserIdentity(array $payload, bool $isFromText = false)
     {
-        if (!$isFromText) {
+        if (! $isFromText) {
             $this->chatId = $payload['callback_query']['message']['chat']['id'];
             $this->messageId = $payload['callback_query']['message']['message_id'];
         } else {
@@ -85,7 +81,7 @@ class MyTaskAction {
 
     protected function setService()
     {
-        $this->service = new TelegramService();
+        $this->service = new TelegramService;
     }
 
     protected function validateNasLink(string $link)
@@ -109,11 +105,10 @@ class MyTaskAction {
         }
     }
 
-
     public function handleProofOfWork(array $payload, object $currentTopicData)
     {
         // validate NAS LINK
-        if (!$this->validateNasLink($payload['message']['text'])) {
+        if (! $this->validateNasLink($payload['message']['text'])) {
             $this->service->sendTextMessage($this->chatId, 'Wahh link yang kamu berikan tidak sesuai');
         } else {
 
@@ -121,7 +116,7 @@ class MyTaskAction {
             TelegramReportTask::where('telegram_chat_id', $this->chatId)
                 ->where('task_id', $this->tid)
                 ->update([
-                    'nas_link' => $payload['message']['text']
+                    'nas_link' => $payload['message']['text'],
                 ]);
         }
     }
@@ -135,29 +130,29 @@ class MyTaskAction {
         if ($this->currentFunction == 'back') {
             $name = 'sendOptionTask';
             $this->sendOptionTask();
-        } else if ($this->currentFunction == 'event') {
+        } elseif ($this->currentFunction == 'event') {
             $name = 'sendBasedOnEvent';
             $this->sendBasedOnEvent();
-        } else if ($this->currentFunction == 'backoption') {
+        } elseif ($this->currentFunction == 'backoption') {
             $name = 'sendOptionTask';
             $this->sendOptionTask();
-        } else if ($this->currentFunction == 'month') {
+        } elseif ($this->currentFunction == 'month') {
             $name = 'sendMonthList';
-        } else if ($this->currentFunction == 'backyear') {
+        } elseif ($this->currentFunction == 'backyear') {
             $name = 'sendYearList';
-        } else if ($this->currentFunction == 'eventlist') {
+        } elseif ($this->currentFunction == 'eventlist') {
             $name = 'sendEventOnSelectedMonth';
-        } else if ($this->currentFunction == 'backmonth') {
+        } elseif ($this->currentFunction == 'backmonth') {
             $name = 'sendMonthList';
-        } else if ($this->currentFunction == 'projectdtl') {
+        } elseif ($this->currentFunction == 'projectdtl') {
             $name = 'sendTaskList';
-        } else if ($this->currentFunction == 'detailtask') {
+        } elseif ($this->currentFunction == 'detailtask') {
             $name = 'sendDetailTaskAction';
-        } else if ($this->currentFunction == 'apptask') {
+        } elseif ($this->currentFunction == 'apptask') {
             $name = 'sendApproveTask';
-        } else if ($this->currentFunction == 'deadline') {
+        } elseif ($this->currentFunction == 'deadline') {
             $name = 'sendDeadlineBased';
-        } else if ($this->currentFunction == 'reportdone') {
+        } elseif ($this->currentFunction == 'reportdone') {
             $name = 'sendApproveWork';
         }
 
@@ -178,13 +173,12 @@ class MyTaskAction {
         $this->service->deleteMessage($this->chatId, $this->messageId);
     }
 
-
     protected function sendDeadlineBased()
     {
         $startDate = date('Y-m-d');
         $endDate = date('Y-m-d', strtotime('+7 days'));
         $tasks = \Modules\Production\Models\ProjectTask::selectRaw('id,name')
-            ->where('start_date', '>=' , $startDate)
+            ->where('start_date', '>=', $startDate)
             ->where('end_date', '<=', $endDate)
             ->get();
 
@@ -194,7 +188,7 @@ class MyTaskAction {
             foreach ($chunk as $task) {
                 $outputTasks[$key][] = [
                     'text' => $task['name'],
-                    'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=detailtask&tid=' . $task['id'] . '&y=&m=&pid=',
+                    'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=detailtask&tid='.$task['id'].'&y=&m=&pid=',
                 ];
             }
         }
@@ -202,12 +196,12 @@ class MyTaskAction {
         $outputTasks[count($chunks)] = [
             [
                 'text' => 'Back',
-                'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=back&y=&m=&tid=',
-            ]
+                'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=back&y=&m=&tid=',
+            ],
         ];
 
         $this->service->sendEditButtonMessage($this->chatId, $this->messageId, [
-            'inline_keyboard' => $outputTasks
+            'inline_keyboard' => $outputTasks,
         ]);
     }
 
@@ -220,7 +214,7 @@ class MyTaskAction {
         $this->setAuth();
 
         $response = Http::withToken($this->token)
-            ->get(env('APP_URL') . "/api/production/project/{$task->project->uid}/task/{$task->uid}/approve");
+            ->get(env('APP_URL')."/api/production/project/{$task->project->uid}/task/{$task->uid}/approve");
 
         if ($response->successful()) {
             $this->service->deleteMessage($this->chatId, $this->messageId);
@@ -238,23 +232,23 @@ class MyTaskAction {
         try {
             $task = \Modules\Production\Models\ProjectTaskPic::selectRaw('id,project_task_id,employee_id')
                 ->with([
-                    'task:id,name,status'
+                    'task:id,name,status',
                 ])
-                ->where('project_task_id',$this->tid)
+                ->where('project_task_id', $this->tid)
                 ->first();
 
             $outputButton = [];
             if ($task->task->status == TaskStatus::WaitingApproval->value) {
                 $outputButton = [
                     [
-                        ['text' => 'Approve task', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=apptask&tid=' . $this->tid]
-                    ]
+                        ['text' => 'Approve task', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=apptask&tid='.$this->tid],
+                    ],
                 ];
-            } else if ($task->task->status == TaskStatus::OnProgress->value || $task->task->status == TaskStatus::Revise->value) {
+            } elseif ($task->task->status == TaskStatus::OnProgress->value || $task->task->status == TaskStatus::Revise->value) {
                 $outputButton = [
                     [
-                        ['text' => 'Sudah Selesai', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=reportdone&tid=' . $this->tid]
-                    ]
+                        ['text' => 'Sudah Selesai', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=reportdone&tid='.$this->tid],
+                    ],
                 ];
             }
 
@@ -266,12 +260,12 @@ class MyTaskAction {
             $outputButton[$key] = [
                 [
                     'text' => 'Back',
-                    'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=projectdtl&y=' . $this->year . '&m=' . $this->month . '&pid=' . $this->pid . '&tid='
-                ]
+                    'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=projectdtl&y='.$this->year.'&m='.$this->month.'&pid='.$this->pid.'&tid=',
+                ],
             ];
 
             $this->service->sendEditButtonMessage($this->chatId, $this->messageId, [
-                'inline_keyboard' => $outputButton
+                'inline_keyboard' => $outputButton,
             ]);
         } catch (\Throwable $th) {
             Log::error($th
@@ -284,7 +278,7 @@ class MyTaskAction {
     {
         $tasks = \Modules\Production\Models\ProjectTaskPic::selectRaw('project_task_id,employee_id')
             ->with([
-                'task:id,name,status,end_date,start_date'
+                'task:id,name,status,end_date,start_date',
             ])
             ->whereHas('employee', function ($q) {
                 $q->where('telegram_chat_id', $this->chatId);
@@ -301,7 +295,7 @@ class MyTaskAction {
             foreach ($chunk as $task) {
                 $outputTasks[$key][] = [
                     'text' => $task['task']['name'],
-                    'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=detailtask&tid=' . $task['task']['id'] . '&y=' . $this->year . '&m=' . $this->month . '&pid=' . $this->pid,
+                    'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=detailtask&tid='.$task['task']['id'].'&y='.$this->year.'&m='.$this->month.'&pid='.$this->pid,
                 ];
             }
         }
@@ -309,12 +303,12 @@ class MyTaskAction {
         $outputTasks[count($chunks)] = [
             [
                 'text' => 'Back',
-                'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m='. $this->month .'&tid=',
-            ]
+                'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m='.$this->month.'&tid=',
+            ],
         ];
 
         $this->service->sendEditButtonMessage($this->chatId, $this->messageId, [
-            'inline_keyboard' => $outputTasks
+            'inline_keyboard' => $outputTasks,
         ]);
     }
 
@@ -326,13 +320,13 @@ class MyTaskAction {
         $user = User::where('employee_id', $employee->id)->first();
 
         // get the projects
-        $startDate = $this->year . '-' . $this->month . '-01';
+        $startDate = $this->year.'-'.$this->month.'-01';
         $year = $this->year;
         $month = $this->month;
         $getLastDay = Carbon::createFromDate((int) $year, (int) $month, 1)
             ->endOfMonth()
             ->format('d');
-        $endDate = $year . '-' . $month . '-' . $getLastDay;
+        $endDate = $year.'-'.$month.'-'.$getLastDay;
 
         $this->setAuth();
 
@@ -342,17 +336,17 @@ class MyTaskAction {
                 'end_date' => $endDate,
             ],
             'page' => 1,
-            'itemsPerPage' => 100
+            'itemsPerPage' => 100,
         ];
 
         $response = Http::withToken($this->token)
-            ->get(env("APP_URL") . "/api/production/project", $search);
+            ->get(env('APP_URL').'/api/production/project', $search);
 
         if ($response->successful()) {
             $projects = collect($response->json()['data']['paginated'])->map(function ($item) {
                 return [
                     'id' => $item['id'],
-                    'name' => $item['name']
+                    'name' => $item['name'],
                 ];
             })->toArray();
         }
@@ -363,7 +357,7 @@ class MyTaskAction {
             foreach ($projectData as $k => $project) {
                 $outputProjects[$keyChunk][] = [
                     'text' => $project['name'],
-                    'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=projectdtl&y=' . $this->year . '&m=' . $this->month . '&pid=' . $project['id'] . '&tid='
+                    'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=projectdtl&y='.$this->year.'&m='.$this->month.'&pid='.$project['id'].'&tid=',
                 ];
             }
         }
@@ -371,8 +365,8 @@ class MyTaskAction {
         $outputProjects[count($projectChunks)] = [
             [
                 'text' => 'Back',
-                'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=backmonth&y=' . $this->year . '&m=' . $this->month . '&tid='
-            ]
+                'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=backmonth&y='.$this->year.'&m='.$this->month.'&tid=',
+            ],
         ];
 
         $send = $this->service->sendEditButtonMessage($this->chatId, $this->messageId, [
@@ -385,29 +379,29 @@ class MyTaskAction {
         $button = [
             'inline_keyboard' => [
                 [
-                    ['text' => 'Januari', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=01&tid='],
-                    ['text' => 'Febuari', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=02&tid='],
-                    ['text' => 'Maret', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=03&tid='],
+                    ['text' => 'Januari', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=01&tid='],
+                    ['text' => 'Febuari', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=02&tid='],
+                    ['text' => 'Maret', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=03&tid='],
                 ],
                 [
-                    ['text' => 'April', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=04&tid='],
-                    ['text' => 'Mei', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=05&tid='],
-                    ['text' => 'Juni', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=06&tid='],
+                    ['text' => 'April', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=04&tid='],
+                    ['text' => 'Mei', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=05&tid='],
+                    ['text' => 'Juni', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=06&tid='],
                 ],
                 [
-                    ['text' => 'Juli', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=07&tid='],
-                    ['text' => 'Agustus', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=08&tid='],
-                    ['text' => 'September', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=09&tid='],
+                    ['text' => 'Juli', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=07&tid='],
+                    ['text' => 'Agustus', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=08&tid='],
+                    ['text' => 'September', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=09&tid='],
                 ],
                 [
-                    ['text' => 'Oktober', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=10&tid='],
-                    ['text' => 'November', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=11&tid='],
-                    ['text' => 'Desember', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=eventlist&y=' . $this->year . '&m=12&tid='],
+                    ['text' => 'Oktober', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=10&tid='],
+                    ['text' => 'November', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=11&tid='],
+                    ['text' => 'Desember', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=eventlist&y='.$this->year.'&m=12&tid='],
                 ],
                 [
-                    ['text' => '<< Back', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=backyear&y=' . $this->year . '&m=&tid='],
-                ]
-            ]
+                    ['text' => '<< Back', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=backyear&y='.$this->year.'&m=&tid='],
+                ],
+            ],
         ];
 
         $this->service->sendEditButtonMessage($this->chatId, $this->messageId, $button);
@@ -433,7 +427,7 @@ class MyTaskAction {
             foreach ($chunk as $year) {
                 $outputYear[$key][] = [
                     'text' => $year,
-                    'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=month&v=' . $year . '&y=' . $year . '&m=&tid=',
+                    'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=month&v='.$year.'&y='.$year.'&m=&tid=',
                 ];
             }
         }
@@ -441,17 +435,17 @@ class MyTaskAction {
         $outputYear[count($chunks)] = [
             [
                 'text' => 'Back',
-                'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=backoption&y=' . $this->year . '&m=' . $this->month . '&tid='
-            ]
+                'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=backoption&y='.$this->year.'&m='.$this->month.'&tid=',
+            ],
         ];
 
         if ($isEdit) {
             $send = $this->service->sendEditButtonMessage($this->chatId, $this->messageId, [
-                'inline_keyboard' => $outputYear
+                'inline_keyboard' => $outputYear,
             ]);
         } else {
             $send = $this->service->sendButtonMessage($this->chatId, 'Pilih dulu beberapa pilihan dibawah ini ya', [
-                'inline_keyboard' => $outputYear
+                'inline_keyboard' => $outputYear,
             ]);
         }
     }
@@ -461,14 +455,12 @@ class MyTaskAction {
         $this->service->sendEditButtonMessage($this->chatId, $this->messageId, [
             'inline_keyboard' => [
                 [
-                    ['text' => '1 minggu lagi harus selesai', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=deadline&tid=']
+                    ['text' => '1 minggu lagi harus selesai', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=deadline&tid='],
                 ],
                 [
-                    ['text' => 'Berdasarkan event', 'callback_data' => 'idt=' . CallbackIdentity::MyTask->value . '&f=event&tid='],
-                ]
-            ]
+                    ['text' => 'Berdasarkan event', 'callback_data' => 'idt='.CallbackIdentity::MyTask->value.'&f=event&tid='],
+                ],
+            ],
         ]);
     }
-
-
 }

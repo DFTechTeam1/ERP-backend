@@ -4,13 +4,13 @@ namespace Modules\Production\Models;
 
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Production\Database\Factories\ProjectFactory;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Modules\Production\Observers\NasFolderObserver;
 
 #[ObservedBy([NasFolderObserver::class])]
@@ -57,8 +57,6 @@ class Project extends Model
 
     /**
      * Get all of the personInCharges for the Project
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function personInCharges(): HasMany
     {
@@ -122,8 +120,6 @@ class Project extends Model
 
     /**
      * Get all of the boards for the Project
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function boards(): HasMany
     {
@@ -137,8 +133,6 @@ class Project extends Model
 
     /**
      * Get all of the references for the Project
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function references(): HasMany
     {
@@ -191,7 +185,7 @@ class Project extends Model
         $output = '';
 
         if (isset($this->attributes['showreels'])) {
-            $output = asset('storage/projects/' . $this->attributes['id'] . '/showreels/' . $this->attributes['showreels']);
+            $output = asset('storage/projects/'.$this->attributes['id'].'/showreels/'.$this->attributes['showreels']);
         }
 
         return Attribute::make(

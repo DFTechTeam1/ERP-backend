@@ -5,20 +5,20 @@ namespace Modules\Inventory\Models;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Inventory\Database\factories\InventoryFactory;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Modules\Inventory\Observers\InventoryObserver;
 use Modules\Production\Models\ProjectEquipment;
 
 // #[ObservedBy([InventoryObserver::class])]
 class Inventory extends Model
 {
-    use HasFactory, ModelObserver, ModelCreationObserver;
+    use HasFactory, ModelCreationObserver, ModelObserver;
 
     /**
      * The attributes that are mass assignable.
@@ -37,7 +37,7 @@ class Inventory extends Model
         'created_by',
         'updated_by',
         'stock',
-        'warehouse_id'
+        'warehouse_id',
     ];
 
     protected $appends = ['display_image'];
@@ -94,8 +94,9 @@ class Inventory extends Model
         if (count($this->images) > 0) {
             $out = asset("storage/inventory/{$this->images[0]->image}");
         }
+
         return new Attribute(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 }

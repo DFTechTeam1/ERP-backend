@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class ReviseTaskJob implements ShouldQueue
 {
@@ -20,8 +20,8 @@ class ReviseTaskJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param array<int> $employeeIds
-     * @param int $taskId
+     *
+     * @param  array<int>  $employeeIds
      */
     public function __construct(array $employeeIds, int $taskId)
     {
@@ -35,18 +35,18 @@ class ReviseTaskJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->pusher = new \App\Services\PusherNotification();
+        $this->pusher = new \App\Services\PusherNotification;
 
         $task = \Modules\Production\Models\ProjectTask::selectRaw('name,project_id')
             ->with([
-                'project:id,name,uid'
+                'project:id,name,uid',
             ])
             ->find($this->taskId);
 
         $revise = \Modules\Production\Models\ProjectTaskReviseHistory::selectRaw('reason,file,project_id,project_task_id')
-                ->where('project_task_id', $this->taskId)
-                ->orderBy('created_at', 'desc')
-                ->first();
+            ->where('project_task_id', $this->taskId)
+            ->orderBy('created_at', 'desc')
+            ->first();
 
         foreach ($this->employeeIds as $employeeId) {
             $employee = \Modules\Hrd\Models\Employee::find($employeeId);
@@ -55,7 +55,7 @@ class ReviseTaskJob implements ShouldQueue
 
             $notif = formatNotifications($employee->unreadNotifications->toArray());
 
-            $this->pusher->send('my-channel-' . $employee->user_id, 'notification-event', $notif);
+            $this->pusher->send('my-channel-'.$employee->user_id, 'notification-event', $notif);
         }
     }
 }

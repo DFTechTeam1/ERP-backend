@@ -5,21 +5,16 @@ namespace Tests\Feature\Employee;
 use App\Traits\HasEmployeeConstructor;
 use App\Traits\TestUserAuthentication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\Sanctum;
 use Modules\Company\Database\Factories\ProvinceFactory;
 use Modules\Company\Models\Branch;
 use Modules\Company\Models\Position;
-use Modules\Company\Models\Province;
 use Modules\Hrd\Models\Employee;
 use Tests\TestCase;
 
-use function PHPSTORM_META\map;
-
 class UpdateEmployeeTest extends TestCase
 {
-    use RefreshDatabase, TestUserAuthentication, HasEmployeeConstructor;
+    use HasEmployeeConstructor, RefreshDatabase, TestUserAuthentication;
 
     private $token;
 
@@ -39,38 +34,38 @@ class UpdateEmployeeTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function testUpdateEmployeeReturnErrorMissingParam(): void
+    public function test_update_employee_return_error_missing_param(): void
     {
         $payload = [
-            'name' => ''
+            'name' => '',
         ];
 
         $response = $this->putJson(route('api.employees.update', ['uid' => 1]), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('name', $response['errors']);
     }
 
-    public function testUpdateEmployeeWithNonUniqueEmail(): void
+    public function test_update_employee_with_non_unique_email(): void
     {
         $uniqueEmail = 'email@email.com';
 
         $employees = Employee::factory()->count(1)->create([
-            'email' => $uniqueEmail
+            'email' => $uniqueEmail,
         ]);
 
         $updateEmployees = Employee::factory()->count(1)->create([
-            'email' => 'update@email.com'
+            'email' => 'update@email.com',
         ]);
 
         $payload = [
-            'email' => $uniqueEmail
+            'email' => $uniqueEmail,
         ];
 
         $response = $this->putJson(route('api.employees.update', ['uid' => $updateEmployees[0]->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer '.$this->token,
         ]);
         $response->assertStatus(422);
         $this->assertArrayHasKey('email', $response['errors']);
@@ -79,7 +74,7 @@ class UpdateEmployeeTest extends TestCase
         parent::tearDown();
     }
 
-    public function testUpdateEmployeeSuccess(): void
+    public function test_update_employee_success(): void
     {
         $position = Position::factory()->count(1)->create();
         $branch = Branch::factory()->count(1)->create();
@@ -88,7 +83,7 @@ class UpdateEmployeeTest extends TestCase
             'level_staff' => 'manager',
             'join_date' => date('Y-m-d'),
             'position_id' => $position[0]->id,
-            'branch_id' => $branch[0]->id
+            'branch_id' => $branch[0]->id,
         ]);
 
         $payload = collect((object) $employees[0])->only([
@@ -120,8 +115,8 @@ class UpdateEmployeeTest extends TestCase
         $payload['boss_id'] = '111';
         $payload['position_id'] = $position[0]->uid;
 
-         $response = $this->putJson(route('api.employees.update', ['uid' => $employees[0]->uid]), $payload, [
-            'Authorization' => 'Bearer ' . $this->token
+        $response = $this->putJson(route('api.employees.update', ['uid' => $employees[0]->uid]), $payload, [
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertStatus(201);

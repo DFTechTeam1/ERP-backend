@@ -15,11 +15,10 @@ class TestProjectConstructor extends TestCase
             [
                 'method' => 'list',
                 'times' => 'once',
-                'return' => []
-            ]
+                'return' => [],
+            ],
         ]
-    )
-    {
+    ) {
         return $testCase->instance(
             $class,
             Mockery::mock($class, function (MockInterface $mock) use ($method) {
@@ -27,7 +26,7 @@ class TestProjectConstructor extends TestCase
                     $mockData = $mock->shouldReceive($methodData['method']);
                     if ($methodData['times'] == 'once') {
                         $mockData->once();
-                    } else if (gettype($methodData['times']) == 'integer') {
+                    } elseif (gettype($methodData['times']) == 'integer') {
                         $mockData->atMost($methodData['times']);
                     }
                     $mockData->andReturn($methodData['return']);

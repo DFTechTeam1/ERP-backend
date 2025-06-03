@@ -5,14 +5,15 @@ namespace App\Schedules;
 use App\Enums\Production\ProjectStatus;
 use App\Jobs\PostNotifyCompleteProjectJob;
 
-class PostNotifyCompleteProject {
+class PostNotifyCompleteProject
+{
     public function __invoke()
     {
         $cutOffDate = '2024-11-01';
         $projects = \Modules\Production\Models\Project::selectRaw('id,project_date,name,status')
             ->with([
                 'personInCharges:id,project_id,pic_id',
-                'personInCharges.employee:id,uid,email,nickname,line_id,telegram_chat_id'
+                'personInCharges.employee:id,uid,email,nickname,line_id,telegram_chat_id',
             ])
             ->whereIn(
                 'status',
@@ -25,7 +26,7 @@ class PostNotifyCompleteProject {
                 'project_date',
                 [
                     $cutOffDate,
-                    date('Y-m-d', strtotime('-1 day'))
+                    date('Y-m-d', strtotime('-1 day')),
                 ]
             )
             ->get();
@@ -37,7 +38,7 @@ class PostNotifyCompleteProject {
 
                 $outputData[] = [
                     'employee' => $employee,
-                    'project' => $project
+                    'project' => $project,
                 ];
             }
         }

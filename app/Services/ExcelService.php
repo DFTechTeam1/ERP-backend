@@ -4,14 +4,15 @@ namespace App\Services;
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
-class ExcelService {
+class ExcelService
+{
     protected $spreadsheet;
 
     protected $worksheet;
 
     public function __construct()
     {
-        $this->spreadsheet = new Spreadsheet();
+        $this->spreadsheet = new Spreadsheet;
 
         $this->worksheet = $this->spreadsheet->getActiveSheet();
     }
@@ -21,7 +22,7 @@ class ExcelService {
         $array = [
             'font' => [
                 'bold' => true,
-            ]
+            ],
         ];
 
         $this->spreadsheet->getActiveSheet()->getStyle($cell)->applyFromArray($array);
@@ -29,7 +30,7 @@ class ExcelService {
 
     public function autoSize(array $dimension)
     {
-        foreach($dimension as $dim) {
+        foreach ($dimension as $dim) {
             $this->spreadsheet->getActiveSheet()->getColumnDimension($dim)->setAutoSize(true);
         }
     }
@@ -54,15 +55,14 @@ class ExcelService {
         string $values, string $cell,
         string $errorTitle, string $errorText,
         string $promtText
-    )
-    {
+    ) {
         $validation = $this->spreadsheet->getActiveSheet()->getCell($cell)->getDataValidation();
         $validation->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
-        $validation->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION );
+        $validation->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
         $validation->setAllowBlank(false);
         $validation->setShowInputMessage(true);
         $validation->setShowErrorMessage(true);
-        $validation->setFormula1('"'. $values .'"');
+        $validation->setFormula1('"'.$values.'"');
         $validation->setShowDropDown(true);
         $validation->setErrorTitle($errorTitle);
         $validation->setError($errorText);
@@ -72,11 +72,11 @@ class ExcelService {
 
     public function save(string $path)
     {
-        if (!\Illuminate\Support\Facades\Storage::directoryExists('static-file')) {
+        if (! \Illuminate\Support\Facades\Storage::directoryExists('static-file')) {
             \Illuminate\Support\Facades\Storage::makeDirectory('static-file');
         }
 
-        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($this->spreadsheet, "Xlsx");
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($this->spreadsheet, 'Xlsx');
         $writer->save($path);
     }
 
@@ -87,7 +87,7 @@ class ExcelService {
 
         $this->deleteDefaultSheet();
     }
-    
+
     public function setActiveSheet(string $sheetName)
     {
         $this->spreadsheet->setActiveSheetIndexByName($sheetName);
@@ -107,9 +107,6 @@ class ExcelService {
 
     /**
      * Set cell comment in bulk
-     *
-     * @param array $items
-     * @return void
      */
     public function bulkComment(array $items): void
     {
@@ -125,12 +122,6 @@ class ExcelService {
 
     /**
      * Set cell comment
-     *
-     * @param mixed $sheet
-     * @param string $coordinate
-     * @param string $comment
-     * @param boolean $isBold
-     * @return void
      */
     public function setComment(mixed $sheet, string $coordinate, string $comment, bool $isBold = false): void
     {
