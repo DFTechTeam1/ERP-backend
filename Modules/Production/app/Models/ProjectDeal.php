@@ -44,6 +44,12 @@ class ProjectDeal extends Model
     //     // return ProjectDealFactory::new();
     // }
 
+    protected $appends = [
+        'formatted_project_date',
+        'status_text',
+        'status_color',
+    ];
+
     protected $casts = [
         'event_type' => \App\Enums\Production\EventType::class,
         'equipment_type' => \App\Enums\Production\EquipmentType::class,
@@ -59,12 +65,7 @@ class ProjectDeal extends Model
 
     public function marketings(): HasMany
     {
-        return $this->hasMany(ProjectDealMarketing::class, 'project_deal_id')   
-            ->select(
-                'id',
-                \Illuminate\Support\Facades\DB::raw('project_deal_id as marketing_project_deal_id'),
-                'employee_id'
-            );
+        return $this->hasMany(ProjectDealMarketing::class, 'project_deal_id');
     }
 
     public function quotations(): HasMany
@@ -87,5 +88,54 @@ class ProjectDeal extends Model
     public function city(): BelongsTo
     {
         return $this->BelongsTo(\Modules\Company\Models\City::class, 'city_id');
+    }
+
+    public function formattedProjectDate(): Attribute
+    {
+        $output = null;
+
+        if (isset($this->attributes['project_date'])) {
+            $output = date('d F Y', strtotime($this->attributes['project_date']));
+        }
+
+        return Attribute::make(
+            get: fn () => $output
+        );
+    }
+
+    public function statusText(): Attribute
+    {
+        $output = __('global.undetermined');
+
+        if (isset($this->attributes['status'])) {
+            $statuses = \App\Enums\Production\ProjectStatus::cases();
+            foreach ($statuses as $status) {
+                if ($status->value == $this->attributes['status']) {
+                    $output = $status->label();
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn () => $output,
+        );
+    }
+
+    public function statusColor(): Attribute
+    {
+        $output = 'grey-lighten-1';
+
+        if (isset($this->attributes['status'])) {
+            $statuses = \App\Enums\Production\ProjectStatus::cases();
+            foreach ($statuses as $status) {
+                if ($status->value == $this->attributes['status']) {
+                    $output = $status->color();
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn () => $output,
+        );
     }
 }

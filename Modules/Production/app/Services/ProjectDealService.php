@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Services\GeneralService;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 
@@ -11,14 +12,22 @@ class ProjectDealService
 
     private $marketingRepo;
 
+    private $generalService;
+
     /**
      * Construction Data
      */
-    public function __construct(ProjectDealRepository $repo, ProjectDealMarketingRepository $marketingRepo)
+    public function __construct(
+        ProjectDealRepository $repo,
+        ProjectDealMarketingRepository $marketingRepo,
+        GeneralService $generalService
+    )
     {
         $this->repo = $repo;
 
         $this->marketingRepo = $marketingRepo;
+
+        $this->generalService = $generalService;
     }
 
     /**
@@ -49,18 +58,25 @@ class ProjectDealService
             );
             $totalData = $this->repo->list('id', $where)->count();
 
-            $paginated->map(function ($item) {
-                $marketing = $this->marketingRepo->list(
-                    select: 'id,employee_id',
-                    where: "project_deal_id = {$item->id}",
-                    relation: [
-                        'employee:id,nickname'
-                    ]
-                );
+            $paginated = $paginated->map(function ($item) {
 
-                $item['marketing'] = implode(',', $marketing->pluck('employee.nickname')->toArray());
+                $marketing = implode(',', $item->marketings->pluck('employee.nickname')->toArray());
 
-                return $item;
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'venue' => $item->venue,
+                    'project_date' => $item->formatted_project_date,
+                    'city' => $item->city ? $item->city->name : '-',
+                    'collaboration' => $item->collboration,
+                    'status' => $item->status_text,
+                    'status_color' => $item->status_color,
+                    'marketing' => $marketing,
+                    'quotation' => [
+                        'id' => $item->latestQuotation->quotation_id,
+                        'fix_price' => $item->latestQuotation->fix_price,
+                    ],
+                ];
             });
 
             return generalResponse(
@@ -124,8 +140,7 @@ class ProjectDealService
         string $id,
         string $where = ''
     ): array {
-        try {
-            $this->repo->update($data, $id);
+        try {$this->repo->update($data, $id);
 
             return generalResponse(
                 'success',
@@ -169,6 +184,37 @@ class ProjectDealService
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
+        }
+    }
+
+    public function getPriceFormula()
+    {
+        $setting = $this->generalService->getSettingByKey(param: 'area_guide_price');
+
+        $output = [];
+
+        if ($setting) {
+            $master = json_decode($setting, true);
+
+            $mainBallroom = [];
+            $keys = [
+                'Main Ballroom Fee',
+                'Prefunction Fee',
+                'Max Discount'
+            ];
+            foreach ($master['area'] as $area) {
+                if (in_array($area['area'], $keys)) {
+                    
+                }
+            }
+
+            $output = [
+                'main_ballroom' => '',
+                'prefunction' => '',
+                'equipment' => '',
+                'discount' => '',
+                'price_up' => ''
+            ];
         }
     }
 }

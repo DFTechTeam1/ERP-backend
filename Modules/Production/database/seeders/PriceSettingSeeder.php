@@ -16,71 +16,107 @@ class PriceSettingSeeder extends Seeder
             // discount
             [
                 'code' => 'price',
-                'key' => 'discount_type',
-                'value' => 'percentage',
-            ],
-            [
-                'code' => 'price',
-                'key' => 'discount',
-                'value' => '10',
-            ],
-
-            // markup price
-            [
-                'code' => 'price',
-                'key' => 'markup_type',
-                'value' => 'percentage',
-            ],
-            [
-                'code' => 'price',
-                'key' => 'markup',
-                'value' => '10',
-            ],
-
-            // high season
-            [
-                'code' => 'price',
-                'key' => 'high_season_type',
-                'value' => 'percentage',
-            ],
-            [
-                'code' => 'price',
-                'key' => 'high_season',
-                'value' => '25',
-            ],
-
-            // equipment
-            [
-                'code' => 'price',
-                'key' => 'equipment_type',
-                'value' => 'fix',
-            ],
-            [
-                'code' => 'price',
-                'key' => 'equipment',
-                'value' => '2500000',
-            ],
-
-            // price guide area
-            [
-                'code' => 'price_guide',
-                'key' => 'Surabaya',
-                'value' => 'surabaya',
-            ],
-            [
-                'code' => 'price_guide',
-                'key' => 'Jakarta',
-                'value' => 'jakarta',
-            ],
-            [
-                'code' => 'price_guide',
-                'key' => 'Jawa',
-                'value' => 'jawa',
-            ],
-            [
-                'code' => 'price_guide',
-                'key' => 'Luar Jawa',
-                'value' => 'luar jawa',
+                'key' => 'area_guide_price',
+                'value' => json_encode([
+                    'area' => [
+                        [
+                            'area' => 'Surabaya',
+                            'settings' => [
+                                [
+                                    'name' => 'Main Ballroom Fee',
+                                    'type' => 'fixed',
+                                    'value' => 0,
+                                ],
+                                [
+                                    'name' => 'Prefunction Fee',
+                                    'type' => 'fixed',
+                                    'value' => 0,
+                                ],
+                                [
+                                    'name' => 'Max Discount',
+                                    'type' => 'percentage',
+                                    'value' => 10,
+                                ],
+                            ],
+                        ],
+                        [
+                            'area' => 'Jakarta',
+                            'settings' => [
+                                [
+                                    'name' => 'Main Ballroom Fee',
+                                    'type' => 'fixed',
+                                    'value' => 0,
+                                ],
+                                [
+                                    'name' => 'Prefunction Fee',
+                                    'type' => 'fixed',
+                                    'value' => 0,
+                                ],
+                                [
+                                    'name' => 'Max Discount',
+                                    'type' => 'percentage',
+                                    'value' => 10,
+                                ],
+                            ],
+                        ],
+                        [
+                            'area' => 'Jawa',
+                            'settings' => [
+                                [
+                                    'name' => 'Main Ballroom Fee',
+                                    'type' => 'fixed',
+                                    'value' => 0,
+                                ],
+                                [
+                                    'name' => 'Prefunction Fee',
+                                    'type' => 'fixed',
+                                    'value' => 0,
+                                ],
+                                [
+                                    'name' => 'Max Discount',
+                                    'type' => 'percentage',
+                                    'value' => 10,
+                                ],
+                            ],
+                        ],
+                        [
+                            'area' => 'Luar Jawa',
+                            'settings' => [
+                                [
+                                    'name' => 'Main Ballroom Fee',
+                                    'type' => 'fixed',
+                                    'value' => 0,
+                                ],
+                                [
+                                    'name' => 'Prefunction Fee',
+                                    'type' => 'fixed',
+                                    'value' => 0,
+                                ],
+                                [
+                                    'name' => 'Max Discount',
+                                    'type' => 'percentage',
+                                    'value' => 10,
+                                ],
+                            ],
+                        ],
+                    ],
+                    'equipment' => [
+                        [
+                            'name' => 'Lasika',
+                            'type' => 'fixed',
+                            'value' => 0,
+                        ],
+                        [
+                            'name' => 'Others',
+                            'type' => 'fixed',
+                            'value' => 2500000,
+                        ],
+                    ],
+                    'price_up' => [
+                        'type' => 'percentage',
+                        'value' => 11,
+                    ],
+                ]),
             ],
         ];
 
