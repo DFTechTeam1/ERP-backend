@@ -30,7 +30,7 @@ class SettingController extends Controller
         return apiResponse($this->service->getSetting($code));
     }
 
-    public function storeSetting(Request $request, $code = null)
+    public function storeSetting(Request $request, $code = null): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->store($request->all(), $code));
     }

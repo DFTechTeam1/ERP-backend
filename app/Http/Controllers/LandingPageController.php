@@ -38,12 +38,12 @@ class LandingPageController extends Controller
             //code...
             $data = \Modules\Production\Models\Project::selectRaw('id,name,project_date,status')
                 ->with([
-                    'personInCharges:id,pic_id,project_id'
+                    'personInCharges:id,pic_id,project_id',
                 ])
                 ->get();
-    
+
             $output = [];
-    
+
             $data = \Illuminate\Support\Facades\DB::table('projects')
                 ->leftJoin(table: 'project_classes', first: 'project_classes.project_id', operator: '=', second: 'projects.id')
                 ->whereDate('projects.project_date', '>=', '2025-01-1')
@@ -57,7 +57,6 @@ class LandingPageController extends Controller
 
     public function index()
     {
-        return $this->getProjectData();
         // $image = 'https://data-center.dfactory.pro/dfactory.png';
         // $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', compact('image'));
         // return $pdf->download('quotation.pdf');

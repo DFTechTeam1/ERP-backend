@@ -29,6 +29,15 @@ class SettingService
     protected function formattedGlobalSetting($code = null)
     {
         $settings = \Illuminate\Support\Facades\Cache::get('setting');
+        
+        // format guide price
+        $settings = collect($settings)->map(function ($setting) {
+            if ($setting['key'] == 'area_guide_price') {
+                $setting['value'] = json_decode($setting['value'], true);
+            }
+
+            return $setting;
+        });
 
         if ($code) {
             $selected = collect($settings)->where('code', $code)->values()->toArray();
@@ -64,10 +73,10 @@ class SettingService
                     ($item['key'] == 'company_logo') &&
                     (
                         ($item['value']) &&
-                        (is_file(storage_path('app/public/settings/' . $item['value'])))
+                        (is_file(storage_path('app/public/settings/'.$item['value'])))
                     )
                 ) {
-                    $item['value'] = asset('storage/settings/' . $item['value']);
+                    $item['value'] = asset('storage/settings/'.$item['value']);
                 }
 
                 return $item;
@@ -190,6 +199,8 @@ class SettingService
 
     /**
      * Store data
+     * 
+     * @return array
      */
     public function store(array $data, $code = null): array
     {
@@ -207,6 +218,8 @@ class SettingService
                 }
             } elseif ($code == 'company') {
                 $this->storeCompany($data);
+            } elseif ($code == 'price') {
+                $this->storePricing($data);
             }
 
             cachingSetting();
@@ -223,7 +236,53 @@ class SettingService
         }
     }
 
-    protected function storeCompany(array $data)
+    protected function storePricing(array $payload): void
+    {
+        $check = $this->repo->show(
+            uid: 'uid',
+            select: 'id,value',
+            where: "`key` = 'area_guide_price'"
+        );
+
+        $payload['area'] = collect($payload['area'])->map(function ($item) {
+            $item['settings'] = collect($item['settings'])->map(function ($setting) {
+                if ($setting['type'] == 'fixed') {
+                    $setting['value'] = str_replace(',', '', $setting['value']);
+                }
+
+                return $setting;
+            });
+
+            return $item;
+        })->toArray();
+        $payload['equipment'] = collect($payload['equipment'])->map(function ($equipment) {
+            if ($equipment['type'] == 'fixed') {
+                $equipment['value'] = str_replace(',', '', $equipment['value']);
+            }
+
+            return $equipment;
+        })->toArray();
+
+        if ($payload['price_up']['type'] == 'fixed') {
+            $payload['price_up']['value'] = str_replace(',', '', $payload['price_up']['value']);
+        }
+
+        if ($check) {
+            $this->repo->update([
+                'value' => json_encode($payload)
+            ], $check->id);
+        } else {
+            $this->repo->store([
+                'code' => 'price',
+                'key' => 'area_guide_price',
+                'value' => json_encode($payload)
+            ]);
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('setting');
+    }
+
+    protected function storeCompany(array $data): void
     {
         // get current logo and delete if exists
         $currentLogo = $this->repo->show(uid: 'uid', select: 'value', where: "`key` = 'company_logo'");
@@ -248,7 +307,7 @@ class SettingService
                 if ($image) {
                     $value = $image;
                 } else {
-                    $value = NULL;
+                    $value = null;
                 }
             }
 

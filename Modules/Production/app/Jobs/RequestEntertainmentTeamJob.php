@@ -24,8 +24,6 @@ class RequestEntertainmentTeamJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     *
-     * @param  object  $requestedEmployee
      */
     public function __construct(
         array $payload,

@@ -399,8 +399,6 @@ class ProjectController extends Controller
 
     /**
      * * Change board of task (When user move a task)
-     *
-     * @param  \Modules\Production\Http\Requests\Project\ManualChangeTaskBoard  $request
      */
     public function manualChangeTaskBoard(ManualChangeTaskBoard $request, string $projectId)
     {
@@ -889,8 +887,10 @@ class ProjectController extends Controller
         return apiResponse($this->projectDealService->list(
             select: 'id,project_date,name,venue,city_id,collaboration,status',
             relation: [
+                'marketings',
+                'marketings.employee:id,nickname',
                 'latestQuotation',
-                'city:id,name'
+                'city:id,name',
             ]
         ));
     }
