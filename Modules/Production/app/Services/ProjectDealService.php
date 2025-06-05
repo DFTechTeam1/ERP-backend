@@ -21,8 +21,7 @@ class ProjectDealService
         ProjectDealRepository $repo,
         ProjectDealMarketingRepository $marketingRepo,
         GeneralService $generalService
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->marketingRepo = $marketingRepo;
@@ -140,7 +139,8 @@ class ProjectDealService
         string $id,
         string $where = ''
     ): array {
-        try {$this->repo->update($data, $id);
+        try {
+            $this->repo->update($data, $id);
 
             return generalResponse(
                 'success',
@@ -200,11 +200,11 @@ class ProjectDealService
             $keys = [
                 'Main Ballroom Fee',
                 'Prefunction Fee',
-                'Max Discount'
+                'Max Discount',
             ];
             foreach ($master['area'] as $area) {
                 if (in_array($area['area'], $keys)) {
-                    
+
                 }
             }
 
@@ -213,7 +213,7 @@ class ProjectDealService
                 'prefunction' => '',
                 'equipment' => '',
                 'discount' => '',
-                'price_up' => ''
+                'price_up' => '',
             ];
         }
     }

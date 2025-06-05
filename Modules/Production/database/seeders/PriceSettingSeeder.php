@@ -26,16 +26,19 @@ class PriceSettingSeeder extends Seeder
                                     'name' => 'Main Ballroom Fee',
                                     'type' => 'fixed',
                                     'value' => 0,
+                                    'fixType' => 'fixed',
                                 ],
                                 [
                                     'name' => 'Prefunction Fee',
                                     'type' => 'fixed',
                                     'value' => 0,
+                                    'fixType' => 'fixed',
                                 ],
                                 [
                                     'name' => 'Max Discount',
                                     'type' => 'percentage',
                                     'value' => 10,
+                                    'fixType' => 'flexible',
                                 ],
                             ],
                         ],
@@ -46,16 +49,19 @@ class PriceSettingSeeder extends Seeder
                                     'name' => 'Main Ballroom Fee',
                                     'type' => 'fixed',
                                     'value' => 0,
+                                    'fixType' => 'fixed',
                                 ],
                                 [
                                     'name' => 'Prefunction Fee',
                                     'type' => 'fixed',
                                     'value' => 0,
+                                    'fixType' => 'fixed',
                                 ],
                                 [
                                     'name' => 'Max Discount',
                                     'type' => 'percentage',
                                     'value' => 10,
+                                    'fixType' => 'flexible',
                                 ],
                             ],
                         ],
@@ -66,16 +72,19 @@ class PriceSettingSeeder extends Seeder
                                     'name' => 'Main Ballroom Fee',
                                     'type' => 'fixed',
                                     'value' => 0,
+                                    'fixType' => 'fixed',
                                 ],
                                 [
                                     'name' => 'Prefunction Fee',
                                     'type' => 'fixed',
                                     'value' => 0,
+                                    'fixType' => 'fixed',
                                 ],
                                 [
                                     'name' => 'Max Discount',
                                     'type' => 'percentage',
                                     'value' => 10,
+                                    'fixType' => 'flexible',
                                 ],
                             ],
                         ],
@@ -86,16 +95,19 @@ class PriceSettingSeeder extends Seeder
                                     'name' => 'Main Ballroom Fee',
                                     'type' => 'fixed',
                                     'value' => 0,
+                                    'fixType' => 'fixed',
                                 ],
                                 [
                                     'name' => 'Prefunction Fee',
                                     'type' => 'fixed',
                                     'value' => 0,
+                                    'fixType' => 'fixed',
                                 ],
                                 [
                                     'name' => 'Max Discount',
                                     'type' => 'percentage',
                                     'value' => 10,
+                                    'fixType' => 'flexible',
                                 ],
                             ],
                         ],
@@ -116,6 +128,8 @@ class PriceSettingSeeder extends Seeder
                         'type' => 'percentage',
                         'value' => 11,
                     ],
+                    'minimum_price' => '35000000',
+                    'prefunction_percentage' => '25',
                 ]),
             ],
         ];
@@ -126,7 +140,6 @@ class PriceSettingSeeder extends Seeder
             Setting::create($data);
         }
 
-        // setting area guide price
-
+        \Illuminate\Support\Facades\Cache::forget('setting');
     }
 }

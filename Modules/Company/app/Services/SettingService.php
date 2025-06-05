@@ -12,6 +12,8 @@ class SettingService
 
     private $taskRepo;
 
+    private $generalService;
+
     const LOGO_PATH = 'settings';
 
     /**
@@ -19,17 +21,20 @@ class SettingService
      */
     public function __construct(
         SettingRepository $repo,
-        ProjectTaskRepository $taskRepo
+        ProjectTaskRepository $taskRepo,
+        \App\Services\GeneralService $generalService
     ) {
         $this->repo = $repo;
 
         $this->taskRepo = $taskRepo;
+
+        $this->generalService = $generalService;
     }
 
     protected function formattedGlobalSetting($code = null)
     {
         $settings = \Illuminate\Support\Facades\Cache::get('setting');
-        
+
         // format guide price
         $settings = collect($settings)->map(function ($setting) {
             if ($setting['key'] == 'area_guide_price') {
@@ -199,8 +204,6 @@ class SettingService
 
     /**
      * Store data
-     * 
-     * @return array
      */
     public function store(array $data, $code = null): array
     {
@@ -246,9 +249,7 @@ class SettingService
 
         $payload['area'] = collect($payload['area'])->map(function ($item) {
             $item['settings'] = collect($item['settings'])->map(function ($setting) {
-                if ($setting['type'] == 'fixed') {
-                    $setting['value'] = str_replace(',', '', $setting['value']);
-                }
+                $setting['value'] = str_replace(',', '', $setting['value']);
 
                 return $setting;
             });
@@ -256,26 +257,24 @@ class SettingService
             return $item;
         })->toArray();
         $payload['equipment'] = collect($payload['equipment'])->map(function ($equipment) {
-            if ($equipment['type'] == 'fixed') {
-                $equipment['value'] = str_replace(',', '', $equipment['value']);
-            }
+            $equipment['value'] = str_replace(',', '', $equipment['value']);
 
             return $equipment;
         })->toArray();
 
-        if ($payload['price_up']['type'] == 'fixed') {
-            $payload['price_up']['value'] = str_replace(',', '', $payload['price_up']['value']);
-        }
+        $payload['price_up']['value'] = str_replace(',', '', $payload['price_up']['value']);
+        $payload['minimum_price'] = str_replace(',', '', $payload['minimum_price']);
+        $payload['prefunction_percentage'] = str_replace(',', '', $payload['prefunction_percentage']);
 
         if ($check) {
             $this->repo->update([
-                'value' => json_encode($payload)
+                'value' => json_encode($payload),
             ], $check->id);
         } else {
             $this->repo->store([
                 'code' => 'price',
                 'key' => 'area_guide_price',
-                'value' => json_encode($payload)
+                'value' => json_encode($payload),
             ]);
         }
 
@@ -500,6 +499,148 @@ class SettingService
             return generalResponse(
                 'success',
                 false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get price calculation for project deals
+     */
+    public function getPriceCalculation(): array
+    {
+        try {
+            $output = [];
+
+            $guides = $this->generalService->getSettingByKey(param: 'area_guide_price');
+
+            if ($guides) {
+                $guides = json_decode($guides, true);
+
+                $areas = collect($guides['area'])->pluck('area')->toArray();
+                
+                $areaPricing = [];
+                foreach ($guides['area'] as $area) {
+                    $settings = [];
+                    foreach ($area['settings'] as $setting) {
+                        if ($setting['name'] == 'Main Ballroom Fee') {
+                            $settings['mainBallroom'] = [
+                                'fixed' => "{total_led}*" . $setting['value'],
+                                'percentage' => null
+                            ];
+                        } else if ($setting['name'] == 'Prefunction Fee') {
+                            $percent = 100 - $guides['prefunction_percentage'];
+                            $settings['prefunction'] = [
+                                'fixed' => "{total_led}*(" . $setting['value'] . "*" . $percent . "/100)",
+                                'percentage' => null
+                            ];
+                        } else if ($setting['name'] == 'Max Discount') {
+                            $percentage = null;
+                            $fixed = null;
+                            if ($setting['type'] == 'percentage') {
+                                $percentage = "({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*". $setting['value'] ."/100";
+                            } else if ($setting['type'] == 'fixed') {
+                                $fixed = "({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})-". $setting['value'];
+                            }
+                            $settings['discount'] = [
+                                'percentage' => $percentage,
+                                "fixed" => $fixed
+                            ];
+                        }
+                    }
+
+                    $areaPricing[$area['area']] = $settings;
+                }
+
+                $output = array_merge($output, $areaPricing);
+
+                // $output = [
+                //     'surabaya' => [
+                //         'mainBallroom' => [
+                //             'fixed' => '{total_led}*750000',
+                //             'percentage' => null,
+                //         ],
+                //         'prefunction' => [
+                //             'fixed' => '{total_led}*(750000*75/100)',
+                //             'percentage' => null,
+                //         ],
+                //         'discount' => [
+                //             'percentage' => '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*10/100',
+                //             'fixed' => null,
+                //         ],
+                //     ],
+                //     'jakarta' => [
+                //         'mainBallroom' => [
+                //             'fixed' => '{total_led}*1250000',
+                //             'percentage' => null,
+                //         ],
+                //         'prefunction' => [
+                //             'fixed' => '{total_led}*(1250000*75/100)',
+                //             'percentage' => null,
+                //         ],
+                //         'discount' => [
+                //             'percentage' => '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*10/100',
+                //             'fixed' => null,
+                //         ],
+                //     ],
+                //     'jawa' => [
+                //         'mainBallroom' => [
+                //             'fixed' => '{total_led}*500000',
+                //             'percentage' => null,
+                //         ],
+                //         'prefunction' => [
+                //             'fixed' => '{total_led}*(500000*75/100)',
+                //             'percentage' => null,
+                //         ],
+                //         'discount' => [
+                //             'percentage' => '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*10/100',
+                //             'fixed' => null,
+                //         ],
+                //     ],
+                //     'luar_jawa' => [
+                //         'mainBallroom' => [
+                //             'fixed' => '{total_led}*1000000',
+                //             'percentage' => null,
+                //         ],
+                //         'prefunction' => [
+                //             'fixed' => '{total_led}*(1000000*75/100)',
+                //             'percentage' => null,
+                //         ],
+                //         'discount' => [
+                //             'percentage' => '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*10/100',
+                //             'fixed' => null,
+                //         ],
+                //     ],
+                //     'highSeason' => [
+                //         'percentage' => '({main_ballroom_price}+{prefunction_price})*25/100',
+                //         'fixed' => null,
+                //     ],
+                //     'equipment' => [
+                //         'lasika' => 0,
+                //         'others' => '2500000',
+                //     ],
+                //     'equipmentList' => [
+                //         [
+                //             'title' => 'Lasika',
+                //             'value' => 'lasika',
+                //         ],
+                //         [
+                //             'title' => 'Others',
+                //             'value' => 'others',
+                //         ],
+                //     ],
+                //     'markup' => [
+                //         'percentage' => '{(main_ballroom_price+prefunction_price)*11/100}',
+                //         'fixed' => null,
+                //     ],
+                //     'minimum_price' => '35000000',
+                // ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: $output
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
