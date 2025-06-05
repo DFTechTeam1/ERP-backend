@@ -79,4 +79,9 @@ class SettingController extends Controller
 
         return response()->json([]);
     }
+
+    public function getPriceCalculation()
+    {
+        return apiResponse($this->service->getPriceCalculation());
+    }
 }

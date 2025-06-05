@@ -35,7 +35,7 @@ class LandingPageController extends Controller
     protected function getProjectData()
     {
         try {
-            //code...
+            // code...
             $data = \Modules\Production\Models\Project::selectRaw('id,name,project_date,status')
                 ->with([
                     'personInCharges:id,pic_id,project_id',
@@ -50,7 +50,7 @@ class LandingPageController extends Controller
                 ->groupBy('p.project_class_id')
                 ->dumpRawSql();
         } catch (\Throwable $th) {
-            //throw $th;
+            // throw $th;
             return errorResponse($th);
         }
     }
