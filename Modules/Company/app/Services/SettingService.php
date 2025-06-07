@@ -507,6 +507,8 @@ class SettingService
 
     /**
      * Get price calculation for project deals
+     * 
+     * @return array
      */
     public function getPriceCalculation(): array
     {
@@ -516,12 +518,17 @@ class SettingService
             $guides = $this->generalService->getSettingByKey(param: 'area_guide_price');
 
             if ($guides) {
-                $guides = json_decode($guides, true);
-
-                $areas = collect($guides['area'])->pluck('area')->toArray();
+                $guides = json_decode($guides, true);;
                 
                 $areaPricing = [];
+                $areas = [];
+    
                 foreach ($guides['area'] as $area) {
+                    $areas[] = [
+                        'title' => $area['area'],
+                        'value' => strtolower(str_replace(' ', '_', $area['area']))
+                    ];
+
                     $settings = [];
                     foreach ($area['settings'] as $setting) {
                         if ($setting['name'] == 'Main Ballroom Fee') {
@@ -550,10 +557,47 @@ class SettingService
                         }
                     }
 
-                    $areaPricing[$area['area']] = $settings;
+                    $formattedName = strtolower(str_replace(' ', '_', $area['area']));
+                    $areaPricing['areaGuide'][$formattedName] = $settings;
                 }
 
                 $output = array_merge($output, $areaPricing);
+
+                // area
+                $output['area'] = $areas;
+
+                // high season fee
+                $output['highSeason'] = [
+                    'percentage' => $guides['high_season']['type'] == 'percentage' ? "({main_ballroom_price}+{prefunction_price})*" . $guides['high_season']['value'] . "/100" : null,
+                    'fixed' => $guides['high_season']['type'] == 'fixed' ? $guides['high_season']['value'] : null
+                ];
+
+                // markup
+                $output['markup'] = [
+                    'percentaage' => $guides['price_up']['type'] == 'percentage' ? "{total_contract}*" . $guides['price_up']['value'] . "/100" : null,
+                    'fixed' => $guides['price_up']['type'] == 'fixed' ? "{total_contract}+" . $guides['price_up']['value'] : null
+                ];
+
+                // equipment
+                $output['equipment'] = [
+                    'lasika' => collect($guides['equipment'])->filter(function ($filter) {
+                        return $filter['name'] == 'Lasika';
+                    })->values()[0]['value'],
+                    'others' => collect($guides['equipment'])->filter(function ($filter) {
+                        return $filter['name'] == 'Others';
+                    })->values()[0]['value'],
+                ];
+
+                // minimum price
+                $output['minimum_price'] = $guides['minimum_price'];
+
+                // equipment list
+                $output['equipmentList'] = collect($guides['equipment'])->map(function ($map) {
+                    return [
+                        'title' => $map['name'],
+                        'value' => strtolower($map['name'])
+                    ];
+                });
 
                 // $output = [
                 //     'surabaya' => [

@@ -80,7 +80,12 @@ class SettingController extends Controller
         return response()->json([]);
     }
 
-    public function getPriceCalculation()
+    /**
+     * Get all price calculation formula
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPriceCalculation(): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->getPriceCalculation());
     }
