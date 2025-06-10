@@ -4,15 +4,22 @@ namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Production\Services\ProjectQuotationService;
 use Modules\Production\Services\QuotationItemService;
 
 class QuotationController extends Controller
 {
     private $service;
 
-    public function __construct(QuotationItemService $service)
-    {
+    private $projectQuotationService;
+
+    public function __construct(
+        QuotationItemService $service,
+        ProjectQuotationService $projectQuotationService
+    ) {
         $this->service = $service;
+
+        $this->projectQuotationService = $projectQuotationService;
     }
 
     /**
@@ -59,5 +66,10 @@ class QuotationController extends Controller
         //
 
         return response()->json([]);
+    }
+
+    public function quotation(string $quotationId): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->projectQuotationService->generateQuotation(quotationId: $quotationId));
     }
 }

@@ -68,6 +68,11 @@ class ProjectDeal extends Model
         return $this->hasMany(ProjectDealMarketing::class, 'project_deal_id');
     }
 
+    public function class(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Company\Models\ProjectClass::class, 'project_class_id');
+    }
+
     public function quotations(): HasMany
     {
         return $this->hasMany(ProjectQuotation::class, 'project_deal_id');
@@ -85,9 +90,24 @@ class ProjectDeal extends Model
             ->latestOfMany();
     }
 
+    public function customer(): BelongsTo
+    {
+        return $this->BelongsTo(\Modules\Production\Models\Customer::class, 'customer_id');
+    }
+
     public function city(): BelongsTo
     {
         return $this->BelongsTo(\Modules\Company\Models\City::class, 'city_id');
+    }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Company\Models\Country::class, 'country_id');
+    }
+
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Company\Models\State::class, 'state_id');
     }
 
     public function formattedProjectDate(): Attribute

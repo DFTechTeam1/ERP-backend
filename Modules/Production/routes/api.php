@@ -131,6 +131,7 @@ Route::middleware(['auth:sanctum'])
 
         // Quotations
         Route::get('quotations', [QuotationController::class, 'index']);
+        Route::get('quotations/download/{quotationId}', [QuotationController::class, 'quotation']);
         Route::post('quotations', [QuotationController::class, 'store']);
 
         Route::get('team-transfers', [TeamTransferController::class, 'index']);
