@@ -280,7 +280,13 @@ class PdfCreator extends FPDF {
             "Opening Sequence Content",
             "LED Digital Backdrop Content",
             "Entertainment LED Concept",
-            "Event Stationary"
+            "Entertainment LED Concept",
+            "Entertainment LED Concept",
+            "Entertainment LED Concept",
+            "Entertainment LED Concept",
+            "Event Stationary",
+            "Event Stationary",
+            "Event Stationary",
         ];
         foreach ($quotationItems as $keyItem => $item) {
             $borderItem = "L,R";
@@ -355,16 +361,18 @@ class PdfCreator extends FPDF {
     {
         $bullet = chr(149);
 
+        $this->SetAutoPageBreak(auto: true, margin: 15);
+
         $this->addClient();
 
         $this->addOffice();
 
         $this->addDetailEvent();
 
+        // $this->AddPage();
+
         // add watermark
         // $this->Image('watermark.png', 70, 85, 100, 0, 'png');
-
-        $this->addPage();
     }
 
     public function render()

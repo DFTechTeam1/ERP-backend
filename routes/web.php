@@ -29,58 +29,62 @@ Route::get('send-email-testing', function () {
 });
 
 Route::get('quotation', function () {
+    $service = new \App\Services\GeneralService();
     $data = [
+            'rules' => $service->getSettingByKey('quotation_rules'),
+            'company' => [
+                'address' => $service->getSettingByKey('company_address'),
+                'email' => $service->getSettingByKey('company_email'),
+                'phone' => $service->getSettingByKey('company_phone'),
+                'name' => $service->getSettingByKey('company_name'),
+            ],
             'quotationNumber' => 'DF01067',
             'date' => '15 April 2025',
             'designJob' => '01064',
-            'address' => 'Kaca Piring 19 / 2nd level',
-            'city' => 'Surabaya - East Java',
-            'phone' => '(62) 8211068 6655',
-            'email' => 'dfactory.id@gmail.com',
-            'social' => ['@dfactory_', '@dfactory'],
+            'price' => 'Rp100,000,000',
             'client' => [
                 'name' => 'Majestic EO',
-                'address' => 'Surabaya Indonesia'
+                'city' => 'Surabaya',
+                'country' => 'Indonesia'
             ],
             'event' => [
                 'title' => 'The Wedding Reception of Mr. Kevin & Mrs. Jocelyn',
                 'date' => '24 Mei 2025',
                 'venue' => 'Imperial Ballroom - Surabaya'
             ],
-            'items' => [
-                ['LED Visual Content Content Media Size :', 'Rp 57.500.000,-'],
-                ['Main Stage : 5x15 m', '']
-            ],
             'ledDetails' => [
+                ['name' => 'Main Stage', 'size' => '5 x 5 m'],
+                ['name' => 'Main Stage', 'size' => '5 x 5 m'],
+                ['name' => 'Main Stage', 'size' => '5 x 5 m'],
+                ['name' => 'Main Stage', 'size' => '5 x 5 m'],
+            ],
+            'items' => [
                 'Opening Sequence Content',
                 'LED Digital Backdrop Content',
                 'Entertainment LED Concept',
-                '  a. Entertainer Session',
-                '  b. Entertainer Bumper',
                 'Event Stationary',
-                '  a. Animated Logo Content',
-                '  b. Procession Title'
             ],
-            'terms' => [
-                'Minimum Down Payment sebesar 50% dari total biaya yang ditagihkan, biaya tersebut tidak dapat dikembalikan.',
-                'Pembayaran melalui rekening BCA 188 060 1225 a/n Wesley Wiyadi / Edwin Chandra Wilaya',
-                'Biaya diatas tidak termasuk pajak.',
-                'Biaya layanan diatas hanya termasuk perlengkapan multimedia DFACTORY dan tidak termasuk persewaan unit LED dan sistem multimedia lainnya bila diperlukan.',
-                'Biaya diatas termasuk Akomodasi untuk Crew bertugas di hari-H event.'
-            ],
-            'currentDate' => now()->format('d F Y')
         ];
 
 
     $image = 'https://data-center.dfactory.pro/dfactory.png';
-    // $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', $data)
-    //     ->setPaper('14')
-    //     ->setOption('isHtml5ParserEnabled', true)
-    //     ->setOption('isRemoteEnabled', true);;
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', $data)
+        ->setPaper('14')
+        ->setOption([
+            'defaultFont' => 'sans-serif',
+            'isPhpEnabled' => true,
+            'isHtml5ParserEnabled' => true,
+            'debugPng' => false,
+            'debugLayout' => false,
+            'debugCss' => false
+        ]);
 
-    // return $pdf->download('quotation.pdf');
-    $creator = new \App\Pdf\PdfCreator();
-    return $creator->render();
+    $filename = "Quotation Majestic EO.pdf";
+    return $pdf->stream(filename: $filename);
+    // return view('quotation.quotation');
+});
+
+Route::get('quotation/{quotationId}/{token}', function (string $quotationId, string $token) {
 });
 
 Route::get('barcode', function () {

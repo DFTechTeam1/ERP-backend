@@ -8,12 +8,19 @@ class ProjectQuotationService
 {
     private $repo;
 
+    private $generalService;
+
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        ProjectQuotationRepository $repo,
+        \App\Services\GeneralService $generalService
+    )
     {
-        $this->repo = new ProjectQuotationRepository;
+        $this->repo = $repo;
+
+        $this->generalService = $generalService;
     }
 
     /**
@@ -151,5 +158,65 @@ class ProjectQuotationService
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    public function generateQuotation(string $quotationId): array
+    {
+        $data = $this->repo->show(
+            uid: 'uid',
+            select: 'id,project_deal_id,fix_price,quotation_id,description',
+            relation: [
+                'deal:id,name,project_date,customer_id,event_type,venue,collaboration,led_detail,country_id,state_id,city_id,project_class_id',
+                'deal.city:id,name',
+                'deal.country:id,name',
+                'deal.state:id,name',
+                'deal.customer:id,name',
+                'deal.class:id,name',
+                'items:quotation_id,id,item_id',
+                'items.item:id,name'
+            ],
+            where: "quotation_id = '#{$quotationId}'"
+        );
+
+        $output = [
+            'rules' => $this->generalService->getSettingByKey('quotation_rules'),
+            'company' => [
+                'address' => $this->generalService->getSettingByKey('company_address'),
+                'email' => $this->generalService->getSettingByKey('company_email'),
+                'phone' => $this->generalService->getSettingByKey('company_phone'),
+                'name' => $this->generalService->getSettingByKey('company_name'),
+            ],
+            'quotationNumber' => "#{$quotationId}",
+            'date' => date('d F Y', strtotime($data->deal->project_date)),
+            'designJob' => $data->deal->class->name,
+            'price' => 'Rp' . number_format(num: $data->fix_price, decimal_separator: ','),
+            'client' => [
+                'name' => $data->deal->customer->name,
+                'city' => $data->deal->city->name,
+                'country' => $data->deal->country->name
+            ],
+            'event' => [
+                'title' => $data->deal->name,
+                'date' => date('d F Y', strtotime($data->deal->project_date)),
+                'venue' => $data->deal->venue
+            ],
+            'ledDetails' => collect($data->deal->led_detail)->map(function ($item) {
+                return [
+                    'name' => $item['name'] == 'main' ? 'Main Stage' : 'Prefunction',
+                    'size' => $item['textDetail']
+                ];
+            })->toArray(),
+            'items' => collect($data->items)->map(function ($item) {
+                return $item->item->name;
+            })->toArray()
+        ];
+
+        return generalResponse(
+            message: "Success",
+            data: [
+                'output' => $output,
+                'raw' => $data
+            ]
+        );
     }
 }
