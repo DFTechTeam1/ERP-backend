@@ -3,7 +3,10 @@
 namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Crypt;
 use Modules\Production\Services\ProjectQuotationService;
 use Modules\Production\Services\QuotationItemService;
 
@@ -68,8 +71,16 @@ class QuotationController extends Controller
         return response()->json([]);
     }
 
-    public function quotation(string $quotationId): \Illuminate\Http\JsonResponse
+    /**
+     * Download or stream the quotation (PDF)
+     * 
+     * @param string $quoatationId
+     * @param string $type
+     * 
+     * @return JsonResponse|Response
+     */
+    public function quotation(string $quotationId, string $type): JsonResponse|Response
     {
-        return apiResponse($this->projectQuotationService->generateQuotation(quotationId: $quotationId));
+        return $this->projectQuotationService->generateQuotation(quotationId: $quotationId, type: $type);
     }
 }

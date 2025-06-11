@@ -10,6 +10,7 @@ class Zipper
 
     public function __construct(string $filepath)
     {
-        $this->zippy = new Zip($filepath);
+        $this->zippy = Zip::create($filepath);
+        // $this->zippy = new Zip($filepath);
     }
 }

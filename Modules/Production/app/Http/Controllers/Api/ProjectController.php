@@ -877,6 +877,13 @@ class ProjectController extends Controller
         return apiResponse($this->service->getQuotationNumber());
     }
 
+    /**
+     * Create and create quotation for project deal
+     * 
+     * @param \Modules\Production\Http\Requests\Deals\Store $request
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function storeProjectDeals(\Modules\Production\Http\Requests\Deals\Store $request)
     {
         return apiResponse($this->service->storeProjectDeals($request->validated()));
@@ -885,12 +892,14 @@ class ProjectController extends Controller
     public function listProjectDeals()
     {
         return apiResponse($this->projectDealService->list(
-            select: 'id,project_date,name,venue,city_id,collaboration,status',
+            select: 'id,project_date,name,venue,city_id,collaboration,status,is_fully_paid',
             relation: [
                 'marketings',
                 'marketings.employee:id,nickname',
                 'latestQuotation',
                 'city:id,name',
+                'transactions:id,project_deal_id,payment_amount,created_at',
+                'latestQuotation'
             ]
         ));
     }

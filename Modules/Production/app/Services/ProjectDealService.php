@@ -62,18 +62,26 @@ class ProjectDealService
                 $marketing = implode(',', $item->marketings->pluck('employee.nickname')->toArray());
 
                 return [
-                    'id' => $item->id,
+                    'uid' => \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $item->latestQuotation->quotation_id)), // stand for encrypted of latest quotation id
                     'name' => $item->name,
                     'venue' => $item->venue,
                     'project_date' => $item->formatted_project_date,
                     'city' => $item->city ? $item->city->name : '-',
-                    'collaboration' => $item->collboration,
+                    'collaboration' => $item->collboration ?? '-',
                     'status' => $item->status_text,
                     'status_color' => $item->status_color,
                     'marketing' => $marketing,
+                    'down_payment' => $item->getDownPaymentAmount(formatPrice: true),
+                    'remaining_payment' => $item->getRemainingPayment(formatPrice: true),
+                    'status' => true,
+                    'fix_price' => $item->getFinalPrice(formatPrice: true),
+                    'latest_price' => $item->getLatestPrice(formatPrice: true),
+                    'is_fully_paid' => (bool) $item->is_fully_paid,
+                    'status_payment' => $item->getStatusPayment(),
+                    'status_payment_color' => $item->getStatusPaymentColor(),
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
-                        'fix_price' => $item->latestQuotation->fix_price,
+                        'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
                     ],
                 ];
             });

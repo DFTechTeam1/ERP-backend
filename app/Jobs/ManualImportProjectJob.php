@@ -124,19 +124,19 @@ class ManualImportProjectJob implements ShouldQueue
             }
         }
 
-        $projectService = new \Modules\Production\Services\ProjectService;
+        // $projectService = new \Modules\Production\Services\ProjectService;
 
-        $chunks = collect($output)->chunk(30)->toArray();
+        // $chunks = collect($output)->chunk(30)->toArray();
 
-        foreach ($chunks as $seperated) {
-            foreach ($seperated as $project) {
-                $store = $projectService->store($project);
+        // foreach ($chunks as $seperated) {
+        //     foreach ($seperated as $project) {
+        //         $store = $projectService->store($project);
 
-                if ($store['error']) {
-                    logging('error', ['name' => $project['name'], 'error' => $store]);
-                }
-            }
-        }
+        //         if ($store['error']) {
+        //             logging('error', ['name' => $project['name'], 'error' => $store]);
+        //         }
+        //     }
+        // }
     }
 
     protected function formatLed(string $ledString)
@@ -190,7 +190,7 @@ class ManualImportProjectJob implements ShouldQueue
                     }
                 }
 
-                $led[$key]['led'] = $ledFinal ?? $project[$ledKey];
+                $led[$key]['led'] = $ledFinal ?? null;
                 $led[$key]['total'] = isset($total) ? array_sum($total) : 0;
                 $led[$key]['totalRaw'] = isset($total) ? array_sum($total) : 0;
                 $led[$key]['textDetail'] = isset($textDetail) ? implode(' , ', $textDetail) : 0;

@@ -11,9 +11,19 @@ use App\Models\FormInteractiveResponse;
 use App\Services\GoogleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Modules\Production\Services\ProjectService;
 
 class TestingController extends Controller
 {
+    private $projectService;
+
+    public function __construct(
+        ProjectService $projectService
+    )
+    {
+        $this->projectService = $projectService;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -345,7 +355,8 @@ class TestingController extends Controller
                     }
                 }
 
-                $led[$key]['led'] = $ledFinal ?? $project[$ledKey];
+                $led[$key]['led'] = $ledFinal ?? null;
+                // $led[$key]['led'] = $ledFinal ?? $project[$ledKey];
                 $led[$key]['total'] = isset($total) ? array_sum($total) : 0;
                 $led[$key]['totalRaw'] = isset($total) ? array_sum($total) : 0;
                 $led[$key]['textDetail'] = isset($textDetail) ? implode(' , ', $textDetail) : 0;
@@ -498,12 +509,10 @@ class TestingController extends Controller
     public function deleteCurrentProjects()
     {
         try {
-            $projectService = new \Modules\Production\Services\ProjectService;
-
             // delete current project
             $projects = \Modules\Production\Models\Project::select('uid')->get();
             $projectUids = collect((object) $projects)->pluck('uid')->toArray();
-            $projectService->bulkDelete($projectUids);
+            $this->projectService->bulkDelete($projectUids);
 
             return apiResponse(
                 generalResponse(
@@ -619,10 +628,8 @@ class TestingController extends Controller
             }
         }
 
-        $projectService = new \Modules\Production\Services\ProjectService;
-
         foreach ($output as $project) {
-            $store = $projectService->store($project);
+            $store = $this->projectService->store($project);
 
             if ($store['error']) {
                 logging('error', ['name' => $project['name'], 'error' => $store]);
