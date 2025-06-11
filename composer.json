@@ -11,6 +11,7 @@
         "chillerlan/php-qrcode": "^5.0",
         "google/apiclient": "^2.17",
         "intervention/image": "^3.8",
+        "irazasyed/telegram-bot-sdk": "^3.15",
         "kodepandai/laravel-indonesia": "^2.0",
         "laravel/framework": "^11.0",
         "laravel/sanctum": "^4.0",
@@ -35,10 +36,12 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^2.0",
         "laravel/pint": "^1.22",
         "laravel/sail": "^1.29",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.0",
+        "phpstan/phpstan": "^1.12",
         "phpunit/phpunit": "^10.5",
         "spatie/laravel-ignition": "^2.4"
     },

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Finance\Models\Transaction;
 
 // use Modules\Production\Database\Factories\ProjectDealFactory;
 
@@ -37,6 +38,7 @@ class ProjectDeal extends Model
         'equipment_type',
         'is_high_season',
         'status',
+        'is_fully_paid'
     ];
 
     // protected static function newFactory(): ProjectDealFactory
@@ -66,6 +68,11 @@ class ProjectDeal extends Model
     public function marketings(): HasMany
     {
         return $this->hasMany(ProjectDealMarketing::class, 'project_deal_id');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class, 'project_deal_id');
     }
 
     public function class(): BelongsTo
@@ -157,5 +164,128 @@ class ProjectDeal extends Model
         return Attribute::make(
             get: fn () => $output,
         );
+    }
+
+    // ###### CUSTOM FUNCTIONS
+    /**
+     * Get final price of project deals
+     * 
+     * @param bool $formatPrice
+     * 
+     * @return float|string
+     */
+    public function getFinalPrice(bool $formatPrice = false): float|string
+    {
+        $output = 0;
+
+        if ($this->relationLoaded('finalQuotation')) {
+            $output = $this->finalQuotation->fix_price;
+        }
+
+        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+    }
+
+    /**
+     * Get price of latest quotations
+     * 
+     * @param bool $formatPrice
+     * 
+     * @return float|string
+     */
+    public function getLatestPrice(bool $formatPrice = false): float|string
+    {
+        $output = 0;
+
+        if ($this->relationLoaded('latestQuotation')) {
+            $output = $this->latestQuotation->fix_price;
+        }
+
+        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+    }
+
+    /**
+     * Get down payment amount
+     * 
+     * @param bool $formatPrice
+     * 
+     * @return float|string
+     */
+    public function getDownPaymentAmount(bool $formatPrice = false): float|string
+    {
+        // load relation to transaction
+        $output = 0;
+        if ($this->relationLoaded('transactions')) {
+            $transactions = $this->transactions;
+
+            if ($transactions->count() > 0) {
+                $output = $transactions->sortByDesc('created_at')[0]->payment_amount;
+            }
+        }
+
+        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+    }
+
+    /**
+     * Get amount of remaining payment
+     * 
+     * @param bool $formatPrice
+     * 
+     * @return float|string
+     */
+    public function getRemainingPayment(bool $formatPrice = false): float|string
+    {
+        $output = 0;
+
+        if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid']) && $this->getFinalPrice() > 0) {
+            if (!$this->attributes['is_fully_paid']) {
+                $output = $this->getFinalPrice() - $this->transactions->pluck('payment_amount')->sum();
+            }
+        }
+
+        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+    }
+
+    /**
+     * Get status of payment in each project deals
+     * 
+     * @return string
+     */
+    public function getStatusPayment(): string
+    {
+        $output = '-';
+
+        if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid'])) {
+            if ($this->attributes['is_fully_paid']) {
+                $output = __('global.paid');
+            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
+                $output = __('global.partial');
+            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
+                $output = __('global.unpaid');
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * Get color status of payment in each project deals
+     * 
+     * @return string
+     */
+    public function getStatusPaymentColor(): string
+    {
+        $output = 'blue-grey-lighten-4';
+
+        if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid'])) {
+            if ($this->attributes['is_fully_paid']) {
+                $output = 'green-lighten-3';
+            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
+                $output = 'lime-lighten-3';
+            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
+                $output = 'red-darken-1';
+            }
+        }
+
+        return $output;
     }
 }

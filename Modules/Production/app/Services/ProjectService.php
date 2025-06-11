@@ -8290,6 +8290,13 @@ class ProjectService
         );
     }
 
+    /**
+     * Create project deals and generate quotation
+     * 
+     * @param array $payload
+     * 
+     * @return array
+     */
     public function storeProjectDeals(array $payload): array
     {
         \Illuminate\Support\Facades\DB::beginTransaction();
@@ -8326,12 +8333,17 @@ class ProjectService
 
             if ($payload['request_type'] == 'save_and_download') {
                 // generate quotation pdf
+                $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $payload['quotation']['quotation_id']));
+                $url = url("quotations/download/{$encrypted}/download");
             }
 
             DB::commit();
 
             return generalResponse(
                 message: __('notification.successCreateProjectDeals'),
+                data: [
+                    'url' => $url ?? null
+                ]
             );
         } catch (\Throwable $th) {
             DB::rollBack();

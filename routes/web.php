@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectTask;
 
 Route::get('/', [LandingPageController::class, 'index']);
@@ -152,3 +153,6 @@ Route::get('ilham', function () {
 Route::get('login', function () {
     return view('auth.login');
 })->name('login');
+
+
+Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);

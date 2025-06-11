@@ -127,13 +127,12 @@ Route::middleware(['auth:sanctum'])
         Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask']);
         Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask']);
         Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
-        Route::delete('project/{projectUid}/task/{taskUid}/deleteAttachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
+        Route::delete('project/{projectUid}/task/{taskUid}/deletAettachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 
         // Quotations
         Route::get('quotations', [QuotationController::class, 'index']);
-        Route::get('quotations/download/{quotationId}', [QuotationController::class, 'quotation']);
         Route::post('quotations', [QuotationController::class, 'store']);
-
+        
         Route::get('team-transfers', [TeamTransferController::class, 'index']);
         Route::post('team-transfers/cancel', [TeamTransferController::class, 'cancelRequest']);
         Route::post('team-transfers/chooseTeam/{transferUid}', [TeamTransferController::class, 'chooseTeam']);

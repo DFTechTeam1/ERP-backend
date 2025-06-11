@@ -2,6 +2,8 @@
 
 namespace Modules\Production\Services;
 
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Crypt;
 use Modules\Production\Repository\ProjectQuotationRepository;
 
 class ProjectQuotationService
@@ -160,8 +162,10 @@ class ProjectQuotationService
         }
     }
 
-    public function generateQuotation(string $quotationId): array
+    public function generateQuotation(string $quotationId, string $type): Response
     {
+        $quotationId = Crypt::decryptString(str_replace('#', '', $quotationId));
+
         $data = $this->repo->show(
             uid: 'uid',
             select: 'id,project_deal_id,fix_price,quotation_id,description',
@@ -211,12 +215,23 @@ class ProjectQuotationService
             })->toArray()
         ];
 
-        return generalResponse(
-            message: "Success",
-            data: [
-                'output' => $output,
-                'raw' => $data
-            ]
-        );
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', $output)
+        ->setPaper('14')
+        ->setOption([
+            'defaultFont' => 'sans-serif',
+            'isPhpEnabled' => true,
+            'isHtml5ParserEnabled' => true,
+            'debugPng' => false,
+            'debugLayout' => false,
+            'debugCss' => false
+        ]);
+
+        $filename = "{$data->deal->name}.pdf";
+
+        if ($type == 'stream') {
+            return $pdf->stream($filename);
+        } else {
+            return $pdf->download($filename);
+        }
     }
 }

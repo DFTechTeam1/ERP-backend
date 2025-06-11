@@ -340,4 +340,7 @@ return [
     'joinDateRequired' => 'Join date is required',
     'positionNotRegistered' => 'Position is not registered yet in database',
     'failedDeleteProjectClassBcsRelation' => 'Failed to delete selected project class. Please check relation to projects menu',
+    'padi' => 'Paid',
+    'unpaid' => 'Unpaid',
+    'partial' => 'Partial'
 ];
