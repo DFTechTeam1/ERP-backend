@@ -2,9 +2,12 @@
 
 namespace Modules\Production\Services;
 
+use App\Actions\CreateQuotation;
 use App\Services\GeneralService;
+use Illuminate\Support\Facades\DB;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
+use Modules\Production\Repository\ProjectQuotationRepository;
 
 class ProjectDealService
 {
@@ -14,19 +17,24 @@ class ProjectDealService
 
     private $generalService;
 
+    private $projectQuotationRepo;
+
     /**
      * Construction Data
      */
     public function __construct(
         ProjectDealRepository $repo,
         ProjectDealMarketingRepository $marketingRepo,
-        GeneralService $generalService
+        GeneralService $generalService,
+        ProjectQuotationRepository $projectQuotationRepo
     ) {
         $this->repo = $repo;
 
         $this->marketingRepo = $marketingRepo;
 
         $this->generalService = $generalService;
+
+        $this->projectQuotationRepo = $projectQuotationRepo;
     }
 
     /**
@@ -62,7 +70,7 @@ class ProjectDealService
                 $marketing = implode(',', $item->marketings->pluck('employee.nickname')->toArray());
 
                 return [
-                    'uid' => \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $item->latestQuotation->quotation_id)), // stand for encrypted of latest quotation id
+                    'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id), // stand for encrypted of latest quotation id
                     'name' => $item->name,
                     'venue' => $item->venue,
                     'project_date' => $item->formatted_project_date,
@@ -223,6 +231,49 @@ class ProjectDealService
                 'discount' => '',
                 'price_up' => '',
             ];
+        }
+    }
+
+    /**
+     * Create new quotation data in existing deal
+     * 
+     * @param array $payload
+     * @param string $projectDealId
+     * 
+     * @return array
+     */
+    public function createNewQuotation(array $payload, string $projectDealId): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $projectDeal = $this->repo->show(
+                uid: $projectDealId,
+                select: 'id,is_fully_paid',
+                relation: [
+                    'finalQuotation:id,project_deal_id',
+                ]
+            );
+            
+            if ($projectDeal->finalQuotation) {
+                return errorResponse(message: __('notification.quotationAlreadyFinal'));
+            }
+
+            $payload['quotation']['project_deal_id'] = $projectDeal->id;
+            $url = CreateQuotation::run($payload, $this->projectQuotationRepo);
+
+            DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'url' => $url
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
         }
     }
 }

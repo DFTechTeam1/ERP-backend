@@ -13,6 +13,7 @@ use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\IndonesiaVillage;
 use Modules\Company\Models\Position;
+use Modules\Company\Models\PositionBackup;
 use Modules\Company\Models\Province;
 use Modules\Hrd\Models\Employee;
 
@@ -89,7 +90,7 @@ class EmployeeFactory extends Factory
             'education_name' => 'Education',
             'education_major' => 'master',
             'education_year' => 2024,
-            'position_id' => Position::factory(),
+            'position_id' => PositionBackup::factory(),
             'boss_id' => null,
             'level_staff' => fake()->randomElement(['manager', 'lead', 'staff']),
             'status' => Status::Permanent->value,

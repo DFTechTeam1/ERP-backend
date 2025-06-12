@@ -3,7 +3,9 @@
 namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Production\Http\Requests\Deals\NewQuotation;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
 use Modules\Production\Http\Requests\Project\ChangeStatus;
@@ -886,10 +888,15 @@ class ProjectController extends Controller
      */
     public function storeProjectDeals(\Modules\Production\Http\Requests\Deals\Store $request)
     {
-        return apiResponse($this->service->storeProjectDeals($request->validated()));
+        return apiResponse($this->service->storeProjectDeals($request->all()));
     }
 
-    public function listProjectDeals()
+    /**
+     * Return list of project deals
+     * 
+     * @return JsonResponse
+     */
+    public function listProjectDeals(): JsonResponse
     {
         return apiResponse($this->projectDealService->list(
             select: 'id,project_date,name,venue,city_id,collaboration,status,is_fully_paid',
@@ -902,5 +909,10 @@ class ProjectController extends Controller
                 'latestQuotation'
             ]
         ));
+    }
+
+    public function createNewQuotation(NewQuotation $request, string $projectDealId)
+    {
+        
     }
 }

@@ -77,4 +77,9 @@ return [
     'failedSaveToTalenta' => 'Gagal menyimpan data ke Talenta',
     'resignationHasBeenCanceled' => 'Berhasil membatalkan pengundaran diri karyawan',
     'successCreateProjectDeals' => 'Penawaran project berhasil dibuat',
+    'successCreateTransaction' => 'Berhasil membuat transaksi',
+    'quotationNotFound' => "Quotation tidak ditemukan",
+    'quotationIsNotFinal' => 'Quotation belum final',
+    'quotationAlreadyFinal' => 'Event sudah mempunyai final quotation',
+    'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Jumlah pembayaran harus lebih kecil dari sisa pembayaran'
 ];

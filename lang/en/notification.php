@@ -77,4 +77,9 @@ return [
     'failedSaveToTalenta' => 'Failed to save data to talenta',
     'resignationHasBeenCanceled' => 'Resignation has been canceled',
     'successCreateProjectDeals' => 'Success create project deals',
+    'successCreateTransaction' => 'Success create transaction',
+    'quotationNotFound' => "Quotation is not found",
+    'quotationIsNotFinal' => 'Quotation is not final yet',
+    'quotationAlreadyFinal' => 'Project already have final quotation',
+    'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Payment amount should not greater than remaining amount'
 ];
