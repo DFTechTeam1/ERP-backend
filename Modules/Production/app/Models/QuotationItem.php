@@ -4,6 +4,7 @@ namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Production\Database\Factories\QuotationItemFactory;
 
 // use Modules\Production\Database\Factories\QuotationItemFactory;
 
@@ -18,8 +19,8 @@ class QuotationItem extends Model
         'name',
     ];
 
-    // protected static function newFactory(): QuotationItemFactory
-    // {
-    //     // return QuotationItemFactory::new();
-    // }
+    protected static function newFactory(): QuotationItemFactory
+    {
+        return QuotationItemFactory::new();
+    }
 }

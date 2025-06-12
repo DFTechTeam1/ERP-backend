@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Finance\Http\Controllers\Api\FinanceController as ApiFinanceController;
 use Modules\Finance\Http\Controllers\FinanceController;
 
 /*
@@ -14,6 +15,6 @@ use Modules\Finance\Http\Controllers\FinanceController;
  *
 */
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('finance', FinanceController::class)->names('finance');
+Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
+    Route::post('transaction/{quotationId}', [ApiFinanceController::class, 'createTransaction']);
 });

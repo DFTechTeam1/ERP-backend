@@ -4,7 +4,7 @@ namespace Modules\Production\Http\Requests\Deals;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class Store extends FormRequest
+class NewQuotation extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -12,31 +12,6 @@ class Store extends FormRequest
     public function rules(): array
     {
         return [
-            // project detail data
-            'name' => 'required',
-            'project_date' => 'required|date_format:Y-m-d',
-            'customer_id' => 'required',
-            'event_type' => 'required',
-            'venue' => 'required',
-            'collaboration' => 'nullable',
-            'note' => 'nullable',
-            'led_area' => 'nullable',
-            'led_detail' => 'nullable',
-            'country_id' => 'required',
-            'state_id' => 'required',
-            'city_id' => 'required',
-            'project_class_id' => 'required',
-            'longitude' => 'nullable',
-            'latitude' => 'nullable',
-            'equipment_type' => 'string|required',
-            'is_high_season' => 'required',
-
-            'client_portal' => 'required',
-            'marketing_id' => 'nullable|array',
-            'marketing_id.*' => 'string',
-            'status' => 'nullable',
-
-            // quotation
             'quotation' => 'required|array',
             'quotation.main_ballroom' => 'required',
             'quotation.prefunction' => 'required',
@@ -68,14 +43,5 @@ class Store extends FormRequest
     public function authorize(): bool
     {
         return true;
-    }
-
-    protected function passedValidation()
-    {
-        $data = $this->validated();
-
-        $data['quotation']['quotation_id'] = str_replace('#', '', $data['quotation']['quotation_id']);
-
-        $this->replace($data);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Actions\CreateQuotation;
 use App\Actions\DefineTaskAction;
 use App\Actions\Hrd\PointRecord;
 use App\Actions\Project\DetailCache;
@@ -8318,31 +8319,15 @@ class ProjectService
             );
 
             // insert quotations
-            $quotation = $project->quotations()->create(
-                collect($payload['quotation'])->except(['items'])->toArray()
-            );
-
-            // insert quotation items
-            $quotation->items()->createMany(
-                collect($payload['quotation']['items'])->map(function ($item) {
-                    return [
-                        'item_id' => $item,
-                    ];
-                })->toArray()
-            );
-
-            if ($payload['request_type'] == 'save_and_download') {
-                // generate quotation pdf
-                $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $payload['quotation']['quotation_id']));
-                $url = url("quotations/download/{$encrypted}/download");
-            }
+            $payload['quotation']['project_deal_id'] = $project->id;
+            $url = CreateQuotation::run($payload, $this->projectQuotationRepo);
 
             DB::commit();
 
             return generalResponse(
                 message: __('notification.successCreateProjectDeals'),
                 data: [
-                    'url' => $url ?? null
+                    'url' => $url
                 ]
             );
         } catch (\Throwable $th) {
