@@ -34,6 +34,7 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
         Route::post('project/deals', [ProjectController::class, 'storeProjectDeals'])->name('project-deal.store');
         Route::get('project/deals', [ProjectController::class, 'listProjectDeals']);
+        Route::get('project/deals/publish/{projectDealUid}/{type}', [ProjectController::class, 'publishProjectDeal']);
         Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
         Route::get('project/calendar', [ProjectController::class, 'getProjectCalendars']);
         Route::get('project/getQuotationNumber', [ProjectController::class, 'getQuotationNumber']);

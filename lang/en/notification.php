@@ -81,5 +81,6 @@ return [
     'quotationNotFound' => "Quotation is not found",
     'quotationIsNotFinal' => 'Quotation is not final yet',
     'quotationAlreadyFinal' => 'Project already have final quotation',
-    'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Payment amount should not greater than remaining amount'
+    'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Payment amount should not greater than remaining amount',
+    'successPublishProjectDeal' => 'Project deal has been published',
 ];
