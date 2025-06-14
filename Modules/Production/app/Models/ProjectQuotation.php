@@ -51,4 +51,9 @@ class ProjectQuotation extends Model
     {
         return $query->where('is_final', 1);
     }
+
+    public function scopeIsNotFinal(\Illuminate\Database\Eloquent\Builder $query)
+    {
+        return $query->where('is_final', 0);
+    }
 }

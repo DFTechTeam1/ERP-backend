@@ -903,10 +903,11 @@ class ProjectController extends Controller
             relation: [
                 'marketings',
                 'marketings.employee:id,nickname',
-                'latestQuotation',
                 'city:id,name',
                 'transactions:id,project_deal_id,payment_amount,created_at',
-                'latestQuotation'
+                'latestQuotation',
+                'finalQuotation',
+                'firstTransaction'
             ]
         ));
     }
@@ -914,5 +915,18 @@ class ProjectController extends Controller
     public function createNewQuotation(NewQuotation $request, string $projectDealId)
     {
         
+    }
+
+    /**
+     * Publish project deal
+     *
+     * @param string $projectDealId
+     * @param string $type
+     * 
+     * @return JsonResponse
+     */
+    public function publishProjectDeal(string $projectDealId, string $type): JsonResponse
+    {
+        return apiResponse($this->projectDealService->publishProjectDeal($projectDealId, $type));
     }
 }

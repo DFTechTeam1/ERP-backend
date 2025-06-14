@@ -76,6 +76,12 @@ class ProjectDeal extends Model
         return $this->hasMany(Transaction::class, 'project_deal_id');
     }
 
+    public function firstTransaction(): HasOne
+    {
+        return $this->hasOne(Transaction::class, 'project_deal_id')
+            ->oldestOfMany();
+    }
+
     public function class(): BelongsTo
     {
         return $this->belongsTo(\Modules\Company\Models\ProjectClass::class, 'project_class_id');
@@ -167,6 +173,11 @@ class ProjectDeal extends Model
         );
     }
 
+    public function isDraft(): bool
+    {
+        return $this->attributes['status'] === \App\Enums\Production\ProjectDealStatus::Draft->value ? true : false;
+    }
+
     // ###### CUSTOM FUNCTIONS
     /**
      * Get final price of project deals
@@ -178,9 +189,8 @@ class ProjectDeal extends Model
     public function getFinalPrice(bool $formatPrice = false): float|string
     {
         $output = 0;
-
-        if ($this->relationLoaded('finalQuotation')) {
-            $output = $this->finalQuotation->fix_price;
+        if (($this->relationLoaded('finalQuotation')) && ($this->finalQuotation)) {
+            $output = $this->finalQuotation ? $this->finalQuotation->fix_price : 0;
         }
 
         return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
@@ -215,12 +225,8 @@ class ProjectDeal extends Model
     {
         // load relation to transaction
         $output = 0;
-        if ($this->relationLoaded('transactions')) {
-            $transactions = $this->transactions;
-
-            if ($transactions->count() > 0) {
-                $output = $transactions->sortByDesc('created_at')[0]->payment_amount;
-            }
+        if ($this->relationLoaded('firstTransaction')) {
+            $output = $this->firstTransaction ? $this->firstTransaction->payment_amount : 0;
         }
 
         return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
@@ -281,10 +287,52 @@ class ProjectDeal extends Model
             if ($this->attributes['is_fully_paid']) {
                 $output = 'green-lighten-3';
             } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
-                $output = 'lime-lighten-3';
+                $output = 'lime-darken-1';
             } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
                 $output = 'red-darken-1';
             }
+        }
+
+        return $output;
+    }
+
+    public function canMakePayment(): bool
+    {
+        // if project deal is fully paid, return false
+        if ($this->is_fully_paid) {
+            return false;
+        }
+
+        // if project deal has no final quotation, return false
+        if (!$this->relationLoaded('finalQuotation') || !$this->finalQuotation) {
+            return false;
+        }
+
+        // if project deal has no final price, return false
+        if ($this->getFinalPrice() <= 0) {
+            return false;
+        }
+
+        // if project deal has remaining payment, return true
+        if ($this->getRemainingPayment() > 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function canPublishProject(): bool
+    {
+        return $this->isDraft();
+    }
+
+    public function canMakeFinal(): bool
+    {
+        $output = false;
+
+        if ($this->relationLoaded('finalQuotation') && !$this->finalQuotation && !$this->isDraft()) {
+            // if project deal has latest quotation, return true
+            $output = true;
         }
 
         return $output;

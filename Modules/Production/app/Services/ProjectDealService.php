@@ -4,6 +4,7 @@ namespace Modules\Production\Services;
 
 use App\Actions\CreateQuotation;
 use App\Services\GeneralService;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -70,7 +71,8 @@ class ProjectDealService
                 $marketing = implode(',', $item->marketings->pluck('employee.nickname')->toArray());
 
                 return [
-                    'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id), // stand for encrypted of latest quotation id
+                    'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
+                    'latest_quotation_id' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id),
                     'name' => $item->name,
                     'venue' => $item->venue,
                     'project_date' => $item->formatted_project_date,
@@ -81,6 +83,7 @@ class ProjectDealService
                     'marketing' => $marketing,
                     'down_payment' => $item->getDownPaymentAmount(formatPrice: true),
                     'remaining_payment' => $item->getRemainingPayment(formatPrice: true),
+                    'remaining_payment_raw' => $item->getRemainingPayment(),
                     'status' => true,
                     'status_project' => $item->status->label(),
                     'status_project_color' => $item->status->color(),
@@ -89,6 +92,9 @@ class ProjectDealService
                     'is_fully_paid' => (bool) $item->is_fully_paid,
                     'status_payment' => $item->getStatusPayment(),
                     'status_payment_color' => $item->getStatusPaymentColor(),
+                    'can_make_payment' => $item->canMakePayment(),
+                    'can_publish_project' => $item->canPublishProject(),
+                    'can_make_final' => $item->canMakeFinal(),
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
                         'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
@@ -275,6 +281,58 @@ class ProjectDealService
         } catch (\Throwable $th) {
             DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Publish project deal
+     * 
+     * @param string $projectDealId
+     * @param string $type
+     * 
+     * @return array
+     */
+    public function publishProjectDeal(string $projectDealId, string $type): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDealId = Crypt::decryptString($projectDealId);
+            $payload = [
+                'status' => $type === 'publish' ? \App\Enums\Production\ProjectDealStatus::Temporary->value : \App\Enums\Production\ProjectDealStatus::Final->value,
+            ];
+
+            $this->repo->update(
+                data: $payload,
+                id: $projectDealId,
+            );
+
+            if ($type === 'publish_final') {
+                // update quotation to final
+                $detail = $this->repo->show(
+                    uid: $projectDealId,
+                    select: 'id',
+                    relation: [
+                        'latestQuotation',
+                    ]
+                );
+
+                $this->projectQuotationRepo->update(
+                    data: [
+                        'is_final' => 1,
+                    ],
+                    id: $detail->latestQuotation->id
+                );
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successPublishProjectDeal'),
+                data: []
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }

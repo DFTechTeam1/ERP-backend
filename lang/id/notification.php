@@ -81,5 +81,6 @@ return [
     'quotationNotFound' => "Quotation tidak ditemukan",
     'quotationIsNotFinal' => 'Quotation belum final',
     'quotationAlreadyFinal' => 'Event sudah mempunyai final quotation',
-    'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Jumlah pembayaran harus lebih kecil dari sisa pembayaran'
+    'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Jumlah pembayaran harus lebih kecil dari sisa pembayaran',
+    'successPublishProjectDeal' => 'Berhasil mempublikasikan penawaran project',
 ];

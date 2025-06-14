@@ -115,7 +115,7 @@ class ProjectQuotationRepository extends ProjectQuotationInterface
         if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('uid', $id);
+            $query->where('id', $id);
         }
 
         $query->update($data);
