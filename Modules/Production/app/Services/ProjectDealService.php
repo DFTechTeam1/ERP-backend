@@ -82,6 +82,8 @@ class ProjectDealService
                     'down_payment' => $item->getDownPaymentAmount(formatPrice: true),
                     'remaining_payment' => $item->getRemainingPayment(formatPrice: true),
                     'status' => true,
+                    'status_project' => $item->status->label(),
+                    'status_project_color' => $item->status->color(),
                     'fix_price' => $item->getFinalPrice(formatPrice: true),
                     'latest_price' => $item->getLatestPrice(formatPrice: true),
                     'is_fully_paid' => (bool) $item->is_fully_paid,

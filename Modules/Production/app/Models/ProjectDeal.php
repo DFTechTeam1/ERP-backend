@@ -55,6 +55,7 @@ class ProjectDeal extends Model
     protected $casts = [
         'event_type' => \App\Enums\Production\EventType::class,
         'equipment_type' => \App\Enums\Production\EquipmentType::class,
+        'status' => \App\Enums\Production\ProjectDealStatus::class
     ];
 
     public function ledDetail(): Attribute
