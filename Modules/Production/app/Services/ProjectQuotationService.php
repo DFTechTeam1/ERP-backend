@@ -164,7 +164,7 @@ class ProjectQuotationService
 
     public function generateQuotation(string $quotationId, string $type): Response
     {
-        $quotationId = Crypt::decryptString(str_replace('#', '', $quotationId));
+        $quotationId = Crypt::decryptString($quotationId);
 
         $data = $this->repo->show(
             uid: 'uid',
@@ -179,7 +179,7 @@ class ProjectQuotationService
                 'items:quotation_id,id,item_id',
                 'items.item:id,name'
             ],
-            where: "quotation_id = '#{$quotationId}'"
+            where: "quotation_id = '{$quotationId}'"
         );
 
         $output = [

@@ -341,4 +341,9 @@ return [
     'joinDateRequired' => 'Tanggal Bergabung harus diisi!',
     'positionNotRegistered' => 'Posisi belum terdaftar di database',
     'failedDeleteProjectClassBcsRelation' => 'Gagal menghapus event class, karena memiliki relasi dengan event yang sudah ada',
+    'paid' => 'Lunas',
+    'unpaid' => 'Belum Dibayar',
+    'partial' => 'Dibayar Sebagian',
+    'final' => 'Final',
+    'temporary' => 'Sementara'
 ];
