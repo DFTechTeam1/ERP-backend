@@ -929,4 +929,15 @@ class ProjectController extends Controller
     {
         return apiResponse($this->projectDealService->publishProjectDeal($projectDealId, $type));
     }
+
+    /**
+     * Get detail of project deals
+     * Get all transactions and quotations
+     * 
+     * @return JsonResponse
+     */
+    public function detailProjectDeal(string $quotationId): JsonResponse
+    {
+        return apiResponse($this->projectDealService->detailProjectDeal(quotationId: $quotationId));
+    }
 }

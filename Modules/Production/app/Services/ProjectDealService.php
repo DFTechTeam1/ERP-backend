@@ -3,12 +3,15 @@
 namespace Modules\Production\Services;
 
 use App\Actions\CreateQuotation;
+use App\Enums\Production\ProjectStatus;
 use App\Services\GeneralService;
+use App\Services\Geocoding;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
+use Modules\Production\Repository\ProjectRepository;
 
 class ProjectDealService
 {
@@ -20,6 +23,10 @@ class ProjectDealService
 
     private $projectQuotationRepo;
 
+    private $projectRepo;
+
+    private $geocoding;
+
     /**
      * Construction Data
      */
@@ -27,7 +34,9 @@ class ProjectDealService
         ProjectDealRepository $repo,
         ProjectDealMarketingRepository $marketingRepo,
         GeneralService $generalService,
-        ProjectQuotationRepository $projectQuotationRepo
+        ProjectQuotationRepository $projectQuotationRepo,
+        ProjectRepository $projectRepo,
+        Geocoding $geocoding
     ) {
         $this->repo = $repo;
 
@@ -36,12 +45,16 @@ class ProjectDealService
         $this->generalService = $generalService;
 
         $this->projectQuotationRepo = $projectQuotationRepo;
+
+        $this->projectRepo = $projectRepo;
+
+        $this->geocoding = $geocoding;
     }
 
     /**
      * Get list of data
      */
-    public function list(
+    public function list (
         string $select = '*',
         string $where = '',
         array $relation = []
@@ -311,9 +324,12 @@ class ProjectDealService
                 // update quotation to final
                 $detail = $this->repo->show(
                     uid: $projectDealId,
-                    select: 'id',
+                    select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,longitude,latitude,status',
                     relation: [
                         'latestQuotation',
+                        'city:id,name',
+                        'state:id,name',
+                        'class:id,name'
                     ]
                 );
 
@@ -323,6 +339,35 @@ class ProjectDealService
                     ],
                     id: $detail->latestQuotation->id
                 );
+
+                if ($detail->city && $detail->state) {
+                    $coordinate = $this->geocoding->getCoordinate($detail->city->name.', '.$detail->state->name);
+                    if (count($coordinate) > 0) {
+                        $longitude = $coordinate['longitude'];
+                        $latitude = $coordinate['latitude'];
+                    }
+                }
+
+                $this->projectRepo->store(data: [
+                    'name' => $detail->name,
+                    'client_portal' => config('app.frontend_url') . '/' . $this->generalService->linkShortener(length: 10),
+                    'project_date' => $detail->project_date,
+                    'event_type' => $detail->event_type,
+                    'venue' => $detail->venue,
+                    'collaboration' => $detail->collaboration,
+                    'note' => $detail->note,
+                    'status' => ProjectStatus::Draft->value,
+                    'classification' => $detail->class->name,
+                    'led_area' => $detail->led_area,
+                    'led_detail' => json_encode($detail->led_detail),
+                    'country_id' => $detail->country_id,
+                    'state_id' => $detail->state_id,
+                    'city_id' => $detail->city_id,
+                    'city_name' => $detail->city ? $detail->city->name : null,
+                    'project_class_id' => $detail->project_class_id,
+                    'longitude' => $longitude ?? null,
+                    'latitude' => $latitude ?? null,
+                ]);
             }
 
             DB::commit();
@@ -333,6 +378,118 @@ class ProjectDealService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get detail of project deal
+     * 
+     * @param string $quotationId
+     * 
+     * @return array
+     */
+    public function detailProjectDeal(string $quotationId): array
+    {
+        try {
+            $quotationIdRaw = Crypt::decryptString($quotationId);
+
+            $data = $this->repo->show(
+                uid: $quotationIdRaw,
+                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail",
+                relation: [
+                    'transactions',
+                    'quotations',
+                    'quotations.items:id,quotation_id,item_id',
+                    'quotations.items.item:id,name',
+                    'customer:id,name,phone,email',
+                    'city:id,name',
+                    'class:id,name'
+                ]
+            );
+
+            $led = collect($data->led_detail)->groupBy('name');
+            $main = [];
+            $prefunction = [];
+
+            if (isset($led['main'])) {
+                foreach ($led['main'] as $ledMain) {
+                    foreach ($ledMain['led'] as $ledDetail) {
+                        $main[] = [
+                            'width' => $ledDetail['width'],
+                            'height' => $ledDetail['height'],
+                        ];
+                    }
+                }
+            }
+
+            if (isset($led['prefunction'])) {
+                foreach ($led['prefunction'] as $ledPrefunction) {
+                    foreach ($ledPrefunction['led'] as $ledDetailPrefunction) {
+                        $prefunction[] = [
+                            'width' => $ledDetailPrefunction['width'],
+                            'height' => $ledDetailPrefunction['height'],
+                        ];
+                    }
+                }
+            }
+
+            $quotations = collect($data->quotations)->map(function ($item) use ($data, $main, $prefunction) {
+                return [
+                    'id' => Crypt::encryptString($item->id),
+                    'quotation_number' => $item->quotation_id,
+                    'name' => $data->name,
+                    'venue' => $data->venue,
+                    'price' => $item->fix_price,
+                    'is_final' => (bool) $item->is_final,
+                    'detail' => [
+                        'office'=> [
+                            'logo' => asset('storage/settings/' . $this->generalService->getSettingByKey('company_logo')),
+                            'address' => $this->generalService->getSettingByKey('company_address'),
+                            'phone' => $this->generalService->getSettingByKey('company_phone'),
+                            'email' => $this->generalService->getSettingByKey('company_email'),
+                            'name' => $this->generalService->getSettingByKey('company_name')
+                        ],
+                        'customer' => [
+                            'name' => $data->customer->name,
+                            'place' => $data->city->name
+                        ],
+                        'quotation_number' => $item->quotation_id,
+                        'event' => [
+                            'project_date' => date('d F Y', strtotime($data->project_date)),
+                            'event_class' => $data->class->name,
+                            'venue' => $data->venue,
+                            'led' => [
+                                'main' => $main,
+                                'prefunction' => $prefunction,
+                            ],
+                            'itemPreviews' => collect($item->items)->pluck('item.name')->toArray(),
+                            'price' => $item->fix_price
+                        ],
+                        'note' => $item->description,
+                        'rules' => '
+                            <ul style="list-style: circle; padding-left: 10px; padding-top: 0; font-size: 12px;">
+                                <li>Minimum Down Payment sebesar 50% dari total biaya yang ditagihkan, biaya tersebut tidak dapat dikembalikan.</li>
+                                <li>Pembayaran melalui rekening BCA 188 060 1225 a/n Wesley Wiyadi / Edwin Chandra Wijaya</li>
+                                <li>Biaya diatas tidak termasuk pajak.</li>
+                                <li>Biaya layanan diatas hanya termasuk perlengkapan multimedia DFACTORY dan tidak termasuk persewaan unit LED dan sistem multimedia lainnya bila diperlukan.</li>
+                                <li>Biaya diatas termasuk Akomodasi untuk Crew bertugas di hari-H event.</li>
+                            </ul>
+                        '
+                    ]
+                ];
+            })->toArray();
+
+            $output = [
+                'transactions' => $data->transactions->toArray(),
+                'quotations' => $quotations
+            ];
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }

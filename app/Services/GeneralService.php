@@ -82,4 +82,9 @@ class GeneralService
     {
         return generateRandomColor($email);
     }
+
+    public function linkShortener(int $length = 8): string
+    {
+        return linkShortener($length);
+    }
 }
