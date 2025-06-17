@@ -375,7 +375,7 @@ class ProjectDealService
             return generalResponse(
                 message: __('notification.successPublishProjectDeal'),
                 data: []
-            );
+            );                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
         } catch (\Throwable $th) {
             DB::rollBack();
             return errorResponse($th);
