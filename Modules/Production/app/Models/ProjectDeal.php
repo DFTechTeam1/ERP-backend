@@ -21,6 +21,9 @@ class ProjectDeal extends Model
      */
     protected $fillable = [
         'name',
+        // client portal
+        // classification
+        // city_name
         'project_date',
         'customer_id',
         'event_type',

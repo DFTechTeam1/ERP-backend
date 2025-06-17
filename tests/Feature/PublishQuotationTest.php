@@ -1,7 +1,9 @@
 <?php
 
+use App\Services\Geocoding;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
+use Modules\Company\Models\Country;
 use Modules\Company\Models\ProjectClass;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
@@ -25,7 +27,7 @@ dataset('dataDeals', [
         Customer::factory()->create(),
         ProjectClass::factory()->create(),
         Employee::factory()->create(),
-        QuotationItem::factory()->create()
+        QuotationItem::factory()->create(),
     ]
 ]);
 
@@ -34,10 +36,21 @@ describe('Publish Quotation', function () {
         $currentDeal = createDeal($customer, $projectClass, $employee, $quotationItem);
         $service = createProjectDealService();
 
+        // mock geocoding
+        $geo = Mockery::mock(Geocoding::class);
+        $geo->shouldReceive('getCoordinate')
+            ->withAnyArgs()
+            ->andReturn([
+                'longitude' => fake()->longitude(),
+                'latitude' => fake()->latitude(),
+            ]);
+
         $response = $service->publishProjectDeal(
             projectDealId: Crypt::encryptString($currentDeal->id),
             type: 'publish_final'
         );
+
+        logging("RESPONSE FINAL", $response);
 
         expect($response['error'])->toBeFalse();
 
@@ -48,6 +61,9 @@ describe('Publish Quotation', function () {
         $this->assertDatabaseHas('project_quotations', [
             'is_final' => 1,
             'project_deal_id' => $currentDeal->id,
+        ]);
+        $this->assertDatabaseHas('projects', [
+            'name' => $currentDeal->name
         ]);
     })->with('dataDeals');
 

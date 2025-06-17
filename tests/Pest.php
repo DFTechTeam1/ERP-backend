@@ -297,12 +297,16 @@ function createProjectDealService(
     $projectDealRepo = null,
     $projectDealMarketingRepo = null,
     $generalService = null,
-    $projectQuotationRepo = null
+    $projectQuotationRepo = null,
+    $projectRepo = null,
+    $geocoding = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository(),
         $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository(),
         $generalService ? $generalService : new GeneralService(),
-        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository()
+        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository(),
+        $projectRepo ? $projectRepo : new ProjectRepository,
+        $geocoding ? $geocoding : new Geocoding
     );
 }
