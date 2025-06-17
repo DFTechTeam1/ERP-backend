@@ -130,7 +130,9 @@ class SingaporeSeeder extends Seeder
 
             $country->states()->create($payloadState);
 
-            $stateData = State::where('name', $state['name'])->first();
+            $stateData = State::where('country_id', $country->id)
+                ->where('name', $state['name'])
+                ->first();
 
             foreach ($state['cities'] as $city) {
                 $city['country_id'] = $country->id;
