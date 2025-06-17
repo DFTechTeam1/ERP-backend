@@ -12,6 +12,8 @@ class City extends Model
 
     protected $table = 'cities';
 
+    public $timestamps = false;
+
     /**
      * The attributes that are mass assignable.
      */
