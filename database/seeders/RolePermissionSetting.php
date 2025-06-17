@@ -735,6 +735,14 @@ class RolePermissionSetting extends Seeder
     protected function projectPermission()
     {
         return [
+            ['name' => 'create_deals', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
+            ['name' => 'list_deals', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
             ['name' => 'complete_project', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
@@ -1023,7 +1031,7 @@ class RolePermissionSetting extends Seeder
                 ->first();
 
             if (! $check) {
-                Permission::create(collect($permission)->except('used')->toArray());
+                Permission::create(collect($permission)->except('used')->merge(['guard_name' => 'sanctum'])->toArray());
             }
         }
     }
