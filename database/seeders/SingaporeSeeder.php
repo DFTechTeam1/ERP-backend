@@ -57,7 +57,6 @@ class SingaporeSeeder extends Seeder
                     ]
                 ],
                 [
-                    'country_id' => 1,
                     'name' => 'East Region',
                     'country_code' => 'SG',
                     'cities' => [
@@ -70,7 +69,6 @@ class SingaporeSeeder extends Seeder
                     ]
                 ],
                 [
-                    'country_id' => 1,
                     'name' => 'North Region',
                     'country_code' => 'SG',
                     'cities' => [
@@ -85,7 +83,6 @@ class SingaporeSeeder extends Seeder
                     ]
                 ],
                 [
-                    'country_id' => 1,
                     'name' => 'North-East Region',
                     'country_code' => 'SG',
                     'cities' => [
@@ -99,7 +96,6 @@ class SingaporeSeeder extends Seeder
                     ]
                 ],
                 [
-                    'country_id' => 1,
                     'name' => 'West Region',
                     'country_code' => 'SG',
                     'cities' => [
