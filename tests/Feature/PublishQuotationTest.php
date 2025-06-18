@@ -50,9 +50,11 @@ describe('Publish Quotation', function () {
             type: 'publish_final'
         );
 
-        logging("RESPONSE FINAL", $response);
-
         expect($response['error'])->toBeFalse();
+
+        expect($response)->toHaveKey('data');
+
+        expect($response['data'])->toHaveKey('project');
 
         $this->assertDatabaseHas('project_deals', [
             'id' => $currentDeal->id,
@@ -64,6 +66,11 @@ describe('Publish Quotation', function () {
         ]);
         $this->assertDatabaseHas('projects', [
             'name' => $currentDeal->name
+        ]);
+
+        // check marketing
+        $this->assertDatabaseHas('project_marketings', [
+            'project_id' => $response['data']['project']['id']
         ]);
     })->with('dataDeals');
 

@@ -329,7 +329,8 @@ class ProjectDealService
                         'latestQuotation',
                         'city:id,name',
                         'state:id,name',
-                        'class:id,name'
+                        'class:id,name',
+                        'marketings:id,project_deal_id,employee_id'
                     ]
                 );
 
@@ -348,7 +349,7 @@ class ProjectDealService
                     }
                 }
 
-                $this->projectRepo->store(data: [
+                $project = $this->projectRepo->store(data: [
                     'name' => $detail->name,
                     'client_portal' => config('app.frontend_url') . '/' . $this->generalService->linkShortener(length: 10),
                     'project_date' => $detail->project_date,
@@ -368,13 +369,23 @@ class ProjectDealService
                     'longitude' => $longitude ?? null,
                     'latitude' => $latitude ?? null,
                 ]);
+
+                $project->marketings()->createMany(
+                    collect($detail->marketings)->map(function ($marketing) {
+                        return [
+                            'marketing_id' => $marketing->employee_id
+                        ];
+                    })->toArray()
+                );
             }
 
             DB::commit();
 
             return generalResponse(
                 message: __('notification.successPublishProjectDeal'),
-                data: []
+                data: [
+                    'project' => $project ?? null
+                ]
             );                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -396,12 +407,13 @@ class ProjectDealService
 
             $data = $this->repo->show(
                 uid: $quotationIdRaw,
-                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail",
+                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid",
                 relation: [
                     'transactions',
                     'quotations',
                     'quotations.items:id,quotation_id,item_id',
                     'quotations.items.item:id,name',
+                    'finalQuotation',
                     'customer:id,name,phone,email',
                     'city:id,name',
                     'class:id,name'
@@ -480,9 +492,54 @@ class ProjectDealService
                 ];
             })->toArray();
 
+            // get the final quotation
+            $finalQuotation = [];
+            $products = [];
+            $main = [];
+            $prefunction = [];
+            if ($data->transactions->count() > 0) {
+                $finalQuotation = $data->quotations->filter(fn($value) => $value->is_final)[0];
+                $finalQuotation['remaining'] = $data->getRemainingPayment();
+                $outputLed = collect($data->led_detail)->groupBy('name');
+                if (isset($outputLed['main'])) {
+                    $main = [
+                        'product' => 'Main Stage',
+                        'description' => collect($outputLed['main'])->sum('totalRaw') . ' m<sup>2</sup>',
+                        'amount' => $finalQuotation->main_ballroom
+                    ];
+
+                    $products[] = $main;
+                }
+
+                if (isset($outputLed['prefunction'])) {
+                    $prefunction = [
+                        'product' => 'Prefunction',
+                        'description' => collect($outputLed['prefunction'])->sum('totalRaw') . ' m<sup>2</sup>',
+                        'amount' => $finalQuotation->prefunction
+                    ];
+
+                    $products[] = $prefunction;
+                }
+
+                if ($finalQuotation->equipment_fee > 0) {
+                    $products[] = [
+                        'product' => 'Equipment',
+                        'description' => '',
+                        'amount' => $finalQuotation->equipment_fee
+                    ];
+                }
+            }
+
             $output = [
+                'customer' => [
+                    'name' => $data->customer->name,
+                    'phone' => $data->customer->phone,
+                    'email' => $data->customer->email,
+                ],
+                'products' => $products,
+                'final_quotation' => $finalQuotation,
                 'transactions' => $data->transactions->toArray(),
-                'quotations' => $quotations
+                'quotations' => $quotations,
             ];
 
             return generalResponse(
