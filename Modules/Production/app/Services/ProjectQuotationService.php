@@ -165,7 +165,7 @@ class ProjectQuotationService
     public function generateQuotation(string $quotationId, string $type): Response
     {
         $quotationId = Crypt::decryptString($quotationId);
-
+        
         $data = $this->repo->show(
             uid: 'uid',
             select: 'id,project_deal_id,fix_price,quotation_id,description',
