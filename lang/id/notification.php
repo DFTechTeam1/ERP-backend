@@ -83,4 +83,5 @@ return [
     'quotationAlreadyFinal' => 'Event sudah mempunyai final quotation',
     'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Jumlah pembayaran harus lebih kecil dari sisa pembayaran',
     'successPublishProjectDeal' => 'Berhasil mempublikasikan penawaran project',
+    'successDeleteProjectDeal' => "Penawaran event berhasil di hapus",
 ];

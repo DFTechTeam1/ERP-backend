@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Finance\Models\Transaction;
+use Modules\Production\Database\Factories\ProjectDealFactory;
 
 // use Modules\Production\Database\Factories\ProjectDealFactory;
 
@@ -44,10 +45,10 @@ class ProjectDeal extends Model
         'is_fully_paid'
     ];
 
-    // protected static function newFactory(): ProjectDealFactory
-    // {
-    //     // return ProjectDealFactory::new();
-    // }
+    protected static function newFactory(): ProjectDealFactory
+    {
+        return ProjectDealFactory::new();
+    }
 
     protected $appends = [
         'formatted_project_date',

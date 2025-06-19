@@ -40,7 +40,6 @@ class Store extends FormRequest
             'quotation' => 'required|array',
             'quotation.main_ballroom' => 'required',
             'quotation.prefunction' => 'required',
-            'quotation.prefunction' => 'required',
             'quotation.high_season_fee' => 'required',
             'quotation.equipment_fee' => 'required',
             'quotation.sub_total' => 'required',

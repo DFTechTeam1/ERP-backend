@@ -83,4 +83,5 @@ return [
     'quotationAlreadyFinal' => 'Project already have final quotation',
     'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Payment amount should not greater than remaining amount',
     'successPublishProjectDeal' => 'Project deal has been published',
+    'successDeleteProjectDeal' => "Project deal has been deleted"
 ];

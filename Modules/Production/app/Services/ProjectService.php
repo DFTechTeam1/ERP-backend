@@ -8317,7 +8317,6 @@ class ProjectService
                     ];
                 })->toArray()
             );
-
             // insert quotations
             $payload['quotation']['project_deal_id'] = $project->id;
             $url = CreateQuotation::run($payload, $this->projectQuotationRepo);

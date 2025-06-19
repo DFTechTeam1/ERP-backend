@@ -26,6 +26,7 @@ class ProjectQuotation extends Model
         'maximum_discount',
         'total',
         'maximum_markup_price',
+        'event_location_guide',
         'fix_price',
         'quotation_id',
         'is_final',

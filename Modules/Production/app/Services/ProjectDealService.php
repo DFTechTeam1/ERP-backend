@@ -196,13 +196,28 @@ class ProjectDealService
      */
     public function delete(int $id): array
     {
+        DB::beginTransaction();
         try {
+            $detail = $this->repo->show(uid: (string) $id, select: 'id,name', relation: [
+                'marketings',
+                'quotations'
+            ]);
+
+            $detail->marketings()->delete();
+            $detail->quotations()->delete();
+
+            $detail->delete();
+
+            DB::commit();
+
             return generalResponse(
-                'Success',
+                __('notification.successDeleteProjectDeal'),
                 false,
                 $this->repo->delete($id)->toArray(),
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -393,6 +408,34 @@ class ProjectDealService
         }
     }
 
+    public function detailProjectDealForEdit(string $quotationId): array
+    {
+        $data = $this->repo->show(
+            uid: Crypt::decryptString($quotationId),
+            select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,is_high_season,equipment_type',
+            relation: [
+                'marketings:id,project_deal_id,employee_id',
+                'marketings.employee:id,uid',
+                'latestQuotation',
+                'latestQuotation.items:id,quotation_id,item_id',
+                'latestQuotation.items.item:id,name'
+            ]
+        );
+
+        $items = $data->latestQuotation->items->map(function ($item) {
+            return [
+                'value' => $item->item->id,
+                'title' => $item->item->name
+            ];
+        });
+        $data['quotation_items'] = $items;
+
+        return generalResponse(
+            message: "Success",
+            data: $data->toArray()
+        );
+    }
+
     /**
      * Get detail of project deal
      * 
@@ -404,6 +447,12 @@ class ProjectDealService
     {
         try {
             $quotationIdRaw = Crypt::decryptString($quotationId);
+            $isEdit = request('edit');
+
+            // get detail of project deal without the transactions
+            if ($isEdit) {
+                return $this->detailProjectDealForEdit(quotationId: $quotationId);
+            }
 
             $data = $this->repo->show(
                 uid: $quotationIdRaw,
