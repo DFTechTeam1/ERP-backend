@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['POST', 'GET', 'DELETE', 'PUT', 'OPTION'],
 
-    'allowed_origins' => ['http://localhost:5174', 'http://localhost:5173'],
+    'allowed_origins' => ['http://localhost:5174', 'http://localhost:5173', 'https://staging.dfactory.pro', 'https://staging-office.dfactory.pro'],
 
     'allowed_origins_patterns' => [],
 
