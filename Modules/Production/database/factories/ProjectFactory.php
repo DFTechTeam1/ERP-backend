@@ -4,7 +4,6 @@ namespace Modules\Production\Database\Factories;
 
 use App\Enums\Production\EventType;
 use App\Enums\Production\ProjectStatus;
-use Google\Service\Appengine\ProjectState;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
@@ -36,7 +35,7 @@ class ProjectFactory extends Factory
 
         return [
             'name' => fake()->name(),
-            'client_portal' => 'client_portal_' . fake()->randomKey(),
+            'client_portal' => 'client_portal_'.fake()->randomKey(),
             'project_date' => date('Y-m-d', strtotime('+1 week')),
             'event_type' => fake()->randomElement($eventTypes),
             'venue' => 'Hotel brawijaya',
@@ -58,4 +57,3 @@ class ProjectFactory extends Factory
         ];
     }
 }
-

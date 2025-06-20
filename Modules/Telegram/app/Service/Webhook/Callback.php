@@ -11,14 +11,12 @@
 namespace Modules\Telegram\Service\Webhook;
 
 use App\Models\User;
-use App\Services\Telegram\InlineKeyboard;
 use App\Services\Telegram\TelegramService;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Modules\Hrd\Models\Employee;
-use Modules\Telegram\Service\Action\ApproveTaskAction;
 use Modules\Telegram\Enums\CallbackIdentity;
+use Modules\Telegram\Service\Action\ApproveTaskAction;
 use Modules\Telegram\Service\Action\CheckProofOfWorkAction;
 use Modules\Telegram\Service\Action\DeleteNasConfigurationAction;
 use Modules\Telegram\Service\Action\GetNasConfigurationAction;
@@ -28,7 +26,8 @@ use Modules\Telegram\Service\Action\MyTaskAction;
 use Modules\Telegram\Service\Action\SetNasIpAction;
 use Modules\Telegram\Service\Action\SetNasRootAction;
 
-class Callback {
+class Callback
+{
     private $value;
 
     private $identity;
@@ -61,7 +60,7 @@ class Callback {
 
     protected function setService()
     {
-        $this->service = new TelegramService();
+        $this->service = new TelegramService;
     }
 
     protected function getChatId(array $payload)
@@ -85,7 +84,7 @@ class Callback {
 
     /**
      * Sometime payload came from FREETEXT, instead of CALLBACK QUERY
-     * @param array $payload
+     *
      * @return void
      */
     public function handle(array $payload)
@@ -97,51 +96,51 @@ class Callback {
             parse_str($data, $queries);
 
             if ($queries['idt'] == CallbackIdentity::MyProject->value) {
-                $projectAction = new MyProjectAction();
+                $projectAction = new MyProjectAction;
                 $projectAction($payload);
-            } else if ($queries['idt'] == CallbackIdentity::MyTask->value) {
-                $taskAction = new MyTaskAction();
+            } elseif ($queries['idt'] == CallbackIdentity::MyTask->value) {
+                $taskAction = new MyTaskAction;
                 $taskAction->handle($payload);
-            } else if ($queries['idt'] == CallbackIdentity::ApproveTask->value) {
-                $approveAction = new ApproveTaskAction();
+            } elseif ($queries['idt'] == CallbackIdentity::ApproveTask->value) {
+                $approveAction = new ApproveTaskAction;
                 $approveAction($payload);
-            } else if ($queries['idt'] == CallbackIdentity::CheckProofOfWork->value) {
-                $checkAction = new CheckProofOfWorkAction();
+            } elseif ($queries['idt'] == CallbackIdentity::CheckProofOfWork->value) {
+                $checkAction = new CheckProofOfWorkAction;
                 $checkAction($payload);
-            } else if ($queries['idt'] == CallbackIdentity::MarkTaskAsComplete->value) {
-                $completeAction = new MarkTaskAsCompleteAction();
+            } elseif ($queries['idt'] == CallbackIdentity::MarkTaskAsComplete->value) {
+                $completeAction = new MarkTaskAsCompleteAction;
                 $completeAction($payload);
-            } else if ($queries['idt'] == CallbackIdentity::SetActiveRoot->value) {
-                $rootAction = new SetNasRootAction();
+            } elseif ($queries['idt'] == CallbackIdentity::SetActiveRoot->value) {
+                $rootAction = new SetNasRootAction;
                 $rootAction($payload);
-            } else if ($queries['idt'] == CallbackIdentity::SetActiveIP->value) {
-                $ipAction = new SetNasIPAction();
+            } elseif ($queries['idt'] == CallbackIdentity::SetActiveIP->value) {
+                $ipAction = new SetNasIPAction;
                 $ipAction($payload);
-            } else if ($queries['idt'] == CallbackIdentity::GetNasConfiguration->value) {
-                $nasConfig = new GetNasConfigurationAction();
+            } elseif ($queries['idt'] == CallbackIdentity::GetNasConfiguration->value) {
+                $nasConfig = new GetNasConfigurationAction;
                 $nasConfig($payload);
-            } else if ($queries['idt'] == CallbackIdentity::DeleteNasConfiguration->value) {
-                $deleteConfigAction = new DeleteNasConfigurationAction();
+            } elseif ($queries['idt'] == CallbackIdentity::DeleteNasConfiguration->value) {
+                $deleteConfigAction = new DeleteNasConfigurationAction;
                 $deleteConfigAction($payload);
             }
-        } else if (isset($payload['message'])) {
+        } elseif (isset($payload['message'])) {
 
         }
-//
-//        $this->breakTheValue($data);
-//        $this->getChatId($payload);
-//        $this->getMessageId($payload);
-//        $this->getUserData();
-//        $this->setService();
-//
-//        if ($this->identity == CallbackIdentity::MyProject->value) {
-//            $additional = [];
-//            if ($this->additional) {
-//                $additional = json_decode($this->additional, true);
-//            }
-//
-//            $projectAction = new MyProjectAction();
-//            $projectAction($payload, $this->chatId, $this->messageId, $additional);
-//        }
+        //
+        //        $this->breakTheValue($data);
+        //        $this->getChatId($payload);
+        //        $this->getMessageId($payload);
+        //        $this->getUserData();
+        //        $this->setService();
+        //
+        //        if ($this->identity == CallbackIdentity::MyProject->value) {
+        //            $additional = [];
+        //            if ($this->additional) {
+        //                $additional = json_decode($this->additional, true);
+        //            }
+        //
+        //            $projectAction = new MyProjectAction();
+        //            $projectAction($payload, $this->chatId, $this->messageId, $additional);
+        //        }
     }
 }

@@ -14,20 +14,20 @@ class FormatBoards
 
     public function handle(string $projectUid, ?string $filterSearch = '', bool $myTask = false)
     {
-        $boardRepo = new ProjectBoardRepository();
-        $projectPicRepository = new ProjectPersonInChargeRepository();
+        $boardRepo = new ProjectBoardRepository;
+        $projectPicRepository = new ProjectPersonInChargeRepository;
         $user = auth()->user();
         $leaderModeller = getSettingByKey('lead_3d_modeller');
         if ($leaderModeller) {
-            $leaderModeller = getIdFromUid($leaderModeller, new Employee());
+            $leaderModeller = getIdFromUid($leaderModeller, new Employee);
         }
 
-        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
         $employeeId = $user->employee_id ?? 0;
         $superUserRole = isSuperUserRole();
 
         $relation = [
-            'tasks' => function ($query) use ($filterSearch, $myTask, $employeeId) {
+            'tasks' => function ($query) use ($filterSearch) {
                 $query->selectRaw('*')
                     ->with([
                         'revises',
@@ -35,13 +35,13 @@ class FormatBoards
                         'proofOfWorks',
                         'logs',
                         'board',
-                        'pics' => function ($queryPic) use ($filterSearch, $myTask, $employeeId) {
+                        'pics' => function ($queryPic) {
                             $queryPic->selectRaw('id,project_task_id,employee_id,status')
                                 ->with([
-                                    'employee' => function ($queryEmployee) use ($filterSearch, $myTask, $employeeId) {
+                                    'employee' => function ($queryEmployee) {
                                         $queryEmployee->selectRaw('id,name,email,uid,avatar_color');
                                     },
-                                    'user:id,employee_id'
+                                    'user:id,employee_id',
                                 ]);
 
                             // if ($myTask) {
@@ -53,18 +53,18 @@ class FormatBoards
                         'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
                         'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
                         'times:id,project_task_id,employee_id,work_type,time_added',
-                        'times.employee:id,uid,name'
+                        'times.employee:id,uid,name',
                     ]);
 
                 if ($filterSearch) {
-                    $query->whereLike("name", "%{$filterSearch}%");
+                    $query->whereLike('name', "%{$filterSearch}%");
                 }
             },
         ];
 
         $data = $boardRepo->list(
             select: 'id,project_id,name,sort,based_board_id',
-            where: 'project_id = ' . $projectId,
+            where: 'project_id = '.$projectId,
             relation: $relation,
         );
 
@@ -85,7 +85,7 @@ class FormatBoards
         }
 
         // if logged user is pic or super user role, set as is_project_pic
-        $projectPics = $projectPicRepository->list('id,pic_id', 'project_id = ' . $projectId);
+        $projectPics = $projectPicRepository->list('id,pic_id', 'project_id = '.$projectId);
         $isProjectPic = in_array($employeeId, collect($projectPics)->pluck('pic_id')->toArray()) || $superUserRole ? true : false;
         $isDirector = isDirector();
 
@@ -133,7 +133,6 @@ class FormatBoards
                     }
                 }
 
-
                 $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
 
                 // override is_active where task status is ON PROGRESS
@@ -160,8 +159,8 @@ class FormatBoards
                 // check the ownership of task
 
                 $haveTaskAccess = true;
-                if (!$superUserRole && !$isProjectPic && !$isDirector && !isAssistantPMRole()) {
-                    if (!in_array($employeeId, $picIds)) {
+                if (! $superUserRole && ! $isProjectPic && ! $isDirector && ! isAssistantPMRole()) {
+                    if (! in_array($employeeId, $picIds)) {
                         $haveTaskAccess = false;
                     }
                 }

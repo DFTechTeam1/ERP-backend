@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class ReturnEquipmentJob implements ShouldQueue
 {
@@ -18,7 +18,6 @@ class ReturnEquipmentJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param string $projectUid
      */
     public function __construct(string $projectUid)
     {
@@ -30,7 +29,7 @@ class ReturnEquipmentJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->pusher = new \App\Services\PusherNotification();
+        $this->pusher = new \App\Services\PusherNotification;
 
         $project = \Modules\Production\Models\Project::selectRaw('uid,name')
             ->where('uid', $this->projectUid)
@@ -46,7 +45,7 @@ class ReturnEquipmentJob implements ShouldQueue
 
             $notif = formatNotifications($employee->unreadNotifications->toArray());
 
-            $this->pusher->send('my-channel-' . $user->id, 'notification-event', $notif);
+            $this->pusher->send('my-channel-'.$user->id, 'notification-event', $notif);
         }
 
     }

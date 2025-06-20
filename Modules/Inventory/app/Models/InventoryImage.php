@@ -2,8 +2,8 @@
 
 namespace Modules\Inventory\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Inventory\Database\factories\InventoryImageFactory;
 
@@ -17,12 +17,12 @@ class InventoryImage extends Model
     protected $fillable = [
         'image',
         'inventory_id',
-        'is_main'
+        'is_main',
     ];
-    
+
     protected static function newFactory(): InventoryImageFactory
     {
-        //return InventoryImageFactory::new();
+        // return InventoryImageFactory::new();
     }
 
     public function inventory(): BelongsTo

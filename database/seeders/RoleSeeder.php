@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -46,8 +45,9 @@ class RoleSeeder extends Seeder
         foreach ($roles as $role) {
             try {
                 DB::table('roles')->where('name', $role['name'])->delete();
-                
-            } catch (\Throwable $th) {}
+
+            } catch (\Throwable $th) {
+            }
 
             $roleData = Role::create(['name' => $role['name'], 'guard_name' => 'sanctum']);
 

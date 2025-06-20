@@ -4,11 +4,10 @@ namespace Modules\Telegram\Jobs;
 
 use App\Services\Telegram\TelegramService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class TelegramSendingJob implements ShouldQueue
 {
@@ -34,8 +33,8 @@ class TelegramSendingJob implements ShouldQueue
     {
         if (gettype($this->message) == 'string') {
             $service->sendTextMessage($this->chatId, $this->message);
-        } else if (gettype($this->message) == 'array') {
-            if (!isset($this->message['text'])) {
+        } elseif (gettype($this->message) == 'array') {
+            if (! isset($this->message['text'])) {
                 $service->sendTextMessage($this->chatId, $this->message);
             } else {
                 $service->sendTextMessage($this->chatId, $this->message['text'], false, $this->message['link_previews']);

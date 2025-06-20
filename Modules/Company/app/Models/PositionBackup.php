@@ -3,9 +3,10 @@
 namespace Modules\Company\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Company\Database\Factories\PositionFactory;
 use Modules\Hrd\Models\Employee;
 
 // use Modules\Company\Database\Factories\PositionBackupFactory;
@@ -25,14 +26,13 @@ class PositionBackup extends Model
         'updated_by',
     ];
 
-    // protected static function newFactory(): PositionBackupFactory
-    // {
-    //     // return PositionBackupFactory::new();
-    // }
+    protected static function newFactory(): PositionFactory
+    {
+        return PositionFactory::new();
+    }
 
     /**
      * Position belongs to division
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function division(): BelongsTo
     {
@@ -41,6 +41,7 @@ class PositionBackup extends Model
 
     /**
      * Position has many employees
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function employees()

@@ -27,14 +27,13 @@ class Login extends FormRequest
         return [
             'email' => 'required',
             'password' => 'required',
-            'remember_me' => 'nullable'
+            'remember_me' => 'nullable',
         ];
     }
 
     /**
      * Return validation errors as json
      *
-     * @param Validator $validator
      * @return void
      */
     public function failedValidation(Validator $validator)

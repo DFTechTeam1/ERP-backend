@@ -9,7 +9,7 @@ trait HasTaskIdentifier
     public static function bootHasTaskIdentifier()
     {
         static::creating(function (Model $model) {
-            $model->created_by = auth()->id(); 
+            $model->created_by = auth()->id();
             $model->task_identifier_id = generateRandomPassword(4);
         });
 

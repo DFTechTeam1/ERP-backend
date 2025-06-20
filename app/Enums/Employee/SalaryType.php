@@ -10,8 +10,8 @@ enum SalaryType: int
     public function label()
     {
         return match ($this) {
-            static::Monthly => 'Month',
-            static::Daily => 'Daily',
+            self::Monthly => 'Month',
+            self::Daily => 'Daily',
         };
     }
 }

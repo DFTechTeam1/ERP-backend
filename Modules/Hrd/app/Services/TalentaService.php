@@ -7,13 +7,13 @@ use App\Enums\Employee\Religion;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Modules\Company\Repository\BranchRepository;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\JobLevelRepository;
 use Modules\Company\Repository\PositionRepository;
 
-class TalentaService {
+class TalentaService
+{
     private $url;
 
     private $endpoint;
@@ -31,8 +31,8 @@ class TalentaService {
     /**
      * Set endpoint and main url
      *
-     * @param string $type              Please check talenta configuration file to make sure
-     * @param ?string $env               Will be prod or dev
+     * @param  string  $type  Please check talenta configuration file to make sure
+     * @param  ?string  $env  Will be prod or dev
      * @return void
      */
     public function setUrl(string $type, ?string $env = null)
@@ -44,7 +44,7 @@ class TalentaService {
             $uriKey = "{$env}_uri";
             $uri = config("talenta.{$uriKey}");
         }
-        $this->url = $uri . $this->endpoint;
+        $this->url = $uri.$this->endpoint;
 
         $this->requestMethod = config("talenta.endpoint_method.{$type}");
     }
@@ -52,7 +52,6 @@ class TalentaService {
     /**
      * Set url query parameters
      *
-     * @param array $params
      * @return void
      */
     public function setUrlParams(array $params)
@@ -62,21 +61,19 @@ class TalentaService {
 
     /**
      * Generate authorization token
-     *
-     * @return void
      */
     protected function generateHmac(string $method): void
     {
-        $datetime       = Carbon::now()->toRfc7231String();
-        $upperMethod    = strtoupper($method);
-        $request_line   = "{$upperMethod} {$this->endpoint} HTTP/1.1";
-        $payload        = implode("\n", ["date: {$datetime}", $request_line]);
-        $digest         = hash_hmac('sha256', $payload, config('talenta.client_secret'), true);
-        $signature      = base64_encode($digest);
+        $datetime = Carbon::now()->toRfc7231String();
+        $upperMethod = strtoupper($method);
+        $request_line = "{$upperMethod} {$this->endpoint} HTTP/1.1";
+        $payload = implode("\n", ["date: {$datetime}", $request_line]);
+        $digest = hash_hmac('sha256', $payload, config('talenta.client_secret'), true);
+        $signature = base64_encode($digest);
 
-        $clientId       = config('talenta.client_id');
+        $clientId = config('talenta.client_id');
         // $completeSecret = "hmac username=\"{$clientId}\", algorithm=\"hmac-sha256\", headers=\"date request-line\", signature=\"{$signature}\"";
-        $completeSecret = 'hmac username="' . $clientId . '", algorithm="hmac-sha256", headers="date request-line", signature="' . $signature . '"';
+        $completeSecret = 'hmac username="'.$clientId.'", algorithm="hmac-sha256", headers="date request-line", signature="'.$signature.'"';
 
         $this->token = $completeSecret;
         $this->dateRequest = $datetime;
@@ -84,7 +81,6 @@ class TalentaService {
 
     /**
      * Make a request to talenta server
-     *
      */
     public function makeRequest()
     {
@@ -95,14 +91,14 @@ class TalentaService {
 
         // make a request
         $response = Http::withHeaders([
-                'Authorization' => $this->token,
-                'Date' => $this->dateRequest
-            ])
+            'Authorization' => $this->token,
+            'Date' => $this->dateRequest,
+        ])
             ->acceptJson()
             ->$method($this->url, $this->payload);
 
         if ($response->failed()) {
-            Log::error("ERROR TALENTA SERVICE", [$response->throw()]);
+            Log::error('ERROR TALENTA SERVICE', [$response->throw()]);
         }
 
         return $response->json();
@@ -114,25 +110,25 @@ class TalentaService {
         $user = auth()->user()->load('employee');
         $createdBy = $user->employee->talenta_user_id;
 
-        //set name
+        // set name
         $expName = explode(' ', $request['name']);
         $lastName = array_pop($expName);
         $firstName = implode(' ', $expName);
 
         // get branch
-        $branchRepo = new BranchRepository();
+        $branchRepo = new BranchRepository;
         $branch = $branchRepo->show(uid: $request['branch_id'], select: 'name');
 
         // get organization / division
-        $divisionRepo = new DivisionRepository();
+        $divisionRepo = new DivisionRepository;
         $division = $divisionRepo->show(uid: $request['division_id'], select: 'name');
 
         // get position
-        $positionRepo = new PositionRepository();
+        $positionRepo = new PositionRepository;
         $position = $positionRepo->show(uid: $request['position_uid'], select: 'name');
 
         // get job level
-        $jobLevelRepo = new JobLevelRepository();
+        $jobLevelRepo = new JobLevelRepository;
         $jobLevel = $jobLevelRepo->show(uid: $request['job_level_uid'], select: 'name');
 
         $payload = [
@@ -175,7 +171,7 @@ class TalentaService {
             'jht_configuration' => $request['jht_configuration'], // required
             'employee_tax_status' => $request['employee_tax_status'], // required
             'jp_configuration' => $request['jp_configuration'], // required
-            'npp_bpjs_ketenagakerjaan' => "default",
+            'npp_bpjs_ketenagakerjaan' => 'default',
             'overtime_status' => $request['overtime_status'], // required
             'bpjs_kesehatan_config' => $request['bpjs_kesehatan_config'], // required
             'payment_schedule' => null,

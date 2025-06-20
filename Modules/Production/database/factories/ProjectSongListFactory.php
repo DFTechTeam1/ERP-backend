@@ -20,8 +20,7 @@ class ProjectSongListFactory extends Factory
             'name' => 'Song 1',
             'is_request_edit' => 0,
             'is_request_delete' => 0,
-            'target_name' => NULL
+            'target_name' => null,
         ];
     }
 }
-

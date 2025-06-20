@@ -5,8 +5,8 @@ namespace Modules\Inventory\Console;
 use Illuminate\Console\Command;
 use Modules\Inventory\Models\Inventory;
 use Modules\Inventory\Models\InventoryItem;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class SyncInventoryToNewItemFormat extends Command
 {

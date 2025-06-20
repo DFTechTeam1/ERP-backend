@@ -2,9 +2,8 @@
 
 namespace Modules\Company\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Company\Database\Factories\StateFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class State extends Model
 {

@@ -9,7 +9,8 @@ namespace App\Services;
 
 use Carbon\Carbon;
 
-class GeneralService {
+class GeneralService
+{
     public function getIdFromUid(string $uid, $model)
     {
         return getIdFromUid($uid, $model);
@@ -50,7 +51,8 @@ class GeneralService {
         return getCache($cacheId);
     }
 
-    public function storeCache(string $key, $value, $ttl = 60 * 60 * 6) {
+    public function storeCache(string $key, $value, $ttl = 60 * 60 * 6)
+    {
         storeCache($key, $value, $ttl);
     }
 
@@ -72,11 +74,17 @@ class GeneralService {
 
         return [
             'start' => $startDate,
-            'end' => $endDate
+            'end' => $endDate,
         ];
     }
 
-    public function generateRandomColor(string $email) {
+    public function generateRandomColor(string $email)
+    {
         return generateRandomColor($email);
+    }
+
+    public function linkShortener(int $length = 8): string
+    {
+        return linkShortener($length);
     }
 }

@@ -36,7 +36,7 @@ return new class extends Migration
                 $table->dropForeign(['employee_id']);
             });
         }
-        
+
         Schema::dropIfExists('employee_points');
     }
 };

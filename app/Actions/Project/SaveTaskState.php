@@ -16,9 +16,9 @@ class SaveTaskState
 
     protected function constructor()
     {
-        $this->taskRepo = new ProjectTaskRepository();
+        $this->taskRepo = new ProjectTaskRepository;
 
-        $this->employeeStateRepo = new EmployeeTaskStateRepository();
+        $this->employeeStateRepo = new EmployeeTaskStateRepository;
     }
 
     public function handle(array $currentPicIds, string $taskUid)
@@ -38,7 +38,7 @@ class SaveTaskState
                     'project_id' => $task->project_id,
                     'project_task_id' => $task->id,
                     'project_board_id' => $task->project_board_id,
-                    'employee_id' => $pic
+                    'employee_id' => $pic,
                 ],
                 updatedValue: []
             );

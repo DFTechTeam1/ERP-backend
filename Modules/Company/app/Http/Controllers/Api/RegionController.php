@@ -1,7 +1,6 @@
 <?php
 
 namespace Modules\Company\Http\Controllers\Api;
-use Nnjeim\World\World;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;

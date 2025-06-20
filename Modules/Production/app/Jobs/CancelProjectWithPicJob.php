@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class CancelProjectWithPicJob implements ShouldQueue
 {
@@ -18,8 +18,8 @@ class CancelProjectWithPicJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param array<string>  $employeeIds
-     * @param string $projectUid
+     *
+     * @param  array<string>  $employeeIds
      */
     public function __construct(array $employeeIds, string $projectUid)
     {
@@ -33,7 +33,7 @@ class CancelProjectWithPicJob implements ShouldQueue
     public function handle(): void
     {
         $project = \Modules\Production\Models\Project::selectRaw('name,project_date')
-            ->where("uid", $this->projectUid)
+            ->where('uid', $this->projectUid)
             ->first();
 
         foreach ($this->employeeIds as $employeeId) {

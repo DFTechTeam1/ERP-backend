@@ -4,7 +4,6 @@ namespace Modules\Inventory\Http\Requests\Supplier;
 
 use App\Rules\UniqueLowerRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Modules\Inventory\Models\Supplier;
 
 class Create extends FormRequest
@@ -17,7 +16,7 @@ class Create extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new Supplier())
+                new UniqueLowerRule(new Supplier),
             ],
         ];
     }

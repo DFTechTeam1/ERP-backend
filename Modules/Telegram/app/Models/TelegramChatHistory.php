@@ -2,8 +2,8 @@
 
 namespace Modules\Telegram\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Telegram\Database\Factories\TelegramChatHistoryFactory;
 
 class TelegramChatHistory extends Model
@@ -22,11 +22,11 @@ class TelegramChatHistory extends Model
         'bot_command',
         'from_customer',
         'is_closed',
-        'topic'
+        'topic',
     ];
 
     protected static function newFactory(): TelegramChatHistoryFactory
     {
-        //return TelegramChatHistoryFactory::new();
+        // return TelegramChatHistoryFactory::new();
     }
 }

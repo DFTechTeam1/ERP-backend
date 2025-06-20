@@ -20,7 +20,7 @@ return new class extends Migration
         }
 
         if (Schema::hasIndex('employee_points', 'employee_id')) {
-            Schema::table('employee_points', function(Blueprint $table) {
+            Schema::table('employee_points', function (Blueprint $table) {
                 $table->dropIndex(['employee_id']);
             });
         }

@@ -2,8 +2,8 @@
 
 namespace Modules\Inventory\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Inventory\Database\factories\InventoryRequestFactory;
 
 class InventoryRequest extends Model
@@ -14,9 +14,9 @@ class InventoryRequest extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [];
-    
+
     protected static function newFactory(): InventoryRequestFactory
     {
-        //return InventoryRequestFactory::new();
+        // return InventoryRequestFactory::new();
     }
 }

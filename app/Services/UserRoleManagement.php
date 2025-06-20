@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-class UserRoleManagement {
+class UserRoleManagement
+{
     public function isProductionRole()
     {
         $productionRoles = json_decode(getSettingByKey('production_staff_role'), true);

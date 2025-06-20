@@ -5,32 +5,30 @@ namespace Modules\Production\Repository;
 use Modules\Production\Models\ProjectEquipment;
 use Modules\Production\Repository\Interface\ProjectEquipmentInterface;
 
-class ProjectEquipmentRepository extends ProjectEquipmentInterface {
+class ProjectEquipmentRepository extends ProjectEquipmentInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectEquipment();
+        $this->model = new ProjectEquipment;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,59 +42,51 @@ class ProjectEquipmentRepository extends ProjectEquipmentInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(
-        string $uid = '', 
-        string $select = '*', 
+        string $uid = '',
+        string $select = '*',
         string $where = '',
         array $relation = []
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
         if (empty($where)) {
-            $query->where("uid", $uid);
+            $query->where('uid', $uid);
         } else {
             $query->whereRaw($where);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -109,7 +99,6 @@ class ProjectEquipmentRepository extends ProjectEquipmentInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -120,15 +109,14 @@ class ProjectEquipmentRepository extends ProjectEquipmentInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -142,13 +130,13 @@ class ProjectEquipmentRepository extends ProjectEquipmentInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id = 0, string $where = '')
     {
         $query = $this->model->query();
-        
+
         if (empty($where)) {
             $query->where('id', $id);
         } else {
@@ -161,7 +149,6 @@ class ProjectEquipmentRepository extends ProjectEquipmentInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

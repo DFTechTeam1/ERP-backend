@@ -12,7 +12,7 @@ class SubtituteWorkerSong extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_uid' => 'required'
+            'employee_uid' => 'required',
         ];
     }
 

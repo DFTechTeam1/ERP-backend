@@ -5,7 +5,6 @@ namespace Modules\Company\Http\Requests;
 use App\Rules\UniqueLowerRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Modules\Company\Models\Position;
 use Modules\Company\Models\PositionBackup;
 
 class PositionUpdateRequest extends FormRequest
@@ -17,10 +16,10 @@ class PositionUpdateRequest extends FormRequest
     {
         return [
             'name' => [
-                Rule::unique('positions')->ignore(request('uid'),'uid'),
-                new UniqueLowerRule(new PositionBackup(), request('uid')),
+                Rule::unique('positions')->ignore(request('uid'), 'uid'),
+                new UniqueLowerRule(new PositionBackup, request('uid')),
             ],
-            'division_id' => 'nullable'
+            'division_id' => 'nullable',
         ];
     }
 

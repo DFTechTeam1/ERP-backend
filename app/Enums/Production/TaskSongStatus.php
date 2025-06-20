@@ -14,12 +14,12 @@ enum TaskSongStatus: int
     public function label()
     {
         return match ($this) {
-            static::Active => __("global.active"),
-            static::OnProgress => __("global.onProgress"),
-            static::Revise => __("global.revise"),
-            static::OnFirstReview => __('global.checkByPm'),
-            static::OnLastReview => __('global.checkByPm'),
-            static::Completed => __("global.completed")
+            self::Active => __('global.active'),
+            self::OnProgress => __('global.onProgress'),
+            self::Revise => __('global.revise'),
+            self::OnFirstReview => __('global.checkByPm'),
+            self::OnLastReview => __('global.checkByPm'),
+            self::Completed => __('global.completed')
         };
     }
 

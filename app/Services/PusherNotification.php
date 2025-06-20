@@ -4,7 +4,8 @@ namespace App\Services;
 
 use Pusher\Pusher;
 
-class PusherNotification {
+class PusherNotification
+{
     private $pusher;
 
     public function __construct()
@@ -14,7 +15,7 @@ class PusherNotification {
             config('broadcasting.connections.pusher.secret'),
             config('broadcasting.connections.pusher.app_id'),
             [
-                'cluster' => 'ap1'                
+                'cluster' => 'ap1',
             ],
         );
     }

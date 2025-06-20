@@ -12,8 +12,7 @@ class CompanyController extends Controller
 
     public function __construct(
         MasterService $masterService
-    )
-    {
+    ) {
         $this->masterService = $masterService;
     }
 
@@ -29,7 +28,6 @@ class CompanyController extends Controller
 
     /**
      * Get all religions
-     *
      */
     public function getReligions()
     {
@@ -38,8 +36,6 @@ class CompanyController extends Controller
 
     /**
      * Get tax configuration
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getTaxConfiguration(): \Illuminate\Http\JsonResponse
     {
@@ -48,8 +44,6 @@ class CompanyController extends Controller
 
     /**
      * Get employee tax status
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getEmployeeTaxStatus(): \Illuminate\Http\JsonResponse
     {
@@ -58,8 +52,6 @@ class CompanyController extends Controller
 
     /**
      * Get jht configuration
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getJhtConfiguration(): \Illuminate\Http\JsonResponse
     {
@@ -68,8 +60,6 @@ class CompanyController extends Controller
 
     /**
      * Get overtime status
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getOvertimeStatus(): \Illuminate\Http\JsonResponse
     {
@@ -78,8 +68,6 @@ class CompanyController extends Controller
 
     /**
      * Get BPJS Kesehatan config
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getBpjsKesehatanConfig(): \Illuminate\Http\JsonResponse
     {
@@ -88,8 +76,6 @@ class CompanyController extends Controller
 
     /**
      * Get JP Configuration
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getJpConfiguration(): \Illuminate\Http\JsonResponse
     {
@@ -98,8 +84,6 @@ class CompanyController extends Controller
 
     /**
      * Get All configuration
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getAllConfiguration(): \Illuminate\Http\JsonResponse
     {
@@ -108,7 +92,6 @@ class CompanyController extends Controller
 
     /**
      * Get all genders
-     *
      */
     public function getGenders()
     {
@@ -117,7 +100,6 @@ class CompanyController extends Controller
 
     /**
      * Get all banks
-     *
      */
     public function getBanks()
     {
@@ -126,7 +108,6 @@ class CompanyController extends Controller
 
     /**
      * Get all martial status
-     *
      */
     public function getMartialStatus()
     {
@@ -135,7 +116,6 @@ class CompanyController extends Controller
 
     /**
      * Get all relation family
-     *
      */
     public function getRelationFamily()
     {
@@ -144,7 +124,6 @@ class CompanyController extends Controller
 
     /**
      * Get all blood type
-     *
      */
     public function getBloodType()
     {
@@ -153,7 +132,6 @@ class CompanyController extends Controller
 
     /**
      * Get all level staff
-     *
      */
     public function getLevelStaff()
     {
@@ -162,7 +140,6 @@ class CompanyController extends Controller
 
     /**
      * Get all salary type
-     *
      */
     public function getSalaryType()
     {
@@ -170,10 +147,8 @@ class CompanyController extends Controller
     }
 
     /**
-    * Get salary configuration
-    *
-    * @return \Illuminate\Http\JsonResponse
-    */
+     * Get salary configuration
+     */
     public function getSalaryConfiguration(): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->masterService->getSalaryConfiguration());
@@ -186,7 +161,6 @@ class CompanyController extends Controller
 
     /**
      * Get all ptkp types
-     *
      */
     public function getPtkpType()
     {

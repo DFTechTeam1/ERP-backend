@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Vinkla\Hashids\Facades\Hashids;
 
 class AssignTaskNotification extends Notification
@@ -65,30 +64,30 @@ class AssignTaskNotification extends Notification
     public function toTelegram($notifiable)
     {
         $message = [
-            'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya.",
+            'Halo, kamu mendapat tugas baru nih di event '.$this->task->project->name.' - '.$this->task->name."\nSilahkan login untuk melihat detailnya.",
             [
                 'text' => 'Setujui tugas ini?',
                 'type' => 'inline_keyboard',
                 'keyboard' => [
                     'inline_keyboard' => [
                         [
-                            ['text' => 'Terima pekerjaan', 'callback_data' => 'idt=ptappv&eid=' . $this->employeeId . '&tid=' . $this->task->id . '&pid=' . $this->task->project->id],
-                        ]
-                    ]
-                ]
-            ]
+                            ['text' => 'Terima pekerjaan', 'callback_data' => 'idt=ptappv&eid='.$this->employeeId.'&tid='.$this->task->id.'&pid='.$this->task->project->id],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         // message for lead modeller
         if ($this->userData->hasPermissionTo('assign_modeller')) {
             $message = [
-                "Halo, tugas {$this->task->name} di event {$this->task->project->name} siap untuk kamu distribusikan ke tim kamu"
+                "Halo, tugas {$this->task->name} di event {$this->task->project->name} siap untuk kamu distribusikan ke tim kamu",
             ];
         }
 
         return [
             'chatIds' => $this->chatIds,
-            'message' => $message
+            'message' => $message,
         ];
     }
 
@@ -96,14 +95,14 @@ class AssignTaskNotification extends Notification
     {
         $divider = \App\Enums\CodeDivider::assignTaskJobDivider->value;
 
-        $payloadEncrypted = $this->task->id . $divider . $this->employeeId . $divider . $this->task->project->id;
+        $payloadEncrypted = $this->task->id.$divider.$this->employeeId.$divider.$this->task->project->id;
 
-        $postbackApprove = 'approveTask=' . Hashids::encode($payloadEncrypted);
+        $postbackApprove = 'approveTask='.Hashids::encode($payloadEncrypted);
 
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo, kamu mendapat tugas baru nih di event ' . $this->task->project->name . ' - ' . $this->task->name . "\nSilahkan login untuk melihat detailnya.",
+                'text' => 'Halo, kamu mendapat tugas baru nih di event '.$this->task->project->name.' - '.$this->task->name."\nSilahkan login untuk melihat detailnya.",
             ],
         ];
 

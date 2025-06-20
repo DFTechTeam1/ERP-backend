@@ -4,7 +4,6 @@ namespace Modules\Inventory\Http\Requests\Inventory;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\File;
 
 class Create extends FormRequest
 {
@@ -34,7 +33,7 @@ class Create extends FormRequest
             'status' => 'nullable',
             'images.*' => [
                 'nullable',
-                'string'
+                'string',
             ],
             'status' => 'nullable',
             'current_images' => 'nullable',

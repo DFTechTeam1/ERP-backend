@@ -10,16 +10,16 @@ enum ShowreelsStatus: int
     public function label()
     {
         return match ($this) {
-            static::Approved => __("global.approvedByClient"),
-            static::WaitingApproval => __("global.waitingApprovalClient"),
+            self::Approved => __('global.approvedByClient'),
+            self::WaitingApproval => __('global.waitingApprovalClient'),
         };
     }
 
     public function color()
     {
         return match ($this) {
-            static::Approved => 'success',
-            static::WaitingApproval => 'deep-purple-lighten-1',
+            self::Approved => 'success',
+            self::WaitingApproval => 'deep-purple-lighten-1',
         };
     }
 }

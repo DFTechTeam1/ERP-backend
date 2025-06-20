@@ -17,7 +17,7 @@ class EmployeeSeeder extends Seeder
         Schema::disableForeignKeyConstraints();
         \Modules\Hrd\Models\Employee::truncate();
 
-        $service = new \Modules\Hrd\Services\EmployeeService();
+        $service = new \Modules\Hrd\Services\EmployeeService;
         $response = $service->readFile(public_path('static_file/employee.xlsx'));
 
         $response = collect($response)->map(function ($item) {
@@ -47,11 +47,11 @@ class EmployeeSeeder extends Seeder
         foreach ($response as $employee) {
             if ($employee['boss_id']) {
                 $bossId = \Modules\Hrd\Models\Employee::select('id')
-                    ->whereRaw("LOWER(employee_id) = '" . strtolower($employee['boss_id']) . "'")
+                    ->whereRaw("LOWER(employee_id) = '".strtolower($employee['boss_id'])."'")
                     ->first();
 
                 if ($bossId) {
-                    \Modules\Hrd\Models\Employee::whereRaw("LOWER(employee_id) = '" . strtolower($employee['employee_id']) . "'")
+                    \Modules\Hrd\Models\Employee::whereRaw("LOWER(employee_id) = '".strtolower($employee['employee_id'])."'")
                         ->update(['boss_id' => $bossId->id]);
                 }
             }
@@ -61,7 +61,7 @@ class EmployeeSeeder extends Seeder
 
         // $positions = Position::selectRaw('id')->whereIn('name', ['Marketing', 'Project Manager', 'Animator'])->get();
         // $positionRange = collect($positions)->pluck('id')->toArray();
-        
+
         // $idNumberLength = 3;
         // $prefix = 'DF';
         // for ($a = 0; $a < count($range); $a++) {
@@ -112,7 +112,7 @@ class EmployeeSeeder extends Seeder
         //         'probation_status' => null,
         //         'end_probation_date' => null,
         //         'company_name' => 'DFactory'
-        //     ];   
+        //     ];
 
         //     \Modules\Hrd\Models\Employee::create($payload);
         // }

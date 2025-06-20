@@ -16,7 +16,7 @@ class Update extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new ProjectClass(), $this->route('projectClass'), 'name', true)
+                new UniqueLowerRule(new ProjectClass, $this->route('projectClass'), 'name', true),
             ],
             'maximal_point' => 'required',
             'color' => 'required',

@@ -4,8 +4,8 @@ namespace Modules\Company\Models;
 
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Company\Database\Factories\PositionFactory;
 use Modules\Hrd\Models\Employee;
 
@@ -33,6 +33,7 @@ class Position extends Model
 
     /**
      * Position belongs to division
+     *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function division()
@@ -42,6 +43,7 @@ class Position extends Model
 
     /**
      * Position has many employees
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function employees()

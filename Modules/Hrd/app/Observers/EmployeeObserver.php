@@ -10,7 +10,6 @@ class EmployeeObserver implements ShouldHandleEventsAfterCommit
     /**
      * Handle when data is retrieved
      *
-     * @param Employee $employee
      * @return void
      */
     public function retrieved(Employee $employee)

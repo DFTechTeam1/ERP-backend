@@ -3,7 +3,6 @@
 namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Modules\Production\Rules\LedDetailRule;
 
 class Create extends FormRequest
 {

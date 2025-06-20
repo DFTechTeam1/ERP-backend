@@ -5,32 +5,30 @@ namespace Modules\Production\Repository;
 use Modules\Production\Models\EntertainmentTaskSongResultImage;
 use Modules\Production\Repository\Interface\EntertainmentTaskSongResultImageInterface;
 
-class EntertainmentTaskSongResultImageRepository extends EntertainmentTaskSongResultImageInterface {
+class EntertainmentTaskSongResultImageRepository extends EntertainmentTaskSongResultImageInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EntertainmentTaskSongResultImage();
+        $this->model = new EntertainmentTaskSongResultImage;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,40 +42,33 @@ class EntertainmentTaskSongResultImageRepository extends EntertainmentTaskSongRe
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [])
@@ -86,8 +77,8 @@ class EntertainmentTaskSongResultImageRepository extends EntertainmentTaskSongRe
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
-        
+        $query->where('uid', $uid);
+
         if ($relation) {
             $query->with($relation);
         }
@@ -100,7 +91,6 @@ class EntertainmentTaskSongResultImageRepository extends EntertainmentTaskSongRe
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -111,15 +101,14 @@ class EntertainmentTaskSongResultImageRepository extends EntertainmentTaskSongRe
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -133,7 +122,7 @@ class EntertainmentTaskSongResultImageRepository extends EntertainmentTaskSongRe
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -145,7 +134,6 @@ class EntertainmentTaskSongResultImageRepository extends EntertainmentTaskSongRe
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

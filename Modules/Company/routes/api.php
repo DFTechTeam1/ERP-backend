@@ -31,27 +31,28 @@ Route::middleware(['auth:sanctum'])
 Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::class)
     ->middleware(['auth:sanctum'])
     ->group(function () {
-    Route::get('positions', 'list');
-    Route::get('positions/all', 'getAll');
-    Route::get('positions/{uid}', 'show');
-    Route::post('positions', 'store');
-    Route::put('positions/{uid}', 'update');
-    Route::delete('positions/{uid}', 'delete');
-    Route::post('positions/bulk', 'bulkDelete');
-});
+        Route::get('positions', 'list');
+        Route::get('positions/all', 'getAll');
+        Route::get('positions/{uid}', 'show');
+        Route::post('positions', 'store');
+        Route::put('positions/{uid}', 'update');
+        Route::delete('positions/{uid}', 'delete');
+        Route::post('positions/bulk', 'bulkDelete');
+    });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\DivisionController::class)
     ->middleware(['auth:sanctum'])
     ->group(function () {
-   Route::get('divisions','list');
-   Route::get('divisions/all', 'allDivisions');
-   Route::get('divisions/{uid}','show');
-   Route::post('divisions','store');
-   Route::put('divisions/{uid}','update');
-   Route::delete('divisions/{uid}','delete');
-   Route::post('divisions/bulk','bulkDelete');
-});
+        Route::get('divisions', 'list');
+        Route::get('divisions/all', 'allDivisions');
+        Route::get('divisions/{uid}', 'show');
+        Route::post('divisions', 'store');
+        Route::put('divisions/{uid}', 'update');
+        Route::delete('divisions/{uid}', 'delete');
+        Route::post('divisions/bulk', 'bulkDelete');
+    });
 
+Route::get('setting/calculation', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getPriceCalculation']);
 Route::get('setting/{code?}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getSetting']);
 Route::post('setting/{code}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'storeSetting']);
 Route::get('setting/{code}/{key}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getSettingByKeyAndCode']);

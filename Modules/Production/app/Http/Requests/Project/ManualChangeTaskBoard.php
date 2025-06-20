@@ -2,11 +2,11 @@
 
 namespace Modules\Production\Http\Requests\Project;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Modules\Production\Rules\ChangeBoardRule;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use App\Enums\ErrorCode\Code;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Modules\Production\Rules\ChangeBoardRule;
 
 class ManualChangeTaskBoard extends FormRequest
 {
@@ -18,7 +18,7 @@ class ManualChangeTaskBoard extends FormRequest
         return [
             'board_id' => [
                 'required',
-                new ChangeBoardRule
+                new ChangeBoardRule,
             ],
             'task_id' => 'nullable',
             'board_source_id' => 'nullable',
@@ -36,7 +36,6 @@ class ManualChangeTaskBoard extends FormRequest
     /**
      * Return validation errors as json
      *
-     * @param Validator $validator
      * @return void
      */
     public function failedValidation(Validator $validator)

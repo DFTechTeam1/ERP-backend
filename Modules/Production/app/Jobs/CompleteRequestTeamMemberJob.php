@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class CompleteRequestTeamMemberJob implements ShouldQueue
 {
@@ -16,7 +16,6 @@ class CompleteRequestTeamMemberJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param string $transferUid
      */
     public function __construct(string $transferUid)
     {
@@ -29,10 +28,10 @@ class CompleteRequestTeamMemberJob implements ShouldQueue
     public function handle(): void
     {
         $transfer = \Modules\Production\Models\TransferTeamMember::with([
-                'employee:id,name,email,nickname',
-                'requestToPerson:id,name,email,nickname',
-                'requestByPerson:id,name,email,nickname',
-            ])
+            'employee:id,name,email,nickname',
+            'requestToPerson:id,name,email,nickname',
+            'requestByPerson:id,name,email,nickname',
+        ])
             ->where('uid', $this->transferUid)->first();
 
         $targetPic = \Modules\Hrd\Models\Employee::find($transfer->request_to);
