@@ -5,7 +5,9 @@ namespace Modules\Production\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Production\Database\Factories\ProjectQuotationFactory;
 
 // use Modules\Production\Database\Factories\ProjectQuotationFactory;
 
@@ -27,16 +29,17 @@ class ProjectQuotation extends Model
         'total',
         'maximum_markup_price',
         'event_location_guide',
+        'equipment_type',
         'fix_price',
         'quotation_id',
         'is_final',
         'description',
     ];
 
-    // protected static function newFactory(): ProjectQuotationFactory
-    // {
-    //     // return ProjectQuotationFactory::new();
-    // }
+    protected static function newFactory(): ProjectQuotationFactory
+    {
+        return ProjectQuotationFactory::new();
+    }
 
     public function deal(): BelongsTo
     {

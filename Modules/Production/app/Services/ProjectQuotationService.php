@@ -165,7 +165,6 @@ class ProjectQuotationService
     public function generateQuotation(string $quotationId, string $type): Response
     {
         $quotationId = Crypt::decryptString($quotationId);
-        
         $data = $this->repo->show(
             uid: 'uid',
             select: 'id,project_deal_id,fix_price,quotation_id,description',
@@ -227,6 +226,7 @@ class ProjectQuotationService
         ]);
 
         $filename = "{$data->deal->name}.pdf";
+        $filename = "Quot {$data->quotation_id} - {$data->deal->customer->name} - {$data->deal->project_date}.pdf";
 
         if ($type == 'stream') {
             return $pdf->stream($filename);

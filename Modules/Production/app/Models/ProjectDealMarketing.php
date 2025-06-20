@@ -31,4 +31,9 @@ class ProjectDealMarketing extends Model
     {
         return $this->belongsTo(Employee::class, 'employee_id');
     }
+
+    public function projectDeal(): BelongsTo
+    {
+        return $this->belongsTo(ProjectDeal::class, 'project_deal_id');
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
 use App\Enums\Production\ProjectStatus;
 use App\Services\GeneralService;
@@ -108,6 +109,7 @@ class ProjectDealService
                     'can_make_payment' => $item->canMakePayment(),
                     'can_publish_project' => $item->canPublishProject(),
                     'can_make_final' => $item->canMakeFinal(),
+                    'can_edit' => !$item->isFinal(),
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
                         'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
@@ -192,28 +194,35 @@ class ProjectDealService
      * Delete selected data
      *
      *
-     * @return void
+     * @return array
      */
-    public function delete(int $id): array
+    public function delete(string $id): array
     {
         DB::beginTransaction();
         try {
-            $detail = $this->repo->show(uid: (string) $id, select: 'id,name', relation: [
+            $detail = $this->repo->show(uid: (string) \Illuminate\Support\Facades\Crypt::decryptString($id), select: 'id,name,status', relation: [
                 'marketings',
-                'quotations'
+                'quotations',
+                'quotations.items'
             ]);
 
-            $detail->marketings()->delete();
-            $detail->quotations()->delete();
+            // only not finalized project that can be deleted
+            if ($detail->isFinal()) return errorResponse('Cannot delete finalized project');
 
-            $detail->delete();
+            foreach ($detail->quotations as $quotation) {
+                $quotation->items()->delete();
+            }
+
+            $detail->quotations()->delete();
+            $detail->marketings()->delete();
+
+            $this->repo->delete(id: $detail->id);
 
             DB::commit();
 
             return generalResponse(
                 __('notification.successDeleteProjectDeal'),
                 false,
-                $this->repo->delete($id)->toArray(),
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -356,42 +365,7 @@ class ProjectDealService
                     id: $detail->latestQuotation->id
                 );
 
-                if ($detail->city && $detail->state) {
-                    $coordinate = $this->geocoding->getCoordinate($detail->city->name.', '.$detail->state->name);
-                    if (count($coordinate) > 0) {
-                        $longitude = $coordinate['longitude'];
-                        $latitude = $coordinate['latitude'];
-                    }
-                }
-
-                $project = $this->projectRepo->store(data: [
-                    'name' => $detail->name,
-                    'client_portal' => config('app.frontend_url') . '/' . $this->generalService->linkShortener(length: 10),
-                    'project_date' => $detail->project_date,
-                    'event_type' => $detail->event_type,
-                    'venue' => $detail->venue,
-                    'collaboration' => $detail->collaboration,
-                    'note' => $detail->note,
-                    'status' => ProjectStatus::Draft->value,
-                    'classification' => $detail->class->name,
-                    'led_area' => $detail->led_area,
-                    'led_detail' => json_encode($detail->led_detail),
-                    'country_id' => $detail->country_id,
-                    'state_id' => $detail->state_id,
-                    'city_id' => $detail->city_id,
-                    'city_name' => $detail->city ? $detail->city->name : null,
-                    'project_class_id' => $detail->project_class_id,
-                    'longitude' => $longitude ?? null,
-                    'latitude' => $latitude ?? null,
-                ]);
-
-                $project->marketings()->createMany(
-                    collect($detail->marketings)->map(function ($marketing) {
-                        return [
-                            'marketing_id' => $marketing->employee_id
-                        ];
-                    })->toArray()
-                );
+                $project = CopyDealToProject::run($detail);
             }
 
             DB::commit();
@@ -456,7 +430,7 @@ class ProjectDealService
 
             $data = $this->repo->show(
                 uid: $quotationIdRaw,
-                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid",
+                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
                 relation: [
                     'transactions',
                     'quotations',
@@ -498,6 +472,7 @@ class ProjectDealService
             $quotations = collect($data->quotations)->map(function ($item) use ($data, $main, $prefunction) {
                 return [
                     'id' => Crypt::encryptString($item->id),
+                    'quotation_id' => Crypt::encryptString($item->quotation_id),
                     'quotation_number' => $item->quotation_id,
                     'name' => $data->name,
                     'venue' => $data->venue,
@@ -525,7 +500,8 @@ class ProjectDealService
                                 'prefunction' => $prefunction,
                             ],
                             'itemPreviews' => collect($item->items)->pluck('item.name')->toArray(),
-                            'price' => $item->fix_price
+                            'price' => $item->fix_price,
+                            'name' => $data->name
                         ],
                         'note' => $item->description,
                         'rules' => '
@@ -547,7 +523,10 @@ class ProjectDealService
             $main = [];
             $prefunction = [];
             if ($data->transactions->count() > 0) {
-                $finalQuotation = $data->quotations->filter(fn($value) => $value->is_final)[0];
+                $finalQuotation = $data->quotations->filter(fn($value) => $value->is_final)->values()[0];
+
+                $finalQuotation['quotation_id'] = Crypt::encryptString($finalQuotation->quotation_id);
+                
                 $finalQuotation['remaining'] = $data->getRemainingPayment();
                 $outputLed = collect($data->led_detail)->groupBy('name');
                 if (isset($outputLed['main'])) {
@@ -579,6 +558,12 @@ class ProjectDealService
                 }
             }
 
+            $transactions = $data->transactions->map(function ($trx) {
+                $trx['description'] = 'Receiving invoice payment';
+
+                return $trx;
+            })->values();
+
             $output = [
                 'customer' => [
                     'name' => $data->customer->name,
@@ -587,8 +572,11 @@ class ProjectDealService
                 ],
                 'products' => $products,
                 'final_quotation' => $finalQuotation,
-                'transactions' => $data->transactions->toArray(),
+                'transactions' => $transactions,
                 'quotations' => $quotations,
+                'remaining_payment_raw' => $data->getRemainingPayment(),
+                'latest_quotation_id' => $finalQuotation['quotation_id'] ?? null,
+                'is_final' => $data->isFinal() 
             ];
 
             return generalResponse(
@@ -596,6 +584,43 @@ class ProjectDealService
                 data: $output
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Adding more quotation in the selected project deal
+     *
+     * @param array $payload
+     * @param string $projectDealUid
+     * @return array
+     */
+    public function addMoreQuotation(array $payload, string $projectDealUid): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $payload['quotation']['project_deal_id'] = Crypt::decryptString($projectDealUid);
+            $quotation = $this->projectQuotationRepo->store(
+                data: collect($payload['quotation'])->except('items')->toArray()
+            );
+
+            $quotation->items()->createMany(
+                collect($payload['quotation']['items'])->map(function ($item) {
+                    return [
+                        'item_id' => $item,
+                    ];
+                })->toArray()
+            );
+            
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successAddQuotation')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }

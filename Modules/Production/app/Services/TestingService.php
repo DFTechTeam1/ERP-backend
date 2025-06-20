@@ -157,9 +157,11 @@ class TestingService
             $marketing = $item->marketing ? $item->marketing->name : '-';
 
             $marketingData = collect($item->marketings)->pluck('marketing.name')->toArray();
-            $marketing = $item->marketings[0]->marketing->name;
-            if ($item->marketings->count() > 1) {
-                $marketing .= ', and +'.$item->marketings->count() - 1 .' more';
+            if ($item->marketings->count() > 0) {
+                $marketing = $item->marketings[0]->marketing->name;
+                if ($item->marketings->count() > 1) {
+                    $marketing .= ', and +'.$item->marketings->count() - 1 .' more';
+                }
             }
 
             $eventType = '-';
@@ -215,7 +217,7 @@ class TestingService
             return [
                 'uid' => $item->uid,
                 'id' => $item->id,
-                'marketing' => $marketing,
+                'marketing' => $marketing ?? '',
                 'pic' => count($pics) > 0 ? implode(', ', $pics) : __('global.undetermined'),
                 'no_pic' => count($pics) == 0 ? true : false,
                 'pic_eid' => $picEid,
@@ -507,9 +509,11 @@ class TestingService
                 $marketing = $item->marketing ? $item->marketing->name : '-';
 
                 $marketingData = collect($item->marketings)->pluck('marketing.name')->toArray();
-                $marketing = $item->marketings[0]->marketing ? $item->marketings[0]->marketing->name : '';
-                if ($item->marketings->count() > 1) {
-                    $marketing .= ', and +'.$item->marketings->count() - 1 .' more';
+                if ($item->marketings->count() > 0) {
+                    $marketing = $item->marketings[0]->marketing ? $item->marketings[0]->marketing->name : '';
+                    if ($item->marketings->count() > 1) {
+                        $marketing .= ', and +'.$item->marketings->count() - 1 .' more';
+                    }
                 }
 
                 $eventType = '-';
@@ -579,7 +583,7 @@ class TestingService
                 return [
                     'uid' => $item->uid,
                     'id' => $item->id,
-                    'marketing' => $marketing,
+                    'marketing' => $marketing ?? '',
                     'pic' => count($pics) > 0 ? implode(', ', $pics) : __('global.undetermined'),
                     'no_pic' => $noPic,
                     'pic_eid' => $picEid,

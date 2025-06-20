@@ -2,6 +2,7 @@
 
 use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
+use App\Enums\Production\ProjectDealStatus;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
@@ -270,7 +271,7 @@ function getProjectDealPayload(
         'marketing_id' => [
             $employee ? $employee->uid : 'f063164d-62ff-44cf-823d-7c456dad1f4b'
         ],
-        'status' => 1, // 1 is active, 0 is draft
+        'status' => ProjectDealStatus::Draft->value, // 1 is active, 0 is draft
         'quotation' => [
             'quotation_id' => '#DF04022',
             'is_final' => 0,

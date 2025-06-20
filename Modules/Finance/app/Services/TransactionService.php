@@ -168,18 +168,20 @@ class TransactionService {
             );
 
             $payloadImage = [];
-            foreach ($data['images'] as $image) {
-                $imageName = $this->generalService->uploadImageandCompress(
-                    path: 'transactions',
-                    image: $image['image'],
-                    compressValue: 1
-                );
-
-                $tmp[] = $imageName;
-
-                $payloadImage[] = [
-                    'image' => $imageName
-                ];
+            if (isset($data['images'])) {
+                foreach ($data['images'] as $image) {
+                    $imageName = $this->generalService->uploadImageandCompress(
+                        path: 'transactions',
+                        image: $image['image'],
+                        compressValue: 1
+                    );
+    
+                    $tmp[] = $imageName;
+    
+                    $payloadImage[] = [
+                        'image' => $imageName
+                    ];
+                }
             }
 
             $trx->attachments()->createMany($payloadImage);
