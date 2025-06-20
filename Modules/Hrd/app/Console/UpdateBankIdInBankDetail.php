@@ -5,8 +5,8 @@ namespace Modules\Hrd\Console;
 use Illuminate\Console\Command;
 use Modules\Company\Models\Bank;
 use Modules\Hrd\Models\Employee;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class UpdateBankIdInBankDetail extends Command
 {
@@ -59,7 +59,7 @@ class UpdateBankIdInBankDetail extends Command
             Employee::where('id', $employee->id)
                 ->update(['bank_detail' => $bankDetail]);
 
-            $this->info($employee->nickname . ' bank detail has been updated');
+            $this->info($employee->nickname.' bank detail has been updated');
         }
     }
 

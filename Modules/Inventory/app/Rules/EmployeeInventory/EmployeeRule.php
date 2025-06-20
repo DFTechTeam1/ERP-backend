@@ -14,7 +14,7 @@ class EmployeeRule implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $employeeId = getIdFromUid($value, new Employee());
+        $employeeId = getIdFromUid($value, new Employee);
         $check = EmployeeInventoryMaster::select('id')
             ->where('employee_id', $employeeId)
             ->first();

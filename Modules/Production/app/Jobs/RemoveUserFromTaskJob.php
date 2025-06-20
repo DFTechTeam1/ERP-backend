@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class RemoveUserFromTaskJob implements ShouldQueue
 {
@@ -18,8 +18,8 @@ class RemoveUserFromTaskJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param array<string> $employeeUids
-     * @param int $taskId
+     *
+     * @param  array<string>  $employeeUids
      */
     public function __construct(array $employeeUids, int $taskId)
     {
@@ -36,7 +36,7 @@ class RemoveUserFromTaskJob implements ShouldQueue
         $task = \Modules\Production\Models\ProjectTask::selectRaw('id,project_id,name')->find($this->taskId);
 
         foreach ($this->employeeUids as $employeeUid) {
-            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee);
             $employee = \Modules\Hrd\Models\Employee::find($employeeId);
 
             \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\RemoveUserFromTaskNotification($employee, $task));

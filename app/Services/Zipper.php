@@ -4,11 +4,13 @@ namespace App\Services;
 
 use STS\ZipStream\Facades\Zip;
 
-class Zipper {
-	public $zippy;
+class Zipper
+{
+    public $zippy;
 
-	public function __construct(string $filepath)
-	{
-		$this->zippy = new Zip($filepath);
-	}
+    public function __construct(string $filepath)
+    {
+        $this->zippy = Zip::create($filepath);
+        // $this->zippy = new Zip($filepath);
+    }
 }

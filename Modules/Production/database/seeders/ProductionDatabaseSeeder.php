@@ -13,6 +13,9 @@ class ProductionDatabaseSeeder extends Seeder
     {
         $this->call([
             ProjectSeeder::class,
+            PriceSettingSeeder::class,
+            QuotationSettingSeeder::class,
+            QuotationItemSeeder::class,
         ]);
     }
 }

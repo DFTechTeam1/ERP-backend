@@ -42,7 +42,7 @@ class DeleteAllTaskAndRelation extends Command
                 'project_task_worktimes',
                 'project_task_pics',
                 'employee_task_points',
-                'project_tasks'
+                'project_tasks',
             ];
 
             // DB::beginTransaction();

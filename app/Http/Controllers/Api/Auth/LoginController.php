@@ -3,21 +3,15 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Enums\ErrorCode\Code;
-use App\Models\UserEncryptedToken;
-use DateTime;
-use App\Exceptions\UserNotFound;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\Login;
 use App\Models\User;
+use App\Models\UserEncryptedToken;
 use App\Repository\UserLoginHistoryRepository;
 use App\Services\EncryptionService;
 use App\Services\UserService;
-use Carbon\Carbon;
-use Exception;
+use DateTime;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Hash;
-use Nullix\CryptoJsAes\CryptoJsAes;
 use Vinkla\Hashids\Facades\Hashids;
 
 class LoginController extends Controller
@@ -32,8 +26,7 @@ class LoginController extends Controller
         UserService $userService,
         EncryptionService $encryptionService,
         UserLoginHistoryRepository $userLoginHistoryRepo
-    )
-    {
+    ) {
         $this->service = $encryptionService;
 
         $this->userService = $userService;
@@ -57,7 +50,7 @@ class LoginController extends Controller
 
         $data = UserEncryptedToken::where('user_id', $userId)->first();
 
-        if (!$data) {
+        if (! $data) {
             // return error
         }
 
@@ -68,12 +61,11 @@ class LoginController extends Controller
                 'success',
                 false,
                 [
-                    'token' => $encryptedPayload
+                    'token' => $encryptedPayload,
                 ]
             )
         );
     }
-
 
     public function login(Login $request)
     {
@@ -117,7 +109,7 @@ class LoginController extends Controller
             $user = $request->user();
 
             // delete cache
-            \Illuminate\Support\Facades\Cache::forget('userLogin' . $user->id);
+            \Illuminate\Support\Facades\Cache::forget('userLogin'.$user->id);
 
             $user->tokens()->delete();
 
@@ -171,7 +163,7 @@ class LoginController extends Controller
 
             $user = \App\Models\User::where('email', $email)->first();
 
-            if (!$user) {
+            if (! $user) {
                 throw new \App\Exceptions\UserNotFound(__('global.userNotFound'));
             }
 
@@ -196,14 +188,14 @@ class LoginController extends Controller
             $password = \Illuminate\Support\Facades\Hash::make($request->password);
             $userData = json_decode($this->service->decrypt($request->encrypted, config('app.saltKey')), true);
 
-            if (!$userData) {
+            if (! $userData) {
                 throw new \App\Exceptions\InvalidResetPasswordToken(__('global.invalidToken'));
             }
 
             // validate token claim
             $user = \App\Models\User::select('reset_password_token_claim')->where('email', $userData['email'])->first();
             if ($user->reset_password_token_claim) {
-                throw new \App\Exceptions\ClaimedTokenResetPassword(__("global.tokenResetPasswordClaimed"));
+                throw new \App\Exceptions\ClaimedTokenResetPassword(__('global.tokenResetPasswordClaimed'));
             }
 
             // validate token expiration
@@ -223,7 +215,7 @@ class LoginController extends Controller
 
             return apiResponse(
                 generalResponse(
-                    __("global.resetPasswordSuccess"),
+                    __('global.resetPasswordSuccess'),
                     false,
                     [
                         'user' => $userData,
@@ -237,9 +229,6 @@ class LoginController extends Controller
 
     /**
      * Change password for authenticated user only
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function changePassword(Request $request): \Illuminate\Http\JsonResponse
     {
@@ -254,7 +243,7 @@ class LoginController extends Controller
                     'success',
                     false,
                     [
-                        'user' => $user
+                        'user' => $user,
                     ]
                 )
             );
@@ -265,10 +254,6 @@ class LoginController extends Controller
 
     /**
      * Change password for selected user
-     *
-     * @param Request $request
-     * @param string $userUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function userChangePassword(Request $request, string $userUid): \Illuminate\Http\JsonResponse
     {

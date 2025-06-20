@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Addon\Http\Controllers\AddonController;
 
 /*
  *--------------------------------------------------------------------------
@@ -23,9 +22,9 @@ Route::get('addon/f/getAll', [\Modules\Addon\Http\Controllers\Api\AddonControlle
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('addon/nas', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'store']);
-    Route::get('addon/{id}',[\Modules\Addon\Http\Controllers\Api\AddonController::class, 'show']);
+    Route::get('addon/{id}', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'show']);
     Route::post('addon/bulk', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'bulkDelete']);
-    
+
     Route::post('addon/upgrades/{id}', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'upgrades']);
     Route::get('addon/nas/validate', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'validate']);
 });

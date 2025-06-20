@@ -2,10 +2,10 @@
 
 namespace Modules\Production\Services;
 
-use App\Enums\ErrorCode\Code;
 use Modules\Production\Repository\ProjectTaskRepository;
 
-class ProjectTaskService {
+class ProjectTaskService
+{
     private $repo;
 
     /**
@@ -13,17 +13,16 @@ class ProjectTaskService {
      */
     public function __construct(
         ProjectTaskRepository $projectTaskRepo
-    )
-    {
+    ) {
         $this->repo = $projectTaskRepo;
     }
 
     public function massUpdateIdentifierID()
     {
         $tasks = $this->repo->list(select: 'uid,task_identifier_id');
-            
+
         foreach ($tasks as $task) {
-            if (!$task->task_identifier_id) {
+            if (! $task->task_identifier_id) {
                 $this->repo->update(
                     data: ['task_identifier_id' => $this->generateIdentifier()],
                     id: $task->uid,
@@ -34,8 +33,6 @@ class ProjectTaskService {
 
     /**
      * Generate random task_identifier_id for each task
-     *
-     * @return string
      */
     public function generateIdentifier(): string
     {
@@ -49,9 +46,6 @@ class ProjectTaskService {
 
     /**
      * Make sure task_identifier_id is unique
-     *
-     * @param string $identifier
-     * @return string
      */
     protected function checkCurrentIdentifier(string $identifier): string
     {
@@ -70,19 +64,12 @@ class ProjectTaskService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -90,7 +77,7 @@ class ProjectTaskService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -123,9 +110,6 @@ class ProjectTaskService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -144,10 +128,6 @@ class ProjectTaskService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     * 
-     * @return array
      */
     public function store(array $data): array
     {
@@ -165,19 +145,12 @@ class ProjectTaskService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -188,13 +161,12 @@ class ProjectTaskService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
-     * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -212,10 +184,6 @@ class ProjectTaskService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

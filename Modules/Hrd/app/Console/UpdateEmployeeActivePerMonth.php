@@ -7,8 +7,8 @@ use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeeActiveReport;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class UpdateEmployeeActivePerMonth extends Command
 {
@@ -45,7 +45,7 @@ class UpdateEmployeeActivePerMonth extends Command
         EmployeeActiveReport::create([
             'month' => $now->format('m'),
             'year' => $now->format('Y'),
-            'number_of_employee' => $employees
+            'number_of_employee' => $employees,
         ]);
     }
 

@@ -5,7 +5,8 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class WhatsappService {
+class WhatsappService
+{
     private bool $status;
 
     private $token;
@@ -28,7 +29,7 @@ class WhatsappService {
     protected function getAllTemplates()
     {
         $response = Http::withHeaders([
-            'token' => $this->token
+            'token' => $this->token,
         ])->get('https://smartchatapi.com/w4b_salasar_ecommerce/Api/get_view_template');
 
         return $response->json();
@@ -39,7 +40,7 @@ class WhatsappService {
         Log::debug('payload send template: ', $payload);
 
         $response = Http::withHeaders([
-            'token' => $this->token
+            'token' => $this->token,
         ])->post('https://smartchatapi.com/w4b_salasar_ecommerce/Api/send_template_message', $payload);
 
         return $response->json();

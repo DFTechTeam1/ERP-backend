@@ -23,6 +23,6 @@ return new class extends Migration
     {
         Schema::table('project_references', function (Blueprint $table) {
             $table->dropColumn('folder');
-        });        
+        });
     }
 };

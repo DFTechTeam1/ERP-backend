@@ -2,18 +2,16 @@
 
 namespace Modules\Inventory\Services;
 
-use App\Enums\ErrorCode\Code;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Models\Employee;
 use Modules\Inventory\Models\CustomInventory;
-use Modules\Inventory\Models\InventoryItem;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use Modules\Inventory\Repository\EmployeeInventoryItemRepository;
 use Modules\Inventory\Repository\EmployeeInventoryMasterRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
 
-class EmployeeInventoryMasterService {
+class EmployeeInventoryMasterService
+{
     private $repo;
 
     private $inventoryItemRepo;
@@ -38,19 +36,12 @@ class EmployeeInventoryMasterService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -58,7 +49,7 @@ class EmployeeInventoryMasterService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -72,7 +63,7 @@ class EmployeeInventoryMasterService {
             $totalData = $this->repo->list('id', $where)->count();
 
             $paginated = collect((object) $paginated)->map(function ($item) {
-                $itemGroupsRaw = collect((object)  $item->items)->groupBy('inventory_source_id');
+                $itemGroupsRaw = collect((object) $item->items)->groupBy('inventory_source_id');
                 $itemGroups = [];
                 foreach ($itemGroupsRaw as $group => $raw) {
                     foreach ($raw as $rawItem) {
@@ -131,9 +122,6 @@ class EmployeeInventoryMasterService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -145,7 +133,7 @@ class EmployeeInventoryMasterService {
                     'employee:id,name',
                     'items:id,employee_inventory_master_id,inventory_item_id,inventory_status',
                     'items.inventory:id,inventory_id,inventory_code',
-                    'items.inventory.inventory:id,name'
+                    'items.inventory.inventory:id,name',
                 ]
             );
 
@@ -154,8 +142,8 @@ class EmployeeInventoryMasterService {
             $rawCustomInventories = [];
             if ($data->custom_inventory_id) {
                 $where = "type = 'pcrakitan'";
-                $currentCustom = "(" . implode(',', $data->custom_inventory_id) . ")";
-                $where .= ' and id in ' . $currentCustom;
+                $currentCustom = '('.implode(',', $data->custom_inventory_id).')';
+                $where .= ' and id in '.$currentCustom;
 
                 $dataCustomInventory = $this->customInventoryRepo->list(
                     'id,uid,name',
@@ -163,7 +151,7 @@ class EmployeeInventoryMasterService {
                     [
                         'items:id,custom_inventory_id,inventory_id',
                         'items.inventory:id,inventory_id,inventory_code',
-                        'items.inventory.inventory:id,name'
+                        'items.inventory.inventory:id,name',
                     ]
                 );
 
@@ -222,7 +210,7 @@ class EmployeeInventoryMasterService {
                         'inventory_item_id' => $itemInventory->inventory->id,
                         'inventory_id' => $itemInventory->inventory->inventory_id,
                         'name' => $itemInventory->inventory->inventory->name,
-                        'code' => $itemInventory->inventory->inventory_code
+                        'code' => $itemInventory->inventory->inventory_code,
                     ];
                 })->toArray(),
             ];
@@ -241,9 +229,9 @@ class EmployeeInventoryMasterService {
         }
 
         $where = "type = 'pcrakitan'";
-        if (!empty($customInventoryIds)) {
-            $currentCustom = "(" . implode(',', $customInventoryIds) . ")";
-            $where .= ' and id not in ' . $currentCustom;
+        if (! empty($customInventoryIds)) {
+            $currentCustom = '('.implode(',', $customInventoryIds).')';
+            $where .= ' and id not in '.$currentCustom;
         }
 
         $data = $this->customInventoryRepo->list(
@@ -252,7 +240,7 @@ class EmployeeInventoryMasterService {
             [
                 'items:id,custom_inventory_id,inventory_id',
                 'items.inventory:id,inventory_id,inventory_code',
-                'items.inventory.inventory:id,name'
+                'items.inventory.inventory:id,name',
             ]
         );
 
@@ -268,7 +256,7 @@ class EmployeeInventoryMasterService {
     public function getAvailableInventories(string $employeeUid)
     {
         // get current employee inventories
-        $employeeId = getIdFromUid($employeeUid, new Employee());
+        $employeeId = getIdFromUid($employeeUid, new Employee);
 
         $current = $this->repo->show(
             'uid',
@@ -276,7 +264,7 @@ class EmployeeInventoryMasterService {
             [
                 'items:id,employee_inventory_master_id,inventory_item_id',
             ],
-            'employee_id = ' . $employeeId
+            'employee_id = '.$employeeId
         );
 
         $output = [];
@@ -302,13 +290,13 @@ class EmployeeInventoryMasterService {
             $itemIds = collect((object) $current->items)->pluck('inventory_item_id')->toArray();
 
             if (count($itemIds) > 0) {
-                $itemIds = "(" . implode(',', $itemIds) . ")";
+                $itemIds = '('.implode(',', $itemIds).')';
                 $where = "id not in {$itemIds}";
             }
         }
 
-        if (!empty($customInventoryItems)) {
-            $conditionCustomInventory = "(" . implode(',', $customInventoryItems) . ")";
+        if (! empty($customInventoryItems)) {
+            $conditionCustomInventory = '('.implode(',', $customInventoryItems).')';
             if (empty($where)) {
                 $where = "id not in {$conditionCustomInventory}";
             } else {
@@ -352,9 +340,9 @@ class EmployeeInventoryMasterService {
     protected function processCustomInventories(array $data)
     {
         $output = [];
-        if (!empty($data['custom_inventories'])) {
+        if (! empty($data['custom_inventories'])) {
             $output = collect($data['custom_inventories'])->map(function ($item) {
-                return getIdFromUid($item['id'], new CustomInventory());
+                return getIdFromUid($item['id'], new CustomInventory);
             })->toArray();
         }
 
@@ -364,33 +352,33 @@ class EmployeeInventoryMasterService {
     protected function processInventories(array $data)
     {
         $inventories = [];
-        if (!empty($data['inventories'])) {
+        if (! empty($data['inventories'])) {
             $inventories = collect($data['inventories'])->map(function ($item) {
                 return [
                     'inventory_item_id' => $item['id'],
                     'inventory_status' => 1,
                     'inventory_source' => 'inventory',
-                    'inventory_source_id' => 0
+                    'inventory_source_id' => 0,
                 ];
             })->toArray();
         }
 
-        if (!empty($data['custom_inventories'])) {
+        if (! empty($data['custom_inventories'])) {
             foreach ($data['custom_inventories'] as $customInventory) {
                 $customItem = $this->customInventoryRepo->show(
                     $customInventory['id'],
                     'id,name',
                     [
-                        'items:id,custom_inventory_id,inventory_id'
+                        'items:id,custom_inventory_id,inventory_id',
                     ]
                 );
 
-                $customItemList = collect((object) $customItem->items)->map(function ($inventory) use($customInventory) {
+                $customItemList = collect((object) $customItem->items)->map(function ($inventory) use ($customInventory) {
                     return [
                         'inventory_item_id' => $inventory->inventory_id,
                         'inventory_status' => 1,
                         'inventory_source' => 'custom',
-                        'inventory_source_id' => getIdFromUid($customInventory['id'], new CustomInventory()),
+                        'inventory_source_id' => getIdFromUid($customInventory['id'], new CustomInventory),
                     ];
                 })->toArray();
 
@@ -403,16 +391,12 @@ class EmployeeInventoryMasterService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
         DB::beginTransaction();
         try {
-            $employeeId = getIdFromUid($data['employee_id'], new Employee());
+            $employeeId = getIdFromUid($data['employee_id'], new Employee);
 
             $customInventory = $this->processCustomInventories($data);
 
@@ -420,7 +404,7 @@ class EmployeeInventoryMasterService {
 
             $master = $this->repo->store([
                 'employee_id' => $employeeId,
-                'custom_inventory_id' => $customInventory
+                'custom_inventory_id' => $customInventory,
             ]);
 
             $master->items()->createMany($inventories);
@@ -440,35 +424,36 @@ class EmployeeInventoryMasterService {
 
     /**
      * Delete selected inventory
-     * @param string $id
-     * @param string $type
-     * @param mixed $inventoryId
+     *
+     * @param  string  $id
+     * @param  string  $type
+     * @param  mixed  $inventoryId
      * @return array
      */
     public function deleteInventory(array $payload)
     {
         DB::beginTransaction();
         try {
-            $employeeId = getIdFromUid($payload['employee_id'], new Employee());
+            $employeeId = getIdFromUid($payload['employee_id'], new Employee);
             $inventoryId = $payload['inventory_id'];
             $type = $payload['type'];
 
             if ($type === 'custom') {
                 // delete custom inventory id
-                $master = $this->repo->show('id', 'id,employee_id,custom_inventory_id', [], 'employee_id = ' . $employeeId);
+                $master = $this->repo->show('id', 'id,employee_id,custom_inventory_id', [], 'employee_id = '.$employeeId);
 
-                $this->employeeInventoryItemRepo->delete(0, 'inventory_source_id = ' . $inventoryId);
+                $this->employeeInventoryItemRepo->delete(0, 'inventory_source_id = '.$inventoryId);
 
                 $filterCustom = array_values(array_filter($master->custom_inventory_id, function ($filter) use ($inventoryId) {
-                    return $filter !=  $inventoryId;
+                    return $filter != $inventoryId;
                 }));
                 $this->repo->update([
-                    'custom_inventory_id' => $filterCustom
-                ], 'id', 'employee_id = ' . $employeeId);
+                    'custom_inventory_id' => $filterCustom,
+                ], 'id', 'employee_id = '.$employeeId);
             } else {
                 // delete inventory item
-                $inventoryItem = $this->inventoryItemRepo->show('id', 'id', [], "inventory_code = '" . $inventoryId . "'");
-                $this->employeeInventoryItemRepo->delete('0', 'inventory_item_id = ' . $inventoryItem->id);
+                $inventoryItem = $this->inventoryItemRepo->show('id', 'id', [], "inventory_code = '".$inventoryId."'");
+                $this->employeeInventoryItemRepo->delete('0', 'inventory_item_id = '.$inventoryItem->id);
             }
 
             DB::commit();
@@ -486,29 +471,22 @@ class EmployeeInventoryMasterService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         DB::beginTransaction();
         try {
-            $employeeId = getIdFromUid($data['employee_id'], new Employee());
+            $employeeId = getIdFromUid($data['employee_id'], new Employee);
 
             $customInventory = $this->processCustomInventories($data);
 
             $inventories = $this->processInventories($data);
 
             $this->repo->update([
-                'custom_inventory_id' => $customInventory
+                'custom_inventory_id' => $customInventory,
             ], $id);
 
             DB::commit();
@@ -527,7 +505,6 @@ class EmployeeInventoryMasterService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -546,10 +523,6 @@ class EmployeeInventoryMasterService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

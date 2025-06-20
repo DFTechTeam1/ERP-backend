@@ -15,7 +15,7 @@ class ModellerSeeder extends Seeder
         Setting::create([
             'key' => 'lead_3d_modeller',
             'value' => null,
-            'code' => 'variables'
+            'code' => 'variables',
         ]);
     }
 }

@@ -3,10 +3,9 @@
 namespace Modules\Inventory\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Modules\Inventory\Database\Factories\CustomInventoryFactory;
 
 class CustomInventory extends Model
 {
@@ -22,7 +21,7 @@ class CustomInventory extends Model
         'type',
         'location',
         'default_request_item',
-        'barcode'
+        'barcode',
     ];
 
     protected $hidden = ['created_at', 'updated_at'];

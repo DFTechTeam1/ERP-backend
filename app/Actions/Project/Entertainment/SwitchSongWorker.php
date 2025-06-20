@@ -18,10 +18,10 @@ class SwitchSongWorker
     {
         DB::beginTransaction();
         try {
-            $repo = new ProjectSongListRepository();
-            $employeeRepo = new EmployeeRepository();
-            $taskRepo = new EntertainmentTaskSongRepository();
-    
+            $repo = new ProjectSongListRepository;
+            $employeeRepo = new EmployeeRepository;
+            $taskRepo = new EntertainmentTaskSongRepository;
+
             // detach //
             // gather all information
             $song = $repo->show(
@@ -30,23 +30,23 @@ class SwitchSongWorker
                 relation: [
                     'task:id,project_song_list_id,employee_id',
                     'task.employee:id,nickname',
-                    'project:id,uid'
+                    'project:id,uid',
                 ]
             );
-    
+
             $currentWorker = $song->task->employee->nickname;
-    
+
             $author = $employeeRepo->show(
                 uid: 'id',
                 select: 'id,nickname',
-                where: "user_id = " . auth()->id()
+                where: 'user_id = '.auth()->id()
             );
-    
+
             // action to remove
             $taskRepo->delete(
                 id: $song->task->id,
             );
-    
+
             // add to the log
             StoreLogAction::run(
                 type: TaskSongLogType::RemoveWorkerFromTask->value,
@@ -56,29 +56,29 @@ class SwitchSongWorker
                 ],
                 params: [
                     'pm' => $author->nickname,
-                    'user' => $currentWorker
+                    'user' => $currentWorker,
                 ]
             );
-    
+
             // attach new worker
             DistributeSong::run(
                 [
-                    'employee_uid' => $nextWorkerUid
+                    'employee_uid' => $nextWorkerUid,
                 ],
                 $song->project->uid,
                 $songUid,
                 new GeneralService
             );
-            
+
             DB::commit();
 
             return [
-                'error' => false
+                'error' => false,
             ];
         } catch (\Throwable $th) {
             return [
                 'error' => true,
-                'message' => $th
+                'message' => $th,
             ];
         }
     }

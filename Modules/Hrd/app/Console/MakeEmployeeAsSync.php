@@ -4,8 +4,8 @@ namespace Modules\Hrd\Console;
 
 use Illuminate\Console\Command;
 use Modules\Hrd\Models\Employee;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class MakeEmployeeAsSync extends Command
 {
@@ -32,10 +32,10 @@ class MakeEmployeeAsSync extends Command
      */
     public function handle()
     {
-        Employee::where('deleted_at', NULL)
+        Employee::where('deleted_at', null)
             ->where('is_sync_with_talenta', 0)
             ->update([
-                'is_sync_with_talenta' => 1
+                'is_sync_with_talenta' => 1,
             ]);
     }
 

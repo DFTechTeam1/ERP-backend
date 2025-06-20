@@ -3,11 +3,9 @@
 namespace Modules\Hrd\Models;
 
 use App\Enums\Employee\Gender;
-use App\Enums\Employee\LevelStaff;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\Religion;
-use App\Enums\Employee\SalaryType;
 use App\Enums\Employee\Status;
 use App\Traits\FlushCacheOnModelChange;
 use App\Traits\ModelCreationObserver;
@@ -15,21 +13,15 @@ use App\Traits\ModelObserver;
 use Carbon\Carbon;
 use Database\Factories\Hrd\EmployeeFactory as HrdEmployeeFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Modules\Company\Models\Position;
-use Modules\Hrd\Database\factories\EmployeeFactory;
-use Modules\Inventory\Models\InventoryRequest;
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use KodePandai\Indonesia\Models\Village;
-use Modules\Hrd\Observers\EmployeeObserver;
-use Modules\Hrd\Observers\EmployeeObserverObserver;
 use Illuminate\Notifications\Notifiable;
+use KodePandai\Indonesia\Models\Village;
 use Modules\Company\Models\Branch;
 use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
@@ -37,6 +29,8 @@ use Modules\Company\Models\IndonesiaVillage;
 use Modules\Company\Models\JobLevel;
 use Modules\Company\Models\PositionBackup;
 use Modules\Company\Models\Province;
+use Modules\Hrd\Observers\EmployeeObserver;
+use Modules\Inventory\Models\InventoryRequest;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\ProjectTaskPic;
 use Modules\Production\Models\ProjectVj;
@@ -44,7 +38,7 @@ use Modules\Production\Models\ProjectVj;
 // #[ObservedBy([EmployeeObserver::class])]
 class Employee extends Model
 {
-    use HasFactory, ModelObserver, ModelCreationObserver, SoftDeletes, Notifiable, FlushCacheOnModelChange;
+    use FlushCacheOnModelChange, HasFactory, ModelCreationObserver, ModelObserver, Notifiable, SoftDeletes;
 
     protected static function newFactory()
     {
@@ -158,7 +152,7 @@ class Employee extends Model
         'blood_type_text',
         'religion_text',
         'length_of_service_year',
-        'human_age'
+        'human_age',
     ];
 
     public function humanAge(): Attribute
@@ -173,14 +167,12 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn() => $output
+            get: fn () => $output
         );
     }
 
     /**
      * Determines how long to work in years
-     *
-     * @return Attribute
      */
     public function lengthOfServiceYear(): Attribute
     {
@@ -193,7 +185,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn() => (float) $out
+            get: fn () => (float) $out
         );
     }
 
@@ -211,7 +203,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -229,7 +221,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -247,7 +239,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -265,7 +257,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -281,7 +273,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -301,7 +293,7 @@ class Employee extends Model
         }
 
         return new Attribute(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -321,7 +313,7 @@ class Employee extends Model
         }
 
         return new Attribute(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -415,37 +407,37 @@ class Employee extends Model
                 $village = Village::select('name')
                     ->find($this->village_id);
 
-                $out .= ", " . $village->name;
+                $out .= ', '.$village->name;
             }
 
             if ($this->district_id) {
                 $district = \KodePandai\Indonesia\Models\District::select('name')
                     ->find($this->district_id);
 
-                $out .= ", " . $district->name;
+                $out .= ', '.$district->name;
             }
 
             if ($this->city_id) {
-                $city = \KodePandai\Indonesia\Models\City::select("name")
+                $city = \KodePandai\Indonesia\Models\City::select('name')
                     ->find($this->city_id);
 
-                $out .= ", " . $city->name;
+                $out .= ', '.$city->name;
             }
 
             if ($this->province_id) {
                 $province = \KodePandai\Indonesia\Models\Province::select('name')
                     ->find($this->province_id);
 
-                $out .= ", " . $province->name;
+                $out .= ', '.$province->name;
             }
 
             if ($this->postal_code) {
-                $out .= " " . $this->postal_code;
+                $out .= ' '.$this->postal_code;
             }
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -464,49 +456,49 @@ class Employee extends Model
     public function idNumberPhoto(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
+            get: fn (?string $value) => ($value) ? asset('storage/employees/'.$value) : '',
         );
     }
 
     public function bankDetail(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => ($value) ? json_decode($value, true) : [],
-            set: fn($value) => $value ? json_encode($value) : NULL
+            get: fn ($value) => ($value) ? json_decode($value, true) : [],
+            set: fn ($value) => $value ? json_encode($value) : null
         );
     }
 
     public function relationContact(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => ($value) ? json_decode($value, true) : [],
-            set: fn($value) => $value ? json_encode($value) : NULL
+            get: fn ($value) => ($value) ? json_decode($value, true) : [],
+            set: fn ($value) => $value ? json_encode($value) : null
         );
     }
 
     public function npwpPhoto(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
+            get: fn (?string $value) => ($value) ? asset('storage/employees/'.$value) : '',
         );
     }
 
     public function bpjsPhoto(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
+            get: fn (?string $value) => ($value) ? asset('storage/employees/'.$value) : '',
         );
     }
 
     public function kkPhoto(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
+            get: fn (?string $value) => ($value) ? asset('storage/employees/'.$value) : '',
         );
     }
 
-//    public function inventory_requests()
-//    {
-//        return $this->hasMany(InventoryRequest::class, 'request_by', 'id');
-//    }
+    //    public function inventory_requests()
+    //    {
+    //        return $this->hasMany(InventoryRequest::class, 'request_by', 'id');
+    //    }
 }

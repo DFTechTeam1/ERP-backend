@@ -13,11 +13,11 @@ enum ProbationStatus: string
     {
         if ($data == 'Lulus') {
             return self::Lulus;
-        } else if ($data == 'Tidak Lulus') {
+        } elseif ($data == 'Tidak Lulus') {
             return self::TidakLulus;
-        } else if ($data == 'Perpanjang') {
+        } elseif ($data == 'Perpanjang') {
             return self::Perpanjang;
-        } else if ($data == 'Catatan') {
+        } elseif ($data == 'Catatan') {
             return self::Note;
         }
     }

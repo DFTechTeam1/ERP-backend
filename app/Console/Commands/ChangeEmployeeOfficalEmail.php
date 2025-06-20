@@ -26,7 +26,7 @@ class ChangeEmployeeOfficalEmail extends Command
     public function handle()
     {
         $employees = \Modules\Hrd\Models\Employee::selectRaw('name,id,employee_id,email')
-            ->whereRaw("status != " . \App\Enums\Employee\Status::Inactive->value)
+            ->whereRaw('status != '.\App\Enums\Employee\Status::Inactive->value)
             ->get();
 
         $payloadEmployee = [];
@@ -36,23 +36,23 @@ class ChangeEmployeeOfficalEmail extends Command
             $exp = explode(' ', $employee->name);
             $firstname = $exp[0];
             $lastname = array_pop($exp);
-            $fullname = $firstname . $lastname;
-            $emailFormat = $fullname . '@dfactory.pro';
-            $password = generateRandomSymbol() . generateRandomPassword() . generateRandomSymbol();
+            $fullname = $firstname.$lastname;
+            $emailFormat = $fullname.'@dfactory.pro';
+            $password = generateRandomSymbol().generateRandomPassword().generateRandomSymbol();
 
             if ($employee->employee_id == 'DF001') {
                 $emailFormat = 'wesley@dfactory.pro';
-            } else if ($employee->employee_id == 'DF002') {
-                $emailFormat = 'edwin@dfactory.pro';                
-            } else if ($employee->employee_id == 'DF025') {
+            } elseif ($employee->employee_id == 'DF002') {
+                $emailFormat = 'edwin@dfactory.pro';
+            } elseif ($employee->employee_id == 'DF025') {
                 $emailFormat = 'galih@dfactory.pro';
-            } else if ($employee->employee_id == 'DF046') {
+            } elseif ($employee->employee_id == 'DF046') {
                 $emailFormat = 'dhea@dfactory.pro';
-            } else if ($employee->employee_id == 'DF049') {
+            } elseif ($employee->employee_id == 'DF049') {
                 $emailFormat = 'gumilang@dfactory.pro';
             }
 
-            $payloadEmployee[] = ['email' => strtolower($emailFormat), 'condition' => "employee_id = '" . $employee->id . "'"];
+            $payloadEmployee[] = ['email' => strtolower($emailFormat), 'condition' => "employee_id = '".$employee->id."'"];
         }
 
         foreach ($payloadEmployee as $payload) {
@@ -60,6 +60,6 @@ class ChangeEmployeeOfficalEmail extends Command
                 ->update(['email' => $payload['email']]);
         }
 
-        $this->info('success: ' . json_encode($payloadEmployee));
+        $this->info('success: '.json_encode($payloadEmployee));
     }
 }

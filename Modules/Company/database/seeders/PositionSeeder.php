@@ -3,10 +3,10 @@
 namespace Modules\Company\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 use Modules\Company\Models\Division;
 use Modules\Company\Models\Position;
-use Illuminate\Support\Facades\Schema;
-use \PhpOffice\PhpSpreadsheet\Reader\Xlsx as Reader;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx as Reader;
 
 class PositionSeeder extends Seeder
 {
@@ -25,11 +25,11 @@ class PositionSeeder extends Seeder
         $production = Division::findByName('Production');
         $entertainment = Division::findByName('Entertainment');
 
-        $reader = new Reader();
-        
-        $service = new \Modules\Hrd\Services\EmployeeService();
+        $reader = new Reader;
+
+        $service = new \Modules\Hrd\Services\EmployeeService;
         $response = $service->readFile(public_path('static_file/employee.xlsx'));
-        
+
         $positions = collect(array_values($response))->pluck('position_raw')->unique()->filter(function ($item) {
             return $item != null;
         })->values()->toArray();
@@ -42,17 +42,17 @@ class PositionSeeder extends Seeder
 
             if ($position == 'Admin Staff') {
                 $out[$key]['division_id'] = $finance->id;
-            } else if (
-                $position == 'HR Officer' || 
+            } elseif (
+                $position == 'HR Officer' ||
                 $position == 'HR & TA Admin'
             ) {
                 $out[$key]['division_id'] = $hr->id;
-            } else if (
+            } elseif (
                 $position == 'IT Technical Support' ||
                 $position == 'Full Stack Developer'
             ) {
                 $out[$key]['division_id'] = $it->id;
-            } else if (
+            } elseif (
                 $position == 'Lead Marcomm' ||
                 $position == 'Marketing Staff'
             ) {

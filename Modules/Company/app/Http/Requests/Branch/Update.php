@@ -15,11 +15,11 @@ class Update extends FormRequest
         return [
             'name' => [
                 'required',
-                new \App\Rules\UniqueLowerRule(model: new Branch(), uid: $this->route('branch'), column: 'name', justId: true),
+                new \App\Rules\UniqueLowerRule(model: new Branch, uid: $this->route('branch'), column: 'name', justId: true),
             ],
             'short_name' => [
                 'required',
-                new \App\Rules\UniqueLowerRule(model: new Branch(), uid: $this->route('branch'), column: 'short_name', justId: true),
+                new \App\Rules\UniqueLowerRule(model: new Branch, uid: $this->route('branch'), column: 'short_name', justId: true),
             ],
         ];
     }

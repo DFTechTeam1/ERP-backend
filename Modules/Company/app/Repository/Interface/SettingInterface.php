@@ -2,22 +2,23 @@
 
 namespace Modules\Company\Repository\Interface;
 
-abstract class SettingInterface {
-    abstract function list(string $select = '*', string $where = "", array $relation = []);
+abstract class SettingInterface
+{
+    abstract public function list(string $select = '*', string $where = '', array $relation = []);
 
-    abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
+    abstract public function pagination(string $select, string $where, array $relation, int $itemsPerPage, int $page);
 
-    abstract function show(string $uid, string $select = '*', array $relation = [], string $where = '');
+    abstract public function show(string $uid, string $select = '*', array $relation = [], string $where = '');
 
-    abstract function store(array $data);
+    abstract public function store(array $data);
 
-    abstract function update(array $data, string $id = '', string $where = '');
+    abstract public function update(array $data, string $id = '', string $where = '');
 
-    abstract function delete(int $id);
+    abstract public function delete(int $id);
 
-    abstract function deleteByCode(string $code);
+    abstract public function deleteByCode(string $code);
 
-    abstract function updateOrInsert(array $condition, array $updatedColumn);
+    abstract public function updateOrInsert(array $condition, array $updatedColumn);
 
-    abstract function bulkDelete(array $ids, string $key = '');
+    abstract public function bulkDelete(array $ids, string $key = '');
 }

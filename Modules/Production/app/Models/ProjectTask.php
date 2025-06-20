@@ -3,20 +3,17 @@
 namespace Modules\Production\Models;
 
 use App\Traits\HasTaskIdentifier;
-use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
-use Carbon\Carbon;
 use DateTime;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Modules\Production\Database\Factories\ProjectTaskFactory;
 
 class ProjectTask extends Model
 {
-    use HasFactory, ModelObserver, HasTaskIdentifier;
+    use HasFactory, HasTaskIdentifier, ModelObserver;
 
     const DEFAULTIMAGEPROOF = 'default-complete.jpg';
 
@@ -139,7 +136,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -156,7 +153,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -168,7 +165,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -180,7 +177,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -196,29 +193,29 @@ class ProjectTask extends Model
                     $start = new DateTime($report['start_at']);
                     $end = $report['end_at'] ? new DateTime($report['end_at']) : new DateTime('now');
                     $diff = date_diff($start, $end);
-                    $day = $diff->d > 0 ? $diff->d . ' ' . __('global.day') : null;
-                    $hour = $diff->h > 0 ? $diff->h . ' ' . __('global.hours') : null;
-                    $minute = $diff->i > 0 ? $diff->i . ' ' . __('global.minutes') : null;
+                    $day = $diff->d > 0 ? $diff->d.' '.__('global.day') : null;
+                    $hour = $diff->h > 0 ? $diff->h.' '.__('global.hours') : null;
+                    $minute = $diff->i > 0 ? $diff->i.' '.__('global.minutes') : null;
                     $workTime = $minute;
                     if ($hour) {
-                        $workTime = $hour . ' ' . __('global.and') . ' ' . $minute;
+                        $workTime = $hour.' '.__('global.and').' '.$minute;
                     }
                     if ($day) {
-                        $workTime = $day . ' ' . $hour . ' ' . __('global.and') . ' ' . $minute;
+                        $workTime = $day.' '.$hour.' '.__('global.and').' '.$minute;
                     }
 
                     $out[] = [
                         'type' => $report['type'],
                         'start' => date('d F Y H:i', strtotime($report['start_at'])),
                         'end' => date('d F Y H:i', strtotime($report['end_at'])),
-                        'worktime' => $workTime
+                        'worktime' => $workTime,
                     ];
                 }
             }
         }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
@@ -252,7 +249,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -273,7 +270,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

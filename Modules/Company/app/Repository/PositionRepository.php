@@ -2,36 +2,33 @@
 
 namespace Modules\Company\Repository;
 
-use Modules\Company\Models\Position;
 use Modules\Company\Models\PositionBackup;
 use Modules\Company\Repository\Interface\PositionInterface;
 
-class PositionRepository extends PositionInterface {
+class PositionRepository extends PositionInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new PositionBackup();
+        $this->model = new PositionBackup;
         $this->key = 'uid';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -45,26 +42,22 @@ class PositionRepository extends PositionInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
         string $orderBy = ''
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -72,7 +65,7 @@ class PositionRepository extends PositionInterface {
             $query->with($relation);
         }
 
-        if(!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -82,9 +75,6 @@ class PositionRepository extends PositionInterface {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -109,7 +99,6 @@ class PositionRepository extends PositionInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -120,15 +109,13 @@ class PositionRepository extends PositionInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param string $uid
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $uid = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $uid);
@@ -142,7 +129,6 @@ class PositionRepository extends PositionInterface {
     /**
      * Delete Data
      *
-     * @param string $uid
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(string $uid)
@@ -153,7 +139,6 @@ class PositionRepository extends PositionInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $uids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $uids, string $key = '')

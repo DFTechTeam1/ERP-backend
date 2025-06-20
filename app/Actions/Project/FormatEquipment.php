@@ -11,11 +11,11 @@ class FormatEquipment
 
     public function handle(int $projectId)
     {
-        $projectEquipmentRepo = new ProjectEquipmentRepository();
-        
-        $equipments = $projectEquipmentRepo->list('*', 'project_id = ' . $projectId, [
+        $projectEquipmentRepo = new ProjectEquipmentRepository;
+
+        $equipments = $projectEquipmentRepo->list('*', 'project_id = '.$projectId, [
             'inventory:id,name',
-            'inventory.image'
+            'inventory.image',
         ]);
 
         $equipments = collect((object) $equipments)->map(function ($item) {

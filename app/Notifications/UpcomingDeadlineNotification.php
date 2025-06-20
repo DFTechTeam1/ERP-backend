@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -32,7 +31,7 @@ class UpcomingDeadlineNotification extends Notification
     public function via(object $notifiable): array
     {
         return [
-            TelegramChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -42,9 +41,9 @@ class UpcomingDeadlineNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-                    ->line('The introduction to the notification.')
-                    ->action('Notification Action', url('/'))
-                    ->line('Thank you for using our application!');
+            ->line('The introduction to the notification.')
+            ->action('Notification Action', url('/'))
+            ->line('Thank you for using our application!');
     }
 
     /**
@@ -64,9 +63,9 @@ class UpcomingDeadlineNotification extends Notification
         return [
             'chatIds' => $this->telegramChatIds,
             'message' => [
-                'Halo ' . $this->payload['employee']['employee']['nickname']. ', batas pengerjaan tugas ' . $this->payload['task']['name'] . ' adalah 2 hari lagi.',
-                'Segera selesaikan ya. Semangat!'
-            ]
+                'Halo '.$this->payload['employee']['employee']['nickname'].', batas pengerjaan tugas '.$this->payload['task']['name'].' adalah 2 hari lagi.',
+                'Segera selesaikan ya. Semangat!',
+            ],
         ];
     }
 
@@ -75,17 +74,17 @@ class UpcomingDeadlineNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->payload['employee']['employee']['nickname']. ', batas pengerjaan tugas ' . $this->payload['task']['name'] . ' adalah 2 hari lagi.',
+                'text' => 'Halo '.$this->payload['employee']['employee']['nickname'].', batas pengerjaan tugas '.$this->payload['task']['name'].' adalah 2 hari lagi.',
             ],
             [
                 'type' => 'text',
-                'text' => 'Segera selesaikan ya. Semangat!'
+                'text' => 'Segera selesaikan ya. Semangat!',
             ],
             [
                 'type' => 'sticker',
                 'packageId' => '1070',
                 'stickerId' => '17840',
-            ]
+            ],
         ];
 
         return [

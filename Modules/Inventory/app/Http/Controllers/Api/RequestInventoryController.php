@@ -15,7 +15,7 @@ class RequestInventoryController extends Controller
 
     public function __construct()
     {
-        $this->service = new RequestInventoryService();
+        $this->service = new RequestInventoryService;
     }
 
     /**

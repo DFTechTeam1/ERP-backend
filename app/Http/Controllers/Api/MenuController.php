@@ -12,7 +12,7 @@ class MenuController extends Controller
 
     public function __construct()
     {
-        $this->service = new MenuService();
+        $this->service = new MenuService;
     }
 
     /**

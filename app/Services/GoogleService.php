@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
-class GoogleService {
+class GoogleService
+{
     private $client;
 
     public function __construct()
     {
-        $this->client = new \Google\Client();
+        $this->client = new \Google\Client;
     }
 
     protected function setAuthKey()
@@ -17,7 +18,7 @@ class GoogleService {
 
     public function connection()
     {
-        $client = new \Google\Client();
+        $client = new \Google\Client;
         $client->setScopes([\Google\Service\Sheets::SPREADSHEETS, \Google\Service\Sheets::DRIVE]);
 
         $client->setDeveloperKey(config('app.googleApiKey'));

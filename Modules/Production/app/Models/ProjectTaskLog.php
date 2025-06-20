@@ -3,10 +3,9 @@
 namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Modules\Production\Database\Factories\ProjectTaskLogFactory;
 
 class ProjectTaskLog extends Model
 {
@@ -33,7 +32,7 @@ class ProjectTaskLog extends Model
     public function timeCreated(): Attribute
     {
         return Attribute::make(
-            get: fn() => date('d F Y', strtotime($this->attributes['created_at'])) . ' at ' . date('H:i', strtotime($this->attributes['created_at']))
+            get: fn () => date('d F Y', strtotime($this->attributes['created_at'])).' at '.date('H:i', strtotime($this->attributes['created_at']))
         );
     }
 }

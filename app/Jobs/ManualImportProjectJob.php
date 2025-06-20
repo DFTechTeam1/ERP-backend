@@ -50,7 +50,7 @@ class ManualImportProjectJob implements ShouldQueue
                     $marketing = [];
                     if (strtolower($project[$marketingKey]) == 'wesley') {
                         $marketingData = \Modules\Hrd\Models\Employee::selectRaw('id,uid')->where('email', 'wesleywiyadi@gmail.com')->first();
-                    } else if (strtolower($project[$marketingKey]) == 'charles') {
+                    } elseif (strtolower($project[$marketingKey]) == 'charles') {
                         $marketingData = \Modules\Hrd\Models\Employee::selectRaw('id,uid')->where('email', 'charleseduardo526@gmail.com')->first();
                     }
 
@@ -58,7 +58,7 @@ class ManualImportProjectJob implements ShouldQueue
 
                     $class = preg_replace('/\(\s*(.*?)\s*\)/', '($1)', $project[$classKey]);
                     $classData = \Modules\Company\Models\ProjectClass::selectRaw('id,name')
-                        ->whereRaw("lower(name) = '" . strtolower($class) . "'")
+                        ->whereRaw("lower(name) = '".strtolower($class)."'")
                         ->first();
 
                     switch (strtolower($project[$eventTypeKey])) {
@@ -89,7 +89,7 @@ class ManualImportProjectJob implements ShouldQueue
                         case 'corporate':
                             $eventType = \App\Enums\Production\EventType::Corporate->value;
                             break;
-                        
+
                         default:
                             $eventType = \App\Enums\Production\EventType::Exhibition->value;
                             break;
@@ -124,19 +124,19 @@ class ManualImportProjectJob implements ShouldQueue
             }
         }
 
-        $projectService = new \Modules\Production\Services\ProjectService();
+        // $projectService = new \Modules\Production\Services\ProjectService;
 
-        $chunks = collect($output)->chunk(30)->toArray();
+        // $chunks = collect($output)->chunk(30)->toArray();
 
-        foreach ($chunks as $seperated) {
-            foreach ($seperated as $project) {
-                $store = $projectService->store($project);
+        // foreach ($chunks as $seperated) {
+        //     foreach ($seperated as $project) {
+        //         $store = $projectService->store($project);
 
-                if ($store['error']) {
-                    logging('error', ['name' => $project['name'], 'error' => $store]);
-                }
-            }
-        }
+        //         if ($store['error']) {
+        //             logging('error', ['name' => $project['name'], 'error' => $store]);
+        //         }
+        //     }
+        // }
     }
 
     protected function formatLed(string $ledString)
@@ -163,7 +163,7 @@ class ManualImportProjectJob implements ShouldQueue
                     if (count($exp1) > 1) {
                         $sizeString = '';
                         for ($a = 0; $a < $exp1[1]; $a++) {
-                            $sizeString .= '+' . $exp1[0];
+                            $sizeString .= '+'.$exp1[0];
                         }
 
                         $sizeString = ltrim($sizeString, '+');
@@ -184,13 +184,13 @@ class ManualImportProjectJob implements ShouldQueue
                         $height = isset($expFF[1]) ? $expFF[1] : null;
                         $ledFinal[] = ['width' => $width, 'height' => $height];
 
-                        $total[] = (float)$width * (float)$height;
+                        $total[] = (float) $width * (float) $height;
 
-                        $textDetail[] = $width . ' x ' . $height . ' m';
+                        $textDetail[] = $width.' x '.$height.' m';
                     }
                 }
 
-                $led[$key]['led'] = $ledFinal ?? $project[$ledKey];
+                $led[$key]['led'] = $ledFinal ?? null;
                 $led[$key]['total'] = isset($total) ? array_sum($total) : 0;
                 $led[$key]['totalRaw'] = isset($total) ? array_sum($total) : 0;
                 $led[$key]['textDetail'] = isset($textDetail) ? implode(' , ', $textDetail) : 0;

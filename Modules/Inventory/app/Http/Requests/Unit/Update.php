@@ -16,8 +16,8 @@ class Update extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new Unit(), $this->route('unit')),
-            ]
+                new UniqueLowerRule(new Unit, $this->route('unit')),
+            ],
         ];
     }
 

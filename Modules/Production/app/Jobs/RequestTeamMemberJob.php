@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class RequestTeamMemberJob implements ShouldQueue
 {
@@ -19,8 +19,7 @@ class RequestTeamMemberJob implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param int $projectId
-     * @param array $data
+     * @param  array  $data
      *
      * $data will have
      * int transferId
@@ -44,7 +43,7 @@ class RequestTeamMemberJob implements ShouldQueue
 
         $targetPic = \Modules\Hrd\Models\Employee::where('uid', $this->data['pic_id'])->first();
 
-        if (!auth()->user()) {
+        if (! auth()->user()) {
             $projectPic = \Modules\Production\Models\ProjectPersonInCharge::selectRaw('id,pic_id')
                 ->where('project_id', $this->projectId)
                 ->latest()
