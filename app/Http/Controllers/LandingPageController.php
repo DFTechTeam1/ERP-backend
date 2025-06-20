@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
 use Modules\Hrd\Services\PerformanceReportService;
+use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Services\ProjectRepositoryGroup;
 
 class LandingPageController extends Controller
@@ -60,6 +61,14 @@ class LandingPageController extends Controller
         // $image = 'https://data-center.dfactory.pro/dfactory.png';
         // $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', compact('image'));
         // return $pdf->download('quotation.pdf');
+
+        $deals = ProjectDeal::latest()
+            ->with([
+                'quotations',
+                'quotations.quotationItems'
+            ])
+            ->get();
+        return $deals;
 
         return view('landing');
     }

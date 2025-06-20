@@ -20,8 +20,8 @@ class ProjectDealMarketingFactory extends Factory
     {
 
         return [
-            'project_deal_id' => ProjectDeal::factory()->create()->id,
-            'employee_id' => Employee::factory()->create()->id
+            'project_deal_id' => ProjectDeal::factory()->create(),
+            'employee_id' => Employee::factory()->create()
         ];
     }
 }

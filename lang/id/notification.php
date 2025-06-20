@@ -84,4 +84,6 @@ return [
     'paymentAmountShouldBeSmallerThanRemainingAmount' => 'Jumlah pembayaran harus lebih kecil dari sisa pembayaran',
     'successPublishProjectDeal' => 'Berhasil mempublikasikan penawaran project',
     'successDeleteProjectDeal' => "Penawaran event berhasil di hapus",
+    'successUpdateProjectDeals' => 'Event dan quotation berhasil di ubah',
+    'successAddQuotation' => 'Quotation berhasil di tambahkan'
 ];

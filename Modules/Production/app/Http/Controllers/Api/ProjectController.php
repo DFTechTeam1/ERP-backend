@@ -888,7 +888,25 @@ class ProjectController extends Controller
      */
     public function storeProjectDeals(\Modules\Production\Http\Requests\Deals\Store $request)
     {
-        return apiResponse($this->service->storeProjectDeals($request->all()));
+        $data = $request->validated();
+        $data['quotation']['quotation_id'] = str_replace('#', '', $data['quotation']['quotation_id']);
+
+        return apiResponse($this->service->storeProjectDeals($data));
+    }
+
+    /**
+     * Create and create quotation for project deal
+     * 
+     * @param \Modules\Production\Http\Requests\Deals\Store $request
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateProjectDeal(\Modules\Production\Http\Requests\Deals\Store $request, string $projectDealUid)
+    {
+        $data = $request->validated();
+        $data['quotation']['quotation_id'] = str_replace('#', '', $data['quotation']['quotation_id']);
+
+        return apiResponse($this->service->updateProjectDeals($data, $projectDealUid));
     }
 
     /**
@@ -939,5 +957,28 @@ class ProjectController extends Controller
     public function detailProjectDeal(string $quotationId): JsonResponse
     {
         return apiResponse($this->projectDealService->detailProjectDeal(quotationId: $quotationId));
+    }
+
+    /**
+     * Delete current project deal
+     *
+     * @param string $projectDealUid
+     * @return JsonReponse
+     */
+    public function deleteProjectDeal(string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->delete(id: $projectDealUid));
+    }
+
+    /**
+     * Adding more quotation in the selected project deal
+     *
+     * @param array $payload
+     * @param string $projectDealUid
+     * @return JsonResponse
+     */
+    public function addMoreQuotation(\Modules\Production\Http\Requests\Deals\MoreQuotation $request, string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->addMoreQuotation($request->validated(), $projectDealUid));
     }
 }

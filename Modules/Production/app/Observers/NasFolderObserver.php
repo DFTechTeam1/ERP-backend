@@ -91,8 +91,6 @@ class NasFolderObserver
      */
     public function created(Project $customer)
     {
-        Log::debug('created', $customer->toArray());
-
         $schema = $this->createFolderSchema($customer);
 
         // running start from january

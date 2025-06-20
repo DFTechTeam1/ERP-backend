@@ -8317,17 +8317,94 @@ class ProjectService
                     ];
                 })->toArray()
             );
+
             // insert quotations
             $payload['quotation']['project_deal_id'] = $project->id;
             $url = CreateQuotation::run($payload, $this->projectQuotationRepo);
 
+            // handle when project deal have a final status
+            if ($payload['status'] == 1) {
+                \App\Actions\CopyDealToProject::run($project);
+            }
+            
             DB::commit();
 
             return generalResponse(
                 message: __('notification.successCreateProjectDeals'),
                 data: [
-                    'url' => $url
+                    'url' => $url,
                 ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Create project deals and generate quotation
+     * 
+     * @param array $payload
+     * 
+     * @return array
+     */
+    public function updateProjectDeals(array $payload, string $projectDealUid): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $projectDealUid = \Illuminate\Support\Facades\Crypt::decryptString($projectDealUid);
+
+            $project = $this->projectDealRepo->show(
+                uid: (string) $projectDealUid,
+                select: 'id',
+                relation: [
+                    'marketings:id,project_deal_id,employee_id',
+                    'latestQuotation'
+                ]
+            );
+
+            $this->projectDealRepo->update(
+                data: collect($payload)
+                    ->except(['marketing_id', 'quotation', 'status', 'request_type'])
+                    ->toArray(),
+                id: $projectDealUid
+            );
+
+            // delete all first
+            $project->marketings()->delete();
+
+            // insert project details marketing
+            $project->marketings()->createMany(
+                collect($payload['marketing_id'])->map(function ($item) {
+                    return [
+                        'employee_id' => $this->generalService->getIdFromUid($item, new \Modules\Hrd\Models\Employee),
+                    ];
+                })->toArray()
+            );
+
+            // update latest quotation
+            $this->projectQuotationRepo->update(
+                data: collect($payload['quotation'])
+                    ->except(['status', 'items', 'quotation_id'])
+                    ->toArray(),
+                id: $project->latestQuotation->id
+            );
+
+            // update quotation items
+            $latestQuotation = $project->latestQuotation;
+            $latestQuotation->items()->delete();
+            
+            foreach ($payload['quotation']['items'] as $item) {
+                $latestQuotation->items()->create([
+                    'item_id' => $item
+                ]);
+            }
+            
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successUpdateProjectDeals'),
             );
         } catch (\Throwable $th) {
             DB::rollBack();

@@ -20,12 +20,18 @@ class ProjectDealFactory extends Factory
      */
     protected $model = \Modules\Production\Models\ProjectDeal::class;
 
+    protected function formatCollectionEnum(array $data)
+    {
+        return collect($data)->map(function ($item) {
+            return $item->value;
+        })->toArray();
+    }
+
     /**
      * Define the model's default state.
      */
     public function definition(): array
     {
-        $status = $this->formatCollectionEnum(ProjectStatus::cases());
         $eventTypes = $this->formatCollectionEnum(EventType::cases());
 
         $customer = Customer::factory()->create();
@@ -42,7 +48,6 @@ class ProjectDealFactory extends Factory
             'country_id' => Province::factory()->create()->code,
             'state_id' => IndonesiaCity::factory()->create()->code,
             'city_id' => IndonesiaDistrict::factory()->create()->code,
-            'status' => fake()->randomElement($status),
             'project_class_id' => ProjectClass::factory()->create()->id,
             'equipment_type' => 'others',
             'is_high_season' => false,

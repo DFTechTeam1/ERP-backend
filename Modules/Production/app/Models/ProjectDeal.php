@@ -182,6 +182,11 @@ class ProjectDeal extends Model
         return $this->attributes['status'] === \App\Enums\Production\ProjectDealStatus::Draft->value ? true : false;
     }
 
+    public function isFinal(): bool
+    {
+        return $this->attributes['status'] === \App\Enums\Production\ProjectDealStatus::Final->value ? true : false;
+    }
+
     // ###### CUSTOM FUNCTIONS
     /**
      * Get final price of project deals
@@ -334,7 +339,7 @@ class ProjectDeal extends Model
     {
         $output = false;
 
-        if ($this->relationLoaded('finalQuotation') && !$this->finalQuotation && !$this->isDraft()) {
+        if ($this->relationLoaded('finalQuotation') && !$this->finalQuotation && !$this->isDraft() && !$this->isFinal()) {
             // if project deal has latest quotation, return true
             $output = true;
         }
