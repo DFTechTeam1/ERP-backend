@@ -23,7 +23,7 @@ class MenuService
             BaseRole::Finance->value,
             BaseRole::ItSupport->value,
         ];
-        $menus = file_get_contents(storage_path('app/public/menu/menu.json'));
+        $menus = file_get_contents(public_path('menu-item/menu.json'));
         $menus = json_decode($menus, true);
 
         // get menu based on permission
