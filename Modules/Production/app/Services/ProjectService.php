@@ -6209,18 +6209,20 @@ class ProjectService
             }
 
             // update cache
-            $currentData = getCache('detailProject'.$projectId);
-            if (! $currentData) {
-                $currentData = $this->reinitDetailCache((object) ['id' => $projectId, 'uid' => $projectUid]);
-            }
+            // $currentData = getCache('detailProject'.$projectId);
+            // if (! $currentData) {
+            //     $currentData = $this->reinitDetailCache((object) ['id' => $projectId, 'uid' => $projectUid]);
+            // }
 
             // new pics
             $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name,employee_id']);
 
-            $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
-            $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
+            // $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
+            // $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
 
-            $currentData = $this->formatTasksPermission($currentData, $projectId);
+            // $currentData = $this->formatTasksPermission($currentData, $projectId);
+
+            $currentData = $this->detailCacheAction->run($projectUid, [], true);
 
             // update list project
             $noPic = $newPics->count() > 0 ? false : true;
