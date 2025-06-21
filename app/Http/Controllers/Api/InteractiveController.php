@@ -14,24 +14,26 @@ class InteractiveController extends Controller
      * @param  string  $deviceId
      * @return void
      */
-    public function generateImageQrCode(Request $request, $deviceId)
+    public function generateImageQrCode(Request $request)
     {
         try {
             $date = date('Y-m-d');
-            $filepath = "interactive/qr/{$deviceId}/{$date}";
+            $filepath = "interactive/qr/tp/{$date}";
 
             if (! is_dir(storage_path('app/public/'.$filepath))) {
                 mkdir(storage_path('app/public/'.$filepath), 0777, true);
             }
 
             // make indentifier
-            $identifier = uniqid(prefix: 'uq');
+            $identifier = uniqid(prefix: 'tpc');
 
-            $filename = date('YmdHis').'.png';
+            $rand = random_int(1, 20);
+            $dateName = date('YmdHis');
+            $filename = "{$dateName}{$rand}.png";
             $image = uploadBase64($request->getContent(), $filepath);
             if ($image) {
                 // create qr
-                $qrcode = generateQrcode(env('APP_URL').'/interactive/download?if='.$identifier.'&d='.$deviceId, $filepath.'/'.$filename);
+                $qrcode = generateQrcode(env('APP_URL').'/interactive/download?if='.$identifier, $filepath.'/'.$filename);
 
                 // store to database
                 InteractiveImage::create([
@@ -58,6 +60,7 @@ class InteractiveController extends Controller
             ->where('identifier', $identifier)
             ->first();
 
+            
         if (! $image) {
             return view('interactive/image_not_found');
         }
