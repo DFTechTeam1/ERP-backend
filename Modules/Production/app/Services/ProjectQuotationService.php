@@ -175,6 +175,8 @@ class ProjectQuotationService
                 'deal.state:id,name',
                 'deal.customer:id,name',
                 'deal.class:id,name',
+                'deal.marketings:id,employee_id,project_deal_id',
+                'deal.marketings.employee:id,name',
                 'items:quotation_id,id,item_id',
                 'items.item:id,name'
             ],
@@ -209,6 +211,9 @@ class ProjectQuotationService
                     'size' => $item['textDetail']
                 ];
             })->toArray(),
+            'marketing' => [
+                'name' => $data->deal->marketings[0]->employee->name,
+            ],
             'items' => collect($data->items)->map(function ($item) {
                 return $item->item->name;
             })->toArray()
