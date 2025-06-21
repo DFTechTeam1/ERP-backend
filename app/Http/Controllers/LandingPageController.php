@@ -58,18 +58,6 @@ class LandingPageController extends Controller
 
     public function index()
     {
-        // $image = 'https://data-center.dfactory.pro/dfactory.png';
-        // $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', compact('image'));
-        // return $pdf->download('quotation.pdf');
-
-        $deals = ProjectDeal::latest()
-            ->with([
-                'quotations',
-                'quotations.quotationItems'
-            ])
-            ->get();
-        return $deals;
-
         return view('landing');
     }
 
