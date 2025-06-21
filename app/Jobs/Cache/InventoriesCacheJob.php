@@ -35,7 +35,7 @@ class InventoriesCacheJob implements ShouldQueue
                     'items',
                     'brand',
                     'itemTypeRelation',
-                    'unit'
+                    'unit',
                 ]);
 
             $data = $query->get();

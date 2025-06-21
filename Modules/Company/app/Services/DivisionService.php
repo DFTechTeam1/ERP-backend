@@ -4,17 +4,14 @@ namespace Modules\Company\Services;
 
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\DivisionException;
-use Illuminate\Support\Facades\Lang;
-use Illuminate\Support\Facades\Log;
 use Modules\Company\Repository\DivisionRepository;
-use Modules\Company\Repository\PositionRepository;
 
 class DivisionService
 {
     private $repo;
 
     /**
-     * @param $repo
+     * @param  $repo
      */
     public function __construct()
     {
@@ -23,19 +20,12 @@ class DivisionService
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ) : array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -44,25 +34,24 @@ class DivisionService
 
             $search = request('search');
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "name asc";
+            $sort = 'name asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
-
 
             $divisions = $this->repo->pagination(
                 $select,
@@ -89,7 +78,7 @@ class DivisionService
                 [
                     'paginated' => $paginated,
                     'totalData' => $totalData,
-                    'where' => $where
+                    'where' => $where,
                 ],
             );
         } catch (\Throwable $th) {
@@ -110,26 +99,21 @@ class DivisionService
 
     /**
      * Get specific data by id
-     *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
-     *
-     * @return array
      */
     public function show(
         string $uid,
         string $select = '*',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $data = $this->repo->show($uid, $select, $relation);
-            $data->makeHidden('id','parent_id');
+            $data->makeHidden('id', 'parent_id');
 
-            if ($data->parentDivision) $data->parentDivision->makeHidden('id');
+            if ($data->parentDivision) {
+                $data->parentDivision->makeHidden('id');
+            }
             $data->childDivisions->each(function ($childDivision) {
-                $childDivision->makeHidden(['id','parent_id']);
+                $childDivision->makeHidden(['id', 'parent_id']);
             });
             $data->positions->each(function ($positions) {
                 $positions->makeHidden('division_id');
@@ -152,23 +136,19 @@ class DivisionService
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
         try {
-            if(isset($data['parent_id'])) {
-                $division = $this->repo->show($data['parent_id'],'id');
+            if (isset($data['parent_id'])) {
+                $division = $this->repo->show($data['parent_id'], 'id');
                 $data['parent_id'] = $division->id;
             }
 
             $this->repo->store($data)->toArray();
 
             return generalResponse(
-                __("global.successCreateDivision"),
+                __('global.successCreateDivision'),
                 false,
                 [],
             );
@@ -184,27 +164,22 @@ class DivisionService
 
     /**
      * Update data
-     *
-     * @param string $uid
-     * @param array $data
-     * @return array
      */
     public function update(
         array $data,
-        string $uid='',
-        string $where=''
-    ): array
-    {
+        string $uid = '',
+        string $where = ''
+    ): array {
         try {
             if (isset($data['parent_id'])) {
-                $division = $this->repo->show($data['parent_id'],'id');
+                $division = $this->repo->show($data['parent_id'], 'id');
                 $data['parent_id'] = $division->id;
             }
 
-            $this->repo->update($data,$uid);
+            $this->repo->update($data, $uid);
 
             return generalResponse(
-                __("global.successUpdateDivision"),
+                __('global.successUpdateDivision'),
                 false,
                 [],
             );
@@ -220,22 +195,19 @@ class DivisionService
 
     /**
      * Delete specific data
-     *
-     * @param string $uid
-     * @return array
      */
     public function delete(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid,'id,name,parent_id',['childDivisions:id,parent_id','positions:id,division_id'])->toArray();
-            if(count($data['child_divisions']) > 0 || count($data['positions']) > 0) {
-                throw new DivisionException(__("global.divisionRelationFound", ['name' => $data['name']]));
+            $data = $this->repo->show($uid, 'id,name,parent_id', ['childDivisions:id,parent_id', 'positions:id,division_id'])->toArray();
+            if (count($data['child_divisions']) > 0 || count($data['positions']) > 0) {
+                throw new DivisionException(__('global.divisionRelationFound', ['name' => $data['name']]));
             }
 
             $this->repo->delete($uid);
 
             return generalResponse(
-                __("global.successDeleteDivision"),
+                __('global.successDeleteDivision'),
                 false,
                 [],
             );
@@ -255,21 +227,21 @@ class DivisionService
             $errorDivisionStatus = false;
 
             foreach ($uids as $uid) {
-                $data = $this->repo->show($uid['uid'],'id,name,parent_id',['childDivisions:id,parent_id','positions:id,division_id']);
-                if($data->childDivisions->count() > 0 || $data->positions->count() > 0) {
+                $data = $this->repo->show($uid['uid'], 'id,name,parent_id', ['childDivisions:id,parent_id', 'positions:id,division_id']);
+                if ($data->childDivisions->count() > 0 || $data->positions->count() > 0) {
                     $errorDivisionName[] = $data->name;
                     $errorDivisionStatus = true;
                 }
             }
 
             if ($errorDivisionStatus) {
-                throw new DivisionException(__("global.divisionRelationFound", ['name' => implode(', ', $errorDivisionName)]));
+                throw new DivisionException(__('global.divisionRelationFound', ['name' => implode(', ', $errorDivisionName)]));
             }
 
-            $this->repo->bulkDelete($uids,$key);
+            $this->repo->bulkDelete($uids, $key);
 
             return generalResponse(
-                __("global.successDeleteDivision"),
+                __('global.successDeleteDivision'),
                 false,
                 [],
             );
@@ -282,5 +254,4 @@ class DivisionService
             );
         }
     }
-
 }

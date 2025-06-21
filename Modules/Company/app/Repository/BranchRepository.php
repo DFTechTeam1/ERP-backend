@@ -5,32 +5,30 @@ namespace Modules\Company\Repository;
 use Modules\Company\Models\Branch;
 use Modules\Company\Repository\Interface\BranchInterface;
 
-class BranchRepository extends BranchInterface {
+class BranchRepository extends BranchInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Branch();
+        $this->model = new Branch;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,26 +42,22 @@ class BranchRepository extends BranchInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
         string $orderBy = ''
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -77,9 +71,6 @@ class BranchRepository extends BranchInterface {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -89,7 +80,7 @@ class BranchRepository extends BranchInterface {
         $query->selectRaw($select);
 
         if (empty($where)) {
-            $query->where("id", $uid);
+            $query->where('id', $uid);
         } else {
             $query->whereRaw($where);
         }
@@ -106,7 +97,6 @@ class BranchRepository extends BranchInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -117,15 +107,14 @@ class BranchRepository extends BranchInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('id', $id);
@@ -139,7 +128,7 @@ class BranchRepository extends BranchInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -151,7 +140,6 @@ class BranchRepository extends BranchInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

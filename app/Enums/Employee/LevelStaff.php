@@ -15,7 +15,7 @@ enum LevelStaff: string
             self::Manager,
             self::Lead,
             self::Staff,
-            self::Junior
+            self::Junior,
         ];
     }
 
@@ -23,11 +23,11 @@ enum LevelStaff: string
     {
         if ($data == 'Lead') {
             return self::Lead;
-        } else if ($data == 'Manager') {
+        } elseif ($data == 'Manager') {
             return self::Manager;
-        } else if ($data == 'Staff') {
+        } elseif ($data == 'Staff') {
             return self::Staff;
-        } else if ($data == 'Junior Staff') {
+        } elseif ($data == 'Junior Staff') {
             return self::Junior;
         }
     }
@@ -36,11 +36,11 @@ enum LevelStaff: string
     {
         if ($data == self::Lead->value) {
             return 'Lead';
-        } else if ($data == self::Manager->value) {
+        } elseif ($data == self::Manager->value) {
             return 'Manager';
-        } else if ($data == self::Staff->value) {
+        } elseif ($data == self::Staff->value) {
             return 'Staff';
-        } else if ($data == self::Junior->value) {
+        } elseif ($data == self::Junior->value) {
             return 'Junior Staff';
         }
     }

@@ -4,8 +4,8 @@ namespace Modules\Nas\Console;
 
 use Illuminate\Console\Command;
 use Modules\Company\Models\Setting;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class SetNasConfiguration extends Command
 {
@@ -39,16 +39,19 @@ class SetNasConfiguration extends Command
 
         if (empty($ip) && empty($root)) {
             $this->error('Please enter IP and root folder');
+
             return;
         }
 
         if (empty($ip)) {
             $this->error('Please enter IP');
+
             return;
         }
 
         if (empty($root)) {
             $this->error('Please enter root folder');
+
             return;
         }
 
@@ -66,7 +69,7 @@ class SetNasConfiguration extends Command
             ]);
         }
 
-        $currentRoot = Setting::select("id")
+        $currentRoot = Setting::select('id')
             ->where('key', 'nas_current_root')
             ->first();
         if ($currentRoot) {
@@ -81,7 +84,7 @@ class SetNasConfiguration extends Command
 
         cachingSetting();
 
-        $this->info("Success setting NAS configuration");
+        $this->info('Success setting NAS configuration');
     }
 
     /**

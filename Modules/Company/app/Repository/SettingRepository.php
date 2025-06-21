@@ -5,32 +5,30 @@ namespace Modules\Company\Repository;
 use Modules\Company\Models\Setting;
 use Modules\Company\Repository\Interface\SettingInterface;
 
-class SettingRepository extends SettingInterface {
+class SettingRepository extends SettingInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Setting();
+        $this->model = new Setting;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,40 +42,33 @@ class SettingRepository extends SettingInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -87,11 +78,11 @@ class SettingRepository extends SettingInterface {
         $query->selectRaw($select);
 
         if (empty($where)) {
-            $query->where("uid", $uid);
+            $query->where('uid', $uid);
         } else {
             $query->whereRaw($where);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -104,7 +95,6 @@ class SettingRepository extends SettingInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -115,18 +105,17 @@ class SettingRepository extends SettingInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('uid', $id);
+            $query->where('id', $id);
         }
 
         $query->update($data);
@@ -137,7 +126,7 @@ class SettingRepository extends SettingInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -148,8 +137,6 @@ class SettingRepository extends SettingInterface {
 
     /**
      * Delete setting by code
-     *
-     * @param string $code
      */
     public function deleteByCode(string $code)
     {
@@ -160,7 +147,7 @@ class SettingRepository extends SettingInterface {
     /**
      * Delete setting by code
      *
-     * @param string $code
+     * @param  string  $code
      */
     public function deleteByKey(string $key)
     {
@@ -170,9 +157,6 @@ class SettingRepository extends SettingInterface {
 
     /**
      * Function to update or insert setting
-     *
-     * @param array $condition
-     * @param array $updatedColumn
      */
     public function updateOrInsert(array $condition, array $updatedColumn)
     {
@@ -182,7 +166,6 @@ class SettingRepository extends SettingInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

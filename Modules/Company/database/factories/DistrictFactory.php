@@ -29,4 +29,3 @@ class DistrictFactory extends Factory
         ];
     }
 }
-

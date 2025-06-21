@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class ReturnEquipmentNotification extends Notification
 {
@@ -57,7 +56,7 @@ class ReturnEquipmentNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-        $link = config('frontend_url') . '/admin/inventories/request-equipment/' . $this->project->uid;
+        $link = config('frontend_url').'/admin/inventories/request-equipment/'.$this->project->uid;
 
         return [
             'title' => __('global.returnEquipment'),
@@ -70,7 +69,7 @@ class ReturnEquipmentNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' =>  "Halo " . $this->employee->name . ". Equipment untuk event " . $this->project->name . " sudah di kembalikan dan siap untuk di cek",
+            'message' => 'Halo '.$this->employee->name.'. Equipment untuk event '.$this->project->name.' sudah di kembalikan dan siap untuk di cek',
         ];
     }
 
@@ -79,7 +78,7 @@ class ReturnEquipmentNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => "Halo " . $this->employee->name . ". Equipment untuk event " . $this->project->name . " sudah di kembalikan dan siap untuk di cek",
+                'text' => 'Halo '.$this->employee->name.'. Equipment untuk event '.$this->project->name.' sudah di kembalikan dan siap untuk di cek',
             ],
         ];
 

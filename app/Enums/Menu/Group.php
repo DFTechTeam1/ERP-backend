@@ -15,13 +15,13 @@ enum Group: int
     public function label()
     {
         return match ($this) {
-            static::Hrd => __('global.hrd'),
-            static::Master => __('global.master'),
-            static::Accounting => __('global.accounting'),
-            static::Inventory => __('global.inventory'),
-            static::Dashboard => __('global.dashboard'),
-            static::Addon => __('global.addon'),
-            static::Production => __('global.production'),
+            self::Hrd => __('global.hrd'),
+            self::Master => __('global.master'),
+            self::Accounting => __('global.accounting'),
+            self::Inventory => __('global.inventory'),
+            self::Dashboard => __('global.dashboard'),
+            self::Addon => __('global.addon'),
+            self::Production => __('global.production'),
         };
     }
 }

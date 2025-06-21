@@ -19,7 +19,8 @@ use App\Enums\Employee\TaxConfiguration;
 use Modules\Company\Repository\BankRepository;
 use Modules\Company\Repository\JobLevelRepository;
 
-class MasterService {
+class MasterService
+{
     private $jobLevelRepo;
 
     private $bankRepo;
@@ -27,8 +28,7 @@ class MasterService {
     public function __construct(
         JobLevelRepository $jobLevelRepo,
         BankRepository $bankRepo
-    )
-    {
+    ) {
         $this->jobLevelRepo = $jobLevelRepo;
 
         $this->bankRepo = $bankRepo;
@@ -36,8 +36,6 @@ class MasterService {
 
     /**
      * Get all religions from enums
-     *
-     * @return array
      */
     public function getReligions(): array
     {
@@ -46,7 +44,7 @@ class MasterService {
         $religions = collect($religions)->map(function ($item) {
             return [
                 'title' => Religion::getReligion($item->value),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -69,7 +67,7 @@ class MasterService {
         $taxConfig = collect($taxConfig)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -92,7 +90,7 @@ class MasterService {
         $employeeTaxStatus = collect($employeeTaxStatus)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -115,7 +113,7 @@ class MasterService {
         $jhtConfig = collect($jhtConfig)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -138,7 +136,7 @@ class MasterService {
         $overtimeStatus = collect($overtimeStatus)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -161,7 +159,7 @@ class MasterService {
         $bpjsKesehatanConfig = collect($bpjsKesehatanConfig)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -184,7 +182,7 @@ class MasterService {
         $jpConfig = collect($jpConfig)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -197,8 +195,6 @@ class MasterService {
 
     /**
      * Get All Configuration
-     *
-     * @return array
      */
     public function getAllConfiguration(): array
     {
@@ -219,15 +215,13 @@ class MasterService {
                 'jht_config' => $jhtConfiguration,
                 'jp_config' => $jpConfig,
                 'overtime_status' => $overtimeStatus,
-                'bpjs_kes_config' => $bpjsKesConfig
+                'bpjs_kes_config' => $bpjsKesConfig,
             ]
         );
     }
 
     /**
      * Get all genders from enums
-     *
-     * @return array
      */
     public function getGenders(): array
     {
@@ -235,7 +229,7 @@ class MasterService {
         $genders = collect($genders)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -248,8 +242,6 @@ class MasterService {
 
     /**
      * Get all genders from enums
-     *
-     * @return array
      */
     public function getBanks(): array
     {
@@ -263,7 +255,7 @@ class MasterService {
             data: collect((object) $banks)->map(function ($bank) {
                 return [
                     'title' => $bank->name,
-                    'value' => $bank->bank_code
+                    'value' => $bank->bank_code,
                 ];
             })->toArray()
         );
@@ -271,8 +263,6 @@ class MasterService {
 
     /**
      * Get all martal status from enums
-     *
-     * @return array
      */
     public function getMartialStatus(): array
     {
@@ -280,7 +270,7 @@ class MasterService {
         $martialStatus = collect($martialStatus)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -293,8 +283,6 @@ class MasterService {
 
     /**
      * Get all relation family from enums
-     *
-     * @return array
      */
     public function getRelationFamily(): array
     {
@@ -302,7 +290,7 @@ class MasterService {
         $relations = collect($relations)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -315,8 +303,6 @@ class MasterService {
 
     /**
      * Get all blood type from enums
-     *
-     * @return array
      */
     public function getBloodType(): array
     {
@@ -324,7 +310,7 @@ class MasterService {
         $bloodTypes = collect($bloodTypes)->map(function ($item) {
             return [
                 'title' => $item->value,
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -337,8 +323,6 @@ class MasterService {
 
     /**
      * Get all level staff from enums
-     *
-     * @return array
      */
     public function getLevelStaff(): array
     {
@@ -355,8 +339,6 @@ class MasterService {
 
     /**
      * Get all salary type from enums
-     *
-     * @return array
      */
     public function getSalaryType(): array
     {
@@ -364,7 +346,7 @@ class MasterService {
         $salaryTypes = collect($salaryTypes)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -376,17 +358,15 @@ class MasterService {
     }
 
     /**
-    * Get all salary configuration types
-    *
-    * @return array
-    */
+     * Get all salary configuration types
+     */
     public function getSalaryConfiguration(): array
     {
         $salaryConfig = SalaryConfiguration::cases();
         $salaryConfig = collect($salaryConfig)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 
@@ -400,8 +380,6 @@ class MasterService {
 
     /**
      * Get all salary type from enums
-     *
-     * @return array
      */
     public function getPtkpType(): array
     {
@@ -409,7 +387,7 @@ class MasterService {
         $ptkpTypes = collect($ptkpTypes)->map(function ($item) {
             return [
                 'title' => $item->label(),
-                'value' => $item->value
+                'value' => $item->value,
             ];
         })->toArray();
 

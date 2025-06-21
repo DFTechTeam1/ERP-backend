@@ -10,7 +10,5 @@ class LedDetailRule implements ValidationRule
     /**
      * Run the validation rule.
      */
-    public function validate(string $attribute, mixed $value, Closure $fail): void
-    {
-    }
+    public function validate(string $attribute, mixed $value, Closure $fail): void {}
 }

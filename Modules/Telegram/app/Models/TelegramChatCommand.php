@@ -2,8 +2,8 @@
 
 namespace Modules\Telegram\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Telegram\Database\Factories\TelegramChatCommandFactory;
 
 class TelegramChatCommand extends Model
@@ -17,11 +17,11 @@ class TelegramChatCommand extends Model
         'chat_id',
         'command',
         'status',
-        'current_function'
+        'current_function',
     ];
 
     protected static function newFactory(): TelegramChatCommandFactory
     {
-        //return TelegramChatCommandFactory::new();
+        // return TelegramChatCommandFactory::new();
     }
 }

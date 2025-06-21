@@ -12,14 +12,14 @@ use App\Repository\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Spatie\Permission\Models\Role;
 use Vinkla\Hashids\Facades\Hashids;
 
-class UserService {
+class UserService
+{
     private $repo;
 
     private $employeeRepo;
@@ -39,8 +39,7 @@ class UserService {
         UserLoginHistoryRepository $userLogHistoryRepo,
         GeneralService $generalService,
         RoleService $roleService
-    )
-    {
+    ) {
         $this->repo = $userRepo;
 
         $this->employeeRepo = $employeeRepo;
@@ -58,7 +57,7 @@ class UserService {
     {
         try {
 
-        } catch(\Throwable $th) {
+        } catch (\Throwable $th) {
             return generalResponse(
                 errorMessage($th),
                 true,
@@ -78,22 +77,22 @@ class UserService {
 
         $search = request('search');
 
-        if (!empty($search)) { // array
+        if (! empty($search)) { // array
             $where = formatSearchConditions($search['filters'], $where);
         }
 
-        $sort = "email asc";
+        $sort = 'email asc';
         if (request('sort')) {
-            $sort = "";
+            $sort = '';
             foreach (request('sort') as $sortList) {
                 if ($sortList['field'] == 'email') {
-                    $sort = $sortList['field'] . " {$sortList['order']},";
+                    $sort = $sortList['field']." {$sortList['order']},";
                 } else {
-                    $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                    $sort .= ','.$sortList['field']." {$sortList['order']},";
                 }
             }
 
-            $sort = rtrim($sort, ",");
+            $sort = rtrim($sort, ',');
             $sort = ltrim($sort, ',');
         }
 
@@ -166,9 +165,6 @@ class UserService {
 
     /**
      * Main service to store a new user and send activation link via email
-     *
-     * @param array $data
-     * @return \App\Models\User
      */
     public function mainServiceStoreUser(array $data): \App\Models\User
     {
@@ -179,12 +175,12 @@ class UserService {
         // setup role
         if (isset($data['role_id'])) {
             $roleData = $this->roleService->show($data['role_id']);
-            if (!$roleData['error']) {
+            if (! $roleData['error']) {
                 $role = $roleData['data']['raw'];
             }
         }
 
-        if (!$data['is_external_user']) {
+        if (! $data['is_external_user']) {
             $currentProjectManagerRole = json_decode($this->generalService->getSettingByKey('project_manager_role'), true) ?? [];
             if (
                 ($currentProjectManagerRole) &&
@@ -203,18 +199,17 @@ class UserService {
 
             $pmAndDirectorRole = collect($currentProjectManagerRole)->merge([$directorRole])->toArray();
 
-            $isEmployee = !isset($data['role_id']) ? false : !in_array($data['role_id'], $pmAndDirectorRole);
+            $isEmployee = ! isset($data['role_id']) ? false : ! in_array($data['role_id'], $pmAndDirectorRole);
 
-            $employeeId = $this->generalService->getIdFromUid($data['employee_id'], new Employee());
+            $employeeId = $this->generalService->getIdFromUid($data['employee_id'], new Employee);
         }
-
 
         $payload = [
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'is_external_user' => $data['is_external_user'],
             'employee_id' => $employeeId ?? null,
-            'username' => NULL,
+            'username' => null,
             'is_employee' => $isEmployee,
             'is_director' => $isDirector,
             'is_project_manager' => $isProjectManager,
@@ -227,7 +222,7 @@ class UserService {
             $user->assignRole($role);
         }
 
-        if (!$data['is_external_user']) {
+        if (! $data['is_external_user']) {
             // update relation on employee
             $this->employeeRepo->update([
                 'user_id' => $user->id,
@@ -242,8 +237,8 @@ class UserService {
     /**
      * Store user
      *
-     * @param array $data
-     * $data is
+     * @param  array  $data
+     *                       $data is
      * @param bool is_external_user
      * @param string email
      * @param string employee_id
@@ -263,7 +258,7 @@ class UserService {
                 __('global.successCreateUser'),
                 false
             );
-        } catch(\Throwable $th) {
+        } catch (\Throwable $th) {
             DB::rollBack();
 
             return errorResponse($th);
@@ -275,7 +270,7 @@ class UserService {
         $data = $this->repo->detail($id);
         $data->roles;
 
-        $employeeData = $this->employeeRepo->show('id', 'id,uid', [], 'user_id = ' . $data->id);
+        $employeeData = $this->employeeRepo->show('id', 'id,uid', [], 'user_id = '.$data->id);
 
         return generalResponse(
             'success',
@@ -295,7 +290,7 @@ class UserService {
     {
         try {
             $this->repo->update([
-                'password' => Hash::make($payload['password'])
+                'password' => Hash::make($payload['password']),
             ], 'uid', $userUid);
 
             return generalResponse(
@@ -310,14 +305,14 @@ class UserService {
     public function activate(string $key)
     {
         try {
-            $service = new EncryptionService();
+            $service = new EncryptionService;
 
             $email = $service->decrypt($key, env('SALT_KEY'));
 
             $user = $this->repo->detail('', 'id,email_verified_at', "email = '{$email}'");
 
             $message = __('global.accontAlreadyActive');
-            if (!$user->email_verified_at) {
+            if (! $user->email_verified_at) {
                 $this->repo->update([
                     'email_verified_at' => Carbon::now(),
                 ], 'email', $email);
@@ -335,10 +330,6 @@ class UserService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -360,9 +351,9 @@ class UserService {
                                 ->whereHas('project', function ($queryProject) {
                                     $queryProject->whereRaw('DATE(project_date) > NOW()');
                                 });
-                        }
+                        },
                     ],
-                    where: "user_id = " . $user->id
+                    where: 'user_id = '.$user->id
                 );
 
                 if (
@@ -384,26 +375,28 @@ class UserService {
                 // detach from employee data
                 if ($employee) {
                     $this->employeeRepo->update([
-                        'user_id' => NULL,
+                        'user_id' => null,
                     ], $employee->uid);
                 }
 
                 // update email
                 $this->repo->update([
-                    'email' => $user->email . '_deleted_' . strtotime('now'),
-                    'employee_id' => NULL
+                    'email' => $user->email.'_deleted_'.strtotime('now'),
+                    'employee_id' => null,
                 ], 'id', $user->id);
             }
 
             $this->repo->bulkDelete($ids, 'uid');
 
             DB::commit();
+
             return generalResponse(
                 __('global.successDeleteUser'),
                 false,
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -417,23 +410,23 @@ class UserService {
             relation: ['employee.position', 'roles']
         );
 
-        if (!$user) {
+        if (! $user) {
             throw new UserNotFound(__('global.userNotFound'));
         }
 
-        if (!$user->email_verified_at) {
+        if (! $user->email_verified_at) {
             throw new UserNotFound(__('global.userNotActive'));
         }
 
-        if (!Hash::check($validated['password'], $user->password) && !$onActing) {
+        if (! Hash::check($validated['password'], $user->password) && ! $onActing) {
             throw new UserNotFound(__('global.credentialDoesNotMatch'));
         }
 
-        if (!isset($user->getRoleNames()[0])) {
-            throw new \App\Exceptions\DoNotHaveAppPermission();
+        if (! isset($user->getRoleNames()[0])) {
+            throw new \App\Exceptions\DoNotHaveAppPermission;
         }
 
-        $menuService = new \App\Services\MenuService();
+        $menuService = new \App\Services\MenuService;
 
         $role = $user->getRoleNames()[0];
         $roles = $user->roles;
@@ -491,16 +484,16 @@ class UserService {
             strip_tags(
                 html_entity_decode(
                     $user->email, ENT_QUOTES, 'UTF-8')
-                )
-            );
+            )
+        );
         if (strlen($user->email) > 15) {
-            $emailShow = mb_substr($emailShow, 0, 15) . ' ...';
+            $emailShow = mb_substr($emailShow, 0, 15).' ...';
         } else {
             $emailShow = $user->email;
         }
         $user['email_show'] = $emailShow;
 
-        $employee = \Modules\Hrd\Models\Employee::select("id")
+        $employee = \Modules\Hrd\Models\Employee::select('id')
             ->find($user->employee_id);
 
         $notifications = [];
@@ -533,7 +526,7 @@ class UserService {
             ['data' => json_encode($payload)]
         );
 
-        $encryptionService = new EncryptionService();
+        $encryptionService = new EncryptionService;
         $encryptedPayload = $encryptionService->encrypt(json_encode($payload), env('SALT_KEY'));
 
         // store histories
@@ -545,7 +538,7 @@ class UserService {
         ]);
 
         // store to cache for user device information
-        \Illuminate\Support\Facades\Cache::rememberForever('userLogin' . $user->id, function () {
+        \Illuminate\Support\Facades\Cache::rememberForever('userLogin'.$user->id, function () {
             return [
                 'ip' => $this->generalService->getClientIp(),
                 'browser' => $this->generalService->parseUserAgent($this->generalService->getUserAgentInfo()),

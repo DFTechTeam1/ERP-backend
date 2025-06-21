@@ -5,8 +5,8 @@ namespace Modules\Hrd\Console;
 use App\Exports\NewTemplatePerformanceReportExport;
 use Illuminate\Console\Command;
 use Maatwebsite\Excel\Facades\Excel;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class ExportNewPerformanceReportTemplate extends Command
 {
@@ -36,8 +36,8 @@ class ExportNewPerformanceReportTemplate extends Command
     public function handle()
     {
         $startDate = $this->argument('startDate');
-        $endDate= $this->argument('endDate');
-        $this->info('start: ' . $startDate);
+        $endDate = $this->argument('endDate');
+        $this->info('start: '.$startDate);
         $filename = "performance_report_{$startDate}_until_{$endDate}.xlsx";
 
         // $export = Excel::store(new NewTemplatePerformanceReportExport('2025-02-23', '2025-03-22'), "hrd/performance_report/{$filename}", 'public');

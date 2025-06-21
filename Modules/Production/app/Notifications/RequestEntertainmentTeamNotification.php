@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class RequestEntertainmentTeamNotification extends Notification
 {
@@ -37,7 +36,7 @@ class RequestEntertainmentTeamNotification extends Notification
     {
         return [
             'database',
-            TelegramChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -71,7 +70,7 @@ class RequestEntertainmentTeamNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => collect($this->message)->pluck('text')->toArray()
+            'message' => collect($this->message)->pluck('text')->toArray(),
         ];
     }
 

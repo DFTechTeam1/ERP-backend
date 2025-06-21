@@ -5,8 +5,8 @@ namespace Modules\Hrd\Console;
 use Illuminate\Console\Command;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Services\TalentaService;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class UpdateTalentaUserIdToEmployeesTable extends Command
 {
@@ -33,11 +33,11 @@ class UpdateTalentaUserIdToEmployeesTable extends Command
      */
     public function handle()
     {
-        $talenta = new TalentaService();
+        $talenta = new TalentaService;
         $talenta->setUrl(type: 'all_employees', env: 'prod');
         $talenta->setUrlParams(params: [
             'status' => 0,
-            'limit' => 50
+            'limit' => 50,
         ]);
 
         $response = $talenta->makeRequest();
@@ -54,7 +54,7 @@ class UpdateTalentaUserIdToEmployeesTable extends Command
                 $employeeId = $employee['employment']['employee_id'];
 
                 $currentEmployee = Employee::selectRaw('id,name,nickname,talenta_user_id')
-                    ->where("employee_id", $employeeId)
+                    ->where('employee_id', $employeeId)
                     ->first();
 
                 if ($currentEmployee) {
@@ -66,7 +66,7 @@ class UpdateTalentaUserIdToEmployeesTable extends Command
                 }
             }
         } else {
-            $this->error("Failed connected with Talenta Server");
+            $this->error('Failed connected with Talenta Server');
         }
     }
 

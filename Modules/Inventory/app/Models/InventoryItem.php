@@ -5,8 +5,8 @@ namespace Modules\Inventory\Models;
 use App\Enums\Inventory\InventoryStatus;
 use App\Enums\Inventory\Location;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Inventory\Database\factories\InventoryItemFactory;
 
@@ -26,7 +26,7 @@ class InventoryItem extends Model
         'qrcode',
         'purchase_price',
         'warranty',
-        'year_of_purchase'
+        'year_of_purchase',
     ];
 
     // protected static function newFactory(): InventoryItemFactory
@@ -50,7 +50,7 @@ class InventoryItem extends Model
         'status_text',
         'status_badge_color',
         'location',
-        'location_badge'
+        'location_badge',
     ];
 
     public function inventory(): BelongsTo
@@ -77,7 +77,7 @@ class InventoryItem extends Model
         }
 
         return new Attribute(
-            get: fn() => $out ?? 0
+            get: fn () => $out ?? 0
         );
     }
 
@@ -95,7 +95,7 @@ class InventoryItem extends Model
         }
 
         return new Attribute(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
@@ -110,7 +110,7 @@ class InventoryItem extends Model
         }
 
         return new Attribute(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
@@ -125,7 +125,7 @@ class InventoryItem extends Model
         }
 
         return new Attribute(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

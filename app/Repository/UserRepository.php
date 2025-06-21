@@ -2,16 +2,15 @@
 
 namespace App\Repository;
 
-use Illuminate\Support\Facades\DB;
-
-class UserRepository {
+class UserRepository
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new \App\Models\User();
+        $this->model = new \App\Models\User;
 
         $this->key = 'id';
     }
@@ -19,9 +18,6 @@ class UserRepository {
     /**
      * Get all users
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function list(
@@ -30,21 +26,20 @@ class UserRepository {
         array $relation = [],
         array $whereRole = [],
         array $whereHasNested = []
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
-        if (!empty($whereHasNested)) {
+        if (! empty($whereHasNested)) {
             applyNestedWhereHas($query, $whereHasNested);
         }
 
-        if (!empty($whereRole)) {
+        if (! empty($whereRole)) {
             $query->role($whereRole);
         }
 
@@ -58,26 +53,22 @@ class UserRepository {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
         string $orderBy = ''
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -85,7 +76,7 @@ class UserRepository {
             $query->with($relation);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -94,8 +85,6 @@ class UserRepository {
 
     /**
      * Store new user
-     *
-     * @param array $data
      */
     public function store(array $data)
     {
@@ -108,8 +97,7 @@ class UserRepository {
         array $data,
         string $key,
         string $value
-    )
-    {
+    ) {
         return $this->model->where($key, $value)
             ->update($data);
     }
@@ -117,7 +105,6 @@ class UserRepository {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')
@@ -135,15 +122,15 @@ class UserRepository {
 
         $query->selectRaw($select);
 
-        if (!empty($relation)) {
+        if (! empty($relation)) {
             $query->with($relation);
         }
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
-        if (!empty($id) && empty($where)) {
+        if (! empty($id) && empty($where)) {
             $query->where('uid', $id);
         }
 

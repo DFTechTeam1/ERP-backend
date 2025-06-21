@@ -3,7 +3,6 @@
 namespace Modules\Inventory\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Modules\Inventory\Http\Requests\UserInventory\AddItem;
 use Modules\Inventory\Http\Requests\UserInventory\Create;
 use Modules\Inventory\Http\Requests\UserInventory\DeleteInventory;
@@ -16,7 +15,7 @@ class UserInventoryController extends Controller
 
     public function __construct()
     {
-        $this->service = new EmployeeInventoryMasterService();
+        $this->service = new EmployeeInventoryMasterService;
     }
 
     /**
@@ -31,7 +30,7 @@ class UserInventoryController extends Controller
                 'employee:id,name,nickname,uid',
                 'items:id,employee_inventory_master_id,inventory_item_id,inventory_status,inventory_source,inventory_source_id',
                 'items.inventory:id,inventory_id,inventory_code',
-                'items.inventory.inventory:id,name'
+                'items.inventory.inventory:id,name',
             ]
         ));
     }
@@ -52,8 +51,7 @@ class UserInventoryController extends Controller
     }
 
     /**
-     * @param AddItem $request
-     * @param string $uid
+     * @param  string  $uid
      * @return \Illuminate\Http\JsonResponse
      */
     public function addItem(AddItem $request, mixed $id)

@@ -4,29 +4,27 @@ namespace App\Repository;
 
 use App\Models\Menu;
 
-class MenuRepository {
+class MenuRepository
+{
     private $model;
 
     public function __construct()
     {
-        $this->model = new Menu();
+        $this->model = new Menu;
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -40,25 +38,21 @@ class MenuRepository {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page,
         array $whereHas = []
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -73,7 +67,7 @@ class MenuRepository {
                 });
             }
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 }

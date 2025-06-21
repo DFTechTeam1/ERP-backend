@@ -6,7 +6,8 @@ use CURLFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
-class NasConnectionService {
+class NasConnectionService
+{
     private $url;
 
     private $config;
@@ -24,7 +25,7 @@ class NasConnectionService {
     protected function login()
     {
         $data = Cache::get('nas_addon_sid');
-        if (!$data) {
+        if (! $data) {
             Cache::rememberForever('nas_addon_sid', function () {
                 $this->createUrl('login');
                 $login = Http::get($this->url, [
@@ -36,10 +37,10 @@ class NasConnectionService {
                     'session' => 'FileStation',
                     'format' => 'sid',
                 ]);
-        
+
                 $login = json_decode($login->body(), true);
 
-                if ($login['success'] != FALSE) {
+                if ($login['success'] != false) {
                     return $login['data']['sid'];
                 }
             });
@@ -47,13 +48,13 @@ class NasConnectionService {
 
         $this->sid = Cache::get('nas_addon_sid');
     }
-    
+
     public function createUrl(string $type)
     {
-        $this->url = 'http://' . $this->config['data']['server'] . ':5000/webapi';
+        $this->url = 'http://'.$this->config['data']['server'].':5000/webapi';
         if ($type == 'fileStations') {
             $this->url .= '/entry.cgi';
-        } else if ($type == 'login') {
+        } elseif ($type == 'login') {
             $this->url .= '/auth.cgi';
         }
     }
@@ -115,7 +116,7 @@ class NasConnectionService {
 
         $body = json_decode($response->body(), true);
 
-        if ($body['success'] == FALSE) {
+        if ($body['success'] == false) {
             return [
                 'error' => true,
                 'message' => 'Cannot get default folder configuration',
@@ -153,21 +154,21 @@ class NasConnectionService {
         $this->createUrl('fileStations');
 
         $this->url .= "?api=SYNO.FileStation.Upload&version=2&method=upload&path={$targetPath}&create_parents=true&_sid={$this->sid}&overwrite=true&mtime";
-        
+
         $curl = curl_init();
 
-        curl_setopt_array($curl, array(
-        CURLOPT_URL => $this->url,
-        CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'GET',
-        CURLOPT_POSTFIELDS => array('filename'=> new CURLFile($path, $mime, $name)),
-        ));
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $this->url,
+            CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_POSTFIELDS => ['filename' => new CURLFile($path, $mime, $name)],
+        ]);
 
         $response = curl_exec($curl);
 
@@ -179,7 +180,6 @@ class NasConnectionService {
     /**
      * Delete NAS Folder
      *
-     * @param string $folderPath
      * @return array
      */
     public function deleteFolder(string $folderPath)
@@ -225,7 +225,7 @@ class NasConnectionService {
         // $body = json_decode($response->body(), true);
 
         return [
-            'url' => $this->url . '?' . $query,
+            'url' => $this->url.'?'.$query,
         ];
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Hrd\Models\Employee;
@@ -21,7 +21,7 @@ class EntertainmentTaskSongResult extends Model
         'task_id',
         'nas_path',
         'employee_id',
-        'note'
+        'note',
     ];
 
     // protected static function newFactory(): EntertainmentTaskSongResultFactory

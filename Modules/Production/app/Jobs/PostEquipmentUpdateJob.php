@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class PostEquipmentUpdateJob implements ShouldQueue
 {
@@ -24,9 +24,6 @@ class PostEquipmentUpdateJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param string $projectId
-     * @param array $requestedData
-     * @param bool $userCanAcceptRequest
      */
     public function __construct(string $projectId, array $requestedData, bool $userCanAcceptRequest)
     {
@@ -46,23 +43,23 @@ class PostEquipmentUpdateJob implements ShouldQueue
         $statuses = \App\Enums\Production\RequestEquipmentStatus::cases();
 
         $this->project = \Modules\Production\Models\Project::with([
-                'personInCharges:id,project_id,pic_id',
-                'personInCharges.employee:id,name,line_id,user_id'
-            ])
+            'personInCharges:id,project_id,pic_id',
+            'personInCharges.employee:id,name,line_id,user_id',
+        ])
             ->where('uid', $this->projectId)
             ->first();
 
         $this->projectManagers = collect($this->project->personInCharges)->filter(function ($filter) {
-                return $filter->employee->user_id;
-            })->map(function ($item) {
-                return [
-                    'telegram_chat_id' => $item->telegram_chat_id,
-                    'line_id' => $item->employee->line_id,
-                    'name' => $item->employee->name,
-                    'id' => $item->employee->id,
-                    'user_id' => $item->employee->user_id,
-                ];
-            })->toArray();
+            return $filter->employee->user_id;
+        })->map(function ($item) {
+            return [
+                'telegram_chat_id' => $item->telegram_chat_id,
+                'line_id' => $item->employee->line_id,
+                'name' => $item->employee->name,
+                'id' => $item->employee->id,
+                'user_id' => $item->employee->user_id,
+            ];
+        })->toArray();
 
         logging('project: ', [$this->project]);
 
@@ -100,7 +97,7 @@ class PostEquipmentUpdateJob implements ShouldQueue
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo, permintaan equipment kamu untuk project ' . $this->project->name . ' sudah disiapkan dan sudah bisa di ambil ya',
+                'text' => 'Halo, permintaan equipment kamu untuk project '.$this->project->name.' sudah disiapkan dan sudah bisa di ambil ya',
             ],
         ];
 
@@ -124,15 +121,15 @@ class PostEquipmentUpdateJob implements ShouldQueue
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo, ada perubahan status nih untuk request equipment di event ' . $this->project->name
+                'text' => 'Halo, ada perubahan status nih untuk request equipment di event '.$this->project->name,
             ],
             [
                 'type' => 'text',
-                'text' => 'Klik link dibawah untuk melihat detail nya'
+                'text' => 'Klik link dibawah untuk melihat detail nya',
             ],
             [
                 'type' => 'text',
-                'text' => config('app.frontend_url') . '/auth/a/login?redirect=/admin/production/project/' . $this->projectId,
+                'text' => config('app.frontend_url').'/auth/a/login?redirect=/admin/production/project/'.$this->projectId,
             ],
         ];
 

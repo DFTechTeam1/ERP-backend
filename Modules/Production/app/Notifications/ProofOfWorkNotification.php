@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 use Modules\Production\Models\ProjectTaskProofOfWork;
 
@@ -39,7 +38,7 @@ class ProofOfWorkNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            TelegramChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -73,7 +72,7 @@ class ProofOfWorkNotification extends Notification
         $images = collect($images)->map(function ($item) {
             return [
                 'type' => 'photo',
-                'media' => asset('storage/projects/' . $this->project->id . '/task/' . $this->task->id . '/proofOfWork/' . $item),
+                'media' => asset('storage/projects/'.$this->project->id.'/task/'.$this->task->id.'/proofOfWork/'.$item),
             ];
         })->toArray();
         $images[0]['caption'] = 'Ini gambar previewnya';
@@ -91,7 +90,7 @@ class ProofOfWorkNotification extends Notification
         $messages = collect($messages)->push([
             'type' => 'media_group',
             'text' => 'media_group',
-            'photos' => $images
+            'photos' => $images,
         ])->values()->toArray();
 
         $messages = collect($messages)->push([
@@ -100,15 +99,15 @@ class ProofOfWorkNotification extends Notification
             'keyboard' => [
                 'inline_keyboard' => [
                     [
-                        ['text' => 'Selesaikan Saja', 'callback_data' => 'idt=' . \Modules\Telegram\Enums\CallbackIdentity::MarkTaskAsComplete->value . '&tid=' . $this->task->id],
-                    ]
-                ]
-            ]
+                        ['text' => 'Selesaikan Saja', 'callback_data' => 'idt='.\Modules\Telegram\Enums\CallbackIdentity::MarkTaskAsComplete->value.'&tid='.$this->task->id],
+                    ],
+                ],
+            ],
         ])->values()->toArray();
 
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => $messages
+            'message' => $messages,
         ];
     }
 
@@ -118,7 +117,7 @@ class ProofOfWorkNotification extends Notification
             [
                 'type' => 'text',
                 'text' => "{$this->taskPic->nickname} baru saja menyelesaikan tugas {$this->task->name}. Silahkan login untuk melihat detailnya.",
-            ]
+            ],
         ];
 
         return [

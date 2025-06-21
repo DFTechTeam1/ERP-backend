@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 
@@ -49,11 +48,11 @@ class AppendPermissionSeeder extends Seeder
 
         foreach ($permissions as $permission) {
             $check = \Illuminate\Support\Facades\DB::table('permissions')
-                ->select("id")
+                ->select('id')
                 ->where('name', $permission['name'])
                 ->first();
 
-            if (!$check) {
+            if (! $check) {
                 Permission::create($permission);
             }
         }

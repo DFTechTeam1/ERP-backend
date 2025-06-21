@@ -5,9 +5,6 @@ namespace Modules\Nas\Http\Controllers;
 use App\Enums\ErrorCode\Code;
 use App\Http\Controllers\Controller;
 use App\Services\NasService;
-use GuzzleHttp\Client;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -20,7 +17,7 @@ class NasController extends Controller
 
     public function __construct()
     {
-        $this->service = new NasService();
+        $this->service = new NasService;
     }
 
     public function login(Login $request)
@@ -32,7 +29,7 @@ class NasController extends Controller
         $data['session'] = 'FileStation';
         $data['method'] = 'login';
 
-        $response = Http::get(env('NAS_URL') . '/auth.cgi', $data);
+        $response = Http::get(env('NAS_URL').'/auth.cgi', $data);
 
         $response = json_decode($response, true);
 
@@ -41,10 +38,10 @@ class NasController extends Controller
         $message = 'Success';
 
         if (
-            !isset($response['success']) ||
+            ! isset($response['success']) ||
             (
                 (isset($response['success'])) &&
-                (!$response['success'])
+                (! $response['success'])
             )
         ) {
             $error = true;
@@ -69,7 +66,7 @@ class NasController extends Controller
 
     public function folderList()
     {
-        $response = HTTP::get(env('NAS_URL') . '/entry.cgi', [
+        $response = HTTP::get(env('NAS_URL').'/entry.cgi', [
             '_sid' => Cache::get('NAS_SID'),
             'api' => 'SYNO.FileStation.List',
             'version' => 2,
@@ -90,7 +87,6 @@ class NasController extends Controller
     /**
      * Store addon configuration
      *
-     * @param TestConnection $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function storeAddonConfiguration(TestConnection $request)
@@ -101,7 +97,6 @@ class NasController extends Controller
     /**
      * Test connection by given nas configuration
      *
-     * @param TestConnection $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function testConnection(TestConnection $request)
@@ -114,8 +109,5 @@ class NasController extends Controller
         return apiResponse($this->service->addonConfiguration());
     }
 
-    public function showAddons()
-    {
-        
-    }
+    public function showAddons() {}
 }

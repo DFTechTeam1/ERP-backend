@@ -15,26 +15,26 @@ enum RequestEquipmentStatus: int
     public function label()
     {
         return match ($this) {
-            static::Ready => __("global.ready"),
-            static::Requested => __("global.requested"),
-            static::Decline => __("global.decline"),
-            static::Cancel => __('global.canceled'),
-            static::Return => __('global.returned'),
-            static::OnEvent => __('global.onEvent'),
-            static::CompleteAndNotReturn => __('global.completeAndNotYetReturned'),
+            self::Ready => __('global.ready'),
+            self::Requested => __('global.requested'),
+            self::Decline => __('global.decline'),
+            self::Cancel => __('global.canceled'),
+            self::Return => __('global.returned'),
+            self::OnEvent => __('global.onEvent'),
+            self::CompleteAndNotReturn => __('global.completeAndNotYetReturned'),
         };
     }
 
     public function color()
     {
         return match ($this) {
-            static::Ready => 'success',
-            static::Requested => 'indigo-lighten-1',
-            static::Decline => 'red-lighten-1',
-            static::Cancel => 'red-accent-4',
-            static::Return => 'primary',
-            static::OnEvent => 'deep-purple-darken-4',
-            static::CompleteAndNotReturn => 'lime-darken-2',
+            self::Ready => 'success',
+            self::Requested => 'indigo-lighten-1',
+            self::Decline => 'red-lighten-1',
+            self::Cancel => 'red-accent-4',
+            self::Return => 'primary',
+            self::OnEvent => 'deep-purple-darken-4',
+            self::CompleteAndNotReturn => 'lime-darken-2',
         };
     }
 }

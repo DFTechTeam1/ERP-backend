@@ -2,14 +2,16 @@
 
 namespace App\Services\Telegram\Commands;
 
-use Illuminate\Support\Facades\Log;
 use Modules\Hrd\Models\Employee;
 use Telegram\Bot\Commands\Command;
 
-class RegisterCommand extends Command {
+class RegisterCommand extends Command
+{
     protected string $name = 'register';
+
     protected string $description = 'Start Command to get you started';
-    protected string $pattern = "{employee_id}";
+
+    protected string $pattern = '{employee_id}';
 
     public function handle()
     {
@@ -19,9 +21,9 @@ class RegisterCommand extends Command {
             ->where('employee_id', $employeeId)
             ->first();
 
-        if (!$employee) {
+        if (! $employee) {
             $this->replyWithMessage([
-                'text' => "Data karyawan tidak ditemukan. Masukan employee_id dengan benar ya 🙂",
+                'text' => 'Data karyawan tidak ditemukan. Masukan employee_id dengan benar ya 🙂',
             ]);
         } else {
             $chatId = $this->getUpdate()->getMessage()->getChat()->getId();
@@ -29,7 +31,7 @@ class RegisterCommand extends Command {
                 ->update(['telegram_chat_id' => $chatId]);
 
             $this->replyWithMessage([
-                'text' => "Register berhasil. Kamu akan menerima notifikasi pekerjaan mu melalui chat room ini 🫰.",
+                'text' => 'Register berhasil. Kamu akan menerima notifikasi pekerjaan mu melalui chat room ini 🫰.',
                 'reply_markup' => json_encode(['remove_keyboard' => true]),
             ]);
         }

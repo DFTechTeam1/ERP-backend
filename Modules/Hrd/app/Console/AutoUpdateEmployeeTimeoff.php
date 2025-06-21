@@ -6,8 +6,8 @@ use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Modules\Hrd\Models\EmployeeTimeoff;
 use Modules\Hrd\Services\TalentaService;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class AutoUpdateEmployeeTimeoff extends Command
 {
@@ -34,13 +34,13 @@ class AutoUpdateEmployeeTimeoff extends Command
      */
     public function handle()
     {
-        $talenta = new TalentaService();
+        $talenta = new TalentaService;
 
         $talenta->setUrl(type: 'timeoff_list');
         $talenta->setUrlParams(params: [
             'start_date' => Carbon::now()->startOfMonth()->toDateString(),
             'end_date' => Carbon::now()->endOfMonth()->toDateString(),
-            'status' => 'approved'
+            'status' => 'approved',
         ]);
 
         $response = $talenta->makeRequest();
@@ -67,7 +67,7 @@ class AutoUpdateEmployeeTimeoff extends Command
                 EmployeeTimeoff::create($payload);
             }
 
-            $this->info("Successfully update " . count($response['data']['time_off']) . " timeoff data");
+            $this->info('Successfully update '.count($response['data']['time_off']).' timeoff data');
         }
     }
 

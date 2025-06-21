@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 
 class ReviseTaskNotification extends Notification
@@ -65,7 +64,7 @@ class ReviseTaskNotification extends Notification
         return [
             'title' => __('global.reviseTask'),
             'message' => __('global.newReviseTask', ['taskName' => $this->task->name]),
-            'link' => config('app.frontend_url') . '/admin/production/project/' . $this->task->project->uid,
+            'link' => config('app.frontend_url').'/admin/production/project/'.$this->task->project->uid,
         ];
     }
 
@@ -75,15 +74,15 @@ class ReviseTaskNotification extends Notification
 
         if ($images) {
             $images = collect($images)->map(function ($item) {
-                $path = asset('storage/projects/' . $this->revise->project_id . '/task/' . $this->revise->project_task_id . '/revise/' . $item);
+                $path = asset('storage/projects/'.$this->revise->project_id.'/task/'.$this->revise->project_task_id.'/revise/'.$item);
 
                 return [
                     'type' => 'photo',
-                    'media' => $path
+                    'media' => $path,
                 ];
             })->toArray();
             // add caption on the first item
-            $images[0]['caption'] = "Ini gambaran revisimu";
+            $images[0]['caption'] = 'Ini gambaran revisimu';
 
             if (env('APP_ENV') == 'local' && env('APP_URL') != 'https://backend.dfactory.pro') {
                 $images = [
@@ -93,15 +92,15 @@ class ReviseTaskNotification extends Notification
         }
 
         $messages = [
-            'Halo ' . $this->employee->nickname . ' tugas ' . $this->task->name . ' di event ' . $this->task->project->name . ' harus di revisi nih.',
-            'Revisinya karena ' . $this->revise->reason,
+            'Halo '.$this->employee->nickname.' tugas '.$this->task->name.' di event '.$this->task->project->name.' harus di revisi nih.',
+            'Revisinya karena '.$this->revise->reason,
         ];
 
         if ($images) {
             $messages = collect($messages)->push([
                 'type' => 'media_group',
                 'text' => 'media_group',
-                'photos' => $images
+                'photos' => $images,
             ])->values()->toArray();
         }
 
@@ -109,7 +108,7 @@ class ReviseTaskNotification extends Notification
 
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => $messages
+            'message' => $messages,
         ];
     }
 
@@ -118,11 +117,11 @@ class ReviseTaskNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->employee->nickname . ' tugas ' . $this->task->name . ' di event ' . $this->task->project->name . ' harus di revisi nih.',
+                'text' => 'Halo '.$this->employee->nickname.' tugas '.$this->task->name.' di event '.$this->task->project->name.' harus di revisi nih.',
             ],
             [
                 'type' => 'text',
-                'text' => 'Revisinya karena ' . $this->revise->reason,
+                'text' => 'Revisinya karena '.$this->revise->reason,
             ],
         ];
 

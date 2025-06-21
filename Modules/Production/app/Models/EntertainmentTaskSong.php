@@ -4,13 +4,11 @@ namespace Modules\Production\Models;
 
 use App\Enums\Production\TaskSongStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Models\EmployeePoint;
 use Modules\Production\Database\Factories\EntertainmentTaskSongFactory;
 
 // use Modules\Production\Database\Factories\EntertainmentTaskSongFactory;
@@ -27,7 +25,7 @@ class EntertainmentTaskSong extends Model
         'employee_id',
         'project_id',
         'status',
-        'time_tracker'
+        'time_tracker',
     ];
 
     protected $appends = ['status_text', 'status_color'];
@@ -65,8 +63,8 @@ class EntertainmentTaskSong extends Model
     public function timeTracker(): Attribute
     {
         return Attribute::make(
-            set: fn($value) => empty($value) ? null : json_encode($value),
-            get: fn($value) => $value ? json_decode($value, true) : []
+            set: fn ($value) => empty($value) ? null : json_encode($value),
+            get: fn ($value) => $value ? json_decode($value, true) : []
         );
     }
 
@@ -78,20 +76,20 @@ class EntertainmentTaskSong extends Model
         }
 
         return Attribute::make(
-            get: fn() => $output
+            get: fn () => $output
         );
     }
 
     public function statusColor(): Attribute
     {
-        $output = "info";
+        $output = 'info';
 
         if (isset($this->attributes['status'])) {
             $output = TaskSongStatus::getColor($this->attributes['status']);
         }
 
         return Attribute::make(
-            get: fn() => $output
+            get: fn () => $output
         );
     }
 }

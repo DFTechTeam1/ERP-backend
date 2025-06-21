@@ -4,12 +4,13 @@ namespace App\Repository;
 
 use App\Models\UserLoginHistory;
 
-class UserLoginHistoryRepository {
+class UserLoginHistoryRepository
+{
     private $model;
 
     public function __construct()
     {
-        $this->model = new UserLoginHistory();
+        $this->model = new UserLoginHistory;
     }
 
     public function store(array $data)

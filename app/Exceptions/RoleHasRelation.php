@@ -8,6 +8,6 @@ class RoleHasRelation extends Exception
 {
     public function __construct()
     {
-        parent::__construct(message: __("notification.cannotDeleteRoleBcsRelation"));
+        parent::__construct(message: __('notification.cannotDeleteRoleBcsRelation'));
     }
 }

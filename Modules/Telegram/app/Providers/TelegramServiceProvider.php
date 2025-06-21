@@ -39,10 +39,10 @@ class TelegramServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-         $this->commands([
-             SetWebhookCommand::class,
-             GetWebhookComamnd::class
-         ]);
+        $this->commands([
+            SetWebhookCommand::class,
+            GetWebhookComamnd::class,
+        ]);
     }
 
     /**

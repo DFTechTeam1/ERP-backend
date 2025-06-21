@@ -2,7 +2,6 @@
 
 namespace Modules\Inventory\Services;
 
-use App\Enums\ErrorCode\Code;
 use App\Enums\Inventory\RequestInventoryStatus;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +11,8 @@ use Modules\Inventory\Jobs\NewRequestInventoryJob;
 use Modules\Inventory\Jobs\ProcessRequestInventory;
 use Modules\Inventory\Repository\RequestInventoryRepository;
 
-class RequestInventoryService {
+class RequestInventoryService
+{
     private $repo;
 
     private $employeeRepo;
@@ -28,19 +28,12 @@ class RequestInventoryService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -50,22 +43,22 @@ class RequestInventoryService {
 
             $relation = ['requester:id,nickname'];
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "status asc";
+            $sort = 'status asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
 
@@ -85,11 +78,11 @@ class RequestInventoryService {
                 $link = $list->purchase_link;
                 $link = collect($link)->map(function ($linkItem) {
                     $url = parse_url($linkItem);
-                    $display = $url['scheme'] . '://' . $url['host'];
+                    $display = $url['scheme'].'://'.$url['host'];
 
                     return [
                         'display' => $display,
-                        'link' => $linkItem
+                        'link' => $linkItem,
                     ];
                 })->toArray();
                 $output[] = [
@@ -132,18 +125,15 @@ class RequestInventoryService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
         try {
             $data = $this->repo->show($uid, 'name,uid,id,description,price,quantity,purchase_source,purchase_link,status,approval_target,store_name');
-            if (!empty(request('format_price'))) {
+            if (! empty(request('format_price'))) {
                 $data->price = $data->withoutFormattingPrice()->price;
             }
-            $approval = $this->employeeRepo->show('id', 'uid', [], 'id = ' . $data->approval_target[0]);
+            $approval = $this->employeeRepo->show('id', 'uid', [], 'id = '.$data->approval_target[0]);
             $data['approval_target_uid'] = $approval->uid;
 
             return generalResponse(
@@ -189,10 +179,10 @@ class RequestInventoryService {
             $data['stock'] = $requestData['quantity'];
             $data['name'] = $requestData->name;
 
-            $inventoryService = new InventoryService();
+            $inventoryService = new InventoryService;
             $store = $inventoryService->store($data);
 
-            if (!$store['error']) {
+            if (! $store['error']) {
                 // closed the request
                 $this->repo->update([
                     'status' => RequestInventoryStatus::Closed->value,
@@ -205,18 +195,15 @@ class RequestInventoryService {
                 __('notification.requestConvertedToInventory'),
                 false
             );
-        } catch(\Throwable $th) {
+        } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
@@ -229,13 +216,13 @@ class RequestInventoryService {
                 (count($data['approval_target']) > 0)
             ) {
                 $data['approval_target'] = collect($data['approval_target'])->map(function ($target) {
-                    return getIdFromUid($target, new Employee());
+                    return getIdFromUid($target, new Employee);
                 })->toArray();
             }
 
             $payloadJob = [
                 'target' => $data['approval_target'],
-                'requester' => $user->employee_id
+                'requester' => $user->employee_id,
             ];
             foreach ($data['items'] as $key => $item) {
                 $item['requested_by'] = $user->employee_id;
@@ -264,22 +251,15 @@ class RequestInventoryService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $data['approval_target'] = collect($data['approval_target'])->map(function ($target) {
-                return getIdFromUid($target, new Employee());
+                return getIdFromUid($target, new Employee);
             })->toArray();
 
             $this->repo->update($data, $id);
@@ -295,16 +275,13 @@ class RequestInventoryService {
 
     /**
      * Process a request
-     * @param string $type
-     * @param string $uid
-     * @return array
      */
     public function process(string $type, string $uid): array
     {
         if ($type == 'reject') {
             $status = RequestInventoryStatus::Rejected->value;
             $rejectedBy = auth()->user()->employee_id;
-        } else if ($type == 'approved') {
+        } elseif ($type == 'approved') {
             $status = RequestInventoryStatus::Approved->value;
             $approvedBy = auth()->user()->employee_id;
         }
@@ -331,7 +308,7 @@ class RequestInventoryService {
         foreach ($cases as $case) {
             $output[] = [
                 'title' => $case->label(),
-                'value' => $case->value
+                'value' => $case->value,
             ];
         }
 
@@ -344,12 +321,12 @@ class RequestInventoryService {
 
     public function closedRequest(array $ids, array $data): array
     {
-        DB::beginTransaction();;
+        DB::beginTransaction();
         try {
             foreach ($ids['ids'] as $uid) {
                 // transfer to inventory
                 $payloadInventory = [
-                    'item_type' => ''
+                    'item_type' => '',
                 ];
             }
 
@@ -359,7 +336,7 @@ class RequestInventoryService {
                 'success',
                 false
             );
-        } catch(\Throwable $th) {
+        } catch (\Throwable $th) {
             DB::rollBack();
 
             return errorResponse($th);
@@ -369,7 +346,6 @@ class RequestInventoryService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -388,10 +364,6 @@ class RequestInventoryService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

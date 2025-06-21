@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Spatie\Permission\Models\Role;
-use Carbon\Carbon;
 
 class ManualAssignEmployeeAsUser extends Command
 {
@@ -35,17 +34,16 @@ class ManualAssignEmployeeAsUser extends Command
 
         $directorPosition = json_decode(getSettingByKey('position_as_directors'), true);
         $directorPosition = collect($directorPosition)->map(function ($item) {
-            return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
+            return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
         })->toArray();
 
         $pmPosition = json_decode(getSettingByKey('position_as_project_manager'), true);
         $pmPosition = collect($pmPosition)->map(function ($item) {
-            return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
+            return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
         })->toArray();
 
         $marketingPosition = getSettingByKey('position_as_marketing');
-        $marketingPosition = getIdFromUid($marketingPosition, new \Modules\Company\Models\PositionBackup());
-
+        $marketingPosition = getIdFromUid($marketingPosition, new \Modules\Company\Models\PositionBackup);
 
         $projectManagerRole = Role::findByName('project manager');
         $productionRole = Role::findByName('production');
@@ -63,10 +61,10 @@ class ManualAssignEmployeeAsUser extends Command
             if (in_array($employee->position_id, $directorPosition)) {
                 $payload['is_director'] = true;
                 $payload['role'] = 'director';
-            } else if (in_array($employee->position_id, $pmPosition)) {
+            } elseif (in_array($employee->position_id, $pmPosition)) {
                 $payload['is_project_manager'] = true;
                 $payload['role'] = 'project manager';
-            } else if ($employee->position_id == $marketingPosition) {
+            } elseif ($employee->position_id == $marketingPosition) {
                 $payload['is_employee'] = true;
                 $payload['role'] = 'marketing';
             } else {
@@ -78,11 +76,11 @@ class ManualAssignEmployeeAsUser extends Command
 
             if ($payload['role'] == 'production') {
                 $user->assignRole($productionRole);
-            } else if ($payload['role'] == 'project manager') {
+            } elseif ($payload['role'] == 'project manager') {
                 $user->assignRole($projectManagerRole);
-            } else if ($payload['role'] == 'director') {
+            } elseif ($payload['role'] == 'director') {
                 $user->assignRole($directorRole);
-            } else if ($payload['role'] == 'marketing') {
+            } elseif ($payload['role'] == 'marketing') {
                 $user->assignRole($marketingRole);
             }
         }

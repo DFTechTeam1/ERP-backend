@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\TestingEvent;
 use App\Exceptions\GenerateQrcodeError;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FormInteractiveRequest;
@@ -11,13 +10,20 @@ use App\Models\FormInteractive;
 use App\Models\FormInteractiveResponse;
 use App\Services\GoogleService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use Modules\Production\Jobs\NewProjectJob;
-use Pusher\Pusher;
+use Modules\Production\Services\ProjectService;
 
 class TestingController extends Controller
 {
+    private $projectService;
+
+    public function __construct(
+        ProjectService $projectService
+    )
+    {
+        $this->projectService = $projectService;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -32,8 +38,8 @@ class TestingController extends Controller
             $data = FormInteractive::with('responses')
                 ->where('uid', $uid)->first();
 
-            $data->background = $data->background ? asset('storage/forms/' . $data->background) : null;
-            $data->qrcode = asset('storage/' . $data->qrcode);
+            $data->background = $data->background ? asset('storage/forms/'.$data->background) : null;
+            $data->qrcode = asset('storage/'.$data->qrcode);
 
             $forms = json_decode($data->forms, true);
             $data->forms = collect($forms)->map(function ($item) {
@@ -78,14 +84,14 @@ class TestingController extends Controller
 
             $payload = [
                 'name' => $data['name'],
-                'forms' => json_encode($data['forms'])
+                'forms' => json_encode($data['forms']),
             ];
 
             if (
                 (isset($data['image'])) &&
                 ($data['image'])
             ) {
-                $tmp = uploadImageandCompress("forms", 10, $data['image']);
+                $tmp = uploadImageandCompress('forms', 10, $data['image']);
                 $payload['background'] = $tmp;
             }
 
@@ -100,10 +106,10 @@ class TestingController extends Controller
                 (
                     ($currentData) &&
                     ($currentData->background) &&
-                    is_file(storage_path('app/public/forms/' . $currentData->background))
+                    is_file(storage_path('app/public/forms/'.$currentData->background))
                 )
             ) {
-                unlink(storage_path('app/public/forms/' . $currentData->background));
+                unlink(storage_path('app/public/forms/'.$currentData->background));
             }
 
             return apiResponse(
@@ -130,13 +136,13 @@ class TestingController extends Controller
 
             if (
                 ($data->background) &&
-                (is_file(storage_path('app/public/forms/' . $data->background)))
+                (is_file(storage_path('app/public/forms/'.$data->background)))
             ) {
-                unlink(storage_path('app/public/forms/' . $data->background));
+                unlink(storage_path('app/public/forms/'.$data->background));
             }
 
-            if (is_file(storage_path('app/public/' . $data->qrcode))) {
-                unlink(storage_path('app/public/' . $data->qrcode));
+            if (is_file(storage_path('app/public/'.$data->qrcode))) {
+                unlink(storage_path('app/public/'.$data->qrcode));
             }
 
             $data->delete();
@@ -159,21 +165,21 @@ class TestingController extends Controller
         try {
             $all = $request->all();
 
-            $formId = getIdFromUid($uid, new FormInteractive());
+            $formId = getIdFromUid($uid, new FormInteractive);
             FormInteractiveResponse::create([
                 'form_interactive_id' => $formId,
-                'response' => json_encode($all)
+                'response' => json_encode($all),
             ]);
 
             // get all messages
             $messages = FormInteractiveResponse::where('form_interactive_id', $formId)
                 ->get();
 
-            $pusher = new \App\Services\PusherNotification();
+            $pusher = new \App\Services\PusherNotification;
 
             $pusher->send('channel-interactive-new', 'notification-event', [
                 'user_message' => $all,
-                'messages' => $messages
+                'messages' => $messages,
             ]);
 
             return apiResponse(
@@ -200,7 +206,7 @@ class TestingController extends Controller
                 (isset($data['image'])) &&
                 ($data['image'])
             ) {
-                $tmp = uploadImageandCompress("forms", 10, $data['image']);
+                $tmp = uploadImageandCompress('forms', 10, $data['image']);
             }
 
             $form = FormInteractive::create([
@@ -209,11 +215,11 @@ class TestingController extends Controller
                 'background' => $tmp,
             ]);
 
-            $qrcodeData = config('app.frontend_url') . '/forms/d/' . $form->uid;
-            $qrcode = generateQrcode($qrcodeData, 'qrcode-' . preg_replace('/\s+/', '', $form->name) . '.png');
+            $qrcodeData = config('app.frontend_url').'/forms/d/'.$form->uid;
+            $qrcode = generateQrcode($qrcodeData, 'qrcode-'.preg_replace('/\s+/', '', $form->name).'.png');
 
-            if (!$qrcode) {
-                throw new GenerateQrcodeError();
+            if (! $qrcode) {
+                throw new GenerateQrcodeError;
             }
 
             FormInteractive::where('id', $form->id)
@@ -248,7 +254,7 @@ class TestingController extends Controller
             $fields = json_decode($form->forms, true);
 
             $output[] = [
-                'qrcode' => asset('storage/' . $form->qrcode),
+                'qrcode' => asset('storage/'.$form->qrcode),
                 'forms' => $fields,
                 'name' => $form->name,
                 'id' => $form->uid,
@@ -294,7 +300,7 @@ class TestingController extends Controller
             'education_major' => 26,
             'education_year' => 27,
             'id_number' => 28,
-            ''
+            '',
         ];
     }
 
@@ -322,7 +328,7 @@ class TestingController extends Controller
                     if (count($exp1) > 1) {
                         $sizeString = '';
                         for ($a = 0; $a < $exp1[1]; $a++) {
-                            $sizeString .= '+' . $exp1[0];
+                            $sizeString .= '+'.$exp1[0];
                         }
 
                         $sizeString = ltrim($sizeString, '+');
@@ -343,13 +349,14 @@ class TestingController extends Controller
                         $height = isset($expFF[1]) ? $expFF[1] : null;
                         $ledFinal[] = ['width' => $width, 'height' => $height];
 
-                        $total[] = (float)$width * (float)$height;
+                        $total[] = (float) $width * (float) $height;
 
-                        $textDetail[] = $width . ' x ' . $height . ' m';
+                        $textDetail[] = $width.' x '.$height.' m';
                     }
                 }
 
-                $led[$key]['led'] = $ledFinal ?? $project[$ledKey];
+                $led[$key]['led'] = $ledFinal ?? null;
+                // $led[$key]['led'] = $ledFinal ?? $project[$ledKey];
                 $led[$key]['total'] = isset($total) ? array_sum($total) : 0;
                 $led[$key]['totalRaw'] = isset($total) ? array_sum($total) : 0;
                 $led[$key]['textDetail'] = isset($textDetail) ? implode(' , ', $textDetail) : 0;
@@ -502,12 +509,10 @@ class TestingController extends Controller
     public function deleteCurrentProjects()
     {
         try {
-            $projectService = new \Modules\Production\Services\ProjectService();
-
             // delete current project
             $projects = \Modules\Production\Models\Project::select('uid')->get();
-            $projectUids = collect((object)$projects)->pluck('uid')->toArray();
-            $projectService->bulkDelete($projectUids);
+            $projectUids = collect((object) $projects)->pluck('uid')->toArray();
+            $this->projectService->bulkDelete($projectUids);
 
             return apiResponse(
                 generalResponse(
@@ -549,7 +554,7 @@ class TestingController extends Controller
                     $marketing = [];
                     if (strtolower($project[$marketingKey]) == 'wesley') {
                         $marketingData = \Modules\Hrd\Models\Employee::selectRaw('id,uid')->where('email', 'wesleywiyadi@gmail.com')->first();
-                    } else if (strtolower($project[$marketingKey]) == 'charles') {
+                    } elseif (strtolower($project[$marketingKey]) == 'charles') {
                         $marketingData = \Modules\Hrd\Models\Employee::selectRaw('id,uid')->where('email', 'charleseduardo526@gmail.com')->first();
                     }
 
@@ -557,7 +562,7 @@ class TestingController extends Controller
 
                     $class = preg_replace('/\(\s*(.*?)\s*\)/', '($1)', $project[$classKey]);
                     $classData = \Modules\Company\Models\ProjectClass::selectRaw('id,name')
-                        ->whereRaw("lower(name) = '" . strtolower($class) . "'")
+                        ->whereRaw("lower(name) = '".strtolower($class)."'")
                         ->first();
 
                     switch (strtolower($project[$eventTypeKey])) {
@@ -623,10 +628,8 @@ class TestingController extends Controller
             }
         }
 
-        $projectService = new \Modules\Production\Services\ProjectService();
-
         foreach ($output as $project) {
-            $store = $projectService->store($project);
+            $store = $this->projectService->store($project);
 
             if ($store['error']) {
                 logging('error', ['name' => $project['name'], 'error' => $store]);
@@ -648,7 +651,7 @@ class TestingController extends Controller
 
     public function spreadsheet()
     {
-        $service = new GoogleService();
+        $service = new GoogleService;
 
         $data = $service->spreadSheet('1Rrp_0srULfoeWLlxgElMTjkxPaJMFSD6XBU_JQL0_jI');
 

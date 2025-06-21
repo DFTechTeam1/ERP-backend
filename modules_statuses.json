@@ -6,5 +6,6 @@
     "Production": true,
     "Addon": true,
     "LineMessaging": true,
-    "Telegram": true
+    "Telegram": true,
+    "Finance": true
 }

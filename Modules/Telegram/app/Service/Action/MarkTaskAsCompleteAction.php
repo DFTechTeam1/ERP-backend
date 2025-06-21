@@ -8,18 +8,23 @@ use Modules\Production\Models\ProjectTask;
 use Modules\Production\Services\ProjectService;
 use Modules\Telegram\Enums\CallbackIdentity;
 
-class MarkTaskAsCompleteAction {
+class MarkTaskAsCompleteAction
+{
     private $chatId;
+
     private $messageId;
+
     private $service;
+
     private $projectService;
+
     private $employee;
 
     protected function setService()
     {
-        $this->service = new TelegramService();
+        $this->service = new TelegramService;
 
-        $this->projectService = new ProjectService();
+        $this->projectService = new ProjectService;
     }
 
     protected function setUserIdentity(array $payload)
@@ -37,7 +42,7 @@ class MarkTaskAsCompleteAction {
         $this->setService();
 
         $data = $payload['callback_query']['data'];
-        [,$taskId] = explode('idt=' . CallbackIdentity::MarkTaskAsComplete->value . "&tid=", $data);
+        [,$taskId] = explode('idt='.CallbackIdentity::MarkTaskAsComplete->value.'&tid=', $data);
 
         if ($taskId) {
             $task = ProjectTask::selectRaw('project_id,id,uid')
@@ -49,7 +54,7 @@ class MarkTaskAsCompleteAction {
                 taskUid: $task->uid,
                 employee: $this->employee,
             );
-            if (!$complete['error']) {
+            if (! $complete['error']) {
                 $send = $this->service->sendTextMessage(
                     chatId: $this->chatId,
                     message: 'Yuhuuuu tugas ini sudah complete 👍',

@@ -11,10 +11,9 @@ enum BpjsKesehatanConfiguration: int
     public function label(): string
     {
         return match ($this) {
-            static::PaidByCompany => 'Paid by Company',
-            static::PaidByEmployee => 'Paid by Employee',
-            static::Default => 'Default'
+            self::PaidByCompany => 'Paid by Company',
+            self::PaidByEmployee => 'Paid by Employee',
+            self::Default => 'Default'
         };
     }
-
 }

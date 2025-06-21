@@ -15,7 +15,7 @@ class RequestEquipment extends FormRequest
             'items.*.inventory_id' => 'required',
             'items.*.qty' => 'required',
             'items.*.item_type' => 'required',
-            'items.*.inventories' => 'nullable|array'
+            'items.*.inventories' => 'nullable|array',
         ];
     }
 

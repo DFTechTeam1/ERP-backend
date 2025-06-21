@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class AssignVjNotification extends Notification
 {
@@ -67,7 +66,7 @@ class AssignVjNotification extends Notification
         return [
             'title' => __('global.newProject'),
             'message' => __('global.assignedVjToProject', [
-                'event' => $this->project->name . ' (' . date('d F Y', strtotime($this->project->project_date)) . ')',
+                'event' => $this->project->name.' ('.date('d F Y', strtotime($this->project->project_date)).')',
                 'creator' => $this->creator]
             ),
             'link' => $link,
@@ -78,7 +77,7 @@ class AssignVjNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => 'Halo ' . $this->employee->nickname . ", " . $this->creator . " baru saja memilihmu sebagai VJ / Operator untuk event " . $this->project->name . " di tanggal " . date('d F Y', strtotime($this->project->project_date)),
+            'message' => 'Halo '.$this->employee->nickname.', '.$this->creator.' baru saja memilihmu sebagai VJ / Operator untuk event '.$this->project->name.' di tanggal '.date('d F Y', strtotime($this->project->project_date)),
         ];
     }
 
@@ -87,8 +86,8 @@ class AssignVjNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->employee->nickname . ", " . $this->creator . " baru saja memilihmu sebagai VJ / Operator untuk event " . $this->project->name . " di tanggal " . date('d F Y', strtotime($this->project->project_date)),
-            ]
+                'text' => 'Halo '.$this->employee->nickname.', '.$this->creator.' baru saja memilihmu sebagai VJ / Operator untuk event '.$this->project->name.' di tanggal '.date('d F Y', strtotime($this->project->project_date)),
+            ],
         ];
 
         return [

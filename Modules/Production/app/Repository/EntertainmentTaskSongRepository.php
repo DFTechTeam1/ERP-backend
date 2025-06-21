@@ -5,36 +5,34 @@ namespace Modules\Production\Repository;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Repository\Interface\EntertainmentTaskSongInterface;
 
-class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
+class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EntertainmentTaskSong();
+        $this->model = new EntertainmentTaskSong;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHasNested = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHasNested = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
-        if (!empty($whereHasNested)) {
+        if (! empty($whereHasNested)) {
             applyNestedWhereHas($query, $whereHasNested);
         }
 
@@ -48,24 +46,20 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -79,9 +73,6 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -91,7 +82,7 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
         $query->selectRaw($select);
 
         if (empty($where)) {
-            $query->where("uid", $uid);
+            $query->where('uid', $uid);
         } else {
             $query->whereRaw($where);
         }
@@ -108,7 +99,6 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -119,15 +109,14 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('id', $id);
@@ -141,14 +130,14 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id, string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('id', $id);
@@ -160,7 +149,6 @@ class EntertainmentTaskSongRepository extends EntertainmentTaskSongInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

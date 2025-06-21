@@ -15,14 +15,15 @@ class Create extends FormRequest
         return [
             'employee_id' => [
                 'required',
-                new EmployeeRule()
+                new EmployeeRule,
             ],
             'custom_inventories' => 'nullable',
             'custom_inventories.*.id' => 'nullable',
             'inventories' => 'nullable',
-            'inventories.*.id' => 'nullable'
+            'inventories.*.id' => 'nullable',
         ];
     }
+
     /**
      * Determine if the user is authorized to make this request.
      */

@@ -3,9 +3,8 @@
 namespace Modules\Production\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -28,7 +27,7 @@ class ProjectSongList extends Model
         'is_request_delete',
         'created_by',
         'target_name',
-        'reason'
+        'reason',
     ];
 
     protected static function newFactory(): ProjectSongListFactory

@@ -10,10 +10,10 @@ use Modules\Hrd\Console\InitateAvatarColor;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
-use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
-use Modules\Hrd\Console\UpdateTalentaUserIdToEmployeesTable;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateBankIdInBankDetail;
+use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
+use Modules\Hrd\Console\UpdateTalentaUserIdToEmployeesTable;
 
 class HrdServiceProvider extends ServiceProvider
 {
@@ -58,7 +58,7 @@ class HrdServiceProvider extends ServiceProvider
             UpdateTalentaUserIdToEmployeesTable::class,
             SynchronizingTalentUserId::class,
             UpdateBankIdInBankDetail::class,
-            CheckEmployeeResign::class
+            CheckEmployeeResign::class,
         ]);
     }
 
@@ -110,7 +110,7 @@ class HrdServiceProvider extends ServiceProvider
 
         $this->loadViewsFrom(array_merge($this->getPublishableViewPaths(), [$sourcePath]), $this->moduleNameLower);
 
-        $componentNamespace = str_replace('/', '\\', config('modules.namespace').'\\'.$this->moduleName.'\\'.ltrim(config('modules.paths.generator.component-class.path'), config('modules.paths.app_folder','')));
+        $componentNamespace = str_replace('/', '\\', config('modules.namespace').'\\'.$this->moduleName.'\\'.ltrim(config('modules.paths.generator.component-class.path'), config('modules.paths.app_folder', '')));
         Blade::componentNamespace($componentNamespace, $this->moduleNameLower);
     }
 

@@ -6,14 +6,12 @@ use App\Enums\Cache\CacheKey;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\System\BaseRole;
 use App\Repository\UserRepository;
-use DateTime;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
 
-class DashboardService {
+class DashboardService
+{
     private $projectRepo;
 
     private $inventoryRepo;
@@ -55,8 +53,7 @@ class DashboardService {
         GeneralService $generalService,
         UserRepository $userRepo,
         EntertainmentTaskSongRepository $entertainmentTaskRepo
-    )
-    {
+    ) {
         $this->generalService = $generalService;
 
         $this->projectRepo = $projectRepo;
@@ -106,7 +103,7 @@ class DashboardService {
                     'series' => [],
                     'text' => '',
                 ],
-            ]
+            ],
         ];
 
         $user = auth()->user();
@@ -118,9 +115,9 @@ class DashboardService {
         $output = [];
         if ($this->isDirector || auth()->user()->email == 'admin@admin.com') {
             $output = $this->getReportDirector();
-        } else if ($this->isProjectManager) {
+        } elseif ($this->isProjectManager) {
             $output = $this->getReportProjectManager();
-        } else if ($this->isEmployee) {
+        } elseif ($this->isEmployee) {
             $output = $this->getReportProduction();
         }
 
@@ -138,18 +135,18 @@ class DashboardService {
             $whereHas = [
                 [
                     'relation' => 'personInCharges',
-                    'query' => "pic_id = " . auth()->user()->employee_id,
+                    'query' => 'pic_id = '.auth()->user()->employee_id,
                 ],
             ];
         }
 
-        $startDate = date('Y-m') . '-01';
+        $startDate = date('Y-m').'-01';
         $year = date('Y', strtotime($startDate));
         $month = date('m', strtotime($startDate));
         $getLastDay = Carbon::createFromDate((int) $year, (int) $month, 1)
             ->endOfMonth()
             ->format('d');
-        $endDate = date('Y-m') . '-' . $getLastDay;
+        $endDate = date('Y-m').'-'.$getLastDay;
         $where = "project_date >= '{$startDate}' and project_date <= '{$endDate}'";
 
         logging('where projects', [$where]);
@@ -197,17 +194,17 @@ class DashboardService {
     // all in a month
     protected function getReportProduction()
     {
-        $tasks = $this->taskPicHistory->list('id,project_task_id,project_id,employee_id', 'employee_id = ' . auth()->user()->employee_id, [
+        $tasks = $this->taskPicHistory->list('id,project_task_id,project_id,employee_id', 'employee_id = '.auth()->user()->employee_id, [
             'project' => function ($q) {
                 $q->whereBetween('project_date', [$this->startDate, $this->endDate]);
-            }
+            },
         ]);
 
         $tasks = collect((object) $tasks)->filter(function ($filter) {
             return $filter->project;
         });
 
-        $group = collect($tasks)->groupBy("project_id")->toArray();
+        $group = collect($tasks)->groupBy('project_id')->toArray();
 
         $keys = array_keys($group);
 
@@ -219,13 +216,13 @@ class DashboardService {
         return [
             'left' => [
                 [
-                    'text' => __("global.totalTaskInMonth"),
+                    'text' => __('global.totalTaskInMonth'),
                     'value' => array_sum($totalTask),
                 ],
                 [
                     'text' => __('global.totalProjectInMonth'),
                     'value' => count($keys),
-                ]
+                ],
             ],
             // 'right' => [
             //     [
@@ -258,8 +255,8 @@ class DashboardService {
             [
                 [
                     'relation' => 'personInCharges',
-                    'query' => "pic_id = " . auth()->user()->employee_id,
-                ]
+                    'query' => 'pic_id = '.auth()->user()->employee_id,
+                ],
             ]
         );
         $upcomingGroup = collect($upcomingProject)->groupBy('project_date')->toArray();
@@ -297,19 +294,19 @@ class DashboardService {
         ];
 
         // get total team member
-        $member = $this->employeeRepo->list('id', 'boss_id = ' . auth()->user()->employee_id);
+        $member = $this->employeeRepo->list('id', 'boss_id = '.auth()->user()->employee_id);
 
         // get task to be checked
-        $tasks = $this->taskPic->list('id', 'employee_id = ' . auth()->user()->employee_id);
+        $tasks = $this->taskPic->list('id', 'employee_id = '.auth()->user()->employee_id);
 
         return [
             'left' => [
                 [
-                    'text' => __("global.taskToDo"),
+                    'text' => __('global.taskToDo'),
                     'value' => $tasks->count(),
                 ],
                 [
-                    'text' => __("global.totalTeamMember"),
+                    'text' => __('global.totalTeamMember'),
                     'value' => $member->count(),
                 ],
             ],
@@ -326,7 +323,7 @@ class DashboardService {
                     'options' => $upcomingOptions,
                     'value' => $upcomingProject->count(),
                 ],
-            ]
+            ],
         ];
     }
 
@@ -342,7 +339,7 @@ class DashboardService {
             return $itemsPrice;
         })->sum();
 
-        $employees = $this->employeeRepo->list('id,position_id', 'status != ' . \App\Enums\Employee\Status::Inactive->value, ['position:id,name']);
+        $employees = $this->employeeRepo->list('id,position_id', 'status != '.\App\Enums\Employee\Status::Inactive->value, ['position:id,name']);
         $employeesGroup = collect($employees)->groupBy('position.name')->toArray();
         $positionLabels = array_keys($employeesGroup);
         $positionSeries = [];
@@ -375,7 +372,7 @@ class DashboardService {
             'labels' => $positionLabels,
         ];
 
-        $projects = $this->projectRepo->list('id,status', "project_date >= '" . $this->startDate . "' and project_date <= '" . $this->endDate . "'");
+        $projects = $this->projectRepo->list('id,status', "project_date >= '".$this->startDate."' and project_date <= '".$this->endDate."'");
         $projectsGroup = collect($projects)->groupBy('status_text')->toArray();
         $projectLabels = array_keys($projectsGroup);
         $projectSeries = [];
@@ -411,13 +408,13 @@ class DashboardService {
         return [
             'left' => [
                 [
-                    'text' => __("global.totalEquipmentPrice"),
-                    'value' => 'Rp. ' . number_format($totalInventoryPrice, 2),
+                    'text' => __('global.totalEquipmentPrice'),
+                    'value' => 'Rp. '.number_format($totalInventoryPrice, 2),
                     'is_hide_nominal' => true,
                 ],
                 [
-                    'text' => __("global.totalIncome"),
-                    'value' => 'Rp. ' . number_format($totalIncome, 2),
+                    'text' => __('global.totalIncome'),
+                    'value' => 'Rp. '.number_format($totalIncome, 2),
                     'is_hide_nominal' => true,
                 ],
             ],
@@ -434,14 +431,12 @@ class DashboardService {
                     'options' => $positionOptions,
                     'value' => $employees->count(),
                 ],
-            ]
+            ],
         ];
     }
 
     /**
      * Function to get project calendar based on user role and months
-     *
-     * @return array
      */
     public function getProjectCalendars(): array
     {
@@ -449,11 +444,11 @@ class DashboardService {
 
         $month = request('month') == 0 ? date('m') : request('month');
         $year = request('year') == 0 ? date('Y') : request('year');
-        $startDate = $year . '-' . $month . '-01';
+        $startDate = $year.'-'.$month.'-01';
         $getLastDay = Carbon::createFromDate((int) $year, (int) $month, 1)
             ->endOfMonth()
             ->format('d');
-        $endDate = $year . '-' . $month . '-' . $getLastDay;
+        $endDate = $year.'-'.$month.'-'.$getLastDay;
 
         $superUserRole = getSettingByKey('super_user_role');
         $projectManagerRole = json_decode(getSettingByKey('project_manager_role'));
@@ -462,7 +457,7 @@ class DashboardService {
         $roleId = $roles[0]->id;
         $employeeId = $user->employee_id;
 
-        $where = "project_date >= '" . $startDate . "' and project_date <= '" . $endDate . "'";
+        $where = "project_date >= '".$startDate."' and project_date <= '".$endDate."'";
 
         $whereHas = [];
 
@@ -470,41 +465,41 @@ class DashboardService {
             $roleId != $superUserRole &&
             in_array($roleId, $projectManagerRole) &&
             $roles[0]->name != BaseRole::ProjectManagerAdmin->value &&
-            !$user->hasRole(BaseRole::ProjectManagerEntertainment->value)
+            ! $user->hasRole(BaseRole::ProjectManagerEntertainment->value)
         ) {
             $whereHas[] = [
                 'relation' => 'personInCharges',
-                'query' => 'pic_id = ' . $employeeId,
+                'query' => 'pic_id = '.$employeeId,
             ];
-        } else if (isDirector() || isItSupport() || $user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
+        } elseif (isDirector() || isItSupport() || $user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
             $whereHas = [];
-        } else if ($roleId != $superUserRole && !in_array($roleId, $projectManagerRole)) {
+        } elseif ($roleId != $superUserRole && ! in_array($roleId, $projectManagerRole)) {
 
             if ($user->hasRole(BaseRole::Entertainment->value)) {
                 // entertainment task song
                 $whereHas[] = [
                     'relation' => 'entertainmentTaskSong',
-                    'query' => "employee_id = {$user->employee_id}"
+                    'query' => "employee_id = {$user->employee_id}",
                 ];
 
                 // vj
                 $whereHas[] = [
                     'relation' => 'vjs',
                     'query' => "employee_id = {$user->employee_id}",
-                    'type' => 'or'
+                    'type' => 'or',
                 ];
             } else {
-                $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
+                $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = '.$employeeId);
 
                 if ($projectTaskPic->count() > 0) {
                     $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
                     $projectTaskIds = implode("','", $projectTasks);
-                    $projectTaskIds = "'" . $projectTaskIds;
+                    $projectTaskIds = "'".$projectTaskIds;
                     $projectTaskIds .= "'";
 
-                    $hasQuery = "id IN (" . $projectTaskIds . ")";
+                    $hasQuery = 'id IN ('.$projectTaskIds.')';
                 } else {
-                    $hasQuery = "id IN (0)";
+                    $hasQuery = 'id IN (0)';
                 }
 
                 $whereHas[] = [
@@ -517,7 +512,7 @@ class DashboardService {
         $data = $this->projectRepo->list('id,uid,name,project_date,venue', $where, [
             'personInCharges:id,project_id,pic_id',
             'personInCharges.employee:id,uid,name',
-            'vjs.employee:id,nickname'
+            'vjs.employee:id,nickname',
         ], $whereHas, 'project_date ASC');
 
         logging('dashboard project calendar', ['where' => $where, 'wherehas' => $whereHas]);
@@ -563,11 +558,11 @@ class DashboardService {
     {
         try {
             $user = auth()->user();
-            $cacheId = CacheKey::ProjectNeedToBeComplete->value . auth()->id();
+            $cacheId = CacheKey::ProjectNeedToBeComplete->value.auth()->id();
 
             $output = $this->generalService->getCache($cacheId);
 
-            if (!$output) {
+            if (! $output) {
                 $output = Cache::remember($cacheId, 60 * 60 * 2, function () use ($user) {
                     $status = [
                         ProjectStatus::OnGoing->value,
@@ -578,24 +573,24 @@ class DashboardService {
                     if ($user->hasRole(BaseRole::ProjectManager->value)) {
                         $whereHas[] = [
                             'relation' => 'personInCharges',
-                            'query' => "pic_id = " . $user->load('employee')->employee->id
+                            'query' => 'pic_id = '.$user->load('employee')->employee->id,
                         ];
                     }
 
-                    $where = "project_date < NOW() AND status IN (" . implode(',', $status) . ")";
+                    $where = 'project_date < NOW() AND status IN ('.implode(',', $status).')';
 
                     $data = $this->projectRepo->list(
                         select: 'id,uid,name,project_date,status,classification',
                         where: $where,
                         relation: [
                             'personInCharges:id,project_id,pic_id',
-                            'personInCharges.employee:id,nickname'
+                            'personInCharges.employee:id,nickname',
                         ],
                         has: [
-                            'personInCharges'
+                            'personInCharges',
                         ],
                         whereHas: $whereHas,
-                        orderBy: "id DESC",
+                        orderBy: 'id DESC',
                     );
 
                     $data = collect((object) $data)->map(function ($project) {
@@ -614,7 +609,7 @@ class DashboardService {
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $output
             );
         } catch (\Throwable $th) {
@@ -624,8 +619,6 @@ class DashboardService {
 
     /**
      * Get all project songs for entertainment division
-     *
-     * @return array
      */
     public function getProjectSong(): array
     {
@@ -637,16 +630,16 @@ class DashboardService {
             if ($user->hasRole(BaseRole::Entertainment->value)) {
                 $whereHas[] = [
                     'relation' => 'entertainmentTaskSong',
-                    'query' => "employee_id = " . $user->load('employee')->employee->id
+                    'query' => 'employee_id = '.$user->load('employee')->employee->id,
                 ];
             }
 
             $projects = $this->projectRepo->list(
                 select: 'id,name,project_date,uid',
-                where: "project_date >= '" . date('Y-m-d') . "'",
+                where: "project_date >= '".date('Y-m-d')."'",
                 relation: [
                     'songs:id,project_id,name',
-                    'songs.task:id,project_song_list_id,employee_id'
+                    'songs.task:id,project_song_list_id,employee_id',
                 ],
                 whereHas: $whereHas,
                 limit: 50
@@ -663,7 +656,7 @@ class DashboardService {
                     if ($song->task) {
                         $assignSong[] = $song;
                     }
-                    if (!$song->task) {
+                    if (! $song->task) {
                         $unassignSong[] = $song;
                     }
                 }
@@ -689,8 +682,6 @@ class DashboardService {
      * 1. Less than 1 week use red
      * 2. Less than 4 week use orange-darken-3
      * 3. Less than 3 month use green-accent-3
-     *
-     * @return array
      */
     public function getProjectDeadline(): array
     {
@@ -709,18 +700,18 @@ class DashboardService {
                 'relation' => 'personInCharges',
                 'query' => "pic_id = {$employeeId}",
             ];
-        } else if ($roleId != $projectManagerRole || $roleId != $superUserRole) {
+        } elseif ($roleId != $projectManagerRole || $roleId != $superUserRole) {
             // get based on user task pic
-            $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = ' . $employeeId);
+            $projectTaskPic = $this->taskPic->list('id,project_task_id', 'employee_id = '.$employeeId);
             if ($projectTaskPic->count() > 0) {
                 $projectTasks = collect($projectTaskPic)->pluck('project_task_id')->toArray();
                 $projectTaskIds = implode("','", $projectTasks);
-                $projectTaskIds = "'" . $projectTaskIds;
+                $projectTaskIds = "'".$projectTaskIds;
                 $projectTaskIds .= "'";
 
-                $hasQuery = "id IN (" . $projectTaskIds . ")";
+                $hasQuery = 'id IN ('.$projectTaskIds.')';
             } else {
-                $hasQuery = "id IN (0)";
+                $hasQuery = 'id IN (0)';
             }
             $whereHas[] = [
                 'relation' => 'tasks',
@@ -728,7 +719,7 @@ class DashboardService {
             ];
         }
 
-        $where = "project_date >= '" . date('Y-m-d') . "' and status = " . \App\Enums\Production\ProjectStatus::OnGoing->value;
+        $where = "project_date >= '".date('Y-m-d')."' and status = ".\App\Enums\Production\ProjectStatus::OnGoing->value;
 
         $data = $this->projectRepo->list('id,uid,name,project_date', $where, [], $whereHas, 'project_date ASC', 8);
 
@@ -745,9 +736,9 @@ class DashboardService {
 
             if ($d <= 7) {
                 $color = 'red';
-            } else if ($d > 7 && $d <= 31) {
+            } elseif ($d > 7 && $d <= 31) {
                 $color = 'orange-darken-3';
-            } else if ($d > 31) {
+            } elseif ($d > 31) {
                 $color = 'green-accent-3';
             }
 
@@ -769,15 +760,13 @@ class DashboardService {
 
     /**
      * This function only for 'Project Manager Entertainment' role only
-     *
-     * @return array
      */
     public function getVjWorkload(): array
     {
         try {
             $filter = request('month');
 
-            if ((!empty($filter)) && ($filter != 'null')) {
+            if ((! empty($filter)) && ($filter != 'null')) {
                 $now = Carbon::parse($filter)->startOfMonth();
                 $end = Carbon::parse($filter)->endOfMonth();
             } else {
@@ -797,10 +786,10 @@ class DashboardService {
                         $query->selectRaw('id,name,project_date')
                             ->with([
                                 'personInCharges:id,project_id,pic_id',
-                                'personInCharges.employee:id,nickname'
+                                'personInCharges.employee:id,nickname',
                             ])
                             ->whereBetween('project_date', $whereDate);
-                    }
+                    },
                 ]
             );
 
@@ -815,7 +804,7 @@ class DashboardService {
                         'project_date' => Carbon::parse($project->project->project_date)->format('d F Y'),
                         'status' => $project->project->status_text,
                         'status_color' => $project->project->status_color,
-                        'pic' => collect($project->project->personInCharges)->pluck('employee.nickname')->join(',')
+                        'pic' => collect($project->project->personInCharges)->pluck('employee.nickname')->join(','),
                     ];
                 });
 
@@ -824,24 +813,24 @@ class DashboardService {
                     'name' => $employee->employee->nickname,
                     'employee_id' => $employee->employee->employee_id,
                     'workload' => $workload,
-                    'workload_per_month' => $workload->count()
+                    'workload_per_month' => $workload->count(),
                 ];
             }
             $totalWorkload = collect($output)->pluck('workload_per_month')->all();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'isEmpty' => collect($totalWorkload)->sum() > 0 ? false : true,
-                    'chartTitle' => $now->format('d F') . ' - ' . $end->format('d F Y'),
+                    'chartTitle' => $now->format('d F').' - '.$end->format('d F Y'),
                     'chartData' => [
                         'labels' => collect($output)->pluck('name')->all(),
                         'datasets' => [
                             [
                                 'backgroundColor' => ['#41B883', '#E46651', '#00D8FF', '#DD1B16'],
-                                'data' => $totalWorkload
-                            ]
-                        ]
+                                'data' => $totalWorkload,
+                            ],
+                        ],
                     ],
                     'employees' => $output,
                 ]
@@ -855,7 +844,7 @@ class DashboardService {
     {
         $filter = request('month');
 
-        if ((!empty($filter)) && ($filter != 'null')) {
+        if ((! empty($filter)) && ($filter != 'null')) {
             $now = Carbon::parse($filter)->startOfMonth();
             $end = Carbon::parse($filter)->endOfMonth();
         } else {
@@ -868,10 +857,10 @@ class DashboardService {
         $users = $this->userRepo->list(select: 'id', whereRole: [BaseRole::Entertainment->value, BaseRole::ProjectManagerEntertainment->value]);
 
         $entertainments = $this->employeeRepo->list(
-            select: "id,name,email,employee_id,avatar_color",
+            select: 'id,name,email,employee_id,avatar_color',
             whereIn: [
                 'key' => 'user_id',
-                'value' => collect($users)->pluck('id')->toArray()
+                'value' => collect($users)->pluck('id')->toArray(),
             ]
         );
 
@@ -886,16 +875,16 @@ class DashboardService {
                 where: "employee_id = {$entertainment->id}",
                 relation: [
                     'project:id,name,project_date',
-                    'song:id,name'
+                    'song:id,name',
                 ],
                 whereHasNested: [
                     'project' => function ($q) use ($whereDate) {
                         $q->whereBetween('project_date', $whereDate);
-                    }
+                    },
                 ]
             );
 
-            $groups = collect((object) $workload)->groupBy('project_id', false)->map(function ($item) use ($totalWorkload) {
+            $groups = collect((object) $workload)->groupBy('project_id', false)->map(function ($item) {
                 return [
                     'name' => $item[0]->project->name,
                     'project_date' => date('d F Y', strtotime($item[0]->project->project_date)),
@@ -922,19 +911,19 @@ class DashboardService {
                         'pointBorderColor' => '#ffffff',
                         'pointHoverBackgroundColor' => '#fff',
                         'pointHoverBorderColor' => 'rgba(255,99,132,1)',
-                        'data' => collect($outputWorkload)->pluck('totalWorkload')->toArray()
-                    ]
+                        'data' => collect($outputWorkload)->pluck('totalWorkload')->toArray(),
+                    ],
                 ],
             ],
         ];
 
         return generalResponse(
-            message: "Success",
+            message: 'Success',
             data: [
                 'chart' => $chart,
                 'employees' => $outputWorkload,
-                'is_empty' => !(bool) collect($outputWorkload)->pluck('totalWorkload')->sum() > 0,
-                'chart_title' => $now->format('d F Y') . ' - ' . $end->format('d F Y')
+                'is_empty' => ! (bool) collect($outputWorkload)->pluck('totalWorkload')->sum() > 0,
+                'chart_title' => $now->format('d F Y').' - '.$end->format('d F Y'),
             ]
         );
     }

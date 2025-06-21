@@ -14,7 +14,7 @@ class ProjectClassController extends Controller
 
     public function __construct()
     {
-        $this->service = new ProjectClassService();
+        $this->service = new ProjectClassService;
     }
 
     public function getAll()
@@ -53,7 +53,7 @@ class ProjectClassController extends Controller
      */
     public function update(Update $request, $id)
     {
-        return apiResponse($this->service->update($request->validated(), 'dummy', 'id = ' . $id));
+        return apiResponse($this->service->update($request->validated(), 'dummy', 'id = '.$id));
     }
 
     /**

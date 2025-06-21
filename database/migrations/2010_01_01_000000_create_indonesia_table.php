@@ -81,4 +81,4 @@ class CreateIndonesiaTable extends Migration
 
         Schema::drop(config('indonesia.table_prefix').'villages');
     }
-};
+}

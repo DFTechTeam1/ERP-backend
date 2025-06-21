@@ -6,7 +6,6 @@ use App\Enums\Employee\LevelStaff;
 use App\Rules\Employee\BossRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Unique;
 
 class UpdateEmployment extends FormRequest
 {
@@ -29,8 +28,8 @@ class UpdateEmployment extends FormRequest
             'status' => 'required',
             'join_date' => 'required',
             'boss_id' => [
-                new BossRule(),
-            ]
+                new BossRule,
+            ],
         ];
     }
 

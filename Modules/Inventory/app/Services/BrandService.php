@@ -2,11 +2,11 @@
 
 namespace Modules\Inventory\Services;
 
-use App\Enums\ErrorCode\Code;
+use Illuminate\Support\Facades\DB;
 use Modules\Inventory\Repository\BrandRepository;
-use \Illuminate\Support\Facades\DB;
 
-class BrandService {
+class BrandService
+{
     private $repo;
 
     /**
@@ -22,8 +22,6 @@ class BrandService {
      *
      * $data will have
      * File 'excel'
-     * @param array $data
-     * @return array
      */
     public function import(array $data): array
     {
@@ -40,12 +38,12 @@ class BrandService {
                 unset($value[1]);
 
                 foreach (array_values($value) as $val) {
-                    $check = $this->repo->show('dummy', 'id', [], "lower(name) = '" . strtolower($val[0]) . "'");
+                    $check = $this->repo->show('dummy', 'id', [], "lower(name) = '".strtolower($val[0])."'");
 
-                    if (!$check) {
+                    if (! $check) {
                         $this->repo->store(['name' => $val[0]]);
                     } else {
-                        $error[] = $val[0] . __('global.alreadyRegistered');
+                        $error[] = $val[0].__('global.alreadyRegistered');
                     }
                 }
             }
@@ -53,7 +51,7 @@ class BrandService {
             DB::commit();
 
             return generalResponse(
-                __("global.importBrandSuccess"),
+                __('global.importBrandSuccess'),
                 false,
                 [
                     'error' => $error,
@@ -68,19 +66,12 @@ class BrandService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -88,22 +79,22 @@ class BrandService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "name asc";
+            $sort = 'name asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
 
@@ -135,8 +126,7 @@ class BrandService {
         string $select = '*',
         string $where = '',
         array $relation = [],
-    )
-    {
+    ) {
         $data = $this->repo->list($select, $where, $relation);
 
         return generalResponse(
@@ -153,9 +143,6 @@ class BrandService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -174,10 +161,6 @@ class BrandService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
@@ -195,19 +178,12 @@ class BrandService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -223,7 +199,6 @@ class BrandService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -242,10 +217,6 @@ class BrandService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

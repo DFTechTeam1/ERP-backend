@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class CancelRequestTeamMemberJob implements ShouldQueue
 {
@@ -16,7 +16,6 @@ class CancelRequestTeamMemberJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param string $uid
      */
     public function __construct(string $uid)
     {

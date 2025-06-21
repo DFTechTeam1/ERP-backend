@@ -5,30 +5,31 @@ namespace App\Services;
 use App\Enums\System\BaseRole;
 use App\Repository\MenuRepository;
 
-class MenuService {
+class MenuService
+{
     private $repo;
 
     public function __construct()
     {
-        $this->repo = new MenuRepository();
+        $this->repo = new MenuRepository;
     }
 
-    public function getNewFormattedMenu(array $permissionData = [], array $roles)
+    public function getNewFormattedMenu(array $permissionData, array $roles)
     {
         $allowedRoleForOfficeMenu = [
             BaseRole::Root->value,
             BaseRole::Director->value,
             BaseRole::Hrd->value,
             BaseRole::Finance->value,
-            BaseRole::ItSupport->value
+            BaseRole::ItSupport->value,
         ];
-        $menus = file_get_contents(storage_path('app/public/menu/menu.json'));
+        $menus = file_get_contents(public_path('menu-item/menu.json'));
         $menus = json_decode($menus, true);
 
         // get menu based on permission
         $old = $menus['old'];
         $new = $menus['new'];
-        $old = collect($old)->map(function ($oldMenu) use($permissionData) {
+        $old = collect($old)->map(function ($oldMenu) use ($permissionData) {
             $childs = collect($oldMenu['childs'])->filter(function ($filter) use ($permissionData) {
                 return in_array($filter['permission'], collect($permissionData)->pluck('name')->toArray());
             })->values()->all();
@@ -47,7 +48,7 @@ class MenuService {
         })->values()->all();
 
         $new = collect($new)->map(function ($map) use ($permissionData) {
-            $childs = collect($map['childs'])->filter(function ($child) use($permissionData) {
+            $childs = collect($map['childs'])->filter(function ($child) use ($permissionData) {
                 return in_array($child['permission'], collect($permissionData)->pluck('name')->toArray());
             })->values()->all();
 
@@ -57,8 +58,8 @@ class MenuService {
         })->all();
 
         return [
-            'old'=> $old, // this menu is for old interface
-            'new' => $new // this menu is for new interface
+            'old' => $old, // this menu is for old interface
+            'new' => $new, // this menu is for new interface
         ];
     }
 
@@ -70,7 +71,7 @@ class MenuService {
         } else {
             $permissions = $permissionsData;
         }
-        if (!empty($permissions)) {
+        if (! empty($permissions)) {
             $permissions = collect($permissions)->pluck('name')->all();
         }
 
@@ -78,7 +79,7 @@ class MenuService {
         $menuGroups = \App\Enums\Menu\Group::cases();
 
         $headerLang = request()->header('App-Language');
-        if (!$headerLang) {
+        if (! $headerLang) {
             $headerLang = 'en';
         }
 
@@ -88,7 +89,7 @@ class MenuService {
 
             if ($headerLang == 'en') {
                 $item['name'] = $item['lang_en'];
-            } else if ($headerLang == 'id') {
+            } elseif ($headerLang == 'id') {
                 $item['name'] = $item['lang_id'];
             }
 
@@ -100,11 +101,11 @@ class MenuService {
 
             foreach ($data as $d) {
                 if ($item->id == $d->parent_id) {
-                    if (!empty($d->permission)) {
+                    if (! empty($d->permission)) {
                         if (gettype(array_search($d->permission, $permissions)) != 'boolean') {
                             if ($headerLang == 'en') {
                                 $d['name'] = $d['lang_en'];
-                            } else if ($headerLang == 'id') {
+                            } elseif ($headerLang == 'id') {
                                 $d['name'] = $d['lang_id'];
                             }
 
@@ -115,7 +116,7 @@ class MenuService {
                 }
             }
 
-            if (!empty($item->permission)) {
+            if (! empty($item->permission)) {
                 if (gettype(array_search($item->permission, $permissions)) == 'boolean') {
                     $isShow = false;
                 } else {
@@ -154,19 +155,12 @@ class MenuService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
             $page = request('page') ?? 1;
@@ -175,7 +169,7 @@ class MenuService {
             $search = request('search');
             $whereHas = [];
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
             }
 
             $paginated = $this->repo->pagination(

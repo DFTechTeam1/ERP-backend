@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class TaskIsCompleteNotification extends Notification
 {
@@ -36,7 +35,7 @@ class TaskIsCompleteNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            TelegramChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -63,7 +62,7 @@ class TaskIsCompleteNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => 'Halo ' . $this->employee->nickname . ". Tugas " . $this->task->name . " sudah selesai dan sudah tidak ada kesalahan. Kamu bisa melanjutkan tugas yang lain. SEMANGAT :)",
+            'message' => 'Halo '.$this->employee->nickname.'. Tugas '.$this->task->name.' sudah selesai dan sudah tidak ada kesalahan. Kamu bisa melanjutkan tugas yang lain. SEMANGAT :)',
         ];
     }
 
@@ -72,7 +71,7 @@ class TaskIsCompleteNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->employee->nickname . ". Tugas " . $this->task->name . " sudah selesai dan sudah tidak ada kesalahan. Kamu bisa melanjutkan tugas yang lain. SEMANGAT :)",
+                'text' => 'Halo '.$this->employee->nickname.'. Tugas '.$this->task->name.' sudah selesai dan sudah tidak ada kesalahan. Kamu bisa melanjutkan tugas yang lain. SEMANGAT :)',
             ],
         ];
 

@@ -2,11 +2,11 @@
 
 namespace Modules\Inventory\Services;
 
-use App\Enums\ErrorCode\Code;
+use Illuminate\Support\Facades\DB;
 use Modules\Inventory\Repository\SupplierRepository;
-use \Illuminate\Support\Facades\DB;
 
-class SupplierService {
+class SupplierService
+{
     private $repo;
 
     /**
@@ -22,8 +22,6 @@ class SupplierService {
      *
      * $data will have
      * File 'excel'
-     * @param array $data
-     * @return array
      */
     public function import(array $data): array
     {
@@ -40,12 +38,12 @@ class SupplierService {
                 unset($value[1]);
 
                 foreach (array_values($value) as $val) {
-                    $check = $this->repo->show('dummy', 'id', [], "lower(name) = '" . strtolower($val[0]) . "'");
+                    $check = $this->repo->show('dummy', 'id', [], "lower(name) = '".strtolower($val[0])."'");
 
-                    if (!$check) {
+                    if (! $check) {
                         $this->repo->store(['name' => $val[0]]);
                     } else {
-                        $error[] = $val[0] . __('global.alreadyRegistered');
+                        $error[] = $val[0].__('global.alreadyRegistered');
                     }
                 }
             }
@@ -53,7 +51,7 @@ class SupplierService {
             DB::commit();
 
             return generalResponse(
-                __("global.importSupplierSuccess"),
+                __('global.importSupplierSuccess'),
                 false,
                 [
                     'error' => $error,
@@ -68,19 +66,12 @@ class SupplierService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -88,7 +79,7 @@ class SupplierService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
@@ -118,8 +109,7 @@ class SupplierService {
         string $select = '*',
         string $where = '',
         array $relation = [],
-    )
-    {
+    ) {
         $data = $this->repo->list($select, $where, $relation);
 
         return generalResponse(
@@ -136,9 +126,6 @@ class SupplierService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -157,10 +144,6 @@ class SupplierService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
@@ -168,7 +151,7 @@ class SupplierService {
             $this->repo->store($data);
 
             return generalResponse(
-                __("global.successCreateSupplier"),
+                __('global.successCreateSupplier'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -179,18 +162,13 @@ class SupplierService {
     /**
      * Update selected data
      *
-     * @param array $data
-     * @param integer $id
-     * @param string $where
-     *
-     * @return array
+     * @param  int  $id
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -206,7 +184,6 @@ class SupplierService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -225,10 +202,6 @@ class SupplierService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

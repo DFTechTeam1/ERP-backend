@@ -30,7 +30,7 @@ return new class extends Migration
         Schema::table('project_references', function (Blueprint $table) {
             $table->dropForeign(['project_id']);
         });
-        
+
         Schema::dropIfExists('project_references');
     }
 };

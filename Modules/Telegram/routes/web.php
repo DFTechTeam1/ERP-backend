@@ -15,5 +15,5 @@ use Modules\Telegram\Http\Controllers\TelegramController;
 */
 
 Route::group([], function () {
-//    Route::resource('telegram', TelegramController::class)->names('telegram');
+    //    Route::resource('telegram', TelegramController::class)->names('telegram');
 });

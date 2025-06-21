@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class ApproveRequestTeamMemberJob implements ShouldQueue
 {
@@ -29,11 +29,11 @@ class ApproveRequestTeamMemberJob implements ShouldQueue
     {
         foreach ($this->ids as $id) {
             $transfer = \Modules\Production\Models\TransferTeamMember::with([
-                    'employee:id,name,email,nickname',
-                    'requestToPerson:id,name,email,nickname',
-                    'requestByPerson:id,name,email,nickname',
-                    'project:id,name'
-                ])
+                'employee:id,name,email,nickname',
+                'requestToPerson:id,name,email,nickname',
+                'requestByPerson:id,name,email,nickname',
+                'project:id,name',
+            ])
                 ->find($id);
 
             $requested = \Modules\Hrd\Models\Employee::find($transfer->requested_by);

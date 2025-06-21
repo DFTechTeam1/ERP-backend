@@ -31,7 +31,7 @@ class EmployeerCacheJob implements ShouldQueue
                 ->with([
                     'position',
                     'user',
-                    'boss'
+                    'boss',
                 ]);
 
             return $query->get();

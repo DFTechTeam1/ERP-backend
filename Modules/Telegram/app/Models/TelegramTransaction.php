@@ -2,8 +2,8 @@
 
 namespace Modules\Telegram\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Telegram\Database\Factories\TelegramTransactionFactory;
 
 class TelegramTransaction extends Model
@@ -17,11 +17,11 @@ class TelegramTransaction extends Model
         'chat_id',
         'message_id',
         'identity',
-        'status'
+        'status',
     ];
 
     protected static function newFactory(): TelegramTransactionFactory
     {
-        //return TelegramTransactionFactory::new();
+        // return TelegramTransactionFactory::new();
     }
 }

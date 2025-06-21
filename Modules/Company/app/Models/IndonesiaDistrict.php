@@ -2,10 +2,9 @@
 
 namespace Modules\Company\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use KodePandai\Indonesia\Models\District;
 use Modules\Company\Database\Factories\DistrictFactory;
 
 // use Modules\Company\Database\Factories\IndonesiaDistrictFactory;

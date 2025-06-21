@@ -2,17 +2,11 @@
 
 namespace Modules\Hrd\Http\Requests\Employee;
 
-use App\Enums\Employee\Education;
 use App\Enums\Employee\Gender;
-use App\Enums\Employee\LevelStaff;
-use App\Enums\Employee\MaritalStatus;
-use App\Enums\Employee\ProbationStatus;
-use App\Enums\Employee\Religion;
 use App\Enums\Employee\MartialStatus;
+use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
 use App\Rules\Employee\BossRule;
-use App\Rules\Employee\InactiveEmployeeRule;
-use App\Rules\Employee\OnlyFilledRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
@@ -30,7 +24,7 @@ class Update extends FormRequest
             'nickname' => 'required',
             'email' => [
                 'required',
-                new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'email'),
+                new \App\Rules\UniqueLowerRule(new Employee, $this->route('uid'), 'email'),
             ],
             'date_of_birth' => 'required',
             'place_of_birth' => 'required',
@@ -47,7 +41,7 @@ class Update extends FormRequest
                 'required',
                 'max:16',
                 'min:16',
-                new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'id_number'),
+                new \App\Rules\UniqueLowerRule(new Employee, $this->route('uid'), 'id_number'),
             ],
             'address' => 'required',
             'current_address' => 'required_if:is_residence_same,1',
@@ -55,7 +49,7 @@ class Update extends FormRequest
             'position_id' => 'required',
             'employee_id' => [
                 'required',
-                new \App\Rules\UniqueLowerRule(new Employee(), $this->route('uid'), 'employee_id'),
+                new \App\Rules\UniqueLowerRule(new Employee, $this->route('uid'), 'employee_id'),
             ],
             'level_staff' => [
                 'nullable',
@@ -64,7 +58,7 @@ class Update extends FormRequest
                 'nullable',
             ],
             'boss_id' => [
-                new BossRule(),
+                new BossRule,
             ],
             'status' => [
                 'required',
@@ -113,19 +107,19 @@ class Update extends FormRequest
 
             'id_number_photo' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                File::types(['jpeg', 'jpg', 'png', 'webp']),
             ],
             'npwp_photo' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                File::types(['jpeg', 'jpg', 'png', 'webp']),
             ],
             'bpjs_photo' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                File::types(['jpeg', 'jpg', 'png', 'webp']),
             ],
             'kk_photo' => [
                 'nullable',
-                File::types(['jpeg', 'jpg', 'png', 'webp'])
+                File::types(['jpeg', 'jpg', 'png', 'webp']),
             ],
         ];
 

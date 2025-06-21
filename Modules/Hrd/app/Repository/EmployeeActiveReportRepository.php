@@ -5,32 +5,30 @@ namespace Modules\Hrd\Repository;
 use Modules\Hrd\Models\EmployeeActiveReport;
 use Modules\Hrd\Repository\Interface\EmployeeActiveReportInterface;
 
-class EmployeeActiveReportRepository extends EmployeeActiveReportInterface {
+class EmployeeActiveReportRepository extends EmployeeActiveReportInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EmployeeActiveReport();
+        $this->model = new EmployeeActiveReport;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,24 +42,20 @@ class EmployeeActiveReportRepository extends EmployeeActiveReportInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -75,9 +69,6 @@ class EmployeeActiveReportRepository extends EmployeeActiveReportInterface {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -86,10 +77,10 @@ class EmployeeActiveReportRepository extends EmployeeActiveReportInterface {
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where("uid", $uid);
+            $query->where('uid', $uid);
         }
 
         if ($relation) {
@@ -104,7 +95,6 @@ class EmployeeActiveReportRepository extends EmployeeActiveReportInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -115,15 +105,14 @@ class EmployeeActiveReportRepository extends EmployeeActiveReportInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -137,7 +126,7 @@ class EmployeeActiveReportRepository extends EmployeeActiveReportInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -149,7 +138,6 @@ class EmployeeActiveReportRepository extends EmployeeActiveReportInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

@@ -3,9 +3,10 @@
 namespace Modules\Company\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Company\Database\Factories\DivisionBackupFactory;
 
 class DivisionBackup extends Model
@@ -45,7 +46,7 @@ class DivisionBackup extends Model
 
     public function scopeFindByName(Builder $query, string $name)
     {
-        return $query->whereRaw("LOWER(name) = '" . strtolower($name) . "'")
+        return $query->whereRaw("LOWER(name) = '".strtolower($name)."'")
             ->first();
     }
 }

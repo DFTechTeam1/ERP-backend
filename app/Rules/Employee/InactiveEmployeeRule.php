@@ -29,15 +29,15 @@ class InactiveEmployeeRule implements ValidationRule
     {
         $query = $this->model->query();
 
-        if (!empty($this->uid)) {
+        if (! empty($this->uid)) {
             $query->where('uid', '!=', $this->uid);
         }
 
-        if($attribute == 'name') {
+        if ($attribute == 'name') {
             $query->where(DB::raw('lower(name)'), strtolower($value));
-        } elseif($attribute == 'email') {
+        } elseif ($attribute == 'email') {
             $query->where('email', $value);
-        } elseif($attribute == 'nik') {
+        } elseif ($attribute == 'nik') {
             $query->where('nik', $value);
         }
 

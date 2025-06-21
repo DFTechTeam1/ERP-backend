@@ -29,7 +29,7 @@ class FormInteractiveUpdate extends FormRequest
             'name' => [
                 'required',
                 Rule::unique('form_interactives', 'name')
-                    ->ignore($this->route('uid'), 'uid')
+                    ->ignore($this->route('uid'), 'uid'),
             ],
             'forms.*.name' => 'required',
             'image' => 'nullable',
@@ -39,7 +39,6 @@ class FormInteractiveUpdate extends FormRequest
     /**
      * Return validation errors as json
      *
-     * @param Validator $validator
      * @return void
      */
     public function failedValidation(Validator $validator)

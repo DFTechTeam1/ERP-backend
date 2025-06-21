@@ -34,7 +34,7 @@ return new class extends Migration
             $table->dropForeign(['project_task_id']);
             $table->dropForeign(['employee_id']);
         });
-        
+
         Schema::dropIfExists('project_task_pics');
     }
 };

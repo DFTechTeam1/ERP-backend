@@ -4,8 +4,8 @@ namespace Modules\Telegram\Console;
 
 use App\Services\Telegram\TelegramService;
 use Illuminate\Console\Command;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class GetWebhookComamnd extends Command
 {
@@ -32,7 +32,7 @@ class GetWebhookComamnd extends Command
      */
     public function handle()
     {
-        $service = new TelegramService();
+        $service = new TelegramService;
         $json = $service->getWebhookInfo();
 
         $this->info(json_encode($json));

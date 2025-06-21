@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Modules\Company\Models\Position;
 use Modules\Company\Models\Setting;
@@ -27,7 +26,7 @@ class VariableSettingSeeder extends Seeder
         $pm = Position::where('name', 'Lead Project Manager')
             ->orWhere('name', 'Project Manager')
             ->get();
-    
+
         $modeller = Position::where('name', '3D Modeller')
             ->first();
 
@@ -63,7 +62,7 @@ class VariableSettingSeeder extends Seeder
             if (gettype($d['value']) == 'array') {
                 $d['value'] = json_encode($d['value']);
             }
-            
+
             Setting::create($d);
         }
     }

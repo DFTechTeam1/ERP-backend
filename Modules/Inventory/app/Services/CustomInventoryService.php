@@ -2,10 +2,10 @@
 
 namespace Modules\Inventory\Services;
 
-use App\Enums\ErrorCode\Code;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 
-class CustomInventoryService {
+class CustomInventoryService
+{
     private $repo;
 
     /**
@@ -18,19 +18,12 @@ class CustomInventoryService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -38,22 +31,22 @@ class CustomInventoryService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "name asc";
+            $sort = 'name asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
 
@@ -91,7 +84,7 @@ class CustomInventoryService {
             [
                 'items:id,custom_inventory_id,inventory_id',
                 'items.inventory:id,inventory_id,inventory_code',
-                'items.inventory.inventory:id,name'
+                'items.inventory.inventory:id,name',
             ]
         );
 
@@ -106,7 +99,7 @@ class CustomInventoryService {
                         'code' => $inventory->inventory->inventory_code,
                         'name' => $inventory->inventory->inventory->name,
                     ];
-                })->toArray()
+                })->toArray(),
             ];
         }
 
@@ -124,9 +117,6 @@ class CustomInventoryService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -145,10 +135,6 @@ class CustomInventoryService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
@@ -166,19 +152,12 @@ class CustomInventoryService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -194,7 +173,6 @@ class CustomInventoryService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -213,10 +191,6 @@ class CustomInventoryService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

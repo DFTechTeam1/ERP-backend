@@ -7,7 +7,6 @@ use App\Actions\Project\DetailProject;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
-use App\Services\TestProjectConstructor;
 use App\Services\UserRoleManagement;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
@@ -39,7 +38,6 @@ use Modules\Production\Repository\ProjectTaskWorktimeRepository;
 use Modules\Production\Repository\ProjectVjRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
 use Modules\Production\Services\EntertainmentTaskSongLogService;
-use Modules\Production\Services\ProjectRepositoryGroup;
 use Modules\Production\Services\ProjectService;
 
 trait HasProjectConstructor
@@ -83,10 +81,9 @@ trait HasProjectConstructor
         $entertainmentTaskSongResultImageRepo = null,
         $entertainmentTaskSongRevise = null,
         $employeeTaskStateRepo = null
-    )
-    {
+    ) {
         $this->projectService = new ProjectService(
-            $userRoleManagement ? $userRoleManagement :new UserRoleManagement,
+            $userRoleManagement ? $userRoleManagement : new UserRoleManagement,
             $projectBoardRepo ? $projectBoardRepo : new ProjectBoardRepository,
             $geocoding ? $geocoding : new Geocoding,
             $projectTaskHoldRepo ? $projectTaskHoldRepo : new ProjectTaskHoldRepository,

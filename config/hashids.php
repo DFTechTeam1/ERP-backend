@@ -31,7 +31,7 @@ return [
         'main' => [
             'salt' => config('app.hashSalt'),
             'length' => 25,
-            'alphabet' => 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+            'alphabet' => 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890',
         ],
 
         'alternative' => [
@@ -43,8 +43,8 @@ return [
         'taskIdentifier' => [
             'salt' => config('app.taskSalt'),
             'length' => 4,
-            'alphabet' => 'abcdefghijklmnopqrstuvwxyz1234567890'
-        ]
+            'alphabet' => 'abcdefghijklmnopqrstuvwxyz1234567890',
+        ],
 
     ],
 

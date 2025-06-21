@@ -51,7 +51,7 @@ class ProductionServiceProvider extends ServiceProvider
     {
         $this->commands([
             ClearAllCache::class,
-            UpdateTaskIdentifier::class
+            UpdateTaskIdentifier::class,
         ]);
     }
 

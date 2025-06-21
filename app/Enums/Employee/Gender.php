@@ -11,7 +11,7 @@ enum Gender: string
     {
         if ($data == 'Female') {
             return self::Female;
-        } else if ($data == 'Male') {
+        } elseif ($data == 'Male') {
             return self::Male;
         }
     }
@@ -26,19 +26,20 @@ enum Gender: string
             case self::Male->value:
                 $output = __('global.male');
                 break;
-            
+
             default:
                 $output = '-';
                 break;
         }
 
-        return $output;}
+        return $output;
+    }
 
     public function label()
     {
         return match ($this) {
-            static::Female => __('global.female'),
-            static::Male => __('global.male'),
+            self::Female => __('global.female'),
+            self::Male => __('global.male'),
         };
     }
 }

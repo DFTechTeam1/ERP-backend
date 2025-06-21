@@ -33,7 +33,7 @@ return new class extends Migration
 
         $classifications = ['s', 'a', 'b', 'c', 'd'];
 
-        Schema::table('projects', function (Blueprint $table) use($classifications) {
+        Schema::table('projects', function (Blueprint $table) use ($classifications) {
             $table->dropColumn('project_class_id');
 
             $table->enum('classification', $classifications)->nullable();

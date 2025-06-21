@@ -11,9 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('project_tasks', function (Blueprint $table) {
-            
-        });
+        Schema::table('project_tasks', function (Blueprint $table) {});
     }
 
     /**

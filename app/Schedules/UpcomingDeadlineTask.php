@@ -6,7 +6,8 @@ use App\Enums\Production\TaskStatus;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use Modules\Production\Models\ProjectTask;
 
-class UpcomingDeadlineTask {
+class UpcomingDeadlineTask
+{
     public function __invoke()
     {
         $endDate = date('Y-m-d', strtotime('+2 days'));
@@ -15,7 +16,7 @@ class UpcomingDeadlineTask {
             ->with([
                 'pics:id,project_task_id,employee_id',
                 'pics.employee:id,nickname,email,line_id,telegram_chat_id',
-                'project:id,name'
+                'project:id,name',
             ])
             ->whereIn(
                 'status',

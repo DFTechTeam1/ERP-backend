@@ -18,8 +18,7 @@ class BranchFactory extends Factory
     {
         return [
             'name' => fake()->randomElement(['PT. Citra Bahagia Indonesia', 'Dfactory']),
-            'short_name' => fake()->randomElement(['CBI', 'DF'])
+            'short_name' => fake()->randomElement(['CBI', 'DF']),
         ];
     }
 }
-

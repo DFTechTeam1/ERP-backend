@@ -12,7 +12,7 @@ class PermissionController extends Controller
 
     public function __construct()
     {
-        $this->service = new PermissionService();
+        $this->service = new PermissionService;
     }
 
     /**

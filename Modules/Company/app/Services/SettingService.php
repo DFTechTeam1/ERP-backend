@@ -2,33 +2,47 @@
 
 namespace Modules\Company\Services;
 
-use App\Enums\ErrorCode\Code;
 use App\Enums\Production\TaskStatus;
-use Exception;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 
-class SettingService {
+class SettingService
+{
     private $repo;
 
     private $taskRepo;
+
+    private $generalService;
+
+    const LOGO_PATH = 'settings';
 
     /**
      * Construction Data
      */
     public function __construct(
         SettingRepository $repo,
-        ProjectTaskRepository $taskRepo
-    )
-    {
+        ProjectTaskRepository $taskRepo,
+        \App\Services\GeneralService $generalService
+    ) {
         $this->repo = $repo;
 
         $this->taskRepo = $taskRepo;
+
+        $this->generalService = $generalService;
     }
 
     protected function formattedGlobalSetting($code = null)
     {
         $settings = \Illuminate\Support\Facades\Cache::get('setting');
+
+        // format guide price
+        $settings = collect($settings)->map(function ($setting) {
+            if ($setting['key'] == 'area_guide_price') {
+                $setting['value'] = json_decode($setting['value'], true);
+            }
+
+            return $setting;
+        });
 
         if ($code) {
             $selected = collect($settings)->where('code', $code)->values()->toArray();
@@ -41,6 +55,11 @@ class SettingService {
                         $item['value'] = (int) $item['value'];
                     }
 
+                    // format logo
+                    if ($item['key'] == 'company_logo') {
+                        $item['value'] = asset('storage/settings/'.$item['value']);
+                    }
+
                     return $item;
                 })->toArray();
                 $settings = $selected;
@@ -49,10 +68,20 @@ class SettingService {
             $settings = collect($settings)->map(function ($item) {
                 if ($item['key'] == 'production_staff_role') {
                     $item['value'] = json_decode($item['value'], true);
-                } else if ($item['key'] == 'default_boards') {
+                } elseif ($item['key'] == 'default_boards') {
                     $item['value'] = $this->formatKanbanSetting($item);
-                } else if ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment') {
+                } elseif ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment') {
                     $item['value'] = json_decode($item['value'], true);
+                }
+
+                if (
+                    ($item['key'] == 'company_logo') &&
+                    (
+                        ($item['value']) &&
+                        (is_file(storage_path('app/public/settings/'.$item['value'])))
+                    )
+                ) {
+                    $item['value'] = asset('storage/settings/'.$item['value']);
                 }
 
                 return $item;
@@ -111,19 +140,12 @@ class SettingService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -131,7 +153,7 @@ class SettingService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -164,9 +186,6 @@ class SettingService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -185,25 +204,25 @@ class SettingService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data, $code = null): array
     {
         try {
             if ($code == 'kanban') {
                 $this->storeKanban($data);
-            } else if ($code == 'email') {
+            } elseif ($code == 'email') {
                 $this->storeEmail($data);
-            } else if ($code == 'general') {
+            } elseif ($code == 'general') {
                 $this->storeGeneral($data);
-            } else if ($code == 'variables') {
+            } elseif ($code == 'variables') {
                 $storeVariable = $this->storeVariables($data);
                 if ($storeVariable) {
                     return $storeVariable;
                 }
+            } elseif ($code == 'company') {
+                $this->storeCompany($data);
+            } elseif ($code == 'price') {
+                $this->storePricing($data);
             }
 
             cachingSetting();
@@ -211,13 +230,105 @@ class SettingService {
             $settings = $this->formattedGlobalSetting();
 
             return generalResponse(
-                __("global.successUpdateSetting"),
+                __('global.successUpdateSetting'),
                 false,
                 $settings
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    protected function storePricing(array $payload): void
+    {
+        $check = $this->repo->show(
+            uid: 'uid',
+            select: 'id,value',
+            where: "`key` = 'area_guide_price'"
+        );
+
+        $payload['area'] = collect($payload['area'])->map(function ($item) {
+            $item['settings'] = collect($item['settings'])->map(function ($setting) {
+                $setting['value'] = str_replace(',', '', $setting['value']);
+
+                return $setting;
+            });
+
+            return $item;
+        })->toArray();
+        $payload['equipment'] = collect($payload['equipment'])->map(function ($equipment) {
+            $equipment['value'] = str_replace(',', '', $equipment['value']);
+
+            return $equipment;
+        })->toArray();
+
+        $payload['price_up']['value'] = str_replace(',', '', $payload['price_up']['value']);
+        $payload['minimum_price'] = str_replace(',', '', $payload['minimum_price']);
+        $payload['prefunction_percentage'] = str_replace(',', '', $payload['prefunction_percentage']);
+
+        if ($check) {
+            $this->repo->update([
+                'value' => json_encode($payload),
+            ], $check->id);
+        } else {
+            $this->repo->store([
+                'code' => 'price',
+                'key' => 'area_guide_price',
+                'value' => json_encode($payload),
+            ]);
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('setting');
+    }
+
+    protected function storeCompany(array $data): void
+    {
+        // get current logo and delete if exists
+        $currentLogo = $this->repo->show(uid: 'uid', select: 'value', where: "`key` = 'company_logo'");
+
+        if (
+            ($currentLogo) &&
+            is_file(storage_path('app/public/'.self::LOGO_PATH."/{$currentLogo}"))
+        ) {
+            unlink(storage_path('app/public/'.self::LOGO_PATH."/{$currentLogo}"));
+        }
+
+        foreach ($data as $key => $value) {
+            $check = $this->repo->show(uid: 'uid', select: 'id,value', where: "`key` = '{$key}'");
+
+            if (($key == 'company_logo') && ($value)) {
+                $image = uploadImageandCompress(
+                    path: 'settings',
+                    compressValue: 0,
+                    image: $value
+                );
+
+                if ($image) {
+                    $value = $image;
+                } else {
+                    $value = null;
+                }
+            }
+
+            if ($check) {
+                $this->repo->update(
+                    data: [
+                        'value' => $value,
+                    ],
+                    id: $check->id
+                );
+            } else {
+                $this->repo->store(
+                    data: [
+                        'key' => $key,
+                        'value' => $value,
+                        'code' => 'company',
+                    ]
+                );
+            }
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('setting');
     }
 
     protected function storeGeneral(array $data)
@@ -227,14 +338,14 @@ class SettingService {
 
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $keyQuery = config('app.env') == 'production' ? '`key` =' : 'key =';
 
-            $where = "`key` = '" . (string) $keyQuery . "'";
+            $where = "`key` = '".(string) $keyQuery."'";
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
                 $this->repo->update([
-                    'value' => $valueData
-                ], 'dummy', 'id = ' . $check->id);
+                    'value' => $valueData,
+                ], 'dummy', 'id = '.$check->id);
             } else {
                 $this->repo->store([
                     'key' => $key,
@@ -252,9 +363,9 @@ class SettingService {
         $leadModellerTask = $this->taskRepo->show(
             uid: 0,
             select: 'id',
-            where: "status = " . TaskStatus::WaitingDistribute->value
+            where: 'status = '.TaskStatus::WaitingDistribute->value
         );
-        if (empty($data['lead_3d_modeller']) || !$data['lead_3d_modeller'] && $leadModellerTask) {
+        if (empty($data['lead_3d_modeller']) || ! $data['lead_3d_modeller'] && $leadModellerTask) {
             return errorResponse('Lead 3D Modeller cannot be empty. There was some tasks that need to be done by Lead Modeller');
         }
 
@@ -263,14 +374,14 @@ class SettingService {
 
             $valueData = gettype($value) == 'array' ? json_encode($value) : $value;
 
-            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $keyQuery = config('app.env') == 'production' ? '`key` =' : 'key =';
 
-            $where = "`key` = '" . (string) $key . "'";
+            $where = "`key` = '".(string) $key."'";
             $check = $this->repo->show('dummy', 'id', [], $where);
             if ($check) {
                 $this->repo->update([
-                    'value' => $valueData
-                ], 'dummy', 'id = ' . $check->id);
+                    'value' => $valueData,
+                ], 'dummy', 'id = '.$check->id);
             } else {
                 $this->repo->store([
                     'key' => $key,
@@ -290,23 +401,23 @@ class SettingService {
 
             // change config
             if ($key == 'email_host') {
-                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.host", $value);
-            } else if ($key == 'email_port') {
-                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.port", $value);
-            } else if ($key == 'username') {
-                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.username", $value);
-            } else if ($key == 'password') {
-                \Illuminate\Support\Facades\Config::set("mail.mailers.smtp.password", $value);
+                \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.host', $value);
+            } elseif ($key == 'email_port') {
+                \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.port', $value);
+            } elseif ($key == 'username') {
+                \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.username', $value);
+            } elseif ($key == 'password') {
+                \Illuminate\Support\Facades\Config::set('mail.mailers.smtp.password', $value);
             }
 
-            $keyQuery = config('app.env') == 'production' ? "`key` =" : "key =";
+            $keyQuery = config('app.env') == 'production' ? '`key` =' : 'key =';
 
-            $where = "`key` = '" . (string) $key . "'";
+            $where = "`key` = '".(string) $key."'";
             logging('where store email', [$where]);
             $this->repo->store([
                 'key' => $key,
                 'value' => $value,
-                'code' => 'email'
+                'code' => 'email',
             ]);
         }
 
@@ -316,7 +427,6 @@ class SettingService {
     /**
      * Store default kanban boards
      *
-     * @param array $data
      * @return void
      */
     protected function storeKanban(array $data)
@@ -341,19 +451,12 @@ class SettingService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -369,7 +472,6 @@ class SettingService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -388,10 +490,6 @@ class SettingService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -401,6 +499,192 @@ class SettingService {
             return generalResponse(
                 'success',
                 false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get price calculation for project deals
+     * 
+     * @return array
+     */
+    public function getPriceCalculation(): array
+    {
+        try {
+            $output = [];
+
+            $guides = $this->generalService->getSettingByKey(param: 'area_guide_price');
+
+            if ($guides) {
+                $guides = json_decode($guides, true);;
+                
+                $areaPricing = [];
+                $areas = [];
+    
+                foreach ($guides['area'] as $area) {
+                    $areas[] = [
+                        'title' => $area['area'],
+                        'value' => strtolower(str_replace(' ', '_', $area['area']))
+                    ];
+
+                    $settings = [];
+                    foreach ($area['settings'] as $setting) {
+                        if ($setting['name'] == 'Main Ballroom Fee') {
+                            $settings['mainBallroom'] = [
+                                'fixed' => "{total_led}*" . $setting['value'],
+                                'percentage' => null
+                            ];
+                        } else if ($setting['name'] == 'Prefunction Fee') {
+                            $percent = 100 - $guides['prefunction_percentage'];
+                            $settings['prefunction'] = [
+                                'fixed' => "{total_led}*(" . $setting['value'] . "*" . $percent . "/100)",
+                                'percentage' => null
+                            ];
+                        } else if ($setting['name'] == 'Max Discount') {
+                            $percentage = null;
+                            $fixed = null;
+                            if ($setting['type'] == 'percentage') {
+                                $percentage = "({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*". $setting['value'] ."/100";
+                            } else if ($setting['type'] == 'fixed') {
+                                $fixed = "({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})-". $setting['value'];
+                            }
+                            $settings['discount'] = [
+                                'percentage' => $percentage,
+                                "fixed" => $fixed
+                            ];
+                        }
+                    }
+
+                    $formattedName = strtolower(str_replace(' ', '_', $area['area']));
+                    $areaPricing['areaGuide'][$formattedName] = $settings;
+                }
+
+                $output = array_merge($output, $areaPricing);
+
+                // area
+                $output['area'] = $areas;
+
+                // high season fee
+                $output['highSeason'] = [
+                    'percentage' => $guides['high_season']['type'] == 'percentage' ? "({main_ballroom_price}+{prefunction_price})*" . $guides['high_season']['value'] . "/100" : null,
+                    'fixed' => $guides['high_season']['type'] == 'fixed' ? $guides['high_season']['value'] : null
+                ];
+
+                // markup
+                $output['markup'] = [
+                    'percentaage' => $guides['price_up']['type'] == 'percentage' ? "{total_contract}*" . $guides['price_up']['value'] . "/100" : null,
+                    'fixed' => $guides['price_up']['type'] == 'fixed' ? "{total_contract}+" . $guides['price_up']['value'] : null
+                ];
+
+                // equipment
+                $output['equipment'] = [
+                    'lasika' => collect($guides['equipment'])->filter(function ($filter) {
+                        return $filter['name'] == 'Lasika';
+                    })->values()[0]['value'],
+                    'others' => collect($guides['equipment'])->filter(function ($filter) {
+                        return $filter['name'] == 'Others';
+                    })->values()[0]['value'],
+                ];
+
+                // minimum price
+                $output['minimum_price'] = $guides['minimum_price'];
+
+                // equipment list
+                $output['equipmentList'] = collect($guides['equipment'])->map(function ($map) {
+                    return [
+                        'title' => $map['name'],
+                        'value' => strtolower($map['name'])
+                    ];
+                });
+
+                // $output = [
+                //     'surabaya' => [
+                //         'mainBallroom' => [
+                //             'fixed' => '{total_led}*750000',
+                //             'percentage' => null,
+                //         ],
+                //         'prefunction' => [
+                //             'fixed' => '{total_led}*(750000*75/100)',
+                //             'percentage' => null,
+                //         ],
+                //         'discount' => [
+                //             'percentage' => '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*10/100',
+                //             'fixed' => null,
+                //         ],
+                //     ],
+                //     'jakarta' => [
+                //         'mainBallroom' => [
+                //             'fixed' => '{total_led}*1250000',
+                //             'percentage' => null,
+                //         ],
+                //         'prefunction' => [
+                //             'fixed' => '{total_led}*(1250000*75/100)',
+                //             'percentage' => null,
+                //         ],
+                //         'discount' => [
+                //             'percentage' => '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*10/100',
+                //             'fixed' => null,
+                //         ],
+                //     ],
+                //     'jawa' => [
+                //         'mainBallroom' => [
+                //             'fixed' => '{total_led}*500000',
+                //             'percentage' => null,
+                //         ],
+                //         'prefunction' => [
+                //             'fixed' => '{total_led}*(500000*75/100)',
+                //             'percentage' => null,
+                //         ],
+                //         'discount' => [
+                //             'percentage' => '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*10/100',
+                //             'fixed' => null,
+                //         ],
+                //     ],
+                //     'luar_jawa' => [
+                //         'mainBallroom' => [
+                //             'fixed' => '{total_led}*1000000',
+                //             'percentage' => null,
+                //         ],
+                //         'prefunction' => [
+                //             'fixed' => '{total_led}*(1000000*75/100)',
+                //             'percentage' => null,
+                //         ],
+                //         'discount' => [
+                //             'percentage' => '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*10/100',
+                //             'fixed' => null,
+                //         ],
+                //     ],
+                //     'highSeason' => [
+                //         'percentage' => '({main_ballroom_price}+{prefunction_price})*25/100',
+                //         'fixed' => null,
+                //     ],
+                //     'equipment' => [
+                //         'lasika' => 0,
+                //         'others' => '2500000',
+                //     ],
+                //     'equipmentList' => [
+                //         [
+                //             'title' => 'Lasika',
+                //             'value' => 'lasika',
+                //         ],
+                //         [
+                //             'title' => 'Others',
+                //             'value' => 'others',
+                //         ],
+                //     ],
+                //     'markup' => [
+                //         'percentage' => '{(main_ballroom_price+prefunction_price)*11/100}',
+                //         'fixed' => null,
+                //     ],
+                //     'minimum_price' => '35000000',
+                // ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: $output
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

@@ -4,7 +4,7 @@ namespace Modules\Inventory\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use \Modules\Inventory\Http\Requests\Inventory\Custom\Build;
+use Modules\Inventory\Http\Requests\Inventory\Custom\Build;
 use Modules\Inventory\Http\Requests\Inventory\Custom\UpdateBuild;
 use Modules\Inventory\Services\CustomInventoryService;
 use Modules\Inventory\Services\InventoryService;
@@ -18,8 +18,7 @@ class CustomInventoryController extends Controller
     public function __construct(
         InventoryService $inventoryService,
         CustomInventoryService $customInventoryService
-    )
-    {
+    ) {
         $this->service = $inventoryService;
 
         $this->customService = $customInventoryService;
@@ -79,8 +78,6 @@ class CustomInventoryController extends Controller
 
     /**
      * Bulk Delete
-     *
-     * @param Request $request
      */
     public function bulkDelete(Request $request)
     {

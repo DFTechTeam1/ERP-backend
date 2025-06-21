@@ -4,13 +4,14 @@ namespace Modules\Company\Services;
 
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\PositionException;
-use Modules\Company\Models\Division;
 use Modules\Company\Models\DivisionBackup;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
 
-class PositionService {
+class PositionService
+{
     private $repo;
+
     private $divisionRepo;
 
     /**
@@ -24,19 +25,12 @@ class PositionService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -45,22 +39,22 @@ class PositionService {
 
             $search = request('search');
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "name asc";
+            $sort = 'name asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
 
@@ -88,7 +82,7 @@ class PositionService {
                 false,
                 [
                     'paginated' => $paginated,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ],
             );
         } catch (\Throwable $th) {
@@ -130,22 +124,15 @@ class PositionService {
 
     /**
      * Get specific data by id
-     *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
-     *
-     * @return array
      */
     public function show(
         string $uid,
         string $select = '*',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $data = $this->repo->show($uid, $select, $relation);
-            $data->makeHidden('id','division_id');
+            $data->makeHidden('id', 'division_id');
             $data->division->makeHidden('id');
             $data->employees->makeHidden('position_id');
             // $data->jobs->makeHidden('position_id');
@@ -172,20 +159,16 @@ class PositionService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
         try {
-            $data['division_id'] = getIdFromUid($data['division_id'], new DivisionBackup());
+            $data['division_id'] = getIdFromUid($data['division_id'], new DivisionBackup);
 
             $this->repo->store($data);
 
             return generalResponse(
-                __("global.successCreatePosition"),
+                __('global.successCreatePosition'),
                 false,
                 [],
             );
@@ -201,21 +184,14 @@ class PositionService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $uid
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $uid = '',
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
-            if(isset($data['division_id'])) {
+            if (isset($data['division_id'])) {
                 $division = $this->divisionRepo->show($data['division_id'], 'id')->toArray();
                 $data['division_id'] = $division['id'];
             }
@@ -223,7 +199,7 @@ class PositionService {
             $this->repo->update($data, $uid);
 
             return generalResponse(
-                __("global.successUpdatePosition"),
+                __('global.successUpdatePosition'),
                 false,
                 [],
             );
@@ -239,15 +215,11 @@ class PositionService {
 
     /**
      * Delete selected data
-     *
-     * @param string $uid
-     *
-     * @return array
      */
     public function delete(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid,'id,name',[
+            $data = $this->repo->show($uid, 'id,name', [
                 'employees:id,position_id,name',
             ]);
 
@@ -259,16 +231,16 @@ class PositionService {
             }
 
             if ($positionErrorStatus) {
-                throw new PositionException(__("global.positionRelationFound", [
+                throw new PositionException(__('global.positionRelationFound', [
                     'name' => $data->name,
-                    'relation' => implode(' and ',$positionErrorRelation)
+                    'relation' => implode(' and ', $positionErrorRelation),
                 ]));
             }
 
             $this->repo->delete($uid);
 
             return generalResponse(
-                __("global.successDeletePosition"),
+                __('global.successDeletePosition'),
                 false,
                 [],
             );
@@ -285,10 +257,7 @@ class PositionService {
     /**
      * Delete bulk data
      *
-     * @param array $ids
-     * @param string $key
-     *
-     * @return array
+     * @param  array  $ids
      */
     public function bulkDelete(array $uids, string $key): array
     {
@@ -296,7 +265,7 @@ class PositionService {
             $positionErrorStatus = false;
 
             foreach ($uids as $uid) {
-                $data = $this->repo->show($uid['uid'],'id,name',[
+                $data = $this->repo->show($uid['uid'], 'id,name', [
                     'employees:id,position_id,name',
                 ]);
 
@@ -308,14 +277,15 @@ class PositionService {
             }
 
             if ($positionErrorStatus) {
-                throw new PositionException(__("global.positionRelationFound", [
+                throw new PositionException(__('global.positionRelationFound', [
                     'name' => implode(', ', array_unique($positionErrorName)),
-                    'relation' => implode(' and ', array_unique($positionErrorRelation))
+                    'relation' => implode(' and ', array_unique($positionErrorRelation)),
                 ]));
             }
-            $this->repo->bulkDelete($uids,$key);
+            $this->repo->bulkDelete($uids, $key);
+
             return generalResponse(
-                __("global.successDeletePosition"),
+                __('global.successDeletePosition'),
                 false,
                 [],
             );

@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\Log;
 use Modules\Production\Models\ProjectTask;
 use Modules\Telegram\Enums\CallbackIdentity;
 
-class CheckProofOfWorkAction {
+class CheckProofOfWorkAction
+{
     private $chatId;
+
     private $messageId;
 
     protected function setUserIdentity(array $payload)
@@ -23,7 +25,7 @@ class CheckProofOfWorkAction {
         $this->setUserIdentity($payload);
 
         $data = $payload['callback_query']['data'];
-        [,$taskId] = explode('idt=' . CallbackIdentity::CheckProofOfWork->value . "&tid=", $data);
+        [,$taskId] = explode('idt='.CallbackIdentity::CheckProofOfWork->value.'&tid=', $data);
 
         if ($taskId) {
             $task = ProjectTask::find($taskId);
@@ -33,7 +35,7 @@ class CheckProofOfWorkAction {
                     return [
                         'type' => 'photo',
                         'media' => $item->images[0],
-                        'caption' => 'Preview'
+                        'caption' => 'Preview',
                     ];
                 })->toArray();
 
@@ -43,12 +45,12 @@ class CheckProofOfWorkAction {
                         [
                             'type' => 'photo',
                             'media' => 'https://backend.dfactory.pro/images/user.png',
-                            'caption' => 'preview'
-                        ]
+                            'caption' => 'preview',
+                        ],
                     ];
                 }
 
-                $service = new TelegramService();
+                $service = new TelegramService;
                 $send = $service->sendPhoto($this->chatId, 'Preview', $proofOfWorks);
                 $service->reinit();
                 if ($send) {
@@ -61,9 +63,9 @@ class CheckProofOfWorkAction {
                         $service->sendButtonMessage($this->chatId, 'Selesaikan pekerjaan?', [
                             'inline_keyboard' => [
                                 [
-                                    ['text' => 'Selesaikan Saja', 'callback_data' => 'idt=' . \Modules\Telegram\Enums\CallbackIdentity::MarkTaskAsComplete->value . '&tid=' . $taskId],
-                                ]
-                            ]
+                                    ['text' => 'Selesaikan Saja', 'callback_data' => 'idt='.\Modules\Telegram\Enums\CallbackIdentity::MarkTaskAsComplete->value.'&tid='.$taskId],
+                                ],
+                            ],
                         ]);
                     }
                 }

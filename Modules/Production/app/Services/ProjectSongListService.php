@@ -2,7 +2,6 @@
 
 namespace Modules\Production\Services;
 
-use App\Enums\ErrorCode\Code;
 use App\Enums\Production\Entertainment\TaskSongLogType;
 use App\Services\GeneralService;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +12,8 @@ use Modules\Production\Models\ProjectSongList;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
 
-class ProjectSongListService {
+class ProjectSongListService
+{
     private $repo;
 
     private $projectService;
@@ -36,8 +36,7 @@ class ProjectSongListService {
         EmployeeRepository $employeeRepo,
         EntertainmentTaskSongLogService $entertainmentTaskSongLogService,
         ProjectRepository $projectRepo
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->projectService = $projectService;
@@ -54,24 +53,19 @@ class ProjectSongListService {
     /**
      * Function to approve edit request
      * This function will notify the changes to PM project and current worker
-     * 
-     * @param string $projectUid
-     * @param string $songUid
-     * 
-     * @return array
      */
     public function confirmEditSong(string $projectUid, string $songUid): array
     {
         DB::beginTransaction();
         try {
-            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList());
-            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $songId = $this->generalService->getIdFromUid($songUid, new ProjectSongList);
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project);
 
             $detail = $this->repo->show(
                 uid: $songUid,
                 select: 'id,name,target_name',
                 relation: [
-                    'task:id,project_song_list_id,employee_id'
+                    'task:id,project_song_list_id,employee_id',
                 ]
             );
 
@@ -93,7 +87,7 @@ class ProjectSongListService {
             $user = $this->employeeRepo->show(
                 uid: 'id',
                 select: 'id,nickname',
-                where: "user_id = " . auth()->id()
+                where: 'user_id = '.auth()->id()
             );
 
             $event = $this->projectRepo->show(
@@ -112,7 +106,7 @@ class ProjectSongListService {
                     'pm' => $user->nickname ?? 'Unknown',
                     'event' => $event->name,
                     'currentName' => $currentName,
-                    'newName' => $newName
+                    'newName' => $newName,
                 ]
             );
 
@@ -126,7 +120,7 @@ class ProjectSongListService {
                 message: 'success',
                 error: false,
                 data: [
-                    'full_detail' => $currentData
+                    'full_detail' => $currentData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -138,11 +132,6 @@ class ProjectSongListService {
 
     /**
      * Update song
-     * 
-     * @param array $payload
-     * @param string $songUid
-     * 
-     * @return bool
      */
     public function doEditSong(array $payload, string $songUid): bool
     {
@@ -153,19 +142,12 @@ class ProjectSongListService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -173,7 +155,7 @@ class ProjectSongListService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -202,7 +184,7 @@ class ProjectSongListService {
     public function formatSingleSongStatus(object $item)
     {
         $statusFormat = $item->task ? __('global.distributed') : __('global.waitingToDistribute');
-        $statusColor = $item->task ? 'success': 'info';
+        $statusColor = $item->task ? 'success' : 'info';
 
         $statusRequest = null;
         if ($item->is_request_edit) {
@@ -227,9 +209,6 @@ class ProjectSongListService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -248,10 +227,6 @@ class ProjectSongListService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     * 
-     * @return array
      */
     public function store(array $data): array
     {
@@ -269,19 +244,12 @@ class ProjectSongListService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -292,13 +260,12 @@ class ProjectSongListService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
-     * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -316,10 +283,6 @@ class ProjectSongListService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {

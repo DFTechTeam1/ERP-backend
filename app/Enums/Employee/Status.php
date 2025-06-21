@@ -18,9 +18,9 @@ enum Status: int
     {
         if ($data == 'Permanent') {
             return self::Permanent;
-        } else if ($data == 'Inactive') {
+        } elseif ($data == 'Inactive') {
             return self::Inactive;
-        } else if ($data == 'Part Time') {
+        } elseif ($data == 'Part Time') {
             return self::PartTime;
         }
     }
@@ -28,76 +28,76 @@ enum Status: int
     public function label()
     {
         return match ($this) {
-            static::Deleted => __('global.deleted'),
-            static::Permanent => __('global.permanent'),
-            static::Contract => __('global.contract'),
-            static::PartTime => __('global.partTime'),
-            static::Freelance => __('global.freelance'),
-            static::Internship => __('global.internship'),
-            static::Inactive => __('global.inactive'),
-            static::WaitingHR => __('global.waitingHr'),
-            static::Probation => __('global.probation'),
+            self::Deleted => __('global.deleted'),
+            self::Permanent => __('global.permanent'),
+            self::Contract => __('global.contract'),
+            self::PartTime => __('global.partTime'),
+            self::Freelance => __('global.freelance'),
+            self::Internship => __('global.internship'),
+            self::Inactive => __('global.inactive'),
+            self::WaitingHR => __('global.waitingHr'),
+            self::Probation => __('global.probation'),
         };
     }
 
     public static function generateLabel(int $value)
     {
         return match ($value) {
-            static::Deleted->value => __('global.deleted'),
-            static::Permanent->value => __('global.permanent'),
-            static::Contract->value => __('global.contract'),
-            static::PartTime->value => __('global.partTime'),
-            static::Freelance->value => __('global.freelance'),
-            static::Internship->value => __('global.internship'),
-            static::Inactive->value => __('global.inactive'),
-            static::WaitingHR->value => __('global.waitingHr'),
-            static::Probation->value => __('global.probation'),
+            self::Deleted->value => __('global.deleted'),
+            self::Permanent->value => __('global.permanent'),
+            self::Contract->value => __('global.contract'),
+            self::PartTime->value => __('global.partTime'),
+            self::Freelance->value => __('global.freelance'),
+            self::Internship->value => __('global.internship'),
+            self::Inactive->value => __('global.inactive'),
+            self::WaitingHR->value => __('global.waitingHr'),
+            self::Probation->value => __('global.probation'),
         };
     }
 
     public static function generateChartColor(int $value)
     {
         return match ($value) {
-            static::Deleted->value => generateRandomColor(__('global.deleted')),
-            static::Permanent->value => '#009bde',
-            static::Contract->value => '#f96d01',
-            static::PartTime->value => generateRandomColor(__('global.partTime')),
-            static::Freelance->value => generateRandomColor(__('global.freelance')),
-            static::Internship->value => generateRandomColor(__('global.internship')),
-            static::Inactive->value => generateRandomColor(__('global.inactive')),
-            static::WaitingHR->value => generateRandomColor(__('global.waitingHr')),
-            static::Probation->value => '#5b37d4',
+            self::Deleted->value => generateRandomColor(__('global.deleted')),
+            self::Permanent->value => '#009bde',
+            self::Contract->value => '#f96d01',
+            self::PartTime->value => generateRandomColor(__('global.partTime')),
+            self::Freelance->value => generateRandomColor(__('global.freelance')),
+            self::Internship->value => generateRandomColor(__('global.internship')),
+            self::Inactive->value => generateRandomColor(__('global.inactive')),
+            self::WaitingHR->value => generateRandomColor(__('global.waitingHr')),
+            self::Probation->value => '#5b37d4',
         };
     }
 
     public static function getLabel(int $value)
     {
         switch ($value) {
-            case static::Permanent->value:
+            case self::Permanent->value:
                 $value = __('global.permanent');
                 break;
 
-            case static::Contract->value;
+            case self::Contract->value:
                 $value = __('global.contract');
                 break;
 
-            case static::PartTime->value:
+            case self::PartTime->value:
                 $value = __('global.partTime');
                 break;
 
-            case static::Freelance->value:
+            case self::Freelance->value:
                 $value = __('global.freelance');
                 break;
 
-            case static::Internship->value:
+            case self::Internship->value:
                 $value = __('global.internship');
                 break;
 
-            case static::Inactive->value:
+            case self::Inactive->value:
                 $value = __('global.inactive');
                 break;
 
-            case static::Probation->value:
+            case self::Probation->value:
                 $value = __('global.probation');
                 break;
 
@@ -112,25 +112,25 @@ enum Status: int
     public function statusColor()
     {
         return match ($this) {
-            static::Deleted => 'danger',
-            static::Permanent => 'success',
-            static::Contract => 'primary',
-            static::PartTime => 'indigo-lighten-3',
-            static::Freelance => 'cyan-lighten-4',
-            static::Internship => 'light-green-lighten-3',
-            static::Inactive => 'blue-grey-lighten-2',
-            static::WaitingHR => 'warning',
-            static::Probation => 'brown-lighten-2',
+            self::Deleted => 'danger',
+            self::Permanent => 'success',
+            self::Contract => 'primary',
+            self::PartTime => 'indigo-lighten-3',
+            self::Freelance => 'cyan-lighten-4',
+            self::Internship => 'light-green-lighten-3',
+            self::Inactive => 'blue-grey-lighten-2',
+            self::WaitingHR => 'warning',
+            self::Probation => 'brown-lighten-2',
         };
     }
 
     public static function getStatusForReport()
     {
         return [
-            static::Permanent->value,
-            static::Contract->value,
-            static::PartTime->value,
-            static::Probation->value
+            self::Permanent->value,
+            self::Contract->value,
+            self::PartTime->value,
+            self::Probation->value,
         ];
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Modules\Hrd\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\ProjectTask;
@@ -21,7 +21,7 @@ class EmployeePointDetail extends Model
         'employee_point_id',
         'type',
         'task_id',
-        'point'
+        'point',
     ];
 
     // protected static function newFactory(): EmployeePointDetailFactory

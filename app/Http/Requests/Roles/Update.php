@@ -3,12 +3,10 @@
 namespace App\Http\Requests\Roles;
 
 use App\Enums\ErrorCode\Code;
-use App\Rules\UniqueLowerRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
 
 class Update extends FormRequest
 {
@@ -30,7 +28,7 @@ class Update extends FormRequest
         return [
             'name' => [
                 'required',
-                Rule::unique('roles', 'name')->ignore($this->route('role'))
+                Rule::unique('roles', 'name')->ignore($this->route('role')),
             ],
             'permissions' => 'required',
         ];
@@ -39,7 +37,6 @@ class Update extends FormRequest
     /**
      * Return validation errors as json
      *
-     * @param Validator $validator
      * @return void
      */
     public function failedValidation(Validator $validator)

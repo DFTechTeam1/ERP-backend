@@ -2,8 +2,8 @@
 
 namespace Modules\Hrd\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Hrd\Database\factories\EmployeeSignFactory;
 
 class EmployeeSign extends Model
@@ -24,8 +24,8 @@ class EmployeeSign extends Model
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
 
-//    protected static function newFactory(): EmployeeSignFactory
-//    {
-//        //return EmployeeSignFactory::new();
-//    }
+    //    protected static function newFactory(): EmployeeSignFactory
+    //    {
+    //        //return EmployeeSignFactory::new();
+    //    }
 }

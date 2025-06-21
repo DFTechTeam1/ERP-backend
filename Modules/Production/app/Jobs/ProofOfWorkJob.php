@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class ProofOfWorkJob implements ShouldQueue
 {
@@ -22,9 +22,6 @@ class ProofOfWorkJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param int $projectId
-     * @param int $taskId
-     * @param int $taskPic
      */
     public function __construct(int $projectId, int $taskId, int $taskPic)
     {

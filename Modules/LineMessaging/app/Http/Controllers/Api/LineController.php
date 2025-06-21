@@ -5,7 +5,6 @@ namespace Modules\LineMessaging\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 
 class LineController extends Controller
 {
@@ -22,8 +21,9 @@ class LineController extends Controller
         logging('webhook line', [
             'response' => $request->all(),
         ]);
-        
-        $service = new \Modules\LineMessaging\Services\LineConnectionService();
+
+        $service = new \Modules\LineMessaging\Services\LineConnectionService;
+
         return $service->webhook($request->all());
     }
 

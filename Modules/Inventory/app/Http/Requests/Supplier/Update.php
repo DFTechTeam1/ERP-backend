@@ -4,8 +4,6 @@ namespace Modules\Inventory\Http\Requests\Supplier;
 
 use App\Rules\UniqueLowerRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Modules\Inventory\Models\Supplier;
 
 class Update extends FormRequest
@@ -18,8 +16,8 @@ class Update extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new Supplier(), $this->route('supplier')),
-            ]
+                new UniqueLowerRule(new Supplier, $this->route('supplier')),
+            ],
         ];
     }
 

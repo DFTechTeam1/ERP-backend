@@ -41,7 +41,7 @@ class CompanyServiceProvider extends ServiceProvider
     {
         $this->commands([
             MigrateOldDivisionToNewDivision::class,
-            JobLevelMigration::class
+            JobLevelMigration::class,
         ]);
     }
 
@@ -79,7 +79,7 @@ class CompanyServiceProvider extends ServiceProvider
     {
         $this->publishes([module_path($this->moduleName, 'config/config.php') => config_path($this->moduleNameLower.'.php')], 'config');
         $this->mergeConfigFrom(module_path($this->moduleName, 'config/config.php'), $this->moduleNameLower);
-        
+
         $this->publishes([module_path($this->moduleName, 'config/general.php') => config_path($this->moduleNameLower.'.php')], 'config');
         $this->mergeConfigFrom(module_path($this->moduleName, 'config/general.php'), $this->moduleNameLower);
     }
@@ -96,7 +96,7 @@ class CompanyServiceProvider extends ServiceProvider
 
         $this->loadViewsFrom(array_merge($this->getPublishableViewPaths(), [$sourcePath]), $this->moduleNameLower);
 
-        $componentNamespace = str_replace('/', '\\', config('modules.namespace').'\\'.$this->moduleName.'\\'.ltrim(config('modules.paths.generator.component-class.path'), config('modules.paths.app_folder','')));
+        $componentNamespace = str_replace('/', '\\', config('modules.namespace').'\\'.$this->moduleName.'\\'.ltrim(config('modules.paths.generator.component-class.path'), config('modules.paths.app_folder', '')));
         Blade::componentNamespace($componentNamespace, $this->moduleNameLower);
     }
 

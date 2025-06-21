@@ -28,13 +28,13 @@ class SyncEmployeeToUser extends Command
         $employees = \Modules\Hrd\Models\Employee::selectRaw('id,user_id,email')->get();
 
         foreach ($employees as $employee) {
-            $userData = \App\Models\User::where("email", $employee->email)
+            $userData = \App\Models\User::where('email', $employee->email)
                 ->where('employee_id', null)
                 ->first();
             if (
                 ($userData) &&
-                (!$userData->employee_id)
-            ) { 
+                (! $userData->employee_id)
+            ) {
                 \App\Models\User::where('email', $employee->email)
                     ->update(['employee_id' => $employee->id]);
             }
@@ -46,7 +46,7 @@ class SyncEmployeeToUser extends Command
             $employeeData = \Modules\Hrd\Models\Employee::select('user_id')->where('email', $user->email)->first();
             if (
                 ($employeeData) &&
-                (!$employeeData->user_id)
+                (! $employeeData->user_id)
             ) {
                 \Modules\Hrd\Models\Employee::where('email', $user->email)
                     ->update(['user_id' => $user->id]);

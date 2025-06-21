@@ -5,32 +5,30 @@ namespace Modules\Inventory\Repository;
 use Modules\Inventory\Models\InventoryType;
 use Modules\Inventory\Repository\Interface\InventoryTypeInterface;
 
-class InventoryTypeRepository extends InventoryTypeInterface {
+class InventoryTypeRepository extends InventoryTypeInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new InventoryType();
+        $this->model = new InventoryType;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,26 +42,22 @@ class InventoryTypeRepository extends InventoryTypeInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
         string $orderBy = ''
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -87,9 +81,6 @@ class InventoryTypeRepository extends InventoryTypeInterface {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -98,10 +89,10 @@ class InventoryTypeRepository extends InventoryTypeInterface {
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where("uid", $uid);
+            $query->where('uid', $uid);
         }
 
         if ($relation) {
@@ -116,7 +107,6 @@ class InventoryTypeRepository extends InventoryTypeInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -127,15 +117,14 @@ class InventoryTypeRepository extends InventoryTypeInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -149,7 +138,7 @@ class InventoryTypeRepository extends InventoryTypeInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -161,7 +150,6 @@ class InventoryTypeRepository extends InventoryTypeInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

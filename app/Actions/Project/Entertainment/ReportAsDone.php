@@ -3,8 +3,6 @@
 namespace App\Actions\Project\Entertainment;
 
 use App\Exceptions\UploadImageFailed;
-use App\Services\GeneralService;
-use Illuminate\Support\Facades\Log;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Production\Models\EntertainmentTaskSongResultImage;
 use Modules\Production\Models\Project;
@@ -22,8 +20,8 @@ class ReportAsDone
         string $songUid,
         $generalService)
     {
-        $projectId = $generalService->getIdFromUid($projectUid, new Project());
-        $songId = $generalService->getIdFromUid($songUid, new ProjectSongList());
+        $projectId = $generalService->getIdFromUid($projectUid, new Project);
+        $songId = $generalService->getIdFromUid($songUid, new ProjectSongList);
 
         $images = [];
         if ((isset($payload['images'])) && (count($payload['images']) > 0)) {
@@ -36,15 +34,15 @@ class ReportAsDone
                 );
 
                 if ($image === false) {
-                    throw new UploadImageFailed();
+                    throw new UploadImageFailed;
                 }
 
                 $images[] = new EntertainmentTaskSongResultImage(['path' => $image]);
             }
         }
 
-        $taskRepo = new EntertainmentTaskSongRepository();
-        $repo = new EntertainmentTaskSongResultRepository();
+        $taskRepo = new EntertainmentTaskSongRepository;
+        $repo = new EntertainmentTaskSongResultRepository;
 
         $task = $taskRepo->show(
             uid: 'id',

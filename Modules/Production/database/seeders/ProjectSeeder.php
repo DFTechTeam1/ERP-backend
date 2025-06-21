@@ -11,20 +11,20 @@ class ProjectSeeder extends Seeder
      */
     public function run(): void
     {
-        $projectService = new \Modules\Production\Services\ProjectService();
+        $projectService = new \Modules\Production\Services\ProjectService;
 
         // delete current project
         $projects = \Modules\Production\Models\Project::select('uid')->get();
-        $projectUids = collect((object)$projects)->pluck('uid')->toArray();
+        $projectUids = collect((object) $projects)->pluck('uid')->toArray();
         $projectService->bulkDelete($projectUids);
 
         $projectManagerPositions = json_decode(getSettingByKey('position_as_project_manager'), true);
         $marketingPositions = getSettingByKey('position_as_marketing');
-        $marketingPositions = getIdFromUid($marketingPositions, new \Modules\Company\Models\PositionBackup());
-        
+        $marketingPositions = getIdFromUid($marketingPositions, new \Modules\Company\Models\PositionBackup);
+
         if ($projectManagerPositions && $marketingPositions) {
             $projectManagerPositions = collect($projectManagerPositions)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
             })->toArray();
 
             $marketings = \Modules\Hrd\Models\Employee::selectRaw('uid')
@@ -308,7 +308,7 @@ class ProjectSeeder extends Seeder
             foreach ($projects as $project) {
                 $store = $projectService->store($project);
 
-                $this->command->info('store result: ' . json_encode($store));
+                $this->command->info('store result: '.json_encode($store));
             }
         }
 

@@ -14,24 +14,24 @@ enum TransferTeamStatus: int
     public function label()
     {
         return match ($this) {
-            static::Requested => __("global.requested"),
-            static::Approved => __('global.approved'),
-            static::Reject => __('global.reject'),
-            static::Completed => __('global.completed'),
-            static::Canceled => __('global.canceled'),
-            static::ApprovedWithAlternative => __('global.approvedWithAlternative'),
+            self::Requested => __('global.requested'),
+            self::Approved => __('global.approved'),
+            self::Reject => __('global.reject'),
+            self::Completed => __('global.completed'),
+            self::Canceled => __('global.canceled'),
+            self::ApprovedWithAlternative => __('global.approvedWithAlternative'),
         };
     }
 
     public function color()
     {
         return match ($this) {
-            static::Requested => 'primary',
-            static::Approved => 'success',
-            static::Reject => 'red-darken-1',
-            static::Completed => 'light-green-lighten-1',
-            static::Canceled => 'warning',
-            static::ApprovedWithAlternative => 'success',
+            self::Requested => 'primary',
+            self::Approved => 'success',
+            self::Reject => 'red-darken-1',
+            self::Completed => 'light-green-lighten-1',
+            self::Canceled => 'warning',
+            self::ApprovedWithAlternative => 'success',
         };
     }
 }

@@ -3,8 +3,8 @@
 namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Models\Employee;
 
@@ -23,7 +23,7 @@ class EntertainmentTaskSongLog extends Model
         'project_id',
         'text',
         'param_text',
-        'employee_id'
+        'employee_id',
     ];
 
     protected $appends = ['formatted_text'];
@@ -39,23 +39,23 @@ class EntertainmentTaskSongLog extends Model
         if (isset($this->attributes['text']) && isset($this->attributes['param_text'])) {
             $param = $this->attributes['param_text'];
 
-            if (!empty($param)) {
+            if (! empty($param)) {
                 $out = __($this->attributes['text'], gettype($param) == 'string' ? json_decode($param, true) : $param);
             } else {
                 $out = __($this->attributes['text']);
             }
-       } 
+        }
 
         return Attribute::make(
-            get: fn() => $out
+            get: fn () => $out
         );
     }
 
     public function paramText(): Attribute
     {
         return Attribute::make(
-            get: fn(string $value) => $value ? json_decode($value, true) : NULL,
-            set: fn(array $value) => !empty($value) ? json_encode($value) : NULL
+            get: fn (string $value) => $value ? json_decode($value, true) : null,
+            set: fn (array $value) => ! empty($value) ? json_encode($value) : null
         );
     }
 

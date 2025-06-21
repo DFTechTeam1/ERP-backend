@@ -4,12 +4,13 @@ namespace App\Services;
 
 use App\Repository\PermissionRepository;
 
-class PermissionService {
+class PermissionService
+{
     private $repo;
 
     public function __construct()
     {
-        $this->repo = new PermissionRepository();
+        $this->repo = new PermissionRepository;
     }
 
     public function getAll()

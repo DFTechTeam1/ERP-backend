@@ -2,8 +2,9 @@
 
 namespace Modules\Hrd\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Hrd\Database\Factories\EmployeeResignFactory;
 
 class EmployeeResign extends Model
@@ -17,7 +18,7 @@ class EmployeeResign extends Model
         'employee_id',
         'reason',
         'resign_date',
-        'severance'
+        'severance',
     ];
 
     // protected static function newFactory(): EmployeeResignFactory

@@ -2,14 +2,15 @@
 
 namespace Modules\LineMessaging\Services;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Modules\Production\Models\ProjectTask;
 use Vinkla\Hashids\Facades\Hashids;
 
-class LineConnectionService {
+class LineConnectionService
+{
     private $url;
+
     private $token;
+
     private $bearerToken;
 
     public function __construct()
@@ -21,11 +22,11 @@ class LineConnectionService {
     public function sendMessage(array $message, string $lineId)
     {
         $response = Http::withToken($this->token)
-            ->post($this->url . '/message/push', [
+            ->post($this->url.'/message/push', [
                 'to' => $lineId,
-                'messages' => $message
+                'messages' => $message,
             ]);
-        
+
         $response = json_decode($response->body(), true);
 
         return $response;
@@ -34,7 +35,7 @@ class LineConnectionService {
     /**
      * Register employee line ID
      *
-     * @param any $event
+     * @param  any  $event
      * @return void
      */
     protected function handleRegisterUser($event)
@@ -52,6 +53,7 @@ class LineConnectionService {
                     'text' => 'Wah format pesanmu salah kawan :) Nice try',
                 ],
             ];
+
             return $this->sendMessage($formatWrongMsg, $event['source']['userId']);
         }
 
@@ -65,6 +67,7 @@ class LineConnectionService {
                     'text' => 'Wah format pesanmu salah kawan :) Nice try',
                 ],
             ];
+
             return $this->sendMessage($formatWrongMsg, $event['source']['userId']);
         }
 
@@ -77,11 +80,11 @@ class LineConnectionService {
                 ],
             ];
             $this->sendMessage($wrongUserFormatMessage, $event['source']['userId']);
-        } else if (strtolower($split[0]) == 'd' || strtolower($split[1]) == 'f') {
+        } elseif (strtolower($split[0]) == 'd' || strtolower($split[1]) == 'f') {
             // check user id in database first
-            $employee = \Modules\Hrd\Models\Employee::select('id')->whereRaw("LOWER(employee_id) = '" . strtolower($exp[1]) . "' and status != " . \App\Enums\Employee\Status::Inactive->value)->first();
+            $employee = \Modules\Hrd\Models\Employee::select('id')->whereRaw("LOWER(employee_id) = '".strtolower($exp[1])."' and status != ".\App\Enums\Employee\Status::Inactive->value)->first();
 
-            if (!$employee) {
+            if (! $employee) {
                 $userNotFoundMsg = [
                     [
                         'type' => 'text',
@@ -93,7 +96,7 @@ class LineConnectionService {
                 $checkLineId = \Modules\Hrd\Models\Employee::select('id')
                     ->where('line_id', $event['source']['userId'])
                     ->first();
-                
+
                 if ($checkLineId) {
                     $alreadRegisterMsg = [
                         [
@@ -103,7 +106,7 @@ class LineConnectionService {
                     ];
                     $this->sendMessage($alreadRegisterMsg, $event['source']['userId']);
                 } else {
-                    \Modules\Hrd\Models\Employee::whereRaw("LOWER(employee_id) = '" . strtolower($exp[1]) . "'")
+                    \Modules\Hrd\Models\Employee::whereRaw("LOWER(employee_id) = '".strtolower($exp[1])."'")
                         ->update(['line_id' => $event['source']['userId']]);
 
                     $successMsg = [
@@ -120,10 +123,7 @@ class LineConnectionService {
         }
     }
 
-    protected function handleUpdateLineID($event)
-    {
-        
-    }
+    protected function handleUpdateLineID($event) {}
 
     public function webhook(array $data)
     {
@@ -154,7 +154,7 @@ class LineConnectionService {
                         $this->handleRejectRequestMember($textRaw, $event['source']);
                     }
 
-                } else if ($event['type'] == 'postback') {
+                } elseif ($event['type'] == 'postback') {
                     $textRaw = $event['postback']['data'];
                     $sender = $event['source']['userId'];
 
@@ -197,14 +197,13 @@ class LineConnectionService {
                 // based on task status
                 $task = \Modules\Production\Models\ProjectTask::selectRaw('id,status,is_approved')
                     ->find($taskId);
-                if (!$task->is_approved) {
+                if (! $task->is_approved) {
                     $taskPic = \Modules\Production\Models\ProjectTaskPic::with(['task:id,name', 'employee'])
                         ->where('project_task_id', $taskId)
                         ->where('employee_id', $employeeId)
                         ->first();
-    
+
                     if ($taskPic) {
-                        
 
                         \Illuminate\Support\Facades\Notification::send($taskPic->employee, new \Modules\Production\Notifications\WebhookApproveTaskNotification($taskPic));
                     }
@@ -215,7 +214,7 @@ class LineConnectionService {
         }
     }
 
-    protected function autoLogin($user) 
+    protected function autoLogin($user)
     {
         $role = $user->getRoleNames()[0];
         $roles = $user->roles;
@@ -224,7 +223,7 @@ class LineConnectionService {
             $roleId = $roles[0]->id;
         }
         $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
-        
+
         $token = $user->createToken($role, $permissions, now()->addHours(2));
 
         $this->bearerToken = $token->plainTextToken;
@@ -241,13 +240,13 @@ class LineConnectionService {
         $waitingMessage = [
             [
                 'type' => 'text',
-                'text' => 'Sistem sendang memproses permintaan kamu'
+                'text' => 'Sistem sendang memproses permintaan kamu',
             ],
         ];
         $this->sendMessage($waitingMessage, $senderLineId);
 
         $exp = explode('type=approveRequestTeam&data=', $text);
-        
+
         $data = json_decode($exp[1], true);
 
         if ($data) {
@@ -259,10 +258,10 @@ class LineConnectionService {
                 $transfer = \Modules\Production\Models\TransferTeamMember::find($data['tfid']);
 
                 $resp = Http::withToken($this->bearerToken)
-                    ->get(config('app.url') . "/api/production/team-transfers/approve/{$transfer->uid}/line");
+                    ->get(config('app.url')."/api/production/team-transfers/approve/{$transfer->uid}/line");
 
                 logging('resp approve', [$resp]);
-    
+
                 $this->autoLogout($user);
             }
         }
@@ -286,9 +285,9 @@ class LineConnectionService {
 
         if (count($token) > 0) {
             $divider = '107';
-    
+
             $breakToken = explode($divider, (string) $token[0]);
-    
+
             $transferId = array_pop($breakToken);
 
             $transfer = \Modules\Production\Models\TransferTeamMember::find($transferId);
@@ -297,12 +296,12 @@ class LineConnectionService {
 
             if ($user) {
                 $this->autoLogin($user);
-    
+
                 $resp = Http::withTOken($this->bearerToken)
-                    ->get(config('app.url') . "/api/production/team-transfers/reject/{$transfer->uid}");
-    
+                    ->get(config('app.url')."/api/production/team-transfers/reject/{$transfer->uid}");
+
                 logging('resp reject from line', [$resp]);
-    
+
                 $this->autoLogout($user);
             }
         }

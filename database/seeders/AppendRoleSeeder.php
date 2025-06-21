@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\DB;
 
 class AppendRoleSeeder extends Seeder
 {
@@ -27,11 +25,11 @@ class AppendRoleSeeder extends Seeder
 
         foreach ($roles as $role) {
             $check = \Illuminate\Support\Facades\DB::table('roles')
-                ->select("id")
+                ->select('id')
                 ->where('name', $role['name'])
                 ->first();
 
-            if (!$check) {
+            if (! $check) {
                 $roleData = Role::create(['name' => $role['name'], 'guard_name' => 'sanctum']);
             }
         }

@@ -7,7 +7,8 @@ use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectTaskLogRepository;
 use stdClass;
 
-class ProjectLogging {
+class ProjectLogging
+{
     private $projectTaskLogRepository;
 
     private $employeeRepo;
@@ -23,8 +24,7 @@ class ProjectLogging {
         EmployeeRepository $employeeRepo,
         ProjectBoardRepository $boardRepo,
         $telegramEmployee = ''
-    )
-    {
+    ) {
         $this->boardRepo = $boardRepo;
         $this->projectTaskLogRepository = $projectTaskLogRepo;
         $this->employeeRepo = $employeeRepo;
@@ -35,25 +35,26 @@ class ProjectLogging {
     /**
      * Create task log in every event
      *
-     * @param array $payload
-     * @param string $type
-     * Type will be:
-     * 1. moveTask
-     * 2. addUser
-     * 3. addNewTask
-     * 4. addAttachment
-     * 5. deleteAttachment
-     * 6. changeTaskName
-     * 7. addDescription
-     * 8. updateDeadline
-     * 9. assignMemberTask
-     * 10. removeMemberTask
-     * 11. deleteAttachment
+     * @param  array  $payload
+     * @param  string  $type
+     *                        Type will be:
+     *                        1. moveTask
+     *                        2. addUser
+     *                        3. addNewTask
+     *                        4. addAttachment
+     *                        5. deleteAttachment
+     *                        6. changeTaskName
+     *                        7. addDescription
+     *                        8. updateDeadline
+     *                        9. assignMemberTask
+     *                        10. removeMemberTask
+     *                        11. deleteAttachment
      * @return void
      */
     public function loggingTask($payload, string $type)
     {
-        $type .= "Log";
+        $type .= 'Log';
+
         return $this->{$type}($payload);
     }
 
@@ -80,16 +81,16 @@ class ProjectLogging {
     /**
      * Add log when user add attachment
      *
-     * @param array $payload
-     * $payload will have
-     * [int task_id, string media_name]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [int task_id, string media_name]
      * @return void
      */
     protected function addAttachmentLog($payload)
     {
         $text = __('global.addAttachmentLogText', [
             'name' => $this->user->username,
-            'media' => $payload['media_name']
+            'media' => $payload['media_name'],
         ]);
 
         $this->projectTaskLogRepository->store([
@@ -103,18 +104,18 @@ class ProjectLogging {
     /**
      * Add log when user delete attachment
      *
-     * @param array $payload
-     * $payload will have
-     * [string task_uid, string media_name]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [string task_uid, string media_name]
      * @return void
      */
     protected function deleteAttachmentLog($payload)
     {
-        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask());
+        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask);
 
         $text = __('global.deleteAttachmentLogText', [
             'name' => $this->user->username,
-            'media' => $payload['media_name']
+            'media' => $payload['media_name'],
         ]);
 
         $this->projectTaskLogRepository->store([
@@ -128,16 +129,16 @@ class ProjectLogging {
     /**
      * Add log when remove member from selected task
      *
-     * @param array $payload
-     * $payload will have
-     * [int task_id, string employee_uid]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [int task_id, string employee_uid]
      * @return void
      */
     protected function removeMemberTaskLog($payload)
     {
         $employee = $this->employeeRepo->show($payload['employee_uid'], 'id,name,nickname');
         $text = __('global.removedMemberLogText', [
-            'removedUser' => $employee->nickname
+            'removedUser' => $employee->nickname,
         ]);
 
         $this->projectTaskLogRepository->store([
@@ -151,16 +152,16 @@ class ProjectLogging {
     /**
      * Add log when add new member to task
      *
-     * @param array $payload
-     * $payload will have
-     * [int task_id, string employee_uid]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [int task_id, string employee_uid]
      * @return void
      */
     protected function assignMemberTaskLog($payload)
     {
         $employee = $this->employeeRepo->show($payload['employee_uid'], 'id,name,nickname');
         $text = __('global.assignMemberLogText', [
-            'assignedUser' => $employee->nickname
+            'assignedUser' => $employee->nickname,
         ]);
 
         $this->projectTaskLogRepository->store([
@@ -174,18 +175,18 @@ class ProjectLogging {
     /**
      * Add log when change task deadline
      *
-     * @param array $payload
-     * $payload will have
-     * [string task_uid]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [string task_uid]
      * @return void
      */
     protected function updateDeadlineLog($payload)
     {
         $text = __('global.updateDeadlineLogText', [
-            'name' => $this->user->username
+            'name' => $this->user->username,
         ]);
 
-        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask());
+        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask);
 
         $this->projectTaskLogRepository->store([
             'project_task_id' => $taskId,
@@ -198,18 +199,18 @@ class ProjectLogging {
     /**
      * Add log when change task description
      *
-     * @param array $payload
-     * $payload will have
-     * [string task_uid]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [string task_uid]
      * @return void
      */
     protected function addDescriptionLog($payload)
     {
         $text = __('global.updateDescriptionLogText', [
-            'name' => $this->user->username
+            'name' => $this->user->username,
         ]);
 
-        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask());
+        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask);
 
         $this->projectTaskLogRepository->store([
             'project_task_id' => $taskId,
@@ -222,18 +223,18 @@ class ProjectLogging {
     /**
      * Add log when change task name
      *
-     * @param array $payload
-     * $payload will have
-     * [string task_uid]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [string task_uid]
      * @return void
      */
     protected function changeTaskNameLog($payload)
     {
         $text = __('global.changeTaskNameLogText', [
-            'name' => $this->user->username
+            'name' => $this->user->username,
         ]);
 
-        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask());
+        $taskId = getIdFromUid($payload['task_uid'], new \Modules\Production\Models\ProjectTask);
 
         $this->projectTaskLogRepository->store([
             'project_task_id' => $taskId,
@@ -246,9 +247,9 @@ class ProjectLogging {
     /**
      * Add log when create new task
      *
-     * @param array $payload
-     * $payload will have
-     * [array board, int board_id, array task]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [array board, int board_id, array task]
      * @return void
      */
     protected function addNewTaskLog($payload)
@@ -257,7 +258,7 @@ class ProjectLogging {
 
         $text = __('global.addTaskText', [
             'name' => $this->user->username,
-            'boardTarget' => $board['name']
+            'boardTarget' => $board['name'],
         ]);
 
         $this->projectTaskLogRepository->store([
@@ -271,9 +272,9 @@ class ProjectLogging {
     /**
      * Add log when moving a task
      *
-     * @param array $payload
-     * $payload will have
-     * [array boards, collection task, int|string board_id, int|string task_id, int|string board_source_id]
+     * @param  array  $payload
+     *                          $payload will have
+     *                          [array boards, collection task, int|string board_id, int|string task_id, int|string board_source_id]
      * @return void
      */
     protected function moveTaskLog($payload)
@@ -289,7 +290,7 @@ class ProjectLogging {
         })->values();
 
         $text = __('global.moveTaskLogText', [
-            'name' => $nickname, 'boardSource' => $sourceBoard[0]['name'], 'boardTarget' => $boardTarget[0]['name']
+            'name' => $nickname, 'boardSource' => $sourceBoard[0]['name'], 'boardTarget' => $boardTarget[0]['name'],
         ]);
 
         $this->projectTaskLogRepository->store([
@@ -303,14 +304,12 @@ class ProjectLogging {
     /**
      * Get list of boards to use in 'move to' action
      *
-     * @param integer $boardId
-     * @param string $projectUid
      * @return array
      */
     public function getMoveToBoards(int $boardId, string $projectUid)
     {
-        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
-        $data = $this->boardRepo->list('id,name', 'project_id = ' . $projectId . ' and id != ' . $boardId);
+        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
+        $data = $this->boardRepo->list('id,name', 'project_id = '.$projectId.' and id != '.$boardId);
 
         $data = collect((object) $data)->map(function ($board) {
             return [

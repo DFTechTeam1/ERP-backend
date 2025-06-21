@@ -4,12 +4,12 @@ namespace Modules\Production\Services;
 
 use App\Enums\Production\TransferTeamStatus;
 use Carbon\Carbon;
-use App\Enums\ErrorCode\Code;
-use \Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\DB;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
 
-class TransferTeamMemberService {
+class TransferTeamMemberService
+{
     private $repo;
 
     private $projectService;
@@ -23,8 +23,7 @@ class TransferTeamMemberService {
         TransferTeamMemberRepository $repo,
         EmployeeRepository $employeeRepo,
         ProjectService $projectService
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->employeeRepo = $employeeRepo;
@@ -34,19 +33,12 @@ class TransferTeamMemberService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
             $page = request('page') ?? 1;
@@ -54,7 +46,7 @@ class TransferTeamMemberService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -89,7 +81,7 @@ class TransferTeamMemberService {
                 $page
             );
 
-            $paginated = collect((object) $paginated)->map(function ($item) use($user, $isSuperUserRole) {
+            $paginated = collect((object) $paginated)->map(function ($item) use ($user, $isSuperUserRole) {
                 $item['project_date'] = date('d F Y', strtotime($item->project_date));
 
                 $haveCancelAction = $item->requested_by == $user->employee_id ? true : false;
@@ -167,9 +159,6 @@ class TransferTeamMemberService {
 
     /**
      * Cancel team request
-     *
-     * @param array $data
-     * @return array
      */
     public function cancelRequest(array $data): array
     {
@@ -198,9 +187,6 @@ class TransferTeamMemberService {
      * Step:
      * 1. Change request status
      * 2. Insert new team member to requested PIC by updating project detail cache if exists
-     *
-     * @param string $transferUid
-     * @return array
      */
     public function approveRequest(string $transferUid, string $deviceAction): array
     {
@@ -221,7 +207,7 @@ class TransferTeamMemberService {
             DB::commit();
 
             return generalResponse(
-                __("global.transferTeamApproved"),
+                __('global.transferTeamApproved'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -261,13 +247,13 @@ class TransferTeamMemberService {
                 'status' => isset($data['alternative']) ? \App\Enums\Production\TransferTeamStatus::ApprovedWithAlternative->value : \App\Enums\Production\TransferTeamStatus::Reject->value,
                 'rejected_at' => Carbon::now(),
                 'reject_reason' => $data['reason'],
-                'alternative_employee_id' => isset($data['alternative']) ? getIdFromUid($data['alternative'], new \Modules\Hrd\Models\Employee()) : null,
+                'alternative_employee_id' => isset($data['alternative']) ? getIdFromUid($data['alternative'], new \Modules\Hrd\Models\Employee) : null,
             ], $transferUid);
 
             \Modules\Production\Jobs\RejectRequestTeamMemberJob::dispatch($transferUid, $data['reason']);
 
             return generalResponse(
-                __("global.requestIsRejected"),
+                __('global.requestIsRejected'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -282,9 +268,6 @@ class TransferTeamMemberService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -303,10 +286,6 @@ class TransferTeamMemberService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
@@ -324,19 +303,12 @@ class TransferTeamMemberService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -352,9 +324,7 @@ class TransferTeamMemberService {
     /**
      * Delete selected data
      *
-     * @param integer $id
-     *
-     * @return array
+     * @param  int  $id
      */
     public function delete(string $transferUid): array
     {
@@ -366,10 +336,10 @@ class TransferTeamMemberService {
                 $this->cancelRequest(['ids' => [$transferUid]]);
             }
 
-            $this->repo->delete(getIdFromUid($transferUid, new \Modules\Production\Models\TransferTeamMember()));
+            $this->repo->delete(getIdFromUid($transferUid, new \Modules\Production\Models\TransferTeamMember));
 
             return generalResponse(
-                __("global.teamRequestIsDelete"),
+                __('global.teamRequestIsDelete'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -379,10 +349,6 @@ class TransferTeamMemberService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -400,21 +366,17 @@ class TransferTeamMemberService {
 
     /**
      * Function to get all team members except current employee id that already requested for lend
-     *
-     * @param string $employeeUid
-     *
-     * @return array
      */
     public function getMembersToLend(string $transferUid, string $employeeUid): array
     {
         $transfer = $this->repo->show($transferUid, 'request_to');
 
-        $data = $this->employeeRepo->list("id,uid,name,employee_id", "uid != '" . $employeeUid . "' and boss_id = {$transfer->request_to}");
+        $data = $this->employeeRepo->list('id,uid,name,employee_id', "uid != '".$employeeUid."' and boss_id = {$transfer->request_to}");
 
-        $output = collect((object)$data)->map(function ($item) {
+        $output = collect((object) $data)->map(function ($item) {
             return [
                 'uid' => $item->uid,
-                'name' => $item->name . " ({$item->employee_id})",
+                'name' => $item->name." ({$item->employee_id})",
             ];
         })->toArray();
 
@@ -427,11 +389,6 @@ class TransferTeamMemberService {
 
     /**
      * Approved and choose team member to work on selected project
-     *
-     * @param array $payload
-     * @param string $transferUid
-     *
-     * @return array
      */
     public function chooseTeam(array $payload, string $transferUid): array
     {
@@ -442,15 +399,15 @@ class TransferTeamMemberService {
             // validate action
             $user = auth()->user();
             if (
-                (!$user->is_directory || $user->email != config('app.root_email')) &&
+                (! $user->is_directory || $user->email != config('app.root_email')) &&
                 $user->employee_id != $currentData->request_to
             ) {
-                throw new \App\Exceptions\InvalidPermissionAction();
+                throw new \App\Exceptions\InvalidPermissionAction;
             }
 
             $transferIds = [];
             foreach ($payload['team'] as $team) {
-                $employeeId = getIdFromUid($team, new \Modules\Hrd\Models\Employee());
+                $employeeId = getIdFromUid($team, new \Modules\Hrd\Models\Employee);
 
                 $transferIds[] = $this->repo->store([
                     'is_entertainment' => true,
@@ -493,7 +450,7 @@ class TransferTeamMemberService {
 
             foreach ($payload['ids'] as $id) {
                 $newData = $currentData->replicate();
-                $newData->employee_id = getIdFromUid($id, new \Modules\Hrd\Models\Employee());
+                $newData->employee_id = getIdFromUid($id, new \Modules\Hrd\Models\Employee);
                 $newData->approved_at = Carbon::now();
                 $newData->is_entertainment = 1;
                 $newData->status = TransferTeamStatus::Approved->value;

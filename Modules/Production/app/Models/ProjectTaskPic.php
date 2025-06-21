@@ -4,11 +4,10 @@ namespace Modules\Production\Models;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Modules\Production\Database\Factories\ProjectTaskPicFactory;
 
 class ProjectTaskPic extends Model
 {
@@ -61,7 +60,7 @@ class ProjectTaskPic extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -73,7 +72,7 @@ class ProjectTaskPic extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

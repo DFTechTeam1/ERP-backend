@@ -5,8 +5,8 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use Modules\Hrd\Console\CheckEmployeeResign;
-use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
+use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Production\Console\ClearAllCache;
 
 Artisan::command('inspire', function () {

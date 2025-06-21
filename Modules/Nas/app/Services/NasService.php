@@ -4,7 +4,8 @@ namespace Modules\Nas\Services;
 
 use Modules\Company\Models\Setting;
 
-class NasService {
+class NasService
+{
     public function setIp(string $ip)
     {
         $currentIp = Setting::select('id')
@@ -23,7 +24,7 @@ class NasService {
 
     public function setRoot(string $rootName)
     {
-        $currentRoot = Setting::select("id")
+        $currentRoot = Setting::select('id')
             ->where('key', 'nas_current_root')
             ->first();
         if ($currentRoot) {

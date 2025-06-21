@@ -3,9 +3,8 @@
 namespace Modules\Production\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class NewProjectNotification extends Notification
 {
@@ -74,7 +73,7 @@ class NewProjectNotification extends Notification
     {
         return [
             'chatIds' => $this->chatIds,
-            'message' => 'Halo ' . $this->employee->nickname . ". Ada event baru nih buat kamu. Event " . $this->project->name . " di tanggal " . date('d F Y', strtotime($this->project->project_date)) . ' akan kamu handle.'
+            'message' => 'Halo '.$this->employee->nickname.'. Ada event baru nih buat kamu. Event '.$this->project->name.' di tanggal '.date('d F Y', strtotime($this->project->project_date)).' akan kamu handle.',
         ];
     }
 
@@ -83,8 +82,8 @@ class NewProjectNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->employee->nickname . ". Ada event baru nih buat kamu. Event " . $this->project->name . " di tanggal " . date('d F Y', strtotime($this->project->project_date)) . ' akan kamu handle.'
-            ]
+                'text' => 'Halo '.$this->employee->nickname.'. Ada event baru nih buat kamu. Event '.$this->project->name.' di tanggal '.date('d F Y', strtotime($this->project->project_date)).' akan kamu handle.',
+            ],
         ];
 
         return [

@@ -42,7 +42,7 @@ return [
          * Only support columns from database.
          */
         'response_columns' => [
-            //.
+            // .
             'province' => ['code as value', 'name as title'],
 
             'city' => ['code as value', 'province_code', 'name as title'],

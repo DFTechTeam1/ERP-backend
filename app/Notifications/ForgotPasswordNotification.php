@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -39,8 +38,8 @@ class ForgotPasswordNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         setEmailConfiguration();
-        
-        $service = new \App\Services\EncryptionService();
+
+        $service = new \App\Services\EncryptionService;
 
         $exp = date('Y-m-d H:i:s', strtotime('+1 Hour'));
 
@@ -50,13 +49,13 @@ class ForgotPasswordNotification extends Notification
             'exp' => $exp,
         ]), config('app.saltKey'));
 
-        \App\Models\User::where("email", $this->user->email)
+        \App\Models\User::where('email', $this->user->email)
             ->update([
                 'reset_password_token_claim' => false,
                 'reset_password_token_exp' => $exp,
             ]);
 
-        $this->url = config('app.frontend_url') . '/auth/a/reset-password?d=' . $encryptedPayload;
+        $this->url = config('app.frontend_url').'/auth/a/reset-password?d='.$encryptedPayload;
 
         logging('mail', [
             'mailers' => config('mail.mailers.smtp'),
@@ -64,8 +63,8 @@ class ForgotPasswordNotification extends Notification
         ]);
 
         return (new MailMessage)
-                    ->subject('Ubah Password')
-                    ->markdown('mail.user.forgotPassword', ['url' => $this->url]);
+            ->subject('Ubah Password')
+            ->markdown('mail.user.forgotPassword', ['url' => $this->url]);
     }
 
     /**

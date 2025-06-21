@@ -13,7 +13,7 @@ class DistributeModelerTask extends FormRequest
     {
         return [
             'assign_to_me' => 'nullable|boolean',
-            'teams' => 'required_if:assign_to_me,0|array'
+            'teams' => 'required_if:assign_to_me,0|array',
         ];
     }
 

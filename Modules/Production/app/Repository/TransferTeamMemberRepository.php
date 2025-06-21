@@ -5,32 +5,30 @@ namespace Modules\Production\Repository;
 use Modules\Production\Models\TransferTeamMember;
 use Modules\Production\Repository\Interface\TransferTeamMemberInterface;
 
-class TransferTeamMemberRepository extends TransferTeamMemberInterface {
+class TransferTeamMemberRepository extends TransferTeamMemberInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new TransferTeamMember();
+        $this->model = new TransferTeamMember;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,24 +42,20 @@ class TransferTeamMemberRepository extends TransferTeamMemberInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -70,16 +64,13 @@ class TransferTeamMemberRepository extends TransferTeamMemberInterface {
         }
 
         $query->orderBy('created_at', 'desc');
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [])
@@ -88,8 +79,8 @@ class TransferTeamMemberRepository extends TransferTeamMemberInterface {
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
-        
+        $query->where('uid', $uid);
+
         if ($relation) {
             $query->with($relation);
         }
@@ -102,7 +93,6 @@ class TransferTeamMemberRepository extends TransferTeamMemberInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -113,15 +103,14 @@ class TransferTeamMemberRepository extends TransferTeamMemberInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -135,7 +124,7 @@ class TransferTeamMemberRepository extends TransferTeamMemberInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -147,7 +136,6 @@ class TransferTeamMemberRepository extends TransferTeamMemberInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class RemovePMFromProjectJob implements ShouldQueue
 {
@@ -18,8 +18,6 @@ class RemovePMFromProjectJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param array $pics
-     * @param string $projectUid
      */
     public function __construct(array $pics, string $projectUid)
     {
@@ -33,11 +31,11 @@ class RemovePMFromProjectJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $pusher = new \App\Services\PusherNotification();
+        $pusher = new \App\Services\PusherNotification;
 
-        $employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository();
+        $employeeRepo = new \Modules\Hrd\Repository\EmployeeRepository;
 
-        $projectRepo = new \Modules\Production\Repository\ProjectRepository();
+        $projectRepo = new \Modules\Production\Repository\ProjectRepository;
 
         $project = $projectRepo->show($this->projectUid, 'id,name,project_date');
 
@@ -57,7 +55,7 @@ class RemovePMFromProjectJob implements ShouldQueue
 
             $output = formatNotifications($employee->unreadNotifications->toArray());
 
-            $pusher->send('my-channel-' . $user->id, 'notification-event', $output);
+            $pusher->send('my-channel-'.$user->id, 'notification-event', $output);
         }
     }
 }

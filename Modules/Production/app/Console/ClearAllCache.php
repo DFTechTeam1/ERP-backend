@@ -4,8 +4,8 @@ namespace Modules\Production\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class ClearAllCache extends Command
 {

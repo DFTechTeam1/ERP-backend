@@ -16,9 +16,9 @@ class Update extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new InventoryType(), $this->route('inventory_type')),
+                new UniqueLowerRule(new InventoryType, $this->route('inventory_type')),
             ],
-            'slug' => 'nullable'
+            'slug' => 'nullable',
         ];
     }
 

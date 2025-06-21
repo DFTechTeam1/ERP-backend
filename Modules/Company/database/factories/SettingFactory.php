@@ -18,8 +18,7 @@ class SettingFactory extends Factory
     {
         return [
             'key' => fake()->randomElement(['data', 'role']),
-            'value' => fake()->randomElement(['oke', 'yes'])
+            'value' => fake()->randomElement(['oke', 'yes']),
         ];
     }
 }
-

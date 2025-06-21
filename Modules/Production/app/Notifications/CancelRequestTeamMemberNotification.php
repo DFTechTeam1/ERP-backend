@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class CancelRequestTeamMemberNotification extends Notification
 {
@@ -59,7 +58,7 @@ class CancelRequestTeamMemberNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => 'Halo ' . $this->transfer->requestToPerson->name . ', ' . $this->transfer->requestByPerson->name . ' telah membatalkan permintaan request untuk ' . $this->transfer->employee->name . '.',
+            'message' => 'Halo '.$this->transfer->requestToPerson->name.', '.$this->transfer->requestByPerson->name.' telah membatalkan permintaan request untuk '.$this->transfer->employee->name.'.',
         ];
     }
 
@@ -68,8 +67,8 @@ class CancelRequestTeamMemberNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->transfer->requestToPerson->name . ', ' . $this->transfer->requestByPerson->name . ' telah membatalkan permintaan request untuk ' . $this->transfer->employee->name . '.',
-            ]
+                'text' => 'Halo '.$this->transfer->requestToPerson->name.', '.$this->transfer->requestByPerson->name.' telah membatalkan permintaan request untuk '.$this->transfer->employee->name.'.',
+            ],
         ];
 
         return [

@@ -13,7 +13,7 @@ class AssignPic extends FormRequest
     {
         return [
             'pics' => 'required|array',
-            'pics.*' => 'required|string'
+            'pics.*' => 'required|string',
         ];
     }
 

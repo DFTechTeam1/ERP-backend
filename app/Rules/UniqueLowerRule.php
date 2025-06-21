@@ -5,7 +5,6 @@ namespace App\Rules;
 use App\Enums\Employee\Status;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 class UniqueLowerRule implements ValidationRule
@@ -45,7 +44,7 @@ class UniqueLowerRule implements ValidationRule
         if ($this->justId) {
             $query->where('id', '!=', $this->uid);
         } else {
-            if (!empty($this->uid)) {
+            if (! empty($this->uid)) {
                 $query->where('uid', '!=', $this->uid);
             }
         }
@@ -53,7 +52,7 @@ class UniqueLowerRule implements ValidationRule
         if (\Illuminate\Support\Str::contains(Route::current()->uri(), 'employees')) {
             $query->where('status', '!=', Status::Deleted->value);
         }
-        $query->whereRaw("lower({$column}) = '" . strtolower($value) . "'");
+        $query->whereRaw("lower({$column}) = '".strtolower($value)."'");
 
         if ($query->count() > 0) {
             $fail('global.attributeAlreadyExists')->translate();

@@ -8,14 +8,15 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class LocalNasService {
+class LocalNasService
+{
     /**
      * Username of NAS
      *
      * @var string
      */
     private $username;
-    
+
     /**
      * Define password of NAS
      *
@@ -44,15 +45,15 @@ class LocalNasService {
     protected function createUrl($type = 'filestation')
     {
         if ($type == 'filestation') {
-            $this->fullUrl = 'http://' . $this->url . ':5000/webapi/entry.cgi';
-        } else if ($type == 'auth') {
-            $this->fullUrl = 'http://' . $this->url . ':5000/webapi/auth.cgi';
+            $this->fullUrl = 'http://'.$this->url.':5000/webapi/entry.cgi';
+        } elseif ($type == 'auth') {
+            $this->fullUrl = 'http://'.$this->url.':5000/webapi/auth.cgi';
         }
     }
 
     protected function login()
     {
-        if (!Cache::get('NAS_SID')) {
+        if (! Cache::get('NAS_SID')) {
             $this->createUrl('auth');
 
             $response = Http::get($this->fullUrl, [
@@ -93,14 +94,14 @@ class LocalNasService {
     public function getSharedFolders()
     {
         $this->createUrl('filestation');
-        
+
         $param = [
             '_sid' => Cache::get('NAS_SID'),
             'api' => 'SYNO.FileStation.List',
             'version' => '2',
             'method' => 'list_share',
         ];
-        
+
         $response = Http::get($this->fullUrl, $param);
 
         $param['url'] = $this->fullUrl;
@@ -115,14 +116,14 @@ class LocalNasService {
     {
         try {
             /**
-            * Upload files to local,
-            * Then upload to nas
-            * Then delete files in local
-            */
-            if (!\Illuminate\Support\Facades\Storage::exists('addons')) {
+             * Upload files to local,
+             * Then upload to nas
+             * Then delete files in local
+             */
+            if (! \Illuminate\Support\Facades\Storage::exists('addons')) {
                 \Illuminate\Support\Facades\Storage::makeDirectory('addons');
             }
-           
+
             $mime = $file->getClientMimeType();
             $ext = $file->getClientOriginalExtension();
             Log::debug('addon ext: ', [$ext]);
@@ -131,45 +132,45 @@ class LocalNasService {
 
             $mainAddon = Storage::putFile('addons', $file);
             Log::debug('main addon upload res: ', [$mainAddon]);
-    
-            $path = storage_path('app/public/addons/' . $name);
-    
+
+            $path = storage_path('app/public/addons/'.$name);
+
             $this->createUrl('filestation');
-    
+
             $curl = curl_init();
-    
+
             $sid = Cache::get('NAS_SID');
-    
+
             $this->fullUrl .= "?api=SYNO.FileStation.Upload&version=2&method=upload&_sid={$sid}";
 
             Log::debug('URL UPLOAD FILE TO NAS: ', [$this->fullUrl]);
-    
-            curl_setopt_array($curl, array(
-            CURLOPT_URL => $this->fullUrl,
-            CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*',],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
-            CURLOPT_POSTFIELDS => array(
-                'path' => $targetPath,
-                'create_parents' => 'true',
-                'mtime' => '',
-                'overwrite' => 'true',
-                'filename'=> new CURLFile($path, $mime, $name)),
-            ));
-    
+
+            curl_setopt_array($curl, [
+                CURLOPT_URL => $this->fullUrl,
+                CURLOPT_HTTPHEADER => ['Access-Control-Allow-Origin' => '*'],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'GET',
+                CURLOPT_POSTFIELDS => [
+                    'path' => $targetPath,
+                    'create_parents' => 'true',
+                    'mtime' => '',
+                    'overwrite' => 'true',
+                    'filename' => new CURLFile($path, $mime, $name)],
+            ]);
+
             $response = curl_exec($curl);
-    
+
             curl_close($curl);
 
             $finalResponse = json_decode($response, true);
 
             Log::debug('result response upload to nas: ', [
-                'finalResponse' => $finalResponse
+                'finalResponse' => $finalResponse,
             ]);
 
             if ($finalResponse['success']) {
@@ -177,7 +178,7 @@ class LocalNasService {
                     unlink($path);
                 }
             }
-    
+
             return json_decode($response, true);
         } catch (\Throwable $th) {
             Log::debug('error nasService upload file: ', [
@@ -206,7 +207,7 @@ class LocalNasService {
     {
         try {
             $folder = $this->getSharedFolders();
-    
+
             return $folder['success'];
         } catch (\Throwable $th) {
             Log::debug('Error check connection: ', [

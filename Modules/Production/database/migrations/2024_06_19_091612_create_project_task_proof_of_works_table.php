@@ -34,7 +34,7 @@ return new class extends Migration
         Schema::table('project_task_proof_of_works', function (Blueprint $table) {
             $table->dropForeign(['project_task_id']);
         });
-        
+
         Schema::dropIfExists('project_task_proof_of_works');
     }
 };

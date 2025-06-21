@@ -4,8 +4,8 @@ namespace Modules\Hrd\Console;
 
 use Illuminate\Console\Command;
 use Modules\Hrd\Services\PerformanceReportService;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class ManualExportPerformanceReport extends Command
 {
@@ -38,15 +38,15 @@ class ManualExportPerformanceReport extends Command
         $endDate = $this->argument('endDate');
 
         if ($startDate && $endDate) {
-            $service = new PerformanceReportService();
+            $service = new PerformanceReportService;
             $service->importEmployeePoint([
                 'employee_uids' => ['d0d9ffab-bf58-488b-87bb-a8c9c2fb2978'],
                 'all_employee' => 1,
                 'start_date' => $startDate,
-                'end_date' => $endDate
+                'end_date' => $endDate,
             ]);
 
-            $this->info("You can download report in this link " . asset('point.xlsx'));
+            $this->info('You can download report in this link '.asset('point.xlsx'));
         }
     }
 

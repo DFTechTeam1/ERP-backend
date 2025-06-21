@@ -34,7 +34,7 @@ class ClearLogSchedule extends Command
         })->all();
         foreach ($dirs as $dir) {
             if ($dir != '..' && $dir != '.') {
-                if (!in_array($dir, $allowed) && file_exists(storage_path("logs/{$dir}"))) {
+                if (! in_array($dir, $allowed) && file_exists(storage_path("logs/{$dir}"))) {
                     unlink(storage_path("logs/{$dir}"));
                 }
             }

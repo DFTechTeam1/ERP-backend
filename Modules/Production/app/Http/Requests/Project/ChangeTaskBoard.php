@@ -14,7 +14,7 @@ class ChangeTaskBoard extends FormRequest
         return [
             'board_id' => 'nullable',
             'task_id' => 'nullable',
-            'board_source_id' => 'nullable'
+            'board_source_id' => 'nullable',
         ];
     }
 

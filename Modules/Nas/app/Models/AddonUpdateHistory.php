@@ -2,8 +2,8 @@
 
 namespace Modules\Nas\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Nas\Database\Factories\AddonUpdateHistoryFactory;
 
 class AddonUpdateHistory extends Model

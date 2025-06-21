@@ -19,7 +19,7 @@ class ConvertToInventory extends FormRequest
             'warehouse_id' => 'required',
             'images.*' => [
                 'nullable',
-                'string'
+                'string',
             ],
         ];
     }

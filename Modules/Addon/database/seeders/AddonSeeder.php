@@ -16,11 +16,10 @@ class AddonSeeder extends Seeder
         Schema::disableForeignKeyConstraints();
         \Modules\Addon\Models\Addon::truncate();
 
-        
-        $range = range(0,20);
+        $range = range(0, 20);
         $data = [];
         for ($a = 0; $a < count($range); $a++) {
-            $data[] = ['name' => 'addon ' . $a+1, 'preview_img' => 'noimage.png', 'tutorial_video' => 'tutorial', 'main_file' => 'Main File', 'description' => 'Lorem ipsum dolor sit, amet consectetur adipisicing elit. Neque molestias nesciunt animi sed. Neque animi numquam optio a? Eveniet fugiat necessitatibus minima magnam expedita dolorum neque, beatae aliquam veniam impedit.'];
+            $data[] = ['name' => 'addon '.$a + 1, 'preview_img' => 'noimage.png', 'tutorial_video' => 'tutorial', 'main_file' => 'Main File', 'description' => 'Lorem ipsum dolor sit, amet consectetur adipisicing elit. Neque molestias nesciunt animi sed. Neque animi numquam optio a? Eveniet fugiat necessitatibus minima magnam expedita dolorum neque, beatae aliquam veniam impedit.'];
         }
 
         foreach ($data as $d) {

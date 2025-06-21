@@ -3,9 +3,8 @@
 namespace Modules\Hrd\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class UserEmailActivation extends Notification
 {
@@ -51,7 +50,7 @@ class UserEmailActivation extends Notification
             ->markdown('mail.user.EmailActivation', [
                 'user' => $this->user,
                 'password' => $this->password,
-                'urlActivate' => env('FRONTEND_URL') . '/activate/' . $this->encrypted
+                'urlActivate' => env('FRONTEND_URL').'/activate/'.$this->encrypted,
             ]);
     }
 

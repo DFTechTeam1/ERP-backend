@@ -17,15 +17,15 @@ enum Code: int
     public function label()
     {
         return match ($this) {
-            static::Created => __('global.created'),
-            static::Success => __('global.success'),
-            static::BadRequest => __('global.badRequest'),
-            static::Unauthorized => __('global.unauthorized'),
-            static::Forbidden => __('global.forbidden'),
-            static::NotFound => __('global.notFound'),
-            static::MethodNotAllowed => __('global.methodNotAllowed'),
-            static::InternalServerError => __('global.internalServerError'),
-            static::ValidationError => __('global.validationError'),
+            self::Created => __('global.created'),
+            self::Success => __('global.success'),
+            self::BadRequest => __('global.badRequest'),
+            self::Unauthorized => __('global.unauthorized'),
+            self::Forbidden => __('global.forbidden'),
+            self::NotFound => __('global.notFound'),
+            self::MethodNotAllowed => __('global.methodNotAllowed'),
+            self::InternalServerError => __('global.internalServerError'),
+            self::ValidationError => __('global.validationError'),
         };
     }
 }

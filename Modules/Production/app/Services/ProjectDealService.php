@@ -1,0 +1,627 @@
+<?php
+
+namespace Modules\Production\Services;
+
+use App\Actions\CopyDealToProject;
+use App\Actions\CreateQuotation;
+use App\Enums\Production\ProjectStatus;
+use App\Services\GeneralService;
+use App\Services\Geocoding;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Modules\Production\Repository\ProjectDealMarketingRepository;
+use Modules\Production\Repository\ProjectDealRepository;
+use Modules\Production\Repository\ProjectQuotationRepository;
+use Modules\Production\Repository\ProjectRepository;
+
+class ProjectDealService
+{
+    private $repo;
+
+    private $marketingRepo;
+
+    private $generalService;
+
+    private $projectQuotationRepo;
+
+    private $projectRepo;
+
+    private $geocoding;
+
+    /**
+     * Construction Data
+     */
+    public function __construct(
+        ProjectDealRepository $repo,
+        ProjectDealMarketingRepository $marketingRepo,
+        GeneralService $generalService,
+        ProjectQuotationRepository $projectQuotationRepo,
+        ProjectRepository $projectRepo,
+        Geocoding $geocoding
+    ) {
+        $this->repo = $repo;
+
+        $this->marketingRepo = $marketingRepo;
+
+        $this->generalService = $generalService;
+
+        $this->projectQuotationRepo = $projectQuotationRepo;
+
+        $this->projectRepo = $projectRepo;
+
+        $this->geocoding = $geocoding;
+    }
+
+    /**
+     * Get list of data
+     */
+    public function list (
+        string $select = '*',
+        string $where = '',
+        array $relation = []
+    ): array {
+        try {
+            $itemsPerPage = request('itemsPerPage') ?? 2;
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $search = request('search');
+
+            if (! empty($search)) {
+                $where = "lower(name) LIKE '%{$search}%'";
+            }
+
+            $paginated = $this->repo->pagination(
+                $select,
+                $where,
+                $relation,
+                $itemsPerPage,
+                $page
+            );
+            $totalData = $this->repo->list('id', $where)->count();
+
+            $paginated = $paginated->map(function ($item) {
+
+                $marketing = implode(',', $item->marketings->pluck('employee.nickname')->toArray());
+
+                return [
+                    'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
+                    'latest_quotation_id' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id),
+                    'name' => $item->name,
+                    'venue' => $item->venue,
+                    'project_date' => $item->formatted_project_date,
+                    'city' => $item->city ? $item->city->name : '-',
+                    'collaboration' => $item->collboration ?? '-',
+                    'status' => $item->status_text,
+                    'status_color' => $item->status_color,
+                    'marketing' => $marketing,
+                    'down_payment' => $item->getDownPaymentAmount(formatPrice: true),
+                    'remaining_payment' => $item->getRemainingPayment(formatPrice: true),
+                    'remaining_payment_raw' => $item->getRemainingPayment(),
+                    'status' => true,
+                    'status_project' => $item->status->label(),
+                    'status_project_color' => $item->status->color(),
+                    'fix_price' => $item->getFinalPrice(formatPrice: true),
+                    'latest_price' => $item->getLatestPrice(formatPrice: true),
+                    'is_fully_paid' => (bool) $item->is_fully_paid,
+                    'status_payment' => $item->getStatusPayment(),
+                    'status_payment_color' => $item->getStatusPaymentColor(),
+                    'can_make_payment' => $item->canMakePayment(),
+                    'can_publish_project' => $item->canPublishProject(),
+                    'can_make_final' => $item->canMakeFinal(),
+                    'can_edit' => !$item->isFinal(),
+                    'quotation' => [
+                        'id' => $item->latestQuotation->quotation_id,
+                        'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
+                    ],
+                ];
+            });
+
+            return generalResponse(
+                'Success',
+                false,
+                [
+                    'paginated' => $paginated,
+                    'totalData' => $totalData,
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function datatable()
+    {
+        //
+    }
+
+    /**
+     * Get detail data
+     */
+    public function show(string $uid): array
+    {
+        try {
+            $data = $this->repo->show($uid, 'name,uid,id');
+
+            return generalResponse(
+                'success',
+                false,
+                $data->toArray(),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Store data
+     */
+    public function store(array $data): array
+    {
+        try {
+            $this->repo->store($data);
+
+            return generalResponse(
+                'success',
+                false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update selected data
+     */
+    public function update(
+        array $data,
+        string $id,
+        string $where = ''
+    ): array {
+        try {
+            $this->repo->update($data, $id);
+
+            return generalResponse(
+                'success',
+                false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete selected data
+     *
+     *
+     * @return array
+     */
+    public function delete(string $id): array
+    {
+        DB::beginTransaction();
+        try {
+            $detail = $this->repo->show(uid: (string) \Illuminate\Support\Facades\Crypt::decryptString($id), select: 'id,name,status', relation: [
+                'marketings',
+                'quotations',
+                'quotations.items'
+            ]);
+
+            // only not finalized project that can be deleted
+            if ($detail->isFinal()) return errorResponse('Cannot delete finalized project');
+
+            foreach ($detail->quotations as $quotation) {
+                $quotation->items()->delete();
+            }
+
+            $detail->quotations()->delete();
+            $detail->marketings()->delete();
+
+            $this->repo->delete(id: $detail->id);
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.successDeleteProjectDeal'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete bulk data
+     */
+    public function bulkDelete(array $ids): array
+    {
+        try {
+            $this->repo->bulkDelete($ids, 'uid');
+
+            return generalResponse(
+                'success',
+                false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function getPriceFormula()
+    {
+        $setting = $this->generalService->getSettingByKey(param: 'area_guide_price');
+
+        $output = [];
+
+        if ($setting) {
+            $master = json_decode($setting, true);
+
+            $mainBallroom = [];
+            $keys = [
+                'Main Ballroom Fee',
+                'Prefunction Fee',
+                'Max Discount',
+            ];
+            foreach ($master['area'] as $area) {
+                if (in_array($area['area'], $keys)) {
+
+                }
+            }
+
+            $output = [
+                'main_ballroom' => '',
+                'prefunction' => '',
+                'equipment' => '',
+                'discount' => '',
+                'price_up' => '',
+            ];
+        }
+    }
+
+    /**
+     * Create new quotation data in existing deal
+     * 
+     * @param array $payload
+     * @param string $projectDealId
+     * 
+     * @return array
+     */
+    public function createNewQuotation(array $payload, string $projectDealId): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $projectDeal = $this->repo->show(
+                uid: $projectDealId,
+                select: 'id,is_fully_paid',
+                relation: [
+                    'finalQuotation:id,project_deal_id',
+                ]
+            );
+            
+            if ($projectDeal->finalQuotation) {
+                return errorResponse(message: __('notification.quotationAlreadyFinal'));
+            }
+
+            $payload['quotation']['project_deal_id'] = $projectDeal->id;
+            $url = CreateQuotation::run($payload, $this->projectQuotationRepo);
+
+            DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'url' => $url
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Publish project deal
+     * 
+     * @param string $projectDealId
+     * @param string $type
+     * 
+     * @return array
+     */
+    public function publishProjectDeal(string $projectDealId, string $type): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDealId = Crypt::decryptString($projectDealId);
+            $payload = [
+                'status' => $type === 'publish' ? \App\Enums\Production\ProjectDealStatus::Temporary->value : \App\Enums\Production\ProjectDealStatus::Final->value,
+            ];
+
+            $this->repo->update(
+                data: $payload,
+                id: $projectDealId,
+            );
+
+            if ($type === 'publish_final') {
+                // update quotation to final
+                $detail = $this->repo->show(
+                    uid: $projectDealId,
+                    select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,longitude,latitude,status',
+                    relation: [
+                        'latestQuotation',
+                        'city:id,name',
+                        'state:id,name',
+                        'class:id,name',
+                        'marketings:id,project_deal_id,employee_id'
+                    ]
+                );
+
+                $this->projectQuotationRepo->update(
+                    data: [
+                        'is_final' => 1,
+                    ],
+                    id: $detail->latestQuotation->id
+                );
+
+                $project = CopyDealToProject::run($detail);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successPublishProjectDeal'),
+                data: [
+                    'project' => $project ?? null
+                ]
+            );                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    public function detailProjectDealForEdit(string $quotationId): array
+    {
+        $data = $this->repo->show(
+            uid: Crypt::decryptString($quotationId),
+            select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,is_high_season,equipment_type',
+            relation: [
+                'marketings:id,project_deal_id,employee_id',
+                'marketings.employee:id,uid',
+                'latestQuotation',
+                'latestQuotation.items:id,quotation_id,item_id',
+                'latestQuotation.items.item:id,name'
+            ]
+        );
+
+        $items = $data->latestQuotation->items->map(function ($item) {
+            return [
+                'value' => $item->item->id,
+                'title' => $item->item->name
+            ];
+        });
+        $data['quotation_items'] = $items;
+
+        return generalResponse(
+            message: "Success",
+            data: $data->toArray()
+        );
+    }
+
+    /**
+     * Get detail of project deal
+     * 
+     * @param string $quotationId
+     * 
+     * @return array
+     */
+    public function detailProjectDeal(string $quotationId): array
+    {
+        try {
+            $quotationIdRaw = Crypt::decryptString($quotationId);
+            $isEdit = request('edit');
+
+            // get detail of project deal without the transactions
+            if ($isEdit) {
+                return $this->detailProjectDealForEdit(quotationId: $quotationId);
+            }
+
+            $data = $this->repo->show(
+                uid: $quotationIdRaw,
+                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
+                relation: [
+                    'transactions',
+                    'quotations',
+                    'quotations.items:id,quotation_id,item_id',
+                    'quotations.items.item:id,name',
+                    'finalQuotation',
+                    'customer:id,name,phone,email',
+                    'city:id,name',
+                    'class:id,name'
+                ]
+            );
+
+            $led = collect($data->led_detail)->groupBy('name');
+            $main = [];
+            $prefunction = [];
+
+            if (isset($led['main'])) {
+                foreach ($led['main'] as $ledMain) {
+                    foreach ($ledMain['led'] as $ledDetail) {
+                        $main[] = [
+                            'width' => $ledDetail['width'],
+                            'height' => $ledDetail['height'],
+                        ];
+                    }
+                }
+            }
+
+            if (isset($led['prefunction'])) {
+                foreach ($led['prefunction'] as $ledPrefunction) {
+                    foreach ($ledPrefunction['led'] as $ledDetailPrefunction) {
+                        $prefunction[] = [
+                            'width' => $ledDetailPrefunction['width'],
+                            'height' => $ledDetailPrefunction['height'],
+                        ];
+                    }
+                }
+            }
+
+            $quotations = collect($data->quotations)->map(function ($item) use ($data, $main, $prefunction) {
+                return [
+                    'id' => Crypt::encryptString($item->id),
+                    'quotation_id' => Crypt::encryptString($item->quotation_id),
+                    'quotation_number' => $item->quotation_id,
+                    'name' => $data->name,
+                    'venue' => $data->venue,
+                    'price' => $item->fix_price,
+                    'is_final' => (bool) $item->is_final,
+                    'detail' => [
+                        'office'=> [
+                            'logo' => asset('storage/settings/' . $this->generalService->getSettingByKey('company_logo')),
+                            'address' => $this->generalService->getSettingByKey('company_address'),
+                            'phone' => $this->generalService->getSettingByKey('company_phone'),
+                            'email' => $this->generalService->getSettingByKey('company_email'),
+                            'name' => $this->generalService->getSettingByKey('company_name')
+                        ],
+                        'customer' => [
+                            'name' => $data->customer->name,
+                            'place' => $data->city->name
+                        ],
+                        'quotation_number' => $item->quotation_id,
+                        'event' => [
+                            'project_date' => date('d F Y', strtotime($data->project_date)),
+                            'event_class' => $data->class->name,
+                            'venue' => $data->venue,
+                            'led' => [
+                                'main' => $main,
+                                'prefunction' => $prefunction,
+                            ],
+                            'itemPreviews' => collect($item->items)->pluck('item.name')->toArray(),
+                            'price' => $item->fix_price,
+                            'name' => $data->name
+                        ],
+                        'note' => $item->description,
+                        'rules' => '
+                            <ul style="list-style: circle; padding-left: 10px; padding-top: 0; font-size: 12px;">
+                                <li>Minimum Down Payment sebesar 50% dari total biaya yang ditagihkan, biaya tersebut tidak dapat dikembalikan.</li>
+                                <li>Pembayaran melalui rekening BCA 188 060 1225 a/n Wesley Wiyadi / Edwin Chandra Wijaya</li>
+                                <li>Biaya diatas tidak termasuk pajak.</li>
+                                <li>Biaya layanan diatas hanya termasuk perlengkapan multimedia DFACTORY dan tidak termasuk persewaan unit LED dan sistem multimedia lainnya bila diperlukan.</li>
+                                <li>Biaya diatas termasuk Akomodasi untuk Crew bertugas di hari-H event.</li>
+                            </ul>
+                        '
+                    ]
+                ];
+            })->toArray();
+
+            // get the final quotation
+            $finalQuotation = [];
+            $products = [];
+            $main = [];
+            $prefunction = [];
+            if ($data->transactions->count() > 0) {
+                $finalQuotation = $data->quotations->filter(fn($value) => $value->is_final)->values()[0];
+
+                $finalQuotation['quotation_id'] = Crypt::encryptString($finalQuotation->quotation_id);
+                
+                $finalQuotation['remaining'] = $data->getRemainingPayment();
+                $outputLed = collect($data->led_detail)->groupBy('name');
+                if (isset($outputLed['main'])) {
+                    $main = [
+                        'product' => 'Main Stage',
+                        'description' => collect($outputLed['main'])->sum('totalRaw') . ' m<sup>2</sup>',
+                        'amount' => $finalQuotation->main_ballroom
+                    ];
+
+                    $products[] = $main;
+                }
+
+                if (isset($outputLed['prefunction'])) {
+                    $prefunction = [
+                        'product' => 'Prefunction',
+                        'description' => collect($outputLed['prefunction'])->sum('totalRaw') . ' m<sup>2</sup>',
+                        'amount' => $finalQuotation->prefunction
+                    ];
+
+                    $products[] = $prefunction;
+                }
+
+                if ($finalQuotation->equipment_fee > 0) {
+                    $products[] = [
+                        'product' => 'Equipment',
+                        'description' => '',
+                        'amount' => $finalQuotation->equipment_fee
+                    ];
+                }
+            }
+
+            $transactions = $data->transactions->map(function ($trx) {
+                $trx['description'] = 'Receiving invoice payment';
+
+                return $trx;
+            })->values();
+
+            $output = [
+                'customer' => [
+                    'name' => $data->customer->name,
+                    'phone' => $data->customer->phone,
+                    'email' => $data->customer->email,
+                ],
+                'products' => $products,
+                'final_quotation' => $finalQuotation,
+                'transactions' => $transactions,
+                'quotations' => $quotations,
+                'remaining_payment_raw' => $data->getRemainingPayment(),
+                'latest_quotation_id' => $finalQuotation['quotation_id'] ?? null,
+                'is_final' => $data->isFinal() 
+            ];
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Adding more quotation in the selected project deal
+     *
+     * @param array $payload
+     * @param string $projectDealUid
+     * @return array
+     */
+    public function addMoreQuotation(array $payload, string $projectDealUid): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $payload['quotation']['project_deal_id'] = Crypt::decryptString($projectDealUid);
+            $quotation = $this->projectQuotationRepo->store(
+                data: collect($payload['quotation'])->except('items')->toArray()
+            );
+
+            $quotation->items()->createMany(
+                collect($payload['quotation']['items'])->map(function ($item) {
+                    return [
+                        'item_id' => $item,
+                    ];
+                })->toArray()
+            );
+            
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successAddQuotation')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+}

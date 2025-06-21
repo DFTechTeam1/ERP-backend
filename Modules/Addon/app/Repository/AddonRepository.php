@@ -5,26 +5,24 @@ namespace Modules\Addon\Repository;
 use Modules\Addon\Models\Addon;
 use Modules\Addon\Repository\Interface\AddonInterface;
 
-class AddonRepository extends AddonInterface {
+class AddonRepository extends AddonInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Addon();
+        $this->model = new Addon;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], bool $isDistinct = false)
+    public function list(string $select = '*', string $where = '', array $relation = [], bool $isDistinct = false)
     {
         $query = $this->model->query();
 
@@ -34,7 +32,7 @@ class AddonRepository extends AddonInterface {
             $query->distinct();
         }
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -48,40 +46,34 @@ class AddonRepository extends AddonInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
+     * @param  string  $uid
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(int $id, string $select = '*', array $relation = [])
@@ -90,8 +82,8 @@ class AddonRepository extends AddonInterface {
 
         $query->selectRaw($select);
 
-        $query->where("id", $id);
-        
+        $query->where('id', $id);
+
         if ($relation) {
             $query->with($relation);
         }
@@ -104,7 +96,6 @@ class AddonRepository extends AddonInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -115,15 +106,14 @@ class AddonRepository extends AddonInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('id', $id);
@@ -137,7 +127,7 @@ class AddonRepository extends AddonInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -149,7 +139,6 @@ class AddonRepository extends AddonInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

@@ -3,11 +3,10 @@
 namespace Modules\Production\Console;
 
 use Illuminate\Console\Command;
-use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Services\ProjectTaskService;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class UpdateTaskIdentifier extends Command
 {

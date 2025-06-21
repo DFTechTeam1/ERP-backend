@@ -4,7 +4,6 @@ namespace Modules\Addon\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Modules\Addon\Http\Requests\Addon\AskDeveloper;
 use Modules\Addon\Http\Requests\Addon\Create;
 use Modules\Addon\Http\Requests\Addon\Upgrade;
@@ -16,7 +15,7 @@ class AddonController extends Controller
 
     public function __construct()
     {
-        $this->service = new AddonService();
+        $this->service = new AddonService;
     }
 
     /**

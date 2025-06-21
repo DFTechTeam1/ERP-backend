@@ -6,7 +6,8 @@ use App\Enums\ErrorCode\Code;
 use Modules\Company\Exceptions\BranchDeleteErrorRelation;
 use Modules\Company\Repository\BranchRepository;
 
-class BranchService {
+class BranchService
+{
     private $repo;
 
     /**
@@ -19,43 +20,36 @@ class BranchService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-           
+
             $search = request('search');
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "name asc";
+            $sort = 'name asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
 
@@ -85,13 +79,11 @@ class BranchService {
 
     /**
      * Get all branches
-     *
-     * @return array
      */
     public function getAll(): array
     {
         $where = '';
-        
+
         if (request('search')) {
             $search = request('search');
             $where .= "name like '%{$search}%'";
@@ -120,9 +112,6 @@ class BranchService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -141,10 +130,6 @@ class BranchService {
 
     /**
      * Store data
-     *
-     * @param array $data
-     * 
-     * @return array
      */
     public function store(array $data): array
     {
@@ -162,19 +147,12 @@ class BranchService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -185,13 +163,12 @@ class BranchService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
-     * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -210,24 +187,22 @@ class BranchService {
     /**
      * Delete bulk data
      *
-     * @param array $ids
-     * 
-     * @return array
+     * @param  array  $ids
      */
     public function bulkDelete(array $uids, string $key = ''): array
     {
         try {
             foreach ($uids as $uid) {
-                $data = $this->repo->show($uid,'id',['employees:id,branch_id']);
-                if($data->employees->count() > 0) {
-                    throw new BranchDeleteErrorRelation();
+                $data = $this->repo->show($uid, 'id', ['employees:id,branch_id']);
+                if ($data->employees->count() > 0) {
+                    throw new BranchDeleteErrorRelation;
                 }
             }
 
-            $this->repo->bulkDelete($uids,$key);
+            $this->repo->bulkDelete($uids, $key);
 
             return generalResponse(
-                __("global.successDeleteDivision"),
+                __('global.successDeleteDivision'),
                 false,
                 [],
             );

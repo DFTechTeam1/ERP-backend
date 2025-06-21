@@ -2,10 +2,10 @@
 
 return [
     'dates' => 'Batas Waktu',
-    'completeTheTask' => "Selesaikan Tugas",
+    'completeTheTask' => 'Selesaikan Tugas',
     'members' => 'Anggota',
     'reviseDetail' => 'Detil Revisi',
-    'attachments' => "Lampiran",
+    'attachments' => 'Lampiran',
     'proofOfWorks' => 'Bukti Pengerjaan',
     'showLogs' => 'Tampilkan Logs',
     'showTimeTracker' => 'Riwayat Waktu',
@@ -16,5 +16,5 @@ return [
     'distributeTask' => 'Distribusikan',
     'markAsComplete' => 'Selesai',
     'revise' => 'Revise',
-    'delete' => 'Hapus'
+    'delete' => 'Hapus',
 ];

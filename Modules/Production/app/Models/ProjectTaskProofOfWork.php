@@ -3,10 +3,9 @@
 namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Modules\Production\Database\Factories\ProjectTaskProofOfWorkFactory;
 
 class ProjectTaskProofOfWork extends Model
 {
@@ -53,7 +52,7 @@ class ProjectTaskProofOfWork extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

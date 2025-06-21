@@ -5,11 +5,8 @@ namespace Modules\Hrd\Http\Controllers\Api;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
-use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Http\Requests\Employee\AddAsUser;
 use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
@@ -28,14 +25,15 @@ class EmployeeController extends Controller
     public function __construct(
         EmployeeService $employeeService,
         EmployeeRepository $repo
-    )
-    {
+    ) {
         $this->employeeService = $employeeService;
 
         $this->repo = $repo;
     }
+
     /**
      * Get list of data
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function list()
@@ -58,7 +56,7 @@ class EmployeeController extends Controller
             'religion',
             'gender',
             'martial_status',
-            'user_id'
+            'user_id',
         ];
 
         return apiResponse(
@@ -70,7 +68,7 @@ class EmployeeController extends Controller
                     'user:id,uid,email,employee_id',
                     'branch:id,short_name',
                     'jobLevel:id,name',
-                    'resignData:id,employee_id,resign_date'
+                    'resignData:id,employee_id,resign_date',
                 ]
             )
         );
@@ -78,8 +76,6 @@ class EmployeeController extends Controller
 
     /**
      * Get list of 3D modeller Employee
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function get3DModeller(string $projectUid, string $taskUid): \Illuminate\Http\JsonResponse
     {
@@ -99,8 +95,6 @@ class EmployeeController extends Controller
 
     /**
      * Get all available status from enums
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getAllStatus(): \Illuminate\Http\JsonResponse
     {
@@ -140,9 +134,6 @@ class EmployeeController extends Controller
 
     /**
      * Validate employee ID
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function validateEmployeeID(Request $request): \Illuminate\Http\JsonResponse
     {
@@ -181,7 +172,7 @@ class EmployeeController extends Controller
 
     /**
      * Get specific data by uid
-     * @param string $uid
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function show(string $uid)
@@ -192,7 +183,6 @@ class EmployeeController extends Controller
     /**
      * Function to assign employee to webapp user
      *
-     * @param AddAsUser $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function addAsUser(AddAsUser $request)
@@ -217,7 +207,7 @@ class EmployeeController extends Controller
 
     /**
      * Create new data
-     * @param Create $request
+     *
      * @return void
      */
     public function store(Create $request)
@@ -229,8 +219,7 @@ class EmployeeController extends Controller
 
     /**
      * Update selected data
-     * @param Update $request
-     * @param string $uid
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function update(Update $request, string $uid)
@@ -242,8 +231,8 @@ class EmployeeController extends Controller
 
     /**
      * Update selected data
-     * @param Update $request
-     * @param string $uid
+     *
+     * @param  Update  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateBasicInfo(UpdateBasicInfo $request, string $uid)
@@ -253,8 +242,8 @@ class EmployeeController extends Controller
 
     /**
      * Update selected data
-     * @param Update $request
-     * @param string $uid
+     *
+     * @param  Update  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateIdentity(UpdateIdentity $request, string $uid)
@@ -264,7 +253,7 @@ class EmployeeController extends Controller
 
     /**
      * Delete specific data
-     * @param $uid
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function delete($uid)
@@ -274,7 +263,7 @@ class EmployeeController extends Controller
 
     /**
      * Delete multiple data
-     * @param Request $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function bulkDelete(Request $request)
@@ -286,7 +275,8 @@ class EmployeeController extends Controller
 
     /**
      * Store employee family member
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function storeFamily(\Modules\Hrd\Http\Requests\Employee\Family $request, string $employeeUid)
@@ -296,7 +286,8 @@ class EmployeeController extends Controller
 
     /**
      * Update employee family member
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateFamily(\Modules\Hrd\Http\Requests\Employee\Family $request, string $familyUid)
@@ -306,7 +297,8 @@ class EmployeeController extends Controller
 
     /**
      * Get family of each employee
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function initFamily(string $employeeUid)
@@ -326,7 +318,8 @@ class EmployeeController extends Controller
 
     /**
      * Get family of each employee
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function deleteFamily(string $familyUid)
@@ -336,7 +329,8 @@ class EmployeeController extends Controller
 
     /**
      * Get emergency contact of each employee
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function initEmergency(string $employeeUid)
@@ -346,7 +340,8 @@ class EmployeeController extends Controller
 
     /**
      * Store employee family member
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function storeEmergency(\Modules\Hrd\Http\Requests\Employee\EmergencyContact $request, string $employeeUid)
@@ -356,7 +351,8 @@ class EmployeeController extends Controller
 
     /**
      * Update employee emergency contact
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateEmergency(\Modules\Hrd\Http\Requests\Employee\EmergencyContact $request, string $familyUid)
@@ -366,7 +362,8 @@ class EmployeeController extends Controller
 
     /**
      * delete emergency contact
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function deleteEmergency(string $emergencyUid)
@@ -376,7 +373,8 @@ class EmployeeController extends Controller
 
     /**
      * update employment data
-     * @param Request $request
+     *
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateEmployment(\Modules\Hrd\Http\Requests\Employee\UpdateEmployment $request, string $employeeUid)
@@ -386,10 +384,6 @@ class EmployeeController extends Controller
 
     /**
      * Mark selected employee as resign employee
-     *
-     * @param \Modules\Hrd\Http\Requests\Employee\Resign $request
-     * @param string $employeeUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function resign(\Modules\Hrd\Http\Requests\Employee\Resign $request, string $employeeUid): \Illuminate\Http\JsonResponse
     {
@@ -398,9 +392,6 @@ class EmployeeController extends Controller
 
     /**
      * Cancel resign of selected employee
-     *
-     * @param string $employeeUid
-     * @return \Illuminate\Http\JsonResponse
      */
     public function cancelResign(string $employeeUid): \Illuminate\Http\JsonResponse
     {
@@ -409,14 +400,12 @@ class EmployeeController extends Controller
 
     /**
      * Get employment chart options for frontend
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getEmploymentChart(): \Illuminate\Http\JsonResponse
     {
         $employees = $this->repo->list(
-            select: "id,name,nickname,status,join_date",
-            where: "deleted_at IS NULL"
+            select: 'id,name,nickname,status,join_date',
+            where: 'deleted_at IS NULL'
         );
 
         return apiResponse($this->employeeService->getEmploymentChart($employees));
@@ -424,8 +413,6 @@ class EmployeeController extends Controller
 
     /**
      * Get all element for dashboard chart
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getDashboardElement(): \Illuminate\Http\JsonResponse
     {
@@ -439,25 +426,25 @@ class EmployeeController extends Controller
         // }
 
         $employees = Cache::get(CacheKey::HrDashboardEmoloyeeList->value);
-        if (!$employees) {
+        if (! $employees) {
             $employees = Cache::rememberForever(CacheKey::HrDashboardEmoloyeeList->value, function () {
                 return $this->repo->list(
-                    select: "id,name,nickname,status,join_date,gender,job_level_id,date_of_birth",
-                    where: "deleted_at IS NULL AND status NOT IN (" . Status::Deleted->value . "," . Status::Inactive->value . ") AND end_date IS NULL"
+                    select: 'id,name,nickname,status,join_date,gender,job_level_id,date_of_birth',
+                    where: 'deleted_at IS NULL AND status NOT IN ('.Status::Deleted->value.','.Status::Inactive->value.') AND end_date IS NULL'
                 );
             });
         }
 
         return apiResponse(
             generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'employmentStatus' => $this->employeeService->getEmploymentChart($employees)['data'],
                     'lengthOfService' => $this->employeeService->getLengthOfServiceChart(employees: $employees)['data'],
                     'activeStaff' => $this->employeeService->getActiveStaffChart()['data'],
                     'genderDiversity' => $this->employeeService->getGenderDiversityChart(employees: $employees)['data'],
                     'jobLevel' => $this->employeeService->getJobLevelChart(employees: $employees)['data'],
-                    'ageAverage' => $this->employeeService->getAgeAverageChart(employees: $employees)['data']
+                    'ageAverage' => $this->employeeService->getAgeAverageChart(employees: $employees)['data'],
                 ]
             )
         );

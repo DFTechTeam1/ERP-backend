@@ -5,33 +5,31 @@ namespace Modules\Inventory\Services;
 use App\Enums\ErrorCode\Code;
 use App\Enums\Inventory\InventoryStatus;
 use App\Enums\Production\RequestEquipmentStatus;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Modules\Hrd\Repository\EmployeeRepository;
-use Modules\Inventory\Models\Brand;
-use Modules\Inventory\Models\InventoryType;
-use Modules\Inventory\Models\Supplier;
-use Modules\Inventory\Models\Unit;
-use Modules\Inventory\Models\Inventory;
-use Modules\Inventory\Repository\BrandRepository;
-use Modules\Inventory\Repository\InventoryItemRepository;
-use Modules\Inventory\Repository\SupplierRepository;
-use Modules\Inventory\Repository\InventoryRepository;
-use Modules\Inventory\Repository\InventoryTypeRepository;
-use Modules\Inventory\Repository\InventoryImageRepository;
-use Modules\Production\Repository\ProjectEquipmentRepository;
-use Modules\Production\Repository\ProjectRepository;
-use Modules\Inventory\Repository\CustomInventoryRepository;
-use Modules\Inventory\Repository\CustomInventoryDetailRepository;
-use Modules\Inventory\Repository\UnitRepository;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Company\Services\SettingService;
-use Carbon\Carbon;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Inventory\Models\Brand;
+use Modules\Inventory\Models\Inventory;
+use Modules\Inventory\Models\Supplier;
+use Modules\Inventory\Models\Unit;
+use Modules\Inventory\Repository\BrandRepository;
+use Modules\Inventory\Repository\CustomInventoryDetailRepository;
+use Modules\Inventory\Repository\CustomInventoryRepository;
+use Modules\Inventory\Repository\InventoryImageRepository;
+use Modules\Inventory\Repository\InventoryItemRepository;
+use Modules\Inventory\Repository\InventoryRepository;
+use Modules\Inventory\Repository\InventoryTypeRepository;
+use Modules\Inventory\Repository\SupplierRepository;
+use Modules\Inventory\Repository\UnitRepository;
+use Modules\Production\Repository\ProjectEquipmentRepository;
+use Modules\Production\Repository\ProjectRepository;
 
-class InventoryService {
+class InventoryService
+{
     private $repo;
 
     private $inventoryTypeRepo;
@@ -82,8 +80,7 @@ class InventoryService {
         CustomInventoryDetailRepository $customInventoryDetailRepo,
         SettingRepository $settingRepo,
         SettingService $settingService
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->unitRepo = $unitRepo;
@@ -118,8 +115,6 @@ class InventoryService {
      *
      * $data will have
      * File 'excel'
-     * @param array $data
-     * @return array
      */
     public function import(array $data): array
     {
@@ -133,7 +128,7 @@ class InventoryService {
 
             // validate template
             if ($data[0][0] != \App\Enums\ExcelTemplate\Inventory::InventoryTemplate->value) {
-                throw new \App\Exceptions\TemplateNotValid();
+                throw new \App\Exceptions\TemplateNotValid;
             }
 
             unset($data[0]);
@@ -166,8 +161,8 @@ class InventoryService {
                 }
 
                 // validate unique item
-                if (!$errorRow) {
-                    $check = $this->repo->show('dummy', 'id', [], "lower(name) = '" . strtolower($name) . "'");
+                if (! $errorRow) {
+                    $check = $this->repo->show('dummy', 'id', [], "lower(name) = '".strtolower($name)."'");
 
                     if ($check) {
                         $errorRow = true;
@@ -183,25 +178,25 @@ class InventoryService {
                     }
                 }
 
-                if (!$errorRow) {
-                    $brand = $this->brandRepo->show('dummy', 'id', [], "lower(name) = '" . strtolower($value[0][4]) . "'");
-                    $type = $this->inventoryTypeRepo->show('dummy', 'id,slug', [], "lower(name) = '" . strtolower($value[0][3]) . "'");
-                    $supplier = $this->supplierRepo->show('dummy', 'id', [], "lower(name) = '" . strtolower($value[0][5]) . "'");
+                if (! $errorRow) {
+                    $brand = $this->brandRepo->show('dummy', 'id', [], "lower(name) = '".strtolower($value[0][4])."'");
+                    $type = $this->inventoryTypeRepo->show('dummy', 'id,slug', [], "lower(name) = '".strtolower($value[0][3])."'");
+                    $supplier = $this->supplierRepo->show('dummy', 'id', [], "lower(name) = '".strtolower($value[0][5])."'");
                     $unit = $this->unitRepo->show('dummy', 'id', [], "lower(name) = 'pcs'");
 
                     $items = [];
                     foreach ($value as $itemDetail) {
                         if ($itemDetail[9] == 'User') {
-                            $employee = $this->employeeRepo->show('dummy', 'id', [], "lower(employee_id) = '" . strtolower($itemDetail[10]) . "'");
+                            $employee = $this->employeeRepo->show('dummy', 'id', [], "lower(employee_id) = '".strtolower($itemDetail[10])."'");
                         }
 
                         $dividerCode = '-';
 
                         $countItems = 0;
 
-                        $inventoryCode = rand(100,900) . $dividerCode . $type->slug . $dividerCode . $countItems + 1;
+                        $inventoryCode = rand(100, 900).$dividerCode.$type->slug.$dividerCode.$countItems + 1;
 
-                        $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr' . rand(100,900) . date('Yhs') . '.png');
+                        $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr'.rand(100, 900).date('Yhs').'.png');
 
                         $items[] = [
                             'current_location' => $itemDetail[9] == 'User' ? 1 : 2,
@@ -213,7 +208,7 @@ class InventoryService {
                         ];
                     }
 
-                    $price = str_replace(',','',$value[0][1]);
+                    $price = str_replace(',', '', $value[0][1]);
                     $price = str_replace('.', '', $price);
 
                     $payload[] = [
@@ -246,7 +241,7 @@ class InventoryService {
             DB::commit();
 
             return generalResponse(
-                __("global.importInventorySuccess"),
+                __('global.importInventorySuccess'),
                 false,
                 [
                     'error' => $error,
@@ -261,14 +256,14 @@ class InventoryService {
 
     public function createBrandTemplate()
     {
-        $excel = new \App\Services\ExcelService();
+        $excel = new \App\Services\ExcelService;
 
         $excel->setValue('A1', 'TEMPLATE BRAND');
         $excel->mergeCells('A1:F1');
         $excel->alignCenter('A1:F1');
         $excel->setAsBold('A1');
 
-        $excel->setValue('A5', "Nama");
+        $excel->setValue('A5', 'Nama');
         $excel->setAsBold('A5');
 
         $excel->save(storage_path('app/public/static-file/template_brand.xlsx'));
@@ -278,14 +273,14 @@ class InventoryService {
 
     public function createSupplierTemplate()
     {
-        $excel = new \App\Services\ExcelService();
+        $excel = new \App\Services\ExcelService;
 
         $excel->setValue('A1', 'TEMPLATE SUPPLIER');
         $excel->mergeCells('A1:F1');
         $excel->alignCenter('A1:F1');
         $excel->setAsBold('A1');
 
-        $excel->setValue('A5', "Nama");
+        $excel->setValue('A5', 'Nama');
         $excel->setAsBold('A5');
 
         $excel->save(storage_path('app/public/static-file/template_supplier.xlsx'));
@@ -295,14 +290,14 @@ class InventoryService {
 
     public function createUnitTemplate()
     {
-        $excel = new \App\Services\ExcelService();
+        $excel = new \App\Services\ExcelService;
 
         $excel->setValue('A1', 'TEMPLATE UNIT');
         $excel->mergeCells('A1:F1');
         $excel->alignCenter('A1:F1');
         $excel->setAsBold('A1');
 
-        $excel->setValue('A5', "Nama");
+        $excel->setValue('A5', 'Nama');
         $excel->setAsBold('A5');
 
         $excel->save(storage_path('app/public/static-file/template_unit.xlsx'));
@@ -312,14 +307,14 @@ class InventoryService {
 
     public function createInventoryTypeTemplate()
     {
-        $excel = new \App\Services\ExcelService();
+        $excel = new \App\Services\ExcelService;
 
         $excel->setValue('A1', 'TEMPLATE INVENTORY TYPE');
         $excel->mergeCells('A1:F1');
         $excel->alignCenter('A1:F1');
         $excel->setAsBold('A1');
 
-        $excel->setValue('A5', "Nama");
+        $excel->setValue('A5', 'Nama');
         $excel->setAsBold('A5');
 
         $excel->save(storage_path('app/public/static-file/template_inventory_type.xlsx'));
@@ -339,7 +334,7 @@ class InventoryService {
 
         sleep(1);
 
-        $excel = new \App\Services\ExcelService();
+        $excel = new \App\Services\ExcelService;
 
         $excel->createSheet('Template', 0);
         $excel->setActiveSheet('Template');
@@ -349,9 +344,9 @@ class InventoryService {
         $excel->alignCenter('A1:F1');
 
         $excel->setAsBold('A1');
-        $excel->setValue('A4', "Nama Barang");
-        $excel->setValue('B4', "Harga Barang");
-        $excel->setValue('C4', "Lokasi Gudang");
+        $excel->setValue('A4', 'Nama Barang');
+        $excel->setValue('B4', 'Harga Barang');
+        $excel->setValue('C4', 'Lokasi Gudang');
         $excel->setValue('D4', 'Pilih Tipe');
         $excel->setValue('E4', 'Pilih Merek');
         $excel->setValue('F4', 'Pilih Supplier');
@@ -393,7 +388,7 @@ class InventoryService {
         }
         $warehouseList = implode(',', $warehouseList);
 
-        $locations = "User, Warehouse";
+        $locations = 'User, Warehouse';
 
         $bulkSheet = 100;
 
@@ -415,7 +410,7 @@ class InventoryService {
             $excel->setAsTypeList($locations, "J{$a}", 'STOP! Ada Error', 'Pilih lokasi nya kawan', 'Pilih Lokasi');
         }
 
-        $employees = $this->employeeRepo->list('id,name,employee_id', 'status != ' . \App\Enums\Employee\Status::Inactive->value);
+        $employees = $this->employeeRepo->list('id,name,employee_id', 'status != '.\App\Enums\Employee\Status::Inactive->value);
 
         $excel->createSheet('Employee List', 1);
         $excel->setActiveSheet('Employee List');
@@ -431,7 +426,7 @@ class InventoryService {
         $excel->setAsBold('A4');
 
         $startCell = '5';
-        foreach($employees->toArray() as $employee) {
+        foreach ($employees->toArray() as $employee) {
             $excel->setValue("A{$startCell}", $employee['employee_id']);
             $excel->setValue("B{$startCell}", $employee['name']);
 
@@ -462,14 +457,14 @@ class InventoryService {
                 [
                     'relation' => 'equipments',
                     'query' => 'status > 0',
-                ]
+                ],
             ];
 
-            if (!empty($search)) { // array
-                if (!empty($search['name']) && empty($where)) {
+            if (! empty($search)) { // array
+                if (! empty($search['name']) && empty($where)) {
                     $name = strtolower($search['name']);
                     $where = "LOWER(name) LIKE '%{$name}%'";
-                } else if (!empty($search['name']) && !empty($where)) {
+                } elseif (! empty($search['name']) && ! empty($where)) {
                     $name = strtolower($search['name']);
                     $where .= " AND LOWER(name) LIKE '%{$name}%'";
                 }
@@ -499,13 +494,13 @@ class InventoryService {
                 if (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::Ready->value) {
                     $statusText = __('global.equipmentReady');
                     $statusColor = 'success';
-                } else if (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::Return->value) {
+                } elseif (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::Return->value) {
                     $statusText = __('global.needToCheckAfterReturn');
                     $statusColor = 'red';
-                } else if (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::Cancel->value) {
+                } elseif (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::Cancel->value) {
                     $statusText = __('global.canceled');
                     $statusColor = 'orange-darken-3';
-                } else if (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn->value) {
+                } elseif (count($unique) == 1 && $unique[0] == \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn->value) {
                     $statusText = __('global.completeAndNotYetReturned');
                     $statusColor = 'lime-darken-2';
                 }
@@ -513,7 +508,6 @@ class InventoryService {
                     $statusText = __('global.onEvent');
                     $statusColor = 'info';
                 }
-
 
                 return [
                     'uid' => $item->uid,
@@ -540,19 +534,12 @@ class InventoryService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
             $page = request('page') ?? 1;
@@ -561,22 +548,22 @@ class InventoryService {
             $search = request('search');
             $whereHas = [];
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "name asc";
+            $sort = 'name asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
 
@@ -592,7 +579,7 @@ class InventoryService {
 
             $inventoryStatuses = InventoryStatus::cases();
 
-            $paginated = collect((object) $paginated)->map(function ($item) use ($inventoryStatuses) {
+            $paginated = collect((object) $paginated)->map(function ($item) {
                 $item['stock'] = count($item->items);
                 $unit = $item->unit ? $item->unit->name : '';
 
@@ -600,8 +587,8 @@ class InventoryService {
                 $location = [];
                 foreach ($locationGroup as $locationId => $loc) {
                     $location[] = [
-                        'text' => count($locationGroup[$locationId]) . ' ' . $locationGroup[$locationId][0]['location'],
-                        'color' => $locationGroup[$locationId][0]['location_badge']
+                        'text' => count($locationGroup[$locationId]).' '.$locationGroup[$locationId][0]['location'],
+                        'color' => $locationGroup[$locationId][0]['location_badge'],
 
                     ];
 
@@ -610,11 +597,11 @@ class InventoryService {
                 return [
                     'uid' => $item->uid,
                     'name' => $item->name,
-                    'stock' => count($item->items) . ' ' . $unit,
+                    'stock' => count($item->items).' '.$unit,
                     'brand' => $item->brand ? $item->brand->name : '-',
                     'image' => $item->image ? asset("storage/{$this->imageFolder}/{$item->image->image}") : asset('images/noimage.png'),
                     'year_of_purchase' => $item->year_of_purchase ?? '-',
-                    'purchase_price' => config('company.currency') . ' ' . number_format(collect($item->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')),
+                    'purchase_price' => config('company.currency').' '.number_format(collect($item->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')),
                     'items' => collect($item->items)->map(function ($inventoryItem) {
                         return [
                             'id' => $inventoryItem->id,
@@ -627,7 +614,7 @@ class InventoryService {
                         ];
                     }),
                     'locations' => $location,
-                    'warranty' => $item->warranty ? $item->warranty . ' ' . __('global.year') : '-',
+                    'warranty' => $item->warranty ? $item->warranty.' '.__('global.year') : '-',
                 ];
             });
 
@@ -650,13 +637,13 @@ class InventoryService {
     {
         $where = '';
 
-        if (!empty(request('search'))) {
+        if (! empty(request('search'))) {
             $search = strtolower(request('search'));
             $where = "lower(name) like '%{$search}%'";
         }
 
         // get all available items
-        $currentCustomData = $this->customItemRepo->list("id", '', ['items:id,custom_inventory_id,inventory_id']);
+        $currentCustomData = $this->customItemRepo->list('id', '', ['items:id,custom_inventory_id,inventory_id']);
         $inventoryItemIds = [];
         foreach ($currentCustomData as $current) {
             foreach ($current->items as $currentItem) {
@@ -674,7 +661,7 @@ class InventoryService {
                 'items' => function ($q) use ($inventoryItemIds) {
                     $q->selectRaw('id,inventory_id,purchase_price,inventory_code')
                         ->whereNotIn('id', $inventoryItemIds);
-                }
+                },
             ],
             'warehouse_id DESC'
         );
@@ -711,7 +698,7 @@ class InventoryService {
             [
                 'items:id,inventory_id,custom_inventory_id,qty',
                 'items.inventory:id,inventory_id',
-                'items.inventory.inventory:id,name'
+                'items.inventory.inventory:id,name',
             ]
         );
 
@@ -720,7 +707,7 @@ class InventoryService {
 
             $items = [];
             foreach ($item->items as $inventory) {
-                for($a = 0; $a < $inventory->qty; $a++) {
+                for ($a = 0; $a < $inventory->qty; $a++) {
                     $items[] = [
                         'id' => $inventory->inventory->uid,
                         'name' => $inventory->inventory->name,
@@ -733,7 +720,7 @@ class InventoryService {
                 'title' => $item->name,
                 'value' => $item->uid,
                 'location' => '',
-                'items' => $items
+                'items' => $items,
             ];
         }
 
@@ -754,7 +741,7 @@ class InventoryService {
             collect((object) $data)->map(function ($item) {
                 return [
                     'value' => $item->id,
-                    'title' => $item->inventory->name
+                    'title' => $item->inventory->name,
                 ];
             })->toArray()
         );
@@ -762,8 +749,6 @@ class InventoryService {
 
     /**
      * Get equipment list for project request
-     *
-     * @return array
      */
     public function getEquipmentForProjectRequest(): array
     {
@@ -773,7 +758,7 @@ class InventoryService {
             if ($type == 'inventory_item') {
                 $inventories = $this->repo->list(
                     select: 'id,name,stock,item_type,brand_id',
-                    where: "warehouse_id = 2 AND stock > 0"
+                    where: 'warehouse_id = 2 AND stock > 0'
                 );
             } else {
                 $inventories = $this->customItemRepo->list(
@@ -782,7 +767,7 @@ class InventoryService {
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $inventories->toArray()
             );
         } catch (\Throwable $th) {
@@ -814,13 +799,13 @@ class InventoryService {
             $location = [];
             foreach ($locationGroup as $locationId => $loc) {
                 $location[] = [
-                    'text' => count($locationGroup[$locationId]) . ' ' . $locationGroup[$locationId][0]['location'],
-                    'color' => $locationGroup[$locationId][0]['location_badge']
+                    'text' => count($locationGroup[$locationId]).' '.$locationGroup[$locationId][0]['location'],
+                    'color' => $locationGroup[$locationId][0]['location_badge'],
                 ];
 
             }
 
-            $image = $item->image ? asset('storage/inventory/' . $item->image->image) : asset('images/noimage.png');
+            $image = $item->image ? asset('storage/inventory/'.$item->image->image) : asset('images/noimage.png');
 
             return [
                 'value' => $item->value,
@@ -844,9 +829,6 @@ class InventoryService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -863,7 +845,7 @@ class InventoryService {
                     'items.employee:id,uid',
                     'images:id,image,inventory_id',
                     'itemTypeRelation:id,uid,name',
-                    'projectEquipments:id,inventory_id,status'
+                    'projectEquipments:id,inventory_id,status',
                 ]
             );
 
@@ -939,7 +921,7 @@ class InventoryService {
                 'item_type' => $itemType,
                 'description' => $data->description,
                 'year_of_purchase' => $data->year_of_purchase,
-                'purchase_price' => config('company.currency') . ' ' . number_format(collect($data->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')),
+                'purchase_price' => config('company.currency').' '.number_format(collect($data->items)->pluck('purchase_price')->sum(), 0, config('company.pricing_divider'), config('company.pricing_divider')),
                 'price_raw' => $data->purchase_price ? $data->purchase_price : '',
                 'last_update' => date('d F Y H:i', strtotime($data->updated_at)),
                 'warehouse_id' => $data->warehouse_id,
@@ -953,7 +935,7 @@ class InventoryService {
                         'status' => $item->status,
                         'status_text' => $item->status_text,
                         'current_location' => $item->current_location,
-                        'purchase_price' => config('company.currency') . ' ' . number_format($item->purchase_price, 0, config('company.pricing_divider'), config('company.pricing_divider')),
+                        'purchase_price' => config('company.currency').' '.number_format($item->purchase_price, 0, config('company.pricing_divider'), config('company.pricing_divider')),
                         'purchase_price_raw' => $item->purchase_price,
                         'warranty' => $item->warranty,
                         'year_of_purchase' => $item->year_of_purchase,
@@ -961,9 +943,9 @@ class InventoryService {
                         'id' => $item->id,
                         'user_id' => $item->employee ? $item->employee->uid : null,
                         'user' => $item->employee ? $item->employee->name : null,
-                        'qrcode' => asset('storage/' . $item->qrcode),
+                        'qrcode' => asset('storage/'.$item->qrcode),
                     ];
-                })
+                }),
             ];
 
             return generalResponse(
@@ -986,7 +968,7 @@ class InventoryService {
             if ($data['default_request_item']) {
                 $this->customItemRepo->update([
                     'default_request_item' => 0,
-                ], '', "default_request_item = 1");
+                ], '', 'default_request_item = 1');
             }
 
             $this->customItemRepo->update(
@@ -996,7 +978,7 @@ class InventoryService {
 
             $defaultItem = $this->customItemRepo->list('id', 'default_request_item = 1')->count();
             $this->settingService->storeVariables([
-                'have_default_request_item' => $defaultItem > 0 ? 1 : 0
+                'have_default_request_item' => $defaultItem > 0 ? 1 : 0,
             ]);
 
             $itemData = $this->customItemRepo->show($uid);
@@ -1006,7 +988,7 @@ class InventoryService {
                     $this->customItemDetailRepo->update([
                         'qty' => 1,
                         'price' => $inventory['price'],
-                    ], '', 'id = ' .$inventory['current_id']);
+                    ], '', 'id = '.$inventory['current_id']);
                 } else {
                     $itemData->items()->create([
                         'inventory_id' => $inventory['id'],
@@ -1039,7 +1021,7 @@ class InventoryService {
         try {
             $lengthData = $this->customItemRepo->list('id')->count();
 
-            $data['build_series'] = $this->buildSeriesPrefix . generateSequenceNumber($lengthData + 1);
+            $data['build_series'] = $this->buildSeriesPrefix.generateSequenceNumber($lengthData + 1);
 
             $data['location'] = \App\Enums\Inventory\Location::InWarehouse->value;
 
@@ -1050,7 +1032,7 @@ class InventoryService {
                 ], '', 'default_request_item = 1');
 
                 $this->settingService->storeVariables([
-                    'have_default_request_item' => 1
+                    'have_default_request_item' => 1,
                 ]);
             }
 
@@ -1094,22 +1076,22 @@ class InventoryService {
             $search = request('search');
             $whereHas = [];
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $where = formatSearchConditions($search['filters'], $where);
             }
 
-            $sort = "name asc";
+            $sort = 'name asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
 
@@ -1180,7 +1162,7 @@ class InventoryService {
                 'series' => $item->inventory->inventory_code,
                 'stock' => $item->inventory->inventory->stock,
                 'uid' => $item->inventory->inventory->uid,
-                'current_id' => $item->id
+                'current_id' => $item->id,
             ];
         });
 
@@ -1189,17 +1171,13 @@ class InventoryService {
             false,
             [
                 'raw' => $data,
-                'items' => $items
+                'items' => $items,
             ],
         );
     }
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
@@ -1207,11 +1185,11 @@ class InventoryService {
 
         DB::beginTransaction();
         try {
-            if ((isset($data['supplier_id'])) && (!empty($data['supplier_id']))) {
-                $data['supplier_id'] = getIdFromUid($data['supplier_id'], new Supplier());
+            if ((isset($data['supplier_id'])) && (! empty($data['supplier_id']))) {
+                $data['supplier_id'] = getIdFromUid($data['supplier_id'], new Supplier);
             }
-            $data['brand_id'] = getIdFromUid($data['brand_id'], new Brand());
-            $data['unit_id'] = getIdFromUid($data['unit_id'], new Unit());
+            $data['brand_id'] = getIdFromUid($data['brand_id'], new Brand);
+            $data['unit_id'] = getIdFromUid($data['unit_id'], new Unit);
 
             $inventoryType = $this->inventoryTypeRepo->show($data['item_type'], 'id,slug,uid');
 
@@ -1231,7 +1209,7 @@ class InventoryService {
                 'year_of_purchase',
                 'purchase_price',
                 'stock',
-                'warehouse_id'
+                'warehouse_id',
             ])->toArray());
 
             // add items
@@ -1241,7 +1219,7 @@ class InventoryService {
             if (isset($data['images'])) {
                 foreach ($data['images'] as $image) {
                     $imageNames[] = [
-                        'image' => uploadBase64($image, $this->imageFolder)
+                        'image' => uploadBase64($image, $this->imageFolder),
                     ];
                 }
 
@@ -1258,7 +1236,7 @@ class InventoryService {
             // rollback image
             if (count($imageNames) > 0) {
                 foreach ($imageNames as $imageName) {
-                    deleteImage(public_path('storage/' . $this->imageFolder . '/' . $imageName));
+                    deleteImage(public_path('storage/'.$this->imageFolder.'/'.$imageName));
                 }
             }
 
@@ -1271,7 +1249,6 @@ class InventoryService {
     /**
      * Add more stock to each product parent
      *
-     * @param array $data
      * @return array
      */
     public function addStock(array $data, string $parentUid)
@@ -1283,7 +1260,7 @@ class InventoryService {
                 'id,uid,item_type',
                 [
                     'itemTypeRelation:id,slug',
-                    'items:id,inventory_id'
+                    'items:id,inventory_id',
                 ]
             );
 
@@ -1295,7 +1272,7 @@ class InventoryService {
                 __('global.successAddStock'),
                 false
             );
-        } catch(\Throwable $th) {
+        } catch (\Throwable $th) {
             DB::rollBack();
 
             return generalResponse(
@@ -1319,17 +1296,17 @@ class InventoryService {
             $itemLoactions = [];
             $countItems = $inventory->items->count();
             foreach ($data['item_locations'] as $keyLocation => $itemLocation) {
-                $inventoryCode = rand(100,900) . $dividerCode . $inventoryType->slug . $dividerCode . $countItems + 1;
+                $inventoryCode = rand(100, 900).$dividerCode.$inventoryType->slug.$dividerCode.$countItems + 1;
                 $userId = null;
                 if (
                     (isset($itemLocation['user_id'])) &&
-                    (!empty($itemLocation['user_id'])) &&
+                    (! empty($itemLocation['user_id'])) &&
                     ($itemLocation['user_id'] != 'undefined')
                 ) {
-                    $userId = getIdFromUid($itemLocation['user_id'], new \Modules\Hrd\Models\Employee());
+                    $userId = getIdFromUid($itemLocation['user_id'], new \Modules\Hrd\Models\Employee);
                 }
 
-                $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr' . rand(100,900) . date('Yhs') . '.png');
+                $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr'.rand(100, 900).date('Yhs').'.png');
 
                 $itemLoactions[] = [
                     'inventory_code' => $inventoryCode,
@@ -1355,13 +1332,13 @@ class InventoryService {
     public function itemList(string $uid)
     {
         try {
-            $inventoryId = getIdFromUid($uid, new \Modules\Inventory\Models\Inventory());
+            $inventoryId = getIdFromUid($uid, new \Modules\Inventory\Models\Inventory);
 
             $data = $this->inventoryItemRepo->list(
                 'id,inventory_id,inventory_code,status,current_location,user_id,purchase_price,warranty,year_of_purchase',
-                'inventory_id = ' . $inventoryId,
+                'inventory_id = '.$inventoryId,
                 [
-                    'employee:id,uid,name'
+                    'employee:id,uid,name',
                 ]
             );
 
@@ -1405,29 +1382,22 @@ class InventoryService {
      * 3. Delete inventory images if exitst
      * 4. Update and Create item locations (Using Upsert method)
      * 5. Upload image if exists
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     *
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         $imageNames = [];
 
         DB::beginTransaction();
         try {
-            if ((isset($data['supplier_id'])) && (!empty($data['supplier_id']))) {
-                $data['supplier_id'] = getIdFromUid($data['supplier_id'], new Supplier());
+            if ((isset($data['supplier_id'])) && (! empty($data['supplier_id']))) {
+                $data['supplier_id'] = getIdFromUid($data['supplier_id'], new Supplier);
             }
-            $data['brand_id'] = getIdFromUid($data['brand_id'], new Brand());
-            $data['unit_id'] = getIdFromUid($data['unit_id'], new Unit());
-            $inventoryId = getIdFromUid($id, new Inventory());
+            $data['brand_id'] = getIdFromUid($data['brand_id'], new Brand);
+            $data['unit_id'] = getIdFromUid($data['unit_id'], new Unit);
+            $inventoryId = getIdFromUid($id, new Inventory);
 
             $inventoryType = $this->inventoryTypeRepo->show($data['item_type'], 'id,slug,uid');
 
@@ -1450,34 +1420,34 @@ class InventoryService {
                 'warranty',
                 'year_of_purchase',
                 'purchase_price',
-                'stock'
+                'stock',
             ])->toArray(), $id);
 
             $inventory = $this->repo->show($id, 'id,uid,name', ['images']);
 
             // delete item if exists
-            if (!empty($data['deleted_item_stock'])) {
+            if (! empty($data['deleted_item_stock'])) {
                 $this->inventoryItemRepo->bulkDelete(
                     collect(
                         $data['deleted_item_stock']
                     )
-                    ->pluck('id')
-                    ->toArray(),
+                        ->pluck('id')
+                        ->toArray(),
                     'id'
                 );
             }
 
             // delete images if exits
-            if (!empty($data['deleted_images'])) {
+            if (! empty($data['deleted_images'])) {
                 // delete in folder
                 $imageIds = collect($data['deleted_images'])
                     ->pluck('id')
                     ->toArray();
-                $whereImage = 'id IN ('. implode(',', $imageIds) .')';
+                $whereImage = 'id IN ('.implode(',', $imageIds).')';
                 $currentImages = $this->inventoryImageRepo->list('id,image', $whereImage);
 
                 foreach ($currentImages as $currentImage) {
-                    deleteImage(public_path('storage/' . $this->imageFolder . '/' . $currentImage->image));
+                    deleteImage(public_path('storage/'.$this->imageFolder.'/'.$currentImage->image));
                 }
 
                 $this->inventoryImageRepo->bulkDelete(
@@ -1491,17 +1461,17 @@ class InventoryService {
             // update items stock
             $itemLocations = [];
             foreach ($data['item_locations'] as $keyLocation => $itemLocation) {
-                $inventoryCode = rand(100,900) . $dividerCode . $inventoryType->slug . $dividerCode . $keyLocation + 1;
+                $inventoryCode = rand(100, 900).$dividerCode.$inventoryType->slug.$dividerCode.$keyLocation + 1;
                 $userId = null;
                 if (
                     (isset($itemLocation['user_id'])) &&
-                    (!empty($itemLocation['user_id'])) &&
+                    (! empty($itemLocation['user_id'])) &&
                     ($itemLocation['user_id'] != 'undefined')
                 ) {
-                    $userId = getIdFromUid($itemLocation['user_id'], new \Modules\Hrd\Models\Employee());
+                    $userId = getIdFromUid($itemLocation['user_id'], new \Modules\Hrd\Models\Employee);
                 }
 
-                $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr' . rand(100,999) . date('Yhs') . '.png');
+                $qrcode = generateQrcode($inventoryCode, 'inventory/qrcode/qr'.rand(100, 999).date('Yhs').'.png');
 
                 $payloadItemLocation = [
                     'current_location' => $itemLocation['location'],
@@ -1511,8 +1481,8 @@ class InventoryService {
                     'user_id' => $userId,
                     'qrcode' => $qrcode,
                     'purchase_price' => $itemLocation['purchase_price'],
-                    'warranty' => $itemLocation['warranty'] == 'null' ? NULL : $itemLocation['warranty'],
-                    'year_of_purchase' => $itemLocation['year_of_purchase'] == 'null' ? NULL : $itemLocation['year_of_purchase'],
+                    'warranty' => $itemLocation['warranty'] == 'null' ? null : $itemLocation['warranty'],
+                    'year_of_purchase' => $itemLocation['year_of_purchase'] == 'null' ? null : $itemLocation['year_of_purchase'],
                 ];
 
                 if (empty($itemLocation['id'])) { // create
@@ -1528,7 +1498,7 @@ class InventoryService {
                             'year_of_purchase',
                         ])->toArray(),
                         '',
-                        'id = ' . $itemLocation['id'],
+                        'id = '.$itemLocation['id'],
                     );
                 }
             }
@@ -1536,9 +1506,9 @@ class InventoryService {
             // handle image uploading
             if (isset($data['images'])) {
                 foreach ($data['images'] as $image) {
-                    if (!Str::startsWith($image, 'https://') || !Str::startsWith($image, 'http://')) {
+                    if (! Str::startsWith($image, 'https://') || ! Str::startsWith($image, 'http://')) {
                         $imageNames[] = [
-                            'image' => uploadBase64($image, $this->imageFolder)
+                            'image' => uploadBase64($image, $this->imageFolder),
                         ];
                     }
                 }
@@ -1561,7 +1531,7 @@ class InventoryService {
             // rollback image
             if (count($imageNames) > 0) {
                 foreach ($imageNames as $imageName) {
-                    deleteImage(public_path('storage/' . $this->imageFolder . '/' . $imageName['image']));
+                    deleteImage(public_path('storage/'.$this->imageFolder.'/'.$imageName['image']));
                 }
             }
 
@@ -1574,7 +1544,6 @@ class InventoryService {
     /**
      * Delete selected data
      *
-     * @param integer $id
      *
      * @return void
      */
@@ -1593,10 +1562,6 @@ class InventoryService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -1643,10 +1608,6 @@ class InventoryService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDeleteCustomInventory(array $ids): array
     {

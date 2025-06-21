@@ -4,8 +4,6 @@ namespace Modules\Inventory\Http\Requests\Inventory;
 
 use App\Rules\UniqueLowerRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\File;
 use Modules\Inventory\Models\Inventory;
 
 class Update extends FormRequest
@@ -18,7 +16,7 @@ class Update extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new Inventory(), $this->route('inventory')),
+                new UniqueLowerRule(new Inventory, $this->route('inventory')),
             ],
             'inventory_code' => 'nullable',
             'item_type' => 'required',
@@ -35,7 +33,7 @@ class Update extends FormRequest
             'status' => 'nullable',
             'images.*' => [
                 'nullable',
-                'string'
+                'string',
             ],
             'status' => 'nullable',
             'current_images' => 'nullable',

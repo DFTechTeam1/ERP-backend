@@ -14,16 +14,16 @@ return new class extends Migration
     public function up(): void
     {
         $relations = RelationFamily::cases();
-        $relations = collect($relations)->map(function($item) {
+        $relations = collect($relations)->map(function ($item) {
             return $item->value;
         })->toArray();
 
         $religions = Religion::cases();
-        $religions = collect($religions)->map(function($item) {
+        $religions = collect($religions)->map(function ($item) {
             return $item->value;
         })->toArray();
 
-        Schema::table('employee_families', function (Blueprint $table) use ($relations, $religions) {
+        Schema::table('employee_families', function (Blueprint $table) use ($relations) {
             $table->dropColumn('relation');
 
             $table->enum('relationship', $relations);

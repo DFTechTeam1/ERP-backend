@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class AssignCheckByPMNotification extends Notification
 {
@@ -71,12 +70,12 @@ class AssignCheckByPMNotification extends Notification
                     'keyboard' => [
                         'inline_keyboard' => [
                             [
-                                ['text' => 'Cek Hasil Pekerjaan', 'callback_data' => 'idt=' . \Modules\Telegram\Enums\CallbackIdentity::CheckProofOfWork->value . '&tid=' . $this->task->id],
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                ['text' => 'Cek Hasil Pekerjaan', 'callback_data' => 'idt='.\Modules\Telegram\Enums\CallbackIdentity::CheckProofOfWork->value.'&tid='.$this->task->id],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
     }
 }

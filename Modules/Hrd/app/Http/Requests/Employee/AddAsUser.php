@@ -14,7 +14,7 @@ class AddAsUser extends FormRequest
         return [
             'user_id' => 'required',
             'password' => 'required|min:6',
-            'role_id' => 'required'
+            'role_id' => 'required',
         ];
     }
 

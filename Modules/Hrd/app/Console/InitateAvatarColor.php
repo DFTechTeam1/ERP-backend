@@ -4,8 +4,8 @@ namespace Modules\Hrd\Console;
 
 use Illuminate\Console\Command;
 use Modules\Hrd\Models\Employee;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class InitateAvatarColor extends Command
 {
@@ -42,7 +42,7 @@ class InitateAvatarColor extends Command
                 ->update(['avatar_color' => $color]);
         }
 
-        $this->info("All employees has been updated");
+        $this->info('All employees has been updated');
     }
 
     /**

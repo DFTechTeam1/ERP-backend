@@ -4,15 +4,15 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class CancelProjectWithPicNotification extends Notification
 {
     use Queueable;
 
     public $employee;
+
     public $project;
 
     /**
@@ -67,7 +67,7 @@ class CancelProjectWithPicNotification extends Notification
 
         return [
             'chatIds' => [$this->employee->telegram_chat_id],
-            'message' => "Halo {$this->employee->nickname}, event {$this->project->name} di tanggal {$eventDate} di cancel nih."
+            'message' => "Halo {$this->employee->nickname}, event {$this->project->name} di tanggal {$eventDate} di cancel nih.",
         ];
     }
 
@@ -77,7 +77,7 @@ class CancelProjectWithPicNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => "Halo {$this->employee->nickname}, event {$this->project->name} di tanggal {$eventDate} di cancel nih."
+                'text' => "Halo {$this->employee->nickname}, event {$this->project->name} di tanggal {$eventDate} di cancel nih.",
             ],
         ];
 

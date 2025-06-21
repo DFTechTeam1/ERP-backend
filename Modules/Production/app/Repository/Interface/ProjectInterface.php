@@ -2,10 +2,11 @@
 
 namespace Modules\Production\Repository\Interface;
 
-abstract class ProjectInterface {
-    abstract function list(
+abstract class ProjectInterface
+{
+    abstract public function list(
         string $select = '*',
-        string $where = "",
+        string $where = '',
         array $relation = [],
         array $whereHas = [],
         string $orderBy = '',
@@ -14,15 +15,15 @@ abstract class ProjectInterface {
         array $has = []
     );
 
-    abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage = 10, int $page = 1, array $has = []);
+    abstract public function pagination(string $select = '*', string $where = '', array $relation = [], int $itemsPerPage = 10, int $page = 1, array $has = []);
 
-    abstract function show(string $uid, string $select = '*', array $relation = [], string $where = '');
+    abstract public function show(string $uid, string $select = '*', array $relation = [], string $where = '');
 
-    abstract function store(array $data);
+    abstract public function store(array $data);
 
-    abstract function update(array $data, string $id = '', string $where = '');
+    abstract public function update(array $data, string $id = '', string $where = '');
 
-    abstract function delete(int $id);
+    abstract public function delete(int $id);
 
-    abstract function bulkDelete(array $ids, string $key = '');
+    abstract public function bulkDelete(array $ids, string $key = '');
 }

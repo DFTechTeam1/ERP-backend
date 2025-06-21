@@ -4,13 +4,10 @@ namespace App\Actions\Project;
 
 use App\Actions\DefineDetailProjectPermission;
 use App\Actions\DefineTaskAction;
-use App\Enums\Production\TaskStatus;
-use App\Enums\System\BaseRole;
 use Carbon\Carbon;
 use DateTime;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\Employee;
-use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
@@ -29,9 +26,9 @@ class FormatTaskPermission
 
     public function handle($project, int $projectId)
     {
-        $projectPicRepository = new ProjectPersonInChargeRepository();
-        $taskRepo = new ProjectTaskRepository();
-        $repo = new ProjectRepository();
+        $projectPicRepository = new ProjectPersonInChargeRepository;
+        $taskRepo = new ProjectTaskRepository;
+        $repo = new ProjectRepository;
 
         $this->user = auth()->user();
         $this->employeeId = $this->user->employee_id;
@@ -41,7 +38,7 @@ class FormatTaskPermission
         $output = [];
 
         $leadModeller = getSettingByKey('lead_3d_modeller');
-        $leadModeller = getIdFromUid($leadModeller, new Employee());
+        $leadModeller = getIdFromUid($leadModeller, new Employee);
 
         $project['report'] = GetProjectStatistic::run($project);
 
@@ -49,12 +46,11 @@ class FormatTaskPermission
 
         $project['feedback_given'] = $project['feedback'] ? true : false;
 
-
         $superUserRole = isSuperUserRole();
 
         // get teams
-        $projectId = getIdFromUid($project['uid'], new \Modules\Production\Models\Project());
-        $personInCharges = $projectPicRepository->list('*', 'project_id = ' . $projectId, ['employee:id,uid,name,email,nickname,boss_id,position_id']);
+        $projectId = getIdFromUid($project['uid'], new \Modules\Production\Models\Project);
+        $personInCharges = $projectPicRepository->list('*', 'project_id = '.$projectId, ['employee:id,uid,name,email,nickname,boss_id,position_id']);
         $project['personInCharges'] = $personInCharges;
         $projectTeams = GetProjectTeams::run((object) $project);
 
@@ -116,12 +112,12 @@ class FormatTaskPermission
         $project['is_director'] = $this->user->is_director;
 
         // if logged user is pic or super user role, set as is_project_pic
-        $projectPics = $projectPicRepository->list('id,pic_id', 'project_id = ' . $projectId);
+        $projectPics = $projectPicRepository->list('id,pic_id', 'project_id = '.$projectId);
         $isProjectPic = in_array($this->employeeId, collect($projectPics)->pluck('pic_id')->toArray()) || $superUserRole ? true : false;
         $project['is_project_pic'] = $isProjectPic;
 
-        $projectId = getIdFromUid($project['uid'], new \Modules\Production\Models\Project());
-        $projectTasks = $taskRepo->list('*', 'project_id = ' . $projectId, ['board']);
+        $projectId = getIdFromUid($project['uid'], new \Modules\Production\Models\Project);
+        $projectTasks = $taskRepo->list('*', 'project_id = '.$projectId, ['board']);
 
         $project['progress'] = FormatProjectProgress::run($projectTasks, $projectId);
         $project['can_complete_project'] = (bool) $this->user->hasPermissionTo('complete_project');
@@ -181,19 +177,25 @@ class FormatTaskPermission
                     ($this->user->hasPermissionTo('edit_task_description')) &&
                     (hasSuperPower(projectId: $projectId) ||
                     hasLittlePower(task: $task))
-                ) $outputTask[$keyTask]['can_edit_description'] = true;
+                ) {
+                    $outputTask[$keyTask]['can_edit_description'] = true;
+                }
 
                 if (
                     ($this->user->hasPermissionTo('add_task_description')) &&
                     (hasSuperPower(projectId: $projectId) ||
                     hasLittlePower(task: $task))
-                ) $outputTask[$keyTask]['can_add_description'] = true;
+                ) {
+                    $outputTask[$keyTask]['can_add_description'] = true;
+                }
 
                 if (
                     ($this->user->hasPermissionTo('delete_task_description')) &&
                     (hasSuperPower(projectId: $projectId) ||
                     hasLittlePower(task: $task))
-                ) $outputTask[$keyTask]['can_delete_description'] = true;
+                ) {
+                    $outputTask[$keyTask]['can_delete_description'] = true;
+                }
 
                 $outputTask[$keyTask]['show_hold_button'] = $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value || $task['status'] == \App\Enums\Production\TaskStatus::Revise->value;
                 $outputTask[$keyTask]['is_hold'] = $task['status'] == \App\Enums\Production\TaskStatus::OnHold->value ? true : false;
@@ -205,7 +207,9 @@ class FormatTaskPermission
                 if (
                     hasSuperPower(projectId: $projectId) ||
                     hasLittlePower(task: $task)
-                ) $outputTask[$keyTask]['can_delete_attachment'] = true;
+                ) {
+                    $outputTask[$keyTask]['can_delete_attachment'] = true;
+                }
 
                 // push 'is_project_pic' to task collection
                 $outputTask[$keyTask]['is_project_pic'] = $isProjectPic;
@@ -220,8 +224,8 @@ class FormatTaskPermission
                 // check the ownership of task
                 $picIds = collect($task['pics'])->pluck('employee_id')->toArray();
                 $haveTaskAccess = true;
-                if (!$superUserRole && !$isProjectPic && !$this->isDirector && !isAssistantPMRole()) {
-                    if (!in_array($this->employeeId, $picIds)) { // where logged user is not a in task pic except the project manager
+                if (! $superUserRole && ! $isProjectPic && ! $this->isDirector && ! isAssistantPMRole()) {
+                    if (! in_array($this->employeeId, $picIds)) { // where logged user is not a in task pic except the project manager
                         $haveTaskAccess = false;
                     }
                 }
@@ -264,7 +268,7 @@ class FormatTaskPermission
                 }
 
                 // last checker
-                if ($project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value || !$project['status_raw']) {
+                if ($project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value || ! $project['status_raw']) {
                     $outputTask[$keyTask]['is_active'] = false;
                 }
             }
@@ -296,7 +300,8 @@ class FormatTaskPermission
 
         $project['permission_list'] = DefineDetailProjectPermission::run();
 
-        storeCache('detailProject' . $projectId, $project);
+        storeCache('detailProject'.$projectId, $project);
+
         return $project;
     }
 

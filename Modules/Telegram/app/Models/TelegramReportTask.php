@@ -2,8 +2,8 @@
 
 namespace Modules\Telegram\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Telegram\Database\Factories\TelegramReportTaskFactory;
 
 class TelegramReportTask extends Model
@@ -18,11 +18,11 @@ class TelegramReportTask extends Model
         'telegram_chat_id',
         'nas_link',
         'file_id',
-        'mime_type'
+        'mime_type',
     ];
 
     protected static function newFactory(): TelegramReportTaskFactory
     {
-        //return TelegramReportTaskFactory::new();
+        // return TelegramReportTaskFactory::new();
     }
 }

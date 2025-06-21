@@ -16,7 +16,7 @@ class Create extends FormRequest
         return [
             'name' => [
                 'required',
-                new UniqueLowerRule(new Brand())
+                new UniqueLowerRule(new Brand),
             ],
         ];
     }

@@ -4,8 +4,8 @@ namespace Modules\Telegram\Console;
 
 use App\Services\Telegram\TelegramService;
 use Illuminate\Console\Command;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class SetWebhookCommand extends Command
 {
@@ -32,10 +32,10 @@ class SetWebhookCommand extends Command
      */
     public function handle()
     {
-        $service = new TelegramService();
+        $service = new TelegramService;
         $set = $service->setWebhook(env('TELEGRAM_WEBHOOK_URL'));
         if ($set['ok']) {
-            $this->info('Webhook is already pointing to ' . env('TELEGRAM_WEBHOOK_URL'));
+            $this->info('Webhook is already pointing to '.env('TELEGRAM_WEBHOOK_URL'));
         }
     }
 

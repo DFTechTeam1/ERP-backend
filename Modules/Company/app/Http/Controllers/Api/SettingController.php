@@ -30,7 +30,7 @@ class SettingController extends Controller
         return apiResponse($this->service->getSetting($code));
     }
 
-    public function storeSetting(Request $request, $code = null)
+    public function storeSetting(Request $request, $code = null): \Illuminate\Http\JsonResponse
     {
         return apiResponse($this->service->store($request->all(), $code));
     }
@@ -78,5 +78,15 @@ class SettingController extends Controller
         //
 
         return response()->json([]);
+    }
+
+    /**
+     * Get all price calculation formula
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPriceCalculation(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->getPriceCalculation());
     }
 }

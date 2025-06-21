@@ -12,7 +12,7 @@ class DefineDetailProjectPermission
 
     public function handle()
     {
-        $user = User::find(Auth::user()->id);
+        $user = User::where('id', Auth::user()->id)->first();
 
         return [
             'list_member' => $user->hasPermissionTo('list_member'),

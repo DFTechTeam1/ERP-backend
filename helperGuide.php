@@ -1,6 +1,5 @@
 <?php
 
-
 // This is work time details json format
 $time_detail = [
     [

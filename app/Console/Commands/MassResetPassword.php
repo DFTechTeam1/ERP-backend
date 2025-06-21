@@ -26,7 +26,7 @@ class MassResetPassword extends Command
     public function handle()
     {
         $employees = \Modules\Hrd\Models\Employee::selectRaw('id,email')
-            ->whereRaw("status != " . \App\Enums\Employee\Status::Inactive->value)
+            ->whereRaw('status != '.\App\Enums\Employee\Status::Inactive->value)
             ->get();
 
         $payloadExcel = [];
@@ -45,6 +45,6 @@ class MassResetPassword extends Command
             }
         }
 
-        return \Maatwebsite\Excel\Facades\Excel::store(new \App\Exports\MassResetPassword($payloadExcel), 'new_password.xlsx');   
+        return \Maatwebsite\Excel\Facades\Excel::store(new \App\Exports\MassResetPassword($payloadExcel), 'new_password.xlsx');
     }
 }

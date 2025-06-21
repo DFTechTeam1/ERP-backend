@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class CompleteRequestTeamMemberNotification extends Notification
 {
@@ -59,7 +58,7 @@ class CompleteRequestTeamMemberNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' =>'Halo ' . $this->transfer->requestToPerson->nickname . '. ' . $this->transfer->employee->nickname . ' telah menyelesaikan semua tugas pada event ' . $this->transfer->project->name . '. Transfer team member sekarang sudah selesai dan ' . $this->transfer->employee->nickname . ' telah bisa mengerjakan tugas2 yang anda berikan secara utuh',
+            'message' => 'Halo '.$this->transfer->requestToPerson->nickname.'. '.$this->transfer->employee->nickname.' telah menyelesaikan semua tugas pada event '.$this->transfer->project->name.'. Transfer team member sekarang sudah selesai dan '.$this->transfer->employee->nickname.' telah bisa mengerjakan tugas2 yang anda berikan secara utuh',
         ];
     }
 
@@ -68,8 +67,8 @@ class CompleteRequestTeamMemberNotification extends Notification
         $messages = [
             [
                 'type' => 'text',
-                'text' => 'Halo ' . $this->transfer->requestToPerson->nickname . '. ' . $this->transfer->employee->nickname . ' telah menyelesaikan semua tugas pada event ' . $this->transfer->project->name . '. Transfer team member sekarang sudah selesai dan ' . $this->transfer->employee->nickname . ' telah bisa mengerjakan tugas2 yang anda berikan secara utuh',
-            ]
+                'text' => 'Halo '.$this->transfer->requestToPerson->nickname.'. '.$this->transfer->employee->nickname.' telah menyelesaikan semua tugas pada event '.$this->transfer->project->name.'. Transfer team member sekarang sudah selesai dan '.$this->transfer->employee->nickname.' telah bisa mengerjakan tugas2 yang anda berikan secara utuh',
+            ],
         ];
 
         return [

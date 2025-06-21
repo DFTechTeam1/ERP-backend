@@ -18,6 +18,6 @@ class Menu extends Model
         'permission',
         'app_type',
         'new_icon',
-        'new_link'
+        'new_link',
     ];
 }

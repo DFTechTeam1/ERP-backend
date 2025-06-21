@@ -1,0 +1,88 @@
+<?php
+
+namespace Modules\Finance\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Modules\Finance\Http\Requests\Transaction\Create;
+use Modules\Finance\Services\TransactionService;
+
+class FinanceController extends Controller
+{
+    private $service;
+
+    public function __construct(
+        TransactionService $service
+    )
+    {
+        $this->service = $service;
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        //
+
+        return response()->json([]);
+    }
+
+    /**
+     * Create customer transaction
+     * 
+     * @param Create $request       With this following structure
+     * - string|float $payment_amount
+     * - string $transaction_date
+     * - ?string $note
+     * - ?string $reference
+     * - array $images              With this following structure
+     *      - ?object|binary $image
+     * @param string $quotationId
+     */
+    public function createTransaction(Create $request, string $quotationId): JsonResponse
+    {
+        return apiResponse($this->service->store($request->all(), $quotationId));
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        //
+
+        return response()->json([]);
+    }
+
+    /**
+     * Show the specified resource.
+     */
+    public function show($id)
+    {
+        //
+
+        return response()->json([]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        //
+
+        return response()->json([]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy($id)
+    {
+        //
+
+        return response()->json([]);
+    }
+}

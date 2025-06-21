@@ -2,8 +2,8 @@
 
 namespace Modules\Company\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Company\Database\factories\DocumentTemplateFactory;
 
 class DocumentTemplate extends Model
@@ -14,9 +14,9 @@ class DocumentTemplate extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [];
-    
+
     protected static function newFactory(): DocumentTemplateFactory
     {
-        //return DocumentTemplateFactory::new();
+        // return DocumentTemplateFactory::new();
     }
 }

@@ -15,12 +15,12 @@ enum WorkType: string
     public function label()
     {
         return match ($this) {
-            static::OnProgress => __("global.approved"),
-            static::Assigned => __("global.waitingApproval"),
-            static::CheckByPm => __("global.waitingApproval"),
-            static::Revise => __("global.waitingApproval"),
-            static::Finish => __("global.waitingApproval"),
-            static::OnHold => __("global.onHold"),
+            self::OnProgress => __('global.approved'),
+            self::Assigned => __('global.waitingApproval'),
+            self::CheckByPm => __('global.waitingApproval'),
+            self::Revise => __('global.waitingApproval'),
+            self::Finish => __('global.waitingApproval'),
+            self::OnHold => __('global.onHold'),
         };
     }
 }

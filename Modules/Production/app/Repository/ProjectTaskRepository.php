@@ -6,14 +6,15 @@ use Illuminate\Database\Eloquent\Builder;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\Interface\ProjectTaskInterface;
 
-class ProjectTaskRepository extends ProjectTaskInterface {
+class ProjectTaskRepository extends ProjectTaskInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectTask();
+        $this->model = new ProjectTask;
         $this->key = 'id';
     }
 
@@ -25,18 +26,15 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -58,26 +56,22 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
-        string $sortBy = ""
-    )
-    {
+        string $sortBy = ''
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -105,9 +99,6 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -117,7 +108,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
         $query->selectRaw($select);
 
         if (empty($where)) {
-            $query->where("uid", $uid);
+            $query->where('uid', $uid);
         } else {
             $query->whereRaw($where);
         }
@@ -134,7 +125,6 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -145,15 +135,14 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -165,7 +154,7 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id, string $where = '')
@@ -184,7 +173,6 @@ class ProjectTaskRepository extends ProjectTaskInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

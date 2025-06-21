@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class TaskSongApprovedNotification extends Notification
 {
@@ -31,7 +30,7 @@ class TaskSongApprovedNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            TelegramChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -58,7 +57,7 @@ class TaskSongApprovedNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => $this->message
+            'message' => $this->message,
         ];
     }
 }

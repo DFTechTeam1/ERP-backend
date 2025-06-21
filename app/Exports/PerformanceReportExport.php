@@ -2,17 +2,12 @@
 
 namespace App\Exports;
 
-use App\Enums\Employee\Status;
-use App\Services\GeneralService;
-use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
-use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
 use Modules\Hrd\Repository\EmployeePointRepository;
-use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
 
 class PerformanceReportExport implements FromView, ShouldAutoSize
@@ -33,8 +28,8 @@ class PerformanceReportExport implements FromView, ShouldAutoSize
     }
 
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function view(): View
     {
         $pointService = new EmployeePointService(
@@ -52,13 +47,14 @@ class PerformanceReportExport implements FromView, ShouldAutoSize
             } else {
                 $data[] = [
                     'employee' => $employee,
-                    'detail_projects' => []
+                    'detail_projects' => [],
                 ];
             }
         }
 
         $startDate = date('d F Y', strtotime($this->startDate));
         $endDate = date('d F Y', strtotime($this->endDate));
+
         return view('hrd::export-performance-report', compact('data', 'startDate', 'endDate'));
     }
 }

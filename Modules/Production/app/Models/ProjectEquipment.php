@@ -2,17 +2,16 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Production\Database\Factories\ProjectEquipmentFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProjectEquipment extends Model
 {
-    use HasFactory, ModelObserver, ModelCreationObserver;
+    use HasFactory, ModelCreationObserver, ModelObserver;
 
     protected $table = 'project_equipment';
 
@@ -57,8 +56,9 @@ class ProjectEquipment extends Model
                 }
             }
         }
+
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
@@ -73,8 +73,9 @@ class ProjectEquipment extends Model
                 }
             }
         }
+
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

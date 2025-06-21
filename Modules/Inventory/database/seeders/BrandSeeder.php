@@ -14,7 +14,7 @@ class BrandSeeder extends Seeder
     {
         // $this->call([]);
         Schema::disableForeignKeyConstraints();
-        
+
         \Modules\Inventory\Models\Brand::truncate();
 
         $brands = [

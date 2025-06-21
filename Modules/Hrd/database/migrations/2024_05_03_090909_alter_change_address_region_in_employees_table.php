@@ -36,7 +36,7 @@ return new class extends Migration
             $table->dropColumn('district_id');
             $table->dropColumn('village_id');
         });
-        
+
         Schema::table('employees', function (Blueprint $table) {
             $table->integer('country_id')->nullable();
             $table->integer('province_id')->nullable();

@@ -14,7 +14,7 @@ return [
     */
 
     'referenceNameRequired' => 'Reference name is required',
-    
+
     'accepted' => 'The :attribute field must be accepted.',
     'accepted_if' => 'The :attribute field must be accepted when :other is :value.',
     'active_url' => 'The :attribute field must be a valid URL.',
@@ -196,7 +196,7 @@ return [
             \App\Enums\Employee\Status::Contract->value => 'contract',
             \App\Enums\Employee\Status::Probation->value => 'probation',
             \App\Enums\Employee\Status::Inactive->value => 'inactive',
-        ]
-    ]
+        ],
+    ],
 
 ];

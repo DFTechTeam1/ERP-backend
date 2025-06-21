@@ -3,7 +3,6 @@
 namespace Modules\Addon\Http\Requests\Addon;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\File;
 
 class Create extends FormRequest
 {

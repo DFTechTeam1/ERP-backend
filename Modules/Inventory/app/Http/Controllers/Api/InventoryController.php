@@ -4,10 +4,10 @@ namespace Modules\Inventory\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Inventory\Http\Requests\Inventory\AddStock;
 use Modules\Inventory\Http\Requests\Inventory\Create;
 use Modules\Inventory\Http\Requests\Inventory\Update;
 use Modules\Inventory\Services\InventoryService;
-use Modules\Inventory\Http\Requests\Inventory\AddStock;
 
 class InventoryController extends Controller
 {
@@ -15,8 +15,7 @@ class InventoryController extends Controller
 
     public function __construct(
         InventoryService $service
-    )
-    {
+    ) {
         $this->service = $service;
     }
 
@@ -75,8 +74,7 @@ class InventoryController extends Controller
     /**
      * Add more stock to selected product
      *
-     * @param AddStock $request
-     * @param string $uid
+     * @param  string  $uid
      */
     public function addStock(AddStock $request, $uid)
     {
@@ -99,7 +97,7 @@ class InventoryController extends Controller
     public function store(Create $request)
     {
         $payload = $request->validated();
-        if ((isset($payload['purchase_price'])) && (!empty($payload['purchase_price'])) && ($payload['purchase_price'] > 0)) {
+        if ((isset($payload['purchase_price'])) && (! empty($payload['purchase_price'])) && ($payload['purchase_price'] > 0)) {
             $price = str_replace(',', '', $payload['purchase_price']);
             $payload['purchase_price'] = $price;
         }
@@ -121,7 +119,7 @@ class InventoryController extends Controller
     public function update(Update $request, $id)
     {
         $payload = $request->validated();
-        if ((isset($payload['purchase_price'])) && (!empty($payload['purchase_price'])) && ($payload['purchase_price'] > 0)) {
+        if ((isset($payload['purchase_price'])) && (! empty($payload['purchase_price'])) && ($payload['purchase_price'] > 0)) {
             $price = str_replace(',', '', $payload['purchase_price']);
             $payload['purchase_price'] = $price;
         }
@@ -141,8 +139,6 @@ class InventoryController extends Controller
 
     /**
      * Bulk Delete
-     *
-     * @param Request $request
      */
     public function bulkDelete(Request $request)
     {
@@ -155,8 +151,6 @@ class InventoryController extends Controller
 
     /**
      * Bulk Delete
-     *
-     * @param Request $request
      */
     public function bulkDeleteCustomInventory(Request $request)
     {

@@ -16,10 +16,10 @@ class DivisionUpdateRequest extends FormRequest
     {
         return [
             'name' => [
-                Rule::unique('divisions')->ignore(request('uid'),'uid'),
-                new UniqueLowerRule(new Division(), request('uid')),
+                Rule::unique('divisions')->ignore(request('uid'), 'uid'),
+                new UniqueLowerRule(new Division, request('uid')),
             ],
-            'parent_id' => 'nullable'
+            'parent_id' => 'nullable',
         ];
     }
 

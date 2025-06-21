@@ -5,32 +5,30 @@ namespace Modules\Production\Repository;
 use Modules\Production\Models\ProjectTaskPicLog;
 use Modules\Production\Repository\Interface\ProjectTaskPicLogInterface;
 
-class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface {
+class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectTaskPicLog();
+        $this->model = new ProjectTaskPicLog;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '', int $limit = 0)
+    public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '', int $limit = 0)
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -38,7 +36,7 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface {
             $query->with($relation);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -52,40 +50,33 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [])
@@ -94,8 +85,8 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface {
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
-        
+        $query->where('uid', $uid);
+
         if ($relation) {
             $query->with($relation);
         }
@@ -108,7 +99,6 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -119,15 +109,14 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -141,7 +130,7 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -153,7 +142,6 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

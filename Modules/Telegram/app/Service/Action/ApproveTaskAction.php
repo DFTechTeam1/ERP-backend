@@ -6,13 +6,12 @@ use App\Models\User;
 use App\Services\Telegram\TelegramService;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Http;
-use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\ProjectTask;
 use Modules\Telegram\Enums\CallbackIdentity;
 use Modules\Telegram\Models\TelegramTransaction;
-use Modules\Telegram\Service\Webhook\Callback;
 
-class ApproveTaskAction {
+class ApproveTaskAction
+{
     private $service;
 
     private $token;
@@ -44,12 +43,12 @@ class ApproveTaskAction {
 
     protected function setService()
     {
-        $this->service = new TelegramService();
+        $this->service = new TelegramService;
     }
 
     protected function setAuth()
     {
-        if (!$this->token) {
+        if (! $this->token) {
             $user = User::where('employee_id', $this->eid)->first();
             $role = $user->getRoleNames()[0];
             $roles = $user->roles;
@@ -75,8 +74,9 @@ class ApproveTaskAction {
             ->first();
         if (($check) && ($check->status)) {
             $this->service->sendTextMessage($this->chatId, 'Wuusshhh, sabar ya bos! masih di proses');
+
             return;
-        } else if (($check) && (!$check->status)) {
+        } elseif (($check) && (! $check->status)) {
             // stop the process
             return;
         }
@@ -96,12 +96,12 @@ class ApproveTaskAction {
             ->where('id', $this->tid)
             ->first();
 
-        $response = Http::withOptions(['verify' => !(App::environment('local') && config('app.url') != config('app.staging_url'))])
+        $response = Http::withOptions(['verify' => ! (App::environment('local') && config('app.url') != config('app.staging_url'))])
             ->withToken($this->token)
-            ->get(config('app.url') . "/api/production/project/{$taskData->project->uid}/task/{$taskData->uid}/approve");
+            ->get(config('app.url')."/api/production/project/{$taskData->project->uid}/task/{$taskData->uid}/approve");
 
         if ($response->successful()) {
-            $this->service->sendTextMessage($this->chatId, "Yeahhh tugas sudah bisa kamu kerjakan sekarang 🥳", true);
+            $this->service->sendTextMessage($this->chatId, 'Yeahhh tugas sudah bisa kamu kerjakan sekarang 🥳', true);
 
             // remove inline keyboard
             $this->service->reinit();
@@ -112,7 +112,7 @@ class ApproveTaskAction {
                 ->where('message_id', $this->messageId)
                 ->where('identity', CallbackIdentity::ApproveTask->value)
                 ->update([
-                    'status' => 0
+                    'status' => 0,
                 ]);
         } else {
             $this->service->sendTextMessage($this->chatId, 'Wahhh sepertinya aku belum bisa membantumu untuk tugas ini');

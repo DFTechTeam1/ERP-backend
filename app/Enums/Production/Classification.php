@@ -13,22 +13,22 @@ enum Classification: string
     public function label()
     {
         return match ($this) {
-            static::gradeS => __("global.grades"),
-            static::gradeA => __("global.gradea"),
-            static::gradeB => __("global.gradeb"),
-            static::gradeC => __("global.gradec"),
-            static::gradeD => __("global.graded"),
+            self::gradeS => __('global.grades'),
+            self::gradeA => __('global.gradea'),
+            self::gradeB => __('global.gradeb'),
+            self::gradeC => __('global.gradec'),
+            self::gradeD => __('global.graded'),
         };
     }
 
     public function color()
     {
         return match ($this) {
-            static::gradeS => 'yellow-darken-2',
-            static::gradeA => 'deep-orange-lighten-3',
-            static::gradeB => 'green-lighten-3',
-            static::gradeC => 'teal-lighten-3',
-            static::gradeD => 'light-blue-lighten-4',
+            self::gradeS => 'yellow-darken-2',
+            self::gradeA => 'deep-orange-lighten-3',
+            self::gradeB => 'green-lighten-3',
+            self::gradeC => 'teal-lighten-3',
+            self::gradeD => 'light-blue-lighten-4',
         };
     }
 }

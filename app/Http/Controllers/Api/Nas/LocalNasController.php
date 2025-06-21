@@ -12,7 +12,7 @@ class LocalNasController extends Controller
 
     public function __construct()
     {
-        $this->service = new LocalNasService();
+        $this->service = new LocalNasService;
     }
 
     public function sharedFolders()

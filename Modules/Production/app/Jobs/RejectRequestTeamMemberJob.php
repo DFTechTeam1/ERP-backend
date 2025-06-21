@@ -3,10 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class RejectRequestTeamMemberJob implements ShouldQueue
 {
@@ -18,8 +18,6 @@ class RejectRequestTeamMemberJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param string $transferUid
-     * @param string $reason
      */
     public function __construct(string $transferUid, string $reason)
     {
@@ -34,12 +32,12 @@ class RejectRequestTeamMemberJob implements ShouldQueue
     public function handle(): void
     {
         $transfer = \Modules\Production\Models\TransferTeamMember::with([
-                'employee:id,name,email,nickname',
-                'requestToPerson:id,name,email,nickname',
-                'requestByPerson:id,name,email,nickname',
-                'alternativeEmployee:id,nickname',
-            ])
-            ->where("uid", $this->transferUid)
+            'employee:id,name,email,nickname',
+            'requestToPerson:id,name,email,nickname',
+            'requestByPerson:id,name,email,nickname',
+            'alternativeEmployee:id,nickname',
+        ])
+            ->where('uid', $this->transferUid)
             ->first();
 
         $requested = \Modules\Hrd\Models\Employee::find($transfer->requested_by);

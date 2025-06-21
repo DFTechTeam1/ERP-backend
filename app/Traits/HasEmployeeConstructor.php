@@ -17,7 +17,6 @@ use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeResignRepository;
 use Modules\Hrd\Repository\EmployeeTimeoffRepository;
-use Modules\Hrd\Services\EmployeeRepoGroup;
 use Modules\Hrd\Services\EmployeeService;
 use Modules\Hrd\Services\TalentaService;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -25,7 +24,6 @@ use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectVjRepository;
-use Modules\Production\Services\ProjectService;
 
 trait HasEmployeeConstructor
 {
@@ -45,7 +43,7 @@ trait HasEmployeeConstructor
         $employeeFamilyRepo = null,
         $employeeEmergencyRepo = null,
         $userService = null,
-        $generalService =  null,
+        $generalService = null,
         $projectService = null,
         $jobLevelRepo = null,
         $chartService = null,
@@ -53,8 +51,7 @@ trait HasEmployeeConstructor
         $employeeTimeoffRepo = null,
         $talentaService = null,
         $employeeResignRepo = null
-    )
-    {
+    ) {
         $userServiceData = new UserService(
             new UserRepository,
             new EmployeeRepository,

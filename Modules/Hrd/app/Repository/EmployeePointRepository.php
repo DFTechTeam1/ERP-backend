@@ -6,32 +6,30 @@ use Illuminate\Support\Facades\DB;
 use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Repository\Interface\EmployeePointInterface;
 
-class EmployeePointRepository extends EmployeePointInterface {
+class EmployeePointRepository extends EmployeePointInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EmployeePoint();
+        $this->model = new EmployeePoint;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -45,24 +43,20 @@ class EmployeePointRepository extends EmployeePointInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -76,9 +70,6 @@ class EmployeePointRepository extends EmployeePointInterface {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '', array $whereHas = [])
@@ -87,13 +78,13 @@ class EmployeePointRepository extends EmployeePointInterface {
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where("id", $uid);
+            $query->where('id', $uid);
         }
 
-        if (!empty($whereHas)) {
+        if (! empty($whereHas)) {
             foreach ($whereHas as $whereRelation) {
                 $query->whereHas($whereRelation['relation'], function ($query) use ($whereRelation) {
                     $query->whereRaw($whereRelation['query']);
@@ -114,7 +105,7 @@ class EmployeePointRepository extends EmployeePointInterface {
     {
         $query = DB::table($table);
 
-        if (!empty($relationRaw)) {
+        if (! empty($relationRaw)) {
             foreach ($relationRaw as $relationData) {
                 $query->join(
                     $relationData['table'],
@@ -126,13 +117,13 @@ class EmployeePointRepository extends EmployeePointInterface {
             }
         }
 
-        if (!empty($realtion)) {
+        if (! empty($realtion)) {
             $query->with($relation);
         }
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -142,7 +133,6 @@ class EmployeePointRepository extends EmployeePointInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -153,15 +143,14 @@ class EmployeePointRepository extends EmployeePointInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -175,7 +164,7 @@ class EmployeePointRepository extends EmployeePointInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -187,7 +176,6 @@ class EmployeePointRepository extends EmployeePointInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

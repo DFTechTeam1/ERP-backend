@@ -13,6 +13,7 @@ use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\IndonesiaVillage;
 use Modules\Company\Models\Position;
+use Modules\Company\Models\PositionBackup;
 use Modules\Company\Models\Province;
 use Modules\Hrd\Models\Employee;
 
@@ -37,28 +38,28 @@ class EmployeeFactory extends Factory
      */
     public function definition(): array
     {
-        $range = range(1,54);
+        $range = range(1, 54);
         $range = collect($range)->map(function ($item) {
             $idNumberLength = 3;
             $prefix = 'DF';
-            $numbering = $prefix . str_pad($item, $idNumberLength, 0, STR_PAD_LEFT);
+            $numbering = $prefix.str_pad($item, $idNumberLength, 0, STR_PAD_LEFT);
 
             return $numbering;
         })->toArray();
 
         $firstName = fake()->firstName();
-        $name = $firstName . ' ' . fake()->lastName();
+        $name = $firstName.' '.fake()->lastName();
 
         $religions = $this->formatCollectionEnum(Religion::cases());
         $martialStatus = $this->formatCollectionEnum(MartialStatus::cases());
 
         return [
             'name' => $name,
-            'employee_id' => 'DF' . fake()->randomNumber(3, true),
+            'employee_id' => 'DF'.fake()->randomNumber(3, true),
             'nickname' => $firstName,
             'email' => fake()->unique(true)->safeEmail(),
             'phone' => fake()->randomNumber(9),
-            'id_number' => fake()->unique()->randomNumber(8, true) . fake()->unique()->randomNumber(8, true),
+            'id_number' => fake()->unique()->randomNumber(8, true).fake()->unique()->randomNumber(8, true),
             'religion' => fake()->randomElement($religions),
             'martial_status' => fake()->randomElement($martialStatus),
             'address' => fake()->address(),
@@ -78,18 +79,18 @@ class EmployeeFactory extends Factory
                     'account_number' => fake()->randomNumber(9, true),
                     'account_holder_name' => $firstName,
                     'is_active' => true,
-                ]
+                ],
             ]),
             'relation_contact' => json_encode([
                 'name' => fake()->name(),
                 'phone' => fake()->phoneNumber(),
-                'relation' => 'brother'
+                'relation' => 'brother',
             ]),
             'education' => fake()->randomElement(['s1', 'sma', 'diploma']),
             'education_name' => 'Education',
             'education_major' => 'master',
             'education_year' => 2024,
-            'position_id' => Position::factory(),
+            'position_id' => PositionBackup::factory(),
             'boss_id' => null,
             'level_staff' => fake()->randomElement(['manager', 'lead', 'staff']),
             'status' => Status::Permanent->value,
@@ -100,7 +101,7 @@ class EmployeeFactory extends Factory
             'basic_salary' => '20000000',
             'salary_type' => SalaryType::Monthly->value,
             'ptkp_status' => PtkpStatus::K0->value,
-            'branch_id' => Branch::factory()
+            'branch_id' => Branch::factory(),
         ];
     }
 }

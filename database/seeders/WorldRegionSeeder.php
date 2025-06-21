@@ -2,14 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
-use Modules\Company\Models\City;
-use Modules\Company\Models\Country;
-use Modules\Company\Models\State;
 
 class WorldRegionSeeder extends Seeder
 {

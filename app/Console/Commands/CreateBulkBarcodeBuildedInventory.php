@@ -30,13 +30,13 @@ class CreateBulkBarcodeBuildedInventory extends Command
             ->get();
 
         foreach ($data as $inventory) {
-            $barcode = generateBarcode($inventory->build_series, 'barcodes/custom_inventory/' . $inventory->id);
+            $barcode = generateBarcode($inventory->build_series, 'barcodes/custom_inventory/'.$inventory->id);
             if ($barcode) {
-                $inventory->barcode = generateBarcode(config('app.frontend_url') . '/ct/' . $inventory->build_series, 'barcodes/custom_inventory/' . $inventory->id . '/');
+                $inventory->barcode = generateBarcode(config('app.frontend_url').'/ct/'.$inventory->build_series, 'barcodes/custom_inventory/'.$inventory->id.'/');
                 $inventory->save();
             }
         }
 
-        $this->info("Updated");
+        $this->info('Updated');
     }
 }

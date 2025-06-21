@@ -4,11 +4,10 @@ namespace Modules\Production\Jobs;
 
 use App\Enums\Production\TaskSongStatus;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Production\Notifications\TaskSongApprovedNotification;
 
 class TaskSongApprovedJob implements ShouldQueue
@@ -47,8 +46,8 @@ class TaskSongApprovedJob implements ShouldQueue
                 if ($pic->employee->telegram_chat_id) {
                     $messagePm = "Halo {$pic->employee->nickname}\n";
                     $messagePm .= "JB di musik {$this->task->song->name} untuk event {$this->task->project->name} sudah bisa di cek.\n";
-                    $messagePm .= "Silahkan login untuk melihat detailnya.";
-    
+                    $messagePm .= 'Silahkan login untuk melihat detailnya.';
+
                     $pic->employee->notify(new TaskSongApprovedNotification([$pic->employee->telegram_chat_id], $messagePm));
                 }
             }

@@ -4,10 +4,10 @@ namespace Modules\Production\Jobs;
 
 use App\Services\PusherNotification;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class NewProjectJob implements ShouldQueue
 {
@@ -21,7 +21,6 @@ class NewProjectJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     * @param string $projectUid
      */
     public function __construct(string $projectUid)
     {
@@ -35,7 +34,7 @@ class NewProjectJob implements ShouldQueue
     {
         $this->project = \Modules\Production\Models\Project::where('uid', $this->projectUid)->first();
 
-        $this->pusher = new PusherNotification();
+        $this->pusher = new PusherNotification;
 
         $projectPic = \Modules\Production\Models\ProjectPersonInCharge::select('pic_id')->where('project_id', $this->project->id)->get();
 
@@ -50,7 +49,7 @@ class NewProjectJob implements ShouldQueue
 
             $output = formatNotifications($employee->unreadNotifications->toArray());
 
-            $this->pusher->send('my-channel-' . $user->id, 'notification-event', $output);
+            $this->pusher->send('my-channel-'.$user->id, 'notification-event', $output);
         }
 
         $this->notifyEntertainment();
@@ -61,7 +60,7 @@ class NewProjectJob implements ShouldQueue
         // get user with 'pic entertainment' role
         $users = \App\Models\User::role('pic entertainment')->get();
 
-        foreach($users as $user) {
+        foreach ($users as $user) {
             if ($user->employee_id) {
                 $employee = \Modules\Hrd\Models\Employee::find($user->employee_id);
 
@@ -70,7 +69,7 @@ class NewProjectJob implements ShouldQueue
 
             $notif = formatNotifications($employee->unreadNotifications->toArray());
 
-            $this->pusher->send('my-channel-' . $user->id, 'notification-event', $notif);
+            $this->pusher->send('my-channel-'.$user->id, 'notification-event', $notif);
         }
     }
 }

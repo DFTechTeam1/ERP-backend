@@ -14,7 +14,7 @@ class Login extends FormRequest
         return [
             'version' => 'required',
             'account' => 'required',
-            'passwd' => 'required'
+            'passwd' => 'required',
         ];
     }
 

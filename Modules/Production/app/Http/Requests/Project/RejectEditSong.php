@@ -12,7 +12,7 @@ class RejectEditSong extends FormRequest
     public function rules(): array
     {
         return [
-            'reason' => 'required|max:255'
+            'reason' => 'required|max:255',
         ];
     }
 

@@ -16,7 +16,6 @@ use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Services\ChartService;
 use App\Services\GeneralService;
-use App\Services\MenuService;
 use App\Services\UserService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -45,27 +44,47 @@ use Modules\Production\Repository\ProjectVjRepository;
 class EmployeeService
 {
     private $repo;
+
     private $positionRepo;
+
     private $userRepo;
+
     private $taskRepo;
+
     private $projectRepo;
+
     private $projectVjRepo;
+
     private $projectPicRepo;
+
     private $projectTaskHistoryRepo;
+
     private $employeeFamilyRepo;
+
     private $employeeEmergencyRepo;
 
     private $idCardPhotoTmp;
+
     private $npwpPhotoTmp;
+
     private $bpjsPhotoTmp;
+
     private $kkPhotoTmp;
+
     private $userService;
+
     private $generalService;
+
     private $jobLevelRepo;
+
     private $chart;
+
     private $employeeActiveRepo;
+
     private $employeeTimeoffRepo;
+
     private $talentaService;
+
     private $employeeResignRepo;
 
     public function __construct(
@@ -87,8 +106,7 @@ class EmployeeService
         EmployeeTimeoffRepository $employeeTimeoffRepo,
         TalentaService $talentaService,
         EmployeeResignRepository $employeeResignRepo
-    )
-    {
+    ) {
         $this->talentaService = $talentaService;
 
         $this->repo = $employeeRepo;
@@ -128,19 +146,12 @@ class EmployeeService
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     *
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ) : array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
             $page = request('page') ?? 1;
@@ -149,42 +160,42 @@ class EmployeeService
 
             $search = request('search');
 
-            if (!empty($search)) { // array
+            if (! empty($search)) { // array
                 $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
 
                 // append status filter when user is not search for filter. This status filter will be as default filter
-                if (!in_array('status', $filterNames)) {
+                if (! in_array('status', $filterNames)) {
                     $search['filters'] = collect($search['filters'])->merge([
                         [
                             'field' => 'status',
                             'condition' => 'not_contain',
-                            'value' => Status::Deleted->value
+                            'value' => Status::Deleted->value,
                         ],
                         [
                             'field' => 'status',
                             'condition' => 'not_contain',
-                            'value' => Status::Inactive->value
+                            'value' => Status::Inactive->value,
                         ],
                     ])->toArray();
                 }
 
                 $where = formatSearchConditions($search['filters'], $where);
             } else {
-                $where = "status != " . Status::Deleted->value . " and status != " . Status::Inactive->value;
+                $where = 'status != '.Status::Deleted->value.' and status != '.Status::Inactive->value;
             }
 
-            $sort = "name asc";
+            $sort = 'name asc';
             if (request('sort')) {
-                $sort = "";
+                $sort = '';
                 foreach (request('sort') as $sortList) {
                     if ($sortList['field'] == 'name') {
-                        $sort = $sortList['field'] . " {$sortList['order']},";
+                        $sort = $sortList['field']." {$sortList['order']},";
                     } else {
-                        $sort .= "," . $sortList['field'] . " {$sortList['order']},";
+                        $sort .= ','.$sortList['field']." {$sortList['order']},";
                     }
                 }
 
-                $sort = rtrim($sort, ",");
+                $sort = rtrim($sort, ',');
                 $sort = ltrim($sort, ',');
             }
 
@@ -222,7 +233,7 @@ class EmployeeService
                     'religion' => Religion::getReligion(code: $item->religion->value),
                     'gender' => Gender::getGender(code: $item->gender->value),
                     'position' => $item->position->name,
-                    'level_staff' => !$item->jobLevel ? '-' : $item->jobLevel->name,
+                    'level_staff' => ! $item->jobLevel ? '-' : $item->jobLevel->name,
                     'status' => $item->status_text,
                     'status_color' => $item->status_color,
                     'join_date' => date('d F Y', strtotime($item->join_date)),
@@ -233,7 +244,7 @@ class EmployeeService
                     'user_id' => $item->user_id,
                     'user' => $item->user,
                     'is_resign' => $item->resignData ? true : false,
-                    'can_cancel_resign' => $canCancelResign
+                    'can_cancel_resign' => $canCancelResign,
                 ];
             })->toArray();
 
@@ -260,13 +271,11 @@ class EmployeeService
 
     /**
      * Get list of 3d Modeller Employee
-     *
-     * @return array
      */
     public function get3DModeller(?string $projectUid = null, ?string $taskUid = null): array
     {
         try {
-            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project);
             $project = $this->projectRepo->show(uid: $projectUid, select: 'id,project_date');
             $position = $this->positionRepo->show(uid: 0, select: 'id', where: "name = '3D Modeller'");
 
@@ -288,8 +297,8 @@ class EmployeeService
                         whereHas: [
                             [
                                 'relation' => 'pics',
-                                'query' => "employee_id = {$employee->id}"
-                            ]
+                                'query' => "employee_id = {$employee->id}",
+                            ],
                         ]
                     )->count();
 
@@ -304,12 +313,12 @@ class EmployeeService
                         whereHas: [
                             [
                                 'relation' => 'project',
-                                'query' => "project_date BETWEEN '{$dateRangeNextWeek[0]}' AND '{$dateRangeNextWeek[1]}'"
+                                'query' => "project_date BETWEEN '{$dateRangeNextWeek[0]}' AND '{$dateRangeNextWeek[1]}'",
                             ],
                             [
                                 'relation' => 'pics',
-                                'query' => "employee_id = {$employee->id}"
-                            ]
+                                'query' => "employee_id = {$employee->id}",
+                            ],
                         ]
                     )->count();
                     $taskInCurrentWeek = $this->taskRepo->list(
@@ -318,12 +327,12 @@ class EmployeeService
                         whereHas: [
                             [
                                 'relation' => 'project',
-                                'query' => "project_date BETWEEN '{$dateRangeCurrentWeek[1]}' AND '{$dateRangeCurrentWeek[0]}'"
+                                'query' => "project_date BETWEEN '{$dateRangeCurrentWeek[1]}' AND '{$dateRangeCurrentWeek[0]}'",
                             ],
                             [
                                 'relation' => 'pics',
-                                'query' => "employee_id = {$employee->id}"
-                            ]
+                                'query' => "employee_id = {$employee->id}",
+                            ],
                         ]
                     )->count();
                 }
@@ -333,7 +342,7 @@ class EmployeeService
                     'title' => $employee->title,
                     'task_in_selected_project' => $taskInSameProject ?? 0,
                     'task_in_next_week' => $taskInNextWeek ?? 0,
-                    'task_in_current_week' => $taskInCurrentWeek ?? 0
+                    'task_in_current_week' => $taskInCurrentWeek ?? 0,
                 ];
             }
 
@@ -349,13 +358,13 @@ class EmployeeService
     public function export(array $payload): array
     {
         try {
-            $filename = 'employees_' . strtotime('now') . '.xlsx';
-            Excel::store(new EmployeeExport($payload), 'employees/export/' . $filename, 'public');
+            $filename = 'employees_'.strtotime('now').'.xlsx';
+            Excel::store(new EmployeeExport($payload), 'employees/export/'.$filename, 'public');
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
-                    'link' => asset('storage/employees/export/' . $filename)
+                    'link' => asset('storage/employees/export/'.$filename),
                 ]
             );
         } catch (\Throwable $th) {
@@ -377,11 +386,10 @@ class EmployeeService
         /**
          * DUMMY FORMAT
          * DF010
-         *
          */
         $idNumberLength = 3;
         $prefix = 'DF';
-        $numbering = $prefix . str_pad($count, $idNumberLength, 0, STR_PAD_LEFT);
+        $numbering = $prefix.str_pad($count, $idNumberLength, 0, STR_PAD_LEFT);
 
         return generalResponse(
             'success',
@@ -394,17 +402,14 @@ class EmployeeService
 
     /**
      * Validate employee ID
-     *
-     * @param array $data
-     * @return array
      */
     public function validateEmployeeID(array $data): array
     {
         $notAllowed = [
             Status::Deleted->value,
-            Status::Inactive->value
+            Status::Inactive->value,
         ];
-        $where = "employee_id = '" . $data['employee_id'] . "' AND status NOT IN (" . implode(',', $notAllowed) . ")" ;
+        $where = "employee_id = '".$data['employee_id']."' AND status NOT IN (".implode(',', $notAllowed).')';
 
         if ($data['uid']) {
             $where .= " and uid != '{$data['uid']}'";
@@ -416,7 +421,7 @@ class EmployeeService
             'success',
             false,
             [
-                'valid' => !$check ? true : false
+                'valid' => ! $check ? true : false,
             ]
         );
     }
@@ -429,29 +434,29 @@ class EmployeeService
 
         if ($positionAsVJ) {
             $positionAsVJ = collect($positionAsVJ)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
             })->toArray();
 
-            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project());
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
             $project = $this->projectRepo->show($projectUid, 'id,project_date');
 
             $position = implode(',', $positionAsVJ);
 
-            $where = "position_id IN (" . $position . ") and status != " . \App\Enums\Employee\Status::Inactive->value;
+            $where = 'position_id IN ('.$position.') and status != '.\App\Enums\Employee\Status::Inactive->value;
 
             // add position project manager entertainment
             $projectManagerEntertainment = User::role(BaseRole::ProjectManagerEntertainment->value)->first();
             if ($projectManagerEntertainment) {
-                $where .= " OR id = " . $projectManagerEntertainment->employee_id;
+                $where .= ' OR id = '.$projectManagerEntertainment->employee_id;
             }
 
             $data = $this->repo->list('uid,name,id', $where)->toArray();
 
             $output = collect($data)->map(function ($employee) use ($project) {
                 // check the calendar
-                $calendar = $this->projectVjRepo->list('id,project_id', 'employee_id = ' . $employee['id'], [
-                    'project:id,project_date'
+                $calendar = $this->projectVjRepo->list('id,project_id', 'employee_id = '.$employee['id'], [
+                    'project:id,project_date',
                 ]);
                 $projectDate = [];
                 foreach ($calendar as $projectList) {
@@ -465,7 +470,7 @@ class EmployeeService
                 return [
                     'value' => $employee['uid'],
                     'title' => $employee['name'],
-                    'date' => count($selectedDate)
+                    'date' => count($selectedDate),
                 ];
             })->toArray();
         }
@@ -479,8 +484,6 @@ class EmployeeService
 
     /**
      * Get all available status from enums
-     *
-     * @return array
      */
     public function getAllStatus(): array
     {
@@ -489,7 +492,7 @@ class EmployeeService
         $status = collect($status)->map(function ($item) {
             return [
                 'value' => $item->value,
-                'title' => $item->label()
+                'title' => $item->label(),
             ];
         })->toArray();
 
@@ -510,15 +513,15 @@ class EmployeeService
         $where = '';
         // $levelStaffOrder = \App\Enums\Employee\LevelStaff::levelStaffOrder();
         $levelStaffOrder = [
-            "manager",
-            "lead",
-            "staff",
-            "junior staff"
+            'manager',
+            'lead',
+            'staff',
+            'junior staff',
         ];
 
         $key = request()->min_level;
 
-        if (!empty(request()->min_level)) {
+        if (! empty(request()->min_level)) {
             $search = array_search($key, $levelStaffOrder);
 
             if ($search > 0) {
@@ -528,31 +531,31 @@ class EmployeeService
                     return "'{$item}'";
                 })->toArray();
 
-                $where = "level_staff IN (". implode(',', $splice) .")";
+                $where = 'level_staff IN ('.implode(',', $splice).')';
             }
 
         }
 
-        if (!empty(request('name'))) {
+        if (! empty(request('name'))) {
             if (empty($where)) {
-                $where = "lower(name) like '%". strtolower(request('name')) ."%'";
+                $where = "lower(name) like '%".strtolower(request('name'))."%'";
             } else {
-                $where .= " and lower(name) like '%". strtolower(request('name')) ."%'";
+                $where .= " and lower(name) like '%".strtolower(request('name'))."%'";
             }
         }
 
-        if (!empty(request('not_user'))) {
+        if (! empty(request('not_user'))) {
             if (empty($where)) {
-                $where = "user_id IS NULL";
+                $where = 'user_id IS NULL';
             } else {
-                $where .= " and user_id IS NULL";
+                $where .= ' and user_id IS NULL';
             }
         }
 
-        if (!empty($where)) {
-            $where .= " and status != " . \App\Enums\Employee\Status::Inactive->value;
+        if (! empty($where)) {
+            $where .= ' and status != '.\App\Enums\Employee\Status::Inactive->value;
         } else {
-            $where = "status != " . \App\Enums\Employee\Status::Inactive->value;
+            $where = 'status != '.\App\Enums\Employee\Status::Inactive->value;
         }
 
         $data = $this->repo->list(
@@ -564,7 +567,7 @@ class EmployeeService
             return [
                 'value' => $item->uid,
                 'title' => $item->name,
-                'email' => $item->email
+                'email' => $item->email,
             ];
         })->toArray();
 
@@ -577,7 +580,7 @@ class EmployeeService
 
     public function activateAccount(string $key)
     {
-        $encrypter = new \App\Services\EncryptionService();
+        $encrypter = new \App\Services\EncryptionService;
 
         $email = $encrypter->decrypt($key, env('SALT_KEY'));
 
@@ -597,7 +600,7 @@ class EmployeeService
     /**
      * Add employee as web app user
      *
-     * @param string $id
+     * @param  string  $id
      * @return array
      */
     public function addAsUser(array $payload)
@@ -609,7 +612,7 @@ class EmployeeService
             // check email
             $checkUser = $this->userRepo->detail(
                 select: 'id',
-                where: "email = '" . $user->email . "'"
+                where: "email = '".$user->email."'"
             );
             if ($checkUser) {
                 DB::rollBack();
@@ -624,15 +627,15 @@ class EmployeeService
             $userData = $this->userRepo->store([
                 'email' => $user->email,
                 'password' => $payload['password'],
-                'employee_id' => $user->id
+                'employee_id' => $user->id,
             ]);
 
             $this->repo->update([
-                'user_id' => $userData->id
+                'user_id' => $userData->id,
             ], $payload['user_id']);
 
             // assign role
-            $roleRepo = new RoleRepository();
+            $roleRepo = new RoleRepository;
             $role = $roleRepo->show($payload['role_id']);
             $userData->assignRole($role);
 
@@ -659,8 +662,6 @@ class EmployeeService
     /**
      * Function to check given key in the database
      *
-     * @param string $key
-     * @param string $value
      * @return array
      */
     public function checkFieldsUnique(string $key, string $value)
@@ -687,7 +688,7 @@ class EmployeeService
         $relation = [
             'position:id,name,uid',
             'user:id,employee_id,email',
-            'branch:id,name'
+            'branch:id,name',
         ];
 
         $data = $this->repo->show($uid, $select, $relation);
@@ -703,14 +704,14 @@ class EmployeeService
         $asPicProjects = $this->projectRepo->list('id,name,uid,project_date,created_at', '', [], [
             [
                 'relation' => 'personInCharges',
-                'query' => "pic_id = " . $data->id,
+                'query' => 'pic_id = '.$data->id,
             ],
         ]);
         $asPicProjects = collect((object) $asPicProjects)->map(function ($item) {
             return [
                 'id' => $item->uid,
                 'name' => $item->name,
-                'position' => __("global.asPicProject"),
+                'position' => __('global.asPicProject'),
                 'project_date' => date('d F Y', strtotime($item->project_date)),
                 'assign_at' => date('d F Y', strtotime($item->created_at)),
                 'detail_task' => [],
@@ -721,8 +722,8 @@ class EmployeeService
         $asPicTaskRaw = $this->taskRepo->list('id,project_id,name,created_at,start_working_at,uid,created_at', '', ['project:id,name,uid,project_date'], [
             [
                 'relation' => 'pics',
-                'query' => 'employee_id = ' . $data->id,
-            ]
+                'query' => 'employee_id = '.$data->id,
+            ],
         ])->groupBy('project_id')->all();
         $asPicTask = [];
         $a = 0;
@@ -766,7 +767,7 @@ class EmployeeService
         $data['boss_uid'] = null;
         $data['approval_line'] = null;
         if ($data->boss_id) {
-            $bossData = $this->repo->show('dummy', 'id,uid,name', [], 'id = ' . $data->boss_id);
+            $bossData = $this->repo->show('dummy', 'id,uid,name', [], 'id = '.$data->boss_id);
             $data['boss_uid'] = $bossData->uid;
             $data['approval_line'] = $bossData->name;
         }
@@ -775,7 +776,7 @@ class EmployeeService
         $jobLevel = $this->jobLevelRepo->show(
             uid: 0,
             select: 'id,uid',
-            where: "id = " . $currentJobLevelId
+            where: 'id = '.$currentJobLevelId
         );
         $data['job_level_uid'] = $jobLevel ? $jobLevel->uid : null;
 
@@ -784,33 +785,26 @@ class EmployeeService
 
     /**
      * Get specific data by id
-     *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
-     *
-     * @return array
      */
     public function show(
         string $uid,
         string $select = '*',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             // validate permission
             $user = auth()->user();
-            $employeeId = getIdFromUid($uid, new \Modules\Hrd\Models\Employee());
+            $employeeId = getIdFromUid($uid, new \Modules\Hrd\Models\Employee);
 
-            if (!$employeeId) {
-                throw new EmployeeNotFound();
+            if (! $employeeId) {
+                throw new EmployeeNotFound;
             }
 
             if (
                 $user->email != config('app.root_email') &&
-                !$user->is_director &&
-                !isSuperUserRole() &&
-                !isHrdRole()
+                ! $user->is_director &&
+                ! isSuperUserRole() &&
+                ! isHrdRole()
             ) {
                 if ($user->employee_id != $employeeId) { // only its user can access their information
                     return errorResponse('not allowed', ['redirect' => '/admin/dashboard'], 403);
@@ -836,10 +830,6 @@ class EmployeeService
 
     /**
      * Store data
-     *
-     * @param array $data
-     *
-     * @return array
      */
     public function store(array $data): array
     {
@@ -849,9 +839,9 @@ class EmployeeService
             $data['division_id'] = $positionData->division->uid;
             $data['position_uid'] = $data['position_id'];
             $data['job_level_uid'] = $data['job_level_id'];
-            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
-            if (!empty($data['boss_id'])) {
-                $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
+            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup);
+            if (! empty($data['boss_id'])) {
+                $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee);
             }
 
             $jobLevel = $this->jobLevelRepo->show(uid: $data['job_level_id'], select: 'id,name');
@@ -873,15 +863,15 @@ class EmployeeService
                     collect($data)->only([
                         'password',
                         'email',
-                        'role_id'
+                        'role_id',
                     ])
-                    ->merge(['employee_id' => $employee->uid, 'is_external_user' => 0])
-                    ->toArray()
+                        ->merge(['employee_id' => $employee->uid, 'is_external_user' => 0])
+                        ->toArray()
                 );
 
                 // update user id
                 $this->repo->update([
-                    'user_id' => $user->id
+                    'user_id' => $user->id,
                 ], $employee->uid);
             }
 
@@ -925,10 +915,6 @@ class EmployeeService
 
     /**
      * Update personal data - basic info
-     *
-     * @param array $payload
-     * @param string $employeeUid
-     * @return array
      */
     public function updateBasicInfo(array $payload, string $employeeUid): array
     {
@@ -939,7 +925,7 @@ class EmployeeService
             $data = $this->getDetailEmployee($employeeUid, '*');
 
             return generalResponse(
-                __("global.successEditEmployeeData"),
+                __('global.successEditEmployeeData'),
                 false,
                 $data
             );
@@ -950,10 +936,6 @@ class EmployeeService
 
     /**
      * Update personal data - identity & address
-     *
-     * @param array $payload
-     * @param string $employeeUid
-     * @return array
      */
     public function updateIdentity(array $payload, string $employeeUid): array
     {
@@ -964,7 +946,7 @@ class EmployeeService
             $data = $this->getDetailEmployee($employeeUid, '*');
 
             return generalResponse(
-                __("global.successEditEmployeeData"),
+                __('global.successEditEmployeeData'),
                 false,
                 $data
             );
@@ -975,29 +957,24 @@ class EmployeeService
 
     /**
      * Update data
-     *
-     * @param string $uid
-     * @param array $data
-     * @return array
      */
     public function update(
         array $data,
         string $uid = '',
         string $where = ''
-    ): array
-    {
+    ): array {
         DB::beginTransaction();
         try {
-            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup());
-            if (!empty($data['boss_id'])) {
-                $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee());
+            $data['position_id'] = $this->generalService->getIdFromUid($data['position_id'], new PositionBackup);
+            if (! empty($data['boss_id'])) {
+                $data['boss_id'] = $this->generalService->getIdFromUid($data['boss_id'], new Employee);
             }
 
             // if ((isset($data['is_residence_same'])) && ($data['is_residence_same'])) {
             //     $data['current_address'] = $data['address'];
             // }
 
-            $data['job_level_id'] = $this->generalService->getIdFromUid($data['job_level_id'], new JobLevel());
+            $data['job_level_id'] = $this->generalService->getIdFromUid($data['job_level_id'], new JobLevel);
 
             $this->repo->update(
                 collect($data)->except(['password', 'invite_to_erp', 'invite_to_talenta'])->toArray(),
@@ -1009,7 +986,7 @@ class EmployeeService
             DB::commit();
 
             return generalResponse(
-                __("global.successUpdateEmployee"),
+                __('global.successUpdateEmployee'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -1026,16 +1003,12 @@ class EmployeeService
 
     /**
      * Delete selected data
-     *
-     * @param string $uid
-     *
-     * @return array
      */
     public function delete(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid,'id,name,uid', [
-                'projects:id,project_id,pic_id'
+            $data = $this->repo->show($uid, 'id,name,uid', [
+                'projects:id,project_id,pic_id',
             ]);
 
             $employeeErrorStatus = false;
@@ -1046,9 +1019,9 @@ class EmployeeService
             }
 
             if ($employeeErrorStatus) {
-                throw new EmployeeException(__("global.employeeRelationFound", [
+                throw new EmployeeException(__('global.employeeRelationFound', [
                     'name' => $data->name,
-                    'relation' => implode(' and ',$employeeErrorRelation)
+                    'relation' => implode(' and ', $employeeErrorRelation),
                 ]));
             }
 
@@ -1057,7 +1030,7 @@ class EmployeeService
             \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
 
             return generalResponse(
-                __("global.successDeletePosition"),
+                __('global.successDeletePosition'),
                 false,
                 [],
             );
@@ -1071,17 +1044,10 @@ class EmployeeService
         }
     }
 
-    public function validateRelation()
-    {
-
-    }
+    public function validateRelation() {}
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     *
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -1095,7 +1061,7 @@ class EmployeeService
                     relation: [
                         'tasks:id,project_task_id,employee_id',
                         'user:id,employee_id,uid',
-                        'projects:id,project_id,pic_id'
+                        'projects:id,project_id,pic_id',
                     ],
                 );
 
@@ -1107,7 +1073,7 @@ class EmployeeService
 
                 $this->repo->update([
                     'status' => Status::Deleted->value,
-                    'email' => $employee->email . '_deleted'
+                    'email' => $employee->email.'_deleted',
                 ], uid: $id);
             }
 
@@ -1143,17 +1109,17 @@ class EmployeeService
     {
         $data = \Illuminate\Support\Facades\Cache::get('maximumProjectPerPM');
 
-        if (!$data) {
+        if (! $data) {
             $projectManagerPosition = json_decode(getSettingByKey('position_as_project_manager'), true);
 
-            $projectManagerPosition = collect($projectManagerPosition)->map(function ($item ) {
-                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup());
+            $projectManagerPosition = collect($projectManagerPosition)->map(function ($item) {
+                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
             })->toArray();
 
             $condition = implode("','", $projectManagerPosition);
-            $condition = "('" . $condition . "')";
+            $condition = "('".$condition."')";
 
-            $employees = $this->repo->list('id,name', "position_id in " . $condition);
+            $employees = $this->repo->list('id,name', 'position_id in '.$condition);
 
             $data = \Illuminate\Support\Facades\Cache::rememberForever('maximumProjectPerPM', function () use ($employees) {
                 return count($employees);
@@ -1171,28 +1137,28 @@ class EmployeeService
         $month = request('date') ? date('Y-m', strtotime(request('date'))) : '';
 
         $projectManagerCount = $this->getMaximumProjectPerPM();
-        $maximumProjectPerPM = $projectManagerCount -1;
+        $maximumProjectPerPM = $projectManagerCount - 1;
 
         $relation = [
             'projects:id,pic_id,project_id',
-            'projects.project:id,name,project_date'
+            'projects.project:id,name,project_date',
         ];
 
-        if (!empty($month)) {
+        if (! empty($month)) {
             $endDateOfMonth = Carbon::createFromDate((int) date('Y', strtotime(request('date'))), (int) date('m', strtotime(request('date'))), 1)
-            ->endOfMonth()
-            ->format('d');
+                ->endOfMonth()
+                ->format('d');
 
-            $startDate = date('Y-m', strtotime(request('date'))) . '-01';
-            $endDate = date('Y-m', strtotime(request('date'))) . '-' . $endDateOfMonth;
+            $startDate = date('Y-m', strtotime(request('date'))).'-01';
+            $endDate = date('Y-m', strtotime(request('date'))).'-'.$endDateOfMonth;
 
             $relation = [
                 'projects' => function ($query) use ($startDate, $endDate) {
                     $query->selectRaw('id,pic_id,project_id')
-                        ->whereHas('project', function($q) use ($startDate, $endDate) {
-                            $q->whereRaw("project_date >= '" . $startDate . "' and project_date <= '" . $endDate . "'");
+                        ->whereHas('project', function ($q) use ($startDate, $endDate) {
+                            $q->whereRaw("project_date >= '".$startDate."' and project_date <= '".$endDate."'");
                         });
-                }
+                },
             ];
         }
 
@@ -1200,16 +1166,16 @@ class EmployeeService
 
         if ($positionAsProjectManager) {
             $positionCondition = implode("','", $positionAsProjectManager);
-            $positionCondition = "('" . $positionCondition . "')";
+            $positionCondition = "('".$positionCondition."')";
             $whereHas[] = [
                 'relation' => 'position',
-                'query' => "uid IN " . $positionCondition,
+                'query' => 'uid IN '.$positionCondition,
             ];
         }
 
         $data = $this->repo->list(
             'id, uid as value, name as title',
-            'status != ' . \App\Enums\Employee\Status::Inactive->value,
+            'status != '.\App\Enums\Employee\Status::Inactive->value,
             $relation,
             '',
             '',
@@ -1219,9 +1185,10 @@ class EmployeeService
         $employees = collect($data)->map(function ($item) use ($date, $month, $maximumProjectPerPM) {
             $projects = collect($item->projects)->pluck('project.project_date')->values();
             $item['workload_on_date'] = 0;
-            if (!empty($date)) {
+            if (! empty($date)) {
                 $filter = collect($projects)->filter(function ($filter) use ($date, $month) {
-                    $dateStart = date('Y-m-d', strtotime($month . '-01'));
+                    $dateStart = date('Y-m-d', strtotime($month.'-01'));
+
                     return $filter == $date;
                 })->values();
             }
@@ -1231,9 +1198,9 @@ class EmployeeService
             // coloring options based on project manager maximum project
             if ($totalProject > $maximumProjectPerPM) {
                 $coloring = 'red';
-            } else if ($totalProject == $maximumProjectPerPM) {
+            } elseif ($totalProject == $maximumProjectPerPM) {
                 $coloring = 'orange-darken-4';
-            } else if (
+            } elseif (
                 ($totalProject - $maximumProjectPerPM) &&
                 ($totalProject - $maximumProjectPerPM == 1)
             ) {
@@ -1270,17 +1237,17 @@ class EmployeeService
             $probationStatusKey, $endProbationKey, $exitDate, $genderKey, $phoneKey, $emailKey, $educationKey, $schoolNameKey, $majorKey,
             $graduationYearKey, $idNumberKey, $bankNameKey, $bankAccountKey, $accountHolderNameKey, $pobKey, $dobKey, $religionKey, $martialKey,
             $addressKey, $postalCodeKey, $currentAddressKey, $bloodTypeKey, $contactNumberKey, $contactNameKey, $contactRelationKey, $placementKey, $referalKey, $bossIdKey] = [
-            2, 4, 5, 6, 7, 8, 9, 10, 11,
-            13, 14, 19, 20, 21, 22, 23, 24, 25,
-            26, 27, 33, 34, 35, 36, 37, 38, 39,
-            41, 42, 43, 44, 45, 46, 47, 49, 50, 51
-        ];
+                2, 4, 5, 6, 7, 8, 9, 10, 11,
+                13, 14, 19, 20, 21, 22, 23, 24, 25,
+                26, 27, 33, 34, 35, 36, 37, 38, 39,
+                41, 42, 43, 44, 45, 46, 47, 49, 50, 51,
+            ];
 
         $employees = [];
         foreach ($response as $key => $row) {
             $jobName = ltrim(rtrim($row[$jobNameKey]));
             $positionData = \Modules\Company\Models\Position::select('id')
-                ->whereRaw("lower(name) = '" . strtolower($jobName) . "'")
+                ->whereRaw("lower(name) = '".strtolower($jobName)."'")
                 ->first();
 
             $employees[] = [
@@ -1375,10 +1342,6 @@ class EmployeeService
      * And edit if exists
      *
      * Handle Boss id in the last process
-     *
-     * @param array $response
-     *
-     * @return array
      */
     public function submitImport(array $response): array
     {
@@ -1390,7 +1353,7 @@ class EmployeeService
 
                 return $item;
             })->filter(function ($filter) {
-                return !$filter['wrong_format'];
+                return ! $filter['wrong_format'];
             })->values()->toArray();
 
             foreach ($response as $employee) {
@@ -1406,10 +1369,10 @@ class EmployeeService
 
                 $employee['boss_id'] = null;
 
-                $check = $this->repo->show('dummy', 'id', [], "lower(employee_id) = '" . strtolower($employee['employee_id']) . "'");
+                $check = $this->repo->show('dummy', 'id', [], "lower(employee_id) = '".strtolower($employee['employee_id'])."'");
 
                 if ($check) {
-                    $this->repo->update(collect($employee)->except(['boss_id', 'wrong_format', 'wrong_data'])->toArray(), '', "lower(employee_id) = '" . strtolower($employee['employee_id']) . "'");
+                    $this->repo->update(collect($employee)->except(['boss_id', 'wrong_format', 'wrong_data'])->toArray(), '', "lower(employee_id) = '".strtolower($employee['employee_id'])."'");
                 } else {
                     $this->repo->store(collect($employee)->except(['boss_id', 'wrong_format', 'wrong_data'])->toArray());
                 }
@@ -1418,13 +1381,13 @@ class EmployeeService
             // handle boss id
             foreach ($response as $employee) {
                 if ($employee['boss_id']) {
-                    $bossId = $this->repo->show('dummy', 'id,employee_id', [], "lower(employee_id) = '" . strtolower($employee['boss_id']) . "'");
+                    $bossId = $this->repo->show('dummy', 'id,employee_id', [], "lower(employee_id) = '".strtolower($employee['boss_id'])."'");
 
                     if ($bossId) {
                         $this->repo->update(
                             ['boss_id' => $bossId->id],
                             'dummy',
-                            "lower(employee_id) = '" . strtolower($employee['employee_id']) . "'"
+                            "lower(employee_id) = '".strtolower($employee['employee_id'])."'"
                         );
                     }
                 }
@@ -1433,7 +1396,7 @@ class EmployeeService
             \Illuminate\Support\Facades\DB::commit();
 
             return generalResponse(
-                __("global.successImportData"),
+                __('global.successImportData'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -1459,20 +1422,20 @@ class EmployeeService
                 if (
                     (isset($employee[$requirement])) &&
                     (
-                        !$employee[$requirement] ||
+                        ! $employee[$requirement] ||
                         empty($employee[$requirement]) ||
                         $employee[$requirement] == null ||
                         $employee[$requirement] == 'null'
                     )
                 ) {
                     $output[$key]['wrong_format'] = true;
-                    $message = "global." . snakeToCamel($requirement) . 'Required';
+                    $message = 'global.'.snakeToCamel($requirement).'Required';
                     array_push($wrong, trans($message));
                 }
 
-                if (!isset($employee[$requirement])) {
+                if (! isset($employee[$requirement])) {
                     $output[$key]['wrong_format'] = true;
-                    $message = "global." . snakeToCamel($requirement) . 'Required';
+                    $message = 'global.'.snakeToCamel($requirement).'Required';
                     array_push($wrong, trans($message));
                 }
             }
@@ -1518,7 +1481,7 @@ class EmployeeService
         }
 
         return generalResponse(
-            "Success",
+            'Success',
             false,
             $output
         );
@@ -1535,16 +1498,12 @@ class EmployeeService
 
     /**
      * Function to store employee family membet
-     *
-     * @param array $payload
-     * @param string $employeeUid
-     * @return array
      */
     public function storeFamily(array $payload, string $employeeUid): array
     {
         DB::beginTransaction();
         try {
-            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee);
 
             $payload['employee_id'] = $employeeId;
 
@@ -1566,15 +1525,13 @@ class EmployeeService
     /**
      * Function to store employee family membet
      *
-     * @param array $payload
-     * @param string $employeeUid
-     * @return array
+     * @param  string  $employeeUid
      */
     public function updateFamily(array $payload, string $familyUid): array
     {
         DB::beginTransaction();
         try {
-            $this->employeeFamilyRepo->update($payload, $familyUid,);
+            $this->employeeFamilyRepo->update($payload, $familyUid);
 
             DB::commit();
 
@@ -1591,13 +1548,10 @@ class EmployeeService
 
     /**
      * Get family list of each employee
-     *
-     * @param string $employeeUid
-     * @return array
      */
     public function initFamily(string $employeeUid): array
     {
-        $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee());
+        $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee);
         $data = $this->employeeFamilyRepo->list(
             select: '*',
             where: "employee_id = {$employeeId}"
@@ -1613,10 +1567,10 @@ class EmployeeService
                 'gender' => $item->gender_text,
                 'job' => $item->job,
                 'religion' => $item->religion_text,
-                'martial_status' => $item->martial_status_status
+                'martial_status' => $item->martial_status_status,
             ];
         })->values()
-        ->toArray();
+            ->toArray();
 
         return generalResponse(
             message: 'success',
@@ -1627,9 +1581,6 @@ class EmployeeService
 
     /**
      * Delete family data
-     *
-     * @param string $familyUid
-     * @return array
      */
     public function deleteFamily(string $familyUid): array
     {
@@ -1637,7 +1588,7 @@ class EmployeeService
             $this->employeeFamilyRepo->delete($familyUid);
 
             return generalResponse(
-                __("global.successDeleteFamily"),
+                __('global.successDeleteFamily'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -1647,13 +1598,10 @@ class EmployeeService
 
     /**
      * Get family list of each employee
-     *
-     * @param string $employeeUid
-     * @return array
      */
     public function initEmergency(string $employeeUid): array
     {
-        $data = $this->employeeEmergencyRepo->list('*', 'employee_id = ' . getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee()));
+        $data = $this->employeeEmergencyRepo->list('*', 'employee_id = '.getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee));
 
         $output = collect((object) $data)->map(function ($item) {
             return [
@@ -1673,16 +1621,12 @@ class EmployeeService
 
     /**
      * Function to store employee emergency contact
-     *
-     * @param array $payload
-     * @param string $employeeUid
-     * @return array
      */
     public function storeEmergency(array $payload, string $employeeUid): array
     {
         DB::beginTransaction();
         try {
-            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee);
 
             $payload['employee_id'] = $employeeId;
             $this->employeeEmergencyRepo->store($payload);
@@ -1703,9 +1647,7 @@ class EmployeeService
     /**
      * Function to store employee emergency contact
      *
-     * @param array $payload
-     * @param string $employeeUid
-     * @return array
+     * @param  string  $employeeUid
      */
     public function updateEmergency(array $payload, string $emergencyUid): array
     {
@@ -1729,8 +1671,7 @@ class EmployeeService
     /**
      * Delete emergency contact
      *
-     * @param string $familyUid
-     * @return array
+     * @param  string  $familyUid
      */
     public function deleteEmergency(string $emergencyUid): array
     {
@@ -1738,7 +1679,7 @@ class EmployeeService
             $this->employeeEmergencyRepo->delete($emergencyUid);
 
             return generalResponse(
-                __("global.successDeleteEmergencyContact"),
+                __('global.successDeleteEmergencyContact'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -1749,19 +1690,17 @@ class EmployeeService
     /**
      * update employment data
      *
-     * @param array $data
-     * @param string $employeeUid
-     * @return array
+     * @param  array  $data
      */
     public function updateEmployment(array $payload, string $employeeUid): array
     {
         try {
-            $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\PositionBackup());
+            $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\PositionBackup);
             if (
                 (isset($payload['boss_id'])) &&
                 ($payload['boss_id'])
             ) {
-                $payload['boss_id'] = getIdFromUid($payload['boss_id'], new \Modules\Hrd\Models\Employee());
+                $payload['boss_id'] = getIdFromUid($payload['boss_id'], new \Modules\Hrd\Models\Employee);
             }
 
             $this->repo->update(collect($payload)->except(['level'])->toArray(), $employeeUid);
@@ -1781,25 +1720,23 @@ class EmployeeService
 
     /**
      * This function is consumed by cron job. Check Modules\Hrd\app\Console\CheckEmployeeResign.php
-     *
-     * @return void
      */
     public function checkEmployeeWhoResignToday(): void
     {
         try {
             $notAllowed = [
                 Status::Inactive->value,
-                Status::Deleted->value
+                Status::Deleted->value,
             ];
 
             $employees = $this->repo->list(
                 select: 'id,uid,status,user_id',
-                where: "status NOT IN (" . implode(',', $notAllowed) . ")",
+                where: 'status NOT IN ('.implode(',', $notAllowed).')',
                 whereHas: [
                     [
                         'relation' => 'resignData',
-                        'query' => "DATE(resign_date) <= NOW()"
-                    ]
+                        'query' => 'DATE(resign_date) <= NOW()',
+                    ],
                 ]
             );
             $userIds = collect($employees)->pluck('user_id')->toArray();
@@ -1807,7 +1744,7 @@ class EmployeeService
             foreach ($employees as $employee) {
                 $this->repo->update(
                     data: [
-                        'status' => Status::Inactive->value
+                        'status' => Status::Inactive->value,
                     ],
                     uid: $employee->uid
                 );
@@ -1826,9 +1763,8 @@ class EmployeeService
     /**
      * Employee is resign
      *
-     * @param array<string, string> $data
+     * @param  array<string, string>  $data
      * @param string employeeUid
-     *
      * @return array
      */
     public function resign(array $data, string $employeeUid)
@@ -1847,8 +1783,7 @@ class EmployeeService
              * 7. Change status
              * 8. Don't DELETE UNTIL THE DESIRE TIME REACHED
              */
-
-            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee());
+            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee);
 
             $employee = $this->repo->show(
                 uid: $employeeUid,
@@ -1896,24 +1831,22 @@ class EmployeeService
      * Frontend is used Apexchart
      *
      * Here we only show 3 Employee status like Permanent, Contract and Probation
-     *
-     * @return array
      */
     public function getEmploymentChart(object $employees): array
     {
         try {
             $output = Cache::get(CacheKey::HrDashboardEmploymentStatus->value);
-            if (!$output) {
+            if (! $output) {
                 $output = Cache::rememberForever(CacheKey::HrDashboardEmploymentStatus->value, function () use ($employees) {
                     $statuses = [
                         Status::Permanent->value,
                         Status::Contract->value,
-                        Status::Probation->value
+                        Status::Probation->value,
                     ];
 
                     $series = [];
                     $table = [
-                        ['title' => 'Total', 'value' => $employees->count(), 'type' => 'header']
+                        ['title' => 'Total', 'value' => $employees->count(), 'type' => 'header'],
                     ];
                     foreach ($statuses as $status) {
                         $totalPerStatus = collect((object) $employees)->filter(function ($filter) use ($status) {
@@ -1924,7 +1857,7 @@ class EmployeeService
                         $series[] = [
                             'name' => Status::generateLabel($status),
                             'data' => [$totalPerStatus],
-                            'color' => Status::generateChartColor($status)
+                            'color' => Status::generateChartColor($status),
                         ];
 
                         // add more $table configuration
@@ -1932,7 +1865,7 @@ class EmployeeService
                         $table[] = [
                             'title' => Status::generateLabel($status),
                             'value' => $totalPerStatus,
-                            'valuePercentage' => number_format(num: $percentage, decimals: 0) . '%',
+                            'valuePercentage' => number_format(num: $percentage, decimals: 0).'%',
                             'color' => Status::generateChartColor($status),
                             'type' => 'body',
                         ];
@@ -1944,14 +1877,13 @@ class EmployeeService
                     return [
                         'series' => $series,
                         'table' => $table,
-                        'options' => $options
+                        'options' => $options,
                     ];
                 });
             }
 
-
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $output
             );
         } catch (\Throwable $th) {
@@ -1964,14 +1896,12 @@ class EmployeeService
      * Frontend is used Apexchart
      *
      * Here we divide by 3 categories: 0-1 yr, 1-3 yr, 3-5 yr, 5-10 yr
-     *
-     * @return array
      */
     public function getLengthOfServiceChart(object $employees): array
     {
         try {
             $output = Cache::get(CacheKey::HrDashboardLoS->value);
-            if (!$output) {
+            if (! $output) {
                 $output = Cache::rememberForever(CacheKey::HrDashboardLoS->value, function () use ($employees) {
                     // 0 - 1 year
                     $firstData = collect($employees)->filter(function ($filter) {
@@ -1995,17 +1925,17 @@ class EmployeeService
 
                     $series = $this->chart->buildBarSeries(name: 'Length of Service', data: [$firstData, $secondData, $thirdData, $lastData]);
 
-                    $options = $this->chart->buildBarOptions(xaxisCategories: ["0-1 yr", "1-3 yr", "3-5 yr", "5-10 yr"]);
+                    $options = $this->chart->buildBarOptions(xaxisCategories: ['0-1 yr', '1-3 yr', '3-5 yr', '5-10 yr']);
 
                     return [
                         'series' => $series,
-                        "options" => $options
+                        'options' => $options,
                     ];
                 });
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $output
             );
         } catch (\Throwable $th) {
@@ -2018,8 +1948,6 @@ class EmployeeService
      * Frontend is used Apexchart
      *
      * Here we only displays data for the past 3 months
-     *
-     * @return array
      */
     public function getActiveStaffChart(): array
     {
@@ -2046,11 +1974,11 @@ class EmployeeService
             })->toArray());
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'series' => $series,
-                    "options" => $options,
-                    'months' => $months
+                    'options' => $options,
+                    'months' => $months,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2061,8 +1989,6 @@ class EmployeeService
     /**
      * Get gender diversity as a chart option that can be comsumed on the frontend
      * Frontend is used Apexchart
-     *
-     * @return array
      */
     public function getGenderDiversityChart(object $employees): array
     {
@@ -2078,31 +2004,30 @@ class EmployeeService
             $series = [$male, $female];
 
             $options = [
-                "chart" => [
-                    "width" => 200,
-                    "height" => 200,
-                    "type" => "pie"
+                'chart' => [
+                    'width' => 200,
+                    'height' => 200,
+                    'type' => 'pie',
                 ],
-                "labels" => [Gender::Male->label(), Gender::Female->label()],
-                "legend" => [
-                    "show" => true
+                'labels' => [Gender::Male->label(), Gender::Female->label()],
+                'legend' => [
+                    'show' => true,
                 ],
             ];
 
             $total = array_sum([$male, $female]);
             $table = [
-                ["title" => "Total", "value" => $total, "type" => "header"],
-                ["title" => Gender::Male->label(), "value" => $male, "valuePercentage" => number_format(num: $male / $total * 100), "color" => "#009bde", "type" => "body"],
-                ["title" => Gender::Female->label(), "value" => $female, "valuePercentage" => number_format(num: $female / $total * 100), "color" => "#f96d01", "type" => "body"],
+                ['title' => 'Total', 'value' => $total, 'type' => 'header'],
+                ['title' => Gender::Male->label(), 'value' => $male, 'valuePercentage' => number_format(num: $male / $total * 100), 'color' => '#009bde', 'type' => 'body'],
+                ['title' => Gender::Female->label(), 'value' => $female, 'valuePercentage' => number_format(num: $female / $total * 100), 'color' => '#f96d01', 'type' => 'body'],
             ];
-
 
             return generalResponse(
                 message: 'Success',
                 data: [
-                    "series" => $series,
-                    "table" => $table,
-                    "options" => $options
+                    'series' => $series,
+                    'table' => $table,
+                    'options' => $options,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2113,14 +2038,12 @@ class EmployeeService
     /**
      * Get all job level of the company as a chart option that can be comsumed on the frontend
      * Frontend is used Apexchart
-     *
-     * @return array
      */
     public function getJobLevelChart(object $employees): array
     {
         try {
             $output = Cache::get(CacheKey::HrDashboardJobLevel->value);
-            if (!$output || empty($output)) {
+            if (! $output || empty($output)) {
                 $output = Cache::rememberForever(CacheKey::HrDashboardJobLevel->value, function () use ($employees) {
                     $jobLevels = $this->jobLevelRepo->list(
                         select: 'id,name'
@@ -2128,7 +2051,7 @@ class EmployeeService
 
                     $series = [];
                     $table = [
-                        ['title' => 'Total', 'value' => $employees->count(), 'type' => 'header']
+                        ['title' => 'Total', 'value' => $employees->count(), 'type' => 'header'],
                     ];
                     foreach ($jobLevels as $jobLevel) {
                         $numberOfJob = collect($employees)->filter(function ($filter) use ($jobLevel) {
@@ -2140,18 +2063,18 @@ class EmployeeService
 
                         // create series
                         $series[] = [
-                            'name'=> $jobLevel->name,
+                            'name' => $jobLevel->name,
                             'data' => [$numberOfJob],
-                            'color' => $color
+                            'color' => $color,
                         ];
 
                         // create table data
                         $table[] = [
                             'title' => $jobLevel->name,
                             'value' => $numberOfJob,
-                            'valuePercentage' => number_format($numberOfJob / $employees->count() * 100) . '%',
+                            'valuePercentage' => number_format($numberOfJob / $employees->count() * 100).'%',
                             'color' => $color,
-                            'type' => 'body'
+                            'type' => 'body',
                         ];
                     }
 
@@ -2161,13 +2084,13 @@ class EmployeeService
                     return [
                         'series' => $series,
                         'table' => $table,
-                        'options' => $options
+                        'options' => $options,
                     ];
                 });
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $output
             );
         } catch (\Throwable $th) {
@@ -2177,9 +2100,6 @@ class EmployeeService
 
     /**
      * Get who is off today
-     *
-     *
-     * @return array
      */
     public function getEmployeeOffChart(): array
     {
@@ -2190,20 +2110,20 @@ class EmployeeService
 
             // get all timeoff in this month
             $timeoffs = $this->employeeTimeoffRepo->list(
-                select: "id,time_off_id,talenta_user_id,policy_name,request_type,file_url,start_date,end_date,status,UNIX_TIMESTAMP(start_date) AS start_timestamp,UNIX_TIMESTAMP(end_date) AS end_timestamp",
+                select: 'id,time_off_id,talenta_user_id,policy_name,request_type,file_url,start_date,end_date,status,UNIX_TIMESTAMP(start_date) AS start_timestamp,UNIX_TIMESTAMP(end_date) AS end_timestamp',
                 relation: [
-                    'employee:id,employee_id,nickname,name,talenta_user_id'
+                    'employee:id,employee_id,nickname,name,talenta_user_id',
                 ],
                 where: "UNIX_TIMESTAMP(start_date) >= {$firstMonthUnixTimestamp} AND UNIX_TIMESTAMP(end_date) <= {$lastMonthUnixTimestamp}"
             );
 
             // get today timeoff
-            $todayTimeoff = collect((object) $timeoffs)->filter(function ($filter) use($todayUnixTimestamp) {
+            $todayTimeoff = collect((object) $timeoffs)->filter(function ($filter) use ($todayUnixTimestamp) {
                 return $todayUnixTimestamp >= $filter->start_timestamp && $todayUnixTimestamp <= $filter->end_timestamp;
             })->values();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'today' => $todayTimeoff,
                     // 'timeoff' => $timeoffs,
@@ -2216,15 +2136,12 @@ class EmployeeService
 
     /**
      * Get age average chart -> Bar Chart
-     *
-     * @param object $employees
-     * @return array
      */
     public function getAgeAverageChart(object $employees): array
     {
         try {
             $output = Cache::get(CacheKey::HrDashboardAgeAverage->value);
-            if (!$output) {
+            if (! $output) {
                 $output = Cache::rememberForever(CacheKey::HrDashboardAgeAverage->value, function () use ($employees) {
                     // < 18 yr
                     $firstData = collect($employees)->filter(function ($filter) {
@@ -2253,17 +2170,17 @@ class EmployeeService
 
                     $series = $this->chart->buildBarSeries(name: 'Age Average', data: [$firstData, $secondData, $thirdData, $fourthData, $lastData]);
 
-                    $options = $this->chart->buildBarOptions(xaxisCategories: ["< 18", "18 - 24", "25 - 34", "35 - 49", "50+"]);
+                    $options = $this->chart->buildBarOptions(xaxisCategories: ['< 18', '18 - 24', '25 - 34', '35 - 49', '50+']);
 
                     return [
                         'series' => $series,
-                        "options" => $options
+                        'options' => $options,
                     ];
                 });
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $output
             );
         } catch (\Throwable $th) {
@@ -2279,19 +2196,16 @@ class EmployeeService
      * 2. Delete resign_dae in the employees table
      *
      * This function only worked when resign date is greater than now
-     *
-     * @param string $employeeUid
-     * @return array
      */
     public function cancelResign(string $employeeUid): array
     {
         try {
-            $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee());
+            $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee);
 
             $this->repo->update(
                 data: [
-                    'end_date' => NULL,
-                    'reason' => NULL
+                    'end_date' => null,
+                    'reason' => null,
                 ],
                 uid: $employeeUid
             );
