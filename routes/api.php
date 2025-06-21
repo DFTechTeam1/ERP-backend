@@ -28,7 +28,7 @@ Route::post('/onesignal-clicked', function (Request $request) {
     logging('onesignal-clicked', $request->toArray());
 });
 
-Route::post('interactive/image/{deviceId}', [InteractiveController::class, 'generateImageQrCode']);
+Route::post('interactive/image', [InteractiveController::class, 'generateImageQrCode']);
 
 Route::get('testing', function () {
     $file = \Illuminate\Support\Facades\Storage::disk('public')->size('settings/image_17485858746.webp');
