@@ -191,7 +191,7 @@ class ProjectQuotationService
                 'phone' => $this->generalService->getSettingByKey('company_phone'),
                 'name' => $this->generalService->getSettingByKey('company_name'),
             ],
-            'quotationNumber' => "#{$quotationId}",
+            'quotationNumber' => "{$quotationId}",
             'date' => date('d F Y', strtotime($data->deal->project_date)),
             'designJob' => $data->deal->class->name,
             'price' => 'Rp' . number_format(num: $data->fix_price, decimal_separator: ','),

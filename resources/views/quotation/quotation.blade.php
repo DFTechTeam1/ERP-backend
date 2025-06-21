@@ -27,7 +27,7 @@
         }
 
         .header .header-left img {
-            width: 50px;
+            width: 20px;
             height: auto;
         }
 
@@ -201,14 +201,14 @@
 </head>
 <body>
     <div class="watermark" style="width: 400px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <img src="{{ public_path() . '/dfactory.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
+        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
     </div>
     <table class="main-wrapper">
         <tbody>
             <tr class="header">
                 <td class="header-left">
                     <div class="header-left-content">
-                        <img src="{{ public_path() . '/dfactory.png' }}" alt="Logo">
+                        <img src="{{ public_path() . '/df-simple-black.png' }}" alt="Logo">
     
                         <div class="divider"></div>
     
@@ -239,7 +239,7 @@
                         </div>
     
                         <div class="footer">
-                            <img src="{{ public_path() . '/dfactory.png' }}" alt="Logo">
+                            <img src="{{ public_path() . '/df-logo.png' }}" alt="Logo" style="width: 130px;">
                         </div>
                     </div>
                 </td>
@@ -248,7 +248,7 @@
                         <tr class="quotation-number">
                             <td class="quotation-number-title first">Quotation No</td>
                             <td class="quotation-number-separator first">:</td>
-                            <td class="quotation-number-value first">#{{ $quotationNumber }}</td>
+                            <td class="quotation-number-value first">{{ $quotationNumber }}</td>
                         </tr>
                         <tr class="quotation-number">
                             <td class="quotation-number-title">Tanggal</td>
@@ -377,14 +377,14 @@
     <div class="page-break"></div>
 
     <div class="watermark" style="width: 400px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <img src="{{ public_path() . '/dfactory.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
+        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
     </div>
     <table class="main-wrapper">
         <tbody>
             <tr class="header">
                 <td class="header-left">
                     <div class="header-left-content">
-                        <img src="{{ public_path() . '/dfactory.png' }}" alt="Logo">
+                        <img src="{{ public_path() . '/df-simple-black.png' }}" alt="Logo">
     
                         <div class="divider"></div>
     
@@ -415,7 +415,7 @@
                         </div>
     
                         <div class="footer">
-                            <img src="{{ public_path() . '/dfactory.png' }}" alt="Logo">
+                            <img src="{{ public_path() . '/df-logo.png' }}" alt="Logo" style="width: 130px;">
                         </div>
                     </div>
                 </td>
@@ -424,7 +424,7 @@
                         <tr class="quotation-number">
                             <td class="quotation-number-title first">Quotation No</td>
                             <td class="quotation-number-separator first">:</td>
-                            <td class="quotation-number-value first">#{{ $quotationNumber }}</td>
+                            <td class="quotation-number-value first">{{ $quotationNumber }}</td>
                         </tr>
                         <tr class="quotation-number">
                             <td class="quotation-number-title">Tanggal</td>
@@ -486,14 +486,14 @@
     <div class="page-break"></div>
 
     <div class="watermark" style="width: 400px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <img src="{{ public_path() . '/dfactory.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
+        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
     </div>
     <table class="main-wrapper">
         <tbody>
             <tr class="header">
                 <td class="header-left">
                     <div class="header-left-content">
-                        <img src="{{ public_path() . '/dfactory.png' }}" alt="Logo">
+                        <img src="{{ public_path() . '/df-simple-black.png' }}" alt="Logo">
     
                         <div class="divider"></div>
     
@@ -524,7 +524,7 @@
                         </div>
     
                         <div class="footer">
-                            <img src="{{ public_path() . '/dfactory.png' }}" alt="Logo">
+                            <img src="{{ public_path() . '/df-logo.png' }}" alt="Logo" style="width: 130px;">
                         </div>
                     </div>
                 </td>
@@ -533,7 +533,7 @@
                         <tr class="quotation-number">
                             <td class="quotation-number-title first">Quotation No</td>
                             <td class="quotation-number-separator first">:</td>
-                            <td class="quotation-number-value first">#{{ $quotationNumber }}</td>
+                            <td class="quotation-number-value first">{{ $quotationNumber }}</td>
                         </tr>
                         <tr class="quotation-number">
                             <td class="quotation-number-title">Tanggal</td>
