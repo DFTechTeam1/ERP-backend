@@ -87,4 +87,9 @@ class GeneralService
     {
         return linkShortener($length);
     }
+
+    public function setProjectCount()
+    {
+        
+    }
 }
