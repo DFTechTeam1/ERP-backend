@@ -624,4 +624,30 @@ class ProjectDealService
             return errorResponse($th);
         }
     }
+
+    /**
+     * Get design job number
+     *
+     * @return array
+     */
+    public function getDesignJob(): array
+    {
+        try {
+            // get latest number of project
+            $data = $this->projectRepo->list(
+                select: 'id'
+            )->count();
+
+            $designJobNumber = $data + 1;
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'designJob' => $designJobNumber
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }

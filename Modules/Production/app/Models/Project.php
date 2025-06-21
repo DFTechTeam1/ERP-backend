@@ -2,6 +2,8 @@
 
 namespace Modules\Production\Models;
 
+use App\Enums\Cache\CacheKey;
+use App\Services\GeneralService;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -17,6 +19,19 @@ use Modules\Production\Observers\NasFolderObserver;
 class Project extends Model
 {
     use HasFactory, ModelObserver;
+
+    /**
+         * The "booted" method of the model.
+         */
+        protected static function booted(): void
+        {
+            static::created(function (Project $project) {
+                $generalService = new GeneralService();
+
+                $total = $generalService->getCache(cacheId: CacheKey::ProjectCount->value);
+            });
+        }
+
 
     /**
      * The attributes that are mass assignable.
