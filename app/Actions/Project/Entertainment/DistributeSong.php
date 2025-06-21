@@ -19,12 +19,12 @@ class DistributeSong
 
     public function handle(array $payload, string $projectUid, string $songUid, GeneralService $generalService)
     {
-        $employeeId = $generalService->getIdFromUid($payload['employee_uid'], new Employee());
-        $songId = $generalService->getIdFromUid($songUid, new ProjectSongList());
-        $projectId = $generalService->getIdFromUid($projectUid, new Project());
+        $employeeId = $generalService->getIdFromUid($payload['employee_uid'], new Employee);
+        $songId = $generalService->getIdFromUid($songUid, new ProjectSongList);
+        $projectId = $generalService->getIdFromUid($projectUid, new Project);
 
-        $entertainmentTaskSongRepo = new EntertainmentTaskSongRepository();
-        $employeeRepo = new EmployeeRepository();
+        $entertainmentTaskSongRepo = new EntertainmentTaskSongRepository;
+        $employeeRepo = new EmployeeRepository;
 
         $taskSong = $entertainmentTaskSongRepo->store([
             'project_song_list_id' => $songId,
@@ -32,7 +32,7 @@ class DistributeSong
             'employee_id' => $employeeId,
             'project_id' => $projectId,
             'givenBy' => '',
-            'target' => ''
+            'target' => '',
         ]);
 
         // store log
@@ -44,7 +44,7 @@ class DistributeSong
         $user = $employeeRepo->show(
             uid: 'id',
             select: 'id,nickname',
-            where: "user_id = " . auth()->id()
+            where: 'user_id = '.auth()->id()
         );
 
         // logging task
@@ -58,7 +58,7 @@ class DistributeSong
             ],
             params: [
                 'givenBy' => $user->nickname,
-                'target' => $employee->nickname
+                'target' => $employee->nickname,
             ]
         );
 

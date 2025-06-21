@@ -3,11 +3,10 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Support\Collection;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\ProjectSongList;
 use Modules\Production\Notifications\RequestSongNotification;
@@ -55,8 +54,8 @@ class RequestSongJob implements ShouldQueue
                 ->where('user_id', $this->createdBy)
                 ->first();
 
-            $message = "Halo " . $entertainmentPic->employee->nickname;
-            $message .= "\n" . $requester->nickname . " telah menambahkan list lagu di event " . $this->project->name;
+            $message = 'Halo '.$entertainmentPic->employee->nickname;
+            $message .= "\n".$requester->nickname.' telah menambahkan list lagu di event '.$this->project->name;
 
             $message .= "\nLagu untuk event ini adalah:\n";
 

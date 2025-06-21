@@ -3,10 +3,10 @@
 namespace Modules\Hrd\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class DeleteImageJob implements ShouldQueue
 {
@@ -14,15 +14,11 @@ class DeleteImageJob implements ShouldQueue
 
     /**
      * Define inventory image name
-     *
-     * @var array
      */
     public array $images;
 
     /**
      * Define inventory image folder
-     *
-     * @var string
      */
     private string $imageFolder = 'employees';
 
@@ -40,7 +36,7 @@ class DeleteImageJob implements ShouldQueue
     public function handle(): void
     {
         foreach ($this->images as $image) {
-            deleteImage(public_path('storage/' . $this->imageFolder . '/' . $image));
+            deleteImage(public_path('storage/'.$this->imageFolder.'/'.$image));
         }
     }
 }

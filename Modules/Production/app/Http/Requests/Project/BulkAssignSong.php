@@ -15,7 +15,7 @@ class BulkAssignSong extends FormRequest
             'workers' => 'array',
             'workers.*.uid' => 'required',
             'workers.*.songs' => 'array',
-            'workers.*.songs.*' => 'required'
+            'workers.*.songs.*' => 'required',
         ];
     }
 

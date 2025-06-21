@@ -3,12 +3,11 @@
 namespace Database\Seeders;
 
 use App\Enums\System\BaseRole;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionSetting extends Seeder
 {
@@ -72,7 +71,7 @@ class RolePermissionSetting extends Seeder
                 ->where('name', $role['name'])
                 ->first();
 
-            if (!$check) {
+            if (! $check) {
                 $roleData = Role::create(collect($role)->except('permissions')->toArray());
                 $roleData->syncPermissions($role['permissions']);
             } else {
@@ -316,7 +315,7 @@ class RolePermissionSetting extends Seeder
             ['name' => 'assign_modeller', 'group' => 'employee', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
-                $this->getLeadModeller()
+                $this->getLeadModeller(),
             ]],
             ['name' => 'create_employee', 'group' => 'employee', 'used' => [
                 $this->getRootRole(),
@@ -736,11 +735,19 @@ class RolePermissionSetting extends Seeder
     protected function projectPermission()
     {
         return [
+            ['name' => 'create_deals', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
+            ['name' => 'list_deals', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
             ['name' => 'complete_project', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
                 $this->getProjectManagerAdminRole(),
-                $this->getProjectManagerRole()
+                $this->getProjectManagerRole(),
             ]],
             ['name' => 'reject_song_proof_of_work', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
@@ -1023,8 +1030,8 @@ class RolePermissionSetting extends Seeder
                 ->where('name', $permission['name'])
                 ->first();
 
-            if (!$check) {
-                Permission::create(collect($permission)->except('used')->toArray());
+            if (! $check) {
+                Permission::create(collect($permission)->except('used')->merge(['guard_name' => 'sanctum'])->toArray());
             }
         }
     }

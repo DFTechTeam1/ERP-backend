@@ -3,9 +3,7 @@
 namespace Modules\Addon\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Modules\Addon\Http\Requests\Addon\Create;
 
 class AddonController extends Controller

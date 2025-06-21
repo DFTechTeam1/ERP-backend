@@ -4,7 +4,6 @@ namespace Modules\Production\Rules;
 
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Support\Facades\Log;
 
 class LinkReferenceRule implements ValidationRule
 {
@@ -13,9 +12,9 @@ class LinkReferenceRule implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        [,$index,] = explode('.', $attribute);
-        
-        if (!empty(request("link.{$index}.href")) && empty($value)) {
+        [,$index] = explode('.', $attribute);
+
+        if (! empty(request("link.{$index}.href")) && empty($value)) {
             $fail('validation.referenceNameRequired')->translate();
         }
     }

@@ -14,24 +14,24 @@ enum InventoryStatus: int
     public function label()
     {
         return match ($this) {
-            static::InUse => __('global.inUse'),
-            static::InRepair => __('global.inRepair'),
-            static::Broke => __('global.broke'),
-            static::Disposal => __('global.disposal'),
-            static::OnSite => __('global.onSite'),
-            static::OnWarehouse => __('global.onWarehouse'),
+            self::InUse => __('global.inUse'),
+            self::InRepair => __('global.inRepair'),
+            self::Broke => __('global.broke'),
+            self::Disposal => __('global.disposal'),
+            self::OnSite => __('global.onSite'),
+            self::OnWarehouse => __('global.onWarehouse'),
         };
     }
 
     public function badgeColor()
     {
         return match ($this) {
-            static::InUse => 'bg-light-blue',
-            static::InRepair => 'bg-light-yellow',
-            static::Broke => 'bg-black',
-            static::Disposal => 'bg-light-red',
-            static::OnSite => 'bg-teal-darken-4',
-            static::OnWarehouse => 'bg-green-darken-2'
+            self::InUse => 'bg-light-blue',
+            self::InRepair => 'bg-light-yellow',
+            self::Broke => 'bg-black',
+            self::Disposal => 'bg-light-red',
+            self::OnSite => 'bg-teal-darken-4',
+            self::OnWarehouse => 'bg-green-darken-2'
         };
     }
 }

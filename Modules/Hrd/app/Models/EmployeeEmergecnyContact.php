@@ -2,8 +2,8 @@
 
 namespace Modules\Hrd\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Hrd\Database\Factories\EmployeeEmergecnyContactFactory;
 
 class EmployeeEmergecnyContact extends Model
@@ -17,6 +17,6 @@ class EmployeeEmergecnyContact extends Model
 
     protected static function newFactory(): EmployeeEmergecnyContactFactory
     {
-        //return EmployeeEmergecnyContactFactory::new();
+        // return EmployeeEmergecnyContactFactory::new();
     }
 }

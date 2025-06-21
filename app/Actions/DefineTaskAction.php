@@ -32,49 +32,49 @@ class DefineTaskAction
                 'icon' => asset('images/taskAction/clock-outline-white.png'),
                 'group' => 'top',
                 'color' => 'grey-darken-1',
-                'action' => 'openDeadlineForm'
+                'action' => 'openDeadlineForm',
             ],
             'completeTheTask' => [
                 'icon' => asset('images/taskAction/check-white.png'),
                 'group' => 'top',
                 'color' => 'success',
-                'action' => 'completeTask'
+                'action' => 'completeTask',
             ],
             'members' => [
                 'icon' => asset('images/taskAction/members-white.png'),
                 'group' => 'top',
                 'color' => 'grey-darken-1',
-                'action' => 'choosePicAction'
+                'action' => 'choosePicAction',
             ],
             'reviseDetail' => [
                 'icon' => asset('images/taskAction/refresh-white.png'),
                 'group' => 'top',
                 'color' => 'grey-darken-1',
-                'action' => 'showReviseAction'
+                'action' => 'showReviseAction',
             ],
             'attachments' => [
                 'icon' => asset('images/taskAction/attachment-white.png'),
                 'group' => 'top',
                 'color' => 'grey-darken-1',
-                'action' => 'openAttachmentAction'
+                'action' => 'openAttachmentAction',
             ],
             'proofOfWorks' => [
                 'icon' => asset('images/taskAction/attachment-white.png'),
                 'group' => 'top',
                 'color' => 'grey-darken-1',
-                'action' => 'openProofOfWorkAction'
+                'action' => 'openProofOfWorkAction',
             ],
             'showLogs' => [
                 'icon' => asset('images/taskAction/log-white.png'),
                 'group' => 'top',
                 'color' => 'grey-darken-1',
-                'action' => 'openLogs'
+                'action' => 'openLogs',
             ],
             'showTimeTracker' => [
                 'icon' => asset('images/taskAction/timeline-white.png'),
                 'group' => 'top',
                 'color' => 'grey-darken-1',
-                'action' => 'openTimeTracker'
+                'action' => 'openTimeTracker',
             ],
             // 'move' => [
             //     'icon' => asset('images/taskAction/arrow-white.png'),
@@ -86,54 +86,50 @@ class DefineTaskAction
                 'icon' => asset('images/taskAction/check-white.png'),
                 'group' => 'bottom',
                 'color' => 'success',
-                'action' => 'approveTaskAction'
+                'action' => 'approveTaskAction',
             ],
             'holdTask' => [
                 'icon' => asset('images/taskAction/exclamation-white.png'),
                 'group' => 'bottom',
                 'color' => 'warning',
-                'action' => 'holdTaskAction'
+                'action' => 'holdTaskAction',
             ],
             'startTask' => [
                 'icon' => asset('images/taskAction/check-white.png'),
                 'group' => 'bottom',
                 'color' => 'success',
-                'action' => 'startTaskAction'
+                'action' => 'startTaskAction',
             ],
             'distributeTask' => [
                 'icon' => asset('images/taskAction/branch-white.png'),
                 'group' => 'bottom',
                 'color' => 'success',
-                'action' => 'distributeTaskAction'
+                'action' => 'distributeTaskAction',
             ],
             'markAsComplete' => [
                 'icon' => asset('images/taskAction/check-white.png'),
                 'group' => 'bottom',
                 'color' => 'success',
-                'action' => 'markAsCompleteTaskAction'
+                'action' => 'markAsCompleteTaskAction',
             ],
             'revise' => [
                 'icon' => asset('images/taskAction/refresh-white.png'),
                 'group' => 'bottom',
                 'color' => 'red',
-                'action' => 'reviseTaskAction'
+                'action' => 'reviseTaskAction',
             ],
             'delete' => [
                 'icon' => asset('images/taskAction/trash-white.png'),
                 'group' => 'bottom',
                 'color' => 'red',
-                'action' => 'deleteTaskAction'
-            ]
+                'action' => 'deleteTaskAction',
+            ],
         ];
     }
-
 
     /**
      * Define authorized user is having this task or not
      * Assign to existing variable
-     *
-     * @param object $task
-     * @return void
      */
     protected function defineMyTask(object $task): void
     {
@@ -146,13 +142,11 @@ class DefineTaskAction
     {
         $currentPicTasks = $task->current_pics ? json_decode($task->current_pics, true) : null;
 
-        $this->isMyCurrentTask = !$currentPicTasks ? false : (in_array($this->user->employee_id, $currentPicTasks) ? true : false);
+        $this->isMyCurrentTask = ! $currentPicTasks ? false : (in_array($this->user->employee_id, $currentPicTasks) ? true : false);
     }
 
     /**
      * This action will define which button should be appear in the selected task
-     *
-     * @return array
      */
     public function handle(object $task): array
     {
@@ -163,7 +157,7 @@ class DefineTaskAction
         $this->defineMyCurrentTask($task);
 
         $leadModelerUid = getSettingByKey('lead_3d_modeller');
-        $this->leadModelerUid = getIdFromUid($leadModelerUid, new Employee());
+        $this->leadModelerUid = getIdFromUid($leadModelerUid, new Employee);
 
         $this->showForLeadModeler = false;
         if ($task->is_modeler_task && $this->user->employee_id == $this->leadModelerUid) {
@@ -182,8 +176,6 @@ class DefineTaskAction
 
     /**
      * Define authorized user is has a super power or not
-     *
-     * @return boolean
      */
     protected function hasSuperPower(): bool
     {
@@ -199,7 +191,7 @@ class DefineTaskAction
             disabled: $this->hasSuperPower() || $this->showForLeadModeler ?
             false :
             (
-                !$this->isMyTask ?
+                ! $this->isMyTask ?
                 true :
                 (
                     $task->status == TaskStatus::WaitingApproval->value ?
@@ -250,10 +242,6 @@ class DefineTaskAction
      * Disabled when
      * 1. Authorized user task and
      * 2. Status is waiting approval
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     public function getAttachmentsButton(object $task, string $key, array $detail): ?array
     {
@@ -264,7 +252,7 @@ class DefineTaskAction
             disabled: $this->hasSuperPower() || $this->showForLeadModeler ?
             false :
             (
-                !$this->isMyTask ?
+                ! $this->isMyTask ?
                 true :
                 (
                     $this->isMyTask && TaskStatus::WaitingApproval->value == $task->status ?
@@ -283,10 +271,6 @@ class DefineTaskAction
      * 1. Has super power
      * 2. Has a task ownership
      * 3. Proof of Works data is already there
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getProofOfWorksButton(object $task, string $key, array $detail): ?array
     {
@@ -302,10 +286,6 @@ class DefineTaskAction
     /**
      * Will show when
      * 1. Has super power
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getShowLogsButton(object $task, string $key, array $detail): ?array
     {
@@ -321,10 +301,6 @@ class DefineTaskAction
     /**
      * Will show when:
      * 1. Has a super power
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getShowTimeTrackerButton(object $task, string $key, array $detail): ?array
     {
@@ -340,10 +316,6 @@ class DefineTaskAction
     /**
      * Will show when:
      * 1. Has a super power
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getMoveButton(object $task, string $key, array $detail): ?array
     {
@@ -361,17 +333,13 @@ class DefineTaskAction
      * 1. Has a super power
      * 2. Authorized user is has this task ownership
      * 3. Task status is Waiting Approval
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getApproveTaskButton(object $task, string $key, array $detail): ?array
     {
         $approve = null;
 
         $leadModeller = json_decode(getSettingByKey('lead_3d_modeller'), true);
-        if (($this->hasSuperPower() || $this->isMyTask) && $task->status == TaskStatus::WaitingApproval->value && !$this->getDistributeTaskButton($task, $key, $detail)) {
+        if (($this->hasSuperPower() || $this->isMyTask) && $task->status == TaskStatus::WaitingApproval->value && ! $this->getDistributeTaskButton($task, $key, $detail)) {
             $approve = $this->buildOutput($key, false, $detail);
         }
 
@@ -383,10 +351,6 @@ class DefineTaskAction
      * 1. Has a super power
      * 2. Authorized user is has this task ownership
      * 3. Task status is ON PROGRESS
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getHoldTaskButton(object $task, string $key, array $detail): ?array
     {
@@ -404,10 +368,6 @@ class DefineTaskAction
      * 1. Has a super power
      * 2. Authorized user is has this task ownership
      * 3. Task status is ON HOLD
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getStartTaskButton(object $task, string $key, array $detail): ?array
     {
@@ -428,17 +388,13 @@ class DefineTaskAction
      * 4. Lead 3D Modeller has already set
      * 5. permission assign_modeller already set and assigned
      * 6. PIC task is a lead modeller
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getDistributeTaskButton(object $task, string $key, array $detail): ?array
     {
         $distribute = null;
 
         $leadModeller = getSettingByKey('lead_3d_modeller');
-        $leadModeller = getIdFromUid($leadModeller, new Employee());
+        $leadModeller = getIdFromUid($leadModeller, new Employee);
         $taskPics = collect($task->pics)->pluck('employee_id')->toArray();
 
         if (
@@ -453,7 +409,6 @@ class DefineTaskAction
             $distribute = $this->buildOutput($key, false, $detail);
         }
 
-
         return $distribute;
     }
 
@@ -461,10 +416,6 @@ class DefineTaskAction
      * Will show when:
      * 1. Has a super power
      * 2. Task status is CHECK BY PM
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getMarkAsCompleteButton(object $task, string $key, array $detail): ?array
     {
@@ -481,10 +432,6 @@ class DefineTaskAction
      * Will show when
      * 1. Has a super power
      * 2. Task status is CHECK BY PM
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getReviseButton(object $task, string $key, array $detail): ?array
     {
@@ -500,10 +447,6 @@ class DefineTaskAction
     /**
      * Will show when:
      * 1. Has a super power
-     *
-     * @param object $task
-     * @param string $key
-     * @return array|null
      */
     protected function getDeleteButton(object $task, string $key, array $detail): ?array
     {
@@ -518,16 +461,12 @@ class DefineTaskAction
 
     /**
      * Build and format output array
-     *
-     * @param string $key
-     * @param boolean $disabled
-     * @return array
      */
     protected function buildOutput(string $key, bool $disabled, array $detail = []): array
     {
         $output = [
             'label' => __("taskAction.{$key}"),
-            'disabled' => $disabled
+            'disabled' => $disabled,
         ];
 
         return array_merge($output, $detail);

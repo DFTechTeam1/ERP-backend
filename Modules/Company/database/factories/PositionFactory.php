@@ -10,7 +10,7 @@ class PositionFactory extends Factory
     /**
      * The name of the factory's corresponding model.
      */
-    protected $model = \Modules\Company\Models\Position::class;
+    protected $model = \Modules\Company\Models\PositionBackup::class;
 
     /**
      * Define the model's default state.
@@ -23,4 +23,3 @@ class PositionFactory extends Factory
         ];
     }
 }
-

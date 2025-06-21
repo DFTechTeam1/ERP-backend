@@ -2,7 +2,8 @@
 
 namespace App\Enums\Production\Entertainment;
 
-enum TaskSongLogType: string {
+enum TaskSongLogType: string
+{
     case AssignJob = 'assignJob';
     case Approved = 'approved';
     case Completed = 'completed';
@@ -27,97 +28,97 @@ enum TaskSongLogType: string {
     public static function generateText(string $type, array $payload = [])
     {
         switch ($type) {
-            case static::AssignJob->value:
+            case self::AssignJob->value:
                 // $text = __('log.userHasBeenAssigned', ['givenBy' => $payload['givenBy'] ?? '-', 'target' => $payload['target'] ?? '']);
                 $text = 'log.userHasBeenAssigned';
                 break;
 
-            case static::Approved->value:
+            case self::Approved->value:
                 // $text = __('log.userApprovedTask', ['user' => $payload['user']]);
                 $text = 'log.userApprovedTask';
                 break;
 
-            case static::Completed->value:
+            case self::Completed->value:
                 // $text = __('log.userCompleteJob', ['user' => $payload['user']]);
                 $text = 'log.userCompleteJob';
                 break;
 
-            case static::CheckByPM->value:
+            case self::CheckByPM->value:
                 // $text = __('log.PMCheckJob', ['user' => $payload['user']]);
                 $text = 'log.PMCheckJob';
                 break;
 
-            case static::ApprovedByPM->value:
+            case self::ApprovedByPM->value:
                 // $text = __('log.songApprovedByPM', ['pm' => $payload['pm'], 'user' => $payload['user']]);
                 $text = 'log.songApprovedByPM';
                 break;
 
-            case static::RevisedByPM->value:
+            case self::RevisedByPM->value:
                 // $text = __('log.songRevisedByPM', ['pm' => $payload['pm'], 'user' => $payload['user']]);
                 $text = 'log.songRevisedByPM';
                 break;
 
-            case static::CheckByPMProject->value:
+            case self::CheckByPMProject->value:
                 // $text = __('log.checkByPMProject');
                 $text = 'log.checkByPMProject';
                 break;
 
-            case static::JobCompleted->value:
+            case self::JobCompleted->value:
                 // $text = __('log.songJobComplete');
                 $text = 'log.songJobComplete';
                 break;
 
-            case static::RevisedByPMProject->value:
+            case self::RevisedByPMProject->value:
                 // $text = __('log.songRevisedByPMProject');
                 $text = 'log.songRevisedByPMProject';
                 break;
 
-            case static::DelegateByPM->value:
+            case self::DelegateByPM->value:
                 // $text = __('log.songDelegateByPM', ['user' => $payload['user']]);
                 $text = 'log.songDelegateByPM';
                 break;
 
-            case static::ChangePICByPM->value:
+            case self::ChangePICByPM->value:
                 // $text = __('log.songChangePICByPM', ['pm' => $payload['pm'], 'user' => $payload['user'], 'target' => $payload['target']]);
                 $text = 'log.songChangePICByPM';
                 break;
 
-            case static::ApprovedRequestEdit->value:
+            case self::ApprovedRequestEdit->value:
                 $text = 'log.songApproveRequestEdit';
                 break;
 
-            case static::RejectRequestEdit->value:
+            case self::RejectRequestEdit->value:
                 $text = 'log.songRejectRequestEdit';
                 break;
 
-            case static::RemoveWorkerFromTask->value:
+            case self::RemoveWorkerFromTask->value:
                 $text = 'log.songRemoveWorker';
                 break;
 
-            case static::RequestToEditSong->value:
+            case self::RequestToEditSong->value:
                 $text = 'log.requestToEditSong';
                 break;
 
-            case static::EditSong->value:
+            case self::EditSong->value:
                 $text = 'log.editSong';
                 break;
 
-            case static::StartWorking->value:
+            case self::StartWorking->value:
                 $text = 'log.startWorkSong';
                 break;
 
-            case static::ReportAsDone->value:
+            case self::ReportAsDone->value:
                 $text = 'log.songReportAsDone';
                 break;
 
-            case static::ApprovedByEntertainmentPM->value:
+            case self::ApprovedByEntertainmentPM->value:
                 $text = 'log.songApprovedByEntertainmentPM';
                 break;
 
-            case static::ApprovedByEventPM->value:
+            case self::ApprovedByEventPM->value:
                 $text = 'log.songApprovedByEventPM';
                 break;
-            
+
             default:
                 $text = '-';
                 break;

@@ -10,9 +10,8 @@ enum SalaryConfiguration: int
     public function label()
     {
         return match ($this) {
-            static::Taxable => 'Taxable',
-            static::NonTaxable => 'Non-Taxable',
+            self::Taxable => 'Taxable',
+            self::NonTaxable => 'Non-Taxable',
         };
     }
-
 }

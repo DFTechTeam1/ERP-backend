@@ -14,6 +14,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
     use Exportable;
 
     protected $startDate;
+
     protected $endDate;
 
     public function __construct(string $startDate = '', string $endDate = '')
@@ -23,14 +24,14 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
     }
 
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function view(): View
     {
-        $employeeRepo = new EmployeeRepository();
-        $pointProjectRepo = new EmployeePointProjectRepository();
+        $employeeRepo = new EmployeeRepository;
+        $pointProjectRepo = new EmployeePointProjectRepository;
         $projects = $pointProjectRepo->list(
-            select: "id,employee_point_id,project_id,total_point,additional_point",
+            select: 'id,employee_point_id,project_id,total_point,additional_point',
             relation: [
                 'project:id,name,project_date',
                 'project.personInCharges:id,project_id,pic_id',
@@ -41,10 +42,10 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
                 'employeePoint.employee.position:id,name',
                 'details.productionTask:id,name',
                 'details.entertainmentTask:id,project_song_list_id',
-                'details.entertainmentTask.song:id,name'
+                'details.entertainmentTask.song:id,name',
             ],
             whereHas: [
-                ['relation' => 'project', 'query' => "project_date BETWEEN '{$this->startDate}' AND '{$this->endDate}'"]
+                ['relation' => 'project', 'query' => "project_date BETWEEN '{$this->startDate}' AND '{$this->endDate}'"],
             ]
         );
 
@@ -55,7 +56,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
             $tasks = [];
             if ($type == 'production') {
                 $tasks = collect($project->details)->pluck('productionTask.name')->toArray();
-            } else if ($type == 'entertainment') {
+            } elseif ($type == 'entertainment') {
                 $tasks = collect($project->details)->pluck('entertainmentTask.song.name')->toArray();
             }
 
@@ -65,7 +66,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
             }
 
             $output[$project->project->name][] = [
-                'tasks' => implode(",", $tasks),
+                'tasks' => implode(',', $tasks),
                 'point' => $project->total_point - $project->additional_point,
                 'additional_point' => $project->additional_point,
                 'total_point' => $project->total_point,

@@ -12,6 +12,6 @@ class InteractiveImage extends Model
     protected $fillable = [
         'qrcode',
         'filepath',
-        'identifier'
+        'identifier',
     ];
 }

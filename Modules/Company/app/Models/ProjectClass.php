@@ -2,10 +2,10 @@
 
 namespace Modules\Company\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Company\Database\Factories\ProjectClassFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Company\Database\Factories\ProjectClassFactory;
 use Modules\Production\Database\Factories\EventTypeFactory;
 
 class ProjectClass extends Model
@@ -18,12 +18,12 @@ class ProjectClass extends Model
     protected $fillable = [
         'name',
         'maximal_point',
-        'color'
+        'color',
     ];
 
-    protected static function newFactory(): EventTypeFactory
+    protected static function newFactory(): ProjectClassFactory
     {
-        return EventTypeFactory::new();
+        return ProjectClassFactory::new();
     }
 
     public function project(): HasOne

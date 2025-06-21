@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class RequestSongNotification extends Notification
 {
@@ -33,7 +32,7 @@ class RequestSongNotification extends Notification
     {
         return [
             'database',
-            TelegramChannel::class
+            TelegramChannel::class,
         ];
     }
 
@@ -56,7 +55,7 @@ class RequestSongNotification extends Notification
         return [
             'title' => 'Request lagu',
             'message' => $this->message,
-            'link' => ''
+            'link' => '',
         ];
     }
 
@@ -64,7 +63,7 @@ class RequestSongNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramChatIds,
-            'message' => $this->message
+            'message' => $this->message,
         ];
     }
 }

@@ -47,7 +47,7 @@ class GetTokenAsActor extends Command
         $token = $service->login(
             validated: [
                 'email' => $email,
-                'password' => ''
+                'password' => '',
             ],
             onActing: true
         );

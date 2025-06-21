@@ -3,9 +3,7 @@
 namespace Modules\Company\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Modules\Company\Http\Requests\PositionCreateRequest;
 use Modules\Company\Http\Requests\PositionUpdateRequest;
 use Modules\Company\Models\Position;
@@ -15,21 +13,18 @@ class PositionController extends Controller
 {
     private PositionService $positionService;
 
-    /**
-     * @param PositionService $positionService
-     */
     public function __construct(PositionService $positionService)
     {
         $this->positionService = $positionService;
     }
-
 
     /**
      * Get list of data
      */
     public function list()
     {
-        $data = $this->positionService->list('uid,name,division_id','',['division:id,name,uid']);
+        $data = $this->positionService->list('uid,name,division_id', '', ['division:id,name,uid']);
+
         return apiResponse($data);
     }
 
@@ -43,11 +38,12 @@ class PositionController extends Controller
      */
     public function show(string $uid)
     {
-        $data = $this->positionService->show($uid,'id,uid,name,division_id', [
+        $data = $this->positionService->show($uid, 'id,uid,name,division_id', [
             'division:id,name,uid',
             'employees:position_id,uid,name',
             // 'jobs:position_id,uid,name'
         ]);
+
         return apiResponse($data);
     }
 
@@ -64,10 +60,9 @@ class PositionController extends Controller
     /**
      * Update selected data
      *
-     * @param array $data
-     * @param integer $id
-     * @param string $where
-     *
+     * @param  array  $data
+     * @param  int  $id
+     * @param  string  $where
      * @return array
      */
     public function update(PositionUpdateRequest $request, string $uid)

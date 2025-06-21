@@ -3,8 +3,9 @@
 namespace Modules\Company\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Company\Database\Factories\JobLevelFactory;
 
 class JobLevel extends Model

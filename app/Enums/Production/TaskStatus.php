@@ -15,26 +15,26 @@ enum TaskStatus: int
     public function label()
     {
         return match ($this) {
-            static::OnProgress => __("global.onProgress"),
-            static::CheckByPm => __("global.checkByPm"),
-            static::Revise => __("global.revise"),
-            static::Completed => __("global.completed"),
-            static::WaitingApproval => __("global.waitingApproval"),
-            static::OnHold => __("global.onHold"),
-            static::WaitingDistribute => __("global.waitingToDistributeToModeller")
+            self::OnProgress => __('global.onProgress'),
+            self::CheckByPm => __('global.checkByPm'),
+            self::Revise => __('global.revise'),
+            self::Completed => __('global.completed'),
+            self::WaitingApproval => __('global.waitingApproval'),
+            self::OnHold => __('global.onHold'),
+            self::WaitingDistribute => __('global.waitingToDistributeToModeller')
         };
     }
 
     public function color()
     {
         return match ($this) {
-            static::OnProgress => 'light-blue-lighten-3',
-            static::CheckByPm => 'deep-purple-lighten-1',
-            static::Revise => 'orange-darken-1',
-            static::Completed => 'success',
-            static::WaitingApproval => 'grey-lighten-1',
-            static::WaitingDistribute => 'grey-lighten-1',
-            static::OnHold => 'yellow-darken-3',
+            self::OnProgress => 'light-blue-lighten-3',
+            self::CheckByPm => 'deep-purple-lighten-1',
+            self::Revise => 'orange-darken-1',
+            self::Completed => 'success',
+            self::WaitingApproval => 'grey-lighten-1',
+            self::WaitingDistribute => 'grey-lighten-1',
+            self::OnHold => 'yellow-darken-3',
         };
     }
 }

@@ -8,12 +8,11 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class EmployeeImport implements WithMultipleSheets
 {
-
     public function sheets(): array
     {
         return [
-            'Fulltime Compile' => new FulltimeCompile(),
-            'Fulltime Response' => new FulltimeResponse(),
+            'Fulltime Compile' => new FulltimeCompile,
+            'Fulltime Response' => new FulltimeResponse,
         ];
     }
 }

@@ -17,8 +17,8 @@ class UpdateBuild extends FormRequest
             'type' => 'required',
             'default_request_item' => 'required',
             'name' => [
-                new \App\Rules\UniqueLowerRule(new \Modules\Inventory\Models\CustomInventory(), $this->route('uid')),
-                'required'
+                new \App\Rules\UniqueLowerRule(new \Modules\Inventory\Models\CustomInventory, $this->route('uid')),
+                'required',
             ],
         ];
     }

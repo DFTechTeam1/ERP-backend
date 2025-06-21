@@ -5,8 +5,8 @@ namespace Modules\Company\Console;
 use Illuminate\Console\Command;
 use Modules\Company\Models\JobLevel;
 use Modules\Hrd\Models\Employee;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class JobLevelMigration extends Command
 {
@@ -87,14 +87,14 @@ class JobLevelMigration extends Command
             '65' => 'Staff',
             '66' => 'Staff',
             '67' => 'Staff',
-            '68' => 'Staff'
+            '68' => 'Staff',
         ];
 
         foreach ($schemas as $code => $level) {
             if (strlen($code) == 1) {
-                $employeeId = 'DF00' . $code;
-            } else if (strlen($code) == 2) {
-                $employeeId = 'DF0' . $code;
+                $employeeId = 'DF00'.$code;
+            } elseif (strlen($code) == 2) {
+                $employeeId = 'DF0'.$code;
             }
 
             $levelData = JobLevel::select('id')
@@ -103,7 +103,7 @@ class JobLevelMigration extends Command
 
             Employee::where('employee_id', $employeeId)
                 ->update([
-                    'job_level_id' => $levelData->id
+                    'job_level_id' => $levelData->id,
                 ]);
         }
     }

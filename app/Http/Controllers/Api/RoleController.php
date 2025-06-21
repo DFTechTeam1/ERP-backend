@@ -14,7 +14,7 @@ class RoleController extends Controller
 
     public function __construct()
     {
-        $this->service = new RoleService();
+        $this->service = new RoleService;
     }
 
     /**
@@ -28,7 +28,7 @@ class RoleController extends Controller
     public function getAll()
     {
         return apiResponse($this->service->getAll());
-        
+
     }
 
     /**

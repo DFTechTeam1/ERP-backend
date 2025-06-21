@@ -5,32 +5,30 @@ namespace Modules\Production\Repository;
 use Modules\Production\Models\ProjectBoard;
 use Modules\Production\Repository\Interface\ProjectBoardInterface;
 
-class ProjectBoardRepository extends ProjectBoardInterface {
+class ProjectBoardRepository extends ProjectBoardInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectBoard();
+        $this->model = new ProjectBoard;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -52,24 +50,20 @@ class ProjectBoardRepository extends ProjectBoardInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -83,9 +77,7 @@ class ProjectBoardRepository extends ProjectBoardInterface {
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
+     * @param  string  $uid
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(int $uid, string $select = '*', array $relation = [], string $where = '')
@@ -108,7 +100,6 @@ class ProjectBoardRepository extends ProjectBoardInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -119,15 +110,14 @@ class ProjectBoardRepository extends ProjectBoardInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -141,7 +131,7 @@ class ProjectBoardRepository extends ProjectBoardInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id = 0, string $where = '')
@@ -160,7 +150,6 @@ class ProjectBoardRepository extends ProjectBoardInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

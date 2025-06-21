@@ -15,21 +15,21 @@ class PerformanceReport extends FormRequest
         return [
             'start_date' => [
                 'nullable',
-                'date_format:Y-m-d'
+                'date_format:Y-m-d',
             ],
             'end_date' => [
                 'nullable',
-                'date_format:Y-m-d'
+                'date_format:Y-m-d',
             ],
             'all_employee' => 'required|boolean',
             'employee_uids' => [
                 'array',
-                Rule::requiredIf(request('all_employee') == 0 && empty(request('position_uids')))
+                Rule::requiredIf(request('all_employee') == 0 && empty(request('position_uids'))),
             ],
             'position_uids' => [
                 'array',
-                Rule::requiredIf(request('all_employee') == 0 && empty(request('employee_uids')))
-            ]
+                Rule::requiredIf(request('all_employee') == 0 && empty(request('employee_uids'))),
+            ],
         ];
     }
 

@@ -2,18 +2,19 @@
 
 namespace Modules\Inventory\Repository\Interface;
 
-abstract class InventoryInterface {
-    abstract function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '');
+abstract class InventoryInterface
+{
+    abstract public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '');
 
-    abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page, array $whereHas = []);
+    abstract public function pagination(string $select, string $where, array $relation, int $itemsPerPage, int $page, array $whereHas = []);
 
-    abstract function show(string $uid, string $select = '*', array $relation = []);
+    abstract public function show(string $uid, string $select = '*', array $relation = []);
 
-    abstract function store(array $data);
+    abstract public function store(array $data);
 
-    abstract function update(array $data, string $id = '', string $where = '');
+    abstract public function update(array $data, string $id = '', string $where = '');
 
-    abstract function delete(int $id);
+    abstract public function delete(int $id);
 
-    abstract function bulkDelete(array $ids, string $key = '');
+    abstract public function bulkDelete(array $ids, string $key = '');
 }

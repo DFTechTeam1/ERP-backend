@@ -2,22 +2,23 @@
 
 namespace Modules\Production\Repository\Interface;
 
-abstract class ProjectTaskPicInterface {
-    abstract function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '', int $limit = 0);
+abstract class ProjectTaskPicInterface
+{
+    abstract public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '', int $limit = 0);
 
-    abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
+    abstract public function pagination(string $select, string $where, array $relation, int $itemsPerPage, int $page);
 
-    abstract function show(int $id, string $select = '*', array $relation = []);
+    abstract public function show(int $id, string $select = '*', array $relation = []);
 
-    abstract function store(array $data);
+    abstract public function store(array $data);
 
-    abstract function update(array $data, string $id = '', string $where = '');
+    abstract public function update(array $data, string $id = '', string $where = '');
 
-    abstract function delete(int $id = 0, string $where = '');
+    abstract public function delete(int $id = 0, string $where = '');
 
-    abstract function bulkDelete(array $ids, string $key = '');
+    abstract public function bulkDelete(array $ids, string $key = '');
 
-    abstract function deleteWithCondition(string $where);
+    abstract public function deleteWithCondition(string $where);
 
-    abstract function upsert(array $data, array $unique, array $updatedColumn);
+    abstract public function upsert(array $data, array $unique, array $updatedColumn);
 }

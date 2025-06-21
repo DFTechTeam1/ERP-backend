@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table("inventories", function (Blueprint $table) {
+        Schema::table('inventories', function (Blueprint $table) {
             $table->tinyInteger('warehouse_id')
                 ->nullable()
                 ->comment('Static id. 1 for office, 2 for entertaint');
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table("inventories", function (Blueprint $table) {
+        Schema::table('inventories', function (Blueprint $table) {
             $table->dropColumn('warehouse_id');
         });
     }

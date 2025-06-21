@@ -8,16 +8,15 @@
 namespace Modules\Telegram\Service\Action;
 
 use App\Models\User;
-use App\Services\Telegram\InlineKeyboard;
 use App\Services\Telegram\TelegramService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Modules\Hrd\Models\Employee;
 use Modules\Telegram\Enums\CallbackIdentity;
 
-class MyProjectAction {
+class MyProjectAction
+{
     private $service;
 
     private $token;
@@ -52,12 +51,12 @@ class MyProjectAction {
 
     protected function setService()
     {
-        $this->service = new TelegramService();
+        $this->service = new TelegramService;
     }
 
     protected function setAuth()
     {
-        if (!$this->token) {
+        if (! $this->token) {
             $employee = Employee::select('id')
                 ->where('telegram_chat_id', $this->chatId)
                 ->first();
@@ -75,13 +74,13 @@ class MyProjectAction {
     protected function sendProjectList()
     {
         // get the projects
-        $startDate = $this->year . '-' . $this->month . '-01';
+        $startDate = $this->year.'-'.$this->month.'-01';
         $year = $this->year;
         $month = $this->month;
         $getLastDay = Carbon::createFromDate((int) $year, (int) $month, 1)
             ->endOfMonth()
             ->format('d');
-        $endDate = $year . '-' . $month . '-' . $getLastDay;
+        $endDate = $year.'-'.$month.'-'.$getLastDay;
 
         $this->setAuth();
 
@@ -94,11 +93,11 @@ class MyProjectAction {
             'filter_today' => false,
             'filter_year' => false,
             'page' => 1,
-            'itemsPerPage' => 100
+            'itemsPerPage' => 100,
         ];
 
         $response = Http::withToken($this->token)
-            ->get(env("TELEGRAM_DOMAIN") . "/api/production/project", $search);
+            ->get(env('TELEGRAM_DOMAIN').'/api/production/project', $search);
 
         Log::debug('response project', [$response->json()]);
 
@@ -106,7 +105,7 @@ class MyProjectAction {
             $projects = collect($response->json()['data']['paginated'])->map(function ($item) {
                 return [
                     'id' => $item['id'],
-                    'name' => $item['name']
+                    'name' => $item['name'],
                 ];
             })->toArray();
         }
@@ -117,7 +116,7 @@ class MyProjectAction {
             foreach ($projectData as $k => $project) {
                 $outputProjects[$keyChunk][] = [
                     'text' => $project['name'],
-                    'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=projectdtl&y=' . $this->year . '&m=' . $this->month . '&pid=' . $project['id']
+                    'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=projectdtl&y='.$this->year.'&m='.$this->month.'&pid='.$project['id'],
                 ];
             }
         }
@@ -125,8 +124,8 @@ class MyProjectAction {
         $outputProjects[count($projectChunks)] = [
             [
                 'text' => 'Back',
-                'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=back&y=' . $this->year . '&m=' . $this->month . '&pid='
-            ]
+                'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=back&y='.$this->year.'&m='.$this->month.'&pid=',
+            ],
         ];
 
         Log::debug('outputprojects', $outputProjects);
@@ -142,7 +141,7 @@ class MyProjectAction {
         $project = \Modules\Production\Models\Project::selectRaw('*')
             ->with([
                 'personInCharges:id,project_id,pic_id',
-                'personInCharges.employee:id,nickname'
+                'personInCharges.employee:id,nickname',
             ])
             ->where('id', $this->pid)
             ->first();
@@ -152,13 +151,13 @@ class MyProjectAction {
 
         $message = "Nama event: {$project->name}\n";
         $message .= "Tanggal: {$projectDate}\n";
-        $message .= "PIC: " . $pics;
+        $message .= 'PIC: '.$pics;
 
         // get current active task
-        $taskMessage = "Kamu tidak memiliki tugas yang aktif di event ini";
+        $taskMessage = 'Kamu tidak memiliki tugas yang aktif di event ini';
         $taskPic = \Modules\Production\Models\ProjectTaskPic::selectRaw('employee_id,project_task_id,id')
             ->with([
-                'task:id,name'
+                'task:id,name',
             ])
             ->whereHas('employee', function ($q) {
                 $q->where('telegram_chat_id', $this->chatId);
@@ -170,7 +169,7 @@ class MyProjectAction {
         if (count($taskPic) > 0) {
             $taskMessage = "Kamu mempunyai tugas: \n";
             foreach ($taskPic as $key => $pic) {
-                $taskMessage .= $key + 1 . '. ' . $pic->task->name . "\n";
+                $taskMessage .= $key + 1 .'. '.$pic->task->name."\n";
             }
         }
 
@@ -188,17 +187,17 @@ class MyProjectAction {
 
         if ($this->currentFunction == 'month') {
             $this->sendMonthList(true);
-        } else if ($this->currentFunction == 'year') {
+        } elseif ($this->currentFunction == 'year') {
             $this->sendYearList(true);
-        } else if ($this->currentFunction == 'project') {
+        } elseif ($this->currentFunction == 'project') {
             $this->sendProjectList();
-        } else if ($this->currentFunction == 'back') {
-            if ($this->year && !$this->month) { // this action came when user click back on the month list, so take to year list
+        } elseif ($this->currentFunction == 'back') {
+            if ($this->year && ! $this->month) { // this action came when user click back on the month list, so take to year list
                 $this->sendYearList(true);
-            } else if ($this->year && $this->month) { // this action came when user click back on the project list, so take to the month list
+            } elseif ($this->year && $this->month) { // this action came when user click back on the project list, so take to the month list
                 $this->sendMonthList(true);
             }
-        } else if ($this->currentFunction == 'projectdtl') {
+        } elseif ($this->currentFunction == 'projectdtl') {
             $this->sendProjectInformation();
         }
     }
@@ -218,18 +217,18 @@ class MyProjectAction {
             foreach ($chunk as $year) {
                 $outputYear[$key][] = [
                     'text' => $year,
-                    'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=month&v=' . $year . '&y=' . $year . '&m=&pid=',
+                    'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=month&v='.$year.'&y='.$year.'&m=&pid=',
                 ];
             }
         }
 
         if ($isEdit) {
             $this->service->sendEditButtonMessage($this->chatId, $this->messageId, [
-                'inline_keyboard' => $outputYear
+                'inline_keyboard' => $outputYear,
             ]);
         } else {
             $this->service->sendButtonMessage($this->chatId, 'Pilih dulu beberapa pilihan dibawah ini ya', [
-                'inline_keyboard' => $outputYear
+                'inline_keyboard' => $outputYear,
             ]);
         }
     }
@@ -239,29 +238,29 @@ class MyProjectAction {
         $button = [
             'inline_keyboard' => [
                 [
-                    ['text' => 'Januari', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=01&pid='],
-                    ['text' => 'Febuari', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=02&pid='],
-                    ['text' => 'Maret', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=03&pid='],
+                    ['text' => 'Januari', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=01&pid='],
+                    ['text' => 'Febuari', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=02&pid='],
+                    ['text' => 'Maret', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=03&pid='],
                 ],
                 [
-                    ['text' => 'April', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=04&pid='],
-                    ['text' => 'Mei', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=05&pid='],
-                    ['text' => 'Juni', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=06&pid='],
+                    ['text' => 'April', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=04&pid='],
+                    ['text' => 'Mei', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=05&pid='],
+                    ['text' => 'Juni', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=06&pid='],
                 ],
                 [
-                    ['text' => 'Juli', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=07&pid='],
-                    ['text' => 'Agustus', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=08&pid='],
-                    ['text' => 'September', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=09&pid='],
+                    ['text' => 'Juli', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=07&pid='],
+                    ['text' => 'Agustus', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=08&pid='],
+                    ['text' => 'September', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=09&pid='],
                 ],
                 [
-                    ['text' => 'Oktober', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=10&pid='],
-                    ['text' => 'November', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=11&pid='],
-                    ['text' => 'Desember', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=project&y=' . $this->year . '&m=12&pid='],
+                    ['text' => 'Oktober', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=10&pid='],
+                    ['text' => 'November', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=11&pid='],
+                    ['text' => 'Desember', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=project&y='.$this->year.'&m=12&pid='],
                 ],
                 [
-                    ['text' => '<< Back', 'callback_data' => 'idt=' . CallbackIdentity::MyProject->value . '&f=back&y=' . $this->year . '&m=&pid='],
-                ]
-            ]
+                    ['text' => '<< Back', 'callback_data' => 'idt='.CallbackIdentity::MyProject->value.'&f=back&y='.$this->year.'&m=&pid='],
+                ],
+            ],
         ];
 
         $send = $this->service->sendEditButtonMessage($this->chatId, $this->messageId, $button);

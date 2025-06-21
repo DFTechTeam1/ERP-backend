@@ -27,7 +27,7 @@ class FormInteractiveRequest extends FormRequest
         return [
             'name' => [
                 'required',
-                'unique:form_interactives,name'
+                'unique:form_interactives,name',
             ],
             'forms.*.name' => 'required',
             'image' => 'nullable',
@@ -37,7 +37,6 @@ class FormInteractiveRequest extends FormRequest
     /**
      * Return validation errors as json
      *
-     * @param Validator $validator
      * @return void
      */
     public function failedValidation(Validator $validator)

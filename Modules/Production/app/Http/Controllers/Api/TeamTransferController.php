@@ -4,7 +4,7 @@ namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use \Modules\Production\Http\Requests\RejectTeamRequest;
+use Modules\Production\Http\Requests\RejectTeamRequest;
 use Modules\Production\Services\TransferTeamMemberService;
 
 class TeamTransferController extends Controller
@@ -13,8 +13,7 @@ class TeamTransferController extends Controller
 
     public function __construct(
         TransferTeamMemberService $service
-    )
-    {
+    ) {
         $this->service = $service;
     }
 

@@ -3,10 +3,9 @@
 namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Production\Database\Factories\ProjectTaskReviseHistoryFactory;
 
 class ProjectTaskReviseHistory extends Model
 {
@@ -43,14 +42,14 @@ class ProjectTaskReviseHistory extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 
     public function reviseAt(): Attribute
     {
         return Attribute::make(
-            get: fn() => date('d F Y H:i', strtotime($this->attributes['created_at'])),
+            get: fn () => date('d F Y H:i', strtotime($this->attributes['created_at'])),
         );
     }
 
@@ -69,7 +68,7 @@ class ProjectTaskReviseHistory extends Model
         }
 
         return Attribute::make(
-            get: fn() => $out,
+            get: fn () => $out,
         );
     }
 }

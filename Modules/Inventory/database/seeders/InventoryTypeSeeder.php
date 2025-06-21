@@ -3,8 +3,8 @@
 namespace Modules\Inventory\Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Modules\Inventory\Models\InventoryType;
 use Illuminate\Support\Facades\Schema;
+use Modules\Inventory\Models\InventoryType;
 
 class InventoryTypeSeeder extends Seeder
 {

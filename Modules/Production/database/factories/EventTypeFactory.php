@@ -20,8 +20,7 @@ class EventTypeFactory extends Factory
         return [
             'name' => 'A (Besar)',
             'maximal_point' => 20,
-            'color' => 'black'
+            'color' => 'black',
         ];
     }
 }
-
