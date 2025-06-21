@@ -3,13 +3,18 @@
 namespace Modules\Company\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Company\Database\Factories\CountryFactory;
 
 class Country extends Model
 {
     use HasFactory;
 
     protected $table = 'countries';
+
+    public $timestamps = false;
 
     /**
      * The attributes that are mass assignable.
@@ -21,4 +26,9 @@ class Country extends Model
         'phone_code',
         'currency',
     ];
+
+    public function states(): HasMany
+    {
+        return $this->hasMany(State::class, 'country_id');
+    }
 }
