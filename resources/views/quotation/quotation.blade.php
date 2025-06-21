@@ -601,7 +601,7 @@
                 <td></td>
                 <td style="text-align: center;">
                     <div style="padding-top: 50px;">
-                        <p style="font-size: 12px; margin: 0;">Wesley Wiyadi</p>
+                        <p style="font-size: 12px; margin: 0;">{{ $marketing['name'] }}</p>
                         <p style="font-size: 12px; border-bottom: 1px solid #000; margin: 0; padding-bottom: 5px;">(<i>Project Manager</i>)</p>
                         <p style="font-size: 12px; margin: 0;">Dibuat Oleh</p>
                     </div>
