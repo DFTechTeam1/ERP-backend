@@ -222,7 +222,7 @@ class ProjectQuotationService
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', $output)
         ->setPaper('14')
         ->setOption([
-            'defaultFont' => 'sans-serif',
+            'defaultFont' => 'lato',
             'isPhpEnabled' => true,
             'isHtml5ParserEnabled' => true,
             'debugPng' => false,
