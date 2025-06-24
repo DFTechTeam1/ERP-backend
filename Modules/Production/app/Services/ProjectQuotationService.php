@@ -167,7 +167,7 @@ class ProjectQuotationService
         $quotationId = Crypt::decryptString($quotationId);
         $data = $this->repo->show(
             uid: 'uid',
-            select: 'id,project_deal_id,fix_price,quotation_id,description',
+            select: 'id,project_deal_id,fix_price,quotation_id,description,design_job',
             relation: [
                 'deal:id,name,project_date,customer_id,event_type,venue,collaboration,led_detail,country_id,state_id,city_id,project_class_id',
                 'deal.city:id,name',
@@ -193,7 +193,7 @@ class ProjectQuotationService
             ],
             'quotationNumber' => "{$quotationId}",
             'date' => date('d F Y', strtotime($data->deal->project_date)),
-            'designJob' => $data->deal->class->name,
+            'designJob' => $data->design_job,
             'price' => 'Rp' . number_format(num: $data->fix_price, decimal_separator: ','),
             'client' => [
                 'name' => $data->deal->customer->name,

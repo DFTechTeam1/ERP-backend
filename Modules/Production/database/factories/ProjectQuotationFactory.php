@@ -34,10 +34,16 @@ class ProjectQuotationFactory extends Factory
         ];
     }
 
-    public function withItems()
+    public function withItems(int $count = 3, string $name = '')
     {
-        return $this->afterCreating(function (ProjectQuotation $projectQuotation) {
-            $items = QuotationItem::factory()->count(3)->create();
+        return $this->afterCreating(function (ProjectQuotation $projectQuotation) use ($count, $name) {
+            if ($count == 0) {
+                $items = QuotationItem::factory()->count(1)->create([
+                    'name' => $name ?: fake()->name()
+                ]);
+            } else {
+                $items = QuotationItem::factory()->count(3)->create();
+            }
 
             $projectQuotation->items()->createMany(
                 collect($items)->map(function ($itemData) {
