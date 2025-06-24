@@ -8414,4 +8414,19 @@ class ProjectService
             return errorResponse($th);
         }
     }
+
+    /**
+     * Function to initialize project count
+     * 
+     * @return array
+     */
+    public function initProjectCount(): array
+    {
+        return generalResponse(
+            message: "Success",
+            data: [
+                'count' => $this->generalService->getCache(CacheKey::ProjectCount->value)
+            ]
+        );
+    }
 }

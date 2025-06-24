@@ -29,6 +29,34 @@ class Project extends Model
                 $generalService = new GeneralService();
 
                 $total = $generalService->getCache(cacheId: CacheKey::ProjectCount->value);
+                if (!$total) {
+                    $total = Project::select('id')->count() + 1;
+                } else {
+                    $total += 1;
+                }
+
+                $generalService->storeCache(
+                    key: CacheKey::ProjectCount->value,
+                    value: $total,
+                    isForever: true
+                );
+            });
+
+            static::deleted(function (Project $project) {
+                $generalService = new GeneralService();
+
+                $total = $generalService->getCache(cacheId: CacheKey::ProjectCount->value);
+                if (!$total) {
+                    $total = Project::select('id')->count() + 1;
+                } else {
+                    $total -= 1;
+                }
+
+                $generalService->storeCache(
+                    key: CacheKey::ProjectCount->value,
+                    value: $total,
+                    isForever: true
+                );
             });
         }
 

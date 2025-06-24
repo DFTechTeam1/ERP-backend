@@ -83,8 +83,6 @@ describe('Publish Quotation', function () {
             type: 'publish'
         );
 
-        logging("RESPONSE DATA", $response);
-
         expect($response['error'])->toBeFalse();
 
         $this->assertDatabaseHas('project_deals', [
