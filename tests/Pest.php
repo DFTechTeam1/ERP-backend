@@ -288,7 +288,8 @@ function getProjectDealPayload(
             'is_high_season' => 1,
             'equipment_type' => 'lasika',
             'items' => $quotationItem ? [$quotationItem->id] : [1, 2],
-            'description' => ''
+            'description' => '',
+            'design_job' => 1
         ],
         'request_type' => 'save_and_download' // will be draft,save,save_and_download
     ];
@@ -309,5 +310,13 @@ function createProjectDealService(
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository(),
         $projectRepo ? $projectRepo : new ProjectRepository,
         $geocoding ? $geocoding : new Geocoding
+    );
+}
+
+function createQuotationItemService(
+    $quotationItemRepo = null
+) {
+    return new \Modules\Production\Services\QuotationItemService(
+        $quotationItemRepo ? $quotationItemRepo : new \Modules\Production\Repository\QuotationItemRepository()
     );
 }

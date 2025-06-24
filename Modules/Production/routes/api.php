@@ -34,6 +34,7 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
         Route::post('project/deals', [ProjectController::class, 'storeProjectDeals'])->name('project-deal.store');
         Route::get('project/deals', [ProjectController::class, 'listProjectDeals']);
+        Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{quotationId}', [ProjectController::class, 'detailProjectDeal']);
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
@@ -136,6 +137,9 @@ Route::middleware(['auth:sanctum'])
 
         // Quotations
         Route::get('quotations', [QuotationController::class, 'index']);
+        Route::get('quotations/pagination', [QuotationController::class, 'pagination']);
+        Route::put('quotations/{id}', [QuotationController::class, 'update']);
+        Route::delete('quotations/{id}', [QuotationController::class, 'destroy']);
         Route::post('quotations', [QuotationController::class, 'store']);
         
         Route::get('team-transfers', [TeamTransferController::class, 'index']);

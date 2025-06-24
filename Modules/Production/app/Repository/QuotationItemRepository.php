@@ -127,7 +127,7 @@ class QuotationItemRepository extends QuotationItemInterface
      */
     public function delete(int $id)
     {
-        return $this->model->whereIn('id', $id)
+        return $this->model->where('id', $id)
             ->delete();
     }
 
