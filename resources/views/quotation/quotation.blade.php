@@ -200,8 +200,8 @@
     </style>
 </head>
 <body>
-    <div class="watermark" style="width: 400px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
+    <div class="watermark" style="width: 450px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%;">
     </div>
     <table class="main-wrapper">
         <tbody>
@@ -376,8 +376,8 @@
 
     <div class="page-break"></div>
 
-    <div class="watermark" style="width: 400px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
+    <div class="watermark" style="width: 450px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%;">
     </div>
     <table class="main-wrapper">
         <tbody>
@@ -485,8 +485,8 @@
 
     <div class="page-break"></div>
 
-    <div class="watermark" style="width: 400px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%; transform: rotate(-35deg);">
+    <div class="watermark" style="width: 450px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%;">
     </div>
     <table class="main-wrapper">
         <tbody>

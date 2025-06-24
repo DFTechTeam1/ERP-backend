@@ -51,9 +51,14 @@ class GeneralService
         return getCache($cacheId);
     }
 
-    public function storeCache(string $key, $value, $ttl = 60 * 60 * 6)
+    public function clearCache(string $cacheId)
     {
-        storeCache($key, $value, $ttl);
+        clearCache($cacheId);
+    }
+
+    public function storeCache(string $key, mixed $value, int $ttl = 60 * 60 * 6, bool $isForever = false)
+    {
+        storeCache($key, $value, $ttl, $isForever);
     }
 
     public function uploadImageandCompress(

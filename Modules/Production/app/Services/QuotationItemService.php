@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use Illuminate\Support\Facades\Auth;
 use Modules\Production\Repository\QuotationItemRepository;
 
 class QuotationItemService
@@ -15,6 +16,50 @@ class QuotationItemService
         QuotationItemRepository $repo
     ) {
         $this->repo = $repo;
+    }
+
+    public function pagination(string $select = '*', string $where = '', array $relation = []): array
+    {
+        try {
+            $user = Auth::user();
+
+            $itemsPerPage = request('itemsPerPage') ?? 2;
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $search = request('search');
+
+            if (! empty($search)) {
+                $where = "lower(name) LIKE '%{$search}%'";
+            }
+
+            $paginated = $this->repo->pagination(
+                $select,
+                $where,
+                $relation,
+                $itemsPerPage,
+                $page
+            );
+            $totalData = $this->repo->list('id', $where)->count();
+
+            $paginated = $paginated->map(function ($item) use ($user) {
+                $item['can_edit'] = $user->can('edit_quotation_item');
+                $item['can_delete'] = $user->can('delete_quotation_item');
+
+                return $item;
+            });
+
+            return generalResponse(
+                'Success',
+                false,
+                [
+                    'paginated' => $paginated,
+                    'totalData' => $totalData,
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 
     /**
@@ -100,7 +145,7 @@ class QuotationItemService
             $this->repo->store($data);
 
             return generalResponse(
-                'success',
+                __('notification.successCreateQuotationItem'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -120,7 +165,7 @@ class QuotationItemService
             $this->repo->update($data, $id);
 
             return generalResponse(
-                'success',
+                __('notification.updateQuotationItemSuccess'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -132,15 +177,16 @@ class QuotationItemService
      * Delete selected data
      *
      *
-     * @return void
+     * @return array
      */
     public function delete(int $id): array
     {
         try {
+            $this->repo->delete($id);
+
             return generalResponse(
                 'Success',
-                false,
-                $this->repo->delete($id)->toArray(),
+                false
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

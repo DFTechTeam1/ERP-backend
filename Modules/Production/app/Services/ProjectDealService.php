@@ -110,6 +110,7 @@ class ProjectDealService
                     'can_publish_project' => $item->canPublishProject(),
                     'can_make_final' => $item->canMakeFinal(),
                     'can_edit' => !$item->isFinal(),
+                    'can_delete' => (bool) !$item->isFinal(),
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
                         'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
@@ -478,6 +479,7 @@ class ProjectDealService
                     'venue' => $data->venue,
                     'price' => $item->fix_price,
                     'is_final' => (bool) $item->is_final,
+                    'design_job' => $item->design_job,
                     'detail' => [
                         'office'=> [
                             'logo' => asset('storage/settings/' . $this->generalService->getSettingByKey('company_logo')),
