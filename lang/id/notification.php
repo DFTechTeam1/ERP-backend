@@ -85,5 +85,7 @@ return [
     'successPublishProjectDeal' => 'Berhasil mempublikasikan penawaran project',
     'successDeleteProjectDeal' => "Penawaran event berhasil di hapus",
     'successUpdateProjectDeals' => 'Event dan quotation berhasil di ubah',
-    'successAddQuotation' => 'Quotation berhasil di tambahkan'
+    'successAddQuotation' => 'Quotation berhasil di tambahkan',
+    'successCreateQuotationItem' => 'Item quotation berhasil di buat',
+    'updateQuotationItemSuccess' => 'Item quotation berhasil di ubah',
 ];

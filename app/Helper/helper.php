@@ -436,9 +436,13 @@ if (! function_exists('cachingSetting')) {
 }
 
 if (! function_exists('storeCache')) {
-    function storeCache(string $key, $value, $ttl = 60 * 60 * 6)
+    function storeCache(string $key, mixed $value, int $ttl = 60 * 60 * 6, bool $isForever = false)
     {
-        Cache::put($key, $value, $ttl);
+        if ($isForever) {
+            Cache::forever($key, $value);
+        } else {
+            Cache::put($key, $value, $ttl);
+        }
     }
 }
 

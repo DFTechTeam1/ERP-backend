@@ -85,5 +85,7 @@ return [
     'successPublishProjectDeal' => 'Project deal has been published',
     'successDeleteProjectDeal' => "Project deal has been deleted",
     'successUpdateProjectDeals' => 'Event and quotation has been updated',
-    'successAddQuotation' => 'Quotation has beed added successfully'
+    'successAddQuotation' => 'Quotation has beed added successfully',
+    'successCreateQuotationItem' => "Quotation item has been created successfully",
+    'updateQuotationItemSuccess' => 'Quotation item has been updated successfully',
 ];

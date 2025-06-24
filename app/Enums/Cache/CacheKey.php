@@ -23,4 +23,6 @@ enum CacheKey: string
     case EquipmentFormula = 'equipmentFormula';
     case MaxDiscountFormula = 'maxDiscountFormula';
     case MaxMarkupFormula = 'maxMarkupFormula';
+
+    case ProjectCount = 'projectCount';
 }

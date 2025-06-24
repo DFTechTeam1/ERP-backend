@@ -743,6 +743,22 @@ class RolePermissionSetting extends Seeder
                 $this->getRootRole(),
                 $this->getDirectorRole()
             ]],
+            ['name' => 'list_quotation_items', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
+            ['name' => 'create_quotation_item', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
+            ['name' => 'edit_quotation_item', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
+            ['name' => 'delete_quotation_item', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
             ['name' => 'complete_project', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),

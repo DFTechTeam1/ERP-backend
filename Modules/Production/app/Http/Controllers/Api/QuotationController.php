@@ -33,6 +33,13 @@ class QuotationController extends Controller
         return apiResponse($this->service->list(select: 'id as value,name as title'));
     }
 
+    public function pagination(): JsonResponse
+    {
+        return apiResponse($this->service->pagination(
+            select: 'id as uid,name',
+        ));
+    }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -54,21 +61,17 @@ class QuotationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(\Modules\Production\Http\Requests\Quotation\Store $request, $id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->update(data: $request->validated(), id: $id));
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id)
+    public function destroy($id): JsonResponse
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->delete(id: $id));
     }
 
     /**

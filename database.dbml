@@ -1378,6 +1378,7 @@ Table "project_quotations" {
   "quotation_id" varchar
   "is_final" bool [default: "false"]
   "description" text
+  "design_job" varchar(100) [default: null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

@@ -34,6 +34,7 @@ class ProjectQuotation extends Model
         'quotation_id',
         'is_final',
         'description',
+        'design_job'
     ];
 
     protected static function newFactory(): ProjectQuotationFactory

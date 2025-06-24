@@ -241,41 +241,56 @@ class SettingService
 
     protected function storePricing(array $payload): void
     {
-        $check = $this->repo->show(
+        $checkCurrentSetting = $this->repo->show(
             uid: 'uid',
             select: 'id,value',
             where: "`key` = 'area_guide_price'"
         );
 
-        $payload['area'] = collect($payload['area'])->map(function ($item) {
-            $item['settings'] = collect($item['settings'])->map(function ($setting) {
-                $setting['value'] = str_replace(',', '', $setting['value']);
-
+        $payload['area'] = collect($payload['area'])->map(function ($area) {
+            // change setting value. Remove . or , symbol
+            $area['settings'] = collect($area['settings'])->map(function ($setting) {
+                if (isset($setting['value'])) {
+                    $setting['value'] = str_replace(['.', ','], '', $setting['value']);
+                }
                 return $setting;
-            });
+            })->toArray();
 
-            return $item;
-        })->toArray();
-        $payload['equipment'] = collect($payload['equipment'])->map(function ($equipment) {
-            $equipment['value'] = str_replace(',', '', $equipment['value']);
+            return $area;
+        });
 
-            return $equipment;
-        })->toArray();
+        // Remove . or , symbol from high season and price up and equipment
+        if (isset($payload['high_season']['value'])) {
+            $payload['high_season']['value'] = str_replace(['.', ','], '', $payload['high_season']['value']);
+        }
+        if (isset($payload['price_up']['value'])) {
+            $payload['price_up']['value'] = str_replace(['.', ','], '', $payload['price_up']['value']);
+        }
+        if (isset($payload['equipment'])) {
+            $payload['equipment'] = collect($payload['equipment'])->map(function ($equipment) {
+                if (isset($equipment['value'])) {
+                    $equipment['value'] = str_replace(['.', ','], '', $equipment['value']);
+                }
+                return $equipment;
+            })->toArray();
+        }
 
-        $payload['price_up']['value'] = str_replace(',', '', $payload['price_up']['value']);
-        $payload['minimum_price'] = str_replace(',', '', $payload['minimum_price']);
-        $payload['prefunction_percentage'] = str_replace(',', '', $payload['prefunction_percentage']);
-
-        if ($check) {
-            $this->repo->update([
-                'value' => json_encode($payload),
-            ], $check->id);
+        // update if exists and create if not exists
+        if ($checkCurrentSetting) {
+            $this->repo->update(
+                data: [
+                    'value' => json_encode($payload),
+                ],
+                id: $checkCurrentSetting->id
+            );
         } else {
-            $this->repo->store([
-                'code' => 'price',
-                'key' => 'area_guide_price',
-                'value' => json_encode($payload),
-            ]);
+            $this->repo->store(
+                data: [
+                    'key' => 'area_guide_price',
+                    'value' => json_encode($payload),
+                    'code' => 'price',
+                ]
+            );
         }
 
         \Illuminate\Support\Facades\Cache::forget('setting');

@@ -5,6 +5,7 @@ namespace Modules\Production\Providers;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Production\Console\ClearAllCache;
+use Modules\Production\Console\InitProjectCount;
 use Modules\Production\Console\UpdateTaskIdentifier;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
@@ -52,6 +53,7 @@ class ProductionServiceProvider extends ServiceProvider
         $this->commands([
             ClearAllCache::class,
             UpdateTaskIdentifier::class,
+            InitProjectCount::class
         ]);
     }
 

@@ -31,7 +31,8 @@ it('Add more quotation return success', function () {
             'items' => [
                 $quuotationItem->id
             ],
-            'description' => ''
+            'description' => '',
+            'design_job' => 1
         ],
     ];
 

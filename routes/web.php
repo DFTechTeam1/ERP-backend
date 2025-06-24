@@ -29,62 +29,6 @@ Route::get('send-email-testing', function () {
     Notification::send($user, new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt, $password));
 });
 
-Route::get('quotation', function () {
-    $service = new \App\Services\GeneralService();
-    $data = [
-            'rules' => $service->getSettingByKey('quotation_rules'),
-            'company' => [
-                'address' => $service->getSettingByKey('company_address'),
-                'email' => $service->getSettingByKey('company_email'),
-                'phone' => $service->getSettingByKey('company_phone'),
-                'name' => $service->getSettingByKey('company_name'),
-            ],
-            'quotationNumber' => 'DF01067',
-            'date' => '15 April 2025',
-            'designJob' => '01064',
-            'price' => 'Rp100,000,000',
-            'client' => [
-                'name' => 'Majestic EO',
-                'city' => 'Surabaya',
-                'country' => 'Indonesia'
-            ],
-            'event' => [
-                'title' => 'The Wedding Reception of Mr. Kevin & Mrs. Jocelyn',
-                'date' => '24 Mei 2025',
-                'venue' => 'Imperial Ballroom - Surabaya'
-            ],
-            'ledDetails' => [
-                ['name' => 'Main Stage', 'size' => '5 x 5 m'],
-                ['name' => 'Main Stage', 'size' => '5 x 5 m'],
-                ['name' => 'Main Stage', 'size' => '5 x 5 m'],
-                ['name' => 'Main Stage', 'size' => '5 x 5 m'],
-            ],
-            'items' => [
-                'Opening Sequence Content',
-                'LED Digital Backdrop Content',
-                'Entertainment LED Concept',
-                'Event Stationary',
-            ],
-        ];
-
-
-    $image = 'https://data-center.dfactory.pro/dfactory.png';
-    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', $data)
-        ->setPaper('14')
-        ->setOption([
-            'defaultFont' => 'sans-serif',
-            'isPhpEnabled' => true,
-            'isHtml5ParserEnabled' => true,
-            'debugPng' => false,
-            'debugLayout' => false,
-            'debugCss' => false
-        ]);
-
-    $filename = "Quotation Majestic EO.pdf";
-    return $pdf->stream(filename: $filename);
-    // return view('quotation.quotation');
-});
-
 Route::get('quotation/{quotationId}/{token}', function (string $quotationId, string $token) {
 });
 

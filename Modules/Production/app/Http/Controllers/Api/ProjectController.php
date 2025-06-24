@@ -981,4 +981,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->projectDealService->addMoreQuotation($request->validated(), $projectDealUid));
     }
+
+    public function initProjectCount(): JsonResponse
+    {
+        return apiResponse($this->service->initProjectCount());
+    }
 }

@@ -53,6 +53,7 @@ class Store extends FormRequest
             'quotation.equipment_type' => 'nullable',
             'quotation.is_high_season' => 'required',
             'quotation.description' => 'nullable',
+            'quotation.design_job' => 'required',
 
             'quotation.items' => 'required|array',
             'quotation.items.*' => 'required',

@@ -62,7 +62,8 @@ $requestData = [
         'is_high_season' => 1,
         'equipment_type' => 'lasika',
         'items' => [1, 2],
-        'description' => ''
+        'description' => '',
+        'design_job' => 1
     ],
     'request_type' => 'save_and_download' // will be draft,save,save_and_download
 ];
