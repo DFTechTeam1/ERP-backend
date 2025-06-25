@@ -6,14 +6,17 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Quotation</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
-
     <style>
-        
+        @font-face {
+            font-family: 'My Font';
+            font-style: normal;
+            font-weight: normal;
+            src: url({{ public_path('fonts/loto.ttf') }}) format('truetype');
+            font-display: swap;
+        }
+
         body,table,p,span,ul,li,td {
-            font-family: "Lato", sans-serif;
+            font-family: "My Font", sans-serif;
             font-weight: 400;
             font-style: normal;
             position: relative;
@@ -475,7 +478,7 @@
                     <div class="conditions" style="font-size: 12px; margin-top: -100px;">
                         <p class="condition-title" style="font-size: 20px; font-weight: bold; margin: 0;">Detail Penawaran (Custom Content)</p>
                         <p style="text-wrap: wrap; width: 80%;"><span style="font-weight: bold; margin: 0;">DFACTORY</span> sebagai penyedia jasa layanan konten digital LED menyiapkan konten dengan tahapan pengerjaan sebagai berikut :</p>
-                        <ul style="padding-left: 20px; padding-top: 10px; width: 70%; font-size: 13px; line-height: 1.5; text-align: justify;">
+                        <ul style="padding-left: 20px; padding-top: 10px; width: 70%; font-size: 13px; line-height: 1.4; text-align: justify;">
                             <li>
                                 <span style="font-weight: bold;">Draft</span> <br>
                                 <span>
@@ -583,7 +586,7 @@
                 <td colspan="2">
                     <div class="conditions" style="font-size: 12px; margin-top: -120px;">
                         <p class="condition-title" style="font-size: 20px; font-weight: bold; margin: 0;">Syarat & Ketentuan Penawaran :</p>
-                        <ul style="padding-left: 20px; padding-top: 10px; width: 65%; font-size: 12px; line-height: 1.5; list-style:upper-roman; text-align: justify;">
+                        <ul style="padding-left: 20px; padding-top: 10px; width: 65%; font-size: 13px; line-height: 1.4; list-style:upper-roman; text-align: justify;">
                             <li>
                                 <span style="font-weight: bold;">Permintaan Perubahan Konten</span> <br>
                                 <ul style="padding-left: 30px; padding-top: 0; width: 100%; list-style:lower-alpha;">
