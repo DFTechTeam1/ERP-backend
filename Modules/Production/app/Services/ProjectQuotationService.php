@@ -4,6 +4,8 @@ namespace Modules\Production\Services;
 
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
+use Modules\Finance\Repository\TransactionRepository;
+use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
 
 class ProjectQuotationService
@@ -12,17 +14,27 @@ class ProjectQuotationService
 
     private $generalService;
 
+    private $transactionRepo;
+
+    private $projectDealRepo;
+
     /**
      * Construction Data
      */
     public function __construct(
         ProjectQuotationRepository $repo,
-        \App\Services\GeneralService $generalService
+        \App\Services\GeneralService $generalService,
+        TransactionRepository $transactionRepo,
+        ProjectDealRepository $projectDealRepo
     )
     {
         $this->repo = $repo;
 
         $this->generalService = $generalService;
+
+        $this->transactionRepo = $transactionRepo;
+
+        $this->projectDealRepo = $projectDealRepo;
     }
 
     /**
@@ -229,7 +241,6 @@ class ProjectQuotationService
             'debugCss' => false
         ]);
 
-        $filename = "{$data->deal->name}.pdf";
         $filename = "Quot {$data->quotation_id} - {$data->deal->customer->name} - {$data->deal->project_date}.pdf";
 
         if ($type == 'stream') {
@@ -239,18 +250,191 @@ class ProjectQuotationService
         }
     }
 
-    public function generateInvoice()
+    protected function generateInvoiceNumber(): string
     {
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice")
+        $transactions = $this->transactionRepo->list(select: 'id')->count() + 1;
+
+        return "DF - " . generateSequenceNumber(number: $transactions, length: 5);
+    }
+
+    public function generateInvoiceFromDeal(string $projectDealUid, string $type): Response
+    {
+        $requestAmount = request('amount');
+        $requestDate = request('date');
+        $id = Crypt::decryptString($projectDealUid);
+
+        $deal = $this->projectDealRepo->show(
+            uid: $id,
+            select: 'id,name,project_date,led_detail,venue,city_id,country_id,is_fully_paid,customer_id',
+            relation: [
+                'transactions',
+                'finalQuotation:id,project_deal_id,main_ballroom,prefunction,high_season_fee,fix_price',
+                'finalQuotation.items:id,quotation_id,item_id',
+                'finalQuotation.items.item:id,name',
+                'transactions',
+                'city:name,id',
+                'country:name,id',
+                'customer:id,name'
+            ]
+        );
+
+        $projectDate = $deal->project_date;
+        $month = MonthInBahasa(search: date('m', strtotime($projectDate)));
+        $year = date('Y', strtotime($projectDate));
+        $date = date('d', strtotime($projectDate));
+
+        $main = [];
+        $prefunction = [];
+
+        $invoiceNumber = $this->generateInvoiceNumber();
+
+        // call magic method
+        $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $deal->led_detail);
+
+        $payload = [
+            'projectName' => $deal->name,
+            'projectDate' => "{$date} {$month} {$year}",
+            'venue' => $deal->venue,
+            'payment' => "Rp" . number_format(num: $requestAmount, decimal_separator: ','),
+            'customer' => [
+                'name' => $deal->customer->name,
+                'city' => $deal->city->name,
+                'country' => $deal->country->name,
+            ],
+            'invoiceNumber' => $invoiceNumber,
+            'trxDate' => date('d F Y', strtotime($requestDate)),
+            'paymentDue' => now()->parse($deal->project_date)->subDays(3)->format('d F Y'),
+            'led' => [
+                'main' => $main,
+                'prefunction' => $prefunction
+            ],
+            'items' => collect($deal->finalQuotation->items)->pluck('item.name')->toArray(),
+            'remainingPayment' => $deal->getRemainingPayment(formatPrice: true)
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $payload)
         ->setPaper('A4')
         ->setOption([
             'isPhpEnabled' => true,
             'isHtml5ParserEnabled' => true,
             'debugPng' => false,
-            'debugLayout' => true,
+            'debugLayout' => false,
             'debugCss' => false
         ]);
 
-        return $pdf->stream('invoice.pdf');
+        $filename = "Inv {$invoiceNumber} - {$deal->customer->name} - {$deal->project_date}.pdf";
+
+        if ($type == 'stream') {
+            return $pdf->stream($filename);
+        } else {
+            return $pdf->download($filename);
+        }
+    }
+
+    protected function setProjectLed(array &$main, array &$prefunction, array $ledDetailData): void
+    {
+        $ledDetail = collect($ledDetailData)->groupBy('name');
+        $main = [];
+        $prefunction = [];
+
+        if (isset($ledDetail['main'])) {
+            $main = collect($ledDetail['main'])->map(function ($item) {
+                return [
+                    'name' => 'Main Stage',
+                    'total' => $item['totalRaw'],
+                    'size' => $item['textDetail']
+                ];
+            })->toArray();
+        }
+
+        if (isset($ledDetail['prefunction'])) {
+            $prefunction = collect($ledDetail['prefunction'])->map(function ($item) {
+                return [
+                    'name' => 'Prefunction',
+                    'total' => $item['totalRaw'],
+                    'size' => $item['textDetail']
+                ];
+            })->toArray();
+        }
+    }
+
+    public function generateInvoice(string $transactionUid, string $type): Response
+    {
+        $requestAmount = request('amount');
+
+        // get detail transactions and detail of related quotation + quotation item
+        $transaction = $this->transactionRepo->show(
+            uid: $transactionUid,
+            select: 'id,uid,project_deal_id,customer_id,payment_amount,reference,note,trx_id,transaction_date',
+            relation: [
+                'projectDeal:id,name,project_date,led_detail,venue,city_id,country_id,is_fully_paid',
+                'projectDeal.finalQuotation:id,project_deal_id,main_ballroom,prefunction,high_season_fee,fix_price',
+                'projectDeal.transactions',
+                'projectDeal.city:name,id',
+                'projectDeal.country:name,id',
+                'projectDeal.finalQuotation.items:id,quotation_id,item_id',
+                'projectDeal.finalQuotation.items.item:id,name',
+                'customer:id,name'
+            ]
+        );
+
+        $projectDate = $transaction->projectDeal->project_date;
+        $month = MonthInBahasa(search: date('m', strtotime($projectDate)));
+        $year = date('Y', strtotime($projectDate));
+        $date = date('d', strtotime($projectDate));
+
+        $ledDetail = collect($transaction->projectDeal->led_detail)->groupBy('name');
+        $main = [];
+        $prefunction = [];
+
+        // call magic method
+        $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $transaction->projectDeal->led_detail);
+
+        if ($requestAmount) {
+            $paymentAmount = "Rp" . number_format(num: $requestAmount, decimal_separator: ',');
+        } else {
+            $paymentAmount = "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ',');
+        }
+
+        $invoiceNumber = $this->generateInvoiceNumber();
+
+        $payload = [
+            'projectName' => $transaction->projectDeal->name,
+            'projectDate' => "{$date} {$month} {$year}",
+            'venue' => $transaction->projectDeal->venue,
+            'payment' => $paymentAmount,
+            'customer' => [
+                'name' => $transaction->customer->name,
+                'city' => $transaction->projectDeal->city->name,
+                'country' => $transaction->projectDeal->country->name,
+            ],
+            'invoiceNumber' => $invoiceNumber,
+            'trxDate' => date('d F Y', strtotime($transaction->transaction_date)),
+            'paymentDue' => now()->parse($transaction->projectDeal->project_date)->subDays(3)->format('d F Y'),
+            'led' => [
+                'main' => $main,
+                'prefunction' => $prefunction
+            ],
+            'items' => collect($transaction->projectDeal->finalQuotation->items)->pluck('item.name')->toArray(),
+            'remainingPayment' => $transaction->projectDeal->getRemainingPayment(formatPrice: true)
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $payload)
+        ->setPaper('A4')
+        ->setOption([
+            'isPhpEnabled' => true,
+            'isHtml5ParserEnabled' => true,
+            'debugPng' => false,
+            'debugLayout' => false,
+            'debugCss' => false
+        ]);
+
+        $filename = "Inv {$invoiceNumber} - {$transaction->customer->name} - {$transaction->projectDeal->project_date}.pdf";
+
+        if ($type == 'stream') {
+            return $pdf->stream($filename);
+        } else {
+            return $pdf->download($filename);
+        }
     }
 }
