@@ -187,6 +187,11 @@ class ProjectDeal extends Model
         return $this->attributes['status'] === \App\Enums\Production\ProjectDealStatus::Final->value ? true : false;
     }
 
+    public function isPaid(): bool
+    {
+        return isset($this->attributes['is_fully_paid']) ? (bool) $this->attributes['is_fully_paid'] : false;
+    }
+
     // ###### CUSTOM FUNCTIONS
     /**
      * Get final price of project deals
