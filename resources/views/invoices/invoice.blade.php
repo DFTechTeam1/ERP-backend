@@ -375,15 +375,15 @@
                             </td>
                             <td>
                                 <div>
-                                    <p>dfactory</p>
-                                    <p>Jl. kacapiring No. 19 2nd Level, Surabaya, Jawa Timur 60272, Surabaya, Indonesia</p>
+                                    <p>{{ $company['name'] }}</p>
+                                    <p>{{ $company['address'] }}</p>
                                 </div>
                             </td>
                             <td>
                                 <div>
                                     <p>Contact Information</p>
-                                    <p>Mobile: +62 821 1068 6655</p>
-                                    <p>sales@dfactory.pro</p>
+                                    <p>Mobile: {{ $company['phone'] }}</p>
+                                    <p>{{ $company['email'] }}</p>
                                 </div>
                             </td>
                         </tr>
