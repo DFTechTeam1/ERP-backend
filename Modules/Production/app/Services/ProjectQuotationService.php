@@ -219,10 +219,9 @@ class ProjectQuotationService
             })->toArray()
         ];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation', $output)
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("quotation.quotation-lato", $output)
         ->setPaper('14')
         ->setOption([
-            'defaultFont' => 'lato',
             'isPhpEnabled' => true,
             'isHtml5ParserEnabled' => true,
             'debugPng' => false,
@@ -238,5 +237,20 @@ class ProjectQuotationService
         } else {
             return $pdf->download($filename);
         }
+    }
+
+    public function generateInvoice()
+    {
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice")
+        ->setPaper('A4')
+        ->setOption([
+            'isPhpEnabled' => true,
+            'isHtml5ParserEnabled' => true,
+            'debugPng' => false,
+            'debugLayout' => true,
+            'debugCss' => false
+        ]);
+
+        return $pdf->stream('invoice.pdf');
     }
 }
