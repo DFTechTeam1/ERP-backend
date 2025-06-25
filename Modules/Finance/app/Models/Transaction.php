@@ -2,12 +2,16 @@
 
 namespace Modules\Finance\Models;
 
+use App\Services\GeneralService;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
+use Modules\Production\Models\Customer;
+use Modules\Production\Models\ProjectDeal;
 
 // use Modules\Finance\Database\Factories\TransactionFactory;
 
@@ -18,10 +22,11 @@ class Transaction extends Model
     protected static function booted(): void
     {
         static::creating(function (Transaction $transaction) {
+            $generalService = new GeneralService();
             $number = Transaction::select('id')
                 ->count();
             // generate trx id
-            $transaction->trx_id = 'TRX' . generateSequenceNumber(number: $number + 1, length: 6);
+            $transaction->trx_id = $generalService->generateInvoiceNumber();
             $transaction->created_by = Auth::id();
         });
     }
@@ -53,6 +58,16 @@ class Transaction extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(TransactionImage::class, 'transaction_id');
+    }
+
+    public function projectDeal(): BelongsTo
+    {
+        return $this->belongsTo(ProjectDeal::class, 'project_deal_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     public function transactionDateRaw(): Attribute
