@@ -2,6 +2,7 @@
 
 namespace Modules\Finance\Models;
 
+use App\Services\GeneralService;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -21,10 +22,11 @@ class Transaction extends Model
     protected static function booted(): void
     {
         static::creating(function (Transaction $transaction) {
+            $generalService = new GeneralService();
             $number = Transaction::select('id')
                 ->count();
             // generate trx id
-            $transaction->trx_id = 'TRX' . generateSequenceNumber(number: $number + 1, length: 6);
+            $transaction->trx_id = $generalService->generateInvoiceNumber();
             $transaction->created_by = Auth::id();
         });
     }
