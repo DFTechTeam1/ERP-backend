@@ -130,7 +130,7 @@
             border: 1px solid #000;
             padding: 10px;
             width: 100%;
-            margin-top: -130px;
+            margin-top: -100px;
         }
 
         .main-wrapper .addressing .box-addressing.to p,
@@ -153,7 +153,7 @@
         .main-wrapper .addressing .box-addressing.from {
             width: 200px;
             margin-left: -80px;
-            margin-top: -130px;
+            margin-top: -100px;
         }
 
 
