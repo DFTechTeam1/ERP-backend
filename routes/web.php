@@ -100,3 +100,4 @@ Route::get('login', function () {
 
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
+Route::get('invoices', [QuotationController::class, 'invoice']);

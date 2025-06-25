@@ -86,4 +86,9 @@ class QuotationController extends Controller
     {
         return $this->projectQuotationService->generateQuotation(quotationId: $quotationId, type: $type);
     }
+
+    public function invoice()
+    {
+        return $this->projectQuotationService->generateInvoice();
+    }
 }

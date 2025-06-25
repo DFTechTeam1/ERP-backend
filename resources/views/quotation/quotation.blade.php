@@ -7,6 +7,19 @@
     <title>Quotation</title>
 
     <style>
+        @font-face {
+            font-family: 'My Font';
+            font-style: normal;
+            font-weight: normal;
+            src: url({{ storage_path('fonts/lato.ttf') }}) format('truetype');
+            font-display: swap;
+        }
+
+        body {
+            /* font-family: 'My Font', sans-serif; */
+            position: relative;
+        }
+
         :root {
             --left-width: 150px;
         }
@@ -14,6 +27,16 @@
         .main-wrapper {
             width: 100%;
             border-collapse: collapse;
+            /* Prevent page breaks inside tables */
+            page-break-inside: avoid;
+            /* Keep tables together */
+            break-inside: avoid;
+        }
+
+        /* Prevent orphans/widows in text */
+        p, li, td {
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .header .header-left {
@@ -105,7 +128,7 @@
             border: 1px solid #000;
             padding: 10px;
             width: 100%;
-            margin-top: -40px;
+            margin-top: -130px;
         }
 
         .main-wrapper .addressing .box-addressing.to p,
@@ -127,7 +150,7 @@
         .main-wrapper .addressing .box-addressing.from {
             width: 200px;
             margin-left: -80px;
-            margin-top: -40px;
+            margin-top: -130px;
         }
 
 
@@ -197,10 +220,13 @@
         .page-break {
             page-break-after: always;
         }
+        .no-break {
+            page-break-inside: avoid;
+        }
     </style>
 </head>
 <body>
-    <div class="watermark" style="width: 450px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+    <div class="watermark" style="width: 250px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
         <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%;">
     </div>
     <table class="main-wrapper">
@@ -376,7 +402,7 @@
 
     <div class="page-break"></div>
 
-    <div class="watermark" style="width: 450px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+    <div class="watermark" style="width: 250px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
         <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%;">
     </div>
     <table class="main-wrapper">
@@ -442,7 +468,7 @@
 
             <tr>
                 <td colspan="2">
-                    <div class="conditions" style="font-size: 12px; margin-top: -50px;">
+                    <div class="conditions" style="font-size: 12px; margin-top: -80px;">
                         <p class="condition-title" style="font-size: 20px; font-weight: bold; margin: 0;">Detail Penawaran (Custom Content)</p>
                         <p style="text-wrap: wrap; width: 80%;"><span style="font-weight: bold; margin: 0;">DFACTORY</span> sebagai penyedia jasa layanan konten digital LED menyiapkan konten dengan tahapan pengerjaan sebagai berikut :</p>
                         <ul style="padding-left: 20px; padding-top: 10px; width: 70%; font-size: 13px; line-height: 1.5; text-align: justify;">
@@ -485,7 +511,7 @@
 
     <div class="page-break"></div>
 
-    <div class="watermark" style="width: 450px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+    <div class="watermark" style="width: 250px; opacity: .1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
         <img src="{{ public_path() . '/df-logo.png' }}" alt="watermark" style="width: 100%;">
     </div>
     <table class="main-wrapper">
@@ -551,9 +577,9 @@
 
             <tr>
                 <td colspan="2">
-                    <div class="conditions" style="font-size: 12px; margin-top: -50px;">
+                    <div class="conditions" style="font-size: 12px; margin-top: -80px;">
                         <p class="condition-title" style="font-size: 20px; font-weight: bold; margin: 0;">Syarat & Ketentuan Penawaran :</p>
-                        <ul style="padding-left: 20px; padding-top: 10px; width: 65%; font-size: 13px; line-height: 1.5; list-style:upper-roman; text-align: justify;">
+                        <ul style="padding-left: 20px; padding-top: 10px; width: 65%; font-size: 12px; line-height: 1.5; list-style:upper-roman; text-align: justify;">
                             <li>
                                 <span style="font-weight: bold;">Permintaan Perubahan Konten</span> <br>
                                 <ul style="padding-left: 30px; padding-top: 0; width: 100%; list-style:lower-alpha;">
