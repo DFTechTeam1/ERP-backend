@@ -6,8 +6,11 @@ use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
+use Modules\Production\Models\Customer;
+use Modules\Production\Models\ProjectDeal;
 
 // use Modules\Finance\Database\Factories\TransactionFactory;
 
@@ -53,6 +56,16 @@ class Transaction extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(TransactionImage::class, 'transaction_id');
+    }
+
+    public function projectDeal(): BelongsTo
+    {
+        return $this->belongsTo(ProjectDeal::class, 'project_deal_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     public function transactionDateRaw(): Attribute
