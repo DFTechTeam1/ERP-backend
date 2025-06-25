@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Services\GeneralService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Repository\TransactionRepository;
@@ -25,7 +26,7 @@ class ProjectQuotationService
         ProjectQuotationRepository $repo,
         \App\Services\GeneralService $generalService,
         TransactionRepository $transactionRepo,
-        ProjectDealRepository $projectDealRepo
+        ProjectDealRepository $projectDealRepo,
     )
     {
         $this->repo = $repo;
@@ -250,13 +251,6 @@ class ProjectQuotationService
         }
     }
 
-    protected function generateInvoiceNumber(): string
-    {
-        $transactions = $this->transactionRepo->list(select: 'id')->count() + 1;
-
-        return "DF - " . generateSequenceNumber(number: $transactions, length: 5);
-    }
-
     public function generateInvoiceFromDeal(string $projectDealUid, string $type): Response
     {
         $requestAmount = request('amount');
@@ -286,7 +280,7 @@ class ProjectQuotationService
         $main = [];
         $prefunction = [];
 
-        $invoiceNumber = $this->generateInvoiceNumber();
+        $invoiceNumber = $this->generalService->generateInvoiceNumber();
 
         // call magic method
         $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $deal->led_detail);
@@ -396,7 +390,7 @@ class ProjectQuotationService
             $paymentAmount = "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ',');
         }
 
-        $invoiceNumber = $this->generateInvoiceNumber();
+        $invoiceNumber = $this->generalService->generateInvoiceNumber();
 
         $payload = [
             'projectName' => $transaction->projectDeal->name,
@@ -408,7 +402,7 @@ class ProjectQuotationService
                 'city' => $transaction->projectDeal->city->name,
                 'country' => $transaction->projectDeal->country->name,
             ],
-            'invoiceNumber' => $invoiceNumber,
+            'invoiceNumber' => $transaction->trx_id,
             'trxDate' => date('d F Y', strtotime($transaction->transaction_date)),
             'paymentDue' => now()->parse($transaction->projectDeal->project_date)->subDays(3)->format('d F Y'),
             'led' => [
