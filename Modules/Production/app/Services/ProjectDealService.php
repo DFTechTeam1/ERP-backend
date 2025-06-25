@@ -437,6 +437,7 @@ class ProjectDealService
                     'quotations',
                     'quotations.items:id,quotation_id,item_id',
                     'quotations.items.item:id,name',
+                    'latestQuotation',
                     'finalQuotation',
                     'customer:id,name,phone,email',
                     'city:id,name',
@@ -520,7 +521,7 @@ class ProjectDealService
             })->toArray();
 
             // get the final quotation
-            $finalQuotation = [];
+            $finalQuotation = collect([]);
             $products = [];
             $main = [];
             $prefunction = [];
@@ -530,34 +531,36 @@ class ProjectDealService
                 $finalQuotation['quotation_id'] = Crypt::encryptString($finalQuotation->quotation_id);
                 
                 $finalQuotation['remaining'] = $data->getRemainingPayment();
-                $outputLed = collect($data->led_detail)->groupBy('name');
-                if (isset($outputLed['main'])) {
-                    $main = [
-                        'product' => 'Main Stage',
-                        'description' => collect($outputLed['main'])->sum('totalRaw') . ' m<sup>2</sup>',
-                        'amount' => $finalQuotation->main_ballroom
-                    ];
+            }
 
-                    $products[] = $main;
-                }
+            // define products
+            $outputLed = collect($data->led_detail)->groupBy('name');
+            if (isset($outputLed['main'])) {
+                $main = [
+                    'product' => 'Main Stage',
+                    'description' => collect($outputLed['main'])->sum('totalRaw') . ' m<sup>2</sup>',
+                    'amount' => $data->latestQuotation->main_ballroom
+                ];
 
-                if (isset($outputLed['prefunction'])) {
-                    $prefunction = [
-                        'product' => 'Prefunction',
-                        'description' => collect($outputLed['prefunction'])->sum('totalRaw') . ' m<sup>2</sup>',
-                        'amount' => $finalQuotation->prefunction
-                    ];
+                $products[] = $main;
+            }
 
-                    $products[] = $prefunction;
-                }
+            if (isset($outputLed['prefunction'])) {
+                $prefunction = [
+                    'product' => 'Prefunction',
+                    'description' => collect($outputLed['prefunction'])->sum('totalRaw') . ' m<sup>2</sup>',
+                    'amount' => $data->latestQuotation->prefunction
+                ];
 
-                if ($finalQuotation->equipment_fee > 0) {
-                    $products[] = [
-                        'product' => 'Equipment',
-                        'description' => '',
-                        'amount' => $finalQuotation->equipment_fee
-                    ];
-                }
+                $products[] = $prefunction;
+            }
+
+            if ($data->latestQuotation->equipment_fee > 0) {
+                $products[] = [
+                    'product' => 'Equipment',
+                    'description' => '',
+                    'amount' => $data->latestQuotation->equipment_fee
+                ];
             }
 
             $transactions = $data->transactions->map(function ($trx) {
@@ -577,8 +580,12 @@ class ProjectDealService
                 'transactions' => $transactions,
                 'quotations' => $quotations,
                 'remaining_payment_raw' => $data->getRemainingPayment(),
-                'latest_quotation_id' => $finalQuotation['quotation_id'] ?? null,
-                'is_final' => $data->isFinal() 
+                'latest_quotation_id' => $finalQuotation->count() > 0 ? $finalQuotation['quotation_id'] : Crypt::encryptString($data->latestQuotation->quotation_id),
+                'is_final' => $data->isFinal(),
+                'event_date' => date('d F Y', strtotime($data->project_date)),
+                'status_payment' => $data->getStatusPayment(),
+                'status_payment_color' => $data->getStatusPaymentColor(),
+                'is_paid' => $data->isPaid()
             ];
 
             return generalResponse(

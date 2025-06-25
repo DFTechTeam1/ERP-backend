@@ -100,4 +100,5 @@ Route::get('login', function () {
 
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
-Route::get('invoices', [QuotationController::class, 'invoice']);
+Route::get('invoices/download/{transactionUid}/{type}', [QuotationController::class, 'invoice']);
+Route::get('deal-invoice/download/{projectDealUid}/{type}', [QuotationController::class, 'generateInvoiceFromDeal']);

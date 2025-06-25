@@ -8,6 +8,7 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Modules\Finance\Repository\TransactionRepository;
 
 class GeneralService
 {
@@ -93,8 +94,11 @@ class GeneralService
         return linkShortener($length);
     }
 
-    public function setProjectCount()
+    public function generateInvoiceNumber(): string
     {
-        
+        $repo = new TransactionRepository();
+        $transactions = $repo->list(select: 'id')->count() + 1;
+
+        return "DF - " . generateSequenceNumber(number: $transactions, length: 5);
     }
 }
