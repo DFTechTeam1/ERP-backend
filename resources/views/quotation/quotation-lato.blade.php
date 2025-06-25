@@ -259,14 +259,6 @@
                                             <span>@dfactory_</span>
                                         </td>
                                     </tr>
-                                    <tr>
-                                        <td>
-                                            <img src="{{ public_path() . '/images/line.png' }}" alt="line" style="width: 15px; height: auto;">
-                                        </td>
-                                        <td>
-                                            <span>@dfactory</span>
-                                        </td>
-                                    </tr>
                                 </tbody>
                             </table>
                         </div>
