@@ -585,7 +585,9 @@ class ProjectDealService
                 'event_date' => date('d F Y', strtotime($data->project_date)),
                 'status_payment' => $data->getStatusPayment(),
                 'status_payment_color' => $data->getStatusPaymentColor(),
-                'is_paid' => $data->isPaid()
+                'is_paid' => $data->isPaid(),
+                'fix_price' => $finalQuotation->count() > 0 ? $finalQuotation->fix_price : $data->latestQuotation->fix_price,
+                'remaining_price' => $data->getRemainingPayment()
             ];
 
             return generalResponse(
