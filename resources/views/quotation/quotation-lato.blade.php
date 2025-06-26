@@ -363,6 +363,12 @@
                                                 <li>{{ $detail }}</li>
                                             @endforeach
                                         </ul>
+
+                                        @if ($description)
+                                            <div class="description">
+                                                {!! $description !!}
+                                            </div>
+                                        @endif
                                     </div>
                                 </td>
                                 <td style="border: 1px solid #e6e6e6;">
