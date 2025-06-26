@@ -87,9 +87,9 @@ class QuotationController extends Controller
         return $this->projectQuotationService->generateQuotation(quotationId: $quotationId, type: $type);
     }
 
-    public function invoice(string $transactionUid, string $type)
+    public function invoice(string $projectDealUid, string $type)
     {
-        return $this->projectQuotationService->generateInvoice($transactionUid, $type);
+        return $this->projectQuotationService->generateInvoice($projectDealUid, $type);
     }
 
     public function generateInvoiceFromDeal(string $projectDealUid, string $type)
