@@ -46,6 +46,7 @@
 
         .header-item {
             width: 100%;
+            border-collapse: collapse;
         }
 
         .header-item tbody tr td {
@@ -339,10 +340,10 @@
                         </div>
                     </td>
                     <td style="vertical-align: top;">
-                        {{ $payment }}
+                        {{ $fixPrice }}
                     </td>
                     <td style="vertical-align: top;">
-                        {{ $payment }}
+                        {{ $fixPrice }}
                     </td>
                 </tr>
             </tbody>
@@ -351,12 +352,19 @@
         <table class="total">
             <tbody>
                 <tr>
-                    <td style="border-bottom: unset; width: 50%;"></td>
+                    <td style="border-bottom: unset; width: 30%;"></td>
                     <td style="width: 22%; color: #353434;">Total</td>
-                    <td style="width: 22%; color: #353434;">{{ $payment }}</td>
+                    <td style="width: 22%; color: #353434;">{{ $fixPrice }}</td>
                 </tr>
+                @foreach ($transactions as $transaction)
+                    <tr>
+                        <td style="border-bottom: unset; width: 30%;"></td>
+                        <td style="width: 22%; color: #353434; font-size: 12px;">Payment on {{ $transaction['transaction_date'] }}</td>
+                        <td style="width: 22%; color: #353434;">{{ $transaction['payment'] }}</td>
+                    </tr>
+                @endforeach
                 <tr>
-                    <td style="border-bottom: unset; width: 50%;"></td>
+                    <td style="border-bottom: unset; width: 30%;"></td>
                     <td style="width: 22%; border-bottom: unset; font-weight: bold; color: #181717;">Amount Due (IDR)</td>
                     <td style="width: 22%; border-bottom: unset; font-weight: bold; color: #181717;">{{ $remainingPayment }}</td>
                 </tr>

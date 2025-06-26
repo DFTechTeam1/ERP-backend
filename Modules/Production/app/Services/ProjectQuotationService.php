@@ -265,7 +265,6 @@ class ProjectQuotationService
                 'finalQuotation:id,project_deal_id,main_ballroom,prefunction,high_season_fee,fix_price',
                 'finalQuotation.items:id,quotation_id,item_id',
                 'finalQuotation.items.item:id,name',
-                'transactions',
                 'city:name,id',
                 'country:name,id',
                 'customer:id,name'
@@ -290,12 +289,19 @@ class ProjectQuotationService
             'projectName' => $deal->name,
             'projectDate' => "{$date} {$month} {$year}",
             'venue' => $deal->venue,
+            'fixPrice' => "Rp" . number_format(num: $deal->finalQuotation->fix_price, decimal_separator: ','),
             'payment' => "Rp" . number_format(num: $requestAmount, decimal_separator: ','),
             'customer' => [
                 'name' => $deal->customer->name,
                 'city' => $deal->city->name,
                 'country' => $deal->country->name,
             ],
+            'transactions' => $deal->transactions->map(function ($transaction) {
+                return [
+                    'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
+                    'transaction_date' => date('d F Y', strtotime($transaction->transaction_date))
+                ];
+            }),
             'company' => [
                 'address' => $this->generalService->getSettingByKey('company_address'),
                 'email' => $this->generalService->getSettingByKey('company_email'),
@@ -304,7 +310,7 @@ class ProjectQuotationService
             ],
             'invoiceNumber' => $invoiceNumber,
             'trxDate' => date('d F Y', strtotime($requestDate)),
-            'paymentDue' => now()->parse($deal->project_date)->subDays(3)->format('d F Y'),
+            'paymentDue' => now()->parse($requestDate)->addDays(7)->format('d F Y'),
             'led' => [
                 'main' => $main,
                 'prefunction' => $prefunction

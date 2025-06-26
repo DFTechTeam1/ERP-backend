@@ -8425,10 +8425,17 @@ class ProjectService
      */
     public function initProjectCount(): array
     {
+        $count = $this->generalService->getCache(CacheKey::ProjectCount->value);
+        if (!$count) {
+            Artisan::call('app:init-project-count');
+
+            $count = $this->generalService->getCache(CacheKey::ProjectCount->value);
+        }
+
         return generalResponse(
             message: "Success",
             data: [
-                'count' => $this->generalService->getCache(CacheKey::ProjectCount->value)
+                'count' => $count
             ]
         );
     }

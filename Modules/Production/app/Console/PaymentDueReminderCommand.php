@@ -33,13 +33,7 @@ class PaymentDueReminderCommand extends Command
      */
     public function handle()
     {
-        $generalService = new GeneralService();
-
-        $data = $generalService->getUpcomingPaymentDue();
-
-        if ($data->count() > 0) {
-            PaymentDueReminderJob::dispatch($data);
-        }
+        PaymentDueReminderJob::dispatch();
     }
 
     /**
