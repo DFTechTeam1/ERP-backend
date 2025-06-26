@@ -8,7 +8,10 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Modules\Finance\Repository\TransactionRepository;
+use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Repository\ProjectDealRepository;
 
 class GeneralService
 {
@@ -100,5 +103,40 @@ class GeneralService
         $transactions = $repo->list(select: 'id')->count() + 1;
 
         return "DF - " . generateSequenceNumber(number: $transactions, length: 5);
+    }
+
+    /**
+     * Get list of payment that not paid yet and have final status
+     *
+     * @return array
+     */
+    public function getUpcomingPaymentDue(): Collection
+    {
+        $repo = new ProjectDealRepository();
+
+        // only get final project deal and not fully paid
+        $where = "status = " . \App\Enums\Production\ProjectDealStatus::Final->value . " AND is_fully_paid = 0 AND DATEDIFF(project_date, CURRENT_DATE) BETWEEN 1 AND 5";
+
+        $data = $repo->list(
+            select: 'id,customer_id,name,DATEDIFF(project_date, CURRENT_DATE) as interval_due,project_date,city_id,country_id,is_fully_paid',
+            where: $where,
+            relation: [
+                'marketings:id,project_deal_id,employee_id',
+                'marketings.employee:id,user_id,email',
+                'customer:id,name',
+                'city:id,name',
+                'country:id,name',
+                'transactions',
+                'finalQuotation'
+            ],
+            whereHas: [
+                [
+                    'relation' => 'finalQuotation',
+                    'query' => 'id > 0'
+                ]
+            ]
+        );
+
+        return $data;
     }
 }

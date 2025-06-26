@@ -100,5 +100,15 @@ Route::get('login', function () {
 
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
-Route::get('invoices/download/{transactionUid}/{type}', [QuotationController::class, 'invoice']);
+Route::get('invoices/download/{projectDealUid}/{type}', [QuotationController::class, 'invoice']);
 Route::get('deal-invoice/download/{projectDealUid}/{type}', [QuotationController::class, 'generateInvoiceFromDeal']);
+
+Route::get('/notification-preview', function () {
+    $invoices = (new \App\Services\GeneralService)->getUpcomingPaymentDue();
+    $invoice = $invoices[0];
+ 
+    return (new \Modules\Production\Notifications\PaymentDueReminderNotification($invoice))
+        ->toMail($invoice->marketings);
+
+    // return (new \App\Services\GeneralService)->getUpcomingPaymentDue();
+});
