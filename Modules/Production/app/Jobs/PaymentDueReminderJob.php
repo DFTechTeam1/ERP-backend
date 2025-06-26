@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Jobs;
 
+use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -14,14 +15,12 @@ class PaymentDueReminderJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private $projectDeals;
-
     /**
      * Create a new job instance.
      */
-    public function __construct(Collection $projectDeals)
+    public function __construct()
     {
-        $this->projectDeals = $projectDeals;
+        //
     }
 
     /**
@@ -29,7 +28,11 @@ class PaymentDueReminderJob implements ShouldQueue
      */
     public function handle(): void
     {
-        foreach ($this->projectDeals as $deal) {
+        $generalService = new GeneralService();
+
+        $data = $generalService->getUpcomingPaymentDue();
+
+        foreach ($data as $deal) {
             foreach ($deal->marketings as $marketing) {
                 $marketing->employee->notify(new PaymentDueReminderNotification($deal));
             }

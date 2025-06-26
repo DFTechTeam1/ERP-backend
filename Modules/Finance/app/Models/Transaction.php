@@ -42,11 +42,16 @@ class Transaction extends Model
         'note',
         'trx_id',
         'transaction_date',
+        'transaction_type',
         'created_by'
     ];
 
     protected $appends = [
         'transaction_date_raw'
+    ];
+
+    protected $casts = [
+        'transaction_type' => \App\Enums\Transaction\TransactionType::class
     ];
 
     protected static function newFactory(): TransactionFactory

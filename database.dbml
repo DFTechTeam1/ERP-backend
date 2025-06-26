@@ -7,6 +7,12 @@ Enum "employee_families_relationship_enum" {
   "other"
 }
 
+Enum "transaction_enum" {
+  "down_payment",
+  "credit",
+  "repayment"
+}
+
 Enum "project_task_deadline_type" {
   "revise"
   "general"
@@ -1376,7 +1382,6 @@ Table "project_quotations" {
   "maximum_markup_price" decimal [default: 0]
   "fix_price" decimal [default: 0]
   "quotation_id" varchar
-  "quotation_number" varchar(50)
   "is_final" bool [default: "false"]
   "description" text
   "design_job" varchar(100) [default: null]
@@ -1402,6 +1407,7 @@ Table "transactions" {
   "note" varchar(255)
   "trx_id" varchar(255) [not null]
   "transaction_date" timestamp [default: NULL]
+  "transaction_type" transaction_enum
   "created_by" bigint [ref: > users.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]

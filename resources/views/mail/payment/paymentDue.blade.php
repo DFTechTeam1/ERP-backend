@@ -15,7 +15,7 @@ This is a reminder that **{{ $projectDeal->name }}'s** payment of **{{ number_fo
 1. Follow up with the client via email or call  
 2. Update the finance team once payment is confirmed  
 
-<x-mail::button :url="$url" color="green">
+<x-mail::button :url="$url">
 View Invoice
 </x-mail::button>
 
