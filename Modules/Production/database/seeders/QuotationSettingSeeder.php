@@ -14,7 +14,7 @@ class QuotationSettingSeeder extends Seeder
         $payload = [
             [
                 'key' => 'quotation_prefix',
-                'value' => '#DF',
+                'value' => 'DF',
                 'code' => 'company',
             ],
             [
