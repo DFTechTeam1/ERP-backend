@@ -8266,24 +8266,27 @@ class ProjectService
      */
     public function getQuotationNumber(): array
     {
-        $total = $this->projectQuotationRepo->list(
-            select: 'id'
-        )->count();
+        // get latest quotation
+        $latestData = $this->projectQuotationRepo->list(
+            select: 'id,quotation_id',
+            limit: 1,
+            orderBy: 'created_at DESC'
+        )->toArray();
 
-        if ($total == 0 && $this->generalService->getSettingByKey('cutoff_quotation_number')) {
-            $total = $this->generalService->getSettingByKey('cutoff_quotation_number');
+        if (count($latestData) == 0) {
+            $nextNumber = 1;
+        } else {
+            $latestNumber = str_replace(['DF', 'DFF'], '', $latestData[0]['quotation_id']);
+            $nextNumber = (int) $latestNumber + 1;
         }
 
-        $defaultLength = 5;
-        if (\Illuminate\Support\Str::length($total) > 5) {
-            $defaultLength = \Illuminate\Support\Str::length($total);
-        }
+        // convert to sequence number format
+        $lengthOfSentence = strlen($nextNumber) < 4 ? 4 : strlen($nextNumber) + 1;
+        $nextNumber = $this->generalService->generateSequenceNumber(number: $nextNumber, length: $lengthOfSentence);
 
-        // get prefix
-        $prefix = $this->generalService->getSettingByKey('quotation_prefix') ?? '#DFF';
+        $prefix = $this->generalService->getSettingByKey('quotation_prefix') ?? 'DF';
 
-        $quotationNumber = generateSequenceNumber(number: $total + 1, length: $defaultLength);
-        $quotation = $prefix.$quotationNumber;
+        $quotation = "{$prefix}{$nextNumber}";
 
         return generalResponse(
             message: 'Success',

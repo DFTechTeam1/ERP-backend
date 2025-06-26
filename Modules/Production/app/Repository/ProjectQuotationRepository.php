@@ -22,7 +22,7 @@ class ProjectQuotationRepository extends ProjectQuotationInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], int $limit = 0, int $page = 0, string $orderBy = '')
     {
         $query = $this->model->query();
 
@@ -34,6 +34,14 @@ class ProjectQuotationRepository extends ProjectQuotationInterface
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
         }
 
         return $query->get();
