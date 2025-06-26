@@ -207,6 +207,7 @@ class ProjectQuotationService
             'quotationNumber' => "{$quotationId}",
             'date' => date('d F Y', strtotime($data->deal->project_date)),
             'designJob' => $data->design_job,
+            'description' => $data->description,
             'price' => 'Rp' . number_format(num: $data->fix_price, decimal_separator: ','),
             'client' => [
                 'name' => $data->deal->customer->name,
