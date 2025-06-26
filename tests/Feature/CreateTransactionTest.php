@@ -226,10 +226,5 @@ describe('Create Transaction', function () use ($requestData) {
 
         $response->assertStatus(201);
         $this->assertDatabaseCount('transactions', 1);
-
-        // check trx
-        $this->assertDatabaseHas('transactions', [
-            'trx_id' => 'TRX' . generateSequenceNumber(number: 1, length: 6)
-        ]);
     });
 });

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
+use Modules\Finance\Database\Factories\TransactionFactory;
 use Modules\Production\Models\Customer;
 use Modules\Production\Models\ProjectDeal;
 
@@ -23,8 +24,6 @@ class Transaction extends Model
     {
         static::creating(function (Transaction $transaction) {
             $generalService = new GeneralService();
-            $number = Transaction::select('id')
-                ->count();
             // generate trx id
             $transaction->trx_id = $generalService->generateInvoiceNumber();
             $transaction->created_by = Auth::id();
@@ -50,10 +49,10 @@ class Transaction extends Model
         'transaction_date_raw'
     ];
 
-    // protected static function newFactory(): TransactionFactory
-    // {
-    //     // return TransactionFactory::new();
-    // }
+    protected static function newFactory(): TransactionFactory
+    {
+        return TransactionFactory::new();
+    }
 
     public function attachments(): HasMany
     {
