@@ -97,12 +97,65 @@ class GeneralService
         return linkShortener($length);
     }
 
+    public function generateSequenceNumber($number, $length = 4)
+    {
+        return str_pad($number, $length, 0, STR_PAD_LEFT);
+    }
+
     public function generateInvoiceNumber(): string
     {
-        $repo = new TransactionRepository();
-        $transactions = $repo->list(select: 'id')->count() + 1;
+        $cutoff = 950;
 
-        return "DF - " . generateSequenceNumber(number: $transactions, length: 5);
+        $romanMonth = $this->monthToRoman(month: (int) now()->format('m'));
+        $year = now()->format('Y');
+
+        $repo = new TransactionRepository();
+        $latestData = $repo->list(select: 'id,trx_id', limit: 1, orderBy: 'created_at DESC')->toArray();
+        logging("LATEST TRX", $latestData);
+        if (count($latestData) == 0) {
+            $number = $cutoff + 1;
+        } else {
+            $latestNumber = explode(' - ', $latestData[0]['trx_id']);
+            $number = (int) $latestNumber[1] + 1;
+        }
+
+        // convert to sequence number
+        $lengthOfSentence = strlen($number) < 4 ? 4 : strlen($number) + 1;
+        $number = $this->generateSequenceNumber(number: $number, length: $lengthOfSentence);
+
+        return "{$romanMonth}/{$year} - {$number}";
+    }
+
+    /**
+     * Generate romawi month
+     * 
+     * @param int $month
+     * 
+     * @return string
+     */
+    public function monthToRoman(int $month): string
+    {
+        // Validate input
+        if (!is_numeric($month) || $month < 1 || $month > 12) {
+            return "Invalid month";
+        }
+
+        $romanNumerals = [
+            1 => 'I',
+            2 => 'II',
+            3 => 'III',
+            4 => 'IV',
+            5 => 'V',
+            6 => 'VI',
+            7 => 'VII',
+            8 => 'VIII',
+            9 => 'IX',
+            10 => 'X',
+            11 => 'XI',
+            12 => 'XII'
+        ];
+
+        return $romanNumerals[$month];
     }
 
     /**

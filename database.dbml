@@ -1376,6 +1376,7 @@ Table "project_quotations" {
   "maximum_markup_price" decimal [default: 0]
   "fix_price" decimal [default: 0]
   "quotation_id" varchar
+  "quotation_number" varchar(50)
   "is_final" bool [default: "false"]
   "description" text
   "design_job" varchar(100) [default: null]
