@@ -281,6 +281,7 @@ class ProjectQuotationService
         $prefunction = [];
 
         $invoiceNumber = $this->generalService->generateInvoiceNumber();
+        [$prefix, $number] = explode('/', $invoiceNumber);
 
         // call magic method
         $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $deal->led_detail);
@@ -322,7 +323,7 @@ class ProjectQuotationService
             'debugCss' => false
         ]);
 
-        $filename = "Inv {$invoiceNumber} - {$deal->customer->name} - {$deal->project_date}.pdf";
+        $filename = "Inv {$prefix}-{$number} - {$deal->customer->name} - {$deal->project_date}.pdf";
 
         if ($type == 'stream') {
             return $pdf->stream($filename);
@@ -398,6 +399,9 @@ class ProjectQuotationService
 
         $invoiceNumber = $this->generalService->generateInvoiceNumber();
 
+        $trxId = $transaction->trx_id;
+        [$prefix, $number] = explode('/', $trxId);
+
         $payload = [
             'projectName' => $transaction->projectDeal->name,
             'projectDate' => "{$date} {$month} {$year}",
@@ -435,7 +439,7 @@ class ProjectQuotationService
             'debugCss' => false
         ]);
 
-        $filename = "Inv {$invoiceNumber} - {$transaction->customer->name} - {$transaction->projectDeal->project_date}.pdf";
+        $filename = "Inv {$prefix}-{$number} - {$transaction->customer->name} - {$transaction->projectDeal->project_date}.pdf";
 
         if ($type == 'stream') {
             return $pdf->stream($filename);
