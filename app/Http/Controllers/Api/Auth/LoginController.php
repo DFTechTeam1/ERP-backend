@@ -72,7 +72,7 @@ class LoginController extends Controller
         try {
             $validated = $request->validated();
 
-            $encryptedPayload = $this->userService->login($validated);
+            $generatedToken = $this->userService->login($validated);
 
             // TODO: further development
             // $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
@@ -82,7 +82,8 @@ class LoginController extends Controller
                     'Success',
                     false,
                     [
-                        'token' => $encryptedPayload,
+                        'token' => $generatedToken['encryptedPayload'],
+                        'reportingToken' => $generatedToken['reportingToken']
                     ],
                 ),
             );
