@@ -4,6 +4,7 @@ use App\Enums\Production\ProjectDealStatus;
 use Modules\Company\Models\ProjectClass;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
+use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\QuotationItem;
 
 use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
@@ -38,10 +39,11 @@ describe('Create Project Deal', function () {
         $response->assertStatus(201);
         $this->assertDatabaseCount('project_deals', 1);
         $this->assertDatabaseHas('project_deals', [
-            'name' => 'Draft project'
+            'name' => 'Draft project',
+            'identifier_number' => '0951'
         ]);
         $this->assertDatabaseMissing('projects', [
-            'name' => 'Draft project'
+            'name' => 'Draft project',
         ]);
         $this->assertDatabaseCount('project_quotations', 1);
         $this->assertDatabaseCount('project_deal_marketings', 1);
@@ -72,7 +74,8 @@ describe('Create Project Deal', function () {
         expect($response['data'])->toHaveKey('url');
 
         $this->assertDatabaseHas('project_deals', [
-            'name' => 'Final Project'
+            'name' => 'Final Project',
+            'identifier_number' => '0951'
         ]);
         $this->assertDatabaseHas('projects', [
             'name' => 'Final Project'

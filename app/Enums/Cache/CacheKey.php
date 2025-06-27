@@ -25,4 +25,5 @@ enum CacheKey: string
     case MaxMarkupFormula = 'maxMarkupFormula';
 
     case ProjectCount = 'projectCount';
+    case ProjectDealIdentifierNumber = 'projectDealIdentifierNumber';
 }
