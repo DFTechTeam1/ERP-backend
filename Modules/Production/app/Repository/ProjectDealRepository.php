@@ -22,7 +22,7 @@ class ProjectDealRepository extends ProjectDealInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [], int $limit = 0, int $page = 0, string $orderBy = '', bool $withDeleted = false)
     {
         $query = $this->model->query();
 
@@ -48,6 +48,18 @@ class ProjectDealRepository extends ProjectDealInterface
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
+        }
+
+        if ($withDeleted) {
+            $query->withTrashed();
         }
 
         return $query->get();

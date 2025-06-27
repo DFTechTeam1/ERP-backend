@@ -8425,11 +8425,13 @@ class ProjectService
      */
     public function initProjectCount(): array
     {
-        $count = $this->generalService->getCache(CacheKey::ProjectCount->value);
-        if (!$count) {
-            Artisan::call('app:init-project-count');
+        $projectDealId = request('projectDealUid') ? \Illuminate\Support\Facades\Crypt::decryptString(request('projectDealUid')) : null;
 
-            $count = $this->generalService->getCache(CacheKey::ProjectCount->value);
+        // if projectDealId exist, get the identity number instead of generate new one
+        if ($projectDealId) {
+            $count = $this->projectDealRepo->show(uid: $projectDealId, select: 'identifier_number')->identifier_number;
+        } else {
+            $count = $this->generalService->generateDealIdentifierNumber();
         }
 
         return generalResponse(

@@ -1363,10 +1363,16 @@ Table "project_deals" {
   "longitude" varchar(150) [default: NULL]
   "latitude" varchar(150) [default: NULL]
   "equipment_type" project_deal_equipment_type
+  "identifier_number" varchar(100) [note: "This number will be used on all quotation and all transactions"]
   "is_high_season" bool
   "is_fully_paid" boolean [default: false, note: "Define this project has been paid off or not"]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
+  "deleted_at" timestamp [default: NULL]
+
+  Indexes {
+    identifier_number [unique, name: "project_deals_identifier_number_unique"]
+  }
 }
 
 Table "project_quotations" {
