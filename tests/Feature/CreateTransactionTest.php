@@ -98,7 +98,7 @@ describe('Create Transaction', function () use ($requestData) {
     it('Create transaction return failed', function () {
         $payload = getEmptyPayload();
 
-        $response = $this->postJson('/api/finance/transaction/quotationId', $payload);
+        $response = $this->postJson('/api/finance/transaction/quotationId/projectDealUid', $payload);
         
         $response->assertStatus(422);
         expect($response->json())->toHaveKey('errors');
@@ -107,7 +107,7 @@ describe('Create Transaction', function () use ($requestData) {
     it('Create Transaction With invalid encryption quotationId', function () {
         $payload = getPayload();
 
-        $response = $this->postJson('/api/finance/transaction/quotationId', $payload);
+        $response = $this->postJson('/api/finance/transaction/quotationId/projectDealUid', $payload);
         $response->assertStatus(400);
 
         expect($response->json())->toHavekey('message');
@@ -118,7 +118,7 @@ describe('Create Transaction', function () use ($requestData) {
         $payload = getPayload();
         $encrypted = \Illuminate\Support\Facades\Crypt::encryptString('password');
 
-        $response = $this->postJson('/api/finance/transaction/' . $encrypted, $payload);
+        $response = $this->postJson('/api/finance/transaction/' . $encrypted . '/projectDealUid', $payload);
         $response->assertStatus(400);
 
         expect($response->json())->toHavekey('message');
@@ -142,7 +142,7 @@ describe('Create Transaction', function () use ($requestData) {
             ->withAnyArgs()
             ->andReturn('image.webp');
 
-        $response = postJson('/api/finance/transaction/' . $encrypted, $payload);
+        $response = postJson('/api/finance/transaction/' . $encrypted . '/projectDealUid', $payload);
 
         $response->assertStatus(400);
         
@@ -167,7 +167,7 @@ describe('Create Transaction', function () use ($requestData) {
             ->withAnyArgs()
             ->andReturn('image.webp');
 
-        $response = postJson('/api/finance/transaction/' . $encrypted, $payload);
+        $response = postJson('/api/finance/transaction/' . $encrypted . '/projectDealUid', $payload);
 
         $response->assertStatus(400);
         expect($response->json())->toHaveKey('message');
@@ -183,6 +183,10 @@ describe('Create Transaction', function () use ($requestData) {
 
         postJson('/api/production/project/deals', $requestData);
 
+        // get current project deal data
+        $currentDeal = \Modules\Production\Models\ProjectDeal::select('id')->latest()->first();
+        $projectDealUid = \Illuminate\Support\Facades\Crypt::encryptString($currentDeal->id);
+
         $quotationId = str_replace('#', '', $requestData['quotation']['quotation_id']);
         $encrypted = \Illuminate\Support\Facades\Crypt::encryptString($quotationId);
 
@@ -192,7 +196,7 @@ describe('Create Transaction', function () use ($requestData) {
             ->withAnyArgs()
             ->andReturn('image.webp');
 
-        $response = postJson('/api/finance/transaction/' . $encrypted, $payload);
+        $response = postJson('/api/finance/transaction/' . $encrypted . '/' . $projectDealUid, $payload);
 
         $response->assertStatus(201);
         expect($response->json())->toHaveKey('message');
@@ -216,15 +220,23 @@ describe('Create Transaction', function () use ($requestData) {
 
         $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $requestData['quotation']['quotation_id']));
 
+        // get current project deal data
+        $currentDeal = \Modules\Production\Models\ProjectDeal::selectRaw('id,identifier_number')->latest()->first();
+        $projectDealUid = \Illuminate\Support\Facades\Crypt::encryptString($currentDeal->id);
+
         // mocking
         $client = Mockery::mock(GeneralService::class);
         $client->shouldReceive('uploadImageandCompress')
             ->withAnyArgs()
             ->andReturn('image.webp');
 
-        $response = postJson('/api/finance/transaction/' . $encrypted, $payload);
+        $response = postJson('/api/finance/transaction/' . $encrypted . '/' . $projectDealUid, $payload);
 
         $response->assertStatus(201);
         $this->assertDatabaseCount('transactions', 1);
+
+        // get current transaction
+        $currentTrx = \Modules\Finance\Models\Transaction::select('trx_id')->latest()->first();
+        $this->assertStringContainsString($currentDeal->identifier_number, $currentTrx->trx_id);
     });
 });

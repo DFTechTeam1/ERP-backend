@@ -23,9 +23,6 @@ class Transaction extends Model
     protected static function booted(): void
     {
         static::creating(function (Transaction $transaction) {
-            $generalService = new GeneralService();
-            // generate trx id
-            $transaction->trx_id = $generalService->generateInvoiceNumber();
             $transaction->created_by = Auth::id();
         });
     }

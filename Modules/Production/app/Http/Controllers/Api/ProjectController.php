@@ -954,9 +954,9 @@ class ProjectController extends Controller
      * 
      * @return JsonResponse
      */
-    public function detailProjectDeal(string $quotationId): JsonResponse
+    public function detailProjectDeal(string $projectDealUid): JsonResponse
     {
-        return apiResponse($this->projectDealService->detailProjectDeal(quotationId: $quotationId));
+        return apiResponse($this->projectDealService->detailProjectDeal(projectDealUid: $projectDealUid));
     }
 
     /**

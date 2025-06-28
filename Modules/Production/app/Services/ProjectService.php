@@ -8425,7 +8425,7 @@ class ProjectService
      */
     public function initProjectCount(): array
     {
-        $projectDealId = request('projectDealUid') ? \Illuminate\Support\Facades\Crypt::decryptString(request('projectDealUid')) : null;
+        $projectDealId = !empty(request('projectDealUid')) ? \Illuminate\Support\Facades\Crypt::decryptString(request('projectDealUid')) : null;
 
         // if projectDealId exist, get the identity number instead of generate new one
         if ($projectDealId) {

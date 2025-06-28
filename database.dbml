@@ -7,6 +7,12 @@ Enum "employee_families_relationship_enum" {
   "other"
 }
 
+Enum "invoice_statuses" {
+  "1", // sent
+  "2", // paid
+  "3" // cancelled
+}
+
 Enum "transaction_enum" {
   "down_payment",
   "credit",
@@ -1414,6 +1420,22 @@ Table "transactions" {
   "trx_id" varchar(255) [not null]
   "transaction_date" timestamp [default: NULL]
   "transaction_type" transaction_enum
+  "created_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "invoices" {
+  note: "This invoices table used to record all request invoice from marketing team to customer"
+
+  "id" bigint [pk, not null, increment]
+  "payment_amount" decimal [default: 0]
+  "payment_date" timestamp
+  "payment_due" timestamp
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "customer_id" bigint [ref: > customers.id]
+  "transaction_id" bigint [note: nullable, ref: > transactions.id]
+  "status" invoice_statuses
   "created_by" bigint [ref: > users.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
