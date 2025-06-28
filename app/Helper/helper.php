@@ -180,9 +180,9 @@ if (! function_exists('generateQrcode')) {
 
         FacadesQrCode::format('png')
             ->size(512)
-            ->style('round')
+            // ->style('round')
             ->eye('square')
-            ->gradient($from[0], $from[1], $from[2], $to[0], $to[1], $to[2], 'diagonal')
+            // ->gradient($from[0], $from[1], $from[2], $to[0], $to[1], $to[2], 'diagonal')
             ->margin(1)
             ->generate($payload, $fullpath);
 
