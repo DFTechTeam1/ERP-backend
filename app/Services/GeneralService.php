@@ -143,28 +143,12 @@ class GeneralService
         return $number;
     }
 
-    public function generateInvoiceNumber(): string
+    public function generateInvoiceNumber(string $identifierNumber): string
     {
-        $cutoff = 950;
-
         $romanMonth = $this->monthToRoman(month: (int) now()->format('m'));
         $year = now()->format('Y');
 
-        $repo = new TransactionRepository();
-        $latestData = $repo->list(select: 'id,trx_id', limit: 1, orderBy: 'created_at DESC')->toArray();
-        logging("LATEST TRX", $latestData);
-        if (count($latestData) == 0) {
-            $number = $cutoff + 1;
-        } else {
-            $latestNumber = explode(' - ', $latestData[0]['trx_id']);
-            $number = (int) $latestNumber[1] + 1;
-        }
-
-        // convert to sequence number
-        $lengthOfSentence = strlen($number) < 4 ? 4 : strlen($number) + 1;
-        $number = $this->generateSequenceNumber(number: $number, length: $lengthOfSentence);
-
-        return "{$romanMonth}/{$year} - {$number}";
+        return "{$romanMonth}/{$year} - {$identifierNumber}";
     }
 
     /**
