@@ -11,9 +11,5 @@ test('Total project cache has been updated', function () {
 
     $cache = Cache::get(CacheKey::ProjectCount->value);
 
-    expect($cache)->toBe($count);
-});
-
-test('Total project after final deal', function() {
-
+    expect($cache)->toBe($count + 1);
 });

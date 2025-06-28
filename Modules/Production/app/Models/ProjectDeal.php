@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Finance\Models\Transaction;
 use Modules\Production\Database\Factories\ProjectDealFactory;
 
@@ -15,7 +16,7 @@ use Modules\Production\Database\Factories\ProjectDealFactory;
 
 class ProjectDeal extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -42,8 +43,31 @@ class ProjectDeal extends Model
         'equipment_type',
         'is_high_season',
         'status',
-        'is_fully_paid'
+        'is_fully_paid',
+        'identifier_number',
+        'deleted_at'
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (ProjectDeal $projectDeal) {
+            // get current identifier number from cache
+            $currentIdentifier = (new \App\Services\GeneralService)->generateDealIdentifierNumber();
+            $projectDeal->identifier_number = $currentIdentifier;
+
+            // increase value of the identifier number
+            (new \App\Services\GeneralService)->clearCache(cacheId: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value);
+            $nextIdentifier = (int) $currentIdentifier + 1;
+            // convert to sequence number
+            $lengthOfSentence = strlen($nextIdentifier) < 4 ? 4 : strlen($nextIdentifier) + 1;
+            $nextIdentifier = (new \App\Services\GeneralService)->generateSequenceNumber(number: $nextIdentifier, length: $lengthOfSentence);
+            (new \App\Services\GeneralService)->storeCache(key: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value, value: $nextIdentifier, isForever: true);
+        });
+
+        static::deleted(function (ProjectDeal $projectDeal) {
+            // identifier number will no be reset even when event has been deleted
+        });
+    }
 
     protected static function newFactory(): ProjectDealFactory
     {
