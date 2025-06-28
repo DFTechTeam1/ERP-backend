@@ -127,7 +127,7 @@ class TransactionService {
      * 
      * @return array
      */
-    public function store(array $data, string $quotationId): array
+    public function store(array $data, string $quotationId, string $projectDealUid): array
     {
         DB::beginTransaction();
         $tmp = [];
