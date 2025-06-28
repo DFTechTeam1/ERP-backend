@@ -8,13 +8,15 @@ it('Add more quotation return success', function () {
     // create project first
     $projectDeal = ProjectDeal::factory()
         ->has(ProjectDealMarketing::factory()->count(2), 'marketings')
-        ->create();
+        ->create([
+            'name' => 'New Deal'
+        ]);
 
     $quuotationItem = QuotationItem::factory()->create();
 
     $payload = [
         'quotation' => [
-            'quotation_id' => '#DF04022',
+            'quotation_id' => 'DF04022',
             'is_final' => 0,
             'event_location_guide' => 'surabaya',
             'main_ballroom' => 72000000,
