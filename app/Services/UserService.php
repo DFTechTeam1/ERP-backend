@@ -444,6 +444,9 @@ class UserService
 
         $token = $user->createToken($role, $permissions, $expireTime);
 
+        // generate token for reporting
+        $reportingToken = $this->authorizeReportingAccess(email: $validated['email']);
+
         $menus = $menuService->getNewFormattedMenu($user->getAllPermissions()->toArray(), $roles->toArray());
 
         $isProjectManager = false;
@@ -545,6 +548,27 @@ class UserService
             ];
         });
 
-        return $encryptedPayload;
+        return [
+            'encryptedPayload' => $encryptedPayload,
+            'reportingToken' => $reportingToken
+        ];
+    }
+
+    protected function authorizeReportingAccess(string $email)
+    {
+        $response = \Illuminate\Support\Facades\Http::post(
+            url: config('app.python_endpoint') . '/auth/access-token',
+            data: [
+                'email' => $email
+            ]
+        );
+
+        if ($response->status() != 200) {
+            throw new UserNotFound(message: "Failed to generate token");
+        }
+
+        $token = $response->json()['data']['access_token'];
+
+        return $token;
     }
 }
