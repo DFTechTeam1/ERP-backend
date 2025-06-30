@@ -340,10 +340,10 @@
                         </div>
                     </td>
                     <td style="vertical-align: top;">
-                        {{ $fixPrice }}
+                        {{ $payment }}
                     </td>
                     <td style="vertical-align: top;">
-                        {{ $fixPrice }}
+                        {{ $payment }}
                     </td>
                 </tr>
             </tbody>
@@ -354,7 +354,7 @@
                 <tr>
                     <td style="border-bottom: unset; width: 30%;"></td>
                     <td style="width: 22%; color: #353434;">Total</td>
-                    <td style="width: 22%; color: #353434;">{{ $fixPrice }}</td>
+                    <td style="width: 22%; color: #353434;">{{ $payment }}</td>
                 </tr>
                 @foreach ($transactions as $transaction)
                     <tr>

@@ -100,5 +100,20 @@ Route::get('login', function () {
 
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
+// generate new invoice from current existing transaction
 Route::get('invoices/download/{transactionUid}/{type}', [QuotationController::class, 'invoice']);
+// generate new invoice from current input
 Route::get('deal-invoice/download/{projectDealUid}/{type}', [QuotationController::class, 'generateInvoiceFromDeal']);
+
+Route::get('/notification-preview', function () {
+    $transaction = \Modules\Finance\Models\Transaction::latest()
+        ->with([
+            'projectDeal:id,name,project_date'
+        ])
+        ->first();
+ 
+    return (new \Modules\Production\Notifications\TransactionCreatedNotification($transaction))
+        ->toMail('gumilang.dev@gmail.com');
+
+    // return (new \App\Services\GeneralService)->getUpcomingPaymentDue();
+});

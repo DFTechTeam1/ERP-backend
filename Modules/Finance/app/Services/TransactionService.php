@@ -127,7 +127,7 @@ class TransactionService {
      * 
      * @return array
      */
-    public function store(array $data, string $quotationId): array
+    public function store(array $data, string $quotationId, string $projectDealUid): array
     {
         DB::beginTransaction();
         $tmp = [];
@@ -160,8 +160,15 @@ class TransactionService {
                 return errorResponse(__('notification.paymentAmountShouldBeSmallerThanRemainingAmount'));
             }
 
+            // get project deal identifier number
+            $deal = $this->projectDealRepo->show(
+                uid: \Illuminate\Support\Facades\Crypt::decryptString($projectDealUid),
+                select: 'id,identifier_number'
+            );
+
             $data['customer_id'] = $quotation->deal->customer_id;
             $data['project_deal_id'] = $quotation->deal->id;
+            $data['trx_id'] = $this->generalService->generateInvoiceNumber(identifierNumber: $deal->identifier_number);
 
             $trx = $this->repo->store(
                 collect($data)->except(['images'])->toArray()

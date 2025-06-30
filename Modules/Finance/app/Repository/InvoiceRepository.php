@@ -1,65 +1,41 @@
 <?php
 
-namespace Modules\Production\Repository;
+namespace Modules\Finance\Repository;
 
-use Modules\Production\Models\ProjectDeal;
-use Modules\Production\Repository\Interface\ProjectDealInterface;
+use Modules\Finance\Models\Invoice;
+use Modules\Finance\Repository\Interface\InvoiceInterface;
 
-class ProjectDealRepository extends ProjectDealInterface
-{
+class InvoiceRepository extends InvoiceInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectDeal;
+        $this->model = new Invoice();
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
+     * @param string $select
+     * @param string $where
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [], int $limit = 0, int $page = 0, string $orderBy = '', bool $withDeleted = false)
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
-        }
-
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                if (! isset($queryItem['type'])) {
-                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                        $qd->whereRaw($queryItem['query']);
-                    });
-                } else {
-                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                        $qd->whereRaw($queryItem['query']);
-                    });
-                }
-            }
         }
 
         if ($relation) {
             $query->with($relation);
-        }
-
-        if ($limit > 0) {
-            $query->limit($limit);
-        }
-
-        if (!empty($orderBy)) {
-            $query->orderByRaw($orderBy);
-        }
-
-        if ($withDeleted) {
-            $query->withTrashed();
         }
 
         return $query->get();
@@ -68,47 +44,50 @@ class ProjectDealRepository extends ProjectDealInterface
     /**
      * Paginated data for datatable
      *
+     * @param string $select
+     * @param string $where
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select,
-        string $where,
-        array $relation,
+        string $select = '*',
+        string $where = "",
+        array $relation = [],
         int $itemsPerPage,
         int $page
-    ) {
+    )
+    {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
+     * @param string $uid
+     * @param string $select
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where('id', $uid);
-        } else {
-            $query->whereRaw($where);
-        }
-
+        $query->where("uid", $uid);
+        
         if ($relation) {
             $query->with($relation);
         }
@@ -121,6 +100,7 @@ class ProjectDealRepository extends ProjectDealInterface
     /**
      * Store Data
      *
+     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -131,17 +111,18 @@ class ProjectDealRepository extends ProjectDealInterface
     /**
      * Update Data
      *
-     * @param  int|string  $id
+     * @param array $data
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('id', $id);
+            $query->where('uid', $id);
         }
 
         $query->update($data);
@@ -152,25 +133,19 @@ class ProjectDealRepository extends ProjectDealInterface
     /**
      * Delete Data
      *
-     * @param  int|string  $id
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-
-        if (empty($where)) {
-            $query->where('id', $id);
-        } else {
-            $query->whereRaw($where);
-        }
-
-        return $query->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**
      * Bulk Delete Data
      *
+     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

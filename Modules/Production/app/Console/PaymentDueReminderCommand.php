@@ -2,23 +2,23 @@
 
 namespace Modules\Production\Console;
 
-use App\Enums\Cache\CacheKey;
+use App\Services\GeneralService;
 use Illuminate\Console\Command;
-use Modules\Production\Models\Project;
+use Modules\Production\Jobs\PaymentDueReminderJob;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 
-class InitProjectCount extends Command
+class PaymentDueReminderCommand extends Command
 {
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'app:init-project-count';
+    protected $signature = 'app:get-and-send-reminder-payment-due';
 
     /**
      * The console command description.
      */
-    protected $description = 'Caching all projects';
+    protected $description = 'Sending notification to marketing about payment due projects.';
 
     /**
      * Create a new command instance.
@@ -33,9 +33,7 @@ class InitProjectCount extends Command
      */
     public function handle()
     {
-        (new \App\Services\GeneralService)->generateDealIdentifierNumber();
-
-        $this->info('Project count initialized successfully.');
+        PaymentDueReminderJob::dispatch();
     }
 
     /**
