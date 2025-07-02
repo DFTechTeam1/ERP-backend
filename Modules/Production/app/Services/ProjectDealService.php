@@ -367,6 +367,9 @@ class ProjectDealService
                 );
 
                 $project = CopyDealToProject::run($detail);
+
+                // generate master invoice
+                \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
             }
 
             DB::commit();

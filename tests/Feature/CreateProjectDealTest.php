@@ -64,8 +64,9 @@ describe('Create Project Deal', function () {
         
         // modify quotation id
         $requestData['quotation']['quotation_id'] = 'DF0010';
+        $requestData['quotation']['is_final'] = 1;
 
-        $service = createProjectService();
+        $service = createProjectService(); 
 
         $response = $service->storeProjectDeals(payload: $requestData);
 
@@ -79,6 +80,10 @@ describe('Create Project Deal', function () {
         ]);
         $this->assertDatabaseHas('projects', [
             'name' => 'Final Project'
+        ]);
+        $this->assertDatabaseCount('invoices', 1);
+        $this->assertDatabaseHas('invoices', [
+            'is_main' => 1
         ]);
     })->with([
         fn() => Customer::factory()->create()

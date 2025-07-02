@@ -18,7 +18,8 @@ return new class extends Migration
 
         Schema::create('invoices', function (Blueprint $table) use ($statuses) {
             $table->id();
-            $table->decimal('payment_amount', 24, 2)->default(0);
+            $table->decimal('amount', 24, 2)->default(0);
+            $table->decimal('paid_amount', 24, 2)->default(0);
             $table->timestamp('payment_date');
             $table->timestamp('payment_due');
             $table->foreignId('project_deal_id')
@@ -27,15 +28,19 @@ return new class extends Migration
             $table->foreignId('customer_id')
                 ->references('id')
                 ->on('customers');
-            $table->foreignId('transaction_id')
-                ->nullable()
-                ->constrained(table: 'transactions', column: 'id')
-                ->onDelete('set null');
             $table->enum('status', $statuses);
+            $table->json('raw_data')->nullable();
+
+            // numbering
+            $table->string('parent_number', 100);
+            $table->string('number', 100);
+            $table->boolean('is_main')->default(false);
+            $table->tinyInteger('sequence')->comment('Sequence identifier for child invoice');
+
             $table->foreignId('created_by')
                 ->nullable()
                 ->constrained(table: 'users', column: 'id')
-                ->onDelete('set null');;
+                ->onDelete('set null');
             $table->timestamps();
         });
     }
@@ -48,7 +53,6 @@ return new class extends Migration
         Schema::table('invoices', function (Blueprint $table) {
             $table->dropForeign(['project_deal_id']);
             $table->dropForeign(['customer_id']);
-            $table->dropForeign(['transaction_id']);
             $table->dropForeign(['created_by']);
         });
 

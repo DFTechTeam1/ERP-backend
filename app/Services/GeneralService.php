@@ -143,10 +143,11 @@ class GeneralService
         return $number;
     }
 
-    public function generateInvoiceNumber(string $identifierNumber): string
+    public function generateInvoiceNumber(string $identifierNumber, ?string $date = null): string
     {
-        $romanMonth = $this->monthToRoman(month: (int) now()->format('m'));
-        $year = now()->format('Y');
+        $datetime = $date ? now()->parse($date) : now();
+        $romanMonth = $this->monthToRoman(month: (int) $datetime->format('m'));
+        $year = $datetime->format('Y');
 
         return "{$romanMonth}/{$year} - {$identifierNumber}";
     }

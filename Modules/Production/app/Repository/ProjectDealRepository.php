@@ -95,7 +95,7 @@ class ProjectDealRepository extends ProjectDealInterface
     /**
      * Get Detail Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return ProjectDeal
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
