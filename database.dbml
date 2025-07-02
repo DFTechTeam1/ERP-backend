@@ -1330,6 +1330,14 @@ Table "projects" {
   "feedback" text
 }
 
+Table "project_metas" {
+  "id" bigint [not null, pk, increment]
+  "project_id" bigint [ref: > projects.id]
+  "teams_meta" longtext [note: 'Structure will be like: [{"pic_id": number, "teams": [number,number], "team_transfer": [number,number]}]']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "quotation_items" {
   "id" bigint [pk, not null, increment]
   "name" varchar(255) [not null]
