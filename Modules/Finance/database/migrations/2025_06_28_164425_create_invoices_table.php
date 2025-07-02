@@ -35,7 +35,9 @@ return new class extends Migration
             $table->foreignId('created_by')
                 ->nullable()
                 ->constrained(table: 'users', column: 'id')
-                ->onDelete('set null');;
+                ->onDelete('set null');
+            $table->json('raw_data')->nullable();
+            $table->string('file', 255);
             $table->timestamps();
         });
     }

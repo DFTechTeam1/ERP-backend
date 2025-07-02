@@ -12,6 +12,8 @@ use Modules\Company\Models\ProjectClass;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
 use Modules\Company\Repository\SettingRepository;
+use Modules\Finance\Repository\TransactionRepository;
+use Modules\Finance\Services\TransactionService;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
@@ -318,5 +320,20 @@ function createQuotationItemService(
 ) {
     return new \Modules\Production\Services\QuotationItemService(
         $quotationItemRepo ? $quotationItemRepo : new \Modules\Production\Repository\QuotationItemRepository()
+    );
+}
+
+function setTransactionService(
+    $repo = null,
+    $projectQuotationRepo = null,
+    $generalService = null,
+    $projectDealRepo = null
+)
+{
+    return new TransactionService(
+        $repo ? $repo : new TransactionRepository,
+        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
+        $generalService ? $generalService : new GeneralService,
+        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository
     );
 }

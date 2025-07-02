@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectTask;
 
@@ -100,10 +101,9 @@ Route::get('login', function () {
 
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
-// generate new invoice from current existing transaction
-Route::get('invoices/download/{transactionUid}/{type}', [QuotationController::class, 'invoice']);
-// generate new invoice from current input
-Route::get('deal-invoice/download/{projectDealUid}/{type}', [QuotationController::class, 'generateInvoiceFromDeal']);
+
+Route::get('invoices/download', [QuotationController::class, 'invoice'])->name('invoice.download')
+    ->middleware('signed');
 
 Route::get('/notification-preview', function () {
     $transaction = \Modules\Finance\Models\Transaction::latest()
@@ -116,4 +116,28 @@ Route::get('/notification-preview', function () {
         ->toMail('gumilang.dev@gmail.com');
 
     // return (new \App\Services\GeneralService)->getUpcomingPaymentDue();
+});
+
+Route::get('check', function () {
+    $url = URL::temporarySignedRoute(
+        name: 'invoice.download',
+        expiration: now()->addMinutes(1),
+        parameters: [
+            'uid' => 'eyJpdiI6IkxtZHpGcENqZjc4eHBkSGNZRnNsUmc9PSIsInZhbHVlIjoiNkorRitlZXJuUmJCNVBCVEtSbTBydz09IiwibWFjIjoiYWMzYjAxZWY4ODJhYzM3MWJjMTUyZjVlMmM4OWZiMTg3YzZmZjgxZTcxZDBkNDQzZTZlNjM3N2E3N2QwZjE5ZCIsInRhZyI6IiJ9',
+            'type' => 'bill',
+            'amount' => 10000000,
+            'date' => '2025-07-10',
+            'output' => 'stream'
+        ],
+    );
+
+    \Illuminate\Support\Facades\Cache::remember(
+        key: "TestingKey",
+        ttl: 60 * 60 * 10,
+        callback: function () use ($url) {
+            return $url;
+        }
+    );
+
+    return \Illuminate\Support\Facades\Cache::get('TestingKey');
 });

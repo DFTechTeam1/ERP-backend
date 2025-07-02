@@ -17,4 +17,5 @@ use Modules\Finance\Http\Controllers\FinanceController;
 
 Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
     Route::post('transaction/{quotationId}/{projectDealUid}', [ApiFinanceController::class, 'createTransaction']);
+    Route::post('invoices/download', [ApiFinanceController::class, 'downloadInvoice']);
 });

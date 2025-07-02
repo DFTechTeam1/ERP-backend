@@ -4,8 +4,10 @@ namespace Modules\Finance\Services;
 
 use App\Enums\ErrorCode\Code;
 use App\Services\GeneralService;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Modules\Finance\Models\TransactionImage;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -204,6 +206,8 @@ class TransactionService {
                 );
             }
 
+            // generate invoice
+
             DB::commit();
 
             return generalResponse(
@@ -291,5 +295,53 @@ class TransactionService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    protected function setProjectLed(array &$main, array &$prefunction, array $ledDetailData): void
+    {
+        $ledDetail = collect($ledDetailData)->groupBy('name');
+        $main = [];
+        $prefunction = [];
+
+        if (isset($ledDetail['main'])) {
+            $main = collect($ledDetail['main'])->map(function ($item) {
+                return [
+                    'name' => 'Main Stage',
+                    'total' => $item['totalRaw'],
+                    'size' => $item['textDetail']
+                ];
+            })->toArray();
+        }
+
+        if (isset($ledDetail['prefunction'])) {
+            $prefunction = collect($ledDetail['prefunction'])->map(function ($item) {
+                return [
+                    'name' => 'Prefunction',
+                    'total' => $item['totalRaw'],
+                    'size' => $item['textDetail']
+                ];
+            })->toArray();
+        }
+    }
+
+    /**
+     * Generated signed url invoice
+     * 
+     * @param array $payload                    With this following structure:
+     * - string $uid
+     * - string $type (bill or current)
+     * - string $amount
+     * - string $date
+     * - string $output (stream or download)
+     * 
+     * @return array
+     */
+    public function downloadInvoice(array $payload): array
+    {
+        //
+    }
+
+    protected function generateInvoice(int $id, array $payload, string $filepath, string $cacheKey): string
+    {
     }
 }
