@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Finance\Http\Controllers\Api\FinanceController as ApiFinanceController;
+use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
 
 /*
@@ -18,4 +19,10 @@ use Modules\Finance\Http\Controllers\FinanceController;
 Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
     Route::post('transaction/{quotationId}/{projectDealUid}', [ApiFinanceController::class, 'createTransaction']);
     Route::post('invoices/download', [ApiFinanceController::class, 'downloadInvoice']);
+
+    // manage invoice
+    Route::prefix('/finance/{projectDealUid}')->group(function () {
+        Route::post('billInvoices', [InvoiceController::class, 'generateBillInvoice']);
+        Route::resource('invoices', InvoiceController::class);
+    });
 });

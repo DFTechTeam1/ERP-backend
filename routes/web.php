@@ -9,7 +9,11 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Models\Invoice;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Models\ProjectQuotation;
 use Modules\Production\Models\ProjectTask;
 
 Route::get('/', [LandingPageController::class, 'index']);
@@ -119,25 +123,4 @@ Route::get('/notification-preview', function () {
 });
 
 Route::get('check', function () {
-    $url = URL::temporarySignedRoute(
-        name: 'invoice.download',
-        expiration: now()->addMinutes(1),
-        parameters: [
-            'uid' => 'eyJpdiI6IkxtZHpGcENqZjc4eHBkSGNZRnNsUmc9PSIsInZhbHVlIjoiNkorRitlZXJuUmJCNVBCVEtSbTBydz09IiwibWFjIjoiYWMzYjAxZWY4ODJhYzM3MWJjMTUyZjVlMmM4OWZiMTg3YzZmZjgxZTcxZDBkNDQzZTZlNjM3N2E3N2QwZjE5ZCIsInRhZyI6IiJ9',
-            'type' => 'bill',
-            'amount' => 10000000,
-            'date' => '2025-07-10',
-            'output' => 'stream'
-        ],
-    );
-
-    \Illuminate\Support\Facades\Cache::remember(
-        key: "TestingKey",
-        ttl: 60 * 60 * 10,
-        callback: function () use ($url) {
-            return $url;
-        }
-    );
-
-    return \Illuminate\Support\Facades\Cache::get('TestingKey');
 });

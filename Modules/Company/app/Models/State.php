@@ -2,6 +2,7 @@
 
 namespace Modules\Company\Models;
 
+use Database\Factories\StateFactory as FactoriesStateFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,6 +16,11 @@ class State extends Model
     protected $table = 'states';
 
     public $timestamps = false;
+
+    protected static function newFactory(): FactoriesStateFactory
+    {
+        return FactoriesStateFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable.

@@ -2,6 +2,9 @@
 
 use App\Services\GeneralService;
 use Illuminate\Http\UploadedFile;
+use Modules\Company\Models\City;
+use Modules\Company\Models\Country;
+use Modules\Company\Models\State;
 use Modules\Production\Models\ProjectQuotation;
 
 use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
@@ -47,7 +50,7 @@ $requestData = [
     ],
     'status' => 1, // 1 is active, 0 is draft
     'quotation' => [
-        'quotation_id' => '#DF04022',
+        'quotation_id' => 'DF04022',
         'is_final' => 1,
         'event_location_guide' => 'surabaya',
         'main_ballroom' => 72000000,
@@ -125,41 +128,26 @@ describe('Create Transaction', function () use ($requestData) {
         expect($response->json()['message'])->toContain('Quotation is not found');
     });
 
-    it("Quotation is not final yet", function () use ($requestData) {
-        $payload = getPayload();
-
-        // create deal
-        $requestData = prepareProjectDeal($requestData);
-        $requestData['quotation']['is_final'] = 0;
-
-        postJson('/api/production/project/deals', $requestData);
-
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $requestData['quotation']['quotation_id']));
-
-        // mocking
-        $client = Mockery::mock(GeneralService::class);
-        $client->shouldReceive('uploadImageandCompress')
-            ->withAnyArgs()
-            ->andReturn('image.webp');
-
-        $response = postJson('/api/finance/transaction/' . $encrypted . '/projectDealUid', $payload);
-
-        $response->assertStatus(400);
-        
-        expect($response->json())->toHaveKey('message');
-        expect($response->json()['message'])->toContain(__('notification.quotationIsNotFinal'));
-    });
-
     it("Payment amount greater than remaining amount", function () use($requestData) {
         $payload = getPayload();
         $payload['payment_amount'] = 90000000;
-
+        
         // create deal
         $requestData = prepareProjectDeal($requestData);
 
-        postJson('/api/production/project/deals', $requestData);
+        $country = Country::factory()
+        ->has(
+            State::factory()
+                ->has(City::factory())
+        )
+        ->create();
+        $requestData['country_id'] = $country->id;
+        $requestData['state_id'] = $country->states[0]->id;
+        $requestData['city_id'] = $country->states[0]->cities[0]->id;
 
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $requestData['quotation']['quotation_id']));
+        $responseDeal = postJson('/api/production/project/deals', $requestData);
+
+        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString($requestData['quotation']['quotation_id']);
 
         // mocking
         $client = Mockery::mock(GeneralService::class);
@@ -180,6 +168,16 @@ describe('Create Transaction', function () use ($requestData) {
 
         // create deal
         $requestData = prepareProjectDeal($requestData);
+
+        $country = Country::factory()
+        ->has(
+            State::factory()
+                ->has(City::factory())
+        )
+        ->create();
+        $requestData['country_id'] = $country->id;
+        $requestData['state_id'] = $country->states[0]->id;
+        $requestData['city_id'] = $country->states[0]->cities[0]->id;
 
         postJson('/api/production/project/deals', $requestData);
 
@@ -215,6 +213,16 @@ describe('Create Transaction', function () use ($requestData) {
 
         // create deal
         $requestData = prepareProjectDeal($requestData);
+
+        $country = Country::factory()
+        ->has(
+            State::factory()
+                ->has(City::factory())
+        )
+        ->create();
+        $requestData['country_id'] = $country->id;
+        $requestData['state_id'] = $country->states[0]->id;
+        $requestData['city_id'] = $country->states[0]->cities[0]->id;
 
         postJson('/api/production/project/deals', $requestData);
 

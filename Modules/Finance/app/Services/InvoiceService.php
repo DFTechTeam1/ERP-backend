@@ -2,18 +2,36 @@
 
 namespace Modules\Finance\Services;
 
+use App\Actions\Finance\GenerateInvoiceContent;
 use App\Enums\ErrorCode\Code;
+use App\Enums\Transaction\InvoiceStatus;
+use App\Services\GeneralService;
+use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Repository\ProjectDealRepository;
 
 class InvoiceService {
     private $repo;
 
+    private $projectDealRepo;
+
+    private $generalService;
+
     /**
      * Construction Data
      */
-    public function __construct()
+    public function __construct(
+        InvoiceRepository $repo,
+        ProjectDealRepository $projectDealRepo,
+        GeneralService $generalService
+    )
     {
-        $this->repo = new InvoiceRepository;
+        $this->repo = $repo;
+
+        $this->projectDealRepo = $projectDealRepo;
+
+        $this->generalService = $generalService;
     }
 
     /**
@@ -97,10 +115,41 @@ class InvoiceService {
      * 
      * @return array
      */
-    public function store(array $data): array
+    public function store(array $data, string $projectDealUid): array
     {
         try {
-            $this->repo->store($data);
+            // generate invoice to bill to customer
+            $paymentDate = $data['transaction_date'];
+            $paymentDue = now()->parse($paymentDate)->format('Y-m-d');
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            // get project deal data
+            $projectDeal = $this->projectDealRepo->show(uid: $projectDealId, select: 'id,customer_id,identifier_number');
+            $identifierNumber = ltrim($projectDeal->identifier_number, 0);
+
+            // get invoice parent
+            $invoiceParent = $this->repo->show(uid: 'uid', select: 'id,number', where: "project_deal_id = {$projectDeal->id} AND is_main = 1");
+            $lastInvoice = $invoiceParent->getLastChild();
+
+            // generate invoice content
+            $invoiceContent = GenerateInvoiceContent::run(deal: $projectDeal, amount: $data['amount'], invoiceNumber: '', requestDate: $paymentDate);
+
+            $payload = [
+                'amount' => $data['amount'],
+                'paid_amount' => 0,
+                'payment_due' => $paymentDue,
+                'payment_date' => $paymentDate,
+                'project_deal_id' => $projectDealId,
+                'customer_id' => $projectDeal->customer_id,
+                'status' => InvoiceStatus::Unpaid,
+                'raw_data' => $invoiceContent,
+                'parent_number' => $invoiceParent->number,
+                'number' => $identifierNumber,
+                'is_main' => false,
+                'sequence' => 0,
+            ];
+
+            $this->repo->store($payload);
 
             return generalResponse(
                 'success',

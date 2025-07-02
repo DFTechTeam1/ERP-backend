@@ -72,6 +72,11 @@ describe('Publish Quotation', function () {
         $this->assertDatabaseHas('project_marketings', [
             'project_id' => $response['data']['project']['id']
         ]);
+
+        $this->assertDatabaseCount('invoices', 1);
+        $this->assertDatabaseHas('invoices', [
+            'is_main' => 1
+        ]);
     })->with('dataDeals');
 
     it("Publish quotation as temporary return success", function (Customer $customer, ProjectClass $projectClass, Employee $employee, QuotationItem $quotationItem) {

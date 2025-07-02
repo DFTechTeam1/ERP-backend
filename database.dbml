@@ -1408,6 +1408,30 @@ Table "project_quotation_items" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "invoices" {
+  note: "This invoices table used to record all request invoice from marketing team to customer"
+
+  "id" bigint [pk, not null, increment]
+  "amount" decimal [default: 0]
+  "paid_amount" decimal [default: 0]
+  "payment_date" timestamp
+  "payment_due" timestamp
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "customer_id" bigint [ref: > customers.id]
+  "status" invoice_statuses
+  "raw_data" longtext
+
+  // numbering
+  "parent_number" varchar(100) [not null]
+  "number" varchar (100) [not null]
+  "is_main" boolean [default: false]
+  "sequence" tinyint [note: "Sequence identifier for child invoice"]
+
+  "created_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "transactions" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
@@ -1420,30 +1444,6 @@ Table "transactions" {
   "inovice_id" bigint [ref: > invoices.id]
   "transaction_date" timestamp [default: NULL]
   "transaction_type" transaction_enum
-  "created_by" bigint [ref: > users.id]
-  "created_at" timestamp [default: NULL]
-  "updated_at" timestamp [default: NULL]
-}
-
-Table "invoices" {
-  note: "This invoices table used to record all request invoice from marketing team to customer"
-
-  "id" bigint [pk, not null, increment]
-  "payment_amount" decimal [default: 0]
-  "payment_date" timestamp
-  "payment_due" timestamp
-  "project_deal_id" bigint [ref: > project_deals.id]
-  "customer_id" bigint [ref: > customers.id]
-  "transaction_id" bigint [note: nullable, ref: > transactions.id]
-  "status" invoice_statuses
-  "raw_data" longtext
-
-  // numbering
-  "parent_number" varchar(100) [not null]
-  "number" varchar (100) [not null]
-  "is_main" boolean [default: false]
-  "sequence" tinyint [note: "Sequence identifier for child invoice"]
-
   "created_by" bigint [ref: > users.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]

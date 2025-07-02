@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\Transaction;
 use Modules\Production\Database\Factories\ProjectDealFactory;
 
@@ -124,6 +125,11 @@ class ProjectDeal extends Model
     {
         return $this->hasOne(ProjectQuotation::class, 'project_deal_id')
             ->final();
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class, 'project_deal_id');
     }
 
     public function latestQuotation(): HasOne
