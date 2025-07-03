@@ -367,6 +367,9 @@ class ProjectDealService
                 );
 
                 $project = CopyDealToProject::run($detail);
+
+                // generate master invoice
+                \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
             }
 
             DB::commit();
@@ -418,19 +421,19 @@ class ProjectDealService
      * 
      * @return array
      */
-    public function detailProjectDeal(string $quotationId): array
+    public function detailProjectDeal(string $projectDealUid): array
     {
         try {
-            $quotationIdRaw = Crypt::decryptString($quotationId);
+            $projectDealUidRaw = Crypt::decryptString($projectDealUid);
             $isEdit = request('edit');
 
             // get detail of project deal without the transactions
             if ($isEdit) {
-                return $this->detailProjectDealForEdit(quotationId: $quotationId);
+                return $this->detailProjectDealForEdit(quotationId: $projectDealUid);
             }
 
             $data = $this->repo->show(
-                uid: $quotationIdRaw,
+                uid: $projectDealUidRaw,
                 select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
                 relation: [
                     'transactions',
@@ -575,6 +578,7 @@ class ProjectDealService
                     'phone' => $data->customer->phone,
                     'email' => $data->customer->email,
                 ],
+                'uid' => $projectDealUid,
                 'products' => $products,
                 'final_quotation' => $finalQuotation,
                 'transactions' => $transactions,

@@ -22,7 +22,7 @@ class ProjectDealRepository extends ProjectDealInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [], int $limit = 0, int $page = 0, string $orderBy = '', bool $withDeleted = false)
     {
         $query = $this->model->query();
 
@@ -32,8 +32,34 @@ class ProjectDealRepository extends ProjectDealInterface
             $query->whereRaw($where);
         }
 
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
+        }
+
         if ($relation) {
             $query->with($relation);
+        }
+
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
+        }
+
+        if ($withDeleted) {
+            $query->withTrashed();
         }
 
         return $query->get();
@@ -69,7 +95,7 @@ class ProjectDealRepository extends ProjectDealInterface
     /**
      * Get Detail Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return ProjectDeal
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {

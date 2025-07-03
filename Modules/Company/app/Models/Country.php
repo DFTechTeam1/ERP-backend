@@ -2,11 +2,11 @@
 
 namespace Modules\Company\Models;
 
+use Database\Factories\CountryFactory as FactoriesCountryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Modules\Company\Database\Factories\CountryFactory;
 
 class Country extends Model
 {
@@ -26,6 +26,11 @@ class Country extends Model
         'phone_code',
         'currency',
     ];
+
+    protected static function newFactory(): FactoriesCountryFactory
+    {
+        return FactoriesCountryFactory::new();
+    }
 
     public function states(): HasMany
     {
