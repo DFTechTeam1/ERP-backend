@@ -1,10 +1,13 @@
 <?php
 
+use App\Enums\Production\ProjectDealStatus;
 use App\Services\GeneralService;
 use Illuminate\Http\UploadedFile;
 use Modules\Company\Models\City;
 use Modules\Company\Models\Country;
 use Modules\Company\Models\State;
+use Modules\Finance\Models\Invoice;
+use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectQuotation;
 
 use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
@@ -98,153 +101,62 @@ function getPayload() {
 }
 
 describe('Create Transaction', function () use ($requestData) {
-    it('Create transaction return failed', function () {
-        $payload = getEmptyPayload();
-
-        $response = $this->postJson('/api/finance/transaction/quotationId/projectDealUid', $payload);
-        
-        $response->assertStatus(422);
-        expect($response->json())->toHaveKey('errors');
-    });
-
-    it('Create Transaction With invalid encryption quotationId', function () {
-        $payload = getPayload();
-
-        $response = $this->postJson('/api/finance/transaction/quotationId/projectDealUid', $payload);
-        $response->assertStatus(400);
-
-        expect($response->json())->toHavekey('message');
-        expect($response->json()['message'])->toContain('The payload is invalid');
-    });
-
-    it("Quotation not found", function () {
-        $payload = getPayload();
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString('password');
-
-        $response = $this->postJson('/api/finance/transaction/' . $encrypted . '/projectDealUid', $payload);
-        $response->assertStatus(400);
-
-        expect($response->json())->toHavekey('message');
-        expect($response->json()['message'])->toContain('Quotation is not found');
-    });
-
-    it("Payment amount greater than remaining amount", function () use($requestData) {
-        $payload = getPayload();
-        $payload['payment_amount'] = 90000000;
-        
-        // create deal
-        $requestData = prepareProjectDeal($requestData);
-
+    it('Create Transaction On Current Invoice', function () use ($requestData) {
         $country = Country::factory()
-        ->has(
-            State::factory()
-                ->has(City::factory())
-        )
-        ->create();
-        $requestData['country_id'] = $country->id;
-        $requestData['state_id'] = $country->states[0]->id;
-        $requestData['city_id'] = $country->states[0]->cities[0]->id;
+            ->has(
+                State::factory()->has(
+                    City::factory()
+                )
+            )->create();
 
-        $responseDeal = postJson('/api/production/project/deals', $requestData);
+        $projectDeal = ProjectDeal::factory()
+            ->has(ProjectQuotation::factory()->state([
+                'is_final' => 1
+            ]), 'quotations')
+            ->has(Invoice::factory()->state([
+                'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
+                'parent_number' => 'VI/2025 951',
+                'number' => 'VI/2025 951 A',
+                'sequence' => 1,
+                'amount' => 10000000,
+            ]))
+            ->create([
+                'country_id' => $country->id,
+                'state_id' => $country->states[0]->id,
+                'state_id' => $country->states[0]->cities[0]->id,
+                'status' => ProjectDealStatus::Final->value
+            ]);
 
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString($requestData['quotation']['quotation_id']);
+        $service = setTransactionService();
 
-        // mocking
-        $client = Mockery::mock(GeneralService::class);
-        $client->shouldReceive('uploadImageandCompress')
-            ->withAnyArgs()
-            ->andReturn('image.webp');
+        $trxDate = now()->addDays(3)->format('Y-m-d');
 
-        $response = postJson('/api/finance/transaction/' . $encrypted . '/projectDealUid', $payload);
+        $file = UploadedFile::fake()->image('testing.jpg');
+        $payload = [
+            'payment_amount' => 10000000,
+            'transaction_date' => $trxDate,
+            'invoice_id' => \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->invoices[0]->id),
+            'note' => '',
+            'reference' => '',
+            'images' => [
+                [
+                    'image' => $file
+                ]
+            ]
+        ];
 
-        $response->assertStatus(400);
-        expect($response->json())->toHaveKey('message');
-        expect($response->json()['message'])->toContain(__('notification.paymentAmountShouldBeSmallerThanRemainingAmount'));
-    });
+        $response = $service->store(payload: $payload, projectDealUid: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id));
 
-    it("Fully paid transaction", function () use ($requestData) {
-        $payload = getPayload();
-        $payload['payment_amount'] = $requestData['quotation']['fix_price'];
+        expect($response)->toHaveKeys(['error', 'message']);
+        expect($response['error'])->toBeFalse();
 
-        // create deal
-        $requestData = prepareProjectDeal($requestData);
-
-        $country = Country::factory()
-        ->has(
-            State::factory()
-                ->has(City::factory())
-        )
-        ->create();
-        $requestData['country_id'] = $country->id;
-        $requestData['state_id'] = $country->states[0]->id;
-        $requestData['city_id'] = $country->states[0]->cities[0]->id;
-
-        postJson('/api/production/project/deals', $requestData);
-
-        // get current project deal data
-        $currentDeal = \Modules\Production\Models\ProjectDeal::select('id')->latest()->first();
-        $projectDealUid = \Illuminate\Support\Facades\Crypt::encryptString($currentDeal->id);
-
-        $quotationId = str_replace('#', '', $requestData['quotation']['quotation_id']);
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString($quotationId);
-
-        // mocking
-        $client = Mockery::mock(GeneralService::class);
-        $client->shouldReceive('uploadImageandCompress')
-            ->withAnyArgs()
-            ->andReturn('image.webp');
-
-        $response = postJson('/api/finance/transaction/' . $encrypted . '/' . $projectDealUid, $payload);
-
-        $response->assertStatus(201);
-        expect($response->json())->toHaveKey('message');
-
-        $currentDeal = ProjectQuotation::selectRaw('id,project_deal_id')
-            ->where('quotation_id', $quotationId)
-            ->first();
-        $this->assertDatabaseHas('project_deals', [
-            'id' => $currentDeal->project_deal_id,
-            'is_fully_paid'  => 1
-        ]);
-    });
-
-    it("Transaction Created Successfully", function() use ($requestData) {
-        $payload = getPayload();
-
-        // create deal
-        $requestData = prepareProjectDeal($requestData);
-
-        $country = Country::factory()
-        ->has(
-            State::factory()
-                ->has(City::factory())
-        )
-        ->create();
-        $requestData['country_id'] = $country->id;
-        $requestData['state_id'] = $country->states[0]->id;
-        $requestData['city_id'] = $country->states[0]->cities[0]->id;
-
-        postJson('/api/production/project/deals', $requestData);
-
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $requestData['quotation']['quotation_id']));
-
-        // get current project deal data
-        $currentDeal = \Modules\Production\Models\ProjectDeal::selectRaw('id,identifier_number')->latest()->first();
-        $projectDealUid = \Illuminate\Support\Facades\Crypt::encryptString($currentDeal->id);
-
-        // mocking
-        $client = Mockery::mock(GeneralService::class);
-        $client->shouldReceive('uploadImageandCompress')
-            ->withAnyArgs()
-            ->andReturn('image.webp');
-
-        $response = postJson('/api/finance/transaction/' . $encrypted . '/' . $projectDealUid, $payload);
-
-        $response->assertStatus(201);
         $this->assertDatabaseCount('transactions', 1);
-
-        // get current transaction
-        $currentTrx = \Modules\Finance\Models\Transaction::select('trx_id')->latest()->first();
-        $this->assertStringContainsString($currentDeal->identifier_number, $currentTrx->trx_id);
+        $this->assertDatabaseHas('transactions', [
+            'invoice_id' => $projectDeal->invoices[0]->id,
+        ]);
+        $this->assertDatabaseHas('invoices', [
+            'id' => $projectDeal->invoices[0]->id,
+            'status' => \App\Enums\Transaction\InvoiceStatus::Paid->value
+        ]);
     });
 });

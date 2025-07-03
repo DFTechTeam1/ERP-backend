@@ -42,9 +42,9 @@ class FinanceController extends Controller
      *      - ?object|binary $image
      * @param string $quotationId
      */
-    public function createTransaction(Create $request, string $quotationId, string $projectDealUid): JsonResponse
+    public function createTransaction(Create $request, string $projectDealUid): JsonResponse
     {
-        return apiResponse($this->service->store($request->all(), $quotationId, $projectDealUid));
+        return apiResponse($this->service->store($request->all(), $projectDealUid));
     }
 
     /**

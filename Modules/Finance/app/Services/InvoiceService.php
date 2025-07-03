@@ -5,9 +5,14 @@ namespace Modules\Finance\Services;
 use App\Actions\Finance\GenerateInvoiceContent;
 use App\Enums\ErrorCode\Code;
 use App\Enums\Transaction\InvoiceStatus;
+use App\Enums\Transaction\TransactionType;
 use App\Services\GeneralService;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Repository\ProjectDealRepository;
 
@@ -18,6 +23,8 @@ class InvoiceService {
 
     private $generalService;
 
+    private $transactionRepo;
+
     /**
      * Construction Data
      */
@@ -25,6 +32,7 @@ class InvoiceService {
         InvoiceRepository $repo,
         ProjectDealRepository $projectDealRepo,
         GeneralService $generalService,
+        TransactionRepository $transactionRepo
     )
     {
         $this->repo = $repo;
@@ -32,6 +40,8 @@ class InvoiceService {
         $this->projectDealRepo = $projectDealRepo;
 
         $this->generalService = $generalService;
+
+        $this->transactionRepo = $transactionRepo;
     }
 
     /**
@@ -68,6 +78,21 @@ class InvoiceService {
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
+
+            // format response
+            $paginated = collect((object) $paginated)->map(function ($item) {
+                $uid = \Illuminate\Support\Facades\Crypt::encryptString($item->id);
+
+                return [
+                    'uid' => $uid,
+                    'number' => $item->parent_number,
+                    'sequence' => $item->sequence,
+                    'amount' => "Rp" . number_format(num: $item->amount, decimal_separator: ','),
+                    'paid_amount' => "Rp" . number_format(num: $item->paid_amount, decimal_separator: ','),
+                    'status' => $item->status->label(),
+                    'status_color' => $item->status->color(),
+                ];
+            });
 
             return generalResponse(
                 'Success',
@@ -108,6 +133,7 @@ class InvoiceService {
         }
     }
 
+
     /**
      * Generate new invoice
      *
@@ -116,7 +142,7 @@ class InvoiceService {
      * - string|int $amount
      * 
      * @param string $projectDealUid
-     * @param string $type          Type will be 'bill', 'current' or 'general'
+     * @param string $type              Type will be 'bill', 'current' or 'general'
      * 
      * @return array
      */
@@ -125,7 +151,7 @@ class InvoiceService {
         try {
             // generate invoice to bill to customer
             $paymentDate = $data['transaction_date'];
-            $paymentDue = now()->parse($paymentDate)->format('Y-m-d');
+            $paymentDue = now()->parse($paymentDate)->addDays(7)->format('Y-m-d');
             $projectDealId = Crypt::decryptString($projectDealUid);
 
             // get project deal data
@@ -171,7 +197,7 @@ class InvoiceService {
                     'i' => $projectDealUid,
                     'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id)
                 ],
-                expiration: now()->addHours(5)
+                expiration: now()->addMinutes(5)
             );
 
             return generalResponse(
@@ -253,10 +279,24 @@ class InvoiceService {
         }
     }
 
-    public function downloadInvoice()
+    /**
+     * Download the invoice based on invoice id
+     * 
+     * @return Response
+     */
+    public function downloadInvoice(): Response
     {
         $invoiceId = \Illuminate\Support\Facades\Crypt::decryptString(request('n'));
-        $invoice = $this->repo->show(uid: $invoiceId, select: 'id,raw_data');
+        $invoice = $this->repo->show(uid: $invoiceId, select: 'id,raw_data,parent_number,number,sequence,project_deal_id', relation: [
+            'projectDeal:id,name,project_date,customer_id',
+            'projectDeal.customer:id,name'
+        ]);
+
+        // only get the parent number 
+        $invoiceNumber = $invoice->sequence == 0 ? $invoice->number : $invoice->parent_number;
+
+        // replace '\' or '/' to avoid error in the file name
+        $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
  
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $invoice->raw_data)
             ->setPaper('A4')
@@ -268,6 +308,8 @@ class InvoiceService {
                 'debugCss' => false
             ]);
 
-        return $pdf->stream(filename: 'invoice.pdf');
+        $filename = "Inv {$invoiceNumber} - {$invoice->projectDeal->customer->name} - {$invoice->projectDeal->project_date}.pdf";
+
+        return $pdf->download(filename: $filename);
     }
 }

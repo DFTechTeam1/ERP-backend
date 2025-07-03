@@ -15,6 +15,7 @@ class Create extends FormRequest
         return [
             'payment_amount' => 'required',
             'transaction_date' => 'required|date_format:Y-m-d',
+            'invoice_id' => 'required|string',
             'note' => 'nullable',
             'reference' => 'nullable',
             'images' => [

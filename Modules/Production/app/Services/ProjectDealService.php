@@ -444,7 +444,10 @@ class ProjectDealService
                     'finalQuotation',
                     'customer:id,name,phone,email',
                     'city:id,name',
-                    'class:id,name'
+                    'class:id,name',
+                    'invoices' => function ($queryInvoice) {
+                        $queryInvoice->where('is_main', 0);
+                    }
                 ]
             );
 
@@ -591,7 +594,19 @@ class ProjectDealService
                 'status_payment_color' => $data->getStatusPaymentColor(),
                 'is_paid' => $data->isPaid(),
                 'fix_price' => $finalQuotation->count() > 0 ? $finalQuotation->fix_price : $data->latestQuotation->fix_price,
-                'remaining_price' => $data->getRemainingPayment()
+                'remaining_price' => $data->getRemainingPayment(),
+                'invoices' => $data->invoices->map(function ($invoice) {
+                    return [
+                        'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                        'amount' => $invoice->amount,
+                        'paid_amount' => $invoice->paid_amount,
+                        'status' => $invoice->status->label(),
+                        'status_color' => $invoice->status->color(),
+                        'payment_due' => $invoice->payment_due,
+                        'payment_date' => $invoice->payment_date,
+                        'number' => $invoice->parent_number
+                    ];
+                })
             ];
 
             return generalResponse(

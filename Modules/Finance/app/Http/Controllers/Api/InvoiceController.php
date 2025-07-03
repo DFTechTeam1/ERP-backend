@@ -3,8 +3,10 @@
 namespace Modules\Finance\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Finance\Http\Requests\Invoice\BillInvoice;
+use Modules\Finance\Http\Requests\Transaction\Create;
 use Modules\Finance\Services\InvoiceService;
 
 class InvoiceController extends Controller
@@ -21,11 +23,14 @@ class InvoiceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(string $projectDealUid)
     {
-        //
+        $projectDealId = \Illuminate\Support\Facades\Crypt::decryptString($projectDealUid);
 
-        return response()->json([]);
+        return apiResponse($this->service->list(
+            select: 'id,parent_number,number,sequence,project_deal_id,amount,paid_amount,status',
+            where: "project_deal_id = {$projectDealId} and is_main = 0"
+        ));
     }
 
     /**
@@ -36,7 +41,15 @@ class InvoiceController extends Controller
 
     }
 
-    public function generateBillInvoice(BillInvoice $request, string $projectDealUid)
+    /**
+     * Generate invoice to bill to customer
+     * 
+     * @param BillInvoice $request
+     * @param string $projectDealUid
+     * 
+     * @return JsonResponse
+     */
+    public function generateBillInvoice(BillInvoice $request, string $projectDealUid): JsonResponse
     {
         return apiResponse($this->service->store(data: $request->validated(), projectDealUid: $projectDealUid));
     }

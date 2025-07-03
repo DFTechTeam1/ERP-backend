@@ -40,7 +40,7 @@ class Invoice extends Model
     ];
 
     protected $casts = [
-        'stattus' => \App\Enums\Transaction\InvoiceStatus::class
+        'status' => \App\Enums\Transaction\InvoiceStatus::class
     ];
 
     protected static function newFactory(): InvoiceFactory

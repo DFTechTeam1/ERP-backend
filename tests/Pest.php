@@ -351,11 +351,13 @@ function setTransactionService(
 function setInvoiceService(
     $repo = null,
     $projectDealRepo = null,
-    $generalService = null
+    $generalService = null,
+    $transactionRepo = null
 ) {
     return new \Modules\Finance\Services\InvoiceService(
         $repo ? $repo : new \Modules\Finance\Repository\InvoiceRepository,
         $projectDealRepo ? $projectDealRepo : new \Modules\Production\Repository\ProjectDealRepository,
-        $generalService ? $generalService : new \App\Services\GeneralService
+        $generalService ? $generalService : new \App\Services\GeneralService,
+        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository
     );
 }
