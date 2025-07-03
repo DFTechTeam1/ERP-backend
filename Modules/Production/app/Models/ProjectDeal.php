@@ -283,13 +283,17 @@ class ProjectDeal extends Model
      * 
      * @return float|string
      */
-    public function getRemainingPayment(bool $formatPrice = false): float|string
+    public function getRemainingPayment(bool $formatPrice = false, int $deductionAmount = 0): float|string
     {
         $output = 0;
 
         if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid']) && $this->getFinalPrice() > 0) {
             if (!$this->attributes['is_fully_paid']) {
                 $output = $this->getFinalPrice() - $this->transactions->pluck('payment_amount')->sum();
+
+                if ($deductionAmount > 0) {
+                    $output = $output - $deductionAmount;
+                }
             }
         }
 

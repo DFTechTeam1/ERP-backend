@@ -347,3 +347,15 @@ function setTransactionService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository
     );
 }
+
+function setInvoiceService(
+    $repo = null,
+    $projectDealRepo = null,
+    $generalService = null
+) {
+    return new \Modules\Finance\Services\InvoiceService(
+        $repo ? $repo : new \Modules\Finance\Repository\InvoiceRepository,
+        $projectDealRepo ? $projectDealRepo : new \Modules\Production\Repository\ProjectDealRepository,
+        $generalService ? $generalService : new \App\Services\GeneralService
+    );
+}

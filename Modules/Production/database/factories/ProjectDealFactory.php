@@ -44,7 +44,7 @@ class ProjectDealFactory extends Factory
             'venue' => 'Hotel brawijaya',
             'collaboration' => 'nuansa',
             'led_area' => 1,
-            'led_detail' => '[{"name":"main","total":4,"totalRaw":4,"textDetail":"2 x 2 m","led":[{"width":"2","height":"2"}]},{"name":" prefunction","total":1,"totalRaw":1,"textDetail":"1 x 1 m","led":[{"width":"1","height":"1"}]}]',
+            'led_detail' => json_decode('[{"name":"main","total":4,"totalRaw":4,"textDetail":"2 x 2 m","led":[{"width":"2","height":"2"}]},{"name":" prefunction","total":1,"totalRaw":1,"textDetail":"1 x 1 m","led":[{"width":"1","height":"1"}]}]', true),
             'country_id' => Province::factory()->create()->code,
             'state_id' => IndonesiaCity::factory()->create()->code,
             'city_id' => IndonesiaDistrict::factory()->create()->code,

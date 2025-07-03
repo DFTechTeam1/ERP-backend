@@ -24,7 +24,7 @@ class InvoiceService {
     public function __construct(
         InvoiceRepository $repo,
         ProjectDealRepository $projectDealRepo,
-        GeneralService $generalService
+        GeneralService $generalService,
     )
     {
         $this->repo = $repo;
@@ -109,9 +109,14 @@ class InvoiceService {
     }
 
     /**
-     * Store data
+     * Generate new invoice
      *
-     * @param array $data
+     * @param array $data               With this following structure
+     * - string $transaction_date
+     * - string|int $amount
+     * 
+     * @param string $projectDealUid
+     * @param string $type          Type will be 'bill', 'current' or 'general'
      * 
      * @return array
      */
@@ -124,15 +129,23 @@ class InvoiceService {
             $projectDealId = Crypt::decryptString($projectDealUid);
 
             // get project deal data
-            $projectDeal = $this->projectDealRepo->show(uid: $projectDealId, select: 'id,customer_id,identifier_number');
-            $identifierNumber = ltrim($projectDeal->identifier_number, 0);
+            $projectDeal = $this->projectDealRepo->show(uid: $projectDealId, select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid', relation: [
+                'transactions',
+                'finalQuotation'
+            ]);
 
             // get invoice parent
-            $invoiceParent = $this->repo->show(uid: 'uid', select: 'id,number', where: "project_deal_id = {$projectDeal->id} AND is_main = 1");
-            $lastInvoice = $invoiceParent->getLastChild();
+            $invoiceParent = $this->repo->show(uid: 'uid', select: 'id,number,project_deal_id', where: "project_deal_id = {$projectDeal->id} AND is_main = 1");
+            $lastInvoice = $invoiceParent->getLastInvoice();
+            
+            $nextSequence = $lastInvoice->sequence + 1;
+
+            // define next suffix invoice
+            $suffix = chr(64 + $nextSequence);
+            $invoiceNumber = "{$invoiceParent->number} {$suffix}";
 
             // generate invoice content
-            $invoiceContent = GenerateInvoiceContent::run(deal: $projectDeal, amount: $data['amount'], invoiceNumber: '', requestDate: $paymentDate);
+            $invoiceContent = GenerateInvoiceContent::run(deal: $projectDeal, amount: $data['amount'], invoiceNumber: $invoiceNumber, requestDate: $paymentDate);
 
             $payload = [
                 'amount' => $data['amount'],
@@ -144,16 +157,28 @@ class InvoiceService {
                 'status' => InvoiceStatus::Unpaid,
                 'raw_data' => $invoiceContent,
                 'parent_number' => $invoiceParent->number,
-                'number' => $identifierNumber,
+                'number' => $invoiceNumber,
                 'is_main' => false,
-                'sequence' => 0,
+                'sequence' => $nextSequence,
             ];
 
-            $this->repo->store($payload);
+            $invoice = $this->repo->store($payload);
+
+            // generate url with expired time
+            $url = \Illuminate\Support\Facades\URL::signedRoute(
+                name: 'invoice.download',
+                parameters: [
+                    'i' => $projectDealUid,
+                    'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id)
+                ],
+                expiration: now()->addHours(5)
+            );
 
             return generalResponse(
-                'success',
-                false,
+                message: 'success',
+                data: [
+                    'url' => $url
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -226,5 +251,23 @@ class InvoiceService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    public function downloadInvoice()
+    {
+        $invoiceId = \Illuminate\Support\Facades\Crypt::decryptString(request('n'));
+        $invoice = $this->repo->show(uid: $invoiceId, select: 'id,raw_data');
+ 
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $invoice->raw_data)
+            ->setPaper('A4')
+            ->setOption([
+                'isPhpEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+                'debugPng' => false,
+                'debugLayout' => false,
+                'debugCss' => false
+            ]);
+
+        return $pdf->stream(filename: 'invoice.pdf');
     }
 }

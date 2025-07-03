@@ -83,7 +83,11 @@ describe('Create Project Deal', function () {
         ]);
         $this->assertDatabaseCount('invoices', 1);
         $this->assertDatabaseHas('invoices', [
-            'is_main' => 1
+            'is_main' => 1,
+            'parent_number' => null,
+            'sequence' => 0,
+            'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
+            'paid_amount' => 0
         ]);
     })->with([
         fn() => Customer::factory()->create()

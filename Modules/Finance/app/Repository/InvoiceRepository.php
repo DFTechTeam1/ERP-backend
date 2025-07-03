@@ -89,7 +89,7 @@ class InvoiceRepository extends InvoiceInterface {
         if (empty($where)) {
             $query->where("id", $uid);
         } else {
-            $query->whereHas($where);
+            $query->whereRaw($where);
         }
         
         if ($relation) {

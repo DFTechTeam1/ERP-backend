@@ -32,7 +32,7 @@ return new class extends Migration
             $table->json('raw_data')->nullable();
 
             // numbering
-            $table->string('parent_number', 100);
+            $table->string('parent_number', 100)->nullable();
             $table->string('number', 100);
             $table->boolean('is_main')->default(false);
             $table->tinyInteger('sequence')->comment('Sequence identifier for child invoice');

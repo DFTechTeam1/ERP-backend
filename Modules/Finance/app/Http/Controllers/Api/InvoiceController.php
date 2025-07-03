@@ -70,4 +70,9 @@ class InvoiceController extends Controller
 
         return response()->json([]);
     }
+
+    public function downloadInvoice()
+    {
+        return $this->service->downloadInvoice();
+    }
 }

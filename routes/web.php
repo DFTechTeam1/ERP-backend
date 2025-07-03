@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Http\Controllers\Api\QuotationController;
@@ -106,7 +107,7 @@ Route::get('login', function () {
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
 
-Route::get('invoices/download', [QuotationController::class, 'invoice'])->name('invoice.download')
+Route::get('invoices/download', [InvoiceController::class, 'downloadInvoice'])->name('invoice.download')
     ->middleware('signed');
 
 Route::get('/notification-preview', function () {

@@ -21,8 +21,8 @@ Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
     Route::post('invoices/download', [ApiFinanceController::class, 'downloadInvoice']);
 
     // manage invoice
-    Route::prefix('/finance/{projectDealUid}')->group(function () {
-        Route::post('billInvoices', [InvoiceController::class, 'generateBillInvoice']);
+    Route::prefix('{projectDealUid}')->group(function () {
+        Route::post('/billInvoice', [InvoiceController::class, 'generateBillInvoice']);
         Route::resource('invoices', InvoiceController::class);
     });
 });

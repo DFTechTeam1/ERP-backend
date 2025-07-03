@@ -74,11 +74,15 @@ class Invoice extends Model
             ->get();
     }
 
-    public function getLastChild(string $select = '*')
+    public function getLastInvoice(string $select = '*')
     {
+        if (!$this->number) {
+            return null;
+        }
+
+        
         return Invoice::selectRaw($select)
-            ->where('parent_number', $this->number)
-            ->where('is_main', 0)
+            ->where('project_deal_id', $this->project_deal_id)
             ->orderBy('sequence', 'desc')
             ->first();
     }

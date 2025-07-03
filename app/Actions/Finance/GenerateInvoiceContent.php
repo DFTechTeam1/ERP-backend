@@ -37,16 +37,22 @@ class GenerateInvoiceContent
             ];
         })->toArray();
 
-        if ($amount > 0) {
+        if ($amount > 0) { // this indicate that request is comes from 'bill invoice'
             $transactions = collect($transactions)->merge([
-                'payment' => $amount,
-                'transaction_date' => date('d F Y', strtotime($requestDate))
+                [
+                    'payment' => "Rp" . number_format(num: $amount, decimal_separator: ','),
+                    'transaction_date' => date('d F Y', strtotime($requestDate))
+                ]
             ]);
+
+            $remainingPayment = $deal->getRemainingPayment(formatPrice: true, deductionAmount: $amount);
+        } else {
+            $remainingPayment = $deal->getRemainingPayment(formatPrice: true);
         }
 
         $main = [];
         $prefunction = [];
-
+        
         // call magic method
         $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $deal->led_detail);
 
@@ -68,14 +74,14 @@ class GenerateInvoiceContent
                 'name' => $generalService->getSettingByKey('company_name'),
             ],
             'invoiceNumber' => $invoiceNumber,
-            'trxDate' => date('d F Y', strtotime($requestDate)),
+            'trxDate' => now()->parse($requestDate)->format('d F Y'),
             'paymentDue' => now()->parse($requestDate)->addDays(7)->format('d F Y'),
             'led' => [
                 'main' => $main,
                 'prefunction' => $prefunction
             ],
             'items' => collect($deal->finalQuotation->items)->pluck('item.name')->toArray(),
-            'remainingPayment' => $deal->getRemainingPayment(formatPrice: true)
+            'remainingPayment' => $remainingPayment
         ];
 
         return $payload;

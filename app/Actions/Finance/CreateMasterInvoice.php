@@ -45,10 +45,10 @@ class CreateMasterInvoice
             'customer_id' => $projectDeal->customer_id,
             'status' => InvoiceStatus::Unpaid,
             'raw_data' => $content,
-            'parent_number' => $invoiceNumber,
+            'parent_number' => null,
             'number' => $invoiceNumber,
             'is_main' => true,
-            'sequence' => 1,
+            'sequence' => 0,
         ];
 
         Invoice::create($payload);
