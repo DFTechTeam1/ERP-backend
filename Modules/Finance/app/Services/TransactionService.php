@@ -199,6 +199,8 @@ class TransactionService {
                 $this->projectDealRepo->update(data: ['is_fully_paid' => 1], id: $projectId);
             }
 
+            DB::commit();
+
             return generalResponse(
                 message: "Success",
                 data: []
@@ -212,6 +214,8 @@ class TransactionService {
                     }
                 }
             }
+
+            DB::rollBack();
 
             return errorResponse($th);
         }

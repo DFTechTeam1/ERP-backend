@@ -3,17 +3,13 @@
 namespace Modules\Finance\Services;
 
 use App\Actions\Finance\GenerateInvoiceContent;
-use App\Enums\ErrorCode\Code;
 use App\Enums\Transaction\InvoiceStatus;
-use App\Enums\Transaction\TransactionType;
 use App\Services\GeneralService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
-use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Repository\ProjectDealRepository;
 
 class InvoiceService {
@@ -136,6 +132,8 @@ class InvoiceService {
 
     /**
      * Generate new invoice
+     * 
+     * If current project deal have unpaid invoice, return error
      *
      * @param array $data               With this following structure
      * - string $transaction_date
@@ -157,8 +155,13 @@ class InvoiceService {
             // get project deal data
             $projectDeal = $this->projectDealRepo->show(uid: $projectDealId, select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid', relation: [
                 'transactions',
-                'finalQuotation'
+                'finalQuotation',
+                'unpaidInvoice:id,project_deal_id'
             ]);
+
+            if ($projectDeal->unpaidInvoice) {
+                return errorResponse(message: __('notification.cannotCreateInvoiceIfYouHaveAnotherUnpaidInovice'));
+            }
 
             // get invoice parent
             $invoiceParent = $this->repo->show(uid: 'uid', select: 'id,number,project_deal_id', where: "project_deal_id = {$projectDeal->id} AND is_main = 1");

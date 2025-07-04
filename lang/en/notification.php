@@ -88,4 +88,5 @@ return [
     'successAddQuotation' => 'Quotation has beed added successfully',
     'successCreateQuotationItem' => "Quotation item has been created successfully",
     'updateQuotationItemSuccess' => 'Quotation item has been updated successfully',
+    'cannotCreateInvoiceIfYouHaveAnotherUnpaidInovice' => 'Cannot create invoice if you have another unpaid invoice'
 ];

@@ -36,6 +36,7 @@ class FinanceController extends Controller
      * @param Create $request       With this following structure
      * - string|float $payment_amount
      * - string $transaction_date
+     * - string $invoice_id
      * - ?string $note
      * - ?string $reference
      * - array $images              With this following structure

@@ -15,6 +15,7 @@ use Modules\Company\Models\State;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
 use Modules\Company\Repository\SettingRepository;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Finance\Services\TransactionService;
 use Modules\Hrd\Models\Employee;
@@ -337,14 +338,16 @@ function setTransactionService(
     $repo = null,
     $projectQuotationRepo = null,
     $generalService = null,
-    $projectDealRepo = null
+    $projectDealRepo = null,
+    $invoiceRepo = null
 )
 {
     return new TransactionService(
         $repo ? $repo : new TransactionRepository,
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
         $generalService ? $generalService : new GeneralService,
-        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository
+        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
+        $invoiceRepo ? $invoiceRepo : new InvoiceRepository
     );
 }
 

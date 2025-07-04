@@ -132,6 +132,13 @@ class ProjectDeal extends Model
         return $this->hasMany(Invoice::class, 'project_deal_id');
     }
 
+    public function unpaidInvoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class, 'project_deal_id')
+            ->where('is_main', 0)
+            ->where('status', \App\Enums\Transaction\InvoiceStatus::Unpaid);
+    }
+
     public function latestQuotation(): HasOne
     {
         return $this->hasOne(ProjectQuotation::class, 'project_deal_id')

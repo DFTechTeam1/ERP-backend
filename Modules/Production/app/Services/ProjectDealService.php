@@ -5,6 +5,7 @@ namespace Modules\Production\Services;
 use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
 use App\Enums\Production\ProjectStatus;
+use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
 use Illuminate\Support\Facades\Crypt;
@@ -446,7 +447,10 @@ class ProjectDealService
                     'city:id,name',
                     'class:id,name',
                     'invoices' => function ($queryInvoice) {
-                        $queryInvoice->where('is_main', 0);
+                        $queryInvoice->where('is_main', 0)
+                            ->with([
+                                'transaction:id,invoice_id,created_at'
+                            ]);
                     }
                 ]
             );
@@ -575,6 +579,24 @@ class ProjectDealService
                 return $trx;
             })->values();
 
+            // we need to encrypt this data to keep it safe
+            $invoiceList = $data->invoices->map(function ($invoice) {
+                return [
+                    'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                    'amount' => $invoice->amount,
+                    'paid_amount' => $invoice->paid_amount,
+                    'status' => $invoice->status->label(),
+                    'status_color' => $invoice->status->color(),
+                    'payment_due' => date('d F Y', strtotime($invoice->payment_due)),
+                    'payment_date' => date('d F Y', strtotime($invoice->payment_date)),
+                    'number' => $invoice->number,
+                    'need_to_pay' => $invoice->status == \App\ENums\Transaction\InvoiceStatus::Unpaid ? true : false,
+                    'paid_at' => $invoice->transaction ? date('d F Y H:i', strtotime($invoice->transaction->created_at)) : '-'
+                ];
+            });
+            $encryptionService = new EncryptionService();
+            $invoiceList = $encryptionService->encrypt(string: json_encode($invoiceList), key: config('app.salt_key_encryption'));
+
             $output = [
                 'customer' => [
                     'name' => $data->customer->name,
@@ -595,18 +617,7 @@ class ProjectDealService
                 'is_paid' => $data->isPaid(),
                 'fix_price' => $finalQuotation->count() > 0 ? $finalQuotation->fix_price : $data->latestQuotation->fix_price,
                 'remaining_price' => $data->getRemainingPayment(),
-                'invoices' => $data->invoices->map(function ($invoice) {
-                    return [
-                        'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
-                        'amount' => $invoice->amount,
-                        'paid_amount' => $invoice->paid_amount,
-                        'status' => $invoice->status->label(),
-                        'status_color' => $invoice->status->color(),
-                        'payment_due' => $invoice->payment_due,
-                        'payment_date' => $invoice->payment_date,
-                        'number' => $invoice->parent_number
-                    ];
-                })
+                'invoices' => $invoiceList
             ];
 
             return generalResponse(
