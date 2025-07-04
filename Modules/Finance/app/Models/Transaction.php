@@ -23,10 +23,16 @@ class Transaction extends Model
     protected static function booted(): void
     {
         static::creating(function (Transaction $transaction) {
-            $generalService = new GeneralService();
-            // generate trx id
-            $transaction->trx_id = $generalService->generateInvoiceNumber();
             $transaction->created_by = Auth::id();
+        });
+
+        static::created(function (Transaction $transaction) {
+            $invoiceId = $transaction->invoice_id;
+
+            \Modules\Finance\Models\Invoice::where('id', $invoiceId)
+                ->update([
+                    'status' => \App\Enums\Transaction\InvoiceStatus::Paid
+                ]);
         });
     }
 
@@ -40,13 +46,19 @@ class Transaction extends Model
         'payment_amount',
         'reference',
         'note',
+        'invoice_id',
         'trx_id',
         'transaction_date',
+        'transaction_type',
         'created_by'
     ];
 
     protected $appends = [
         'transaction_date_raw'
+    ];
+
+    protected $casts = [
+        'transaction_type' => \App\Enums\Transaction\TransactionType::class
     ];
 
     protected static function newFactory(): TransactionFactory

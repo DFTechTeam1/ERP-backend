@@ -4,6 +4,7 @@ use App\Enums\Production\ProjectDealStatus;
 use Modules\Company\Models\ProjectClass;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
+use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\QuotationItem;
 
 use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
@@ -38,10 +39,11 @@ describe('Create Project Deal', function () {
         $response->assertStatus(201);
         $this->assertDatabaseCount('project_deals', 1);
         $this->assertDatabaseHas('project_deals', [
-            'name' => 'Draft project'
+            'name' => 'Draft project',
+            'identifier_number' => '0951'
         ]);
         $this->assertDatabaseMissing('projects', [
-            'name' => 'Draft project'
+            'name' => 'Draft project',
         ]);
         $this->assertDatabaseCount('project_quotations', 1);
         $this->assertDatabaseCount('project_deal_marketings', 1);
@@ -62,8 +64,9 @@ describe('Create Project Deal', function () {
         
         // modify quotation id
         $requestData['quotation']['quotation_id'] = 'DF0010';
+        $requestData['quotation']['is_final'] = 1;
 
-        $service = createProjectService();
+        $service = createProjectService(); 
 
         $response = $service->storeProjectDeals(payload: $requestData);
 
@@ -72,10 +75,19 @@ describe('Create Project Deal', function () {
         expect($response['data'])->toHaveKey('url');
 
         $this->assertDatabaseHas('project_deals', [
-            'name' => 'Final Project'
+            'name' => 'Final Project',
+            'identifier_number' => '0951'
         ]);
         $this->assertDatabaseHas('projects', [
             'name' => 'Final Project'
+        ]);
+        $this->assertDatabaseCount('invoices', 1);
+        $this->assertDatabaseHas('invoices', [
+            'is_main' => 1,
+            'parent_number' => null,
+            'sequence' => 0,
+            'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
+            'paid_amount' => 0
         ]);
     })->with([
         fn() => Customer::factory()->create()

@@ -8,10 +8,15 @@ use App\Services\GeneralService;
 use App\Services\Geocoding;
 use App\Services\UserRoleManagement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Company\Models\City;
+use Modules\Company\Models\Country;
 use Modules\Company\Models\ProjectClass;
+use Modules\Company\Models\State;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
 use Modules\Company\Repository\SettingRepository;
+use Modules\Finance\Repository\TransactionRepository;
+use Modules\Finance\Services\TransactionService;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
@@ -236,6 +241,13 @@ function getProjectDealPayload(
     ?object $employee = null,
     ?object $quotationItem = null
 ) {
+    $country = Country::factory()
+        ->has(
+            State::factory()
+                ->has(City::factory())
+        )
+        ->create();
+
     return [
         'name' => 'Project Testing',
         'project_date' => '2025-06-30',
@@ -259,9 +271,9 @@ function getProjectDealPayload(
                 'textDetail' => '20 x 5.5 m'
             ]
         ],
-        'country_id' => '102',
-        'state_id' => '1827',
-        'city_id' => '56803',
+        'country_id' => $country->id,
+        'state_id' => $country->states[0]->id,
+        'city_id' => $country->states[0]->cities[0]->id,
         'project_class_id' => $projectClass ? $projectClass->id : 1,
         'longitude' => fake()->longitude(),
         'latitude' => fake()->latitude(),
@@ -318,5 +330,34 @@ function createQuotationItemService(
 ) {
     return new \Modules\Production\Services\QuotationItemService(
         $quotationItemRepo ? $quotationItemRepo : new \Modules\Production\Repository\QuotationItemRepository()
+    );
+}
+
+function setTransactionService(
+    $repo = null,
+    $projectQuotationRepo = null,
+    $generalService = null,
+    $projectDealRepo = null
+)
+{
+    return new TransactionService(
+        $repo ? $repo : new TransactionRepository,
+        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
+        $generalService ? $generalService : new GeneralService,
+        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository
+    );
+}
+
+function setInvoiceService(
+    $repo = null,
+    $projectDealRepo = null,
+    $generalService = null,
+    $transactionRepo = null
+) {
+    return new \Modules\Finance\Services\InvoiceService(
+        $repo ? $repo : new \Modules\Finance\Repository\InvoiceRepository,
+        $projectDealRepo ? $projectDealRepo : new \Modules\Production\Repository\ProjectDealRepository,
+        $generalService ? $generalService : new \App\Services\GeneralService,
+        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository
     );
 }

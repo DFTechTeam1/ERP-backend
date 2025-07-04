@@ -25,9 +25,11 @@ it('Delete project deal return success', function () {
     $this->assertDatabaseCount('project_quotation_items', 0);
     $this->assertDatabaseCount('project_quotations', 0);
     $this->assertDatabaseCount('project_marketings', 0);
-    $this->assertDatabaseMissing('project_deals', [
-        'id' => $projectDeal->id
-    ]);
+
+    // check softdeletes
+    $this->assertNotNull(
+        ProjectDeal::withTrashed()->find($projectDeal->id)->deleted_at
+    );
 });
 
 it('Delete final project deals', function () {

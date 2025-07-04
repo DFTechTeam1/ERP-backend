@@ -8,7 +8,13 @@ use App\Models\User;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
+use Modules\Finance\Http\Controllers\Api\InvoiceController;
+use Modules\Finance\Models\Invoice;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Models\ProjectQuotation;
 use Modules\Production\Models\ProjectTask;
 
 Route::get('/', [LandingPageController::class, 'index']);
@@ -100,5 +106,23 @@ Route::get('login', function () {
 
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
-Route::get('invoices/download/{transactionUid}/{type}', [QuotationController::class, 'invoice']);
-Route::get('deal-invoice/download/{projectDealUid}/{type}', [QuotationController::class, 'generateInvoiceFromDeal']);
+
+// route to download invoice after
+Route::get('invoices/download', [InvoiceController::class, 'downloadInvoice'])->name('invoice.download')
+    ->middleware('signed');
+
+Route::get('/notification-preview', function () {
+    $transaction = \Modules\Finance\Models\Transaction::latest()
+        ->with([
+            'projectDeal:id,name,project_date'
+        ])
+        ->first();
+ 
+    return (new \Modules\Production\Notifications\TransactionCreatedNotification($transaction))
+        ->toMail('gumilang.dev@gmail.com');
+
+    // return (new \App\Services\GeneralService)->getUpcomingPaymentDue();
+});
+
+Route::get('check', function () {
+});

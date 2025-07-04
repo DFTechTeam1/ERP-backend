@@ -367,6 +367,9 @@ class ProjectDealService
                 );
 
                 $project = CopyDealToProject::run($detail);
+
+                // generate master invoice
+                \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
             }
 
             DB::commit();
@@ -418,19 +421,19 @@ class ProjectDealService
      * 
      * @return array
      */
-    public function detailProjectDeal(string $quotationId): array
+    public function detailProjectDeal(string $projectDealUid): array
     {
         try {
-            $quotationIdRaw = Crypt::decryptString($quotationId);
+            $projectDealUidRaw = Crypt::decryptString($projectDealUid);
             $isEdit = request('edit');
 
             // get detail of project deal without the transactions
             if ($isEdit) {
-                return $this->detailProjectDealForEdit(quotationId: $quotationId);
+                return $this->detailProjectDealForEdit(quotationId: $projectDealUid);
             }
 
             $data = $this->repo->show(
-                uid: $quotationIdRaw,
+                uid: $projectDealUidRaw,
                 select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
                 relation: [
                     'transactions',
@@ -441,7 +444,10 @@ class ProjectDealService
                     'finalQuotation',
                     'customer:id,name,phone,email',
                     'city:id,name',
-                    'class:id,name'
+                    'class:id,name',
+                    'invoices' => function ($queryInvoice) {
+                        $queryInvoice->where('is_main', 0);
+                    }
                 ]
             );
 
@@ -575,6 +581,7 @@ class ProjectDealService
                     'phone' => $data->customer->phone,
                     'email' => $data->customer->email,
                 ],
+                'uid' => $projectDealUid,
                 'products' => $products,
                 'final_quotation' => $finalQuotation,
                 'transactions' => $transactions,
@@ -587,7 +594,19 @@ class ProjectDealService
                 'status_payment_color' => $data->getStatusPaymentColor(),
                 'is_paid' => $data->isPaid(),
                 'fix_price' => $finalQuotation->count() > 0 ? $finalQuotation->fix_price : $data->latestQuotation->fix_price,
-                'remaining_price' => $data->getRemainingPayment()
+                'remaining_price' => $data->getRemainingPayment(),
+                'invoices' => $data->invoices->map(function ($invoice) {
+                    return [
+                        'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                        'amount' => $invoice->amount,
+                        'paid_amount' => $invoice->paid_amount,
+                        'status' => $invoice->status->label(),
+                        'status_color' => $invoice->status->color(),
+                        'payment_due' => $invoice->payment_due,
+                        'payment_date' => $invoice->payment_date,
+                        'number' => $invoice->parent_number
+                    ];
+                })
             ];
 
             return generalResponse(

@@ -8330,6 +8330,9 @@ class ProjectService
             // handle when project deal have a final status
             if ($payload['status'] == 1) {
                 \App\Actions\CopyDealToProject::run($project);
+
+                // gerenrate invoice master
+                \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $project->id);
             }
             
             DB::commit();
@@ -8425,10 +8428,19 @@ class ProjectService
      */
     public function initProjectCount(): array
     {
+        $projectDealId = !empty(request('projectDealUid')) ? \Illuminate\Support\Facades\Crypt::decryptString(request('projectDealUid')) : null;
+
+        // if projectDealId exist, get the identity number instead of generate new one
+        if ($projectDealId) {
+            $count = $this->projectDealRepo->show(uid: $projectDealId, select: 'identifier_number')->identifier_number;
+        } else {
+            $count = $this->generalService->generateDealIdentifierNumber();
+        }
+
         return generalResponse(
             message: "Success",
             data: [
-                'count' => $this->generalService->getCache(CacheKey::ProjectCount->value)
+                'count' => $count
             ]
         );
     }
