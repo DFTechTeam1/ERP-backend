@@ -374,7 +374,7 @@ class ProjectDealService
                     id: $detail->latestQuotation->id
                 );
 
-                $project = CopyDealToProject::run($detail);
+                $project = CopyDealToProject::run($detail, $this->generalService);
 
                 // generate master invoice
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
