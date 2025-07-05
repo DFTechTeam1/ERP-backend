@@ -33,20 +33,7 @@ class InitProjectCount extends Command
      */
     public function handle()
     {
-        $total = Project::select('id')->count() + 1;
-
-        $generalService = app('App\Services\GeneralService');
-        
-        // delete it first
-        $generalService->clearCache(
-            cacheId: CacheKey::ProjectCount->value
-        );
-
-        $generalService->storeCache(
-            key: CacheKey::ProjectCount->value,
-            value: $total,
-            isForever: true
-        );
+        (new \App\Services\GeneralService)->generateDealIdentifierNumber();
 
         $this->info('Project count initialized successfully.');
     }

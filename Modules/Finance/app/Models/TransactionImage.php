@@ -11,7 +11,7 @@ class TransactionImage extends Model
 {
     use HasFactory;
 
-    CONST PATH = 'app/public/transactions';
+    CONST PATH = 'transactions';
 
     /**
      * The attributes that are mass assignable.

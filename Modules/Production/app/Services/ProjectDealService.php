@@ -5,6 +5,7 @@ namespace Modules\Production\Services;
 use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
 use App\Enums\Production\ProjectStatus;
+use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
 use Illuminate\Support\Facades\Crypt;
@@ -115,6 +116,13 @@ class ProjectDealService
                         'id' => $item->latestQuotation->quotation_id,
                         'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
                     ],
+                    'unpaidInvoices' => $item->unpaidInvoices->map(function ($invoice) {
+                        return [
+                            'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                            'number' => $invoice->number,
+                            'amount' => $invoice->amount,
+                        ];
+                    })
                 ];
             });
 
@@ -367,6 +375,9 @@ class ProjectDealService
                 );
 
                 $project = CopyDealToProject::run($detail);
+
+                // generate master invoice
+                \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
             }
 
             DB::commit();
@@ -418,22 +429,24 @@ class ProjectDealService
      * 
      * @return array
      */
-    public function detailProjectDeal(string $quotationId): array
+    public function detailProjectDeal(string $projectDealUid): array
     {
         try {
-            $quotationIdRaw = Crypt::decryptString($quotationId);
+            $projectDealUidRaw = Crypt::decryptString($projectDealUid);
             $isEdit = request('edit');
 
             // get detail of project deal without the transactions
             if ($isEdit) {
-                return $this->detailProjectDealForEdit(quotationId: $quotationId);
+                return $this->detailProjectDealForEdit(quotationId: $projectDealUid);
             }
 
             $data = $this->repo->show(
-                uid: $quotationIdRaw,
+                uid: $projectDealUidRaw,
                 select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
                 relation: [
                     'transactions',
+                    'transactions.invoice:id,number,parent_number,paid_amount,payment_date',
+                    'transactions.attachments:id,transaction_id,image',
                     'quotations',
                     'quotations.items:id,quotation_id,item_id',
                     'quotations.items.item:id,name',
@@ -441,7 +454,13 @@ class ProjectDealService
                     'finalQuotation',
                     'customer:id,name,phone,email',
                     'city:id,name',
-                    'class:id,name'
+                    'class:id,name',
+                    'invoices' => function ($queryInvoice) {
+                        $queryInvoice->where('is_main', 0)
+                            ->with([
+                                'transaction:id,invoice_id,created_at'
+                            ]);
+                    }
                 ]
             );
 
@@ -563,11 +582,45 @@ class ProjectDealService
                 ];
             }
 
-            $transactions = $data->transactions->map(function ($trx) {
+            $transactions = $data->transactions->map(function ($trx) use ($data) {
                 $trx['description'] = 'Receiving invoice payment';
+                $trx['images'] = collect($trx->attachments)->pluck('real_path')->toArray();
+                $trx['customer'] = [
+                    'name' => $data->customer->name
+                ];
+                $trx['invoice_date'] = date('d F Y', strtotime($trx->invoice->payment_date));
+                $trx['payment_date'] = date('d F Y', strtotime($trx->created_at));
 
                 return $trx;
             })->values();
+
+            // we need to encrypt this data to keep it safe
+            $invoiceList = $data->invoices->map(function ($invoice) use ($projectDealUid) {
+                $invoiceUrl = \Illuminate\Support\Facades\URL::signedRoute(
+                    name: 'invoice.download',
+                    parameters: [
+                        'i' => $projectDealUid,
+                        'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id)
+                    ],
+                    expiration: now()->addMinutes(5)
+                );
+
+                return [
+                    'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                    'amount' => $invoice->amount,
+                    'paid_amount' => $invoice->paid_amount,
+                    'status' => $invoice->status->label(),
+                    'status_color' => $invoice->status->color(),
+                    'payment_due' => date('d F Y', strtotime($invoice->payment_due)),
+                    'payment_date' => date('d F Y', strtotime($invoice->payment_date)),
+                    'number' => $invoice->number,
+                    'need_to_pay' => $invoice->status == \App\ENums\Transaction\InvoiceStatus::Unpaid ? true : false,
+                    'paid_at' => $invoice->transaction ? date('d F Y H:i', strtotime($invoice->transaction->created_at)) : '-',
+                    'invoice_url' => $invoiceUrl
+                ];
+            });
+            $encryptionService = new EncryptionService();
+            $invoiceList = $encryptionService->encrypt(string: json_encode($invoiceList), key: config('app.salt_key_encryption'));
 
             $output = [
                 'customer' => [
@@ -575,6 +628,7 @@ class ProjectDealService
                     'phone' => $data->customer->phone,
                     'email' => $data->customer->email,
                 ],
+                'uid' => $projectDealUid,
                 'products' => $products,
                 'final_quotation' => $finalQuotation,
                 'transactions' => $transactions,
@@ -587,7 +641,8 @@ class ProjectDealService
                 'status_payment_color' => $data->getStatusPaymentColor(),
                 'is_paid' => $data->isPaid(),
                 'fix_price' => $finalQuotation->count() > 0 ? $finalQuotation->fix_price : $data->latestQuotation->fix_price,
-                'remaining_price' => $data->getRemainingPayment()
+                'remaining_price' => $data->getRemainingPayment(),
+                'invoices' => $invoiceList
             ];
 
             return generalResponse(

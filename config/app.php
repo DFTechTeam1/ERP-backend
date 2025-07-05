@@ -146,4 +146,8 @@ return [
     'telegram_domain' => env('TELEGRAM_DOMAIN', null),
 
     'staging_url' => env('STAGING_URL', null),
+
+    'python_endpoint' => env('PYTHON_ENDPOINT', null),
+
+    'salt_key_encryption' => env('SALT_KEY')
 ];
