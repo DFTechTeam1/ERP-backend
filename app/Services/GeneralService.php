@@ -8,7 +8,10 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Modules\Finance\Repository\TransactionRepository;
+use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Repository\ProjectDealRepository;
 
 class GeneralService
 {
@@ -99,28 +102,54 @@ class GeneralService
         return str_pad($number, $length, 0, STR_PAD_LEFT);
     }
 
-    public function generateInvoiceNumber(): string
+    /**
+     * Generate identifier number for each project deal
+     * 
+     * This will increase every time
+     * This identifier number will be used as 'DESIGN JOB' in the quotation and as SUFFIX NUMBER on invoice
+     * 
+     * The output will be like 0950 or 01001 and so on
+     *
+     * @return string
+     */
+    public function generateDealIdentifierNumber(): string
     {
         $cutoff = 950;
 
-        $romanMonth = $this->monthToRoman(month: (int) now()->format('m'));
-        $year = now()->format('Y');
+        $number = $this->getCache(cacheId: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value);
 
-        $repo = new TransactionRepository();
-        $latestData = $repo->list(select: 'id,trx_id', limit: 1, orderBy: 'created_at DESC')->toArray();
-        logging("LATEST TRX", $latestData);
-        if (count($latestData) == 0) {
-            $number = $cutoff + 1;
-        } else {
-            $latestNumber = explode(' - ', $latestData[0]['trx_id']);
-            $number = (int) $latestNumber[1] + 1;
+        if (!$number) {
+            $repo = new ProjectDealRepository();
+            $currentData = $repo->list(
+                select: 'id,identifier_number',
+                limit: 1,
+                orderBy: 'created_at DESC',
+                withDeleted: true
+            )->toArray();
+    
+            if (count($currentData) == 0) {
+                $number = $cutoff + 1;
+            } else {
+                $number = $currentData[0]['identifier_number'] + 1;
+            }
+
+            // convert to sequence number
+            $lengthOfSentence = strlen($number) < 4 ? 4 : strlen($number) + 1;
+            $number = $this->generateSequenceNumber(number: $number, length: $lengthOfSentence);
+
+            $this->storeCache(key: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value, value: $number, isForever: true);
         }
 
-        // convert to sequence number
-        $lengthOfSentence = strlen($number) < 4 ? 4 : strlen($number) + 1;
-        $number = $this->generateSequenceNumber(number: $number, length: $lengthOfSentence);
+        return $number;
+    }
 
-        return "{$romanMonth}/{$year} - {$number}";
+    public function generateInvoiceNumber(string $identifierNumber, ?string $date = null): string
+    {
+        $datetime = $date ? now()->parse($date) : now();
+        $romanMonth = $this->monthToRoman(month: (int) $datetime->format('m'));
+        $year = $datetime->format('Y');
+
+        return "{$romanMonth}/{$year} - {$identifierNumber}";
     }
 
     /**
@@ -153,5 +182,40 @@ class GeneralService
         ];
 
         return $romanNumerals[$month];
+    }
+
+    /**
+     * Get list of payment that not paid yet and have final status
+     *
+     * @return array
+     */
+    public function getUpcomingPaymentDue(): Collection
+    {
+        $repo = new ProjectDealRepository();
+
+        // only get final project deal and not fully paid
+        $where = "status = " . \App\Enums\Production\ProjectDealStatus::Final->value . " AND is_fully_paid = 0 AND DATEDIFF(project_date, CURRENT_DATE) BETWEEN 1 AND 5";
+
+        $data = $repo->list(
+            select: 'id,customer_id,name,DATEDIFF(project_date, CURRENT_DATE) as interval_due,project_date,city_id,country_id,is_fully_paid',
+            where: $where,
+            relation: [
+                'marketings:id,project_deal_id,employee_id',
+                'marketings.employee:id,user_id,email',
+                'customer:id,name',
+                'city:id,name',
+                'country:id,name',
+                'transactions',
+                'finalQuotation'
+            ],
+            whereHas: [
+                [
+                    'relation' => 'finalQuotation',
+                    'query' => 'id > 0'
+                ]
+            ]
+        );
+
+        return $data;
     }
 }

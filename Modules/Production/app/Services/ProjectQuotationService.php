@@ -252,87 +252,6 @@ class ProjectQuotationService
         }
     }
 
-    public function generateInvoiceFromDeal(string $projectDealUid, string $type): Response
-    {
-        $requestAmount = request('amount');
-        $requestDate = request('date');
-        $id = Crypt::decryptString($projectDealUid);
-
-        $deal = $this->projectDealRepo->show(
-            uid: $id,
-            select: 'id,name,project_date,led_detail,venue,city_id,country_id,is_fully_paid,customer_id',
-            relation: [
-                'transactions',
-                'finalQuotation:id,project_deal_id,main_ballroom,prefunction,high_season_fee,fix_price',
-                'finalQuotation.items:id,quotation_id,item_id',
-                'finalQuotation.items.item:id,name',
-                'transactions',
-                'city:name,id',
-                'country:name,id',
-                'customer:id,name'
-            ]
-        );
-
-        $projectDate = $deal->project_date;
-        $month = MonthInBahasa(search: date('m', strtotime($projectDate)));
-        $year = date('Y', strtotime($projectDate));
-        $date = date('d', strtotime($projectDate));
-
-        $main = [];
-        $prefunction = [];
-
-        $invoiceNumber = $this->generalService->generateInvoiceNumber();
-        [$prefix, $number] = explode('/', $invoiceNumber);
-
-        // call magic method
-        $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $deal->led_detail);
-
-        $payload = [
-            'projectName' => $deal->name,
-            'projectDate' => "{$date} {$month} {$year}",
-            'venue' => $deal->venue,
-            'payment' => "Rp" . number_format(num: $requestAmount, decimal_separator: ','),
-            'customer' => [
-                'name' => $deal->customer->name,
-                'city' => $deal->city->name,
-                'country' => $deal->country->name,
-            ],
-            'company' => [
-                'address' => $this->generalService->getSettingByKey('company_address'),
-                'email' => $this->generalService->getSettingByKey('company_email'),
-                'phone' => $this->generalService->getSettingByKey('company_phone'),
-                'name' => $this->generalService->getSettingByKey('company_name'),
-            ],
-            'invoiceNumber' => $invoiceNumber,
-            'trxDate' => date('d F Y', strtotime($requestDate)),
-            'paymentDue' => now()->parse($deal->project_date)->subDays(3)->format('d F Y'),
-            'led' => [
-                'main' => $main,
-                'prefunction' => $prefunction
-            ],
-            'items' => collect($deal->finalQuotation->items)->pluck('item.name')->toArray(),
-            'remainingPayment' => $deal->getRemainingPayment(formatPrice: true)
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $payload)
-        ->setPaper('A4')
-        ->setOption([
-            'isPhpEnabled' => true,
-            'isHtml5ParserEnabled' => true,
-            'debugPng' => false,
-            'debugLayout' => false,
-            'debugCss' => false
-        ]);
-
-        $filename = "Inv {$prefix}-{$number} - {$deal->customer->name} - {$deal->project_date}.pdf";
-
-        if ($type == 'stream') {
-            return $pdf->stream($filename);
-        } else {
-            return $pdf->download($filename);
-        }
-    }
-
     protected function setProjectLed(array &$main, array &$prefunction, array $ledDetailData): void
     {
         $ledDetail = collect($ledDetailData)->groupBy('name');
@@ -360,74 +279,101 @@ class ProjectQuotationService
         }
     }
 
-    public function generateInvoice(string $transactionUid, string $type): Response
+    public function generateInvoice(): Response
     {
-        $requestAmount = request('amount');
+        $type = request('type');
+        $uid = request('uid');
+        $output = request('output');
 
-        // get detail transactions and detail of related quotation + quotation item
-        $transaction = $this->transactionRepo->show(
-            uid: $transactionUid,
-            select: 'id,uid,project_deal_id,customer_id,payment_amount,reference,note,trx_id,transaction_date',
+        if (!$type || !$uid) {
+            abort(404);
+        }
+        $requestAmount = request('amount');
+        $requestDate = request('date');
+        
+        if ($type === 'current') {
+            // get project deal id from transaction uid
+            $transaction = $this->transactionRepo->show(
+                uid: $uid,
+                select: 'id,project_deal_id'
+            );
+
+            $uid = $transaction->project_deal_id;
+        } else {
+            // decrypt the id
+            $uid = Crypt::decryptString($uid);
+        }
+
+        $deal = $this->projectDealRepo->show(
+            uid: $uid,
+            select: 'id,name,project_date,led_detail,venue,city_id,country_id,is_fully_paid,customer_id,identifier_number',
             relation: [
-                'projectDeal:id,name,project_date,led_detail,venue,city_id,country_id,is_fully_paid',
-                'projectDeal.finalQuotation:id,project_deal_id,main_ballroom,prefunction,high_season_fee,fix_price',
-                'projectDeal.transactions',
-                'projectDeal.city:name,id',
-                'projectDeal.country:name,id',
-                'projectDeal.finalQuotation.items:id,quotation_id,item_id',
-                'projectDeal.finalQuotation.items.item:id,name',
+                'transactions',
+                'finalQuotation:id,project_deal_id,main_ballroom,prefunction,high_season_fee,fix_price',
+                'finalQuotation.items:id,quotation_id,item_id',
+                'finalQuotation.items.item:id,name',
+                'city:name,id',
+                'country:name,id',
                 'customer:id,name'
             ]
         );
 
-        $projectDate = $transaction->projectDeal->project_date;
+        $projectDate = $deal->project_date;
         $month = MonthInBahasa(search: date('m', strtotime($projectDate)));
         $year = date('Y', strtotime($projectDate));
         $date = date('d', strtotime($projectDate));
 
-        $ledDetail = collect($transaction->projectDeal->led_detail)->groupBy('name');
         $main = [];
         $prefunction = [];
 
-        // call magic method
-        $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $transaction->projectDeal->led_detail);
+        $invoiceNumber = $this->generalService->generateInvoiceNumber(identifierNumber: $deal->identifier_number);
+        [$prefix, $number] = explode('/', $invoiceNumber);
 
-        if ($requestAmount) {
-            $paymentAmount = "Rp" . number_format(num: $requestAmount, decimal_separator: ',');
-        } else {
-            $paymentAmount = "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ',');
+        // call magic method
+        $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $deal->led_detail);
+
+        // set transactions
+        $transactions = $deal->transactions->map(function ($transaction) {
+            return [
+                'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
+                'transaction_date' => date('d F Y', strtotime($transaction->transaction_date))
+            ];
+        });
+
+        if ($type === 'bill') { // merge amount and transaction date
+            $transactions = collect($transactions)->push([
+                'payment' => "Rp" . number_format(num: $requestAmount, decimal_separator: ','),
+                'transaction_date' => date('d F Y', strtotime($requestDate))
+            ]);
         }
 
-        $invoiceNumber = $this->generalService->generateInvoiceNumber();
-
-        $trxId = $transaction->trx_id;
-        [$prefix, $number] = explode('/', $trxId);
-
         $payload = [
-            'projectName' => $transaction->projectDeal->name,
+            'projectName' => $deal->name,
             'projectDate' => "{$date} {$month} {$year}",
-            'venue' => $transaction->projectDeal->venue,
-            'payment' => $paymentAmount,
+            'venue' => $deal->venue,
+            'fixPrice' => "Rp" . number_format(num: $deal->finalQuotation->fix_price, decimal_separator: ','),
+            'payment' => "Rp" . number_format(num: $requestAmount, decimal_separator: ','),
             'customer' => [
-                'name' => $transaction->customer->name,
-                'city' => $transaction->projectDeal->city->name,
-                'country' => $transaction->projectDeal->country->name,
+                'name' => $deal->customer->name,
+                'city' => $deal->city->name,
+                'country' => $deal->country->name,
             ],
+            'transactions' => $transactions,
             'company' => [
                 'address' => $this->generalService->getSettingByKey('company_address'),
                 'email' => $this->generalService->getSettingByKey('company_email'),
                 'phone' => $this->generalService->getSettingByKey('company_phone'),
                 'name' => $this->generalService->getSettingByKey('company_name'),
             ],
-            'invoiceNumber' => $transaction->trx_id,
-            'trxDate' => date('d F Y', strtotime($transaction->transaction_date)),
-            'paymentDue' => now()->parse($transaction->projectDeal->project_date)->subDays(3)->format('d F Y'),
+            'invoiceNumber' => $invoiceNumber,
+            'trxDate' => date('d F Y', strtotime($requestDate)),
+            'paymentDue' => now()->parse($requestDate)->addDays(7)->format('d F Y'),
             'led' => [
                 'main' => $main,
                 'prefunction' => $prefunction
             ],
-            'items' => collect($transaction->projectDeal->finalQuotation->items)->pluck('item.name')->toArray(),
-            'remainingPayment' => $transaction->projectDeal->getRemainingPayment(formatPrice: true)
+            'items' => collect($deal->finalQuotation->items)->pluck('item.name')->toArray(),
+            'remainingPayment' => $deal->getRemainingPayment(formatPrice: true)
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $payload)
@@ -440,9 +386,9 @@ class ProjectQuotationService
             'debugCss' => false
         ]);
 
-        $filename = "Inv {$prefix}-{$number} - {$transaction->customer->name} - {$transaction->projectDeal->project_date}.pdf";
+        $filename = "Inv {$prefix}-{$number} - {$deal->customer->name} - {$deal->project_date}.pdf";
 
-        if ($type == 'stream') {
+        if ($output == 'stream') {
             return $pdf->stream($filename);
         } else {
             return $pdf->download($filename);

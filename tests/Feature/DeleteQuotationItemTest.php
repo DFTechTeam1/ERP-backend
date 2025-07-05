@@ -20,8 +20,6 @@ it("Delete quotation item when already have quotation data", function () {
 
     $response = $service->delete(id: $quotationItem->id);
 
-    logging("RESPONSE DATA DELETED", $response);
-
     expect($response)->toHavekey('error');
     expect($response['error'])->toBeFalse();
 

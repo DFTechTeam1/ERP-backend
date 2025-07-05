@@ -3,10 +3,15 @@
 namespace Modules\Finance\Services;
 
 use App\Enums\ErrorCode\Code;
+use App\Enums\Transaction\TransactionType;
 use App\Services\GeneralService;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\TransactionImage;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
@@ -20,6 +25,8 @@ class TransactionService {
 
     private $projectDealRepo;
 
+    private $inventoryRepo;
+
     /**
      * Construction Data
      */
@@ -27,7 +34,8 @@ class TransactionService {
         TransactionRepository $repo,
         ProjectQuotationRepository $projectQuotationRepo,
         GeneralService $generalService,
-        ProjectDealRepository $projectDealRepo
+        ProjectDealRepository $projectDealRepo,
+        InvoiceRepository $inventoryRepo
     )
     {
         $this->repo = $repo;
@@ -37,6 +45,8 @@ class TransactionService {
         $this->generalService = $generalService;
 
         $this->projectDealRepo = $projectDealRepo;
+
+        $this->inventoryRepo = $inventoryRepo;
     }
 
     /**
@@ -114,67 +124,71 @@ class TransactionService {
     }
 
     /**
-     * Create customer transaction
-     *
-     * @param array $data           With this following structure
-     * - string|float $payment_amount
+     * Create transaction based on invoice
+     * 
+     * @param array $payload                    With this following structure:
+     * - string|int $payment_amount
      * - string $transaction_date
+     * - string $invoice_id
      * - ?string $note
      * - ?string $reference
-     * - array $images              With this following structure
-     *      - ?object|binary $image
-     * @param string $quotationId
+     * - array $images                              With this following structure:
+     *      - object $image
+     * @param string $projectDealUid
      * 
      * @return array
      */
-    public function store(array $data, string $quotationId): array
+    public function store(array $payload, string $projectDealUid): array
     {
         DB::beginTransaction();
         $tmp = [];
         try {
-            $quotationId = \Illuminate\Support\Facades\Crypt::decryptString($quotationId);
-            
-            // get customer
-            $quotation = $this->projectQuotationRepo->show(
-                uid: 'id',
-                select: 'id,project_deal_id,is_final',
+            $projectId = \Illuminate\Support\Facades\Crypt::decryptString($projectDealUid);
+
+            $projectDeal = $this->projectDealRepo->show(
+                uid: $projectId,
+                select: 'id,customer_id,is_fully_paid,identifier_number',
                 relation: [
-                    'deal:id,customer_id,is_fully_paid',
-                    'deal.transactions:id,project_deal_id,payment_amount',
-                    'deal.finalQuotation:id,project_deal_id,fix_price'
-                ],
-                where: "quotation_id = '{$quotationId}'"
+                    'transactions:id,project_deal_id,payment_amount',
+                    'finalQuotation:id,project_deal_id,fix_price'
+                ]
             );
 
-            if (!$quotation) {
-                return errorResponse(__('notification.quotationNotFound'));
+            $allPaid = false;
+
+            // define transaction type
+            if ($projectDeal->transactions->count() == 0) {
+                $type = TransactionType::DownPayment;
+            } else if ($projectDeal->getRemainingPayment() == $payload['payment_amount']) {
+                $type = TransactionType::Repayment;
+                $allPaid = true;
+            } else {
+                $type = TransactionType::Credit;   
             }
 
-            if (!$quotation->is_final) {
-                return errorResponse(__('notification.quotationIsNotFinal'));
-            }
-
-            // validate amount
-            $remainingPayment = $quotation->deal->getRemainingPayment();
-            if ($remainingPayment < $data['payment_amount']) {
-                return errorResponse(__('notification.paymentAmountShouldBeSmallerThanRemainingAmount'));
-            }
-
-            $data['customer_id'] = $quotation->deal->customer_id;
-            $data['project_deal_id'] = $quotation->deal->id;
+            $payload['project_deal_id'] = $projectDeal->id;
+            $payload['customer_id'] = $projectDeal->customer_id;
+            $payload['transaction_type'] = $type;
+            $payload['invoice_id'] = \Illuminate\Support\Facades\Crypt::decryptString($payload['invoice_id']);
+            $payload['trx_id'] = "TRX - {$projectDeal->identifier_number} - " . now()->format('Y');
 
             $trx = $this->repo->store(
-                collect($data)->except(['images'])->toArray()
+                collect($payload)->except(['images'])->toArray()
             );
 
             $payloadImage = [];
-            if (isset($data['images'])) {
-                foreach ($data['images'] as $image) {
+            if (isset($payload['images'])) {
+                foreach ($payload['images'] as $image) {
                     $imageName = $this->generalService->uploadImageandCompress(
                         path: 'transactions',
                         image: $image['image'],
                         compressValue: 1
                     );
+                    
+                    if (!$imageName) {
+                        DB::rollBack();
+                        return errorMessage(message: 'Failed to process transaction');
+                    }
     
                     $tmp[] = $imageName;
     
@@ -186,25 +200,21 @@ class TransactionService {
 
             $trx->attachments()->createMany($payloadImage);
 
-            // define fully paid
-            if ($remainingPayment == $data['payment_amount']) {
-                // updata parent
-                $this->projectDealRepo->update(
-                    data: [
-                        'is_fully_paid' => 1
-                    ],
-                    id: $quotation->deal->id
-                );
+            // update project deal data when all invoice has been paid
+            if ($allPaid) {
+                $this->projectDealRepo->update(data: ['is_fully_paid' => 1], id: $projectId);
             }
+
+            // send notifications
+            TransactionCreatedJob::dispatch($trx->id)->afterCommit();
 
             DB::commit();
 
             return generalResponse(
-                message: __('notification.successCreateTransaction')
+                message: "Success",
+                data: []
             );
         } catch (\Throwable $th) {
-            DB::rollBack();
-
             // delete image
             if (count($tmp) > 0) {
                 foreach ($tmp as $tmpFile) {
@@ -213,6 +223,8 @@ class TransactionService {
                     }
                 }
             }
+
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -284,5 +296,53 @@ class TransactionService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    protected function setProjectLed(array &$main, array &$prefunction, array $ledDetailData): void
+    {
+        $ledDetail = collect($ledDetailData)->groupBy('name');
+        $main = [];
+        $prefunction = [];
+
+        if (isset($ledDetail['main'])) {
+            $main = collect($ledDetail['main'])->map(function ($item) {
+                return [
+                    'name' => 'Main Stage',
+                    'total' => $item['totalRaw'],
+                    'size' => $item['textDetail']
+                ];
+            })->toArray();
+        }
+
+        if (isset($ledDetail['prefunction'])) {
+            $prefunction = collect($ledDetail['prefunction'])->map(function ($item) {
+                return [
+                    'name' => 'Prefunction',
+                    'total' => $item['totalRaw'],
+                    'size' => $item['textDetail']
+                ];
+            })->toArray();
+        }
+    }
+
+    /**
+     * Generated signed url invoice
+     * 
+     * @param array $payload                    With this following structure:
+     * - string $uid
+     * - string $type (bill or current)
+     * - string $amount
+     * - string $date
+     * - string $output (stream or download)
+     * 
+     * @return array
+     */
+    public function downloadInvoice(array $payload): array
+    {
+        //
+    }
+
+    protected function generateInvoice(int $id, array $payload, string $filepath, string $cacheKey): string
+    {
     }
 }

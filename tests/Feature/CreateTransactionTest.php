@@ -1,7 +1,15 @@
 <?php
 
+use App\Enums\Production\ProjectDealStatus;
 use App\Services\GeneralService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
+use Modules\Company\Models\City;
+use Modules\Company\Models\Country;
+use Modules\Company\Models\State;
+use Modules\Finance\Jobs\TransactionCreatedJob;
+use Modules\Finance\Models\Invoice;
+use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectQuotation;
 
 use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
@@ -47,7 +55,7 @@ $requestData = [
     ],
     'status' => 1, // 1 is active, 0 is draft
     'quotation' => [
-        'quotation_id' => '#DF04022',
+        'quotation_id' => 'DF04022',
         'is_final' => 1,
         'event_location_guide' => 'surabaya',
         'main_ballroom' => 72000000,
@@ -95,136 +103,66 @@ function getPayload() {
 }
 
 describe('Create Transaction', function () use ($requestData) {
-    it('Create transaction return failed', function () {
-        $payload = getEmptyPayload();
+    it('Create Transaction On Current Invoice', function () use ($requestData) {
+        Bus::fake();
 
-        $response = $this->postJson('/api/finance/transaction/quotationId', $payload);
-        
-        $response->assertStatus(422);
-        expect($response->json())->toHaveKey('errors');
-    });
+        $country = Country::factory()
+            ->has(
+                State::factory()->has(
+                    City::factory()
+                )
+            )->create();
 
-    it('Create Transaction With invalid encryption quotationId', function () {
-        $payload = getPayload();
+        $projectDeal = ProjectDeal::factory()
+            ->has(ProjectQuotation::factory()->state([
+                'is_final' => 1
+            ]), 'quotations')
+            ->has(Invoice::factory()->state([
+                'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
+                'parent_number' => 'VI/2025 951',
+                'number' => 'VI/2025 951 A',
+                'sequence' => 1,
+                'amount' => 10000000,
+            ]))
+            ->create([
+                'country_id' => $country->id,
+                'state_id' => $country->states[0]->id,
+                'state_id' => $country->states[0]->cities[0]->id,
+                'status' => ProjectDealStatus::Final->value
+            ]);
 
-        $response = $this->postJson('/api/finance/transaction/quotationId', $payload);
-        $response->assertStatus(400);
+        $service = setTransactionService();
 
-        expect($response->json())->toHavekey('message');
-        expect($response->json()['message'])->toContain('The payload is invalid');
-    });
+        $trxDate = now()->addDays(3)->format('Y-m-d');
 
-    it("Quotation not found", function () {
-        $payload = getPayload();
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString('password');
+        $file = UploadedFile::fake()->image('testing.jpg');
+        $payload = [
+            'payment_amount' => 10000000,
+            'transaction_date' => $trxDate,
+            'invoice_id' => \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->invoices[0]->id),
+            'note' => '',
+            'reference' => '',
+            'images' => [
+                [
+                    'image' => $file
+                ]
+            ]
+        ];
 
-        $response = $this->postJson('/api/finance/transaction/' . $encrypted, $payload);
-        $response->assertStatus(400);
+        $response = $service->store(payload: $payload, projectDealUid: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id));
+        logging('TRANSACTION TEST', $response);
+        expect($response)->toHaveKeys(['error', 'message']);
+        expect($response['error'])->toBeFalse();
 
-        expect($response->json())->toHavekey('message');
-        expect($response->json()['message'])->toContain('Quotation is not found');
-    });
-
-    it("Quotation is not final yet", function () use ($requestData) {
-        $payload = getPayload();
-
-        // create deal
-        $requestData = prepareProjectDeal($requestData);
-        $requestData['quotation']['is_final'] = 0;
-
-        postJson('/api/production/project/deals', $requestData);
-
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $requestData['quotation']['quotation_id']));
-
-        // mocking
-        $client = Mockery::mock(GeneralService::class);
-        $client->shouldReceive('uploadImageandCompress')
-            ->withAnyArgs()
-            ->andReturn('image.webp');
-
-        $response = postJson('/api/finance/transaction/' . $encrypted, $payload);
-
-        $response->assertStatus(400);
-        
-        expect($response->json())->toHaveKey('message');
-        expect($response->json()['message'])->toContain(__('notification.quotationIsNotFinal'));
-    });
-
-    it("Payment amount greater than remaining amount", function () use($requestData) {
-        $payload = getPayload();
-        $payload['payment_amount'] = 90000000;
-
-        // create deal
-        $requestData = prepareProjectDeal($requestData);
-
-        postJson('/api/production/project/deals', $requestData);
-
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $requestData['quotation']['quotation_id']));
-
-        // mocking
-        $client = Mockery::mock(GeneralService::class);
-        $client->shouldReceive('uploadImageandCompress')
-            ->withAnyArgs()
-            ->andReturn('image.webp');
-
-        $response = postJson('/api/finance/transaction/' . $encrypted, $payload);
-
-        $response->assertStatus(400);
-        expect($response->json())->toHaveKey('message');
-        expect($response->json()['message'])->toContain(__('notification.paymentAmountShouldBeSmallerThanRemainingAmount'));
-    });
-
-    it("Fully paid transaction", function () use ($requestData) {
-        $payload = getPayload();
-        $payload['payment_amount'] = $requestData['quotation']['fix_price'];
-
-        // create deal
-        $requestData = prepareProjectDeal($requestData);
-
-        postJson('/api/production/project/deals', $requestData);
-
-        $quotationId = str_replace('#', '', $requestData['quotation']['quotation_id']);
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString($quotationId);
-
-        // mocking
-        $client = Mockery::mock(GeneralService::class);
-        $client->shouldReceive('uploadImageandCompress')
-            ->withAnyArgs()
-            ->andReturn('image.webp');
-
-        $response = postJson('/api/finance/transaction/' . $encrypted, $payload);
-
-        $response->assertStatus(201);
-        expect($response->json())->toHaveKey('message');
-
-        $currentDeal = ProjectQuotation::selectRaw('id,project_deal_id')
-            ->where('quotation_id', $quotationId)
-            ->first();
-        $this->assertDatabaseHas('project_deals', [
-            'id' => $currentDeal->project_deal_id,
-            'is_fully_paid'  => 1
-        ]);
-    });
-
-    it("Transaction Created Successfully", function() use ($requestData) {
-        $payload = getPayload();
-
-        // create deal
-        $requestData = prepareProjectDeal($requestData);
-
-        postJson('/api/production/project/deals', $requestData);
-
-        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString(str_replace('#', '', $requestData['quotation']['quotation_id']));
-
-        // mocking
-        $client = Mockery::mock(GeneralService::class);
-        $client->shouldReceive('uploadImageandCompress')
-            ->withAnyArgs()
-            ->andReturn('image.webp');
-
-        $response = postJson('/api/finance/transaction/' . $encrypted, $payload);
-
-        $response->assertStatus(201);
         $this->assertDatabaseCount('transactions', 1);
+        $this->assertDatabaseHas('transactions', [
+            'invoice_id' => $projectDeal->invoices[0]->id,
+        ]);
+        $this->assertDatabaseHas('invoices', [
+            'id' => $projectDeal->invoices[0]->id,
+            'status' => \App\Enums\Transaction\InvoiceStatus::Paid->value
+        ]);
+
+        Bus::assertDispatched(TransactionCreatedJob::class);
     });
 });

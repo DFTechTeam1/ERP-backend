@@ -36,6 +36,7 @@ describe('Project count will be update when', function () {
 
         // set to final
         $requestData['status'] = ProjectDealStatus::Final->value;
+        $requestData['quotation']['is_final'] = 1;
         
         // change name
         $requestData['name'] = 'Final Project';
@@ -46,6 +47,8 @@ describe('Project count will be update when', function () {
         $service = createProjectService();
 
         $response = $service->storeProjectDeals(payload: $requestData);
+
+        logging('RESPONSE DESIGN JOB', $response);
 
         expect($response)->toHaveKey('error');
         expect($response['error'])->toBeFalse();

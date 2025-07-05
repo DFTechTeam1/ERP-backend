@@ -925,7 +925,8 @@ class ProjectController extends Controller
                 'transactions:id,project_deal_id,payment_amount,created_at',
                 'latestQuotation',
                 'finalQuotation',
-                'firstTransaction'
+                'firstTransaction',
+                'unpaidInvoices:id,number,parent_number,project_deal_id,amount'
             ]
         ));
     }
@@ -954,9 +955,9 @@ class ProjectController extends Controller
      * 
      * @return JsonResponse
      */
-    public function detailProjectDeal(string $quotationId): JsonResponse
+    public function detailProjectDeal(string $projectDealUid): JsonResponse
     {
-        return apiResponse($this->projectDealService->detailProjectDeal(quotationId: $quotationId));
+        return apiResponse($this->projectDealService->detailProjectDeal(projectDealUid: $projectDealUid));
     }
 
     /**
