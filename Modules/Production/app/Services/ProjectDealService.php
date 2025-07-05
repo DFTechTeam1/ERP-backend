@@ -116,6 +116,13 @@ class ProjectDealService
                         'id' => $item->latestQuotation->quotation_id,
                         'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
                     ],
+                    'unpaidInvoices' => $item->unpaidInvoices->map(function ($invoice) {
+                        return [
+                            'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                            'number' => $invoice->number,
+                            'amount' => $invoice->amount,
+                        ];
+                    })
                 ];
             });
 
@@ -438,6 +445,8 @@ class ProjectDealService
                 select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
                 relation: [
                     'transactions',
+                    'transactions.invoice:id,number,parent_number,paid_amount,payment_date',
+                    'transactions.attachments:id,transaction_id,image',
                     'quotations',
                     'quotations.items:id,quotation_id,item_id',
                     'quotations.items.item:id,name',
@@ -573,14 +582,29 @@ class ProjectDealService
                 ];
             }
 
-            $transactions = $data->transactions->map(function ($trx) {
+            $transactions = $data->transactions->map(function ($trx) use ($data) {
                 $trx['description'] = 'Receiving invoice payment';
+                $trx['images'] = collect($trx->attachments)->pluck('real_path')->toArray();
+                $trx['customer'] = [
+                    'name' => $data->customer->name
+                ];
+                $trx['invoice_date'] = date('d F Y', strtotime($trx->invoice->payment_date));
+                $trx['payment_date'] = date('d F Y', strtotime($trx->created_at));
 
                 return $trx;
             })->values();
 
             // we need to encrypt this data to keep it safe
-            $invoiceList = $data->invoices->map(function ($invoice) {
+            $invoiceList = $data->invoices->map(function ($invoice) use ($projectDealUid) {
+                $invoiceUrl = \Illuminate\Support\Facades\URL::signedRoute(
+                    name: 'invoice.download',
+                    parameters: [
+                        'i' => $projectDealUid,
+                        'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id)
+                    ],
+                    expiration: now()->addMinutes(5)
+                );
+
                 return [
                     'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
                     'amount' => $invoice->amount,
@@ -591,7 +615,8 @@ class ProjectDealService
                     'payment_date' => date('d F Y', strtotime($invoice->payment_date)),
                     'number' => $invoice->number,
                     'need_to_pay' => $invoice->status == \App\ENums\Transaction\InvoiceStatus::Unpaid ? true : false,
-                    'paid_at' => $invoice->transaction ? date('d F Y H:i', strtotime($invoice->transaction->created_at)) : '-'
+                    'paid_at' => $invoice->transaction ? date('d F Y H:i', strtotime($invoice->transaction->created_at)) : '-',
+                    'invoice_url' => $invoiceUrl
                 ];
             });
             $encryptionService = new EncryptionService();

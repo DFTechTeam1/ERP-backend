@@ -20,7 +20,7 @@ class GenerateInvoiceContent
      * 
      * @return array
      */
-    public function handle(ProjectDeal $deal, string|int $amount, string $invoiceNumber, string $requestDate)
+    public function handle(ProjectDeal $deal, string|int $amount, string $invoiceNumber, string $requestDate, bool $isFromCommand = false)
     {
         $generalService = new GeneralService();
 
@@ -30,12 +30,16 @@ class GenerateInvoiceContent
         $date = date('d', strtotime($projectDate));
 
         // set transactions
-        $transactions = $deal->transactions->map(function ($transaction) {
-            return [
-                'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
-                'transaction_date' => date('d F Y', strtotime($transaction->transaction_date))
-            ];
-        })->toArray();
+        if ($isFromCommand) {
+            $transactions = [];
+        } else {
+            $transactions = $deal->transactions->map(function ($transaction) {
+                return [
+                    'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
+                    'transaction_date' => date('d F Y', strtotime($transaction->transaction_date))
+                ];
+            })->toArray();
+        }
 
         if ($amount > 0) { // this indicate that request is comes from 'bill invoice'
             $transactions = collect($transactions)->merge([
@@ -45,7 +49,11 @@ class GenerateInvoiceContent
                 ]
             ]);
 
-            $remainingPayment = $deal->getRemainingPayment(formatPrice: true, deductionAmount: $amount);
+            if ($isFromCommand) {
+                $remainingPayment = $deal->getRemainingPayment(formatPrice: true);
+            } else {
+                $remainingPayment = $deal->getRemainingPayment(formatPrice: true, deductionAmount: $amount);
+            }
         } else {
             $remainingPayment = $deal->getRemainingPayment(formatPrice: true);
         }

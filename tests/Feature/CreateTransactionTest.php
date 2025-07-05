@@ -3,9 +3,11 @@
 use App\Enums\Production\ProjectDealStatus;
 use App\Services\GeneralService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Modules\Company\Models\City;
 use Modules\Company\Models\Country;
 use Modules\Company\Models\State;
+use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectQuotation;
@@ -102,6 +104,8 @@ function getPayload() {
 
 describe('Create Transaction', function () use ($requestData) {
     it('Create Transaction On Current Invoice', function () use ($requestData) {
+        Bus::fake();
+
         $country = Country::factory()
             ->has(
                 State::factory()->has(
@@ -146,7 +150,7 @@ describe('Create Transaction', function () use ($requestData) {
         ];
 
         $response = $service->store(payload: $payload, projectDealUid: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id));
-
+        logging('TRANSACTION TEST', $response);
         expect($response)->toHaveKeys(['error', 'message']);
         expect($response['error'])->toBeFalse();
 
@@ -158,5 +162,7 @@ describe('Create Transaction', function () use ($requestData) {
             'id' => $projectDeal->invoices[0]->id,
             'status' => \App\Enums\Transaction\InvoiceStatus::Paid->value
         ]);
+
+        Bus::assertDispatched(TransactionCreatedJob::class);
     });
 });

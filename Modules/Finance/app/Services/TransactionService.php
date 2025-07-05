@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\TransactionImage;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
@@ -176,13 +177,18 @@ class TransactionService {
             );
 
             $payloadImage = [];
-            if (isset($data['images'])) {
-                foreach ($data['images'] as $image) {
+            if (isset($payload['images'])) {
+                foreach ($payload['images'] as $image) {
                     $imageName = $this->generalService->uploadImageandCompress(
                         path: 'transactions',
                         image: $image['image'],
                         compressValue: 1
                     );
+                    
+                    if (!$imageName) {
+                        DB::rollBack();
+                        return errorMessage(message: 'Failed to process transaction');
+                    }
     
                     $tmp[] = $imageName;
     
@@ -198,6 +204,9 @@ class TransactionService {
             if ($allPaid) {
                 $this->projectDealRepo->update(data: ['is_fully_paid' => 1], id: $projectId);
             }
+
+            // send notifications
+            TransactionCreatedJob::dispatch($trx->id)->afterCommit();
 
             DB::commit();
 

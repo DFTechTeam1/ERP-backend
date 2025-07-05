@@ -14,12 +14,16 @@ class TransactionCreatedNotification extends Notification
 
     private $transaction;
 
+    private $remainingBalance;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(Transaction $transaction)
+    public function __construct(Transaction $transaction, mixed $remainingBalance)
     {
         $this->transaction = $transaction;
+
+        $this->remainingBalance = $remainingBalance;
     }
 
     /**
@@ -35,11 +39,14 @@ class TransactionCreatedNotification extends Notification
      */
     public function toMail($notifiable): MailMessage
     {
+        setEmailConfiguration();
+        
         return (new MailMessage)
             ->subject("New Transaction {$this->transaction->trx_id}")
             ->markdown('mail.payment.transactionCreated', [
                 'transaction' => $this->transaction,
-                'url' => url("invoices/download/{$this->transaction->uid}/stream"),
+                'remainingBalance' => $this->remainingBalance,
+                'invoiceUrl' => url("invoices/download/{$this->transaction->uid}/stream"),
             ]);
     }
 

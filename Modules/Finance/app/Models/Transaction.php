@@ -31,7 +31,8 @@ class Transaction extends Model
 
             \Modules\Finance\Models\Invoice::where('id', $invoiceId)
                 ->update([
-                    'status' => \App\Enums\Transaction\InvoiceStatus::Paid
+                    'status' => \App\Enums\Transaction\InvoiceStatus::Paid,
+                    'paid_amount' => $transaction->payment_amount
                 ]);
         });
     }
@@ -64,6 +65,11 @@ class Transaction extends Model
     protected static function newFactory(): TransactionFactory
     {
         return TransactionFactory::new();
+    }
+    
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class, 'invoice_id');
     }
 
     public function attachments(): HasMany

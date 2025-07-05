@@ -925,7 +925,8 @@ class ProjectController extends Controller
                 'transactions:id,project_deal_id,payment_amount,created_at',
                 'latestQuotation',
                 'finalQuotation',
-                'firstTransaction'
+                'firstTransaction',
+                'unpaidInvoices:id,number,parent_number,project_deal_id,amount'
             ]
         ));
     }
