@@ -31,7 +31,8 @@ class TransactionCreatedJob implements ShouldQueue
                 'projectDeal:id,name,project_date,is_fully_paid',
                 'projectDeal.transactions',
                 'projectDeal.finalQuotation',
-                'invoice:id,payment_due'
+                'invoice:id,payment_due',
+                'attachments:id,transaction_id,image'
             ])
             ->where('id', $this->transactionId)
             ->first();
@@ -40,7 +41,7 @@ class TransactionCreatedJob implements ShouldQueue
 
         // get role finance
         $users = \App\Models\User::role(['finance'])->get();
-        logging('USER DATA EMAIL TR', $users->toArray());
+
         foreach ($users as $user) {
             $user->notify(new \Modules\Production\Notifications\TransactionCreatedNotification($transaction, $remainingBalance));
         }

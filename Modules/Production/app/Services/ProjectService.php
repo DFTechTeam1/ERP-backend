@@ -8329,6 +8329,11 @@ class ProjectService
 
             // handle when project deal have a final status
             if ($payload['status'] == 1) {
+                // here we edit the project deal data, we update identifier number
+                $this->projectDealRepo->update(data: [
+                    'identifier_number' => $this->generalService->setProjectIdentifier()
+                ], id: $project->id);
+
                 \App\Actions\CopyDealToProject::run($project, $this->generalService);
 
                 // gerenrate invoice master

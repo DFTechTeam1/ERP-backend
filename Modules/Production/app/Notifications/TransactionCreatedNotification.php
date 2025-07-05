@@ -40,9 +40,13 @@ class TransactionCreatedNotification extends Notification
     public function toMail($notifiable): MailMessage
     {
         setEmailConfiguration();
+
+        // define attachments
+        $attachments = collect($this->transaction->attachments)->pluck('real_path')->toArray();
         
         return (new MailMessage)
             ->subject("New Transaction {$this->transaction->trx_id}")
+            ->attachMany($attachments)
             ->markdown('mail.payment.transactionCreated', [
                 'transaction' => $this->transaction,
                 'remainingBalance' => $this->remainingBalance,
