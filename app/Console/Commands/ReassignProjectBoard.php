@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Actions\Project\DetailCache;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Modules\Production\Models\Project;
 
 class ReassignProjectBoard extends Command
@@ -44,7 +45,7 @@ class ReassignProjectBoard extends Command
                 $project->boards()->createMany($defaultBoards);
 
                 // clear cache
-                DetailCache::run(projectUid: $project->uid, forceUpdateAll: true);
+                Cache::forget('detailProject'.$project->id);
             }
         }
 
