@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\GeneralService;
 use App\Services\Geocoding;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
@@ -34,7 +35,6 @@ dataset('dataDeals', [
 describe('Publish Quotation', function () {
     it("Publish quotation as final return success", function (Customer $customer, ProjectClass $projectClass, Employee $employee, QuotationItem $quotationItem) {
         $currentDeal = createDeal($customer, $projectClass, $employee, $quotationItem);
-        $service = createProjectDealService();
 
         // mock geocoding
         $geo = Mockery::mock(Geocoding::class);
@@ -44,6 +44,19 @@ describe('Publish Quotation', function () {
                 'longitude' => fake()->longitude(),
                 'latitude' => fake()->latitude(),
             ]);
+
+        $generalService = Mockery::mock(GeneralService::class);
+        $generalService->shouldReceive('getSettingByKey')
+            ->withAnyArgs()
+            ->andReturn('[{"name":"Asset 3D","sort":0,"id":1},{"name":"Compositing","sort":1,"id":2},{"name":"Animating","sort":2,"id":3},{"name":"Finalize","sort":3,"id":4}]');
+
+        $generalService->shouldReceive('linkShortener')
+            ->withAnyArgs()
+            ->andReturn('google');
+
+        $service = createProjectDealService(
+            generalService: $generalService
+        );
 
         $response = $service->publishProjectDeal(
             projectDealId: Crypt::encryptString($currentDeal->id),
@@ -80,6 +93,9 @@ describe('Publish Quotation', function () {
             'sequence' => 0,
             'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
             'paid_amount' => 0
+        ]);
+        $this->assertDatabaseHas('project_boards', [
+            'project_id' => $response['data']['project']['id']
         ]);
     })->with('dataDeals');
 

@@ -12,7 +12,7 @@ class CopyDealToProject
 {
     use AsAction;
 
-    public function handle(object $projectDeal)
+    public function handle(object $projectDeal, GeneralService $generalService)
     {
         $geocoding = new Geocoding();
         if ($projectDeal->city && $projectDeal->state) {
@@ -24,7 +24,6 @@ class CopyDealToProject
         }
 
         $projectRepo = new ProjectRepository();
-        $generalService = new GeneralService();
         $project = $projectRepo->store(data: [
             'name' => $projectDeal->name,
             'client_portal' => config('app.frontend_url') . '/' . $generalService->linkShortener(length: 10),
@@ -53,6 +52,20 @@ class CopyDealToProject
                 ];
             })->toArray()
         );
+
+        // create boards data
+        $defaultBoards = json_decode($generalService->getSettingByKey('default_boards'), true);
+        logging('CHECK BOARD TESTING', [$defaultBoards]);
+        $defaultBoards = collect($defaultBoards)->map(function ($item) {
+            return [
+                'based_board_id' => $item['id'],
+                'sort' => $item['sort'],
+                'name' => $item['name'],
+            ];
+        })->values()->toArray();
+        if ($defaultBoards) {
+            $project->boards()->createMany($defaultBoards);
+        }
 
         return $project;
     }

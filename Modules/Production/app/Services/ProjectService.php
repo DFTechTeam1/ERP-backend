@@ -8329,7 +8329,7 @@ class ProjectService
 
             // handle when project deal have a final status
             if ($payload['status'] == 1) {
-                \App\Actions\CopyDealToProject::run($project);
+                \App\Actions\CopyDealToProject::run($project, $this->generalService);
 
                 // gerenrate invoice master
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $project->id);
