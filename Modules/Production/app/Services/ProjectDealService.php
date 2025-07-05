@@ -347,7 +347,7 @@ class ProjectDealService
 
             $payload = [
                 'status' => $type === 'publish' ? \App\Enums\Production\ProjectDealStatus::Temporary->value : \App\Enums\Production\ProjectDealStatus::Final->value,
-                'identifier_number' => $this->generalService->setProjectIdentifier()
+                // 'identifier_number' => $this->generalService->setProjectIdentifier()
             ];
 
             $this->repo->update(
