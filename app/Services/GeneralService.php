@@ -130,7 +130,11 @@ class GeneralService
             if (count($currentData) == 0) {
                 $number = $cutoff + 1;
             } else {
-                $number = $currentData[0]['identifier_number'] + 1;
+                if (!$currentData[0]['identifier_number']) {
+                    $number = $cutoff + 1;
+                } else {
+                    $number = $currentData[0]['identifier_number'] + 1;
+                }
             }
 
             // convert to sequence number
@@ -217,5 +221,21 @@ class GeneralService
         );
 
         return $data;
+    }
+
+    public function setProjectIdentifier()
+    {
+        // get current identifier number from cache
+        $currentIdentifier = (new \App\Services\GeneralService)->generateDealIdentifierNumber();
+
+        // increase value of the identifier number
+        (new \App\Services\GeneralService)->clearCache(cacheId: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value);
+        $nextIdentifier = (int) $currentIdentifier + 1;
+        // convert to sequence number
+        $lengthOfSentence = strlen($nextIdentifier) < 4 ? 4 : strlen($nextIdentifier) + 1;
+        $nextIdentifier = (new \App\Services\GeneralService)->generateSequenceNumber(number: $nextIdentifier, length: $lengthOfSentence);
+        (new \App\Services\GeneralService)->storeCache(key: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value, value: $nextIdentifier, isForever: true);
+
+        return $currentIdentifier;
     }
 }
