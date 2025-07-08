@@ -335,10 +335,15 @@ class InvoiceService {
         // only get the parent number 
         $invoiceNumber = $projectDeal->mainInvoice->sequence == 0 ? $projectDeal->mainInvoice->number : $projectDeal->mainInvoice->parent_number;
 
+        // reformat transaction and remaining payment
+        $rawData = $projectDeal->mainInvoice->raw_data;
+        $rawData['transactions'] = [];
+        $rawData['remainingPayment'] = $rawData['fixPrice'];
+
         // replace '\' or '/' to avoid error in the file name
         $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
  
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $projectDeal->mainInvoice->raw_data)
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
