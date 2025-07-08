@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Project\WriteDurationTaskHistory;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
@@ -128,4 +129,7 @@ Route::get('/notification-preview', function () {
 });
 
 Route::get('check', function () {
+    $response = WriteDurationTaskHistory::run(1609);
+
+    return $response;
 });

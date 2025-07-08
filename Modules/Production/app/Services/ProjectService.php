@@ -2509,10 +2509,6 @@ class ProjectService
     /**
      * Assign member to selected task
      *
-     * $data variable will have
-     * 1. array users -> uid
-     * 2. array removed -> uid
-     *
      * when isForProjectManager is TRUE, then set status to approved, otherwise set to waiting approval
      *
      * Every assigned member need to approved it before do any action. Bcs of this sytem will take a note about 'IDLE TASK'
@@ -2520,11 +2516,23 @@ class ProjectService
      *
      * If $isRevise is TRUE, no need to change task status (Already handle in parent function)
      *
-     * @param  string  $taskId
+     * @param array $data                   With these following structure
+     * - array <string> $users
+     * - array <string> $remmoved
+     * @param string $taskUid
+     * @param bool $isForProjectManager
+     * @param bool $isRevise
+     * @param bool $needChangeTaskStatus
+     * 
      * @return array
      */
-    public function assignMemberToTask(array $data, string $taskUid, bool $isForProjectManager = false, bool $isRevise = false, bool $needChangeTaskStatus = true)
-    {
+    public function assignMemberToTask(
+        array $data,
+        string $taskUid,
+        bool $isForProjectManager = false,
+        bool $isRevise = false,
+        bool $needChangeTaskStatus = true
+    ) {
         DB::beginTransaction();
         try {
             // validate pic
@@ -2552,7 +2560,7 @@ class ProjectService
                 if (! $checkPic) {
                     $taskDetail = $this->taskRepo->show($taskUid, 'id,project_id');
 
-                    // add to pic historyk
+                    // add to pic history
                     $this->taskPicHistory->store([
                         'project_id' => $taskDetail->project_id,
                         'project_task_id' => $taskId,
@@ -2695,10 +2703,12 @@ class ProjectService
                 $removedEmployeeId = $removedUser;
             }
 
+            // delete from table task_pics
             $this->taskPicRepo->deleteWithCondition('employee_id = '.$removedEmployeeId.' AND project_task_id = '.$taskId);
 
             // delete from history
             if ($removeFromHistory) {
+                // delete from table task_pic_histories
                 $this->taskPicHistory->deleteWithCondition('employee_id = '.$removedEmployeeId.' AND project_task_id = '.$taskId);
             }
 
@@ -3852,7 +3862,10 @@ class ProjectService
                 // }
 
                 // set current pic
-                $currentPics = $this->taskPicRepo->list('employee_id', 'project_task_id = '.$taskId);
+                $currentPics = $this->taskPicRepo->list(
+                    select: 'employee_id',
+                    where: 'project_task_id = '.$taskId
+                );
                 $payloadUpdate['current_pics'] = json_encode(collect($currentPics)->pluck('employee_id')->toArray());
                 $payloadUpdate['is_modeler_task'] = false;
 
@@ -5044,6 +5057,7 @@ class ProjectService
             // THIS IS REMARK REQUEST CAME FROM TELEGRAM
             $this->telegramEmployee = $employee;
         }
+
         $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask);
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
