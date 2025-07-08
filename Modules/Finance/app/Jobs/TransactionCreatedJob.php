@@ -40,7 +40,7 @@ class TransactionCreatedJob implements ShouldQueue
         $remainingBalance = $transaction->projectDeal->getRemainingPayment();
 
         // get role finance
-        $users = \App\Models\User::role(['finance'])->get();
+        $users = \App\Models\User::role(['finance', 'root'])->get();
 
         foreach ($users as $user) {
             $user->notify(new \Modules\Production\Notifications\TransactionCreatedNotification($transaction, $remainingBalance));

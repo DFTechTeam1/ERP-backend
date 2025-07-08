@@ -11,6 +11,7 @@ use App\Services\Geocoding;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
@@ -381,6 +382,8 @@ class ProjectDealService
 
                 // generate master invoice
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
+
+                ProjectHasBeenFinal::dispatch($projectDealId)->afterCommit();
             }
 
             DB::commit();

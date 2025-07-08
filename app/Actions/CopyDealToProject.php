@@ -55,7 +55,7 @@ class CopyDealToProject
 
         // create boards data
         $defaultBoards = json_decode($generalService->getSettingByKey('default_boards'), true);
-        logging('CHECK BOARD TESTING', [$defaultBoards]);
+        
         $defaultBoards = collect($defaultBoards)->map(function ($item) {
             return [
                 'based_board_id' => $item['id'],
