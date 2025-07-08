@@ -39,6 +39,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\Company\Models\PositionBackup;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
+use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
@@ -8338,6 +8339,8 @@ class ProjectService
 
                 // gerenrate invoice master
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $project->id);
+
+                ProjectHasBeenFinal::dispatch($project->id)->afterCommit();
             }
             
             DB::commit();

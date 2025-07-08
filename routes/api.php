@@ -8,9 +8,11 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
+use App\Services\EncryptionService;
 use App\Services\WhatsappService;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -200,6 +202,24 @@ Route::middleware('auth:sanctum')
 
         // Dashboard for human resources
         Route::get('dashboard/hr/{type}', [DashboardController::class, 'getHrReport']);
+
+        // NOTIFICATION
+        Route::get('user/notifications', function () {
+            $user = Auth::user();
+
+            $notifications = $user->unreadNotifications;
+            $service = new EncryptionService();
+            $encrypt = $service->encrypt(json_encode($notifications), config('app.salt_key_encryption'));
+
+            return apiResponse(
+                generalResponse(
+                    message: 'success',
+                    data: [
+                        'data' => $encrypt
+                    ]
+                )
+            );
+        });
     });
 
 Route::post('line-webhook', [\Modules\LineMessaging\Http\Controllers\Api\LineController::class, 'webhook']);
