@@ -328,7 +328,8 @@ class InvoiceService {
             uid: $projectDealId,
             select: 'id',
             relation: [
-                'mainInvoice'
+                'mainInvoice',
+                'finalQuotation:id,project_deal_id,description'
             ]
         );
 
@@ -339,6 +340,9 @@ class InvoiceService {
         $rawData = $projectDeal->mainInvoice->raw_data;
         $rawData['transactions'] = [];
         $rawData['remainingPayment'] = $rawData['fixPrice'];
+
+        // insert quotation note
+        $rawData['description'] = $projectDeal->finalQuotation->description;
 
         // replace '\' or '/' to avoid error in the file name
         $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
