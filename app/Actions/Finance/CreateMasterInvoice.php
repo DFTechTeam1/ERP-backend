@@ -31,7 +31,7 @@ class CreateMasterInvoice
                 'customer:id,name'
             ]
         );
-
+        
         $content = GenerateInvoiceContent::run(deal: $projectDeal, amount: 0, invoiceNumber: '', requestDate: '');
 
         $invoiceNumber = $generalService->generateInvoiceNumber(identifierNumber: $projectDeal->identifier_number);

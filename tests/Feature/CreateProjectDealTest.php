@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\Production\ProjectDealStatus;
+use Illuminate\Support\Facades\Bus;
 use Modules\Company\Models\ProjectClass;
+use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
 use Modules\Production\Models\ProjectDeal;
@@ -53,6 +55,8 @@ describe('Create Project Deal', function () {
     ]);
 
     it('Create final project deal directly', function (Customer $customer) {
+        Bus::fake();
+
         $requestData = getProjectDealPayload($customer);
         $requestData = prepareProjectDeal($requestData);
 
@@ -89,6 +93,8 @@ describe('Create Project Deal', function () {
             'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
             'paid_amount' => 0
         ]);
+
+        Bus::assertDispatched(ProjectHasBeenFinal::class);
     })->with([
         fn() => Customer::factory()->create()
     ]);

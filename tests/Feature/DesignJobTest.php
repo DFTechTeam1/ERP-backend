@@ -2,6 +2,8 @@
 
 use App\Enums\Cache\CacheKey;
 use App\Enums\Production\ProjectDealStatus;
+use Illuminate\Support\Facades\Bus;
+use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Production\Models\Customer;
 
 describe('Project count will be update when', function () {
@@ -31,6 +33,8 @@ describe('Project count will be update when', function () {
     });
 
     it("Project deal has been created", function (Customer $customer) {
+        Bus::fake();
+
         $requestData = getProjectDealPayload($customer);
         $requestData = prepareProjectDeal($requestData);
 
@@ -64,6 +68,8 @@ describe('Project count will be update when', function () {
         $generalService = new \App\Services\GeneralService();
         $updatedCount = $generalService->getCache(CacheKey::ProjectCount->value);
         expect($updatedCount)->toBe(2);
+
+        Bus::assertDispatched(ProjectHasBeenFinal::class);
     })->with([
         fn() => Customer::factory()->create()
     ]);

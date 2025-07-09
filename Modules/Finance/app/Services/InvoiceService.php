@@ -8,6 +8,7 @@ use App\Services\GeneralService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -202,6 +203,9 @@ class InvoiceService {
                 ],
                 expiration: now()->addMinutes(5)
             );
+
+            // running notifications
+            InvoiceHasBeenCreatedJob::dispatch($invoice->id);
 
             return generalResponse(
                 message: 'success',
