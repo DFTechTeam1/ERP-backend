@@ -629,11 +629,18 @@ class ProjectDealService
             $invoiceList = $encryptionService->encrypt(string: json_encode($invoiceList), key: config('app.salt_key_encryption'));
 
             // generate general invoice download url
-            $generalInvoiceUrl = URL::signedRoute(name: 'invoice.general.download', parameters: [
-                'i' => \Illuminate\Support\Facades\Crypt::encryptString($projectDealUidRaw)
-            ]);
+            $generalInvoiceUrl = URL::signedRoute(
+                name: 'invoice.general.download',
+                parameters: [
+                    'i' => \Illuminate\Support\Facades\Crypt::encryptString($projectDealUidRaw)
+                ],
+                expiration: now()->addHours(6)
+            );
             // encrypt the url
-            $generalInvoiceUrl = $encryptionService->encrypt(string: json_encode(['url' => $generalInvoiceUrl]), key: config('app.salt_key_encryption'));
+            $generalInvoiceUrl = $encryptionService->encrypt(
+                string: json_encode(['url' => $generalInvoiceUrl]),
+                key: config('app.salt_key_encryption'),
+            );
 
             $output = [
                 'customer' => [
