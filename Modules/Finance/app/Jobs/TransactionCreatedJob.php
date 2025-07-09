@@ -2,6 +2,7 @@
 
 namespace Modules\Finance\Jobs;
 
+use App\Services\PusherNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -42,8 +43,14 @@ class TransactionCreatedJob implements ShouldQueue
         // get role finance
         $users = \App\Models\User::role(['finance', 'root'])->get();
 
+        $pusher = new PusherNotification();
+
         foreach ($users as $user) {
             $user->notify(new \Modules\Production\Notifications\TransactionCreatedNotification($transaction, $remainingBalance));
+
+            $pusher->send(channel: "my-channel-{$user->id}", event: 'notification-event', payload: [
+                'type' => 'finance'
+            ]);
         }
     }
 }

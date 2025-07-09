@@ -42,8 +42,7 @@ class InvoiceHasBeenCreatedJob implements ShouldQueue
             $user->notify(new InvoiceHasBeenCreated($invoice->projectDeal));
 
             $pusher->send("my-channel-{$user->id}", 'notification-event', [
-                'type' => 'finance',
-                'reload' => 1
+                'type' => 'finance'
             ]);
         }
     }

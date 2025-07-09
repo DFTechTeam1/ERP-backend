@@ -635,6 +635,7 @@ class ProjectDealService
                 ],
                 'uid' => $projectDealUid,
                 'products' => $products,
+                'name' => $data->name,
                 'final_quotation' => $finalQuotation,
                 'transactions' => $transactions,
                 'quotations' => $quotations,

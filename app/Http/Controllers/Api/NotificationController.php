@@ -77,4 +77,23 @@ class NotificationController extends Controller
     {
         //
     }
+
+    public function readAll()
+    {
+        $user = Auth::user();
+
+        $user->unreadNotifications->markAsRead();
+
+        if ($user->employee_id) {
+            $employee = \Modules\Hrd\Models\Employee::find($user->employee_id);
+
+            $employee->unreadNotifications->markAsRead();
+        }
+
+        return apiResponse(
+            generalResponse(
+                message: "Success"
+            )
+        );
+    }
 }

@@ -5,12 +5,14 @@ use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
+use App\Services\PusherNotification;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
+use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Notifications\ProjectHasBeenFinal;
@@ -119,22 +121,7 @@ Route::get('/notification-preview', function () {
 })->middleware('auth:sanctum');
 
 Route::get('check', function () {
-    $transaction = \Modules\Finance\Models\Transaction::with([
-            'projectDeal:id,name,project_date,is_fully_paid',
-            'projectDeal.transactions',
-            'projectDeal.finalQuotation',
-            'invoice:id,payment_due',
-            'attachments:id,transaction_id,image'
-        ])
-        ->latest()
-        ->first();
+    $projectDeal = \Modules\Production\Models\ProjectDeal::latest()->first();
 
-    $remainingBalance = $transaction->projectDeal->getRemainingPayment();
-
-    // get role finance
-    $users = \App\Models\User::role(['finance', 'root'])->get();
-
-    foreach ($users as $user) {
-        $user->notify(new \Modules\Production\Notifications\TransactionCreatedNotification($transaction, $remainingBalance));
-    }
+    JobsProjectHasBeenFinal::dispatch($projectDeal->id);
 });
