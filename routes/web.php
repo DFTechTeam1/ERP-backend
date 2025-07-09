@@ -115,6 +115,8 @@ Route::get('quotations/download/{quotationId}/{type}', [QuotationController::cla
 // route to download invoice after
 Route::get('invoices/download', [InvoiceController::class, 'downloadInvoice'])->name('invoice.download')
     ->middleware('signed');
+Route::get('invoices/general/download', [InvoiceController::class, 'downloadGeneralInvoice'])->name('invoice.general.download')
+    ->middleware('signed');
 
 Route::get('/notification-preview', function () {
     return Auth::user();

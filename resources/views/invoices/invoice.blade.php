@@ -337,6 +337,12 @@
                                     <li style="font-size: 13px;">{{ $item }}</li>
                                 @endforeach
                             </ul>
+
+                            @if ($description)
+                                <div class="description">
+                                    {!! $description !!}
+                                </div>
+                            @endif
                         </div>
                     </td>
                     <td style="vertical-align: top;">

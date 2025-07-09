@@ -88,4 +88,9 @@ class InvoiceController extends Controller
     {
         return $this->service->downloadInvoice();
     }
+
+    public function downloadGeneralInvoice()
+    {
+        return $this->service->downloadGeneralInvoice();
+    }
 }

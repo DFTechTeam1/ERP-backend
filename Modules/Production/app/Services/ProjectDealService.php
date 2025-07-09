@@ -10,6 +10,7 @@ use App\Services\GeneralService;
 use App\Services\Geocoding;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -627,6 +628,13 @@ class ProjectDealService
             $encryptionService = new EncryptionService();
             $invoiceList = $encryptionService->encrypt(string: json_encode($invoiceList), key: config('app.salt_key_encryption'));
 
+            // generate general invoice download url
+            $generalInvoiceUrl = URL::signedRoute(name: 'invoice.general.download', parameters: [
+                'i' => \Illuminate\Support\Facades\Crypt::encryptString($projectDealUidRaw)
+            ]);
+            // encrypt the url
+            $generalInvoiceUrl = $encryptionService->encrypt(string: json_encode(['url' => $generalInvoiceUrl]), key: config('app.salt_key_encryption'));
+
             $output = [
                 'customer' => [
                     'name' => $data->customer->name,
@@ -648,7 +656,8 @@ class ProjectDealService
                 'is_paid' => $data->isPaid(),
                 'fix_price' => $finalQuotation->count() > 0 ? $finalQuotation->fix_price : $data->latestQuotation->fix_price,
                 'remaining_price' => $data->getRemainingPayment(),
-                'invoices' => $invoiceList
+                'invoices' => $invoiceList,
+                'general_invoice_url' => $generalInvoiceUrl
             ];
 
             return generalResponse(
