@@ -7,8 +7,10 @@
 
 namespace App\Services;
 
+use App\Enums\Transaction\InvoiceStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -237,5 +239,28 @@ class GeneralService
         (new \App\Services\GeneralService)->storeCache(key: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value, value: $nextIdentifier, isForever: true);
 
         return $currentIdentifier;
+    }
+
+    /**
+     * Get all invoice that have due from now to the next 5 days
+     * 
+     * Finance and marketing will be notified about this
+     * 
+     * @return Collection
+     */
+    public function getInvoiceDueData(): Collection
+    {
+        $repo = new InvoiceRepository();
+
+        $data = $repo->list(
+            select: 'id,project_deal_id,customer_id,number,amount,payment_due,status',
+            where: "DATEDIFF(payment_due, CURRENT_DATE) BETWEEN 1 AND 5 AND status = " . InvoiceStatus::Unpaid->value,
+            relation: [
+                'projectDeal:id,name',
+                'customer:id,name'
+            ]
+        );
+
+        return $data;
     }
 }

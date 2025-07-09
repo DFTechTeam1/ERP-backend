@@ -12,9 +12,11 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
+use Modules\Finance\Jobs\InvoiceDueCheck;
 use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
+use Modules\Finance\Notifications\InvoiceDueCheckNotification;
 use Modules\Finance\Notifications\ProjectHasBeenFinal;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Http\Controllers\Api\QuotationController;
@@ -123,7 +125,5 @@ Route::get('/notification-preview', function () {
 })->middleware('auth:sanctum');
 
 Route::get('check', function () {
-    $projectDeal = \Modules\Production\Models\ProjectDeal::latest()->first();
-
-    JobsProjectHasBeenFinal::dispatch($projectDeal->id);
+    InvoiceDueCheck::dispatch();
 });
