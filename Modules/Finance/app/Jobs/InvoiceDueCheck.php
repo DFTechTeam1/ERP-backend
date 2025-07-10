@@ -32,13 +32,21 @@ class InvoiceDueCheck implements ShouldQueue
 
         $invoices = $generalService->getInvoiceDueData();
 
-        logging('INVOICE KYES', $invoices->toArray());
-
-        $users = \App\Models\User::role(['root', 'finance', 'marketing'])
+        $users = \App\Models\User::role(['root', 'finance'])
             ->with([
                 'employee:id,name'
             ])
             ->get();
+
+        // get related marketings and merge to existing users
+        foreach ($invoices as $invoice) {
+            foreach ($invoice->projectDeal->marketings as $marketing) {
+                $marketingUser = \App\Models\User::with(['employee:id,name'])
+                    ->where('employee_id', $marketing->employee_id)->first();
+
+                $users->push($marketingUser);
+            }
+        }
 
         $pusher = new PusherNotification();
 

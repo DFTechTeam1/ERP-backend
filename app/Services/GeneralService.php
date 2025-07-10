@@ -257,7 +257,8 @@ class GeneralService
             where: "DATEDIFF(payment_due, CURRENT_DATE) BETWEEN 1 AND 5 AND status = " . InvoiceStatus::Unpaid->value,
             relation: [
                 'projectDeal:id,name',
-                'customer:id,name'
+                'customer:id,name',
+                'projectDeal.marketings:id,employee_id,project_deal_id'
             ]
         );
 
