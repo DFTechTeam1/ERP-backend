@@ -550,7 +550,7 @@ class ProjectDealService
             $products = [];
             $main = [];
             $prefunction = [];
-            if ($data->transactions->count() > 0) {
+            if ($data->finalQuotation) {
                 $finalQuotation = $data->quotations->filter(fn($value) => $value->is_final)->values()[0];
 
                 $finalQuotation['quotation_id'] = Crypt::encryptString($finalQuotation->quotation_id);
