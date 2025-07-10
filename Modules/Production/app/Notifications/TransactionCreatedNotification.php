@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\URL;
 use Modules\Finance\Models\Transaction;
 
 class TransactionCreatedNotification extends Notification
@@ -16,6 +17,8 @@ class TransactionCreatedNotification extends Notification
 
     private $remainingBalance;
 
+    private $url;
+
     /**
      * Create a new notification instance.
      */
@@ -24,6 +27,11 @@ class TransactionCreatedNotification extends Notification
         $this->transaction = $transaction;
 
         $this->remainingBalance = $remainingBalance;
+
+        // make invoice url
+        $this->url = URL::signedRoute(name: 'invoice.download', parameters: [
+            'n' => \Illuminate\Support\Facades\Crypt::encryptString($this->transaction->invoice->id)
+        ]);
     }
 
     /**
@@ -31,7 +39,10 @@ class TransactionCreatedNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return ['mail'];
+        return [
+            'mail',
+            'database'
+        ];
     }
 
     /**
@@ -50,7 +61,7 @@ class TransactionCreatedNotification extends Notification
             ->markdown('mail.payment.transactionCreated', [
                 'transaction' => $this->transaction,
                 'remainingBalance' => $this->remainingBalance,
-                'invoiceUrl' => url("invoices/download/{$this->transaction->uid}/stream"),
+                'invoiceUrl' => $this->url,
             ]);
     }
 
@@ -59,6 +70,15 @@ class TransactionCreatedNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-        return [];
+         return [
+            'type' => 'transaction_created',
+            'title' => 'New transaction recorded',
+            'message' => "A new transaction has been added the for project <b>{$this->transaction->projectDeal->name}</b>. Please review and validate the entry",
+            'button' => [
+                'text' => 'Download Invoice',
+                'button' => $this->url
+            ],
+            'href' => null
+        ];
     }
 }

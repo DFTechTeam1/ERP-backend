@@ -8,6 +8,7 @@ use App\Services\GeneralService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -203,6 +204,9 @@ class InvoiceService {
                 expiration: now()->addMinutes(5)
             );
 
+            // running notifications
+            InvoiceHasBeenCreatedJob::dispatch($invoice->id);
+
             return generalResponse(
                 message: 'success',
                 data: [
@@ -292,16 +296,21 @@ class InvoiceService {
         $invoiceId = \Illuminate\Support\Facades\Crypt::decryptString(request('n'));
         $invoice = $this->repo->show(uid: $invoiceId, select: 'id,raw_data,parent_number,number,sequence,project_deal_id', relation: [
             'projectDeal:id,name,project_date,customer_id',
-            'projectDeal.customer:id,name'
+            'projectDeal.customer:id,name',
+            'projectDeal.finalQuotation:id,project_deal_id,description'
         ]);
+
+        $description = $invoice->projectDeal->finalQuotation->description;
 
         // only get the parent number 
         $invoiceNumber = $invoice->sequence == 0 ? $invoice->number : $invoice->parent_number;
 
         // replace '\' or '/' to avoid error in the file name
         $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
+        $rawData = $invoice->raw_data;
+        $rawData['description'] = $description;
  
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $invoice->raw_data)
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,

@@ -11,6 +11,7 @@ use App\Services\Geocoding;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
@@ -381,6 +382,8 @@ class ProjectDealService
 
                 // generate master invoice
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
+
+                ProjectHasBeenFinal::dispatch($projectDealId)->afterCommit();
             }
 
             DB::commit();
@@ -547,7 +550,7 @@ class ProjectDealService
             $products = [];
             $main = [];
             $prefunction = [];
-            if ($data->transactions->count() > 0) {
+            if ($data->finalQuotation) {
                 $finalQuotation = $data->quotations->filter(fn($value) => $value->is_final)->values()[0];
 
                 $finalQuotation['quotation_id'] = Crypt::encryptString($finalQuotation->quotation_id);
@@ -626,11 +629,18 @@ class ProjectDealService
             $invoiceList = $encryptionService->encrypt(string: json_encode($invoiceList), key: config('app.salt_key_encryption'));
 
             // generate general invoice download url
-            $generalInvoiceUrl = URL::signedRoute(name: 'invoice.general.download', parameters: [
-                'i' => \Illuminate\Support\Facades\Crypt::encryptString($projectDealUidRaw)
-            ]);
+            $generalInvoiceUrl = URL::signedRoute(
+                name: 'invoice.general.download',
+                parameters: [
+                    'i' => \Illuminate\Support\Facades\Crypt::encryptString($projectDealUidRaw)
+                ],
+                expiration: now()->addHours(6)
+            );
             // encrypt the url
-            $generalInvoiceUrl = $encryptionService->encrypt(string: json_encode(['url' => $generalInvoiceUrl]), key: config('app.salt_key_encryption'));
+            $generalInvoiceUrl = $encryptionService->encrypt(
+                string: json_encode(['url' => $generalInvoiceUrl]),
+                key: config('app.salt_key_encryption'),
+            );
 
             $output = [
                 'customer' => [
@@ -640,6 +650,7 @@ class ProjectDealService
                 ],
                 'uid' => $projectDealUid,
                 'products' => $products,
+                'name' => $data->name,
                 'final_quotation' => $finalQuotation,
                 'transactions' => $transactions,
                 'quotations' => $quotations,

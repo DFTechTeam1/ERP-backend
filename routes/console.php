@@ -4,6 +4,7 @@ use App\Console\Commands\ClearLogSchedule;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use Modules\Finance\Jobs\InvoiceDueCheck;
 use Modules\Hrd\Console\CheckEmployeeResign;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
@@ -32,3 +33,5 @@ Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 Schedule::command(CheckEmployeeResign::class)->dailyAt('00:15');
 
 Schedule::command(PaymentDueReminderCommand::class)->dailyAt('06:00');
+
+Schedule::job(InvoiceDueCheck::class)->dailyAt('06:00');

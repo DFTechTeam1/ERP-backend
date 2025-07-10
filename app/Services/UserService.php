@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ErrorCode\Code;
+use App\Enums\System\BaseRole;
 use App\Exceptions\UserNotFound;
 use App\Models\User;
 use App\Models\UserEncryptedToken;
@@ -506,6 +507,11 @@ class UserService
 
         $userIdEncode = Hashids::encode($user->id);
 
+        $allRoles = BaseRole::cases();
+        $allRoles = collect($allRoles)->map(function ($roleData) {
+            return $roleData->value;
+        })->toArray();
+
         $payload = [
             'token' => $token->plainTextToken,
             'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
@@ -521,6 +527,12 @@ class UserService
             'is_super_user' => $isSuperUser,
             'notifications' => $notifications,
             'encrypted_user_id' => $userIdEncode,
+            'notification_section' => [
+                'general' => $user->hasRole($allRoles),
+                'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
+                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
+                'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
+            ]
         ];
 
         // this data is used when changing to other subdomains

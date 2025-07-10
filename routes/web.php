@@ -5,13 +5,19 @@ use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
+use App\Services\PusherNotification;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
+use Modules\Finance\Jobs\InvoiceDueCheck;
+use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
+use Modules\Finance\Notifications\InvoiceDueCheckNotification;
+use Modules\Finance\Notifications\ProjectHasBeenFinal;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectDeal;
@@ -115,19 +121,9 @@ Route::get('invoices/general/download', [InvoiceController::class, 'downloadGene
     ->middleware('signed');
 
 Route::get('/notification-preview', function () {
-    $transaction = \Modules\Finance\Models\Transaction::latest()
-        ->with([
-            'projectDeal:id,name,project_date,is_fully_paid',
-            'projectDeal.transactions',
-            'projectDeal.finalQuotation',
-            'invoice:id,payment_due'
-        ])
-        ->first();
- 
-    TransactionCreatedJob::dispatch($transaction->id);
-
-    // return (new \App\Services\GeneralService)->getUpcomingPaymentDue();
-});
+    return Auth::user();
+})->middleware('auth:sanctum');
 
 Route::get('check', function () {
+    InvoiceDueCheck::dispatch();
 });
