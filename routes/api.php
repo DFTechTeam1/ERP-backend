@@ -209,6 +209,11 @@ Route::middleware('auth:sanctum')
             $user = Auth::user();
 
             $notifications = $user->unreadNotifications;
+            $notifications = $notifications->map(function ($item) {
+                $item['created_at_raw'] = date('d F Y H:i', strtotime($item->created_at));
+
+                return $item;
+            });
             $service = new EncryptionService();
             $encrypt = $service->encrypt(json_encode($notifications), config('app.salt_key_encryption'));
 
