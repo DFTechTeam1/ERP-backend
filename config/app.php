@@ -133,7 +133,7 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
-    'pagination_length' => 10,
+    'pagination_length' => 50,
 
     'frontend_url' => env('FRONTEND_URL', ''),
 
