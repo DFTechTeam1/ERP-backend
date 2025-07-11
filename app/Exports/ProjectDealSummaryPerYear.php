@@ -43,10 +43,10 @@ class ProjectDealSummaryPerYear implements FromView, ShouldAutoSize, WithEvents,
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                $event->sheet->getDelegate()->setAutoFilter('A1:P1');
+                $event->sheet->getDelegate()->setAutoFilter('A1:Q1');
 
                 // set background
-                $event->sheet->getDelegate()->getStyle('A1:P1')->applyFromArray([
+                $event->sheet->getDelegate()->getStyle('A1:Q1')->applyFromArray([
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
                         'color' => ['rgb' => '000000']
@@ -59,7 +59,7 @@ class ProjectDealSummaryPerYear implements FromView, ShouldAutoSize, WithEvents,
 
                 // set borders
                 $lastRow = $event->sheet->getDelegate()->getHighestRow();
-                $event->sheet->getDelegate()->getStyle("A1:P{$lastRow}")->applyFromArray([
+                $event->sheet->getDelegate()->getStyle("A1:Q{$lastRow}")->applyFromArray([
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
