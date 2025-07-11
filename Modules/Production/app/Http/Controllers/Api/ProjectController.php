@@ -987,4 +987,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->initProjectCount());
     }
+
+    public function getReportSummary()
+    {
+        return apiResponse($this->projectDealService->getProjectDealSummary());
+    }
 }

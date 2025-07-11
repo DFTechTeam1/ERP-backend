@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\ClearLogSchedule;
+use App\Jobs\ProjectDealSummaryJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -35,3 +36,5 @@ Schedule::command(CheckEmployeeResign::class)->dailyAt('00:15');
 Schedule::command(PaymentDueReminderCommand::class)->dailyAt('06:00');
 
 Schedule::job(InvoiceDueCheck::class)->dailyAt('06:00');
+
+Schedule::job(ProjectDealSummaryJob::class)->dailyAt('17:00');
