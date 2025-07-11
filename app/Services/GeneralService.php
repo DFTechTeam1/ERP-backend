@@ -288,11 +288,14 @@ class GeneralService
 
                 // get down payment
                 $downPayment = 0;
+                $downPaymentDate = '';
                 if ($project->transactions->count() > 0) {
-                    $downPayment = $project->transactions->where('transaction_type', TransactionType::DownPayment->value)->values();
-                    $downPayment = $downPayment->count() > 0 ? (float) $downPayment[0]->payment_amount : 0;
+                    $downPaymentRaw = $project->transactions->where('transaction_type', TransactionType::DownPayment->value)->values();
+                    $downPayment = $downPaymentRaw->count() > 0 ? (float) $downPaymentRaw[0]->payment_amount : 0;
+                    $downPaymentDate = $downPaymentRaw->count() > 0 ? date('d F Y', strtotime($downPaymentRaw[0]->transaction_date)) : '';
                 }
                 $project['down_payment'] = $downPayment;
+                $project['down_payment_date'] = $downPaymentDate;
 
                 // get repayment
                 $repayment = 0;
