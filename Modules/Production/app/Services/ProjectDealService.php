@@ -4,7 +4,9 @@ namespace Modules\Production\Services;
 
 use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
+use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectStatus;
+use App\Enums\Transaction\TransactionType;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
@@ -737,5 +739,10 @@ class ProjectDealService
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    public function getProjectDealSummary(): array
+    {
+        return $this->generalService->getProjectDealSummary(2025);
     }
 }
