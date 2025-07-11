@@ -12,11 +12,12 @@
             <th style="font-weight: bold; text-align: center;">Ukuran LED</th>
             <th style="font-weight: bold; text-align: center;">Fee</th>
             <th style="font-weight: bold; text-align: center;">Pembayaran DP</th>
+            <th style="font-weight: bold; text-align: center;">Tgl Pembayaran DP</th>
             <th style="font-weight: bold; text-align: center;">Pelunasan</th>
+            <th style="font-weight: bold; text-align: center;">Tgl Lunas</th>
             <th style="font-weight: bold; text-align: center;">Refund</th>
             <th style="font-weight: bold; text-align: center;">Tanggal Refund</th>
             <th style="font-weight: bold; text-align: center;">Keterangan</th>
-            <th style="font-weight: bold; text-align: center;">Tgl Lunas</th>
         </tr>
     </thead>
 
@@ -40,6 +41,7 @@
 
                     @endif
                 </td>
+                <td>{{ $project->down_payment_date }}</td>
                 <td>
                     @if ($project->repayment)
                         Rp{{ number_format(num: $project->repayment, decimal_separator: ',') }}
@@ -47,6 +49,7 @@
 
                     @endif
                 </td>
+                <td>{{ $project->repayment_date }}</td>
                 <td>
                     @if ($project->refund)
                         Rp{{ number_format(num: $project->refund, decimal_separator: ',') }}
@@ -56,7 +59,6 @@
                 </td>
                 <td>{{ $project->refund_date }}</td>
                 <td></td>
-                <td>{{ $project->repayment_date }}</td>
             </tr>
         @endforeach
     </tbody>

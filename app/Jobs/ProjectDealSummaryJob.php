@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class ProjectDealSummaryJob implements ShouldQueue
 {
@@ -29,7 +30,7 @@ class ProjectDealSummaryJob implements ShouldQueue
     public function handle(): void
     {
         $users = User::role(['finance', 'root'])->get();
-
+        
         foreach ($users as $user) {
             $user->notify(new ProjectDealSummaryNotification);
         }
