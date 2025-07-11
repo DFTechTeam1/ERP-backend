@@ -2,64 +2,40 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\ProjectTaskPicLog;
-use Modules\Production\Repository\Interface\ProjectTaskPicLogInterface;
+use Modules\Production\Models\ProjectTaskDurationHistory;
+use Modules\Production\Repository\Interface\ProjectTaskDurationHistoryInterface;
 
-class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface
-{
+class ProjectTaskDurationHistoryRepository extends ProjectTaskDurationHistoryInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ProjectTaskPicLog;
+        $this->model = new ProjectTaskDurationHistory();
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
+     * @param string $select
+     * @param string $where
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '', int $limit = 0, array $whereHas = [])
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
-        }
-
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                if (isset($queryItem['query'])) {
-                    if (! isset($queryItem['type'])) {
-                        $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                            $qd->whereRaw($queryItem['query']);
-                        });
-                    } else {
-                        $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                            $qd->whereRaw($queryItem['query']);
-                        });
-                    }
-                } else {
-                    $query->whereHas($queryItem['relation']);
-                }
-            }
         }
 
         if ($relation) {
             $query->with($relation);
-        }
-
-        if (! empty($orderBy)) {
-            $query->orderByRaw($orderBy);
-        }
-
-        if ($limit > 0) {
-            $query->limit($limit);
         }
 
         return $query->get();
@@ -68,47 +44,50 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface
     /**
      * Paginated data for datatable
      *
+     * @param string $select
+     * @param string $where
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select,
-        string $where,
-        array $relation,
+        string $select = '*',
+        string $where = "",
+        array $relation = [],
         int $itemsPerPage,
         int $page
-    ) {
+    )
+    {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
+     * @param string $uid
+     * @param string $select
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where('id', $uid);
-        } else {
-            $query->whereRaw($where);
-        }
-
+        $query->where("uid", $uid);
+        
         if ($relation) {
             $query->with($relation);
         }
@@ -121,6 +100,7 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface
     /**
      * Store Data
      *
+     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -131,14 +111,15 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface
     /**
      * Update Data
      *
-     * @param  int|string  $id
+     * @param array $data
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -152,7 +133,7 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface
     /**
      * Delete Data
      *
-     * @param  int|string  $id
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -164,6 +145,7 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface
     /**
      * Bulk Delete Data
      *
+     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')
