@@ -7,8 +7,12 @@
 
 namespace App\Services;
 
+use App\Enums\Production\ProjectDealStatus;
+use App\Enums\Transaction\InvoiceStatus;
+use App\Enums\Transaction\TransactionType;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -237,5 +241,85 @@ class GeneralService
         (new \App\Services\GeneralService)->storeCache(key: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value, value: $nextIdentifier, isForever: true);
 
         return $currentIdentifier;
+    }
+
+    /**
+     * Get all invoice that have due from now to the next 5 days
+     * 
+     * Finance and marketing will be notified about this
+     * 
+     * @return Collection
+     */
+    public function getInvoiceDueData(): Collection
+    {
+        $repo = new InvoiceRepository();
+
+        $data = $repo->list(
+            select: 'id,project_deal_id,customer_id,number,amount,payment_due,status',
+            where: "DATEDIFF(payment_due, CURRENT_DATE) BETWEEN 1 AND 5 AND status = " . InvoiceStatus::Unpaid->value,
+            relation: [
+                'projectDeal:id,name',
+                'customer:id,name',
+                'projectDeal.marketings:id,employee_id,project_deal_id'
+            ]
+        );
+
+        return $data;
+    }
+
+    public function getProjectDealSummary(string|int $year): array
+    {
+        try {
+            $repo = new ProjectDealRepository();
+            $data = $repo->list(
+                select: "id,name,collaboration,project_date,city_id,led_area,venue",
+                relation: [
+                    'city:id,name',
+                    'marketings:id,project_deal_id,employee_id',
+                    'marketings.employee:id,nickname',
+                    'finalQuotation',
+                    'transactions'
+                ],
+                where: "status = " . ProjectDealStatus::Final->value . " AND YEAR(project_date) = {$year}"
+            );
+
+            $data = $data->map(function ($project) {
+                $project['marketing_name'] = $project->marketings->pluck('employee.nickname')->implode(',');
+
+                // get down payment
+                $downPayment = 0;
+                if ($project->transactions->count() > 0) {
+                    $downPayment = $project->transactions->where('transaction_type', TransactionType::DownPayment->value)->values();
+                    $downPayment = $downPayment->count() > 0 ? (float) $downPayment[0]->payment_amount : 0;
+                }
+                $project['down_payment'] = $downPayment;
+
+                // get repayment
+                $repayment = 0;
+                $repaymentDate = '';
+                if ($project->transactions->count() > 0) {
+                    $repaymentRaw = $project->transactions->where('transaction_type', TransactionType::Repayment->value)->values();
+                    $repayment = $repaymentRaw->count() > 0 ? (float) $repaymentRaw[0]->payment_amount : 0;
+                    $repaymentDate = $repaymentRaw->count() > 0 ? date('d F Y', strtotime($repaymentRaw[0]->transaction_date)) : '';
+                }
+                $project['repayment'] = $repayment;
+                $project['repayment_date'] = $repaymentDate;
+
+                //TODO: Build the feature
+                $project['refund'] = 0;
+                $project['refund_date'] = '';
+
+                return $project;
+            })->values();
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'projects' => $data
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

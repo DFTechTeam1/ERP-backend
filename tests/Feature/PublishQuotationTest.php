@@ -2,10 +2,12 @@
 
 use App\Services\GeneralService;
 use App\Services\Geocoding;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Modules\Company\Models\Country;
 use Modules\Company\Models\ProjectClass;
+use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
 use Modules\Production\Models\ProjectDeal;
@@ -34,6 +36,8 @@ dataset('dataDeals', [
 
 describe('Publish Quotation', function () {
     it("Publish quotation as final return success", function (Customer $customer, ProjectClass $projectClass, Employee $employee, QuotationItem $quotationItem) {
+        Bus::fake();
+
         $currentDeal = createDeal($customer, $projectClass, $employee, $quotationItem);
 
         // mock geocoding
@@ -97,6 +101,8 @@ describe('Publish Quotation', function () {
         $this->assertDatabaseHas('project_boards', [
             'project_id' => $response['data']['project']['id']
         ]);
+
+        Bus::assertDispatched(ProjectHasBeenFinal::class);
     })->with('dataDeals');
 
     it("Publish quotation as temporary return success", function (Customer $customer, ProjectClass $projectClass, Employee $employee, QuotationItem $quotationItem) {

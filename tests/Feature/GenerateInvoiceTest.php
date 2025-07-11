@@ -1,11 +1,13 @@
 <?php
 
 use App\Enums\Production\ProjectDealStatus;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Modules\Company\Models\City;
 use Modules\Company\Models\Country;
 use Modules\Company\Models\State;
+use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
 use Modules\Finance\Models\Transaction;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectQuotation;
@@ -49,6 +51,8 @@ it("GenerateBillInvoiceWhenHaveUnpaidInvoice", function () {
 });
 
 it('GenerateBillInvoice', function () {
+    Bus::fake();
+
     $country = Country::factory()
         ->has(
             State::factory()
@@ -98,4 +102,6 @@ it('GenerateBillInvoice', function () {
         'project_deal_id' => $projectDeal->id,
         'sequence' => 1
     ]);
+
+    Bus::assertDispatched(InvoiceHasBeenCreatedJob::class);
 });

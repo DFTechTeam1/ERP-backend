@@ -4,14 +4,24 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
     public function markAsRead(string $id)
     {
-        $employee = \Modules\Hrd\Models\Employee::find(auth()->user()->employee_id);
+        $user = Auth::user();
+        $employee = \Modules\Hrd\Models\Employee::find($user->employee_id);
 
         foreach ($employee->unreadNotifications as $notification) {
+            if ($notification->id == $id) {
+                $notification->markAsRead();
+            }
+        }
+
+        // from users
+        $userData = \App\Models\User::find($user->id);
+        foreach ($userData->unreadNotifications as $notification) {
             if ($notification->id == $id) {
                 $notification->markAsRead();
             }
@@ -66,5 +76,24 @@ class NotificationController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function readAll()
+    {
+        $user = Auth::user();
+
+        $user->unreadNotifications->markAsRead();
+
+        if ($user->employee_id) {
+            $employee = \Modules\Hrd\Models\Employee::find($user->employee_id);
+
+            $employee->unreadNotifications->markAsRead();
+        }
+
+        return apiResponse(
+            generalResponse(
+                message: "Success"
+            )
+        );
     }
 }
