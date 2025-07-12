@@ -88,5 +88,8 @@ return [
     'successAddQuotation' => 'Quotation has beed added successfully',
     'successCreateQuotationItem' => "Quotation item has been created successfully",
     'updateQuotationItemSuccess' => 'Quotation item has been updated successfully',
-    'cannotCreateInvoiceIfYouHaveAnotherUnpaidInovice' => 'Cannot create invoice if you have another unpaid invoice'
+    'cannotCreateInvoiceIfYouHaveAnotherUnpaidInovice' => 'Cannot create invoice if you have another unpaid invoice',
+    'successCreateDueReason' => "Success create deadline due reason",
+    'successUpdateDueReason' => "Success update deadline due reason",
+    'successDeleteDueReason' => "Success delete deadline due reason",
 ];
