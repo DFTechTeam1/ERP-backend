@@ -1291,7 +1291,7 @@ Table "project_tasks" {
   "performance_time" longtext [note: '''will be [{type: \'\'on_progress\'\', start_at: \'\'2024-05-24 20:00:00\'\', end_at: \'\'\'\'}]. and will be have type: on_progress, review_by_pm, review_by_client''']
   "status" tinyint [default: NULL, note: '1 for on process, 2 for check by pm, 3 for revise, 4 for completed']
   "current_pics" longtext [note: 'This column will be update in every task movement. Format will be array of id like [1,2,3]']
-  "current_board" int [default: NULL]
+  "current_board" int [default: NULL]p
   "is_approved" tinyint [not null, default: '0']
   "task_identifier_id" varchar(4) [default: NULL]
   "is_modeler_task" tinyint(1) [not null, default: '0', note: 'This column is to detect this task is assign to modeler team or not']
@@ -1301,6 +1301,28 @@ Table "project_tasks" {
     project_id [name: "project_tasks_project_id_foreign"]
     project_board_id [name: "project_tasks_project_board_id_foreign"]
   }
+}
+
+Table "deadline_change_reasons" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar [not null]
+  "created_at" timestamp
+  "updated_at" timestamp
+  "deleted_at" timestamp
+}
+
+Table "project_task_deadlines" {
+  "id" bigint [pk, not null, increment]
+  "project_task_id" bigint [ref: > project_tasks.id]
+  "employee_id" bigint [ref: > employees.id]
+  "deadline" timestamp [not null]
+  "actual_finish_time" timestamp
+  "is_first_deadline" bool [not null, default: false]
+  "due_reason" bigint [ref: > deadline_change_reasons, note: "nullable"]
+  "custom_reason" varchar
+  "updated_by" bigint [ref: > users.id]
+  "created_at" timestamp
+  "updated_at" timestamp
 }
 
 Table "project_vjs" {

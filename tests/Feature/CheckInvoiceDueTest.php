@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Transaction\InvoiceStatus;
 use App\Services\GeneralService;
 use Modules\Finance\Models\Invoice;
 
@@ -26,6 +27,7 @@ it('Due invoice detected', function () {
         ->create([
             'payment_date' => now()->subDays(4)->format('Y-m-d'),
             'payment_due' => now()->addDays(3)->format('Y-m-d'),
+            'status' => InvoiceStatus::Unpaid->value
         ]);
 
     $service = new GeneralService();

@@ -15,6 +15,7 @@
                 { "path": "/admin/production/projects", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "menus/projects.png", "permission": "list_project" },
                 { "path": "/admin/deals", "slug": "projectDeals", "lang_id": "Deals", "lang_en": "Deals", "icon": "menus/deals.png", "permission": "list_deals" },
                 { "path": "/admin/quotation-items", "slug": "manage-quotaiton-items", "lang_id": "Kelola Quotation Item", "lang_en": "Manage Quotation Item", "icon": "menus/paper-ori.png", "permission": "list_quotation_items" },
+                { "path": "/admin/deadline-change-reason", "slug": "deadline-change-reason", "lang_id": "Kelola Alasan Deadline", "lang_en": "Manage Deadline Reason", "icon": "menus/paper-ori.png", "permission": "list_deadline_reasons" },
                 { "path": "/admin/production/files", "slug": "files", "lang_id": "Files", "lang_en": "Files", "icon": "menus/folder.png", "permission": "list_file_manager" },
                 { "path": "/admin/production/tasks", "slug": "task", "lang_id": "Tugas", "lang_en": "Tasks", "icon": "menus/task.png", "permission": "list_task" },
                 { "path": "/admin/production/team-transfer", "slug": "team-transfer", "lang_id": "Team Transfer", "lang_en": "Team Transfer", "icon": "menus/transfer.png", "permission": "list_team_transfer" },

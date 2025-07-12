@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Production\Http\Controllers\Api\DeadlineChangeReasonController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Http\Controllers\Api\TeamTransferController;
@@ -24,6 +25,8 @@ Route::middleware(['auth:sanctum'])
         Route::get('eventTypes', [ProjectController::class, 'getEventTypes']);
         Route::get('classList', [ProjectController::class, 'getClassList']);
         Route::get('status', [ProjectController::class, 'getProjectStatus']);
+
+        Route::resource('deadlineReason', DeadlineChangeReasonController::class);
 
         Route::get('tasks', [ProjectController::class, 'getAllTasks']);
         Route::get('tasks/status', [ProjectController::class, 'getTaskStatus']);
