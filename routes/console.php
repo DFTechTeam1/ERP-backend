@@ -37,4 +37,4 @@ Schedule::command(PaymentDueReminderCommand::class)->dailyAt('06:00');
 
 Schedule::job(InvoiceDueCheck::class)->dailyAt('06:00');
 
-Schedule::job(ProjectDealSummaryJob::class)->dailyAt('15:00');
+Schedule::job(ProjectDealSummaryJob::class)->dailyAt('09:42');
