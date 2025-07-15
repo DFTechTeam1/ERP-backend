@@ -10,6 +10,7 @@ use App\Services\Geocoding;
 use App\Services\UserRoleManagement;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
+use Modules\Company\Repository\SettingRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Hrd\Repository\EmployeeTaskStateRepository;
@@ -20,8 +21,11 @@ use Modules\Production\Repository\EntertainmentTaskSongResultImageRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
 use Modules\Production\Repository\EntertainmentTaskSongReviseRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
+use Modules\Production\Repository\ProjectDealMarketingRepository;
+use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
+use Modules\Production\Repository\ProjectQuotationRepository;
 use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
@@ -80,7 +84,11 @@ trait HasProjectConstructor
         $entertainmentTaskSongResultRepo = null,
         $entertainmentTaskSongResultImageRepo = null,
         $entertainmentTaskSongRevise = null,
-        $employeeTaskStateRepo = null
+        $employeeTaskStateRepo = null,
+        $settingRepo = null,
+        $projectQuotationRepo = null,
+        $projectDealRepo = null,
+        $projectDealMarketingRepo = null
     ) {
         $this->projectService = new ProjectService(
             $userRoleManagement ? $userRoleManagement : new UserRoleManagement,
@@ -118,7 +126,11 @@ trait HasProjectConstructor
             $entertainmentTaskSongResultRepo ? $entertainmentTaskSongResultRepo : new EntertainmentTaskSongResultRepository,
             $entertainmentTaskSongResultImageRepo ? $entertainmentTaskSongResultImageRepo : new EntertainmentTaskSongResultImageRepository,
             $entertainmentTaskSongRevise ? $entertainmentTaskSongRevise : new EntertainmentTaskSongReviseRepository,
-            $employeeTaskStateRepo ? $employeeTaskStateRepo : new EmployeeTaskStateRepository
+            $employeeTaskStateRepo ? $employeeTaskStateRepo : new EmployeeTaskStateRepository,
+            $settingRepo ? $settingRepo : new SettingRepository,
+            $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
+            $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
+            $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository 
         );
     }
 }

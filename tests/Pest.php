@@ -187,7 +187,7 @@ function createProjectService(
     );
 }
 
-function initAuthenticateUser()
+function initAuthenticateUser(array $permissions = [])
 {
     $user = \App\Models\User::factory()
         ->create();
@@ -198,6 +198,10 @@ function initAuthenticateUser()
 
     if (!$checkRoot) {
         $checkRoot = \Spatie\Permission\Models\Role::create(['name' => \App\Enums\System\BaseRole::Root->value, 'guard_name' => 'sanctum']);
+    }
+
+    foreach ($permissions as $permissionData) {
+        $user->givePermissionTo($permissionData);
     }
 
     $user->assignRole($checkRoot);

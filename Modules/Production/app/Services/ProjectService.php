@@ -1313,7 +1313,7 @@ class ProjectService
         ];
     }
 
-    protected function formattedDetailTask(string $taskUid, string $where = '')
+    public function formattedDetailTask(string $taskUid, string $where = '')
     {
         if (empty($where)) {
             $taskDetail = $this->taskRepo->show($taskUid, '*', $this->defaultTaskRelation());

@@ -63,6 +63,7 @@ class CopyDealToProject
                 'name' => $item['name'],
             ];
         })->values()->toArray();
+        
         if ($defaultBoards) {
             $project->boards()->createMany($defaultBoards);
         }
