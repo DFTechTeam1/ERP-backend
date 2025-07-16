@@ -170,6 +170,8 @@ class ProjectService
 
     private $projectDealMarketingRepo;
 
+    private $projectTaskDeadlineRepo;
+
     /**
      * Construction Data
      */
@@ -213,7 +215,8 @@ class ProjectService
         \Modules\Company\Repository\SettingRepository $settingRepo,
         \Modules\Production\Repository\ProjectQuotationRepository $projectQuotationRepo,
         \Modules\Production\Repository\ProjectDealRepository $projectDealRepo,
-        \Modules\Production\Repository\ProjectDealMarketingRepository $projectDealMarketingRepo
+        \Modules\Production\Repository\ProjectDealMarketingRepository $projectDealMarketingRepo,
+        \Modules\Production\Repository\ProjectTaskDeadlineRepository $projectTaskDeadlineRepo
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -294,6 +297,8 @@ class ProjectService
         $this->projectDealRepo = $projectDealRepo;
 
         $this->projectDealMarketingRepo = $projectDealMarketingRepo;
+
+        $this->projectTaskDeadlineRepo = $projectTaskDeadlineRepo;
     }
 
     /**
@@ -2549,7 +2554,7 @@ class ProjectService
                 return errorResponse(message: __('notification.cannotCombineModeller'));
             }
 
-            $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask);
+            $taskId = $this->generalService->getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask);
 
             $notifiedNewTask = [];
             foreach ($data['users'] as $user) {
@@ -2557,6 +2562,7 @@ class ProjectService
                 $employeeId = $this->generalService->getIdFromUid($user, new \Modules\Hrd\Models\Employee);
                 $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
 
+                // only process new pic
                 $checkPic = $this->taskPicRepo->show(0, 'id', [], 'project_task_id = '.$taskId.' AND employee_id = '.$employeeId);
                 if (! $checkPic) {
                     $taskDetail = $this->taskRepo->show($taskUid, 'id,project_id');
@@ -2586,6 +2592,16 @@ class ProjectService
                     $this->taskPicRepo->store($payload);
 
                     $notifiedNewTask[] = $employeeId;
+
+                    // write deadline history
+                    if ($needChangeTaskStatus) { // indicate pic is not led modeller
+                        $this->projectTaskDeadlineRepo->store(data: [
+                            'employee_id' => $employeeId,
+                            'project_task_id' => $taskId,
+                            'deadline' => date('Y-m-d H:i:s', strtotime($data['end_date'])),
+                            'is_first_deadline' => true,
+                        ]);
+                    }
 
                     // record task working time history
                     if ($isForProjectManager) { // set to check by pm
@@ -2836,7 +2852,7 @@ class ProjectService
      *
      * $data variable will have
      * string name
-     * string end_date
+     * string end_date -> with format Y-m-d H:i
      * array pic [uid]
      * array media [blob]
      *
@@ -2884,6 +2900,7 @@ class ProjectService
                     data: [
                         'users' => $data['pic'],
                         'removed' => [],
+                        'end_date' => $data['end_date']
                     ],
                     taskUid: $task->uid,
                     needChangeTaskStatus: $isForLeadModeller ? false : true

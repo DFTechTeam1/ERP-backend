@@ -3,6 +3,7 @@
 namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateTask extends FormRequest
 {
@@ -14,7 +15,10 @@ class CreateTask extends FormRequest
         return [
             'name' => 'required',
             'task_type' => 'nullable',
-            'end_date' => 'nullable',
+            'end_date' => [
+                'required',
+                Rule::date()->format('Y-m-d H:i')
+            ],
             'pic' => 'nullable',
             'media' => 'nullable|array',
         ];

@@ -26,6 +26,13 @@ class ProjectTaskDeadline extends Model
         'updated_by'
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (ProjectTaskDeadline $model) {
+            $model->updated_by = \Illuminate\Support\Facades\Auth::id();
+        });
+    }
+
     protected static function newFactory(): ProjectTaskDeadlineFactory
     {
         return ProjectTaskDeadlineFactory::new();

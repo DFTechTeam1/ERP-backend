@@ -2,6 +2,7 @@
 
 use App\Actions\DefineTaskAction;
 use App\Actions\Project\DetailCache;
+use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectBoard;
 use Modules\Production\Services\ProjectService;
@@ -86,4 +87,60 @@ test('Create task only with name', function () use ($defaultBoards) {
     $this->assertDatabaseCount('project_tasks', 1);
 
     $this->assertDatabaseCount('project_task_pics', 0);
+});
+
+test('Create task with pic and deadline', function () use ($defaultBoards) {
+    \Illuminate\Support\Facades\Bus::fake();
+
+    $employee = Employee::factory()->create();
+    $payload = [
+        'name' => 'Task pic',
+        'pic' => [
+            'users' => [$employee->uid]
+        ],
+        'end_date' => now()->addDays(10)->format('Y-m-d H:i'),
+    ];
+
+    $mockDetailCache = Mockery::mock(DetailCache::class);
+    $mockDetailCache->shouldReceive('handle')
+    ->withAnyArgs()
+    ->andReturn([]);
+
+    $service = createProjectService(detailCacheAction: $mockDetailCache);
+    
+    $project = Project::factory()->create();
+
+    foreach ($defaultBoards as $board) {
+        ProjectBoard::create([
+            'project_id' => $project->id,
+            'name' => $board['name'],
+            'sort' => $board['sort'],
+            'based_board_id' => $board['based_board_id'],
+        ]);
+    }
+
+    DefineTaskAction::mock()
+        ->shouldReceive('handle')
+        ->withAnyArgs()
+        ->andReturn([]);
+
+    $response = $service->storeTask(data: $payload, boardId: $defaultBoards[0]['id']);
+    logging('RESPONE TASK PIC', $response);
+
+    expect($response['error'])->toBeFalse();
+    expect($response['message'])->toBe(__('global.taskCreated'));
+
+    // check database
+    $this->assertDatabaseHas('project_tasks', [
+        'project_id' => $project->id,
+        'name' => 'Task pic'
+    ]);
+    
+    $this->assertDatabaseHas('project_task_pics', [
+        'employee_id' => $employee->id
+    ]);
+
+    $this->assertDatabaseHas('project_task_deadlines', 1);
+
+    \Illuminate\Support\Facades\Bus::assertDispatched(\Modules\Production\Jobs\AssignTaskJob::class);
 });

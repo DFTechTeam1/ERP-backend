@@ -40,6 +40,7 @@ use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Repository\ProjectTaskAttachmentRepository;
+use Modules\Production\Repository\ProjectTaskDeadlineRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectTaskLogRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
@@ -140,7 +141,8 @@ function createProjectService(
     $settingRepo = null,
     $projectQuotationRepo = null,
     $projectDealRepo = null,
-    $projectDealMarketingRepo = null
+    $projectDealMarketingRepo = null,
+    $projetTaskDeadlineRepo = null
 )
 {
     return new ProjectService(
@@ -183,7 +185,8 @@ function createProjectService(
         $settingRepo ? $settingRepo : new SettingRepository,
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
-        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository
+        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
+        $projetTaskDeadlineRepo ? $projetTaskDeadlineRepo : new ProjectTaskDeadlineRepository
     );
 }
 
