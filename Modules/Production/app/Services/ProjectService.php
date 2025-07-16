@@ -2561,6 +2561,10 @@ class ProjectService
 
                 $employeeId = $this->generalService->getIdFromUid($user, new \Modules\Hrd\Models\Employee);
                 $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
+                logging("TASK PICK EMPLOYEEID", [
+                    'employeeId' => $employeeId,
+                    'userdata' => $userData
+                ]);
 
                 // only process new pic
                 $checkPic = $this->taskPicRepo->show(0, 'id', [], 'project_task_id = '.$taskId.' AND employee_id = '.$employeeId);
@@ -2588,6 +2592,8 @@ class ProjectService
                     if ($isForLeadModeller) {
                         $payload['status'] = TaskPicStatus::WaitingToDistribute->value;
                     }
+
+                    logging("PAYLOAD TASK PIC", $payload);
 
                     $this->taskPicRepo->store($payload);
 
@@ -2811,7 +2817,9 @@ class ProjectService
         // validate pic
         $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
         $specialPosition = $this->generalService->getSettingByKey('special_production_position');
-        $specialPosition = $this->generalService->getIdFromUid($specialPosition, new PositionBackup);
+        if ($specialPosition) {
+            $specialPosition = $this->generalService->getIdFromUid($specialPosition, new PositionBackup);
+        }
 
         if ((isset($payloadUser)) && (! empty($payloadUser)) && ($leadModeller && count($payloadUser) > 1)) {
             $selectedModeller = collect($payloadUser)->filter(function ($filter) use ($leadModeller) {

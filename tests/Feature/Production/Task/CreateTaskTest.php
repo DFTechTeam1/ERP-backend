@@ -2,6 +2,8 @@
 
 use App\Actions\DefineTaskAction;
 use App\Actions\Project\DetailCache;
+use App\Models\User;
+use App\Services\GeneralService;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectBoard;
@@ -10,7 +12,7 @@ use Spatie\Permission\Models\Permission;
 
 beforeEach(function () {
     // create permission
-    $permissionNames = ['move_board', 'edit_task_description', 'add_task_description', 'delete_task_description'];
+    $permissionNames = ['move_board', 'edit_task_description', 'add_task_description', 'delete_task_description', 'assign_modeller'];
     foreach ($permissionNames as $name) {
         Permission::create(['name' => $name, 'guard_name' => 'sanctum']);
     }
@@ -92,11 +94,25 @@ test('Create task only with name', function () use ($defaultBoards) {
 test('Create task with pic and deadline', function () use ($defaultBoards) {
     \Illuminate\Support\Facades\Bus::fake();
 
-    $employee = Employee::factory()->create();
+    $mockGeneralService = Mockery::mock(GeneralService::class);
+    $mockGeneralService->shouldReceive('getSettingByKey')
+        ->with('led_3d_modeller')
+        ->andReturnNull();
+    $mockGeneralService->shouldReceive('getSettingByKey')
+        ->with('special_production_position')
+        ->andReturnNull();
+
+    $employee = Employee::factory()
+        ->for(User::factory())
+        ->create();
+    logging("CURRENT EMPLOYEE", [
+        'employee' => $employee,
+        'user' => $employee->user
+    ]);
     $payload = [
         'name' => 'Task pic',
         'pic' => [
-            'users' => [$employee->uid]
+            $employee->uid
         ],
         'end_date' => now()->addDays(10)->format('Y-m-d H:i'),
     ];
@@ -124,7 +140,7 @@ test('Create task with pic and deadline', function () use ($defaultBoards) {
         ->withAnyArgs()
         ->andReturn([]);
 
-    $response = $service->storeTask(data: $payload, boardId: $defaultBoards[0]['id']);
+    $response = $service->storeTask(data: $payload, boardId: $project->boards[0]->id);
     logging('RESPONE TASK PIC', $response);
 
     expect($response['error'])->toBeFalse();

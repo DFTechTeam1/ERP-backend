@@ -7,6 +7,7 @@ use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\SalaryType;
 use App\Enums\Employee\Status;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Company\Models\Branch;
 use Modules\Company\Models\IndonesiaCity;
@@ -102,6 +103,7 @@ class EmployeeFactory extends Factory
             'salary_type' => SalaryType::Monthly->value,
             'ptkp_status' => PtkpStatus::K0->value,
             'branch_id' => Branch::factory(),
+            'user_id' => User::factory()
         ];
     }
 }

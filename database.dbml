@@ -1318,7 +1318,7 @@ Table "project_task_deadlines" {
   "deadline" timestamp [not null]
   "actual_finish_time" timestamp
   "is_first_deadline" bool [not null, default: false]
-  "due_reason" bigint [ref: > deadline_change_reasons, note: "nullable"]
+  "due_reason" bigint [ref: > deadline_change_reasons.id, note: "nullable"]
   "custom_reason" varchar
   "updated_by" bigint [ref: > users.id]
   "created_at" timestamp
