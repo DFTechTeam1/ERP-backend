@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\GenerateQuotationNumber;
 use App\Enums\Production\ProjectDealStatus;
 use Illuminate\Support\Facades\Bus;
 use Modules\Company\Models\ProjectClass;
@@ -8,6 +9,7 @@ use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\QuotationItem;
+use Modules\Production\Repository\ProjectQuotationRepository;
 
 use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
 
@@ -95,6 +97,79 @@ describe('Create Project Deal', function () {
         ]);
 
         Bus::assertDispatched(ProjectHasBeenFinal::class);
+    })->with([
+        fn() => Customer::factory()->create()
+    ]);
+
+    it('Create project deal when 2 people access in the same time', function (Customer $customer) {
+        // we assume two people request quotation number when in the same time
+        $output = collect([
+            [
+                'quotation_id' => 'DF01100'
+            ]
+        ]);
+
+        $mock = Mockery::mock(ProjectQuotationRepository::class);
+        $mock->shouldReceive('list')
+            ->withAnyArgs()
+            ->andReturn($output);
+
+        $quotationOne = GenerateQuotationNumber::run($mock);
+        $quotationTwo = GenerateQuotationNumber::run($mock);
+
+        $requestData = getProjectDealPayload($customer);
+        $requestData = prepareProjectDeal($requestData);
+        
+        $requestDataTwo = getProjectDealPayload($customer);
+        $requestDataTwo = prepareProjectDeal($requestDataTwo);
+
+        // change name
+        $nameOne = 'Final Project';
+        $nameTwo = 'Final Project Two';
+        $requestData['name'] = $nameOne;
+        $requestDataTwo['name'] = $nameTwo;
+        
+        // modify quotation id
+        $requestData['quotation']['quotation_id'] = $quotationOne;
+        $requestDataTwo['quotation']['quotation_id'] = $quotationOne;
+        $requestData['quotation']['is_final'] = 1;
+
+        $service = createProjectService(); 
+
+        $service->storeProjectDeals(payload: $requestData);
+        $service->storeProjectDeals(payload: $requestDataTwo);
+
+        // here we check, quotation id should be different even they store the same quotation id
+        $dealOne = ProjectDeal::selectRaw('id')
+            ->with(['latestQuotation'])
+            ->where('name', $nameOne)
+            ->first();
+        $dealTwo = ProjectDeal::selectRaw('id')
+            ->with(['latestQuotation'])
+            ->where('name', $nameTwo)
+            ->first();
+
+        $this->assertDatabaseCount('project_quotations', 2);
+        $this->assertDatabaseHas('project_deals', [
+            'name' => $nameOne,
+            'id' => $dealOne->id
+        ]);
+        $this->assertDatabaseHas('project_deals', [
+            'name' => $nameTwo,
+            'id' => $dealTwo->id
+        ]);
+        $this->assertDatabaseHas('project_quotations', [
+            'project_deal_id' => $dealOne->id,
+            'quotation_id' => $dealOne->latestQuotation->quotation_id
+        ]);
+        $this->assertDatabaseHas('project_quotations', [
+            'project_deal_id' => $dealTwo->id,
+            'quotation_id' => $dealTwo->latestQuotation->quotation_id
+        ]);
+        $this->assertDatabaseMissing('project_quotations', [
+            'project_deal_id' => $dealOne->id,
+            'quotation_id' => $dealTwo->latestQuotation->quotation_id
+        ]);
     })->with([
         fn() => Customer::factory()->create()
     ]);

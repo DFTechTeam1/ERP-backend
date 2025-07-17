@@ -4,6 +4,7 @@ namespace Modules\Production\Services;
 
 use App\Actions\CreateQuotation;
 use App\Actions\DefineTaskAction;
+use App\Actions\GenerateQuotationNumber;
 use App\Actions\Hrd\PointRecord;
 use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
@@ -8281,27 +8282,7 @@ class ProjectService
      */
     public function getQuotationNumber(): array
     {
-        // get latest quotation
-        $latestData = $this->projectQuotationRepo->list(
-            select: 'id,quotation_id',
-            limit: 1,
-            orderBy: 'created_at DESC'
-        )->toArray();
-
-        if (count($latestData) == 0) {
-            $nextNumber = 1;
-        } else {
-            $latestNumber = str_replace(['DF', 'DFF'], '', $latestData[0]['quotation_id']);
-            $nextNumber = (int) $latestNumber + 1;
-        }
-
-        // convert to sequence number format
-        $lengthOfSentence = strlen($nextNumber) < 4 ? 4 : strlen($nextNumber) + 1;
-        $nextNumber = $this->generalService->generateSequenceNumber(number: $nextNumber, length: $lengthOfSentence);
-
-        $prefix = $this->generalService->getSettingByKey('quotation_prefix') ?? 'DF';
-
-        $quotation = "{$prefix}{$nextNumber}";
+        $quotation = GenerateQuotationNumber::run(projectQuotationRepo: $this->projectQuotationRepo);
 
         return generalResponse(
             message: 'Success',

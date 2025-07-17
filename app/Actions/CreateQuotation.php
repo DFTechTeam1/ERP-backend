@@ -11,6 +11,14 @@ class CreateQuotation
 
     public function handle(array $payload, ProjectQuotationRepository $projectQuotationRepo): ?string
     {
+        /**
+         * Here we generate the REAL quotation id
+         * Given quotation id is not valid in sometime.
+         * We can have duplicate number when 2 users create a project in the same time
+         */
+        $quotationId = GenerateQuotationNumber::run();
+        $payload['quotation']['quotation_id'] = $quotationId;
+        
         $quotation = $projectQuotationRepo->store(
             data: collect($payload['quotation'])->except('items')->toArray()
         );
