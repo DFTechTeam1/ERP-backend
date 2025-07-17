@@ -1617,11 +1617,35 @@ class ProjectService
         }
     }
 
-    protected function formatSingleTaskPermission($task)
+    /**
+     * Format task permission. Here we define actions based on \App\Actions\DefineTaskAction.php
+     * Another permission is:
+     * - need_approval_pm
+     * - stop_action
+     * - action_to_complete_task
+     * - have_permission_to_move_board
+     * - has_task_access
+     * - can_add_description
+     * - can_edit_description
+     * - can_delete_description
+     * - can_delete_attachment
+     * 
+     * In this function, we called some general function
+     * - hasSuperPower
+     * - hasLittlePower
+     * - isAssistantPMRole
+     * - isSuperUserRole
+     * - isDirector
+     * 
+     * @param ProjectTask $task
+     * 
+     * @return ProjectTask
+     */
+    protected function formatSingleTaskPermission(ProjectTask $task): ProjectTask
     {
         $employeeId = $this->telegramEmployee ? $this->telegramEmployee->id : auth()->user()->employee_id;
-        $superUserRole = isSuperUserRole();
-        $isDirector = isDirector();
+        $superUserRole = $this->generalService->isSuperUserRole();
+        $isDirector = $this->generalService->isDirector();
 
         // if logged user is pic or super user role, set as is_project_pic
         $projectPics = $this->projectPicRepository->list('id,pic_id', 'project_id = '.$task['project_id']);
@@ -1664,7 +1688,7 @@ class ProjectService
         if (
             (
                 in_array($employeeId, $picIds) ||
-                $superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()
+                $superUserRole || $isProjectPic || $isDirector || $this->generalService->isAssistantPMRole()
             ) &&
             $task['project']->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
             ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value ||
@@ -1675,7 +1699,7 @@ class ProjectService
             $task['action_to_complete_task'] = false;
         }
 
-        if ($superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()) {
+        if ($superUserRole || $isProjectPic || $isDirector || $this->generalService->isAssistantPMRole()) {
             $isActive = true;
             $haveTaskAccess = true;
         }
@@ -1707,24 +1731,24 @@ class ProjectService
          */
         if (
             ($user->hasPermissionTo('edit_task_description')) &&
-            (hasSuperPower(projectId: $task['project_id']) ||
-            hasLittlePower(task: $task))
+            ($this->generalService->hasSuperPower(projectId: $task['project_id']) ||
+            $this->generalService->hasLittlePower(task: $task))
         ) {
             $task['can_edit_description'] = true;
         }
 
         if (
             ($user->hasPermissionTo('add_task_description')) &&
-            (hasSuperPower(projectId: $task['project_id']) ||
-            hasLittlePower(task: $task))
+            ($this->generalService->hasSuperPower(projectId: $task['project_id']) ||
+            $this->generalService->hasLittlePower(task: $task))
         ) {
             $task['can_add_description'] = true;
         }
 
         if (
             ($user->hasPermissionTo('delete_task_description')) &&
-            (hasSuperPower(projectId: $task['project_id']) ||
-            hasLittlePower(task: $task))
+            ($this->generalService->hasSuperPower(projectId: $task['project_id']) ||
+            $this->generalService->hasLittlePower(task: $task))
         ) {
             $task['can_delete_description'] = true;
         }
@@ -1734,8 +1758,8 @@ class ProjectService
          */
         $task['can_delete_attachment'] = false;
         if (
-            hasSuperPower(projectId: $task['project_id']) ||
-            hasLittlePower(task: $task)
+            $this->generalService->hasSuperPower(projectId: $task['project_id']) ||
+            $this->generalService->hasLittlePower(task: $task)
         ) {
             $task['can_delete_attachment'] = true;
         }
@@ -2561,10 +2585,6 @@ class ProjectService
 
                 $employeeId = $this->generalService->getIdFromUid($user, new \Modules\Hrd\Models\Employee);
                 $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
-                logging("TASK PICK EMPLOYEEID", [
-                    'employeeId' => $employeeId,
-                    'userdata' => $userData
-                ]);
 
                 // only process new pic
                 $checkPic = $this->taskPicRepo->show(0, 'id', [], 'project_task_id = '.$taskId.' AND employee_id = '.$employeeId);
@@ -2592,8 +2612,6 @@ class ProjectService
                     if ($isForLeadModeller) {
                         $payload['status'] = TaskPicStatus::WaitingToDistribute->value;
                     }
-
-                    logging("PAYLOAD TASK PIC", $payload);
 
                     $this->taskPicRepo->store($payload);
 
@@ -2659,9 +2677,10 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskUid);
 
-            $currentData = $this->detailCacheAction->handle($task->project->uid, [
-                'boards' => FormatBoards::run($task->project->uid),
-            ]);
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $task->project->uid,
+                forceUpdateAll: true
+            );
 
             // TODO: CHECK AGAIN ACTION WHEN ASSIGN TO PROJECT MANAGER
             if ($currentData['status_raw'] != \App\Enums\Production\ProjectStatus::Draft->value) {
@@ -2812,6 +2831,16 @@ class ProjectService
         );
     }
 
+    /**
+     * Validate given pic, cannot combine lead modeller with other person in the office
+     * Need settings:
+     * - lead_3d_modeller
+     * - special_production_position
+     * 
+     * @param array $payloadUsser
+     * 
+     * @return bool
+     */
     protected function validatePicTask(array $payloadUser): bool
     {
         // validate pic
@@ -2857,6 +2886,8 @@ class ProjectService
 
     /**
      * Store task on selected board
+     * Process:
+     * - Validate PIC
      *
      * $data variable will have
      * string name
@@ -2893,26 +2924,28 @@ class ProjectService
 
             $taskStore = $this->taskRepo->store(collect($data)->except(['pic', 'media'])->toArray());
 
-            $task = $this->formattedDetailTask($taskStore->uid);
-
             // task log
             $this->loggingTask([
                 'board_id' => $boardId,
                 'board' => $board,
-                'task' => $task,
+                'task' => $taskStore->toArray(),
             ], 'addNewTask');
 
             // assign pic and record work timing if needed
             if (! empty($data['pic'])) {
-                $this->assignMemberToTask(
+                $assign = $this->assignMemberToTask(
                     data: [
                         'users' => $data['pic'],
                         'removed' => [],
                         'end_date' => $data['end_date']
                     ],
-                    taskUid: $task->uid,
+                    taskUid: $taskStore->uid,
                     needChangeTaskStatus: $isForLeadModeller ? false : true
                 );
+
+                if ($assign['error']) {
+                    return $assign;
+                }
 
                 // send notification if needed
 
@@ -2924,10 +2957,10 @@ class ProjectService
                     [
                         'media' => $data['media'],
                     ],
-                    $task->id,
+                    $taskStore->id,
                     $board->project_id,
                     $board->project->uid,
-                    $task->uid
+                    $taskStore->uid
                 );
             }
 
@@ -4941,13 +4974,12 @@ class ProjectService
 
             // assign current employee pic to task
             $this->assignMemberToTask(
-                [
+                data: [
                     'users' => $currentPicUids,
                     'removed' => [],
                 ],
-                $taskUid,
-                false,
-                true,
+                taskUid: $taskUid,
+                isRevise: true,
             );
 
             // update worktime for employee

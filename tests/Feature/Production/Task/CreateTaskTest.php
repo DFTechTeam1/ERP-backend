@@ -103,8 +103,12 @@ test('Create task with pic and deadline', function () use ($defaultBoards) {
         ->andReturnNull();
 
     $employee = Employee::factory()
-        ->for(User::factory())
         ->create();
+
+    User::factory()
+        ->create([
+            'employee_id' => $employee->id
+        ]);
     logging("CURRENT EMPLOYEE", [
         'employee' => $employee,
         'user' => $employee->user

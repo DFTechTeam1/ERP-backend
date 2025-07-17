@@ -325,4 +325,29 @@ class GeneralService
             return errorResponse($th);
         }
     }
+
+    public function isSuperUserRole()
+    {
+        return isSuperUserRole();
+    }
+
+    public function isDirector()
+    {
+        return isDirector();
+    }
+
+    public function hasSuperPower(int $projectId)
+    {
+        return hasSuperPower(projectId: $projectId);
+    }
+
+    public function hasLittlePower(object $task)
+    {
+        return hasLittlePower(task: $task);
+    }
+
+    public function isAssistantPMRole()
+    {
+        return isAssistantPMRole();
+    }
 }
