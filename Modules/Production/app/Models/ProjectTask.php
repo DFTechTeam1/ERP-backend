@@ -10,12 +10,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Production\Database\Factories\ProjectTaskFactory;
 
 class ProjectTask extends Model
 {
     use HasFactory, HasTaskIdentifier, ModelObserver;
 
     const DEFAULTIMAGEPROOF = 'default-complete.jpg';
+
+    protected static function newFactory(): ProjectTaskFactory
+    {
+        return ProjectTaskFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -56,6 +62,11 @@ class ProjectTask extends Model
     public function pics(): HasMany
     {
         return $this->hasMany(ProjectTaskPic::class, 'project_task_id');
+    }
+
+    public function deadlines(): HasMany
+    {
+        return $this->hasMany(ProjectTaskDeadline::class, 'project_task_id');
     }
 
     public function revises(): HasMany

@@ -31,6 +31,7 @@ use App\Services\UserRoleManagement;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -990,8 +991,6 @@ class ProjectService
             $whereHas
         );
 
-        logging('WHERE HAS', $whereHas);
-
         $data = collect((object) $data)->map(function ($project) {
             return [
                 'title' => $project->title,
@@ -1166,10 +1165,6 @@ class ProjectService
 
             $specialIds = collect($specialEmployee)->pluck('id')->toArray();
         }
-
-        logging('SPECIAL EMPLOYEE', $specialEmployee);
-        logging('WHERE SPECIAL', [$whereSpecial]);
-        logging('LEAD MODELER', [$leadModeller]);
 
         // get another teams from approved transfer team
         $user = auth()->user();
@@ -1637,11 +1632,11 @@ class ProjectService
      * - isSuperUserRole
      * - isDirector
      * 
-     * @param ProjectTask $task
+     * @param object $task
      * 
      * @return ProjectTask
      */
-    protected function formatSingleTaskPermission(ProjectTask $task): ProjectTask
+    protected function formatSingleTaskPermission(object $task): ProjectTask
     {
         $employeeId = $this->telegramEmployee ? $this->telegramEmployee->id : auth()->user()->employee_id;
         $superUserRole = $this->generalService->isSuperUserRole();
@@ -2580,6 +2575,14 @@ class ProjectService
 
             $taskId = $this->generalService->getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask);
 
+            $taskDetail = $this->taskRepo->show(
+                uid: $taskUid,
+                select: 'id,project_id',
+                relation: [
+                    'project:id,uid'
+                ]
+            );
+
             $notifiedNewTask = [];
             foreach ($data['users'] as $user) {
 
@@ -2589,8 +2592,6 @@ class ProjectService
                 // only process new pic
                 $checkPic = $this->taskPicRepo->show(0, 'id', [], 'project_task_id = '.$taskId.' AND employee_id = '.$employeeId);
                 if (! $checkPic) {
-                    $taskDetail = $this->taskRepo->show($taskUid, 'id,project_id');
-
                     // add to pic history
                     $this->taskPicHistory->store([
                         'project_id' => $taskDetail->project_id,
@@ -2675,28 +2676,40 @@ class ProjectService
                 \Modules\Production\Jobs\RemoveUserFromTaskJob::dispatch($data['removed'], $taskId)->afterCommit();
             }
 
-            $task = $this->formattedDetailTask($taskUid);
-
             $currentData = $this->detailCacheAction->handle(
-                projectUid: $task->project->uid,
+                projectUid: $taskDetail->project->uid,
                 forceUpdateAll: true
             );
 
-            // TODO: CHECK AGAIN ACTION WHEN ASSIGN TO PROJECT MANAGER
-            if ($currentData['status_raw'] != \App\Enums\Production\ProjectStatus::Draft->value) {
-                // override notification when task is revise
-                if ($isRevise) {
-                    \Modules\Production\Jobs\ReviseTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
-                } else {
-                    if ($isForProjectManager) {
-                        //                        \Modules\Production\Jobs\AssignCheckByPMJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+            // get current task
+            $task = null;
+            if (!empty($currentData)) {
+                foreach ($currentData['boards'] as $board) {
+                    foreach ($board['tasks'] as $dataTask) {
+                        if ($dataTask['uid'] == $taskUid) {
+                            $task = $dataTask;
+                            break;
+                        }
+                    }
+                }
+
+                // TODO: CHECK AGAIN ACTION WHEN ASSIGN TO PROJECT MANAGER
+                if ($currentData['status_raw'] != \App\Enums\Production\ProjectStatus::Draft->value) {
+                    // override notification when task is revise
+                    if ($isRevise) {
+                        \Modules\Production\Jobs\ReviseTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
                     } else {
-                        if (isset($userData)) {
-                            \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId, $userData)->afterCommit();
+                        if ($isForProjectManager) {
+                            //                        \Modules\Production\Jobs\AssignCheckByPMJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
+                        } else {
+                            if (isset($userData)) {
+                                \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId, $userData)->afterCommit();
+                            }
                         }
                     }
                 }
             }
+
 
             /**
              * We have is_modeler_task column in project task do define task is for modeler team or not
@@ -3571,17 +3584,50 @@ class ProjectService
         ];
     }
 
-    public function updateDeadline(array $data, string $projectUid)
+    /**
+     * Update task deadline
+     * User will give the reason why he change the deadline
+     * 
+     * @param array $data                                       With these following format:
+     * - string $task_id: uid of task
+     * - string $due_date
+     * - string $reason_id
+     * - string $reason_custom
+     * @param string $projectUid
+     * 
+     * @return array
+     */
+    public function updateDeadline(array $data, string $projectUid): array
     {
         DB::beginTransaction();
         try {
+            $task = $this->taskRepo->show(uid: $data['task_id'], select: 'id', relation: [
+                'pics:id,project_task_id,employee_id',
+            ]);
+            $deadline = date('Y-m-d H:i:s', strtotime($data['due_date']));
+
+            // update main table
             $this->taskRepo->update(
-                [
-                    'start_date' => empty($data['start_date']) ? null : date('Y-m-d', strtotime($data['start_date'])),
-                    'end_date' => empty($data['end_date']) ? null : date('Y-m-d', strtotime($data['end_date'])),
+                data: [
+                    'end_date' => $deadline
                 ],
-                $data['task_id']
+                id: $data['task_id']
             );
+
+            // only record deadline changes when task id already have pic
+            $notifyPic = false;
+            if ($task->pics->count() > 0) {
+                $notifyPic = true;
+                foreach ($task->pics as $pic) {
+                    $this->projectTaskDeadlineRepo->store(data: [
+                        'project_task_id' => $task->id,
+                        'employee_id' => $pic->employee_id,
+                        'deadline' => $deadline,
+                        'due_reason' => $data['reason_id'],
+                        'custom_reason' => $data['reason_custom'] ?? null,
+                    ]);
+                }
+            }
 
             $this->loggingTask([
                 'task_uid' => $data['task_id'],
@@ -3592,6 +3638,8 @@ class ProjectService
             $currentData = $this->detailCacheAction->handle($projectUid, [
                 'boards' => FormatBoards::run($projectUid),
             ]);
+
+            // notifiy user
 
             DB::commit();
 

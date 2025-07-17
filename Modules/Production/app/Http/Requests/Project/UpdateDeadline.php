@@ -3,6 +3,7 @@
 namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateDeadline extends FormRequest
 {
@@ -12,9 +13,15 @@ class UpdateDeadline extends FormRequest
     public function rules(): array
     {
         return [
-            'task_id' => 'nullable',
-            'start_date' => 'nullable',
-            'end_date' => 'nullable',
+            'task_id' => 'required',
+            'due_date' => [
+                'required',
+                Rule::date()->format('Y-m-d H:i')
+            ],
+            'reason_id' => 'required',
+            'reason_custom' => [
+                Rule::requiredIf(fn() => request('reason_id') == 'custom')
+            ]
         ];
     }
 

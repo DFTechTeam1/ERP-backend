@@ -38,7 +38,9 @@ class FormatTaskPermission
         $output = [];
 
         $leadModeller = getSettingByKey('lead_3d_modeller');
-        $leadModeller = getIdFromUid($leadModeller, new Employee);
+        if ($leadModeller) {
+            $leadModeller = getIdFromUid($leadModeller, new Employee);
+        }
 
         $project['report'] = GetProjectStatistic::run($project);
 

@@ -157,7 +157,10 @@ class DefineTaskAction
         $this->defineMyCurrentTask($task);
 
         $leadModelerUid = getSettingByKey('lead_3d_modeller');
-        $this->leadModelerUid = getIdFromUid($leadModelerUid, new Employee);
+        $this->leadModelerUid = null;
+        if ($leadModelerUid) {
+            $this->leadModelerUid = getIdFromUid($leadModelerUid, new Employee);
+        }
 
         $this->showForLeadModeler = false;
         if ($task->is_modeler_task && $this->user->employee_id == $this->leadModelerUid) {
@@ -394,7 +397,9 @@ class DefineTaskAction
         $distribute = null;
 
         $leadModeller = getSettingByKey('lead_3d_modeller');
-        $leadModeller = getIdFromUid($leadModeller, new Employee);
+        if ($leadModeller) {
+            $leadModeller = getIdFromUid($leadModeller, new Employee);
+        }
         $taskPics = collect($task->pics)->pluck('employee_id')->toArray();
 
         if (
@@ -402,7 +407,10 @@ class DefineTaskAction
                 (in_array($this->user->employee_id, $taskPics) || $this->hasSuperPower())
             ) &&
             (
-                ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics)) ||
+                (
+                    ($leadModeller) &&
+                    ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics))
+                ) ||
                 ($task->status == TaskStatus::WaitingDistribute->value && $this->hasSuperPower())
             )
         ) {

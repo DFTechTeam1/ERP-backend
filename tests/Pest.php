@@ -196,8 +196,12 @@ function createProjectService(
 
 function initAuthenticateUser(array $permissions = [])
 {
+    $employee = Employee::factory()->create();
+
     $user = \App\Models\User::factory()
-        ->create();
+        ->create([
+            'employee_id' => $employee->id
+        ]);
 
     $checkRoot = \Illuminate\Support\Facades\DB::table('roles')
         ->where('name', \App\Enums\System\BaseRole::Root->value)

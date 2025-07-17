@@ -2,6 +2,7 @@
 
 use App\Actions\DefineTaskAction;
 use App\Actions\Project\DetailCache;
+use App\Enums\Production\ProjectStatus;
 use App\Models\User;
 use App\Services\GeneralService;
 use Modules\Hrd\Models\Employee;
@@ -12,7 +13,25 @@ use Spatie\Permission\Models\Permission;
 
 beforeEach(function () {
     // create permission
-    $permissionNames = ['move_board', 'edit_task_description', 'add_task_description', 'delete_task_description', 'assign_modeller'];
+    $permissionNames = [
+        'move_board',
+        'edit_task_description',
+        'add_task_description',
+        'delete_task_description',
+        'assign_modeller',
+        'list_member',
+        'list_entertainment_member',
+        'add_team_member',
+        'add_references',
+        'list_request_song',
+        'create_request_song',
+        'distribute_request_song',
+        'add_showreels',
+        'list_task',
+        'add_task',
+        'delete_task',
+        'complete_project'
+    ];
     foreach ($permissionNames as $name) {
         Permission::create(['name' => $name, 'guard_name' => 'sanctum']);
     }
@@ -56,7 +75,9 @@ test('Create task only with name', function () use ($defaultBoards) {
 
     $service = createProjectService(detailCacheAction: $mockDetailCache);
     
-    $project = Project::factory()->create();
+    $project = Project::factory()->create([
+        'status' => ProjectStatus::OnGoing->value
+    ]);
 
     foreach ($defaultBoards as $board) {
         ProjectBoard::create([
@@ -109,10 +130,7 @@ test('Create task with pic and deadline', function () use ($defaultBoards) {
         ->create([
             'employee_id' => $employee->id
         ]);
-    logging("CURRENT EMPLOYEE", [
-        'employee' => $employee,
-        'user' => $employee->user
-    ]);
+
     $payload = [
         'name' => 'Task pic',
         'pic' => [
@@ -145,7 +163,6 @@ test('Create task with pic and deadline', function () use ($defaultBoards) {
         ->andReturn([]);
 
     $response = $service->storeTask(data: $payload, boardId: $project->boards[0]->id);
-    logging('RESPONE TASK PIC', $response);
 
     expect($response['error'])->toBeFalse();
     expect($response['message'])->toBe(__('global.taskCreated'));
@@ -160,7 +177,154 @@ test('Create task with pic and deadline', function () use ($defaultBoards) {
         'employee_id' => $employee->id
     ]);
 
-    $this->assertDatabaseHas('project_task_deadlines', 1);
+    $this->assertDatabaseCount('project_task_deadlines', 1);
+    $this->assertDatabaseHas('project_task_deadlines', [
+        'employee_id' => $employee->id
+    ]);
 
-    \Illuminate\Support\Facades\Bus::assertDispatched(\Modules\Production\Jobs\AssignTaskJob::class);
+    \Illuminate\Support\Facades\Bus::assertNotDispatched(\Modules\Production\Jobs\AssignTaskJob::class);
+});
+
+test("Create task with deadline and no pic", function () use($defaultBoards) {
+    \Illuminate\Support\Facades\Bus::fake();
+
+    $mockGeneralService = Mockery::mock(GeneralService::class);
+    $mockGeneralService->shouldReceive('getSettingByKey')
+        ->with('led_3d_modeller')
+        ->andReturnNull();
+    $mockGeneralService->shouldReceive('getSettingByKey')
+        ->with('special_production_position')
+        ->andReturnNull();
+
+    $employee = Employee::factory()
+        ->create();
+
+    User::factory()
+        ->create([
+            'employee_id' => $employee->id
+        ]);
+
+    $payload = [
+        'name' => 'Task pic',
+        'end_date' => now()->addDays(10)->format('Y-m-d H:i'),
+    ];
+
+    $mockDetailCache = Mockery::mock(DetailCache::class);
+    $mockDetailCache->shouldReceive('handle')
+    ->withAnyArgs()
+    ->andReturn([]);
+
+    $service = createProjectService(detailCacheAction: $mockDetailCache);
+    
+    $project = Project::factory()->create();
+
+    foreach ($defaultBoards as $board) {
+        ProjectBoard::create([
+            'project_id' => $project->id,
+            'name' => $board['name'],
+            'sort' => $board['sort'],
+            'based_board_id' => $board['based_board_id'],
+        ]);
+    }
+
+    DefineTaskAction::mock()
+        ->shouldReceive('handle')
+        ->withAnyArgs()
+        ->andReturn([]);
+
+    $response = $service->storeTask(data: $payload, boardId: $project->boards[0]->id);
+
+    expect($response['error'])->toBeFalse();
+    expect($response['message'])->toBe(__('global.taskCreated'));
+
+    // check database
+    $this->assertDatabaseHas('project_tasks', [
+        'project_id' => $project->id,
+        'name' => 'Task pic'
+    ]);
+    
+    $this->assertDatabaseMissing('project_task_pics', [
+        'employee_id' => $employee->id
+    ]);
+
+    $this->assertDatabaseCount('project_task_deadlines', 0);
+
+    \Illuminate\Support\Facades\Bus::assertNotDispatched(\Modules\Production\Jobs\AssignTaskJob::class);
+});
+
+test("Create task with pic and deadline with complete data", function () use ($defaultBoards) {
+    \Illuminate\Support\Facades\Bus::fake();
+
+    $mockGeneralService = Mockery::mock(GeneralService::class);
+    $mockGeneralService->shouldReceive('getSettingByKey')
+        ->with('led_3d_modeller')
+        ->andReturnNull();
+    $mockGeneralService->shouldReceive('getSettingByKey')
+        ->with('special_production_position')
+        ->andReturnNull();
+
+    $employee = Employee::factory()
+        ->create();
+
+    $user = User::factory()
+        ->create([
+            'employee_id' => $employee->id
+        ]);
+
+    Employee::where('id', $employee->id)
+        ->update([
+            'user_id' => $user->id
+        ]);
+
+    $payload = [
+        'name' => 'Task pic',
+        'pic' => [
+            $employee->uid
+        ],
+        'end_date' => now()->addDays(10)->format('Y-m-d H:i'),
+    ];
+
+    $mockDetailCache = Mockery::mock(DetailCache::class);
+    $mockDetailCache->shouldReceive('handle')
+    ->withAnyArgs()
+    ->andReturn([]);
+
+    $service = createProjectService();
+    
+    $project = Project::factory()->create([
+        'status' => ProjectStatus::OnGoing->value
+    ]);
+
+    foreach ($defaultBoards as $board) {
+        ProjectBoard::create([
+            'project_id' => $project->id,
+            'name' => $board['name'],
+            'sort' => $board['sort'],
+            'based_board_id' => $board['based_board_id'],
+        ]);
+    }
+
+    $response = $service->storeTask(data: $payload, boardId: $project->boards[0]->id);
+
+    expect($response['error'])->toBeFalse();
+    expect($response['message'])->toBe(__('global.taskCreated'));
+
+    // check database
+    $this->assertDatabaseHas('project_tasks', [
+        'project_id' => $project->id,
+        'name' => 'Task pic'
+    ]);
+    
+    $this->assertDatabaseHas('project_task_pics', [
+        'employee_id' => $employee->id
+    ]);
+
+    $this->assertDatabaseCount('project_task_deadlines', 1);
+    $this->assertDatabaseHas('project_task_deadlines', [
+        'employee_id' => $employee->id,
+    ]);
+
+    expect($response)->toHaveKeys(['error', 'message', 'data.id']);
+
+    \Illuminate\Support\Facades\Bus::assertDispatched(\Modules\Production\Jobs\AssignTaskJob::class);    
 });

@@ -8,10 +8,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Production\Database\Factories\ProjectTaskPicFactory;
 
 class ProjectTaskPic extends Model
 {
     use HasFactory;
+
+    protected static function newFactory(): ProjectTaskPicFactory
+    {
+        return ProjectTaskPicFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable.
