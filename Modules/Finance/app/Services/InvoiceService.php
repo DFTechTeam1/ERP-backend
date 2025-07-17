@@ -355,6 +355,10 @@ class InvoiceService {
 
         // replace '\' or '/' to avoid error in the file name
         $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
+
+        if (empty($rawData['invoiceNumber'])) {
+            $rawData['invoiceNumber'] = $invoiceNumber;
+        }
  
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $rawData)
             ->setPaper('A4')
