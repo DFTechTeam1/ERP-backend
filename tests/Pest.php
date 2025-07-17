@@ -149,50 +149,49 @@ function createProjectService(
     $projetTaskDeadlineRepo = null
 )
 {
-    // return new ProjectService(
-    //     $userRoleManagement ? $userRoleManagement : new UserRoleManagement(),
-    //     $projectBoardRepo ? $projectBoardRepo : new ProjectBoardRepository,
-    //     $geoCoding ? $geoCoding : new Geocoding,
-    //     $projectTaskHoldRepo ? $projectTaskHoldRepo : new ProjectTaskHoldRepository,
-    //     $projectVjRepo ? $projectVjRepo : new ProjectVjRepository,
-    //     $inventoryItemRepo ? $inventoryItemRepo : new InventoryItemRepository,
-    //     $projectClassRepo ? $projectClassRepo : new ProjectClassRepository,
-    //     $projectRepo ? $projectRepo : new ProjectRepository,
-    //     $projectRefRepo ? $projectRefRepo : new ProjectReferenceRepository,
-    //     $employeeRepo ? $employeeRepo : new EmployeeRepository,
-    //     $projectTaskRepo ? $projectTaskRepo : new ProjectTaskRepository,
-    //     $projectTaskPicRepo ? $projectTaskPicRepo : new ProjectTaskPicRepository,
-    //     $projectEquipmentRepo ? $projectEquipmentRepo : new ProjectEquipmentRepository,
-    //     $projectTaskAttachmentRepo ? $projectTaskAttachmentRepo : new ProjectTaskAttachmentRepository,
-    //     $projectPicRepo ? $projectPicRepo : new ProjectPersonInChargeRepository,
-    //     $projectTaskLogRepo ? $projectTaskLogRepo : new ProjectTaskLogRepository,
-    //     $projectProofOfWorkRepo ? $projectProofOfWorkRepo : new ProjectTaskProofOfWorkRepository,
-    //     $projectTaskWorktimeRepo ? $projectTaskWorktimeRepo : new ProjectTaskWorktimeRepository,
-    //     $positionRepo ? $positionRepo : new PositionRepository,
-    //     $taskPicLogRepo ? $taskPicLogRepo : new ProjectTaskPicLogRepository,
-    //     $taskReviseHistoryRepo ? $taskReviseHistoryRepo : new ProjectTaskReviseHistoryRepository,
-    //     $transferTeamRepo ? $transferTeamRepo : new TransferTeamMemberRepository,
-    //     $employeeTaskPoint ? $employeeTaskPoint : new EmployeeTaskPointRepository,
-    //     $taskPicHistory ? $taskPicHistory : new ProjectTaskPicHistoryRepository,
-    //     $customItemRepo ? $customItemRepo : new CustomInventoryRepository,
-    //     $projectSongListRepo ? $projectSongListRepo : new ProjectSongListRepository,
-    //     $generalService ? $generalService : new GeneralService,
-    //     $entertainmentTaskSongRepo ? $entertainmentTaskSongRepo : new EntertainmentTaskSongRepository,
-    //     $entertainmentTaskSongLogService ? $entertainmentTaskSongLogService : new EntertainmentTaskSongLogService,
-    //     $userRepo ? $userRepo : new UserRepository,
-    //     $detailProjectAction ? $detailProjectAction : new DetailProject,
-    //     $detailCacheAction ? $detailCacheAction : new DetailCache,
-    //     $entertainmentTaskSongResultRepo ? $entertainmentTaskSongResultRepo : new EntertainmentTaskSongResultRepository,
-    //     $entertainmentTaskSongResultImageRepo ? $entertainmentTaskSongResultImageRepo : new EntertainmentTaskSongResultImageRepository,
-    //     $entertainmentTaskSongRevise ? $entertainmentTaskSongRevise : new EntertainmentTaskSongReviseRepository,
-    //     $employeeTaskStateRepo ? $employeeTaskStateRepo : new EmployeeTaskStateRepository,
-    //     $settingRepo ? $settingRepo : new SettingRepository,
-    //     $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
-    //     $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
-    //     $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
-    //     $projetTaskDeadlineRepo ? $projetTaskDeadlineRepo : new ProjectTaskDeadlineRepository
-    // );
-    return app(ProjectService::class);
+    return new ProjectService(
+        $userRoleManagement ? $userRoleManagement : new UserRoleManagement(),
+        $projectBoardRepo ? $projectBoardRepo : new ProjectBoardRepository,
+        $geoCoding ? $geoCoding : new Geocoding,
+        $projectTaskHoldRepo ? $projectTaskHoldRepo : new ProjectTaskHoldRepository,
+        $projectVjRepo ? $projectVjRepo : new ProjectVjRepository,
+        $inventoryItemRepo ? $inventoryItemRepo : new InventoryItemRepository,
+        $projectClassRepo ? $projectClassRepo : new ProjectClassRepository,
+        $projectRepo ? $projectRepo : new ProjectRepository,
+        $projectRefRepo ? $projectRefRepo : new ProjectReferenceRepository,
+        $employeeRepo ? $employeeRepo : new EmployeeRepository,
+        $projectTaskRepo ? $projectTaskRepo : new ProjectTaskRepository,
+        $projectTaskPicRepo ? $projectTaskPicRepo : new ProjectTaskPicRepository,
+        $projectEquipmentRepo ? $projectEquipmentRepo : new ProjectEquipmentRepository,
+        $projectTaskAttachmentRepo ? $projectTaskAttachmentRepo : new ProjectTaskAttachmentRepository,
+        $projectPicRepo ? $projectPicRepo : new ProjectPersonInChargeRepository,
+        $projectTaskLogRepo ? $projectTaskLogRepo : new ProjectTaskLogRepository,
+        $projectProofOfWorkRepo ? $projectProofOfWorkRepo : new ProjectTaskProofOfWorkRepository,
+        $projectTaskWorktimeRepo ? $projectTaskWorktimeRepo : new ProjectTaskWorktimeRepository,
+        $positionRepo ? $positionRepo : new PositionRepository,
+        $taskPicLogRepo ? $taskPicLogRepo : new ProjectTaskPicLogRepository,
+        $taskReviseHistoryRepo ? $taskReviseHistoryRepo : new ProjectTaskReviseHistoryRepository,
+        $transferTeamRepo ? $transferTeamRepo : new TransferTeamMemberRepository,
+        $employeeTaskPoint ? $employeeTaskPoint : new EmployeeTaskPointRepository,
+        $taskPicHistory ? $taskPicHistory : new ProjectTaskPicHistoryRepository,
+        $customItemRepo ? $customItemRepo : new CustomInventoryRepository,
+        $projectSongListRepo ? $projectSongListRepo : new ProjectSongListRepository,
+        $generalService ? $generalService : new GeneralService,
+        $entertainmentTaskSongRepo ? $entertainmentTaskSongRepo : new EntertainmentTaskSongRepository,
+        $entertainmentTaskSongLogService ? $entertainmentTaskSongLogService : new EntertainmentTaskSongLogService,
+        $userRepo ? $userRepo : new UserRepository,
+        $detailProjectAction ? $detailProjectAction : new DetailProject,
+        $detailCacheAction ? $detailCacheAction : new DetailCache,
+        $entertainmentTaskSongResultRepo ? $entertainmentTaskSongResultRepo : new EntertainmentTaskSongResultRepository,
+        $entertainmentTaskSongResultImageRepo ? $entertainmentTaskSongResultImageRepo : new EntertainmentTaskSongResultImageRepository,
+        $entertainmentTaskSongRevise ? $entertainmentTaskSongRevise : new EntertainmentTaskSongReviseRepository,
+        $employeeTaskStateRepo ? $employeeTaskStateRepo : new EmployeeTaskStateRepository,
+        $settingRepo ? $settingRepo : new SettingRepository,
+        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
+        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
+        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
+        $projetTaskDeadlineRepo ? $projetTaskDeadlineRepo : new ProjectTaskDeadlineRepository
+    );
 }
 
 function initAuthenticateUser(array $permissions = [])
@@ -328,15 +327,14 @@ function createProjectDealService(
     $projectRepo = null,
     $geocoding = null
 ) {
-    // return new \Modules\Production\Services\ProjectDealService(
-    //     $projectDealRepo ? $projectDealRepo : new ProjectDealRepository(),
-    //     $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository(),
-    //     $generalService ? $generalService : new GeneralService(),
-    //     $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository(),
-    //     $projectRepo ? $projectRepo : new ProjectRepository,
-    //     $geocoding ? $geocoding : new Geocoding
-    // );
-    return app(ProjectDealService::class);
+    return new \Modules\Production\Services\ProjectDealService(
+        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository(),
+        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository(),
+        $generalService ? $generalService : new GeneralService(),
+        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository(),
+        $projectRepo ? $projectRepo : new ProjectRepository,
+        $geocoding ? $geocoding : new Geocoding
+    );
 }
 
 function createQuotationItemService(
@@ -355,14 +353,13 @@ function setTransactionService(
     $invoiceRepo = null
 )
 {
-    // return new TransactionService(
-    //     $repo ? $repo : new TransactionRepository,
-    //     $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
-    //     $generalService ? $generalService : new GeneralService,
-    //     $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
-    //     $invoiceRepo ? $invoiceRepo : new InvoiceRepository
-    // );
-    return app(TransactionService::class);
+    return new TransactionService(
+        $repo ? $repo : new TransactionRepository,
+        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
+        $generalService ? $generalService : new GeneralService,
+        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
+        $invoiceRepo ? $invoiceRepo : new InvoiceRepository
+    );
 }
 
 function setInvoiceService(
@@ -371,11 +368,10 @@ function setInvoiceService(
     $generalService = null,
     $transactionRepo = null
 ) {
-    // return new \Modules\Finance\Services\InvoiceService(
-    //     $repo ? $repo : new \Modules\Finance\Repository\InvoiceRepository,
-    //     $projectDealRepo ? $projectDealRepo : new \Modules\Production\Repository\ProjectDealRepository,
-    //     $generalService ? $generalService : new \App\Services\GeneralService,
-    //     $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository
-    // );
-    return app(InvoiceService::class);
+    return new \Modules\Finance\Services\InvoiceService(
+        $repo ? $repo : new \Modules\Finance\Repository\InvoiceRepository,
+        $projectDealRepo ? $projectDealRepo : new \Modules\Production\Repository\ProjectDealRepository,
+        $generalService ? $generalService : new \App\Services\GeneralService,
+        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository
+    );
 }
