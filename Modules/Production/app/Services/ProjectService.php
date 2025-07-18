@@ -2619,7 +2619,7 @@ class ProjectService
                     $notifiedNewTask[] = $employeeId;
 
                     // write deadline history
-                    if ($needChangeTaskStatus) { // indicate pic is not led modeller
+                    if ($needChangeTaskStatus && isset($data['end_date'])) { // indicate pic is not led modeller
                         $this->projectTaskDeadlineRepo->store(data: [
                             'employee_id' => $employeeId,
                             'project_task_id' => $taskId,
@@ -3623,7 +3623,7 @@ class ProjectService
                         'project_task_id' => $task->id,
                         'employee_id' => $pic->employee_id,
                         'deadline' => $deadline,
-                        'due_reason' => $data['reason_id'],
+                        'due_reason' => $data['reason_id'] == 'custom' ? null : $data['reason_id'],
                         'custom_reason' => $data['reason_custom'] ?? null,
                     ]);
                 }

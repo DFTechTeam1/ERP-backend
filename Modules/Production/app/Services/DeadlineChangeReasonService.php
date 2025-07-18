@@ -45,13 +45,17 @@ class DeadlineChangeReasonService {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
-            $paginated = $this->repo->pagination(
-                $select,
-                $where,
-                $relation,
-                $itemsPerPage,
-                $page
-            );
+            if (request('all')) { // get all data
+                $paginated = $this->repo->list(select: $select, where: $where);
+            } else { // paginate the data
+                $paginated = $this->repo->pagination(
+                    $select,
+                    $where,
+                    $relation,
+                    $itemsPerPage,
+                    $page
+                );
+            }
             $totalData = $this->repo->list('id', $where)->count();
 
             // define actions

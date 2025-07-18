@@ -184,7 +184,7 @@ class ProjectTask extends Model
     {
         $out = '-';
         if ($this->end_date) {
-            $out = date('d F Y', strtotime($this->end_date));
+            $out = date('d F Y H:i', strtotime($this->end_date));
         }
 
         return Attribute::make(
