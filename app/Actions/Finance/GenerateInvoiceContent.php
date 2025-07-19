@@ -35,6 +35,7 @@ class GenerateInvoiceContent
         } else {
             $transactions = $deal->transactions->map(function ($transaction) {
                 return [
+                    'id' => $transaction->id,
                     'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
                     'transaction_date' => date('d F Y', strtotime($transaction->transaction_date))
                 ];
@@ -44,6 +45,7 @@ class GenerateInvoiceContent
         if ($amount > 0) { // this indicate that request is comes from 'bill invoice'
             $transactions = collect($transactions)->merge([
                 [
+                    'id' => null,
                     'payment' => "Rp" . number_format(num: $amount, decimal_separator: ','),
                     'transaction_date' => date('d F Y', strtotime($requestDate))
                 ]

@@ -129,10 +129,3 @@ Route::get('invoices/general/download', [InvoiceController::class, 'downloadGene
 Route::get('/notification-preview', function () {
     return Auth::user();
 })->middleware('auth:sanctum');
-
-Route::get('check', function () {
-    // return Excel::download(export: new ProjectDealSummary, fileName: "Project Deal " . now()->format('Y-m-d') . ".xlsx");
-    // return (new GeneralService)->getProjectDealSummary();
-
-    ProjectDealSummaryJob::dispatch();
-});
