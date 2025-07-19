@@ -59,6 +59,16 @@ class ProjectDealService
 
     /**
      * Get list of data
+     * 
+     * Filter can be:
+     * - multiple name
+     * - muliple customer name
+     * - project date (start date, end date)
+     * - multiple status
+     * - range price
+     * - multiple marketing
+     * 
+     * @return array
      */
     public function list (
         string $select = '*',
@@ -70,10 +80,51 @@ class ProjectDealService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
+            $search = request('name');
+            $customer = request('customer');
+
+            $where = "deleted_at is null";
 
             if (! empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+                $where .= " and lower(name) LIKE '%{$search}%'";
+            }
+
+            $whereHas = [];
+            if (!empty($customer)) {
+                $customer = strtolower($customer);
+                $whereHas[] = [
+                    'relation' => 'customer',
+                    'query' => "lower(name) LIKE '%{$customer}%'"
+                ];
+            }
+
+            if (!empty(request('project_date'))) {
+                $where .= " AND project_date = '" . request('project_date') . "'";
+            }
+
+            if (!empty(request('status'))) {
+                $status = request('status');
+                if (request('status') == 3) {
+                    $status = 0;
+                }
+
+                $where .= " AND status = " . $status;
+            }
+
+            $sorts = '';
+            if (! empty(request('sortBy'))) {
+                foreach (request('sortBy') as $sort) {
+                    if ($sort['key'] == 'task_name') {
+                        $sort['key'] = 'name';
+                    }
+                    if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
+                        $sorts .= $sort['key'].' '.$sort['order'].',';
+                    }
+                }
+
+                $sorts = rtrim($sorts, ',');
+            } else {
+                $sorts .= 'created_at desc';
             }
 
             $paginated = $this->repo->pagination(
@@ -81,7 +132,9 @@ class ProjectDealService
                 $where,
                 $relation,
                 $itemsPerPage,
-                $page
+                $page,
+                $whereHas,
+                $sorts
             );
             $totalData = $this->repo->list('id', $where)->count();
 
