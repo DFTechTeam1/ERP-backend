@@ -123,6 +123,9 @@ describe('Create Transaction', function () use ($requestData) {
                 'number' => 'VI/2025 951 A',
                 'sequence' => 1,
                 'amount' => 10000000,
+                'raw_data' => [
+                    'transactions' => []
+                ]
             ]))
             ->create([
                 'country_id' => $country->id,
@@ -150,7 +153,7 @@ describe('Create Transaction', function () use ($requestData) {
         ];
 
         $response = $service->store(payload: $payload, projectDealUid: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id));
-        
+        logging("CREATE TRANSACTION TEST", $response);
         expect($response)->toHaveKeys(['error', 'message']);
         expect($response['error'])->toBeFalse();
 
