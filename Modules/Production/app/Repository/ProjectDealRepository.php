@@ -75,7 +75,9 @@ class ProjectDealRepository extends ProjectDealInterface
         string $where,
         array $relation,
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = [],
+        string $orderBy = 'project_date asc'
     ) {
         $query = $this->model->query();
 
@@ -85,8 +87,26 @@ class ProjectDealRepository extends ProjectDealInterface
             $query->whereRaw($where);
         }
 
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
+        }
+
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
         }
 
         return $query->skip($page)->take($itemsPerPage)->get();
