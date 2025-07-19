@@ -9,6 +9,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
+use Modules\Finance\Models\Invoice;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -199,7 +200,10 @@ class InvoiceService {
                 name: 'invoice.download',
                 parameters: [
                     'i' => $projectDealUid,
-                    'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id)
+                    'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                    'additional' => 1,
+                    'am' => $data['amount'],
+                    'rd' => $paymentDate
                 ],
                 expiration: now()->addMinutes(5)
             );
@@ -289,15 +293,15 @@ class InvoiceService {
     /**
      * Download the invoice based on invoice id
      * 
-     * @return Response
      */
-    public function downloadInvoice(): Response
+    public function downloadInvoice()
     {
         $invoiceId = \Illuminate\Support\Facades\Crypt::decryptString(request('n'));
         $invoice = $this->repo->show(uid: $invoiceId, select: 'id,raw_data,parent_number,number,sequence,project_deal_id', relation: [
             'projectDeal:id,name,project_date,customer_id',
             'projectDeal.customer:id,name',
-            'projectDeal.finalQuotation:id,project_deal_id,description'
+            'projectDeal.finalQuotation:id,project_deal_id,description',
+            'projectDeal.transactions:id,payment_amount,transaction_date,project_deal_id',
         ]);
 
         $description = $invoice->projectDeal->finalQuotation->description;

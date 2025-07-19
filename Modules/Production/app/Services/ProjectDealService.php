@@ -466,7 +466,7 @@ class ProjectDealService
                     'invoices' => function ($queryInvoice) {
                         $queryInvoice->where('is_main', 0)
                             ->with([
-                                'transaction:id,invoice_id,created_at'
+                                'transaction:id,invoice_id,created_at,transaction_date'
                             ]);
                     }
                 ]
@@ -610,7 +610,7 @@ class ProjectDealService
                         'i' => $projectDealUid,
                         'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id)
                     ],
-                    expiration: now()->addMinutes(5)
+                    expiration: now()->addHours(5)
                 );
 
                 return [
@@ -623,7 +623,7 @@ class ProjectDealService
                     'payment_date' => date('d F Y', strtotime($invoice->payment_date)),
                     'number' => $invoice->number,
                     'need_to_pay' => $invoice->status == \App\ENums\Transaction\InvoiceStatus::Unpaid ? true : false,
-                    'paid_at' => $invoice->transaction ? date('d F Y H:i', strtotime($invoice->transaction->created_at)) : '-',
+                    'paid_at' => $invoice->transaction ? date('d F Y', strtotime($invoice->transaction->transaction_date)) : '-',
                     'invoice_url' => $invoiceUrl
                 ];
             });

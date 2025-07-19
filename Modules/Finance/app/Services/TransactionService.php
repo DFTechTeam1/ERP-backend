@@ -25,7 +25,7 @@ class TransactionService {
 
     private $projectDealRepo;
 
-    private $inventoryRepo;
+    private $invoiceRepo;
 
     /**
      * Construction Data
@@ -35,7 +35,7 @@ class TransactionService {
         ProjectQuotationRepository $projectQuotationRepo,
         GeneralService $generalService,
         ProjectDealRepository $projectDealRepo,
-        InvoiceRepository $inventoryRepo
+        InvoiceRepository $invoiceRepo
     )
     {
         $this->repo = $repo;
@@ -46,7 +46,7 @@ class TransactionService {
 
         $this->projectDealRepo = $projectDealRepo;
 
-        $this->inventoryRepo = $inventoryRepo;
+        $this->invoiceRepo = $invoiceRepo;
     }
 
     /**
@@ -199,6 +199,25 @@ class TransactionService {
             }
 
             $trx->attachments()->createMany($payloadImage);
+
+            // here we will update the invoice content. We update the transactions content there
+            $invoice = $this->invoiceRepo->show(uid: $payload['invoice_id'], select: 'id,raw_data');
+            $rawData = $invoice->raw_data;
+
+            $currentTransactions = $rawData['transactions'];
+            $currentTransactions = collect($currentTransactions)->map(function ($transaction) use ($trx) {
+                if ($transaction['id'] == null) {
+                    $transaction['id'] = $trx->id;
+                    $transaction['transaction_date'] = date('d F Y', strtotime($trx->transaction_date));
+                }
+
+                return $transaction;
+            })->toArray();
+            
+            $rawData['transactions'] = $currentTransactions;
+            $this->invoiceRepo->update(data: [
+                'raw_data' => $rawData
+            ], id: $payload['invoice_id']);
 
             // update project deal data when all invoice has been paid
             if ($allPaid) {
