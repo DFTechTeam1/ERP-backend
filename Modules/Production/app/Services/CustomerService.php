@@ -67,13 +67,20 @@ class CustomerService
      */
     public function getAll(): array
     {
-        $data = $this->repo->list(
-            select: 'id as value,email,name as title,phone'
-        );
+        $data = \Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::CustomerList->value);
+        if (!$data) {
+            $data = \Illuminate\Support\Facades\Cache::rememberForever(\App\Enums\Cache\CacheKey::CustomerList->value, function () {
+                $customers = $this->repo->list(
+                    select: 'id as value,email,name as title,phone'
+                );
+
+                return $customers->toArray();
+            });
+        }
 
         return generalResponse(
             message: 'Success',
-            data: $data->toArray()
+            data: $data
         );
     }
 

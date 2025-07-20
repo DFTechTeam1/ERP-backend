@@ -15,6 +15,9 @@ enum CacheKey: string
     case HrDashboardJobLevel = 'hrDashboardJobLevel';
     case HrDashboardAgeAverage = 'hrDashboardAgeAverage';
 
+    case MarketingList = 'marketingList';
+    case CustomerList = 'customerList';
+
     // price settings
     case PriceGuideSetting = 'priceGuideSetting';
     case MainLedFormula = 'mainLedFormula';
