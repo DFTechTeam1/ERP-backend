@@ -53,8 +53,6 @@ jobs:
 
             echo "🧼 Cleaning Laravel cache..."
             rm -rf bootstrap/cache/*.php
-            php artisan config:clear || true
-            php artisan cache:clear || true
 
             echo "📦 Running composer install..."
             composer install --no-interaction --prefer-dist --optimize-autoloader
