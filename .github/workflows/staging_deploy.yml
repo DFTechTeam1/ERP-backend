@@ -2,7 +2,7 @@ name: ERP Staging Deployment
 
 on:
   push:
-    branches: [ staging ]
+    branches: [ staging_latest ]
 
 jobs:
   deploy:
