@@ -30,7 +30,6 @@ jobs:
         run: |
           cp .env.example .env
           php -r "file_put_contents('.env', preg_replace('/APP_KEY=\s*/', 'APP_KEY=', file_get_contents('.env')));"
-          php artisan key:generate
 
           echo "DB_DATABASE=${{ secrets.STAGING_DB_DATABASE }}" >> .env
           echo "DB_USERNAME=${{ secrets.STAGING_DB_USERNAME }}" >> .env
