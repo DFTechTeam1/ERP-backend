@@ -25,57 +25,14 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      # Step 4: Environment setup
-      - name: Copy .env
-        run: |
-          cp .env.example .env
-          php -r "file_put_contents('.env', preg_replace('/APP_KEY=\s*/', 'APP_KEY=', file_get_contents('.env')));"
-
-          echo "DB_HOST=127.0.0.1" >> .env
-          echo "DB_CONNECTION=mysql" >> .env
-          echo "DB_PORT=3306" >> .env
-          echo "DB_DATABASE=${{ secrets.STAGING_DB_DATABASE }}" >> .env
-          echo "DB_USERNAME=${{ secrets.STAGING_DB_USERNAME }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}" >> .env
-          echo "SALT_KEY=${{ secrets.STAGING_SALT_KEY }}" >> .env
-          echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> .env
-          # echo "HASH_SALT=${{ secrets.STAGING_HASH_SALT }}" >> .env
-          # echo "TASK_SALT=${{ secrets.STAGING_TASK_SALT }}" >> .env
-          # echo "GOOGLE_CONSOLE_API_KEY=${{ secrets.STAGING_GOOGLE_CONSOLE_API_KEY }}" >> .env
-          # echo "PUSHER_APP_ID=${{ secrets.STAGING_PUSHER_APP_ID }}" >> .env
-          # echo "PUSHER_APP_KEY=${{ secrets.STAGING_PUSHER_APP_KEY }}" >> .env
-          # echo "PUSHER_APP_SECRET=${{ secrets.STAGING_PUSHER_APP_SECRET }}" >> .env
-          # echo "PUSHER_PORT=${{ secrets.STAGING_PUSHER_PORT }}" >> .env
-          # echo "PUSHER_SCHEME=${{ secrets.STAGING_PUSHER_SCHEME }}" >> .env
-          # echo "PUSHER_APP_CLUSTER=${{ secrets.STAGING_PUSHER_APP_CLUSTER }}" >> .env
-          # echo "GEOAPIFY_KEY=${{ secrets.STAGING_GEOAPIFY_KEY }}" >> .env
-          # echo "SENTRY_LARAVEL_DSN=null" >> .env
-          # echo "SENTRY_TRACES_SAMPLE_RATE=0.25" >> .env
-          # echo "TELEGRAM_BOT_TOKEN=${{ secrets.STAGING_TELEGRAM_BOT_TOKEN }}" >> .env
-          # echo "TELEGRAM_BOT_TOKEN=${{ secrets.STAGING_TELEGRAM_BOT_TOKEN }}" >> .env
-
-      # Step 3: Install dependencies
-      - name: Install Composer dependencies
-        run: |
-          composer install --no-interaction --prefer-dist --optimize-autoloader
-          # Install new packages if composer.json changed
-          if git diff --name-only HEAD^ HEAD | grep -q 'composer.json'; then
-            composer update --no-interaction --prefer-dist --optimize-autoloader
-          fi
-
-
-      - name: Generate key
-        run: |
-          php artisan key:generate
-
       # Step 5: Clear and optimize
-      - name: Clear application cache
-        run: |
-          php artisan cache:clear
-          php artisan config:clear
-          php artisan route:clear
-          php artisan view:clear
-          php artisan optimize:clear
+      # - name: Clear application cache
+      #   run: |
+      #     php artisan cache:clear
+      #     php artisan config:clear
+      #     php artisan route:clear
+      #     php artisan view:clear
+      #     php artisan optimize:clear
 
       # Step 6: Database migrations (optional)
       # - name: Run database migrations
