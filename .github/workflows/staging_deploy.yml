@@ -56,7 +56,7 @@ jobs:
             find bootstrap/cache -type d -exec chmod 775 {} \;
             find bootstrap/cache -type f -exec chmod 664 {} \;
 
-            composer install --no-interaction --prefer-dist
+            composer install --no-interaction
             composer dumpautoload
             php artisan storage:link
             php artisan config:clear
