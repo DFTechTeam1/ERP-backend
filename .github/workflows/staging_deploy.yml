@@ -63,7 +63,6 @@ jobs:
             find bootstrap/cache -type f -exec chmod 664 {} \;
 
             composer install --no-interaction
-            composer dumpautoload
             php artisan storage:link
             php artisan config:clear
             php artisan config:cache
