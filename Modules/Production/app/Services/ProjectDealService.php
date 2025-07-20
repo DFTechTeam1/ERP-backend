@@ -59,6 +59,16 @@ class ProjectDealService
 
     /**
      * Get list of data
+     * 
+     * Filter can be:
+     * - multiple name
+     * - muliple customer name
+     * - project date (start date, end date)
+     * - multiple status
+     * - range price
+     * - multiple marketing
+     * 
+     * @return array
      */
     public function list (
         string $select = '*',
@@ -70,10 +80,77 @@ class ProjectDealService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
 
-            if (! empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+            $where = "deleted_at is null";
+            $whereHas = [];
+
+            if (request('event')) {
+                $name = request('event');
+                $where .= " AND name like '%{$name}%'";
+            }
+
+            if (request('customer')) {
+                $customer = request('customer');
+                $customerIds = implode(',', $customer);
+                $whereHas[] = [
+                    'relation' => 'customer',
+                    'query' => "id IN ({$customerIds})"
+                ];
+            }
+
+            if (request('status')) {
+                $status = request('status');
+                $statusIds = collect($status)->pluck('id')->implode(',');
+                $where .= " AND status IN ({$statusIds})";
+            }
+
+            if (request('date')) {
+                $dateSplit = explode(' - ', request('date'));
+                if (isset($dateSplit[1])) {
+                    $where .= " AND project_date BETWEEN '" . $dateSplit[0] . "' AND '" . $dateSplit[1] . "'";
+                } else if (!isset($dateSplite[1]) && isset($dateSplit[0])) {
+                    $where .= " AND project_date = '" . $dateSplit[0] . "'";
+                }
+            }
+
+            if (request('price')) {
+                $price = request('price');
+                $whereHas[] = [
+                    'relation' => 'latestQuotation',
+                    'query' => "fix_price BETWEEN " . $price[0] . " AND " . $price[1]
+                ];
+            }
+
+            if (request('marketing')) {
+                $marketing = request('marketing') ?? [];
+                
+                $marketingIds = collect($marketing)->map(function ($itemMarketing) {
+                    $id = $this->generalService->getIdFromUid($itemMarketing['uid'], new \Modules\Hrd\Models\Employee());
+
+                    return $id;
+                })->toArray();
+                $marketingIds = implode(',', $marketingIds);
+
+                $whereHas[] = [
+                    'relation' => 'marketings',
+                    'query' => "employee_id IN ({$marketingIds})"
+                ];
+            }
+
+            $sorts = '';
+            if (! empty(request('sortBy'))) {
+                foreach (request('sortBy') as $sort) {
+                    if ($sort['key'] == 'task_name') {
+                        $sort['key'] = 'name';
+                    }
+                    if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
+                        $sorts .= $sort['key'].' '.$sort['order'].',';
+                    }
+                }
+
+                $sorts = rtrim($sorts, ',');
+            } else {
+                $sorts .= 'created_at desc';
             }
 
             $paginated = $this->repo->pagination(
@@ -81,7 +158,9 @@ class ProjectDealService
                 $where,
                 $relation,
                 $itemsPerPage,
-                $page
+                $page,
+                $whereHas,
+                $sorts
             );
             $totalData = $this->repo->list('id', $where)->count();
 

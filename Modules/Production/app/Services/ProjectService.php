@@ -4744,38 +4744,46 @@ class ProjectService
     {
         $user = auth()->user();
 
-        $positionAsMarketing = getSettingByKey('position_as_marketing');
-        $positionAsDirectors = json_decode(getSettingByKey('position_as_directors'), true);
+        $marketings = \Illuminate\Support\Facades\Cache::get(CacheKey::MarketingList->value);
 
-        if ($positionAsDirectors) {
-            $combine = array_merge($positionAsDirectors, [$positionAsMarketing]);
-        } else {
-            $combine = [$positionAsMarketing];
+        if (!$marketings) {
+            $marketings= \Illuminate\Support\Facades\Cache::rememberForever(CacheKey::MarketingList->value, function () use ($user) {
+                $positionAsMarketing = getSettingByKey('position_as_marketing');
+                $positionAsDirectors = json_decode(getSettingByKey('position_as_directors'), true);
+        
+                if ($positionAsDirectors) {
+                    $combine = array_merge($positionAsDirectors, [$positionAsMarketing]);
+                } else {
+                    $combine = [$positionAsMarketing];
+                }
+        
+                $combine = implode("','", $combine);
+                $condition = "'".$combine;
+                $condition .= "'";
+        
+                $positions = $this->positionRepo->list('id', "uid in ({$condition})");
+        
+                $positionIds = collect($positions)->pluck('id')->all();
+                $combinePositionIds = implode(',', $positionIds);
+        
+                $where = "position_id in ({$combinePositionIds}) and status != ".\App\Enums\Employee\Status::Inactive->value;
+                $marketings = $this->employeeRepo->list('id,uid,name', $where);
+        
+                $marketings = collect((object) $marketings)->map(function ($item) use ($user) {
+                    $item['selected'] = false;
+                    if (
+                        ($user->employee_id) &&
+                        ($user->employee_id == $item->id)
+                    ) {
+                        $item['selected'] = true;
+                    }
+        
+                    return $item;
+                });
+
+                return $marketings;
+            });
         }
-
-        $combine = implode("','", $combine);
-        $condition = "'".$combine;
-        $condition .= "'";
-
-        $positions = $this->positionRepo->list('id', "uid in ({$condition})");
-
-        $positionIds = collect($positions)->pluck('id')->all();
-        $combinePositionIds = implode(',', $positionIds);
-
-        $where = "position_id in ({$combinePositionIds}) and status != ".\App\Enums\Employee\Status::Inactive->value;
-        $marketings = $this->employeeRepo->list('id,uid,name', $where);
-
-        $marketings = collect((object) $marketings)->map(function ($item) use ($user) {
-            $item['selected'] = false;
-            if (
-                ($user->employee_id) &&
-                ($user->employee_id == $item->id)
-            ) {
-                $item['selected'] = true;
-            }
-
-            return $item;
-        });
 
         return generalResponse(
             'success',
