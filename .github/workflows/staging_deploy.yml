@@ -25,6 +25,8 @@ jobs:
             cd /var/www/apps/backend.dfactory.pro
             rm -rf bootstrap/cache/*.php
             rm -rf storage/framework/cache/*
+            sudo chown -R www-data:www-data /var/www/apps/backend.dfactory.pro
+            sudo chmod -R 777 /var/www/apps/backend.dfactory.pro/storage
             git pull origin staging
             composer install --no-interaction
             php artisan storage:link
