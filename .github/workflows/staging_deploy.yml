@@ -44,7 +44,7 @@ jobs:
 
       - name: Post-deployment Laravel tasks (dev)
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
             cd /var/www/apps/backend.dfactory.pro
             
             rm -rf storage/framework/cache/*
