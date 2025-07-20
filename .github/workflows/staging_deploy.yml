@@ -1,60 +1,28 @@
-name: ERP Staging Deployment
+name: Deploy
 
+# Trigger the workflow on push and 
+# pull request events on the production branch
 on:
   push:
-    branches: [ staging_latest ]
-
+    branches:
+      - staging
+      
+# Authenticate to the the server via ssh 
+# and run our deployment script 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Checkout code
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: staging
-          fetch-depth: 0
-
-      # Step 2: Setup PHP
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mbstring, ctype, fileinfo, openssl, pdo, tokenizer, xml, gd, mysqli, pdo_mysql, bcmath
-          coverage: none
-          tools: composer:v2
-
-      # Step 5: Clear and optimize
-      # - name: Clear application cache
-      #   run: |
-      #     php artisan cache:clear
-      #     php artisan config:clear
-      #     php artisan route:clear
-      #     php artisan view:clear
-      #     php artisan optimize:clear
-
-      # Step 6: Database migrations (optional)
-      # - name: Run database migrations
-      #   run: |
-      #     php artisan migrate --force
-
-      # Step 7: Deployment to server would go here
+      - uses: actions/checkout@v2
       - name: Deploy to server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/apps/backend.dfactory.pro
-
-            echo "Pull latest code"
             git pull origin staging
-
-            echo "Installing package"
-            composer install --no-interaction --prefer-dist --optimize-autoloader
-
-            echo "Migrating"
-            php artisan migrate --force
-            php artisan optimize
+            composer install --no-interaction
+            php artisan storage:link
