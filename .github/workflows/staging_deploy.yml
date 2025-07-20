@@ -61,6 +61,11 @@ jobs:
             composer update --no-interaction --prefer-dist --optimize-autoloader
           fi
 
+
+      - name: Generate key
+        run: |
+          php artisan key:generate
+
       # Step 5: Clear and optimize
       - name: Clear application cache
         run: |
