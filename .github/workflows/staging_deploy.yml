@@ -25,7 +25,7 @@ jobs:
 
       - name: Deploy to dev via rsync
         run: |
-          ssh -p 2299 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
             TIMESTAMP=$(date +%Y%m%d%H%M%S)
             BACKUP_DIR="/var/www/apps/backup/backend_staging_$TIMESTAMP"
             mkdir -p $BACKUP_DIR
@@ -44,7 +44,7 @@ jobs:
 
       - name: Post-deployment Laravel tasks (dev)
         run: |
-          ssh -p 2299 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd /var/www/apps/backend.dfactory.pro
             
             rm -rf storage/framework/cache/*
@@ -75,7 +75,7 @@ jobs:
     steps:
       - name: Restore from dev backup
         run: |
-          ssh -p 2299 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
             if [ -f /var/www/apps/backup/backend_staging_last_backup_path_dev.txt ]; then
               BACKUP_DIR=$(cat /var/www/apps/backup/backend_staging_last_backup_path_dev.txt)
               cp -r $BACKUP_DIR/* /var/www/apps/backend.dfactory.pro/
