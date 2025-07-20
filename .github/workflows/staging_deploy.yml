@@ -31,6 +31,9 @@ jobs:
           cp .env.example .env
           php -r "file_put_contents('.env', preg_replace('/APP_KEY=\s*/', 'APP_KEY=', file_get_contents('.env')));"
 
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_PORT=3306" >> .env
           echo "DB_DATABASE=${{ secrets.STAGING_DB_DATABASE }}" >> .env
           echo "DB_USERNAME=${{ secrets.STAGING_DB_USERNAME }}" >> .env
           echo "DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}" >> .env
