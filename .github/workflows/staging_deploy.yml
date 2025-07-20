@@ -25,15 +25,6 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      # Step 3: Install dependencies
-      - name: Install Composer dependencies
-        run: |
-          composer install --no-interaction --prefer-dist --optimize-autoloader
-          # Install new packages if composer.json changed
-          if git diff --name-only HEAD^ HEAD | grep -q 'composer.json'; then
-            composer update --no-interaction --prefer-dist --optimize-autoloader
-          fi
-
       # Step 4: Environment setup
       - name: Copy .env
         run: |
@@ -60,6 +51,15 @@ jobs:
           # echo "SENTRY_TRACES_SAMPLE_RATE=0.25" >> .env
           # echo "TELEGRAM_BOT_TOKEN=${{ secrets.STAGING_TELEGRAM_BOT_TOKEN }}" >> .env
           # echo "TELEGRAM_BOT_TOKEN=${{ secrets.STAGING_TELEGRAM_BOT_TOKEN }}" >> .env
+
+      # Step 3: Install dependencies
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          # Install new packages if composer.json changed
+          if git diff --name-only HEAD^ HEAD | grep -q 'composer.json'; then
+            composer update --no-interaction --prefer-dist --optimize-autoloader
+          fi
 
       # Step 5: Clear and optimize
       - name: Clear application cache
