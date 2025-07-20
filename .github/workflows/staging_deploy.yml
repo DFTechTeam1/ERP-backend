@@ -34,7 +34,7 @@ jobs:
           EOF
 
           rsync -avz --delete             --exclude-from='.github/workflows/.rsync-exclude'             --exclude='.env'             --log-file=rsync-log-dev.txt             -e "ssh -o StrictHostKeyChecking=no"             ./ ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }}:/var/www/apps/backend.dfactory.pro || exit 1
-          sleep 2
+          sleep 3
 
       - name: Upload rsync log
         if: always()

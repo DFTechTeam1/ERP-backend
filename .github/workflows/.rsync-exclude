@@ -15,10 +15,7 @@ deploy.yml
 # Prevent deletion of SSL files and uploaded content
 .user.ini
 .well-known/
-storage/
+storage/debugbar/
+storage/logs/*.log
+storage/*.sqlite
 public/uploads/
-
-# Don't exclude compiled frontend assets
-!public/mix-manifest.json
-!public/js/
-!public/css/
