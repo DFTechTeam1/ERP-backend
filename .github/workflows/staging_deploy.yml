@@ -34,6 +34,7 @@ jobs:
           EOF
 
           rsync -avz --delete             --exclude-from='.github/workflows/.rsync-exclude'             --exclude='.env'             --log-file=rsync-log-dev.txt             -e "ssh -o StrictHostKeyChecking=no"             ./ ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }}:/var/www/apps/backend.dfactory.pro || exit 1
+          sleep 2
 
       - name: Upload rsync log
         if: always()
@@ -47,24 +48,20 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
             cd /var/www/apps/backend.dfactory.pro
 
-            mkdir -p storage/framework/cache
-            mkdir -p storage/framework/sessions
-            mkdir -p storage/framework/views
-            mkdir -p storage/logs
-            
-            rm -rf storage/framework/cache/*
+            echo "🔧 Creating storage folders..."
+            mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
+
+            echo "🧼 Cleaning Laravel cache..."
             rm -rf bootstrap/cache/*.php
+            php artisan config:clear || true
+            php artisan cache:clear || true
 
-            chown -R www-data:www-data .
+            echo "📦 Running composer install..."
+            composer install --no-interaction --prefer-dist --optimize-autoloader
 
-            find storage -type d -exec chmod 775 {} \;
-            find storage -type f -exec chmod 664 {} \;
-            find bootstrap/cache -type d -exec chmod 775 {} \;
-            find bootstrap/cache -type f -exec chmod 664 {} \;
-
-            composer install --no-interaction
-            php artisan storage:link
-            php artisan config:clear
+            echo "🚀 Artisan rebuild"
+            php artisan clear-compiled || true
+            php artisan package:discover --ansi
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
