@@ -1,86 +1,96 @@
-name: Deploy to Staging
+name: ERP Staging Deployment
 
 on:
   push:
-    branches:
-      - staging
+    branches: [ staging ]
 
 jobs:
-  deploy-dev:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # Step 1: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
         with:
-          node-version: 20.19.1
+          ref: staging
+          fetch-depth: 0
 
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.8.0
+      # Step 2: Setup PHP
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          php-version: '8.2'
+          extensions: mbstring, ctype, fileinfo, openssl, pdo, tokenizer, xml, gd, mysqli, pdo_mysql, bcmath
+          coverage: none
+          tools: composer:v2
 
-      - name: Deploy to dev via rsync
+      # Step 3: Install dependencies
+      - name: Install Composer dependencies
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
-            TIMESTAMP=$(date +%Y%m%d%H%M%S)
-            BACKUP_DIR="/var/www/apps/backup/backend_staging_$TIMESTAMP"
-            mkdir -p $BACKUP_DIR
-            cp -r /var/www/apps/backend.dfactory.pro/* $BACKUP_DIR/
-            echo "$BACKUP_DIR" > /var/www/apps/backup/backend_staging_last_backup_path_dev.txt
-          EOF
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          # Install new packages if composer.json changed
+          if git diff --name-only HEAD^ HEAD | grep -q 'composer.json'; then
+            composer update --no-interaction --prefer-dist --optimize-autoloader
+          fi
 
-          rsync -avz --delete             --exclude-from='.github/workflows/.rsync-exclude'             --exclude='.env'             --log-file=rsync-log-dev.txt             -e "ssh -o StrictHostKeyChecking=no"             ./ ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }}:/var/www/apps/backend.dfactory.pro || exit 1
-          sleep 3
-
-      - name: Upload rsync log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: rsync-log-dev
-          path: rsync-log-dev.txt
-
-      - name: Post-deployment Laravel tasks (dev)
+      # Step 4: Environment setup
+      - name: Copy .env
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
+          cp .env.example .env
+          php -r "file_put_contents('.env', preg_replace('/APP_KEY=\s*/', 'APP_KEY=', file_get_contents('.env')));"
+          php artisan key:generate
+
+          echo "DB_DATABASE=${{ secrets.STAGING_DB_DATABASE }}" >> .env
+          echo "DB_USERNAME=${{ secrets.STAGING_DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}" >> .env
+          echo "SALT_KEY=${{ secrets.STAGING_SALT_KEY }}" >> .env
+          echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> .env
+          # echo "HASH_SALT=${{ secrets.STAGING_HASH_SALT }}" >> .env
+          # echo "TASK_SALT=${{ secrets.STAGING_TASK_SALT }}" >> .env
+          # echo "GOOGLE_CONSOLE_API_KEY=${{ secrets.STAGING_GOOGLE_CONSOLE_API_KEY }}" >> .env
+          # echo "PUSHER_APP_ID=${{ secrets.STAGING_PUSHER_APP_ID }}" >> .env
+          # echo "PUSHER_APP_KEY=${{ secrets.STAGING_PUSHER_APP_KEY }}" >> .env
+          # echo "PUSHER_APP_SECRET=${{ secrets.STAGING_PUSHER_APP_SECRET }}" >> .env
+          # echo "PUSHER_PORT=${{ secrets.STAGING_PUSHER_PORT }}" >> .env
+          # echo "PUSHER_SCHEME=${{ secrets.STAGING_PUSHER_SCHEME }}" >> .env
+          # echo "PUSHER_APP_CLUSTER=${{ secrets.STAGING_PUSHER_APP_CLUSTER }}" >> .env
+          # echo "GEOAPIFY_KEY=${{ secrets.STAGING_GEOAPIFY_KEY }}" >> .env
+          # echo "SENTRY_LARAVEL_DSN=null" >> .env
+          # echo "SENTRY_TRACES_SAMPLE_RATE=0.25" >> .env
+          # echo "TELEGRAM_BOT_TOKEN=${{ secrets.STAGING_TELEGRAM_BOT_TOKEN }}" >> .env
+          # echo "TELEGRAM_BOT_TOKEN=${{ secrets.STAGING_TELEGRAM_BOT_TOKEN }}" >> .env
+
+      # Step 5: Clear and optimize
+      - name: Clear application cache
+        run: |
+          php artisan cache:clear
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
+          php artisan optimize:clear
+
+      # Step 6: Database migrations (optional)
+      # - name: Run database migrations
+      #   run: |
+      #     php artisan migrate --force
+
+      # Step 7: Deployment to server would go here
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
             cd /var/www/apps/backend.dfactory.pro
 
-            echo "🔧 Creating storage folders..."
-            mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
+            echo "Pull latest code"
+            git pull origin staging
 
-            echo "🧼 Cleaning Laravel cache..."
-            rm -rf bootstrap/cache/*.php
-
-            echo "📦 Running composer install..."
+            echo "Installing package"
             composer install --no-interaction --prefer-dist --optimize-autoloader
 
-            echo "🚀 Artisan rebuild"
-            php artisan clear-compiled || true
-            php artisan package:discover --ansi
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+            echo "Migrating"
             php artisan migrate --force
-            php artisan queue:restart
-
-          EOF
-
-  rollback-dev:
-    needs: deploy-dev
-    if: failure()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Restore from dev backup
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
-            if [ -f /var/www/apps/backup/backend_staging_last_backup_path_dev.txt ]; then
-              BACKUP_DIR=$(cat /var/www/apps/backup/backend_staging_last_backup_path_dev.txt)
-              cp -r $BACKUP_DIR/* /var/www/apps/backend.dfactory.pro/
-              chown -R www-data:www-data /var/www/apps/backend.dfactory.pro
-            else
-              echo "No backup path found. Rollback skipped."
-            fi
-          EOF
+            php artisan optimize
