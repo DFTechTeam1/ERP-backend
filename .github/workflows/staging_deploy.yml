@@ -48,7 +48,8 @@ jobs:
             cd /var/www/apps/backend.dfactory.pro
             
             rm -rf storage/framework/cache/*
-            
+            rm -rf bootstrap/cache/*.php
+
             chown -R www-data:www-data .
 
             find storage -type d -exec chmod 775 {} \;
