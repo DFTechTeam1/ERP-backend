@@ -46,6 +46,11 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.VPS_IP }} << 'EOF'
             cd /var/www/apps/backend.dfactory.pro
+
+            mkdir -p storage/framework/cache
+            mkdir -p storage/framework/sessions
+            mkdir -p storage/framework/views
+            mkdir -p storage/logs
             
             rm -rf storage/framework/cache/*
             rm -rf bootstrap/cache/*.php
