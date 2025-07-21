@@ -30,5 +30,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             ls -a
-            sudo su - deployer
-            /var/www/apps/scripts/backend.sh
+            cd /var/www/apps/backend.dfactory.pro
+            git pull origin staging
+            chmod +x /var/www/apps/scripts/backend_deployer.sh
+            /var/www/apps/scripts/backend_deployer.sh
