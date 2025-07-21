@@ -2,6 +2,7 @@
 
 namespace Modules\Finance\Models;
 
+use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -70,6 +71,17 @@ class Invoice extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    public function requestUpdates(): HasMany
+    {
+        return $this->hasMany(InvoiceRequestUpdate::class, 'invoice_id');
+    }
+
+    public function pendingRequestUpdate(): HasOne
+    {
+        return $this->hasOne(InvoiceRequestUpdate::class, 'invoice_id')
+            ->where('status', InvoiceRequestUpdateStatus::Pending);
     }
 
     public function getChilds(int $projectDealId, string $select = '*')

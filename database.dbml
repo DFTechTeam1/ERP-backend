@@ -1467,6 +1467,17 @@ Table "invoices" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "invoice_request_updates" {
+  "id" bigint [pk, not null, increment]
+  "invoice_id" bigint [ref: > invoices.id]
+  "amount" decimal [default: 0]
+  "payment_date" date
+  "status" tinyint [note: "1 for approved, 2 for pending", default: 2]
+  "request_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "transactions" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]

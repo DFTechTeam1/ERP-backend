@@ -23,12 +23,11 @@ Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
     // manage invoice
     Route::prefix('{projectDealUid}')->group(function () {
         Route::post('/billInvoice', [InvoiceController::class, 'generateBillInvoice']);
+        Route::post('invoices/{invoiceId}', [InvoiceController::class, 'updateTemporaryData']);
         Route::resource('invoices', InvoiceController::class);
 
         // transaction
         Route::post('transaction', [InvoiceController::class, 'createTransaction']);
     });
-
-    // download invoice
 
 });
