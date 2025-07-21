@@ -30,4 +30,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             ls -a
+            sudo su - deployer
             /var/www/apps/scripts/backend.sh
