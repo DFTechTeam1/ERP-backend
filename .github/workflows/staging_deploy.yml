@@ -28,30 +28,4 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /var/www/apps/backend.dfactory.pro
-            
-            # Fix permissions and ownership
-            sudo chown -R www-data:www-data .
-            sudo find . -type d -exec chmod 755 {} \;
-            sudo find . -type f -exec chmod 644 {} \;
-            sudo chmod -R 777 storage bootstrap/cache Modules
-            
-            # Cleanup and prepare
-            rm -rf bootstrap/cache/*.php
-            rm -rf storage/framework/cache/*
-            
-            # Git operations
-            git config --global --add safe.directory /var/www/apps/backend.dfactory.pro
-            git pull origin staging
-            
-            # Composer operations
-            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-            composer dump-autoload -o
-            
-            # Laravel specific
-            php artisan storage:link
-            php artisan optimize:clear
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+          script_path: /var/www/apps/scripts/backend.sh
