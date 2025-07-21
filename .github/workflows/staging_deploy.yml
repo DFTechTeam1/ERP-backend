@@ -28,4 +28,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script_path: /var/www/apps/scripts/backend.sh
+          script: |
+            ls -a
+            /var/www/apps/scripts/backend.sh
