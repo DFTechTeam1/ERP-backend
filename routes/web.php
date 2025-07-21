@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Project\WriteDurationTaskHistory;
+use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Production\TaskStatus;
 use App\Exports\ProjectDealSummary;
 use App\Http\Controllers\Api\InteractiveController;
@@ -10,6 +11,7 @@ use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Services\GeneralService;
 use App\Services\PusherNotification;
+use App\Services\Telegram\TelegramService;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -19,10 +21,13 @@ use Maatwebsite\Excel\Facades\Excel;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Jobs\InvoiceDue;
 use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
+use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
+use Modules\Finance\Models\InvoiceRequestUpdate;
 use Modules\Finance\Notifications\InvoiceDueCheckNotification;
 use Modules\Finance\Notifications\ProjectHasBeenFinal;
+use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
@@ -129,3 +134,14 @@ Route::get('invoices/general/download', [InvoiceController::class, 'downloadGene
 Route::get('/notification-preview', function () {
     return Auth::user();
 })->middleware('auth:sanctum');
+
+Route::get('check', function () {
+    // return (new TelegramService)->sendTextMessage(
+    //     chatId: '1991941955',
+    //     message: "Test message",
+    // );
+
+    $current = InvoiceRequestUpdate::latest()->first();
+
+    RequestInvoiceChangeJob::dispatch($current);
+});
