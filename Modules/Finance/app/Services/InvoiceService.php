@@ -205,7 +205,7 @@ class InvoiceService {
                 'am' => $data['amount'],
                 'rd' => $paymentDate,
             ];
-            if ($currentInvoiceCount) {
+            if ($currentInvoiceCount == 0) {
                 $paramSignedRoute['t'] = 'downPayment';
             }
             
