@@ -9,8 +9,10 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
+use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Finance\Repository\InvoiceRequestUpdateRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 
@@ -23,6 +25,8 @@ class InvoiceService {
 
     private $transactionRepo;
 
+    private $invoiceRequestUpdateRepo;
+
     /**
      * Construction Data
      */
@@ -30,7 +34,8 @@ class InvoiceService {
         InvoiceRepository $repo,
         ProjectDealRepository $projectDealRepo,
         GeneralService $generalService,
-        TransactionRepository $transactionRepo
+        TransactionRepository $transactionRepo,
+        InvoiceRequestUpdateRepository $invoiceRequestUpdateRepo
     )
     {
         $this->repo = $repo;
@@ -40,6 +45,8 @@ class InvoiceService {
         $this->generalService = $generalService;
 
         $this->transactionRepo = $transactionRepo;
+
+        $this->invoiceRequestUpdateRepo = $invoiceRequestUpdateRepo;
     }
 
     /**
@@ -223,7 +230,35 @@ class InvoiceService {
     }
 
     /**
+     * Here we save temporary data for invoice update.
+     * Need Director approval to change the invoice.
+     *
+     * @param array $payload
+     * @param integer $invoiceId
+     * @return array
+     */
+    public function updateTemporaryData(array $payload, int $invoiceId): array
+    {
+        try {
+            $payload['invoice_id'] = $payload['invoice_id'] = $invoiceId;
+
+            $updateData = $this->invoiceRequestUpdateRepo->store(data: $payload);
+
+            // send notification to director
+            RequestInvoiceChangeJob::dispatch($updateData);
+
+            return generalResponse(
+                message: 'Succesls'
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Update selected data
+     * 
+     * Here we will update in main table which is invoices table, then update invoice content in the raw_date column
      *
      * @param array $data
      * @param string $id

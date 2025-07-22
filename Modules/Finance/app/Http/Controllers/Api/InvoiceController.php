@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Finance\Http\Requests\Invoice\BillInvoice;
+use Modules\Finance\Http\Requests\Invoice\EditInvoice;
 use Modules\Finance\Http\Requests\Transaction\Create;
 use Modules\Finance\Services\InvoiceService;
 
@@ -67,11 +68,25 @@ class InvoiceController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(EditInvoice $request, $id)
     {
         //
 
         return response()->json([]);
+    }
+    
+    /**
+     * Here we save temporary data for invoice update.
+     * Need Director approval to change the invoice.
+     * 
+     * @param EditInvoice $request
+     * @param string $invoiceId
+     * 
+     * @return JsonResponse
+     */
+    public function updateTemporaryData(EditInvoice $request, string $invoiceId): JsonResponse
+    {
+        return apiResponse($this->service->updateTemporaryData(payload: $request->validated(), invoiceId: $invoiceId));
     }
 
     /**
