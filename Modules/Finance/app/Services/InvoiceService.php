@@ -161,6 +161,7 @@ class InvoiceService {
                 'unpaidInvoice:id,project_deal_id',
                 'invoices:id,project_deal_id'
             ]);
+            $currentInvoiceCount = $projectDeal->invoices->count();
 
             if ($projectDeal->unpaidInvoice) {
                 return errorResponse(message: __('notification.cannotCreateInvoiceIfYouHaveAnotherUnpaidInovice'));
@@ -204,7 +205,7 @@ class InvoiceService {
                 'am' => $data['amount'],
                 'rd' => $paymentDate,
             ];
-            if ($projectDeal->invoices->count() == 0) {
+            if ($currentInvoiceCount) {
                 $paramSignedRoute['t'] = 'downPayment';
             }
             
