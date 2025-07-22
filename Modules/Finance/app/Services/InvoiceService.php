@@ -158,7 +158,8 @@ class InvoiceService {
             $projectDeal = $this->projectDealRepo->show(uid: $projectDealId, select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid', relation: [
                 'transactions',
                 'finalQuotation',
-                'unpaidInvoice:id,project_deal_id'
+                'unpaidInvoice:id,project_deal_id',
+                'invoices:id,project_deal_id'
             ]);
 
             if ($projectDeal->unpaidInvoice) {
@@ -196,15 +197,20 @@ class InvoiceService {
             $invoice = $this->repo->store($payload);
 
             // generate url with expired time
+            $paramSignedRoute = [
+                'i' => $projectDealUid,
+                'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                'additional' => 1,
+                'am' => $data['amount'],
+                'rd' => $paymentDate,
+            ];
+            if ($projectDeal->invoices->count() == 0) {
+                $paramSignedRoute['t'] = 'downPayment';
+            }
+            
             $url = \Illuminate\Support\Facades\URL::signedRoute(
                 name: 'invoice.download',
-                parameters: [
-                    'i' => $projectDealUid,
-                    'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
-                    'additional' => 1,
-                    'am' => $data['amount'],
-                    'rd' => $paymentDate
-                ],
+                parameters: $paramSignedRoute,
                 expiration: now()->addMinutes(5)
             );
 
@@ -296,13 +302,21 @@ class InvoiceService {
      */
     public function downloadInvoice()
     {
+        $invoiceType = request('t'); // will be 'downPayment' or ....... for now just downPayment is available
+
+        $view = $invoiceType == 'downPayment' ? 'invoices.downPaymentInvoice' : 'invoices.invoice';
+
         $invoiceId = \Illuminate\Support\Facades\Crypt::decryptString(request('n'));
-        $invoice = $this->repo->show(uid: $invoiceId, select: 'id,raw_data,parent_number,number,sequence,project_deal_id', relation: [
-            'projectDeal:id,name,project_date,customer_id',
-            'projectDeal.customer:id,name',
-            'projectDeal.finalQuotation:id,project_deal_id,description',
-            'projectDeal.transactions:id,payment_amount,transaction_date,project_deal_id',
-        ]);
+        $invoice = $this->repo->show(
+            uid: $invoiceId,
+            select: 'id,raw_data,parent_number,number,sequence,project_deal_id,amount,payment_date',
+            relation: [
+                'projectDeal:id,name,project_date,customer_id',
+                'projectDeal.customer:id,name',
+                'projectDeal.finalQuotation:id,project_deal_id,description',
+                'projectDeal.transactions:id,payment_amount,transaction_date,project_deal_id',
+            ]
+        );
 
         $description = $invoice->projectDeal->finalQuotation->description;
 
@@ -313,8 +327,17 @@ class InvoiceService {
         $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
         $rawData = $invoice->raw_data;
         $rawData['description'] = $description;
- 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $rawData)
+
+        // set the amount and transaction date based on user input when invoice type is downpayment
+        if ($invoiceType == 'downPayment') {
+            $rawData['amountRequest'] = "Rp" . number_format(num: $invoice->amount, decimal_separator: ',');
+            $rawData['transactionDateRequest'] = date('d F Y', strtotime($invoice->payment_date));
+            $rawData['transactions'] = [];
+            $remaining = (float) $rawData['fixPrice'] - (float) $invoice->amount;
+            $rawData['remainingPayment'] = "Rp" . number_format(num: $remaining, decimal_separator: ',');
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,

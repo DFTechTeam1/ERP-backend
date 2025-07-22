@@ -682,17 +682,19 @@ class ProjectDealService
             })->values();
 
             // we need to encrypt this data to keep it safe
-            $invoiceList = $data->invoices->map(function ($invoice) use ($projectDealUid) {
+            $invoiceList = $data->invoices->map(function ($invoice, $key) use ($projectDealUid) {
                 $invoiceUrl = \Illuminate\Support\Facades\URL::signedRoute(
                     name: 'invoice.download',
                     parameters: [
                         'i' => $projectDealUid,
-                        'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id)
+                        'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                        't' => $key == 0 ? 'downPayment' : 'invoice'
                     ],
                     expiration: now()->addHours(5)
                 );
 
                 return [
+                    'type_invoice' => $key == 0 ? 'down_payment' : 'invoice',
                     'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
                     'amount' => $invoice->amount,
                     'paid_amount' => $invoice->paid_amount,
@@ -706,6 +708,7 @@ class ProjectDealService
                     'invoice_url' => $invoiceUrl
                 ];
             });
+            
             $encryptionService = new EncryptionService();
             $invoiceList = $encryptionService->encrypt(string: json_encode($invoiceList), key: config('app.salt_key_encryption'));
 
