@@ -9,6 +9,7 @@ use App\Http\Controllers\LandingPageController;
 use App\Jobs\ProjectDealSummaryJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
+use App\Notifications\DummyNotification;
 use App\Services\GeneralService;
 use App\Services\PusherNotification;
 use App\Services\Telegram\TelegramService;
@@ -29,6 +30,7 @@ use Modules\Finance\Notifications\InvoiceDueCheckNotification;
 use Modules\Finance\Notifications\ProjectHasBeenFinal;
 use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
 use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectDeal;
@@ -134,6 +136,18 @@ Route::get('invoices/general/download', [InvoiceController::class, 'downloadGene
 Route::get('/notification-preview', function () {
     return Auth::user();
 })->middleware('auth:sanctum');
+
+Route::get('dummy-send-email', function () {
+    $user = Employee::where('email', 'gumilang.dev@gmail.com')->first();
+
+    if ($user) {
+        $user->notify(new DummyNotification);
+
+        return 'Email sent successfully!';
+    }
+
+    return 'User not found.';
+});
 
 Route::get('check', function () {
     // return (new TelegramService)->sendTextMessage(
