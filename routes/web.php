@@ -15,6 +15,7 @@ use App\Services\PusherNotification;
 use App\Services\Telegram\TelegramService;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
@@ -154,8 +155,17 @@ Route::get('check', function () {
     //     chatId: '1991941955',
     //     message: "Test message",
     // );
-
     $current = InvoiceRequestUpdate::latest()->first();
+    if (!$current) {
+        $invoice = Invoice::latest()->first();
+        DB::table('invoice_request_updates')->insert([
+            'invoice_id' => $invoice->id,
+            'payment_date' => now()->addDays(3)->format('Y-m-d'),
+            'status' => InvoiceRequestUpdateStatus::Pending->value,
+            'request_by' => User::latest()->first()->id,
+        ]);
+        $current = InvoiceRequestUpdate::latest()->first();
+    }
 
     RequestInvoiceChangeJob::dispatch($current);
 });

@@ -14,10 +14,11 @@ class EditInvoice extends FormRequest
     {
         return [
             'amount' => [
-                'required',
-                new EditInvoiceAmountRule($this->route('invoiceId'))
+                'nullable',
+                new EditInvoiceAmountRule()
             ],
-            'transaction_date' => 'required|date_format:Y-m-d'
+            'payment_date' => 'nullable|date_format:Y-m-d',
+            'invoice_uid' => 'required'
         ];
     }
 

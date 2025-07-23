@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
-            $table->uuid('uid')->nullable();
+            $table->uuid('uid')->nullable()->after('id');
         });
     }
 

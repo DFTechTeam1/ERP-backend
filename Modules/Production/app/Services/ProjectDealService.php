@@ -687,13 +687,14 @@ class ProjectDealService
                     name: 'invoice.download',
                     parameters: [
                         'i' => $projectDealUid,
-                        'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id)
+                        'n' => $invoice->uid
                     ],
                     expiration: now()->addHours(5)
                 );
 
                 return [
                     'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                    'uid' => $invoice->uid,
                     'amount' => $invoice->amount,
                     'paid_amount' => $invoice->paid_amount,
                     'status' => $invoice->status->label(),

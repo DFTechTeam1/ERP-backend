@@ -3,6 +3,7 @@
 namespace Modules\Finance\Models;
 
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
+use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,7 +18,7 @@ use Modules\Production\Models\ProjectDeal;
 
 class Invoice extends Model
 {
-    use HasFactory;
+    use HasFactory, ModelObserver;
 
     /**
      * The attributes that are mass assignable.

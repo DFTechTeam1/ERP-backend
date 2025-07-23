@@ -12,7 +12,7 @@ class AutoUpdateCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'app:auto-update-command';
+    protected $signature = 'app:auto-update';
 
     /**
      * The console command description.
