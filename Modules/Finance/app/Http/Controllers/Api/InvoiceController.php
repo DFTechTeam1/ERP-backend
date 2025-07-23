@@ -84,9 +84,9 @@ class InvoiceController extends Controller
      * 
      * @return JsonResponse
      */
-    public function updateTemporaryData(EditInvoice $request, string $invoiceId): JsonResponse
+    public function updateTemporaryData(EditInvoice $request): JsonResponse
     {
-        return apiResponse($this->service->updateTemporaryData(payload: $request->validated(), invoiceId: $invoiceId));
+        return apiResponse($this->service->updateTemporaryData(payload: $request->validated()));
     }
 
     /**

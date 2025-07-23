@@ -142,7 +142,7 @@ describe('Create Transaction', function () use ($requestData) {
         $payload = [
             'payment_amount' => 10000000,
             'transaction_date' => $trxDate,
-            'invoice_id' => \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->invoices[0]->id),
+            'invoice_id' => $projectDeal->invoices[0]->uid,
             'note' => '',
             'reference' => '',
             'images' => [

@@ -39,15 +39,21 @@ class RequestInvoiceChangeJob implements ShouldQueue
             ->find($this->model->id);
 
         $changes = [];
-        if ($data->invoice->amount != $data->amount) {
+        if (
+            ($data->invoice->amount != $data->amount) &&
+            ($data->amount)
+        ) {
             $changes['amount'] = [
                 'old' => "Rp" . number_format(num: $data->invoice->amount, decimal_separator: ','),
                 'new' => "Rp" . number_format(num: $data->amount, decimal_separator: ',')
             ];
         }
-        if (date('Y-m-d', strtotime($data->invoice->payment_date)) != date('Y-m-d', strtotime($data->payment_date))) {
+        if (
+            (date('Y-m-d', strtotime($data->invoice->payment_date)) != date('Y-m-d', strtotime($data->payment_date))) &&
+            ($data->payment_date)
+        ) {
             $changes['payment_date'] = [
-                'old' => $data->invoice->payment_date,
+                'old' => date('Y-m-d', strtotime($data->invoice->payment_date)),
                 'new' => $data->payment_date
             ];
         }
@@ -70,7 +76,7 @@ class RequestInvoiceChangeJob implements ShouldQueue
         $telegramIds = $director->telegram_chat_id ? [$director->telegram_chat_id] : [];
 
         // define message for telegram
-        $mainMessage = "🔔Approval Required\n📋 Invoice: #[{$data->invoice->number} #]\n👤 Client: {$data->invoice->customer->name}\n";
+        $mainMessage = "🔔Approval Required\n📋 Invoice: *[{$data->invoice->number} *]\n\n👤 Client: {$data->invoice->customer->name}\n";
         foreach ($changes as $field => $change) {
             $old = $change['old'];
             $new = $change['new'];

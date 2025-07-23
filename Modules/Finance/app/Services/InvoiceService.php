@@ -3,6 +3,7 @@
 namespace Modules\Finance\Services;
 
 use App\Actions\Finance\GenerateInvoiceContent;
+use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Services\GeneralService;
 use Illuminate\Http\Response;
@@ -244,20 +245,19 @@ class InvoiceService {
      * @param integer $invoiceId
      * @return array
      */
-    public function updateTemporaryData(array $payload, int $invoiceId): array
+    public function updateTemporaryData(array $payload): array
     {
         try {
-            $invoiceId = Crypt::decryptString($invoiceId);
-
+            $invoiceId = $this->generalService->getIdFromUid($payload['invoice_uid'], new Invoice());
             $payload['invoice_id'] = $invoiceId;
-
+            $payload['status'] = InvoiceRequestUpdateStatus::Pending->value;
             $updateData = $this->invoiceRequestUpdateRepo->store(data: $payload);
 
             // send notification to director
             RequestInvoiceChangeJob::dispatch($updateData);
 
             return generalResponse(
-                message: 'Succesls'
+                message: 'Success'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

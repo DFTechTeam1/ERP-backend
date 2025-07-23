@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -11,15 +12,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('invoice_request_updates', function (Blueprint $table) {
+        $statuses = InvoiceRequestUpdateStatus::cases();
+        $statuses = array_map(fn($status) => $status->value, $statuses);
+
+        Schema::create('invoice_request_updates', function (Blueprint $table) use ($statuses) {
             $table->id();
             $table->foreignId('invoice_id')
                 ->references('id')
                 ->on('invoices')
                 ->cascadeOnDelete();
-            $table->decimal('amount', 24, 2)->default(0);
-            $table->date('payment_date');
-            $table->enum('status', [1,2]);
+            $table->decimal('amount', 24, 2)->nullable();
+            $table->date('payment_date')->nullable();
+            $table->enum('status', $statuses);
             $table->foreignId('request_by')
                 ->nullable()
                 ->constrained(table: 'users');

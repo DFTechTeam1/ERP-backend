@@ -32,7 +32,7 @@ class TransactionCreatedJob implements ShouldQueue
                 'projectDeal:id,name,project_date,is_fully_paid',
                 'projectDeal.transactions',
                 'projectDeal.finalQuotation',
-                'invoice:id,payment_due',
+                'invoice:id,payment_due,uid',
                 'attachments:id,transaction_id,image'
             ])
             ->where('id', $this->transactionId)

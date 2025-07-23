@@ -30,7 +30,7 @@ class TransactionCreatedNotification extends Notification
 
         // make invoice url
         $this->url = URL::signedRoute(name: 'invoice.download', parameters: [
-            'n' => \Illuminate\Support\Facades\Crypt::encryptString($this->transaction->invoice->id)
+            'n' => $this->transaction->invoice->uid
         ]);
     }
 

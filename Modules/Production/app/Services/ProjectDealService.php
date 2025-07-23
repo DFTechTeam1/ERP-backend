@@ -687,8 +687,7 @@ class ProjectDealService
                     name: 'invoice.download',
                     parameters: [
                         'i' => $projectDealUid,
-                        'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
-                        't' => $key == 0 ? 'downPayment' : 'invoice'
+                        'n' => $invoice->uid
                     ],
                     expiration: now()->addHours(5)
                 );
@@ -696,6 +695,7 @@ class ProjectDealService
                 return [
                     'type_invoice' => $key == 0 ? 'down_payment' : 'invoice',
                     'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                    'uid' => $invoice->uid,
                     'amount' => $invoice->amount,
                     'paid_amount' => $invoice->paid_amount,
                     'status' => $invoice->status->label(),

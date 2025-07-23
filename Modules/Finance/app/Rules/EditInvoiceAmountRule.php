@@ -9,21 +9,13 @@ use Modules\Finance\Models\Invoice;
 
 class EditInvoiceAmountRule implements ValidationRule
 {
-    private $invoiceId;
-    public function __construct($invoiceId)
-    {
-        $this->invoiceId = $invoiceId;
-    }
-
     /**
      * Run the validation rule.
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        logging("invoiceiD check", [$this->invoiceId]);
-        $invoiceId = Crypt::decryptString($this->invoiceId);
-
-        $currentInvoice = Invoice::find($invoiceId);
+        $invoiceUid = request('invoice_uid');
+        $currentInvoice = Invoice::where('uid', $invoiceUid)->first();
 
         if ($currentInvoice->amount == $value && date('Y-m-d', strtotime($currentInvoice->payment_date)) == request('payment_date')) {
             $fail('No changes are submitted');

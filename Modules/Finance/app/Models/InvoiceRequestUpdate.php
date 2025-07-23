@@ -17,9 +17,9 @@ class InvoiceRequestUpdate extends Model
 
     protected static function booted()
     {
-        // static::creating(function (InvoiceRequestUpdate $model) {
-        //     $model->request_by = Auth::id();
-        // });
+        static::creating(function (InvoiceRequestUpdate $model) {
+            $model->request_by = Auth::id();
+        });
     }
 
     /**
