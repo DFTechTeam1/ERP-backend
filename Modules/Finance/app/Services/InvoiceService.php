@@ -6,9 +6,11 @@ use App\Actions\Finance\GenerateInvoiceContent;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Services\GeneralService;
+use Carbon\Carbon;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Modules\Finance\Jobs\ApproveInvoiceChangesJob;
 use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
@@ -253,6 +255,102 @@ class InvoiceService {
                 message: 'Success'
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Approve changes for invoice
+     * 
+     * @param string $invoiceUid
+     * 
+     * @return array
+     */
+    public function approveChanges(string $invoiceUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $invoiceId = $this->generalService->getIdFromUid($invoiceUid, new Invoice());
+
+            $currentChanges = $this->invoiceRequestUpdateRepo->show(uid: 'id', select: 'amount,payment_date,id', where: "invoice_id = {$invoiceId} and status = " . InvoiceRequestUpdateStatus::Pending->value, relation: [
+                'invoice:id,parent_number,number,sequence,raw_data',
+                'user:id,email,employee_id',
+                'user.employee:id,name'
+            ]);
+
+            // validate if there is no changes
+            if (!$currentChanges) {
+                return errorResponse(
+                    message: __('notification.noChangesToApprove')
+                );
+            }
+
+            $this->invoiceRequestUpdateRepo->update(
+                data: [
+                    'status' => InvoiceRequestUpdateStatus::Approved->value,
+                    'approved_at' => Carbon::now(),
+                    'approved_by' => auth()->id(),
+                ],
+                where: "invoice_id = {$invoiceId}"
+            );
+
+            // update the real invoice, we also update the raw_data column
+            $invoice = $this->repo->show(uid: $invoiceUid, select: 'id,raw_data');
+            $rawData = $invoice->raw_data;
+            $rawDataFixPrice = str_replace(['Rp', ','], '', $rawData['fixPrice']);
+            $transactions = $rawData['transactions'] ?? [];
+
+            $payloadUpdate = [];
+
+            if ($currentChanges->amount) {
+                $payloadUpdate['amount'] = $currentChanges->amount;
+                
+                // set remaining payment
+                $remainingPayment = $rawDataFixPrice - $currentChanges->amount;
+                $rawData['remainingPayment'] = "Rp" . number_format(num: $remainingPayment, decimal_separator: ',');
+
+                // update latest transaction item if transactions exists
+                if (count($transactions) > 0) {
+                    $lastTransaction = end($transactions);
+                    $lastTransaction['payment'] = "Rp" . number_format(num: $currentChanges->amount, decimal_separator: ',');
+
+                    // replace old latest transaction with new one
+                    $transactions[count($transactions) - 1] = $lastTransaction;
+                }
+            }
+            if ($currentChanges->payment_date) {
+                $paymentDate = date('Y-m-d', strtotime($currentChanges->payment_date));
+                // set payment due for the next 7 days
+                $payloadUpdate['payment_due'] = now()->parse($paymentDate)->addDays(7)->format('Y-m-d');
+                $payloadUpdate['payment_date'] = $paymentDate;
+                $payloadUpdate['payment_due'] = $paymentDate;
+
+                $rawData['paymentDue'] = date('d F Y', strtotime($payloadUpdate['payment_due']));
+                $rawData['trxDate'] = date('d F Y', strtotime($paymentDate));
+
+                // update transaction_date in latest transaction if transactions exists
+                if (count($transactions) > 0) {
+                    $lastTransaction = end($transactions);
+                    $lastTransaction['transaction_date'] = date('d F Y', strtotime($paymentDate));
+                    $transactions[count($transactions) - 1] = $lastTransaction;
+                }
+            }
+            $rawData['transactions'] = $transactions;
+
+            $payloadUpdate['raw_data'] = $rawData;
+
+            $this->repo->update(data: $payloadUpdate, id: $invoiceUid);
+
+            ApproveInvoiceChangesJob::dispatch($currentChanges->id)->afterCommit();
+
+            DB::commit();
+            
+            return generalResponse(
+                message: "Success"
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }

@@ -27,6 +27,7 @@ use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\InvoiceRequestUpdate;
+use Modules\Finance\Notifications\ApproveInvoiceChangesNotification;
 use Modules\Finance\Notifications\InvoiceDueCheckNotification;
 use Modules\Finance\Notifications\ProjectHasBeenFinal;
 use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
@@ -155,6 +156,16 @@ Route::get('check', function () {
     //     chatId: '1991941955',
     //     message: "Test message",
     // );
+    $currentChanges = InvoiceRequestUpdate::selectRaw('id,request_by,amount,payment_date,invoice_id,approved_at')
+        ->with([
+            'user:id,email,employee_id',
+            'user.employee:id,name',
+            'invoice:id,parent_number,number'
+        ])
+        ->latest()
+        ->first();
+    return (new ApproveInvoiceChangesNotification($currentChanges))
+        ->toMail('gumilang.dev@gmail.com');
     $current = InvoiceRequestUpdate::latest()->first();
     if (!$current) {
         $invoice = Invoice::latest()->first();
@@ -168,4 +179,8 @@ Route::get('check', function () {
     }
 
     RequestInvoiceChangeJob::dispatch($current);
+});
+
+Route::get('expired', function () {
+    return view('errors.expired');
 });

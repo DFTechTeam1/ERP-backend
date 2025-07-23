@@ -92,4 +92,6 @@ return [
     'successCreateDueReason' => "Success create deadline due reason",
     'successUpdateDueReason' => "Success update deadline due reason",
     'successDeleteDueReason' => "Success delete deadline due reason",
+    'noChangesToApprove' => 'No changes to approve',
+    'noChangesToApprove' => 'Tidak ada perubahan yang perlu disetujui',
 ];

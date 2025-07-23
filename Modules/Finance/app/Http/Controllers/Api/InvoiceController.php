@@ -65,6 +65,11 @@ class InvoiceController extends Controller
         return response()->json([]);
     }
 
+    public function approveChanges(string $projectDealUid, string $invoiceUid): JsonResponse
+    {
+        return apiResponse($this->service->approveChanges(invoiceUid: $invoiceUid));
+    }
+
     /**
      * Update the specified resource in storage.
      */
