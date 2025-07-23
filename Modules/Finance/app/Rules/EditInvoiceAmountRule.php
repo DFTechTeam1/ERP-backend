@@ -9,12 +9,19 @@ use Modules\Finance\Models\Invoice;
 
 class EditInvoiceAmountRule implements ValidationRule
 {
+    private $invoiceId;
+    public function __construct($invoiceId)
+    {
+        $this->invoiceId = $invoiceId;
+    }
+
     /**
      * Run the validation rule.
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $invoiceId = Crypt::decryptString(request('invoice_id'));
+        logging("invoiceiD check", [$this->invoiceId]);
+        $invoiceId = Crypt::decryptString($this->invoiceId);
 
         $currentInvoice = Invoice::find($invoiceId);
 

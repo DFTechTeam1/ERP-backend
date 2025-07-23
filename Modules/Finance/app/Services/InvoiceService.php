@@ -247,7 +247,9 @@ class InvoiceService {
     public function updateTemporaryData(array $payload, int $invoiceId): array
     {
         try {
-            $payload['invoice_id'] = $payload['invoice_id'] = $invoiceId;
+            $invoiceId = Crypt::decryptString($invoiceId);
+
+            $payload['invoice_id'] = $invoiceId;
 
             $updateData = $this->invoiceRequestUpdateRepo->store(data: $payload);
 

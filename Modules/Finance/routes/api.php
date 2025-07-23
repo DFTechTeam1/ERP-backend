@@ -25,6 +25,7 @@ Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
         Route::post('/billInvoice', [InvoiceController::class, 'generateBillInvoice']);
         Route::post('invoices/{invoiceId}', [InvoiceController::class, 'updateTemporaryData']);
         Route::resource('invoices', InvoiceController::class);
+        Route::put('invoices/{invoiceId}', [InvoiceController::class, 'updateTemporaryData'])->name('invoices.updateTemporaryData');
 
         // transaction
         Route::post('transaction', [InvoiceController::class, 'createTransaction']);
