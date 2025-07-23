@@ -1474,6 +1474,11 @@ Table "invoice_request_updates" {
   "payment_date" date
   "status" tinyint [note: "1 for approved, 2 for pending", default: 2]
   "request_by" bigint [ref: > users.id]
+  "approved_by" bigint [ref: > users.id]
+  "rejected_by" bigint [ref: > users.id]
+  "reason" text [default: NULL]
+  "approved_at" timestamp [default: NULL]
+  "rejected_at" timestamp [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
