@@ -262,7 +262,7 @@
                         <td>
                             <div class="header-item-amount">
                                 <p>Amount Due (IDR)</p>
-                                <p>{{ $remainingPayment }}</p>
+                                <p>{{ $amountRequest }}</p>
                             </div>
                         </td>
                     </tr>
