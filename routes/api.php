@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use KodePandai\Indonesia\Models\District;
+use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -274,3 +275,8 @@ Route::get('notification', function () {
 
     // Notification::send($user, new \Modules\Hrd\Notifications\UserEmailActivation('passwordnya', $user));
 });
+
+Route::get('playground', function () {
+    $user = Auth::user();
+    InvoiceHasBeenDeletedJob::dispatch(parentNumber: '#7773', projectName: "Project Name", user: $user);
+})->middleware('auth:sanctum');

@@ -88,4 +88,9 @@ return [
     'successAddQuotation' => 'Quotation berhasil di tambahkan',
     'successCreateQuotationItem' => 'Item quotation berhasil di buat',
     'updateQuotationItemSuccess' => 'Item quotation berhasil di ubah',
+    'cannotCreateInvoiceIfYouHaveAnotherUnpaidInovice' => 'Cannot create invoice if you have another unpaid invoice',
+    'successCreateDueReason' => "Berhasil membuat alasan perubahan deadline",
+    'successUpdateDueReason' => "Berhasil mengubah alasan perubahan deadline",
+    'successDeleteDueReason' => "Berhasil menghapus alasan perubahan deadline",
+    'successDeleteInvoice' => "Berhasil menghapus invoice"
 ];

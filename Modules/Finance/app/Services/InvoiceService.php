@@ -5,13 +5,16 @@ namespace Modules\Finance\Services;
 use App\Actions\Finance\GenerateInvoiceContent;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Transaction\InvoiceStatus;
+use App\Models\User;
 use App\Services\GeneralService;
 use Carbon\Carbon;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Modules\Finance\Jobs\ApproveInvoiceChangesJob;
 use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
+use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Repository\InvoiceRepository;
@@ -206,7 +209,7 @@ class InvoiceService {
             ];
 
             $invoice = $this->repo->store($payload);
-
+            logging('INVOICE', [$invoice->uid]);
             // generate url with expired time
             $paramSignedRoute = [
                 'i' => $projectDealUid,
@@ -226,7 +229,7 @@ class InvoiceService {
             );
 
             // running notifications
-            InvoiceHasBeenCreatedJob::dispatch($invoice->id);
+            InvoiceHasBeenCreatedJob::dispatch($invoice->uid);
 
             return generalResponse(
                 message: 'success',
@@ -273,7 +276,7 @@ class InvoiceService {
      * 
      * @return array
      */
-    public function approveChanges(string $invoiceUid): array
+    public function approveChanges(string $invoiceUid, bool $fromExternalUrl = false): array
     {
         DB::beginTransaction();
         try {
@@ -292,11 +295,17 @@ class InvoiceService {
                 );
             }
 
+            $actorId = Auth::id();
+            if ($fromExternalUrl) {
+                $actorUid = request('dir');
+                $actorId = $this->generalService->getIdFromUid($actorUid, new User());
+            }
+
             $this->invoiceRequestUpdateRepo->update(
                 data: [
                     'status' => InvoiceRequestUpdateStatus::Approved->value,
                     'approved_at' => Carbon::now(),
-                    'approved_by' => auth()->id(),
+                    'approved_by' => $actorId,
                 ],
                 where: "invoice_id = {$invoiceId}"
             );
@@ -394,17 +403,32 @@ class InvoiceService {
     /**
      * Delete selected data
      *
-     * @param integer $id
+     * @param string $invoiceUid
      * 
-     * @return void
+     * @return array
      */
-    public function delete(int $id): array
+    public function delete(string $invoiceUid): array
     {
         try {
+            $invoice = $this->repo->show(
+                uid: $invoiceUid,
+                select: "id,uid,parent_number,project_deal_id",
+                relation: [
+                    'projectDeal:id,name'
+                ]
+            );
+
+            $parentNumber = $invoice->parent_number;
+            $projectName = $invoice->projectDeal->name;
+
+            $user = Auth::user();
+
+            $this->repo->delete(invoiceUid: $invoiceUid);
+            
+            InvoiceHasBeenDeletedJob::dispatch($parentNumber, $projectName, $user);
+
             return generalResponse(
-                'Success',
-                false,
-                $this->repo->delete($id)->toArray(),
+                __('notification.successDeleteInvoice'),
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

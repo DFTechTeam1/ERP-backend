@@ -24,6 +24,7 @@ class Invoice extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'uid',
         'amount',
         'paid_amount',
         'payment_date',
