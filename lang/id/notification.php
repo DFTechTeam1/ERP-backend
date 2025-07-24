@@ -92,5 +92,7 @@ return [
     'successCreateDueReason' => "Berhasil membuat alasan perubahan deadline",
     'successUpdateDueReason' => "Berhasil mengubah alasan perubahan deadline",
     'successDeleteDueReason' => "Berhasil menghapus alasan perubahan deadline",
-    'successDeleteInvoice' => "Berhasil menghapus invoice"
+    'successDeleteInvoice' => "Berhasil menghapus invoice",
+    'cannotDeletePaidInvoice' => "Tidak bisa menghapus inovice yang sudah terbayar.",
+    'successRequestInvoiceChanges' => 'Permohonan perubahan faktur telah diajukan. Kamu akan menerima pembaruan melalui email'
 ];

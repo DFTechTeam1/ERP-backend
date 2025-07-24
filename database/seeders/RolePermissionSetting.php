@@ -365,6 +365,22 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function financePermission()
+    {
+        return [
+            ['name' => 'approve_invoice_changes', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole()
+            ]],
+            ['name' => 'reject_invoice_changes', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole()
+            ]],
+        ];
+    }
+
     protected function masterPermission()
     {
         return [
@@ -1032,6 +1048,7 @@ class RolePermissionSetting extends Seeder
             ->merge($this->inventoriesPermission())
             ->merge($this->settingPermission())
             ->merge($this->taskPermission())
+            ->merge($this->financePermission())
             ->merge($this->projectPermission());
 
         return $permissions;

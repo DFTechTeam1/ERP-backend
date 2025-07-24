@@ -72,6 +72,11 @@ it('Request invoice test with changes in amount', function () {
         'request_by' => auth()->id()
     ]);
 
+    $this->assertDatabaseHas('invoices', [
+        'id' => $invoice->id,
+        'status' => InvoiceStatus::WaitingChangesApproval->value
+    ]);
+
     Bus::assertDispatched(RequestInvoiceChangeJob::class);
 });
 
