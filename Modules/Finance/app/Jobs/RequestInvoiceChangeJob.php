@@ -3,11 +3,13 @@
 namespace Modules\Finance\Jobs;
 
 use App\Models\User;
+use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\URL;
 use Modules\Finance\Models\InvoiceRequestUpdate;
 use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
 use Modules\Hrd\Models\Employee;
@@ -31,47 +33,11 @@ class RequestInvoiceChangeJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $data = \Modules\Finance\Models\InvoiceRequestUpdate::with([
-                'invoice:id,parent_number,amount,payment_date,customer_id,project_deal_id,number',
-                'invoice.customer:id,name',
-                'invoice.projectDeal:id,name'
-            ])
-            ->find($this->model->id);
-
-        $changes = [];
-        if (
-            ($data->invoice->amount != $data->amount) &&
-            ($data->amount)
-        ) {
-            $changes['amount'] = [
-                'old' => "Rp" . number_format(num: $data->invoice->amount, decimal_separator: ','),
-                'new' => "Rp" . number_format(num: $data->amount, decimal_separator: ',')
-            ];
-        }
-        if (
-            (date('Y-m-d', strtotime($data->invoice->payment_date)) != date('Y-m-d', strtotime($data->payment_date))) &&
-            ($data->payment_date)
-        ) {
-            $changes['payment_date'] = [
-                'old' => date('Y-m-d', strtotime($data->invoice->payment_date)),
-                'new' => $data->payment_date
-            ];
-        }
-
-        $actor = \App\Models\User::with(['employee:id,user_id,name'])
-            ->find($data->request_by);
-
-        $director = \Modules\Hrd\Models\Employee::where('email', 'wesleywiyadi@gmail.com') 
-            ->first();
-
-        $output = [
-            'actor' => $actor,
-            'invoice' => $data,
-            'director' => $director,
-            'changes' => $changes,
-            'approvalUrl' => '',
-            'rejectionUrl' => ''
-        ];
+        $output = (new GeneralService)->getDataForRequestInvoiceChangeNotification(invoiceRequestId: $this->model->id);
+        $director = $output['director'];
+        $data = $output['invoice'];
+        $changes = $output['changes'];
+        $actor = $output['actor'];
 
         $telegramIds = $director->telegram_chat_id ? [$director->telegram_chat_id] : [];
 

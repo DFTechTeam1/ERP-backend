@@ -2,10 +2,14 @@
 
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Transaction\InvoiceStatus;
+use App\Services\GeneralService;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
+use Modules\Finance\Jobs\ApproveInvoiceChangesJob;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
+use Modules\Finance\Models\InvoiceRequestUpdate;
+use Modules\Hrd\Models\Employee;
 
 use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs, putJson};
 use function PHPUnit\Framework\assertArrayHasKey;
@@ -99,4 +103,70 @@ it('Request invoice test with changes in payment date', function () {
     ]);
 
     Bus::assertDispatched(RequestInvoiceChangeJob::class);
+});
+
+it('Get data for request edit notification', function () {
+    // create director
+    Employee::factory()
+        ->withUser()
+        ->create([
+            'email' => 'wesleywiyadi@gmail.com'
+        ]);
+
+    $invoiceRequest = InvoiceRequestUpdate::factory()->create();
+
+    $response = (new GeneralService)->getDataForRequestInvoiceChangeNotification(invoiceRequestId: $invoiceRequest->id);
+
+    expect($response)->toHaveKeys(['actor', 'invoice', 'director', 'changes', 'approvalUrl', 'rejectionUrl']);
+    expect($response['approvalUrl'])->toBeUrl();
+});
+
+it('Approval change from email', function () {
+    Bus::fake();
+
+    $invoice = Invoice::factory()->create([
+        'raw_data' => [
+            'fixPrice' => 'Rp50,0000,000',
+            'remainingPayment' => 'Rp30,0000,000',
+            'transactions' => [
+                [
+                    'id' => null,
+                    'payment' => 'Rp20,000,000',
+                    'transaction_date' => '23 July 2025'
+                ]
+            ],
+            'paymentDue' => '23 July 2025',
+            'trxDate' => '19 July 2025'
+        ]
+    ]);
+
+    $invoiceRequest = InvoiceRequestUpdate::factory()->create([
+        'invoice_id' => $invoice->id
+    ]);
+
+    $director = Employee::factory()
+        ->withUser()
+        ->create([
+            'email' => 'wesleywiyadi@gmail.com'
+        ]);
+    $employee = Employee::with('user:id,uid,employee_id')
+        ->find($director->id);
+
+    // generate url
+    $response = (new GeneralService)->getDataForRequestInvoiceChangeNotification(invoiceRequestId: $invoiceRequest->id);
+
+    expect($response)->toHaveKeys(['actor', 'invoice', 'director', 'changes', 'approvalUrl', 'rejectionUrl']);
+    expect($response['approvalUrl'])->toBeUrl();
+
+    $trueResponse = getJson($response['approvalUrl']);
+    
+    $trueResponse->assertStatus(201);
+
+    $this->assertDatabaseHas('invoice_request_updates', [
+        'id' => $invoiceRequest->id,
+        'status' => InvoiceRequestUpdateStatus::Approved->value,
+        'approved_by' => $employee->user->id
+    ]);
+
+    Bus::assertDispatched(ApproveInvoiceChangesJob::class);
 });

@@ -19,7 +19,7 @@ class InvoiceHasBeenCreatedJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(int $invoiceId)
+    public function __construct(string $invoiceId)
     {
         $this->invoiceId = $invoiceId;
     }

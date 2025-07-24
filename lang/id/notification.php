@@ -92,4 +92,5 @@ return [
     'successCreateDueReason' => "Berhasil membuat alasan perubahan deadline",
     'successUpdateDueReason' => "Berhasil mengubah alasan perubahan deadline",
     'successDeleteDueReason' => "Berhasil menghapus alasan perubahan deadline",
+    'successDeleteInvoice' => "Berhasil menghapus invoice"
 ];

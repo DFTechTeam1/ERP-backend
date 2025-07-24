@@ -94,4 +94,5 @@ return [
     'successDeleteDueReason' => "Success delete deadline due reason",
     'noChangesToApprove' => 'No changes to approve',
     'noChangesToApprove' => 'Tidak ada perubahan yang perlu disetujui',
+    'successDeleteInvoice' => "Success delete invoice"
 ];

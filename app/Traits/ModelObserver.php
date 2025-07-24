@@ -10,7 +10,7 @@ trait ModelObserver
     public static function bootModelObserver()
     {
         static::creating(function (Model $model) {
-            $model->uid = Uuid::uuid4();
+            $model->uid = Uuid::uuid4()->toString();
         });
 
         // static::retrieved(function (Model $model) {

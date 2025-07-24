@@ -140,10 +140,13 @@ class InvoiceRepository extends InvoiceInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(string $invoiceUid)
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
+        $query = $this->model->query();
+
+        $query->where("uid", $invoiceUid);
+
+        return $query->delete();
     }
 
     /**

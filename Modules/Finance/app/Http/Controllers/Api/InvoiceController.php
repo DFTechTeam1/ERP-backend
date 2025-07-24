@@ -70,6 +70,11 @@ class InvoiceController extends Controller
         return apiResponse($this->service->approveChanges(invoiceUid: $invoiceUid));
     }
 
+    public function emailApproveChanges()
+    {
+        return apiResponse($this->service->approveChanges(invoiceUid: request('invoiceUid'), fromExternalUrl: true));
+    }
+
     /**
      * Update the specified resource in storage.
      */
@@ -96,12 +101,12 @@ class InvoiceController extends Controller
 
     /**
      * Remove the specified resource from storage.
+     * 
+     * @return JsonResponse
      */
-    public function destroy($id)
+    public function destroy(string $projectDealUid, string $id): JsonResponse
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->delete(invoiceUid: $id));
     }
 
     public function downloadInvoice()
