@@ -37,3 +37,31 @@ it('Delete invoice return success', function () {
 
     Bus::assertDispatched(InvoiceHasBeenDeletedJob::class);
 });
+
+it("Delete paid invoice", function () {
+    Bus::fake();
+
+    $invoice = Invoice::factory()
+        ->create([
+            'status' => InvoiceStatus::Paid->value,
+            'uid' => \Illuminate\Support\Str::uuid(),
+            'parent_number' => 'IV/2025 - 950'
+        ]);
+
+    $invoiceData = Invoice::selectRaw('id,uid')
+        ->find($invoice->id);
+    
+    $projectDealUid = Crypt::encryptString($invoice->project_deal_id);
+
+    $response = deleteJson(route('api.invoices.destroy', ['invoice' => $invoiceData->uid, 'projectDealUid' => $projectDealUid]));
+    
+    $response->assertStatus(400);
+
+    $this->assertDatabaseCount('invoices', 1);
+
+    expect($response->json())->toHaveKeys(['message']);
+
+    expect($response->json()['message'])->toBe(__('notification.cannotDeletePaidInvoice'));
+
+    Bus::assertNotDispatched(InvoiceHasBeenDeletedJob::class);
+});

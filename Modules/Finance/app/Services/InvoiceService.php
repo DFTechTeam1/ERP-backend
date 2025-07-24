@@ -207,7 +207,7 @@ class InvoiceService {
             ];
 
             $invoice = $this->repo->store($payload);
-            logging('INVOICE', [$invoice->uid]);
+            
             // generate url with expired time
             $url = \Illuminate\Support\Facades\URL::signedRoute(
                 name: 'invoice.download',
@@ -245,19 +245,28 @@ class InvoiceService {
      */
     public function updateTemporaryData(array $payload): array
     {
+        DB::beginTransaction();
         try {
             $invoiceId = $this->generalService->getIdFromUid($payload['invoice_uid'], new Invoice());
             $payload['invoice_id'] = $invoiceId;
             $payload['status'] = InvoiceRequestUpdateStatus::Pending->value;
             $updateData = $this->invoiceRequestUpdateRepo->store(data: $payload);
 
+            // update invoice status
+            $this->repo->update(data: [
+                'status' => InvoiceStatus::WaitingChangesApproval
+            ], id: $payload['invoice_uid']);
+
             // send notification to director
             RequestInvoiceChangeJob::dispatch($updateData);
 
+            DB::commit();
+
             return generalResponse(
-                message: 'Success'
+                message: __('notification.successRequestInvoiceChanges')
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }
@@ -405,11 +414,15 @@ class InvoiceService {
         try {
             $invoice = $this->repo->show(
                 uid: $invoiceUid,
-                select: "id,uid,parent_number,project_deal_id",
+                select: "id,uid,parent_number,project_deal_id,status",
                 relation: [
                     'projectDeal:id,name'
                 ]
             );
+
+            if ($invoice->status == InvoiceStatus::Paid) {
+                return errorResponse(message: __('notification.cannotDeletePaidInvoice'));
+            }
 
             $parentNumber = $invoice->parent_number;
             $projectName = $invoice->projectDeal->name;
