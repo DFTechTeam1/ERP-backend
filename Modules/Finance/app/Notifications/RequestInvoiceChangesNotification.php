@@ -37,7 +37,6 @@ class RequestInvoiceChangesNotification extends Notification
     {
         return [
             'mail',
-            TelegramChannel::class
         ];
     }
 

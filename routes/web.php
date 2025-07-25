@@ -189,3 +189,10 @@ Route::get('check', function () {
 Route::get('expired', function () {
     return view('errors.expired');
 });
+
+Route::get('i/p', function () {
+    return view('invoices.approved');
+})->name('invoices.approved');
+Route::get('i/r', function () {
+    return view('invoices.rejected');
+})->name('invoices.rejected');

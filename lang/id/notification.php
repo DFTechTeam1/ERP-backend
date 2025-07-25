@@ -96,5 +96,6 @@ return [
     'successDeleteInvoice' => "Berhasil menghapus invoice",
     'cannotDeletePaidInvoice' => "Tidak bisa menghapus inovice yang sudah terbayar.",
     'successRequestInvoiceChanges' => 'Permohonan perubahan faktur telah diajukan. Kamu akan menerima pembaruan melalui email',
-    'successApproveInvoiceChanges' => "Berhasil menyetujui perubahan faktur"
+    'successApproveInvoiceChanges' => "Berhasil menyetujui perubahan faktur",
+    'successRejectInvoiceChanges' => 'Berhasil menolak perubahan faktur',
 ];

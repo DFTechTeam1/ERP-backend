@@ -65,14 +65,53 @@ class InvoiceController extends Controller
         return response()->json([]);
     }
 
-    public function approveChanges(string $projectDealUid, string $invoiceUid): JsonResponse
+    /**
+     * Reject invoice changes.
+     * @param Request $request
+     * @param string $projectDealUid
+     * @param string $invoiceUid
+     * @param string|int $pendingUpdateId
+     * 
+     * @return JsonResponse
+     */
+    public function rejectChanges(Request $request, string $projectDealUid, string $invoiceUid, string|int $pendingUpdateId): JsonResponse
     {
-        return apiResponse($this->service->approveChanges(invoiceUid: $invoiceUid));
+        return apiResponse($this->service->rejectChanges(payload: $request->all(), invoiceUid: $invoiceUid, pendingUpdateId: $pendingUpdateId));
+    }
+
+    /**
+     * Approve invoice changes.
+     * @param string $projectDealUid
+     * @param string $invoiceUid
+     * @param string|int $pendingUpdateId
+     * 
+     * @return JsonResponse
+     */
+    public function approveChanges(string $projectDealUid, string $invoiceUid, string|int $pendingUpdateId): JsonResponse
+    {
+        return apiResponse($this->service->approveChanges(invoiceUid: $invoiceUid, pendingUpdateId: $pendingUpdateId));
     }
 
     public function emailApproveChanges()
     {
-        return apiResponse($this->service->approveChanges(invoiceUid: request('invoiceUid'), fromExternalUrl: true));
+        $response = $this->service->approveChanges(invoiceUid: request('invoiceUid'), fromExternalUrl: true, pendingUpdateId: request('cuid'));
+
+        if (!$response['error']) {
+            return redirect()->route('invoices.approved');
+        }
+
+        return response()->json($response);
+    }
+
+    public function emailRejectChanges()
+    {
+        $response = $this->service->rejectChanges(payload: [], invoiceUid: request('invoiceUid'), fromExternalUrl: true, pendingUpdateId: request('cid'));
+
+        if (!$response['error']) {
+            return redirect()->route('invoices.rejected');
+        }
+        
+        return response()->json($response);
     }
 
     /**

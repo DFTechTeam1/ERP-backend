@@ -21,7 +21,7 @@ class InvoiceRequestUpdateFactory extends Factory
             'payment_date' => now()->addDays(30)->format('Y-m-d'),
             'status' => \App\Enums\Finance\InvoiceRequestUpdateStatus::Pending->value,
             'invoice_id' => \Modules\Finance\Models\Invoice::factory(),
-            'request_by' => \App\Models\User::factory()->create()->id
+            'request_by' => \App\Models\User::factory()
         ];
     }
 }

@@ -24,6 +24,11 @@ class InvoiceRequestUpdate extends Model
         });
     }
 
+    protected static function newFactory(): InvoiceRequestUpdateFactory
+    {
+        return InvoiceRequestUpdateFactory::new();
+    }
+
     /**
      * The attributes that are mass assignable.
      */
@@ -39,14 +44,12 @@ class InvoiceRequestUpdate extends Model
         'approved_at',
         'rejected_at'
     ];
-
-    protected $casts = [
-        'status' => InvoiceRequestUpdateStatus::class
-    ];
-
-    protected static function newFactory(): InvoiceRequestUpdateFactory
+    
+    protected function casts()
     {
-        return InvoiceRequestUpdateFactory::new();
+        return [
+            'status' => InvoiceRequestUpdateStatus::class
+        ];
     }
 
     public function invoice(): BelongsTo

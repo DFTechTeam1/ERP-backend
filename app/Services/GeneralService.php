@@ -369,7 +369,19 @@ class GeneralService
             name: 'api.invoices.approveChanges',
             parameters: [
                 'invoiceUid' => $data->invoice->uid,
-                'dir' => $director->user->uid
+                'dir' => $director->user->uid,
+                'cid' => $data->id
+            ],
+            expiration: now()->addHours(5)
+        );
+
+        // create rejection url with signed route
+        $rejectionUrl = URL::signedRoute(
+            name: 'api.invoices.rejectChanges',
+            parameters: [
+                'invoiceUid' => $data->invoice->uid,
+                'dir' => $director->user->uid,
+                'cid' => $data->id
             ],
             expiration: now()->addHours(5)
         );
@@ -380,7 +392,7 @@ class GeneralService
             'director' => $director,
             'changes' => $changes,
             'approvalUrl' => $approvalUrl,
-            'rejectionUrl' => ''
+            'rejectionUrl' => $rejectionUrl
         ];
 
         return $output;
