@@ -548,7 +548,8 @@ class ProjectDealService
                     'invoices' => function ($queryInvoice) {
                         $queryInvoice->where('is_main', 0)
                             ->with([
-                                'transaction:id,invoice_id,created_at,transaction_date'
+                                'transaction:id,invoice_id,created_at,transaction_date',
+                                'pendingUpdate:id,invoice_id'
                             ]);
                     }
                 ]
@@ -701,7 +702,7 @@ class ProjectDealService
                 $canApproveChanges = (bool) $user->hasPermissionTo('approve_invoice_changes') && $invoice->status == InvoiceStatus::WaitingChangesApproval;
                 $canRejectChanges = (bool) $user->hasPermissionTo('reject_invoice_changes') && $invoice->status == InvoiceStatus::WaitingChangesApproval;
 
-                if ($invoice->status == InvoiceStatus::WaitingChangesApproval) {
+                if ($invoice->status == InvoiceStatus::WaitingChangesApproval || $invoice->status == InvoiceStatus::Paid) {
                     $canEditInvoice = false;
                     $canDeleteInvoice = false;
                 }
@@ -723,7 +724,8 @@ class ProjectDealService
                     'can_reject_invoice' => $canRejectChanges,
                     'need_to_pay' => $invoice->status == \App\ENums\Transaction\InvoiceStatus::Unpaid ? true : false,
                     'paid_at' => $invoice->transaction ? date('d F Y', strtotime($invoice->transaction->transaction_date)) : '-',
-                    'invoice_url' => $invoiceUrl
+                    'invoice_url' => $invoiceUrl,
+                    'pending_update_id' => $invoice->pendingUpdate ? $invoice->pendingUpdate->id : null,
                 ];
             });
             

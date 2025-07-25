@@ -96,5 +96,6 @@ return [
     'successDeleteInvoice' => "Success delete invoice",
     'cannotDeletePaidInvoice' => "Cannot delete paid invoice",
     'successRequestInvoiceChanges' => 'The invoice change request has been submitted. You will receive an update via email',
-    'successApproveInvoiceChanges' => "Successfully approved the invoice change"
+    'successApproveInvoiceChanges' => "Successfully approved the invoice change",
+    'successRejectInvoiceChanges' => 'Successfully rejected the invoice change',
 ];

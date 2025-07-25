@@ -80,6 +80,13 @@ class Invoice extends Model
         return $this->hasMany(InvoiceRequestUpdate::class, 'invoice_id');
     }
 
+    public function pendingUpdate(): HasOne
+    {
+        return $this->hasOne(InvoiceRequestUpdate::class, 'invoice_id')
+            ->where('status', InvoiceRequestUpdateStatus::Pending)
+            ->whereNull('approved_at');
+    }
+
     public function pendingRequestUpdate(): HasOne
     {
         return $this->hasOne(InvoiceRequestUpdate::class, 'invoice_id')

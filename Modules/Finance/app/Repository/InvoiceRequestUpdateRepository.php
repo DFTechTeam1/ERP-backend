@@ -87,7 +87,7 @@ class InvoiceRequestUpdateRepository extends InvoiceRequestUpdateInterface {
         $query->selectRaw($select);
 
         if (empty($where)) {
-            $query->where("uid", $uid);
+            $query->where("id", $uid);
         } else {
             $query->whereRaw($where);
         }

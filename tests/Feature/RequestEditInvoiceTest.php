@@ -159,7 +159,7 @@ it('Approval change from email', function () {
 
     // generate url
     $response = (new GeneralService)->getDataForRequestInvoiceChangeNotification(invoiceRequestId: $invoiceRequest->id);
-
+    
     expect($response)->toHaveKeys(['actor', 'invoice', 'director', 'changes', 'approvalUrl', 'rejectionUrl']);
     expect($response['approvalUrl'])->toBeUrl();
 

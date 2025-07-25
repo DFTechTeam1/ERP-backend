@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Finance\Jobs\ApproveInvoiceChangesJob;
 use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
 use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
+use Modules\Finance\Jobs\RejectInvoiceChangesJob;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Repository\InvoiceRepository;
@@ -279,37 +280,104 @@ class InvoiceService {
     }
 
     /**
-     * Approve changes for invoice
-     * 
+     * Reject changes for invoice
+     * @param array $payload                     With these following structure
+     * * - string $reason
      * @param string $invoiceUid
+     * @param bool $fromExternalUrl
+     * @param string|int|null $pendingUpdateId 
      * 
      * @return array
      */
-    public function approveChanges(string $invoiceUid, bool $fromExternalUrl = false): array
+    public function rejectChanges(array $payload, string $invoiceUid, bool $fromExternalUrl = false, string|int|null $pendingUpdateId = null): array
     {
         DB::beginTransaction();
         try {
             $invoiceId = $this->generalService->getIdFromUid($invoiceUid, new Invoice());
 
-            $approvedChanges = $this->invoiceRequestUpdateRepo->show(uid: 'id', select: 'id,status,invoice_id', where: "invoice_id = {$invoiceId}", orderBy: 'id DESC', relation: ['invoice:id,status']);
-
-            // validate if there is no changes
-            if (($approvedChanges) && ($approvedChanges->status == InvoiceRequestUpdateStatus::Approved) && ($approvedChanges->invoice->status == \App\Enums\Transaction\InvoiceStatus::Unpaid)) {
-                return errorResponse(
-                    message: __('notification.noChangesToApprove')
-                );
+            // validate current data, return error if current changes already approved or rejected
+            $currentChanges = $this->invoiceRequestUpdateRepo->show(
+                uid: $pendingUpdateId,
+                select: 'status'
+            );
+            if ($currentChanges->status == InvoiceRequestUpdateStatus::Approved || $currentChanges->status == InvoiceRequestUpdateStatus::Rejected) {
+                DB::rollBack();
+                return errorResponse(message: __('notification.noChangesToApprove'));
             }
-
-            $currentChanges = $this->invoiceRequestUpdateRepo->show(uid: 'id', select: 'amount,payment_date,id', where: "invoice_id = {$invoiceId} and status = " . InvoiceRequestUpdateStatus::Pending->value, relation: [
-                'invoice:id,parent_number,number,sequence,raw_data',
-                'user:id,email,employee_id',
-                'user.employee:id,name'
-            ]);
 
             $actorId = Auth::id();
             if ($fromExternalUrl) {
                 $actorUid = request('dir');
                 $actorId = $this->generalService->getIdFromUid($actorUid, new User());
+                $pendingUpdateId = request('cid');
+            }
+
+            // update invoice request update status to rejected
+            $this->invoiceRequestUpdateRepo->update(
+                data: [
+                    'status' => InvoiceRequestUpdateStatus::Rejected->value,
+                    'rejected_at' => Carbon::now(),
+                    'rejected_by' => $actorId,
+                    'reason' => $payload['reason'] ?? null,
+                ],
+                where: "invoice_id = {$invoiceId} AND id = {$pendingUpdateId}"
+            );
+
+            // update invoice status to unpaid
+            $this->repo->update(data: [
+                'status' => InvoiceStatus::Unpaid->value
+            ], id: $invoiceUid);
+
+            // call job to send notification just like in approveChanges method
+            RejectInvoiceChangesJob::dispatch($pendingUpdateId)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successRejectInvoiceChanges')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Approve changes for invoice
+     * 
+     * @param string $invoiceUid
+     * @param bool $fromExternalUrl
+     * @param string|int|null $pendingUpdateId
+     * 
+     * @return array
+     */
+    public function approveChanges(string $invoiceUid, bool $fromExternalUrl = false, string|int|null $pendingUpdateId = null): array
+    {
+        DB::beginTransaction();
+        try {
+            $invoiceId = $this->generalService->getIdFromUid($invoiceUid, new Invoice());
+
+            $actorId = Auth::id();
+            if ($fromExternalUrl) {
+                $actorUid = request('dir');
+                $actorId = $this->generalService->getIdFromUid($actorUid, new User());
+                $pendingUpdateId = request('cid');
+            }
+
+            $currentChanges = $this->invoiceRequestUpdateRepo->show(
+                uid: $pendingUpdateId,
+                select: 'amount,payment_date,id,status',
+                relation: [
+                    'invoice:id,parent_number,number,sequence,raw_data',
+                    'user:id,email,employee_id',
+                    'user.employee:id,name'
+                ]
+            );
+
+            // validate if current changes already approved
+            if ($currentChanges->status == InvoiceRequestUpdateStatus::Approved || $currentChanges->status == InvoiceRequestUpdateStatus::Rejected) {
+                DB::rollBack();
+                return errorResponse(message: __('notification.noChangesToApprove'));
             }
 
             $this->invoiceRequestUpdateRepo->update(
@@ -352,7 +420,6 @@ class InvoiceService {
                 // set payment due for the next 7 days
                 $payloadUpdate['payment_due'] = now()->parse($paymentDate)->addDays(7)->format('Y-m-d');
                 $payloadUpdate['payment_date'] = $paymentDate;
-                $payloadUpdate['payment_due'] = $paymentDate;
 
                 $rawData['paymentDue'] = date('d F Y', strtotime($payloadUpdate['payment_due']));
                 $rawData['trxDate'] = date('d F Y', strtotime($paymentDate));
