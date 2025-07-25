@@ -153,6 +153,31 @@ class InvoiceController extends Controller
         return $this->service->downloadInvoice();
     }
 
+    /**
+     * Download invoice based on type.
+     * Type will be:
+     * - general invoice
+     * - collection invoice
+     * - proof of payment invoice
+     * - history invoice
+     * 
+     * @param string $type
+     * 
+     * @return JsonResponse
+     */
+    public function downloadInvoiceBasedOnType(string $type)
+    {
+        $payload = [
+            'projectDealUid' => request('projectDealUid'),
+            'amount' => request('amount'),
+            'paymentDate' => request('paymentDate'),
+            'invoiceUid' => request('invoiceUid'),
+        ];
+        
+        return $this->service->downloadInvoiceBasedOnType(type: $type, payload: $payload);
+    }
+
+
     public function downloadGeneralInvoice()
     {
         return $this->service->downloadGeneralInvoice();
