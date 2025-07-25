@@ -535,7 +535,7 @@ class ProjectDealService
                 select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
                 relation: [
                     'transactions',
-                    'transactions.invoice:id,number,parent_number,paid_amount,payment_date',
+                    'transactions.invoice:id,number,parent_number,paid_amount,payment_date,uid',
                     'transactions.attachments:id,transaction_id,image',
                     'quotations',
                     'quotations.items:id,quotation_id,item_id',

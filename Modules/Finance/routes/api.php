@@ -32,8 +32,7 @@ Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
 
         // transaction
         Route::post('transaction', [InvoiceController::class, 'createTransaction']);
-    });
-
+    });    
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])

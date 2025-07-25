@@ -132,6 +132,18 @@ class ProjectDeal extends Model
         return $this->hasMany(Invoice::class, 'project_deal_id');
     }
 
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class, 'project_deal_id');
+    }
+
+    public function getInvoice(string $invoiceUid)
+    {
+        return $this->invoice()
+            ->with(['transaction'])
+            ->where('uid', $invoiceUid)->first();
+    }
+
     public function mainInvoice(): HasOne
     {
         return $this->hasOne(Invoice::class, 'project_deal_id')

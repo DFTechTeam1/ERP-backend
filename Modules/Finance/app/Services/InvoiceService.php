@@ -211,13 +211,14 @@ class InvoiceService {
             
             // generate url with expired time
             $url = \Illuminate\Support\Facades\URL::signedRoute(
-                name: 'invoice.download',
+                name: 'invoice.download.type',
                 parameters: [
-                    'i' => $projectDealUid,
-                    'n' => $invoice->uid,
-                    'additional' => 1,
-                    'am' => $data['amount'],
-                    'rd' => $paymentDate
+                    'type' => 'collection',
+                    'projectDealUid' => $projectDealUid,
+                    'invoiceUid' => $invoice->uid,
+                    'amount' => $data['amount'],
+                    'paymentDate' => $paymentDate,
+                    'isDownPayment' => $data['is_down_payment'] ? 1 : 0
                 ],
                 expiration: now()->addMinutes(5)
             );
@@ -574,12 +575,14 @@ class InvoiceService {
 
     /**
      * Download general invoice based on invoice id
+     * @param $payload          Will have these following structure
+     * - string $projectDealUid
      * 
      * @return Response
      */
-    public function downloadGeneralInvoice(): Response
+    public function downloadGeneralInvoice(array $payload): Response
     {
-        $projectDealId = \Illuminate\Support\Facades\Crypt::decryptString(request('i'));
+        $projectDealId = \Illuminate\Support\Facades\Crypt::decryptString($payload['projectDealUid']);
         $projectDeal = $this->projectDealRepo->show(
             uid: $projectDealId,
             select: 'id',
@@ -608,6 +611,237 @@ class InvoiceService {
         }
  
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $rawData)
+            ->setPaper('A4')
+            ->setOption([
+                'isPhpEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+                'debugPng' => false,
+                'debugLayout' => false,
+                'debugCss' => false
+            ]);
+
+        $filename = "Inv {$invoiceNumber} - {$projectDeal->mainInvoice->projectDeal->customer->name} - {$projectDeal->mainInvoice->projectDeal->project_date}.pdf";
+
+        return $pdf->download(filename: $filename);
+    }
+
+    /**
+     * Download invoice based on type.
+     * Type will be:
+     * - general invoice
+     * - collection invoice
+     * - proof of payment invoice
+     * - history invoice
+     * 
+     * Here we we will call another method based on type, for example
+     * if type is 'general', we will call downloadGeneralInvoice method.
+     * 
+     * @param string $type
+     * @param array $payload
+     * 
+     * @return Response
+     */
+    public function downloadInvoiceBasedOnType(string $type, array $payload): Response
+    {
+        dd($payload);
+        switch ($type) {
+            case 'general':
+                return $this->downloadGeneralInvoice($payload);
+            case 'collection':
+                return $this->downloadCollectionInvoice($payload);
+            case 'proof_of_payment':
+                return $this->downloadProofOfPaymentInvoice($payload);
+            case 'history':
+                return $this->downloadHistoryInvoice($payload);
+            default:
+                abort(404);
+        }
+        
+        abort(404);
+    }
+
+    /**
+     * Here invoice will only have amount that need to be paid, no remaining payment, no total invoice amount.
+     * 
+     * @param array $payload            Will have these following structure
+     * - string $amount
+     * - string $projectDealUid
+     * - string $paymentDate
+     * - bool $isDownPayment
+     * 
+     * @return Response
+     */
+    public function downloadCollectionInvoice(array $payload): Response
+    {
+        // here we only need to get raw_data column from invoice table by request / query from project_deals table
+        $projectDealId = Crypt::decryptString($payload['projectDealUid']);
+        $projectDeal = $this->projectDealRepo->show(
+            uid: $projectDealId,
+            select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid',
+            relation: [
+                'mainInvoice:id,parent_number,number,sequence,raw_data,project_deal_id',
+            ]
+        );
+
+        $amount = $payload['amount'] ?? 0;
+
+        $rawData = $projectDeal->mainInvoice->raw_data;
+        $invoiceNumber = $projectDeal->mainInvoice->number;
+
+        $rawData['transactions'] = [];
+        $rawData['remainingPayment'] = $rawData['fixPrice'];
+
+        // insert quotation note
+        $rawData['description'] = $projectDeal->finalQuotation->description;
+
+        // replace '\' or '/' to avoid error in the file name
+        $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
+
+        if (empty($rawData['invoiceNumber'])) {
+            $rawData['invoiceNumber'] = $invoiceNumber;
+        }
+
+        $rawData['payment'] = "Rp" . number_format(num: $amount, decimal_separator: ',');
+
+        // override date
+        $rawData['paymentDate'] = date('d F Y', strtotime($payload['paymentDate']));
+        $rawData['paymentDue'] = date('d F Y', strtotime($payload['paymentDate'] . ' +7 days'));
+
+        // define down payment status
+        $rawData['isDownPayment'] = $payload['isDownPayment'] ?? false;
+ 
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.collectionInvoice", $rawData)
+            ->setPaper('A4')
+            ->setOption([
+                'isPhpEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+                'debugPng' => false,
+                'debugLayout' => false,
+                'debugCss' => false
+            ]);
+
+        $filename = "Inv {$invoiceNumber} - {$projectDeal->mainInvoice->projectDeal->customer->name} - {$projectDeal->mainInvoice->projectDeal->project_date}.pdf";
+
+        return $pdf->download(filename: $filename);
+    }
+
+    /**
+     * Here invoice will only have amount that need to be paid, with 0 remaining payment, no total invoice amount.
+     * 
+     * @param array $payload            Will have these following structure
+     * - string $projectDealUid
+     * - string $invoiceUid
+     * 
+     * @return Response
+     */
+    public function downloadProofOfPaymentInvoice(array $payload): Response
+    {
+        // here we only need to get raw_data column from invoice table by request / query from project_deals table
+        $projectDealId = Crypt::decryptString($payload['projectDealUid']);
+        $projectDeal = $this->projectDealRepo->show(
+            uid: $projectDealId,
+            select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid',
+            relation: [
+                'mainInvoice:id,parent_number,number,sequence,raw_data,project_deal_id',
+                'transactions'
+            ]
+        );
+
+        $currentInvoice = $projectDeal->getInvoice(invoiceUid: $payload['invoiceUid']);
+
+        $rawData = $projectDeal->mainInvoice->raw_data;
+
+        $invoiceNumber = $projectDeal->mainInvoice->number;
+
+        $rawData['transactions'] = [];
+        $rawData['remainingPayment'] = $rawData['fixPrice'];
+
+        // insert quotation note
+        $rawData['description'] = $projectDeal->finalQuotation->description;
+
+        // replace '\' or '/' to avoid error in the file name
+        $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
+
+        if (empty($rawData['invoiceNumber'])) {
+            $rawData['invoiceNumber'] = $invoiceNumber;
+        }
+
+        // set payment date, payment due and invoice date
+        $rawData['currentInvoice'] = $currentInvoice;
+        // set the real payment date
+        $rawData['invoiceDate'] = date('d F Y', strtotime($currentInvoice->payment_date));
+        $rawData['paymentDue'] = date('d F Y', strtotime($currentInvoice->payment_date . ' +7 days'));
+        $rawData['paymentDate'] = date('d F Y', strtotime($currentInvoice->transaction->transaction_date));
+
+        $rawData['payment'] = "Rp" . number_format(num: $currentInvoice->paid_amount, decimal_separator: ',');
+ 
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.proofOfPaymentInvoice", $rawData)
+            ->setPaper('A4')
+            ->setOption([
+                'isPhpEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+                'debugPng' => false,
+                'debugLayout' => false,
+                'debugCss' => false
+            ]);
+
+        $filename = "Inv {$invoiceNumber} - {$projectDeal->mainInvoice->projectDeal->customer->name} - {$projectDeal->mainInvoice->projectDeal->project_date}.pdf";
+
+        return $pdf->download(filename: $filename);
+    }
+
+    /**
+     * Here we get transactions history based on project_deals table
+     * 
+     * @param array $payload            Will have these following structure
+     * - string $projectDealUid
+     */
+    public function downloadHistoryInvoice(array $payload)
+    {
+        // here we only need to get raw_data column from invoice table by request / query from project_deals table
+        $projectDealId = Crypt::decryptString($payload['projectDealUid']);
+        $projectDeal = $this->projectDealRepo->show(
+            uid: $projectDealId,
+            select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid',
+            relation: [
+                'finalQuotation',
+                'transactions'
+            ]
+        );
+
+        $rawData = $projectDeal->mainInvoice->raw_data;
+        $invoiceNumber = $projectDeal->mainInvoice->number;
+
+        $rawData['transactions'] = $projectDeal->transactions->map(function ($transaction) {
+            return [
+                'transaction_date' => date('d F Y', strtotime($transaction->transaction_date)),
+                'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
+            ];
+        })->toArray();
+
+        $rawData['remainingPayment'] = $rawData['fixPrice'];
+
+        // insert quotation note
+        $rawData['description'] = $projectDeal->finalQuotation->description;
+
+        // replace '\' or '/' to avoid error in the file name
+        $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
+
+        if (empty($rawData['invoiceNumber'])) {
+            $rawData['invoiceNumber'] = $invoiceNumber;
+        }
+
+        $rawData['remainingPaymentAmount'] = $projectDeal->getRemainingPayment(formatPrice: true);
+
+        // define invoiceDate and payment due, payment due is the same with project deal date
+        $rawData['invoiceDate'] = date('d F Y', strtotime($projectDeal->project_date));
+        $rawData['paymentDue'] = date('d F Y', strtotime($projectDeal->project_date));
+
+        // define fix price, amount is take from finalQuotation relation
+        $rawData['fixPrice'] = "Rp" . number_format(num: $projectDeal->finalQuotation->fix_price, decimal_separator: ',');
+
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.historyInvoice", $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,

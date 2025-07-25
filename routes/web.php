@@ -132,6 +132,7 @@ Route::get('login', function () {
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
 
 // route to download invoice after
+Route::get('/invoices/download/{type}', [InvoiceController::class, 'downloadInvoiceBasedOnType'])->name('invoice.download.type');
 Route::get('invoices/download', [InvoiceController::class, 'downloadInvoice'])->name('invoice.download')
     ->middleware('signed');
 Route::get('invoices/general/download', [InvoiceController::class, 'downloadGeneralInvoice'])->name('invoice.general.download')
