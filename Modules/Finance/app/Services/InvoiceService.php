@@ -284,18 +284,20 @@ class InvoiceService {
         try {
             $invoiceId = $this->generalService->getIdFromUid($invoiceUid, new Invoice());
 
+            $approvedChanges = $this->invoiceRequestUpdateRepo->show(uid: 'id', select: 'id,status,invoice_id', where: "invoice_id = {$invoiceId}", orderBy: 'id DESC', relation: ['invoice:id,status']);
+
+            // validate if there is no changes
+            if (($approvedChanges) && ($approvedChanges->status == InvoiceRequestUpdateStatus::Approved) && ($approvedChanges->invoice->status == \App\Enums\Transaction\InvoiceStatus::Unpaid)) {
+                return errorResponse(
+                    message: __('notification.noChangesToApprove')
+                );
+            }
+
             $currentChanges = $this->invoiceRequestUpdateRepo->show(uid: 'id', select: 'amount,payment_date,id', where: "invoice_id = {$invoiceId} and status = " . InvoiceRequestUpdateStatus::Pending->value, relation: [
                 'invoice:id,parent_number,number,sequence,raw_data',
                 'user:id,email,employee_id',
                 'user.employee:id,name'
             ]);
-
-            // validate if there is no changes
-            if (!$currentChanges) {
-                return errorResponse(
-                    message: __('notification.noChangesToApprove')
-                );
-            }
 
             $actorId = Auth::id();
             if ($fromExternalUrl) {
@@ -318,7 +320,9 @@ class InvoiceService {
             $rawDataFixPrice = str_replace(['Rp', ','], '', $rawData['fixPrice']);
             $transactions = $rawData['transactions'] ?? [];
 
-            $payloadUpdate = [];
+            $payloadUpdate = [
+                'status' => InvoiceStatus::Unpaid->value
+            ];
 
             if ($currentChanges->amount) {
                 $payloadUpdate['amount'] = $currentChanges->amount;
@@ -364,7 +368,7 @@ class InvoiceService {
             DB::commit();
             
             return generalResponse(
-                message: "Success"
+                message: __('notification.successApproveInvoiceChanges')
             );
         } catch (\Throwable $th) {
             DB::rollBack();

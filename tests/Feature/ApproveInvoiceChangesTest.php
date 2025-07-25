@@ -30,7 +30,8 @@ test('Approve changes return success', function () {
 
     $change = InvoiceRequestUpdate::factory()->create([
         'invoice_id' => $firstInvoice->id,
-        'amount' => 25000000
+        'amount' => 25000000,
+        'status' => \App\Enums\Finance\InvoiceRequestUpdateStatus::Pending->value
     ]);
 
     $invoice = Invoice::selectRaw('uid,id')->find($change->invoice_id);
@@ -57,6 +58,7 @@ test('Approve changes return success', function () {
         'id' => $invoice->id,
         'amount' => $change->amount,
         'payment_date' => $firstInvoice->payment_date,
+        'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value
     ]);
 
     $invoiceAfterChanges = Invoice::selectRaw('id,raw_data')->find($change->invoice_id);
@@ -74,18 +76,86 @@ test('Approve changes return success', function () {
 });
 
 it('Approve changes that already approved before', function () {
+    $firstPaymentDate = now()->addDays(30)->format('Y-m-d');
+    $firstPaymentDue = now()->parse($firstPaymentDate)->addDays(7)->format('Y-m-d');
+    
     // create approved changes by run the factor
+    $invoiceData = Invoice::factory()->create([
+        'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
+        'amount' => 20000000,
+        'payment_date' => $firstPaymentDate,
+        'raw_data' => [
+            'fixPrice' => "Rp50,000,000",
+            'remainingPayment' => "Rp30,000,000",
+            'trxDate' => date('d F Y', strtotime($firstPaymentDate)),
+            'paymentDue' => date('d F Y', strtotime($firstPaymentDue)),
+            'transactions' => [
+                [
+                    'id' => null,
+                    'payment' => "Rp20,000,000",
+                    'transaction_date' => date('d F Y', strtotime($firstPaymentDate)),
+                ]
+            ]
+        ]
+    ]);
     $change = InvoiceRequestUpdate::factory()->create([
         'status' => \App\Enums\Finance\InvoiceRequestUpdateStatus::Approved->value,
-        'invoice_id' => Invoice::factory()->create()->id,
+        'invoice_id' => $invoiceData->id,
     ]);
 
     $invoice = Invoice::selectRaw('uid,id')->find($change->invoice_id);
 
     $service = setInvoiceService();
     $response = $service->approveChanges(invoiceUid: $invoice->uid);
-    
+    logging('RRESPONSE CHANGE INVOICE APPROVE BEFORE', $response);
     expect($response['error'])->toBeTrue();
 
     expect($response['message'])->toBe(__('notification.noChangesToApprove'));
+});
+
+it('Approve changes that already other request history for the same invoice id', function () {
+    $firstPaymentDate = now()->addDays(30)->format('Y-m-d');
+    $firstPaymentDue = now()->parse($firstPaymentDate)->addDays(7)->format('Y-m-d');
+
+    $invoice = Invoice::factory()->create([
+        'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
+        'amount' => 20000000,
+        'payment_date' => $firstPaymentDate,
+        'raw_data' => [
+            'fixPrice' => "Rp50,000,000",
+            'remainingPayment' => "Rp30,000,000",
+            'trxDate' => date('d F Y', strtotime($firstPaymentDate)),
+            'paymentDue' => date('d F Y', strtotime($firstPaymentDue)),
+            'transactions' => [
+                [
+                    'id' => null,
+                    'payment' => "Rp20,000,000",
+                    'transaction_date' => date('d F Y', strtotime($firstPaymentDate)),
+                ]
+            ]
+        ]
+    ]);
+
+    InvoiceRequestUpdate::factory()
+        ->create([
+            'invoice_id' => $invoice->id,
+            'status' => \App\Enums\Finance\InvoiceRequestUpdateStatus::Approved->value
+        ]);
+
+    InvoiceRequestUpdate::factory()
+        ->create([
+            'invoice_id' => $invoice->id,
+            'status' => \App\Enums\Finance\InvoiceRequestUpdateStatus::Pending->value,
+            'amount' => $invoice->amount + 200000
+        ]);
+
+    $service = setInvoiceService();
+    $response = $service->approveChanges(invoiceUid: $invoice->uid);
+        logging('RRESPONSE CHANGE INVOICE DOUBLE', $response);
+    expect($response['error'])->toBeFalse();
+
+    $this->assertDatabaseHas('invoices', [
+        'invoice_id' => $invoice->id,
+        'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value
+    ]);
 });

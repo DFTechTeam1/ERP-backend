@@ -80,7 +80,7 @@ class InvoiceRequestUpdateRepository extends InvoiceRequestUpdateInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '', string $orderBy = '')
     {
         $query = $this->model->query();
 
@@ -94,6 +94,10 @@ class InvoiceRequestUpdateRepository extends InvoiceRequestUpdateInterface {
         
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
         }
 
         $data = $query->first();
