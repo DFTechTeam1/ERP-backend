@@ -1454,6 +1454,7 @@ Table "invoices" {
   "project_deal_id" bigint [ref: > project_deals.id]
   "customer_id" bigint [ref: > customers.id]
   "status" invoice_statuses
+  "is_down_payment" boolean [default: false, note: "Define this invoice is down payment or not"]
   "raw_data" longtext
 
   // numbering

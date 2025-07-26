@@ -40,6 +40,8 @@ class Invoice extends Model
         'is_main',
         'sequence',
 
+        'is_down_payment',
+
         'created_by'
     ];
 

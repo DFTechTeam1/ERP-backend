@@ -168,8 +168,8 @@ class TransactionService {
             }
 
             // get invoice id based on invoice uid
-            $invoiceId = $this->generalService->getIdFromUid($payload['invoice_id'], new Invoice());
             $invoiceUid = $payload['invoice_id'];
+            $invoiceId = $this->generalService->getIdFromUid($payload['invoice_id'], new Invoice());
 
             $payload['project_deal_id'] = $projectDeal->id;
             $payload['customer_id'] = $projectDeal->customer_id;
