@@ -711,6 +711,7 @@ class ProjectDealService
                 }
 
                 return [
+                    'type_invoice' => $key == 0 ? 'down_payment' : 'invoice',
                     'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
                     'uid' => $invoice->uid,
                     'amount' => $invoice->amount,
@@ -731,6 +732,7 @@ class ProjectDealService
                     'is_down_payment' => $invoice->is_down_payment,
                 ];
             });
+            
             $encryptionService = new EncryptionService();
             $invoiceList = $encryptionService->encrypt(string: json_encode($invoiceList), key: config('app.salt_key_encryption'));
 

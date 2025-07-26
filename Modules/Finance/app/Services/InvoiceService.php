@@ -172,8 +172,10 @@ class InvoiceService {
             $projectDeal = $this->projectDealRepo->show(uid: $projectDealId, select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid', relation: [
                 'transactions',
                 'finalQuotation',
-                'unpaidInvoice:id,project_deal_id'
+                'unpaidInvoice:id,project_deal_id',
+                'invoices:id,project_deal_id'
             ]);
+            $currentInvoiceCount = $projectDeal->invoices->count();
 
             if ($projectDeal->unpaidInvoice) {
                 return errorResponse(message: __('notification.cannotCreateInvoiceIfYouHaveAnotherUnpaidInovice'));
@@ -211,6 +213,17 @@ class InvoiceService {
             $invoice = $this->repo->store($payload);
             
             // generate url with expired time
+            $paramSignedRoute = [
+                'i' => $projectDealUid,
+                'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                'additional' => 1,
+                'am' => $data['amount'],
+                'rd' => $paymentDate,
+            ];
+            if ($currentInvoiceCount == 0) {
+                $paramSignedRoute['t'] = 'downPayment';
+            }
+            
             $url = \Illuminate\Support\Facades\URL::signedRoute(
                 name: 'invoice.download.type',
                 parameters: [
@@ -558,8 +571,17 @@ class InvoiceService {
         $invoiceNumber = str_replace(['/', '\/'], ' ', $invoiceNumber);
         $rawData = $invoice->raw_data;
         $rawData['description'] = $description;
- 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $rawData)
+
+        // set the amount and transaction date based on user input when invoice type is downpayment
+        if ($invoiceType == 'downPayment') {
+            $rawData['amountRequest'] = "Rp" . number_format(num: $invoice->amount, decimal_separator: ',');
+            $rawData['transactionDateRequest'] = date('d F Y', strtotime($invoice->payment_date));
+            $rawData['transactions'] = [];
+            $remaining = (float) $rawData['fixPrice'] - (float) $invoice->amount;
+            $rawData['remainingPayment'] = "Rp" . number_format(num: $remaining, decimal_separator: ',');
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
