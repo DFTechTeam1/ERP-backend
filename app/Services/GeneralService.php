@@ -364,35 +364,11 @@ class GeneralService
             ->where('email', 'wesleywiyadi@gmail.com') 
             ->first();
 
-        // create approval url with signed route
-        $approvalUrl = URL::signedRoute(
-            name: 'api.invoices.approveChanges',
-            parameters: [
-                'invoiceUid' => $data->invoice->uid,
-                'dir' => $director->user->uid,
-                'cid' => $data->id
-            ],
-            expiration: now()->addHours(5)
-        );
-
-        // create rejection url with signed route
-        $rejectionUrl = URL::signedRoute(
-            name: 'api.invoices.rejectChanges',
-            parameters: [
-                'invoiceUid' => $data->invoice->uid,
-                'dir' => $director->user->uid,
-                'cid' => $data->id
-            ],
-            expiration: now()->addHours(5)
-        );
-
         $output = [
             'actor' => $actor,
             'invoice' => $data,
             'director' => $director,
             'changes' => $changes,
-            'approvalUrl' => $approvalUrl,
-            'rejectionUrl' => $rejectionUrl
         ];
 
         return $output;
