@@ -686,7 +686,7 @@ class ProjectDealService
             })->values();
 
             // we need to encrypt this data to keep it safe
-            $invoiceList = $data->invoices->map(function ($invoice) use ($projectDealUid, $user) {
+            $invoiceList = $data->invoices->map(function ($invoice, $key) use ($projectDealUid, $user) {
                 $invoiceUrl = \Illuminate\Support\Facades\URL::signedRoute(
                     name: 'invoice.download.type',
                     parameters: [
