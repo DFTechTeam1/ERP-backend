@@ -1476,6 +1476,7 @@ Table "invoices" {
   "project_deal_id" bigint [ref: > project_deals.id]
   "customer_id" bigint [ref: > customers.id]
   "status" invoice_statuses
+  "is_down_payment" boolean [default: false, note: "Define this invoice is down payment or not"]
   "raw_data" longtext
 
   // numbering
@@ -1485,6 +1486,22 @@ Table "invoices" {
   "sequence" tinyint [note: "Sequence identifier for child invoice"]
 
   "created_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "invoice_request_updates" {
+  "id" bigint [pk, not null, increment]
+  "invoice_id" bigint [ref: > invoices.id]
+  "amount" decimal [default: 0]
+  "payment_date" date
+  "status" tinyint [note: "1 for approved, 2 for pending", default: 2]
+  "request_by" bigint [ref: > users.id]
+  "approved_by" bigint [ref: > users.id]
+  "rejected_by" bigint [ref: > users.id]
+  "reason" text [default: NULL]
+  "approved_at" timestamp [default: NULL]
+  "rejected_at" timestamp [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

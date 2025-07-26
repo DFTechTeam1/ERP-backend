@@ -16,6 +16,7 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Finance\Repository\InvoiceRequestUpdateRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Finance\Services\TransactionService;
 use Modules\Hrd\Models\Employee;
@@ -65,8 +66,9 @@ use Modules\Production\Services\ProjectService;
 |
 */
 
-pest()->extend(Tests\TestCase::class)->use(RefreshDatabase::class)
- // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+pest()
+    ->extend(Tests\TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -80,10 +82,6 @@ pest()->extend(Tests\TestCase::class)->use(RefreshDatabase::class)
 |
 */
 
-expect()->extend('toBeOne', function () {
-    return $this->toBe(1);
-});
-
 /*
 |--------------------------------------------------------------------------
 | Functions
@@ -94,11 +92,6 @@ expect()->extend('toBeOne', function () {
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
-
-function something()
-{
-    // ..
-}
 
 function createProjectService(
     $userRoleManagement = null,
@@ -355,12 +348,14 @@ function setInvoiceService(
     $repo = null,
     $projectDealRepo = null,
     $generalService = null,
-    $transactionRepo = null
+    $transactionRepo = null,
+    $invoiceRequestUpdateRepo = null
 ) {
     return new \Modules\Finance\Services\InvoiceService(
         $repo ? $repo : new \Modules\Finance\Repository\InvoiceRepository,
         $projectDealRepo ? $projectDealRepo : new \Modules\Production\Repository\ProjectDealRepository,
         $generalService ? $generalService : new \App\Services\GeneralService,
-        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository
+        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository,
+        $invoiceRequestUpdateRepo ? $invoiceRequestUpdateRepo : new InvoiceRequestUpdateRepository
     );
 }

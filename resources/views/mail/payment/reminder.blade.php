@@ -32,6 +32,7 @@ This is a reminder that the following customer invoice{{ count($invoices) > 1 ? 
         <tr>
             <th>Invoice</th>
             <th>Customer</th>
+            <th>Event</th>
             <th>Amount</th>
             <th>Due Date</th>
         </tr>
@@ -41,6 +42,7 @@ This is a reminder that the following customer invoice{{ count($invoices) > 1 ? 
             <tr>
                 <td>{{ $invoice->number }}</td>
                 <td>{{ $invoice->customer->name }}</td>
+                <td>{{ $invoice->projectDeal->name }}</td>
                 <td>Rp{{ number_format(num: $invoice->amount, decimal_separator: ',') }}</td>
                 <td>{{ date('d F Y', strtotime($invoice->payment_due)) }}</td>
             </tr>

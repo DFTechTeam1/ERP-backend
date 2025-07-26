@@ -31,6 +31,7 @@ A **repayment** of **{{ number_format($transaction->payment_amount, 2, ',') }} I
 - **Date:** {{ $transaction->created_at->format('d F Y H:i') }}  
 - **Amount:** {{ number_format($transaction->payment_amount, 2, ',') }} IDR  
 - **Customer:** {{ $transaction->customer->name }}  
+- **Event:** {{ $transaction->projectDeal->name }}  
 
 @if($transaction->transaction_type->value === 'down_payment')
 **Order Balance:** {{ number_format($remainingBalance, 2, ',') }} IDR  

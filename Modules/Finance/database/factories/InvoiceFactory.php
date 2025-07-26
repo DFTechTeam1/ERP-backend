@@ -36,6 +36,8 @@ class InvoiceFactory extends Factory
             'is_main' => 1,
             'sequence' => 0,
 
+            'uid' => null,
+
             'created_by' => User::factory()
         ];
     }

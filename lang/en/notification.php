@@ -92,4 +92,10 @@ return [
     'successCreateDueReason' => "Success create deadline due reason",
     'successUpdateDueReason' => "Success update deadline due reason",
     'successDeleteDueReason' => "Success delete deadline due reason",
+    'noChangesToApprove' => 'No changes to approve',
+    'successDeleteInvoice' => "Success delete invoice",
+    'cannotDeletePaidInvoice' => "Cannot delete paid invoice",
+    'successRequestInvoiceChanges' => 'The invoice change request has been submitted. You will receive an update via email',
+    'successApproveInvoiceChanges' => "Successfully approved the invoice change",
+    'successRejectInvoiceChanges' => 'Successfully rejected the invoice change',
 ];

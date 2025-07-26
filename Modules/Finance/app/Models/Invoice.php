@@ -2,6 +2,8 @@
 
 namespace Modules\Finance\Models;
 
+use App\Enums\Finance\InvoiceRequestUpdateStatus;
+use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,12 +18,13 @@ use Modules\Production\Models\ProjectDeal;
 
 class Invoice extends Model
 {
-    use HasFactory;
+    use HasFactory, ModelObserver;
 
     /**
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'uid',
         'amount',
         'paid_amount',
         'payment_date',
@@ -36,6 +39,8 @@ class Invoice extends Model
         'number',
         'is_main',
         'sequence',
+
+        'is_down_payment',
 
         'created_by'
     ];
@@ -70,6 +75,24 @@ class Invoice extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    public function requestUpdates(): HasMany
+    {
+        return $this->hasMany(InvoiceRequestUpdate::class, 'invoice_id');
+    }
+
+    public function pendingUpdate(): HasOne
+    {
+        return $this->hasOne(InvoiceRequestUpdate::class, 'invoice_id')
+            ->where('status', InvoiceRequestUpdateStatus::Pending)
+            ->whereNull('approved_at');
+    }
+
+    public function pendingRequestUpdate(): HasOne
+    {
+        return $this->hasOne(InvoiceRequestUpdate::class, 'invoice_id')
+            ->where('status', InvoiceRequestUpdateStatus::Pending);
     }
 
     public function getChilds(int $projectDealId, string $select = '*')

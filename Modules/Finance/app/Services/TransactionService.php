@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\TransactionCreatedJob;
+use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\TransactionImage;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
@@ -166,10 +167,14 @@ class TransactionService {
                 $type = TransactionType::Credit;   
             }
 
+            // get invoice id based on invoice uid
+            $invoiceUid = $payload['invoice_id'];
+            $invoiceId = $this->generalService->getIdFromUid($payload['invoice_id'], new Invoice());
+
             $payload['project_deal_id'] = $projectDeal->id;
             $payload['customer_id'] = $projectDeal->customer_id;
             $payload['transaction_type'] = $type;
-            $payload['invoice_id'] = \Illuminate\Support\Facades\Crypt::decryptString($payload['invoice_id']);
+            $payload['invoice_id'] = $invoiceId;
             $payload['trx_id'] = "TRX - {$projectDeal->identifier_number} - " . now()->format('Y');
 
             $trx = $this->repo->store(
@@ -201,7 +206,7 @@ class TransactionService {
             $trx->attachments()->createMany($payloadImage);
 
             // here we will update the invoice content. We update the transactions content there
-            $invoice = $this->invoiceRepo->show(uid: $payload['invoice_id'], select: 'id,raw_data');
+            $invoice = $this->invoiceRepo->show(uid: $invoiceUid, select: 'id,raw_data');
             $rawData = $invoice->raw_data;
 
             $currentTransactions = $rawData['transactions'];
@@ -217,7 +222,7 @@ class TransactionService {
             $rawData['transactions'] = $currentTransactions;
             $this->invoiceRepo->update(data: [
                 'raw_data' => $rawData
-            ], id: $payload['invoice_id']);
+            ], id: $invoiceUid);
 
             // update project deal data when all invoice has been paid
             if ($allPaid) {

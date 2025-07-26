@@ -87,7 +87,7 @@ class InvoiceRepository extends InvoiceInterface {
         $query->selectRaw($select);
 
         if (empty($where)) {
-            $query->where("id", $uid);
+            $query->where("uid", $uid);
         } else {
             $query->whereRaw($where);
         }
@@ -126,7 +126,7 @@ class InvoiceRepository extends InvoiceInterface {
         if (!empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('id', $id);
+            $query->where('uid', $id);
         }
 
         $query->update($data);
@@ -140,10 +140,13 @@ class InvoiceRepository extends InvoiceInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(string $invoiceUid)
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
+        $query = $this->model->query();
+
+        $query->where("uid", $invoiceUid);
+
+        return $query->delete();
     }
 
     /**

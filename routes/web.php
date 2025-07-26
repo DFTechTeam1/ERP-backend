@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Project\WriteDurationTaskHistory;
+use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Production\TaskStatus;
 use App\Exports\ProjectDealSummary;
 use App\Http\Controllers\Api\InteractiveController;
@@ -9,10 +10,14 @@ use App\Jobs\ProjectDealSummaryJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Notifications\DummyNotification;
+use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\PusherNotification;
+use App\Services\Telegram\TelegramService;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
@@ -20,10 +25,14 @@ use Maatwebsite\Excel\Facades\Excel;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Jobs\InvoiceDue;
 use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
+use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
+use Modules\Finance\Models\InvoiceRequestUpdate;
+use Modules\Finance\Notifications\ApproveInvoiceChangesNotification;
 use Modules\Finance\Notifications\InvoiceDueCheckNotification;
 use Modules\Finance\Notifications\ProjectHasBeenFinal;
+use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\ProjectController;
@@ -123,8 +132,9 @@ Route::get('login', function () {
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
 
 // route to download invoice after
-Route::get('invoices/download', [InvoiceController::class, 'downloadInvoice'])->name('invoice.download')
-    ->middleware('signed');
+Route::get('/invoices/download/{type}', [InvoiceController::class, 'downloadInvoiceBasedOnType'])->name('invoice.download.type');
+// Route::get('invoices/download', [InvoiceController::class, 'downloadInvoice'])->name('invoice.download')
+//     ->middleware('signed');
 Route::get('invoices/general/download', [InvoiceController::class, 'downloadGeneralInvoice'])->name('invoice.general.download')
     ->middleware('signed');
 
@@ -143,3 +153,46 @@ Route::get('dummy-send-email', function () {
 
     return 'User not found.';
 });
+
+Route::get('check', function () {
+    // return (new TelegramService)->sendTextMessage(
+    //     chatId: '1991941955',
+    //     message: "Test message",
+    // );
+    // $currentChanges = InvoiceRequestUpdate::selectRaw('id,request_by,amount,payment_date,invoice_id,approved_at')
+    //     ->with([
+    //         'user:id,email,employee_id',
+    //         'user.employee:id,name',
+    //         'invoice:id,parent_number,number'
+    //     ])
+    //     ->latest()
+    //     ->first();
+    // return (new ApproveInvoiceChangesNotification($currentChanges))
+    //     ->toMail('gumilang.dev@gmail.com');
+    // $current = InvoiceRequestUpdate::latest()->first();
+    // if (!$current) {
+    //     $invoice = Invoice::latest()->first();
+    //     DB::table('invoice_request_updates')->insert([
+    //         'invoice_id' => $invoice->id,
+    //         'payment_date' => now()->addDays(3)->format('Y-m-d'),
+    //         'status' => InvoiceRequestUpdateStatus::Pending->value,
+    //         'request_by' => User::latest()->first()->id,
+    //     ]);
+    //     $current = InvoiceRequestUpdate::latest()->first();
+    // }
+
+    // RequestInvoiceChangeJob::dispatch($current);
+
+     
+});
+
+Route::get('expired', function () {
+    return view('errors.expired');
+});
+
+Route::get('i/p', function () {
+    return view('invoices.approved');
+})->name('invoices.approved');
+Route::get('i/r', function () {
+    return view('invoices.rejected');
+})->name('invoices.rejected');

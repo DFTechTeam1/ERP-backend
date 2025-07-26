@@ -22,16 +22,18 @@ class TransactionCreatedNotification extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct(Transaction $transaction, mixed $remainingBalance)
+    public function __construct(Transaction $transaction, mixed $remainingBalance, string $projectDealUid)
     {
         $this->transaction = $transaction;
 
         $this->remainingBalance = $remainingBalance;
 
         // make invoice url
-        $this->url = URL::signedRoute(name: 'invoice.download', parameters: [
-            'n' => \Illuminate\Support\Facades\Crypt::encryptString($this->transaction->invoice->id)
-        ]);
+        $this->url = URL::signedRoute(name: 'invoice.download.type', parameters: [
+            'type' => 'proof_of_payment',
+            'projectDealUid' => $projectDealUid,
+            'invoiceUid' => $this->transaction->invoice->uid,
+        ], expiration: now()->addHours(5));
     }
 
     /**

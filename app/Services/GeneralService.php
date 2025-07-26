@@ -12,6 +12,7 @@ use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\URL;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Models\ProjectDeal;
@@ -324,5 +325,76 @@ class GeneralService
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    public function getDataForRequestInvoiceChangeNotification(int $invoiceRequestId): array
+    {
+        $data = \Modules\Finance\Models\InvoiceRequestUpdate::with([
+                'invoice:id,uid,parent_number,amount,payment_date,customer_id,project_deal_id,number',
+                'invoice.customer:id,name',
+                'invoice.projectDeal:id,name'
+            ])
+            ->find($invoiceRequestId);
+
+        $changes = [];
+        if (
+            ($data->invoice->amount != $data->amount) &&
+            ($data->amount)
+        ) {
+            $changes['amount'] = [
+                'old' => "Rp" . number_format(num: $data->invoice->amount, decimal_separator: ','),
+                'new' => "Rp" . number_format(num: $data->amount, decimal_separator: ',')
+            ];
+        }
+        if (
+            (date('Y-m-d', strtotime($data->invoice->payment_date)) != date('Y-m-d', strtotime($data->payment_date))) &&
+            ($data->payment_date)
+        ) {
+            $changes['payment_date'] = [
+                'old' => date('Y-m-d', strtotime($data->invoice->payment_date)),
+                'new' => $data->payment_date
+            ];
+        }
+
+        $actor = \App\Models\User::with(['employee:id,user_id,name'])
+            ->find($data->request_by);
+
+        // this cannot be null
+        $director = \Modules\Hrd\Models\Employee::with(['user:id,employee_id,uid'])
+            ->where('email', 'wesleywiyadi@gmail.com') 
+            ->first();
+
+        // create approval url with signed route
+        $approvalUrl = URL::signedRoute(
+            name: 'api.invoices.approveChanges',
+            parameters: [
+                'invoiceUid' => $data->invoice->uid,
+                'dir' => $director->user->uid,
+                'cid' => $data->id
+            ],
+            expiration: now()->addHours(5)
+        );
+
+        // create rejection url with signed route
+        $rejectionUrl = URL::signedRoute(
+            name: 'api.invoices.rejectChanges',
+            parameters: [
+                'invoiceUid' => $data->invoice->uid,
+                'dir' => $director->user->uid,
+                'cid' => $data->id
+            ],
+            expiration: now()->addHours(5)
+        );
+
+        $output = [
+            'actor' => $actor,
+            'invoice' => $data,
+            'director' => $director,
+            'changes' => $changes,
+            'approvalUrl' => $approvalUrl,
+            'rejectionUrl' => $rejectionUrl
+        ];
+
+        return $output;
     }
 }

@@ -6,10 +6,12 @@ use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectStatus;
+use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
@@ -519,6 +521,7 @@ class ProjectDealService
     public function detailProjectDeal(string $projectDealUid): array
     {
         try {
+            $user = Auth::user();
             $projectDealUidRaw = Crypt::decryptString($projectDealUid);
             $isEdit = request('edit');
 
@@ -532,7 +535,7 @@ class ProjectDealService
                 select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
                 relation: [
                     'transactions',
-                    'transactions.invoice:id,number,parent_number,paid_amount,payment_date',
+                    'transactions.invoice:id,number,parent_number,paid_amount,payment_date,uid',
                     'transactions.attachments:id,transaction_id,image',
                     'quotations',
                     'quotations.items:id,quotation_id,item_id',
@@ -545,7 +548,8 @@ class ProjectDealService
                     'invoices' => function ($queryInvoice) {
                         $queryInvoice->where('is_main', 0)
                             ->with([
-                                'transaction:id,invoice_id,created_at,transaction_date'
+                                'transaction:id,invoice_id,created_at,transaction_date',
+                                'pendingUpdate:id,invoice_id'
                             ]);
                     }
                 ]
@@ -682,30 +686,50 @@ class ProjectDealService
             })->values();
 
             // we need to encrypt this data to keep it safe
-            $invoiceList = $data->invoices->map(function ($invoice, $key) use ($projectDealUid) {
+            $invoiceList = $data->invoices->map(function ($invoice) use ($projectDealUid, $user) {
                 $invoiceUrl = \Illuminate\Support\Facades\URL::signedRoute(
-                    name: 'invoice.download',
+                    name: 'invoice.download.type',
                     parameters: [
-                        'i' => $projectDealUid,
-                        'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
-                        't' => $key == 0 ? 'downPayment' : 'invoice'
+                        'type' => $invoice->status == InvoiceStatus::Unpaid ? 'collection' : 'proof_of_payment',
+                        'projectDealUid' => $projectDealUid,
+                        'invoiceUid' => $invoice->uid,
+                        'amount' => $invoice->amount,
+                        'paymentDate' => $invoice->payment_date
                     ],
                     expiration: now()->addHours(5)
                 );
 
+                // define action in each invoice
+                $canEditInvoice = true;
+                $canDeleteInvoice = true;
+                $canApproveChanges = (bool) $user->hasPermissionTo('approve_invoice_changes') && $invoice->status == InvoiceStatus::WaitingChangesApproval;
+                $canRejectChanges = (bool) $user->hasPermissionTo('reject_invoice_changes') && $invoice->status == InvoiceStatus::WaitingChangesApproval;
+
+                if ($invoice->status == InvoiceStatus::WaitingChangesApproval || $invoice->status == InvoiceStatus::Paid) {
+                    $canEditInvoice = false;
+                    $canDeleteInvoice = false;
+                }
+
                 return [
                     'type_invoice' => $key == 0 ? 'down_payment' : 'invoice',
                     'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                    'uid' => $invoice->uid,
                     'amount' => $invoice->amount,
                     'paid_amount' => $invoice->paid_amount,
                     'status' => $invoice->status->label(),
                     'status_color' => $invoice->status->color(),
                     'payment_due' => date('d F Y', strtotime($invoice->payment_due)),
-                    'payment_date' => date('d F Y', strtotime($invoice->payment_date)),
+                    'billing_date' => date('d F Y', strtotime($invoice->payment_date)),
                     'number' => $invoice->number,
+                    'can_edit_invoice' => $canEditInvoice,
+                    'can_delete_invoice' => $canDeleteInvoice,
+                    'can_approve_invoice' => $canApproveChanges,
+                    'can_reject_invoice' => $canRejectChanges,
                     'need_to_pay' => $invoice->status == \App\ENums\Transaction\InvoiceStatus::Unpaid ? true : false,
                     'paid_at' => $invoice->transaction ? date('d F Y', strtotime($invoice->transaction->transaction_date)) : '-',
-                    'invoice_url' => $invoiceUrl
+                    'invoice_url' => $invoiceUrl,
+                    'pending_update_id' => $invoice->pendingUpdate ? $invoice->pendingUpdate->id : null,
+                    'is_down_payment' => $invoice->is_down_payment,
                 ];
             });
             
