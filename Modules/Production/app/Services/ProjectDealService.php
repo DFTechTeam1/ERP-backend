@@ -688,10 +688,13 @@ class ProjectDealService
             // we need to encrypt this data to keep it safe
             $invoiceList = $data->invoices->map(function ($invoice) use ($projectDealUid, $user) {
                 $invoiceUrl = \Illuminate\Support\Facades\URL::signedRoute(
-                    name: 'invoice.download',
+                    name: 'invoice.download.type',
                     parameters: [
-                        'i' => $projectDealUid,
-                        'n' => $invoice->uid
+                        'type' => $invoice->status == InvoiceStatus::Unpaid ? 'collection' : 'proof_of_payment',
+                        'projectDealUid' => $projectDealUid,
+                        'invoiceUid' => $invoice->uid,
+                        'amount' => $invoice->amount,
+                        'paymentDate' => $invoice->payment_date
                     ],
                     expiration: now()->addHours(5)
                 );
@@ -725,6 +728,7 @@ class ProjectDealService
                     'paid_at' => $invoice->transaction ? date('d F Y', strtotime($invoice->transaction->transaction_date)) : '-',
                     'invoice_url' => $invoiceUrl,
                     'pending_update_id' => $invoice->pendingUpdate ? $invoice->pendingUpdate->id : null,
+                    'is_down_payment' => $invoice->is_down_payment,
                 ];
             });
             $encryptionService = new EncryptionService();

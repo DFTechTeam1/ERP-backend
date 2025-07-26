@@ -8,6 +8,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\Crypt;
 
 class TransactionCreatedJob implements ShouldQueue
 {
@@ -39,6 +40,7 @@ class TransactionCreatedJob implements ShouldQueue
             ->first();
 
         $remainingBalance = $transaction->projectDeal->getRemainingPayment();
+        $projectDealUid = Crypt::encryptString($transaction->projectDeal->id);
 
         // get role finance
         $users = \App\Models\User::role(['finance', 'root'])->get();
@@ -46,7 +48,7 @@ class TransactionCreatedJob implements ShouldQueue
         $pusher = new PusherNotification();
 
         foreach ($users as $user) {
-            $user->notify(new \Modules\Production\Notifications\TransactionCreatedNotification($transaction, $remainingBalance));
+            $user->notify(new \Modules\Production\Notifications\TransactionCreatedNotification($transaction, $remainingBalance, $projectDealUid));
 
             $pusher->send(channel: "my-channel-{$user->id}", event: 'notification-event', payload: [
                 'type' => 'finance'

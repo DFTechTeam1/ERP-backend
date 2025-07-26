@@ -205,6 +205,7 @@ class InvoiceService {
                 'number' => $invoiceNumber,
                 'is_main' => false,
                 'sequence' => $nextSequence,
+                'is_down_payment' => $data['is_down_payment'] ?? false,
             ];
 
             $invoice = $this->repo->store($payload);
@@ -643,7 +644,6 @@ class InvoiceService {
      */
     public function downloadInvoiceBasedOnType(string $type, array $payload): Response
     {
-        dd($payload);
         switch ($type) {
             case 'general':
                 return $this->downloadGeneralInvoice($payload);
@@ -683,6 +683,8 @@ class InvoiceService {
             ]
         );
 
+        $currentInvoice = $projectDeal->getInvoice(invoiceUid: $payload['invoiceUid']);
+
         $amount = $payload['amount'] ?? 0;
 
         $rawData = $projectDeal->mainInvoice->raw_data;
@@ -708,7 +710,7 @@ class InvoiceService {
         $rawData['paymentDue'] = date('d F Y', strtotime($payload['paymentDate'] . ' +7 days'));
 
         // define down payment status
-        $rawData['isDownPayment'] = $payload['isDownPayment'] ?? false;
+        $rawData['isDownPayment'] = $currentInvoice->is_down_payment;
  
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.collectionInvoice", $rawData)
             ->setPaper('A4')
