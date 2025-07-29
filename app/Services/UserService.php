@@ -513,16 +513,15 @@ class UserService
         })->toArray();
 
         $payload = [
-            'token' => $token->plainTextToken,
             'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
             'user' => $user,
             'role' => $role,
             'role_id' => $roleId,
             'app_name' => $this->generalService->getSettingByKey('app_name'),
-            'board_start_calcualted' => $this->generalService->getSettingByKey('board_start_calcualted'),
-            'is_director' => $isDirector,
-            'is_project_manager' => $isProjectManager,
-            'is_super_user' => $isSuperUser,
+            // 'board_start_calcualted' => $this->generalService->getSettingByKey('board_start_calcualted'),
+            // 'is_director' => $isDirector,
+            // 'is_project_manager' => $isProjectManager,
+            // 'is_super_user' => $isSuperUser,
             'notifications' => [],
             'encrypted_user_id' => $userIdEncode,
             'notification_section' => [
@@ -572,6 +571,7 @@ class UserService
             'reportingToken' => $reportingToken,
             'pEnc' => $permissionsEncrypted,
             'mEnc' => $menusEncrypted,
+            'mainToken' => $token->plainTextToken
         ];
     }
 
