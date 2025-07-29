@@ -539,16 +539,16 @@ class UserService
         );
 
         $encryptionService = new EncryptionService;
-        $encryptedPayload = $encryptionService->encrypt(json_encode($payload), env('SALT_KEY'));
+        $encryptedPayload = $encryptionService->encrypt(json_encode($payload), config('app.salt_key_encryption'));
 
         // here we will break the payload into some parts to avoid long context in the encrypted payload string
         // we will remove permissions, menus, and notifications from the payload
         $permissionsEncrypted = $encryptionService->encrypt(json_encode([
             'permissions' => $permissions
-        ]), env('SALT_KEY'));
+        ]), config('app.salt_key_encryption'));
         $menusEncrypted = $encryptionService->encrypt(json_encode([
             'menus' => $menus
-        ]), env('SALT_KEY'));
+        ]), config('app.salt_key_encryption'));
 
         // store histories
         $this->loginHistoryRepo->store([
