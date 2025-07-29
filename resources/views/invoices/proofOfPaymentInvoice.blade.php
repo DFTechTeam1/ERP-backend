@@ -363,6 +363,11 @@
                 </tr>
                 <tr>
                     <td style="border-bottom: unset; width: 30%;"></td>
+                    <td style="width: 22%; color: #353434; font-size: 12px;">Payment on {{ $paymentDate }}</td>
+                    <td style="width: 22%; color: #353434;">{{ $payment }}</td>
+                </tr>
+                <tr>
+                    <td style="border-bottom: unset; width: 30%;"></td>
                     <td style="width: 22%; border-bottom: unset; font-weight: bold; color: #181717;">Amount Due (IDR)</td>
                     <td style="width: 22%; border-bottom: unset; font-weight: bold; color: #181717;">Rp 0</td>
                 </tr>
