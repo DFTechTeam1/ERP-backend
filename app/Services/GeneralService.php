@@ -456,7 +456,7 @@ class GeneralService
             'role' => $tokenizer['role'],
             'role_id' => $tokenizer['role_id'],
             'app_name' => $this->getSettingByKey('app_name'),
-            'notification' => [],
+            'notifications' => [],
             'encrypted_user_id' => $userIdEncode,
             'notification_section' => [
                 'general' => $user->hasRole($allRoles),
