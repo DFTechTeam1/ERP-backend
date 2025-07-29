@@ -42,7 +42,13 @@ class LoginController extends Controller
         //
     }
 
-    public function getDetailFromMigrate(string $code)
+    /**
+     * Generate token to login into new interface
+     *
+     * @param string $code
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDetailFromMigrate(string $code): \Illuminate\Http\JsonResponse
     {
         $decode = Hashids::decode($code);
 
@@ -54,14 +60,21 @@ class LoginController extends Controller
             // return error
         }
 
-        $encryptedPayload = $this->service->encrypt($data->data, env('SALT_KEY'));
+        $user = \App\Models\User::find($userId);
+
+        $generatedToken = (new \App\Services\GeneralService)->generateAuthorizationToken(user: $user);
 
         return apiResponse(
             generalResponse(
                 'success',
                 false,
                 [
-                    'token' => $encryptedPayload,
+                    'token' => $generatedToken['encryptedPayload'],
+                    'reportingToken' => $generatedToken['reportingToken'],
+                    'mEnc' => $generatedToken['mEnc'],
+                    'pEnc' => $generatedToken['pEnc'],
+                    'menus' => $generatedToken['menus'],
+                    'main' => $generatedToken['mainToken']
                 ]
             )
         );

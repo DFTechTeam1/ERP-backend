@@ -8,6 +8,7 @@
 namespace App\Services;
 
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\System\BaseRole;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
 use Carbon\Carbon;
@@ -17,6 +18,7 @@ use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Repository\ProjectDealRepository;
+use Vinkla\Hashids\Facades\Hashids;
 
 class GeneralService
 {
@@ -372,5 +374,134 @@ class GeneralService
         ];
 
         return $output;
+    }
+
+    public function generateAuthorizedUserToken(\App\Models\User $user): array
+    {
+        $role = $user->getRoleNames()[0];
+        $roles = $user->roles;
+
+        $roleId = null;
+        if (count($roles) > 0) {
+            $roleId = $roles[0]->id;
+        }
+        $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
+
+        $expireTime = now()->addHours(24);
+        if (isset($validated['remember_me'])) {
+            $expireTime = now()->addDays(30);
+        }
+
+        $token = $user->createToken($role, $permissions, $expireTime);
+
+        return [
+            'token' => $token,
+            'user' => $user,
+            'roles' => $roles,
+            'role' => $role,
+            'role_id' => $roleId,
+            'permissions' => $permissions
+        ];
+    }
+
+    public function authorizeReportingAccess(string $email): string
+    {
+        $response = \Illuminate\Support\Facades\Http::post(
+            url: config('app.python_endpoint') . '/auth/access-token',
+            data: [
+                'email' => $email
+            ]
+        );
+
+        if ($response->status() != 200) {
+            throw new \App\Exceptions\UserNotFound(message: "Failed to generate token");
+        }
+
+        $token = $response->json()['data']['access_token'];
+
+        return $token;
+    }
+
+    /**
+     * Encrypted payload:           With these format:
+     *      - token exp
+     *      - user
+     *      - role
+     *      - roleId
+     *      - appName
+     *      - notifications: []
+     *      - encryptedUserId
+     *      - notificationSection                With these format
+     *          - general
+     *          - finance
+     *          - hrd
+     *          - production
+     *
+     * @return array
+     */
+    public function getEncryptedPayloadData(array $tokenizer): array
+    {
+        $allRoles = \App\Enums\System\BaseRole::cases();
+        $allRoles = collect($allRoles)->map(function ($roleData) {
+            return $roleData->value;
+        })->toArray();
+
+        $user = $tokenizer['user'];
+        $exp = date('Y-m-d H:i:s', strtotime($tokenizer['token']->accessToken->expires_at));
+        $userIdEncode = Hashids::encode($user->id);
+
+        return [
+            'exp' => $exp,
+            'user' => $tokenizer['user'],
+            'role' => $tokenizer['role'],
+            'role_id' => $tokenizer['role_id'],
+            'app_name' => $this->getSettingByKey('app_name'),
+            'notification' => [],
+            'encrypted_user_id' => $userIdEncode,
+            'notification_section' => [
+                'general' => $user->hasRole($allRoles),
+                'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
+                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
+                'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
+            ]
+        ];
+    }
+
+    /**
+     * Here we define all variable that will be saved in the frontend
+     *
+     * @param \App\Models\User $user
+     * @return array
+     */
+    public function generateAuthorizationToken(\App\Models\User $user): array
+    {
+        $tokenizer = $this->generateAuthorizedUserToken(user: $user);
+
+        $roles = $tokenizer['roles'];
+
+        $token = $tokenizer['token'];
+
+        $encryptedPayload = $this->getEncryptedPayloadData(tokenizer: $tokenizer);
+        
+        // generate reporting token
+        $reportingToken = $this->authorizeReportingAccess(email: $user->email);
+        
+        $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
+        
+        $menus = (new \App\Services\MenuService)->getNewFormattedMenu($user->getAllPermissions()->toArray(), $roles->toArray());
+        
+        $encryptionService = new \App\services\EncryptionService();
+        $encryptedPayload = $encryptionService->encrypt(string: json_encode($encryptedPayload), key: config('app.salt_key_encryption'));
+        $permissionsEncrypted = $encryptionService->encrypt(string: json_encode($permissions), key: config('app.salt_key_encryption'));
+        $menusEncrypted = $encryptionService->encrypt(string: json_encode($menus), key: config('app.salt_key_encryption'));
+
+        return [
+            'encryptedPayload' => $encryptedPayload,
+            'reportingToken' => $reportingToken,
+            'pEnc' => $permissionsEncrypted,
+            'mEnc' => $menusEncrypted,
+            'mainToken' => $token->plainTextToken,
+            'menus' => $menus
+        ];
     }
 }
