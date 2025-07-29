@@ -775,15 +775,14 @@ class InvoiceService {
             select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid',
             relation: [
                 'mainInvoice:id,parent_number,number,sequence,raw_data,project_deal_id',
-                'transactions'
             ]
         );
 
         $currentInvoice = $projectDeal->getInvoice(invoiceUid: $payload['invoiceUid']);
 
-        $rawData = $projectDeal->mainInvoice->raw_data;
+        $rawData = $currentInvoice->raw_data;
 
-        $invoiceNumber = $projectDeal->mainInvoice->number;
+        $invoiceNumber = $currentInvoice->parent_number;
 
         $rawData['transactions'] = [];
         $rawData['remainingPayment'] = $rawData['fixPrice'];
