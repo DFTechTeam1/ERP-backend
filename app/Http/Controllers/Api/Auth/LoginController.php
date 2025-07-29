@@ -86,6 +86,7 @@ class LoginController extends Controller
                         'reportingToken' => $generatedToken['reportingToken'],
                         'mEnc' => $generatedToken['mEnc'],
                         'pEnc' => $generatedToken['pEnc'],
+                        'menus' => $generatedToken['menus'],
                         'main' => $generatedToken['mainToken']
                     ],
                 ),

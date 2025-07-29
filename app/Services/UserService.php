@@ -571,7 +571,8 @@ class UserService
             'reportingToken' => $reportingToken,
             'pEnc' => $permissionsEncrypted,
             'mEnc' => $menusEncrypted,
-            'mainToken' => $token->plainTextToken
+            'mainToken' => $token->plainTextToken,
+            'menus' => $menus
         ];
     }
 
