@@ -459,7 +459,10 @@ class UserService
     {
         try {
             // get user and validate the payload
-            $user = $this->repo->detail(id: 'id', select: 'id,email,employee_id,email_verified_at,password', where: "email = '" . $payload['email'] . "'");
+            $user = $this->repo->detail(id: 'id', select: 'id,email,employee_id,email_verified_at,password', where: "email = '" . $payload['email'] . "'", relation: [
+                'employee:id,name,email,user_id,position_id',
+                'employee.position:id,name'
+            ]);
             
             if (!$user) {
                 return errorResponse(message: __('global.userNotFound'));
@@ -476,6 +479,20 @@ class UserService
             if (!isset($user->getRoleNames()[0])) {
                 return errorResponse(message: __('notification.doNotHaveAppPermission'));
             }
+
+            // format user email first
+            $emailShow = trim(
+                strip_tags(
+                    html_entity_decode(
+                        $user->email, ENT_QUOTES, 'UTF-8')
+                )
+            );
+            if (strlen($user->email) > 15) {
+                $emailShow = mb_substr($emailShow, 0, 15).' ...';
+            } else {
+                $emailShow = $user->email;
+            }
+            $user['email_show'] = $emailShow;
 
             /**
              * here we generate all payload that will temporary saved in the frontent
