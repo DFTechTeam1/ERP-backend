@@ -32,7 +32,11 @@ class MenuService
         $old = collect($old)->map(function ($oldMenu) use ($permissionData) {
             $childs = collect($oldMenu['childs'])->filter(function ($filter) use ($permissionData) {
                 return in_array($filter['permission'], collect($permissionData)->pluck('name')->toArray());
-            })->values()->all();
+            })->values()->map(function($map) {
+                unset($map['permission']);
+
+                return $map;
+            })->all();
 
             $oldMenu['childs'] = $childs;
 
@@ -50,7 +54,11 @@ class MenuService
         $new = collect($new)->map(function ($map) use ($permissionData) {
             $childs = collect($map['childs'])->filter(function ($child) use ($permissionData) {
                 return in_array($child['permission'], collect($permissionData)->pluck('name')->toArray());
-            })->values()->all();
+            })->values()->map(function ($map) {
+                unset($map['permission']);
+
+                return $map;
+            })->all();
 
             $map['childs'] = $childs;
 
