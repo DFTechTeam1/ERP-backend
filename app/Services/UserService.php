@@ -402,7 +402,114 @@ class UserService
         }
     }
 
-    public function login(array $validated, bool $unitTesting = false, bool $onActing = false)
+    /**
+     * Encrypted payload:           With these format:
+     *      - token exp
+     *      - user
+     *      - role
+     *      - roleId
+     *      - appName
+     *      - notifications: []
+     *      - encryptedUserId
+     *      - notificationSection                With these format
+     *          - general
+     *          - finance
+     *          - hrd
+     *          - production
+     *
+     * @return array
+     */
+    protected function getEncryptedPayloadData(array $tokenizer): array
+    {
+        $allRoles = BaseRole::cases();
+        $allRoles = collect($allRoles)->map(function ($roleData) {
+            return $roleData->value;
+        })->toArray();
+
+        $user = $tokenizer['user'];
+        $exp = date('Y-m-d H:i:s', strtotime($tokenizer['token']->accessToken->expires_at));
+        $userIdEncode = Hashids::encode($user->id);
+
+        return [
+            'exp' => $exp,
+            'user' => $tokenizer['user'],
+            'role' => $tokenizer['role'],
+            'role_id' => $tokenizer['role_id'],
+            'app_name' => $this->generalService->getSettingByKey('app_name'),
+            'notification' => [],
+            'encrypted_user_id' => $userIdEncode,
+            'notification_section' => [
+                'general' => $user->hasRole($allRoles),
+                'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
+                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
+                'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
+            ]
+        ];
+    }
+
+    /**
+     * Login user
+     *
+     * @param array $payload
+     * @param boolean $unitTesting
+     * @param boolean $onActing
+     * @return array
+     */
+    public function login(array $payload, bool $unitTesting = false, bool $onActing = false): array
+    {
+        try {
+            // get user and validate the payload
+            $user = $this->repo->detail(id: 'id', select: 'id,email,employee_id,email_verified_at,password', where: "email = '" . $payload['email'] . "'");
+            
+            if (!$user) {
+                return errorResponse(message: __('global.userNotFound'));
+            }
+
+            if (!$user->email_verified_at) {
+                return errorResponse(message: __('userNotActive'));
+            }
+
+            if (!Hash::check($payload['password'], $user->password)) {
+                return errorResponse(message: __('global.credentialDoesNotMatch'));
+            }
+
+            if (!isset($user->getRoleNames()[0])) {
+                return errorResponse(message: __('notification.doNotHaveAppPermission'));
+            }
+
+            /**
+             * here we generate all payload that will temporary saved in the frontent
+             * We generate these:
+             * 
+             * Encrypted payload:           With these format:
+             *      - token exp
+             *      - user
+             *      - role
+             *      - roleId
+             *      - appName
+             *      - notifications: []
+             *      - encryptedUserId
+             *      - notificationSection                With these format
+             *          - general
+             *          - finance
+             *          - hrd
+             *          - production
+             * 
+             * reportingToken
+             * permissionEncrypted
+             * menusEncrypted
+             * mainToken
+             * menus
+             */
+            $token = $this->generalService->generateAuthorizationToken(user: $user);
+
+            return $token;
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function loginBackup(array $validated, bool $unitTesting = false, bool $onActing = false)
     {
         $user = $this->repo->detail(
             id: 'id',
