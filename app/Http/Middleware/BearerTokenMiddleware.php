@@ -19,10 +19,7 @@ class BearerTokenMiddleware
         $bearer = $request->header('Authorization');
 
         $bearer = explode('Bearer ', $bearer);
-        $service = new EncryptionService;
-        $tokenRaw = $service->decrypt($bearer[1], env('SALT_KEY'));
-        $decode = json_decode($tokenRaw);
-        $request->headers->set('Authorization', 'Bearer '.$decode->token);
+        $request->headers->set('Authorization', 'Bearer '.$bearer[1]);
 
         return $next($request);
     }
