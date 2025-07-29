@@ -516,16 +516,14 @@ class UserService
             'token' => $token->plainTextToken,
             'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
             'user' => $user,
-            'permissions' => $permissions,
             'role' => $role,
-            'menus' => $menus,
             'role_id' => $roleId,
             'app_name' => $this->generalService->getSettingByKey('app_name'),
             'board_start_calcualted' => $this->generalService->getSettingByKey('board_start_calcualted'),
             'is_director' => $isDirector,
             'is_project_manager' => $isProjectManager,
             'is_super_user' => $isSuperUser,
-            'notifications' => $notifications,
+            'notifications' => [],
             'encrypted_user_id' => $userIdEncode,
             'notification_section' => [
                 'general' => $user->hasRole($allRoles),
@@ -543,6 +541,15 @@ class UserService
 
         $encryptionService = new EncryptionService;
         $encryptedPayload = $encryptionService->encrypt(json_encode($payload), env('SALT_KEY'));
+
+        // here we will break the payload into some parts to avoid long context in the encrypted payload string
+        // we will remove permissions, menus, and notifications from the payload
+        $permissionsEncrypted = $encryptionService->encrypt(json_encode([
+            'permissions' => $permissions
+        ]), env('SALT_KEY'));
+        $menusEncrypted = $encryptionService->encrypt(json_encode([
+            'menus' => $menus
+        ]), env('SALT_KEY'));
 
         // store histories
         $this->loginHistoryRepo->store([
@@ -562,7 +569,9 @@ class UserService
 
         return [
             'encryptedPayload' => $encryptedPayload,
-            'reportingToken' => $reportingToken
+            'reportingToken' => $reportingToken,
+            'pEnc' => $permissionsEncrypted,
+            'mEnc' => $menusEncrypted,
         ];
     }
 
