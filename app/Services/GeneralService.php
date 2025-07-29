@@ -492,8 +492,12 @@ class GeneralService
         
         $encryptionService = new \App\services\EncryptionService();
         $encryptedPayload = $encryptionService->encrypt(string: json_encode($encryptedPayload), key: config('app.salt_key_encryption'));
-        $permissionsEncrypted = $encryptionService->encrypt(string: json_encode($permissions), key: config('app.salt_key_encryption'));
-        $menusEncrypted = $encryptionService->encrypt(string: json_encode($menus), key: config('app.salt_key_encryption'));
+        $permissionsEncrypted = $encryptionService->encrypt(string: json_encode([
+            'permissions' => $permissions
+        ]), key: config('app.salt_key_encryption'));
+        $menusEncrypted = $encryptionService->encrypt(string: json_encode([
+            'menus' => $menus
+        ]), key: config('app.salt_key_encryption'));
 
         return [
             'encryptedPayload' => $encryptedPayload,
