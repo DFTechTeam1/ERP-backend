@@ -85,7 +85,8 @@ class LoginController extends Controller
                         'token' => $generatedToken['encryptedPayload'],
                         'reportingToken' => $generatedToken['reportingToken'],
                         'mEnc' => $generatedToken['mEnc'],
-                        'pEnc' => $generatedToken['pEnc']
+                        'pEnc' => $generatedToken['pEnc'],
+                        'main' => $generatedToken['mainToken']
                     ],
                 ),
             );
