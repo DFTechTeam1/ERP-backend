@@ -155,35 +155,13 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    // return (new TelegramService)->sendTextMessage(
-    //     chatId: '1991941955',
-    //     message: "Test message",
-    // );
-    // $currentChanges = InvoiceRequestUpdate::selectRaw('id,request_by,amount,payment_date,invoice_id,approved_at')
-    //     ->with([
-    //         'user:id,email,employee_id',
-    //         'user.employee:id,name',
-    //         'invoice:id,parent_number,number'
-    //     ])
-    //     ->latest()
-    //     ->first();
-    // return (new ApproveInvoiceChangesNotification($currentChanges))
-    //     ->toMail('gumilang.dev@gmail.com');
-    // $current = InvoiceRequestUpdate::latest()->first();
-    // if (!$current) {
-    //     $invoice = Invoice::latest()->first();
-    //     DB::table('invoice_request_updates')->insert([
-    //         'invoice_id' => $invoice->id,
-    //         'payment_date' => now()->addDays(3)->format('Y-m-d'),
-    //         'status' => InvoiceRequestUpdateStatus::Pending->value,
-    //         'request_by' => User::latest()->first()->id,
-    //     ]);
-    //     $current = InvoiceRequestUpdate::latest()->first();
-    // }
+    return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SummaryFinanceExport, 'summary.xlsx');
 
-    // RequestInvoiceChangeJob::dispatch($current);
+    return view('finance::reports.summaryExport');
 
-     
+    return (new \App\Services\GeneralService)->getFinanceExportData(payload: [
+        'date_range' => '2025-07-01 - 2025-07-30'
+    ]);
 });
 
 Route::get('expired', function () {
