@@ -156,18 +156,13 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-});
+    return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SummaryFinanceExport, 'summary.xlsx');
 
-Route::get('pusher-check', function() {
-    (new \App\Services\PusherNotification)->send(
-        channel: "my-channel-42",
-        event: "handle-export-import-notification",
-        payload: [
-            'type' => 'exportImportSuccess',
-            'message' => 'Success import data'
-        ],
-        compressedValue: true
-    );
+    return view('finance::reports.summaryExport');
+
+    return (new \App\Services\GeneralService)->getFinanceExportData(payload: [
+        'date_range' => '2025-07-01 - 2025-07-30'
+    ]);
 });
 
 Route::get('expired', function () {

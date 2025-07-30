@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Modules\Finance\Http\Requests\ExportRequest;
 use Modules\Finance\Http\Requests\Transaction\Create;
 use Modules\Finance\Services\TransactionService;
 
@@ -63,6 +64,11 @@ class FinanceController extends Controller
     public function downloadInvoice(Request $request): JsonResponse
     {
         return apiResponse($this->service->downloadInvoice(payload: $request->all()));
+    }
+
+    public function export(ExportRequest $request)
+    {
+        
     }
 
     /**

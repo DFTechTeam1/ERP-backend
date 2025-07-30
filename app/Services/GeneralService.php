@@ -508,4 +508,86 @@ class GeneralService
             'menus' => $menus
         ];
     }
+
+    /**
+     * Here we'll export project deals summary based on user selection
+     * In the result, we will display:
+     * - project name
+     * - project date
+     * - marketing name
+     * - venue
+     * - total led area
+     * - fix price
+     * - history of payments
+     * - due amount
+     *
+     * @param array $payload            With these following structure:
+     * - string $date_range
+     * - array $marketings
+     * - array $status
+     * - array $price
+     */
+    public function getFinanceExportData(array $payload)
+    {
+        $where = "id > 0";
+        $whereHas = [];
+
+        // filter based on project date
+        if (!empty($payload['date_range'])) {
+            $explodeDate = explode(' - ', $payload['date_range']);
+
+            if (isset($explodeDate[1])) {
+                $where .= " AND project_date BETWEEN '" . $explodeDate[0] . "' AND '" . $explodeDate[1] . "'";
+            } else {
+                $where .= " AND project_date >= '" . $explodeDate[0] . "'";
+            }
+        }
+
+        // filter based on marketings
+        if (!empty($payload['marketings'])) {
+            $marketings = collect($payload['marketings'])->map(function ($marketing) {
+                return $this->getIdFromUid(uid: $marketing, model: new \Modules\Hrd\Models\Employee());
+            })->implode(',');
+
+            $whereHas[] = [
+                'relation' => 'marketings',
+                'query' => "employee_id IN ({$marketings})"
+            ];
+        }
+
+        // filter based on status
+        if (!empty($payload['status'])) {
+            $where .= " AND status IN (" . implode(',', $payload['status']) . ")";
+        }
+
+        // filter based on price
+        if (!empty($payload['price'])) {
+            $price = $payload['price'];
+            $whereHas[] = [
+                'relation' => 'finalQuotation',
+                'query' => "fix_price BETWEEN " . $price[0] . " AND " . $price[1]
+            ];
+        }
+
+        $data = (new \Modules\Production\Repository\ProjectDealRepository)->list(
+            select: 'id,name,project_date,country_id,state_id,city_id',
+            where: $where,
+            whereHas: $whereHas,
+            relation: [
+                'marketings:id,employee_id',
+                'marketings.employee:id,name',
+                'finalQuotation',
+                'transactions'
+            ]
+        );
+
+        $data = $data->map(function ($project) {
+            $project['marketingName'] = $project->marketings->pluck('employee.name')->implode(',');
+            $project['projectDateFormat'] = date('d F Y', strtotime($project->project_date));
+
+            return $project;
+        })->values();
+
+        return $data;
+    }
 }

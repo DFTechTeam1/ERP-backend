@@ -886,4 +886,19 @@ class InvoiceService {
 
         return $pdf->download(filename: $filename);
     }
+
+    /**
+     * Here we'll export project deals summary based on user selection
+     *
+     * @param array $payload            With these following structure:
+     * - string $date_range
+     * - array $marketings
+     * - array $status
+     * - array $price
+     * @return void
+     */
+    public function exportFinanceData(array $payload)
+    {
+        
+    }
 }
