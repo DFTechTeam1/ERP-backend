@@ -526,8 +526,9 @@ class GeneralService
      * - array $marketings
      * - array $status
      * - array $price
+     * @return Collection
      */
-    public function getFinanceExportData(array $payload)
+    public function getFinanceExportData(array $payload): Collection
     {
         $where = "id > 0";
         $whereHas = [];
@@ -570,7 +571,7 @@ class GeneralService
         }
 
         $data = (new \Modules\Production\Repository\ProjectDealRepository)->list(
-            select: 'id,name,project_date,country_id,state_id,city_id',
+            select: 'id,name,project_date,country_id,state_id,city_id,is_fully_paid,venue,status',
             where: $where,
             whereHas: $whereHas,
             relation: [
@@ -581,9 +582,26 @@ class GeneralService
             ]
         );
 
-        $data = $data->map(function ($project) {
+        $data = $data->map(function ($project, $key) {
             $project['marketingName'] = $project->marketings->pluck('employee.name')->implode(',');
             $project['projectDateFormat'] = date('d F Y', strtotime($project->project_date));
+
+            $project['status_payment'] = $project->getStatusPayment();
+            $project['status_payment_color'] = $project->getStatusPaymentColor();
+
+            // remove number one transaction if transaction number more than 1
+            $otherTransactions = [];
+            if ($project->transactions->count() > 1) {
+                foreach($project->transactions as $keyTrx => $trx) {
+                    if ($keyTrx != 0) {
+                        $otherTransactions[] = $trx;
+                    }
+                }
+            }
+
+            $project['other_transactions'] = $otherTransactions;
+
+            $project['is_final'] = $project->status == ProjectDealStatus::Final ? true : false;
 
             return $project;
         })->values();

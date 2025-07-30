@@ -3,9 +3,7 @@
 namespace App\Exports;
 
 use App\Enums\Production\ProjectDealStatus;
-use App\Services\ExportImportService;
 use App\Services\GeneralService;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Maatwebsite\Excel\Concerns\FromView;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -17,27 +15,17 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Maatwebsite\Excel\Concerns\Exportable;
 
-class SummaryFinanceExport implements FromView, ShouldAutoSize, WithEvents, ShouldQueue
+class SummaryFinanceExport implements FromView, ShouldAutoSize, WithEvents
 {
-    use Exportable;
-
     private $payload;
 
     private $data;
 
     private $finalLine;
 
-    private $userId;
-
-    private $filepath;
-
-    public function __construct(array $payload, int $userId, $filepath = '')
+    public function __construct(array $payload = [])
     {
         $this->payload = $payload;
-
-        $this->userId = $userId;
-
-        $this->filepath = $filepath;
     }
 
     public function view(): View
@@ -89,25 +77,7 @@ class SummaryFinanceExport implements FromView, ShouldAutoSize, WithEvents, Shou
                         'bold' => true
                     ]
                 ]);
-
-                // notify user
-                (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
-                    'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
-                    'message' => '<p>Click <a href="'. $this->filepath .'" target="__blank">here</a> to download your finance report</p>',
-                    'area' => 'finance',
-                    'user_id' => $this->userId
-                ]);
             }
         ];
-    }
-
-    public function failed(\Throwable $exception)
-    {
-        (new ExportImportService)->handleErrorProcessing(payload: [
-            'description' => 'Failed to export finance report',
-            'message' => $exception->getMessage(),
-            'area' => 'finance',
-            'user_id' => $this->userId
-        ]);
     }
 }
