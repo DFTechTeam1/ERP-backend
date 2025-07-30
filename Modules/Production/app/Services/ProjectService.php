@@ -2445,16 +2445,13 @@ class ProjectService
 
             // update cache
             $referenceData = $this->formatingReferenceFiles($project->references, $project->id);
-            $currentData = getCache('detailProject'.$project->id);
-
-            if (! $currentData) {
-                $this->show($id);
-                $currentData = getCache('detailProject'.$project->id);
-            }
-
-            $currentData['references'] = $referenceData;
-
-            $currentData = $this->formatTasksPermission($currentData, $project->id);
+            
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $project->uid,
+                necessaryUpdate: [
+                    'references' => $referenceData
+                ]
+            );
 
             return generalResponse(
                 __('global.successCreateReferences'),
@@ -3019,10 +3016,13 @@ class ProjectService
 
             // update cache
             $referenceData = $this->formatingReferenceFiles($project->references, $project->id);
-            $currentData = getCache('detailProject'.$project->id);
-            $currentData['references'] = $referenceData;
-
-            $currentData = $this->formatTasksPermission($currentData, $project->id);
+            
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $project->uid,
+                necessaryUpdate: [
+                    'references' => $referenceData
+                ]
+            );
 
             return generalResponse(
                 __('global.successDeleteReference'),
