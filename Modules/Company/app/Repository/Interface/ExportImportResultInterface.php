@@ -5,7 +5,7 @@ namespace Modules\Company\Repository\Interface;
 abstract class ExportImportResultInterface {
     abstract function list(string $select = '*', string $where = "", array $relation = []);
 
-    abstract function pagination(int $itemsPerPage, int $page, string $select = '*', string $where = "", array $relation = [], string $orderBy = '');
+    abstract function pagination(string $select = '*', string $where = "", array $relation = [], int $itemsPerPage, int $page);
 
     abstract function show(string $uid, string $select = '*', array $relation = []);
 

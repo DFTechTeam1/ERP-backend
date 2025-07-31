@@ -895,10 +895,39 @@ class InvoiceService {
      * - array $marketings
      * - array $status
      * - array $price
-     * @return void
+     * 
+     * @return array
      */
-    public function exportFinanceData(array $payload)
+    public function exportFinanceData(array $payload): array
     {
-               
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+
+            $path = 'finance/report';
+            $filename = 'finance_report_' . now() . '.xlsx';
+            $filepath = $path . $filename;
+            $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+                name: 'finance.download.export.financeReport',
+                parameters: [
+                    'fp' => $filepath
+                ],
+                expiration: now()->addHours(5)
+            );
+
+            (new \App\Exports\SummaryFinanceExport(payload: [], userId: $user->id))->queue($filepath, 'public')->chain([
+                (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
+                    'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
+                    'message' => '<p>Click <a href="'. $downloadPath .'" target="__blank">here</a> to download your finance report</p>',
+                    'area' => 'finance',
+                    'user_id' => $user->id
+                ])
+            ]);
+
+            return generalResponse(
+                message: "Success",
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

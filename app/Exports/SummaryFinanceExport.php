@@ -3,7 +3,9 @@
 namespace App\Exports;
 
 use App\Enums\Production\ProjectDealStatus;
+use App\Services\ExportImportService;
 use App\Services\GeneralService;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Maatwebsite\Excel\Concerns\FromView;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -15,17 +17,23 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Maatwebsite\Excel\Concerns\Exportable;
 
-class SummaryFinanceExport implements FromView, ShouldAutoSize, WithEvents
+class SummaryFinanceExport implements FromView, ShouldAutoSize, WithEvents, ShouldQueue
 {
+    use Exportable;
+
     private $payload;
 
     private $data;
 
     private $finalLine;
 
-    public function __construct(array $payload = [])
+    private $userId;
+
+    public function __construct(array $payload = [], int $userId)
     {
         $this->payload = $payload;
+
+        $this->userId = $userId;
     }
 
     public function view(): View
@@ -79,5 +87,15 @@ class SummaryFinanceExport implements FromView, ShouldAutoSize, WithEvents
                 ]);
             }
         ];
+    }
+
+    public function failed(\Throwable $exception)
+    {
+        (new ExportImportService)->handleErrorProcessing(payload: [
+            'description' => 'Failed to export finance report',
+            'message' => $exception->getMessage(),
+            'area' => 'finance',
+            'user_id' => $this->userId
+        ]);
     }
 }

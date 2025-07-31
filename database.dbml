@@ -1449,6 +1449,7 @@ Table "export_import_results" {
   "area" varchar(100) [not null]
   "description" varchar(255) [not null]
   "message" longtext [not null]
+  "user_id" bigint [ref: > users.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
