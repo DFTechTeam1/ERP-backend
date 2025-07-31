@@ -5332,7 +5332,11 @@ class ProjectService
                 foreach ($tasks as $task) {
                     $employeeIds = collect($task->pics)->pluck('employee_id')->toArray();
 
-                    \Modules\Production\Jobs\AssignTaskJob::dispatch($employeeIds, $task->id);
+                    foreach ($employeeIds as $employeeId) {
+                        $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
+    
+                        \Modules\Production\Jobs\AssignTaskJob::dispatch($employeeIds, $task->id, $userData);
+                    }
                 }
             }
 
