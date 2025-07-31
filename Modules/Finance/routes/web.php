@@ -16,4 +16,6 @@ use Modules\Finance\Http\Controllers\FinanceController;
 
 Route::group([], function () {
     Route::resource('finance', FinanceController::class)->names('finance');
+
+    Route::get('finance/download/export/financeReport', [FinanceController::class, 'downloadFinanceReport'])->name('finance.download.export.financeReport');
 });

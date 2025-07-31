@@ -62,4 +62,11 @@ class FinanceController extends Controller
     {
         //
     }
+
+    public function downloadFinanceReport()
+    {
+        $filename = request('fp');
+
+        return \Illuminate\Support\Facades\Storage::download('app/public/' . $filename);
+    }
 }
