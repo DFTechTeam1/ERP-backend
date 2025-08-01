@@ -3016,10 +3016,13 @@ class ProjectService
 
             // update cache
             $referenceData = $this->formatingReferenceFiles($project->references, $project->id);
-            $currentData = getCache('detailProject'.$project->id);
-            $currentData['references'] = $referenceData;
-
-            $currentData = $this->formatTasksPermission($currentData, $project->id);
+            
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $project->uid,
+                necessaryUpdate: [
+                    'references' => $referenceData
+                ]
+            );
 
             return generalResponse(
                 __('global.successDeleteReference'),
@@ -5329,7 +5332,11 @@ class ProjectService
                 foreach ($tasks as $task) {
                     $employeeIds = collect($task->pics)->pluck('employee_id')->toArray();
 
-                    \Modules\Production\Jobs\AssignTaskJob::dispatch($employeeIds, $task->id);
+                    foreach ($employeeIds as $employeeId) {
+                        $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
+    
+                        \Modules\Production\Jobs\AssignTaskJob::dispatch($employeeIds, $task->id, $userData);
+                    }
                 }
             }
 
