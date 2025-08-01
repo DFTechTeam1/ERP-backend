@@ -32,7 +32,10 @@ Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
 
         // transaction
         Route::post('transaction', [InvoiceController::class, 'createTransaction']);
-    });    
+
+    });
+
+    Route::post('report/global', [ApiFinanceController::class, 'exportFinanceData']);
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])

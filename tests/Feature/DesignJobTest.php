@@ -52,8 +52,6 @@ describe('Project count will be update when', function () {
 
         $response = $service->storeProjectDeals(payload: $requestData);
 
-        logging('RESPONSE DESIGN JOB', $response);
-
         expect($response)->toHaveKey('error');
         expect($response['error'])->toBeFalse();
         expect($response['data'])->toHaveKey('url');

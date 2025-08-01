@@ -29,11 +29,15 @@ class SummaryFinanceExport implements FromView, ShouldAutoSize, WithEvents, Shou
 
     private $userId;
 
-    public function __construct(array $payload = [], int $userId)
+    private $filepath;
+
+    public function __construct(array $payload, int $userId, $filepath = '')
     {
         $this->payload = $payload;
 
         $this->userId = $userId;
+
+        $this->filepath = $filepath;
     }
 
     public function view(): View
@@ -84,6 +88,14 @@ class SummaryFinanceExport implements FromView, ShouldAutoSize, WithEvents, Shou
                     'font' => [
                         'bold' => true
                     ]
+                ]);
+
+                // notify user
+                (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
+                    'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
+                    'message' => '<p>Click <a href="'. $this->filepath .'" target="__blank">here</a> to download your finance report</p>',
+                    'area' => 'finance',
+                    'user_id' => $this->userId
                 ]);
             }
         ];

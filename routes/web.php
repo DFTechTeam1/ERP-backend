@@ -157,29 +157,29 @@ Route::get('dummy-send-email', function () {
 Route::get('check', function () {
     // return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SummaryFinanceExport, 'summary.xlsx');
 
-    $path = 'finance/report';
-    $filename = 'finance_report_' . now() . '.xlsx';
-    $filepath = $path . $filename;
-    $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
-        name: 'finance.download.export.financeReport',
-        parameters: [
-            'fp' => $filepath
-        ],
-        expiration: now()->addHours(5)
-    );
+    // $path = 'finance/report';
+    // $filename = 'finance_report_' . now() . '.xlsx';
+    // $filepath = $path . $filename;
+    // $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+    //     name: 'finance.download.export.financeReport',
+    //     parameters: [
+    //         'fp' => $filepath
+    //     ],
+    //     expiration: now()->addHours(5)
+    // );
 
-    (new \App\Exports\SummaryFinanceExport([]))->queue($filepath, 'public')->chain([
-        (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
-            'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
-            'message' => '<p>Click <a href="'. $downloadPath .'" target="__blank">here</a> to download your finance report</p>',
-            'area' => 'finance',
-            'user_id' => 42
-        ])
-    ]);
+    // (new \App\Exports\SummaryFinanceExport([]))->queue($filepath, 'public')->chain([
+    //     (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
+    //         'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
+    //         'message' => '<p>Click <a href="'. $downloadPath .'" target="__blank">here</a> to download your finance report</p>',
+    //         'area' => 'finance',
+    //         'user_id' => 42
+    //     ])
+    // ]);
 
-    return response()->json([
-        'message' => 'Queue is on process'
-    ]);
+    // return response()->json([
+    //     'message' => 'Queue is on process'
+    // ]);
 
     // return view('finance.report.summaryExport');
 

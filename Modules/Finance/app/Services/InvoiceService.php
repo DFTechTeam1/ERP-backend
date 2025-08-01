@@ -895,7 +895,7 @@ class InvoiceService {
         try {
             $user = \Illuminate\Support\Facades\Auth::user();
 
-            $path = 'finance/report';
+            $path = 'finance/report/';
             $filename = 'finance_report_' . now() . '.xlsx';
             $filepath = $path . $filename;
             $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
@@ -906,17 +906,15 @@ class InvoiceService {
                 expiration: now()->addHours(5)
             );
 
-            (new \App\Exports\SummaryFinanceExport(payload: [], userId: $user->id))->queue($filepath, 'public')->chain([
-                (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
-                    'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
-                    'message' => '<p>Click <a href="'. $downloadPath .'" target="__blank">here</a> to download your finance report</p>',
-                    'area' => 'finance',
-                    'user_id' => $user->id
-                ])
-            ]);
+            (new \App\Exports\SummaryFinanceExport(payload: $payload, userId: $user->id, filepath: $downloadPath))->queue($filepath, 'public');
+
+            $data = $this->generalService->getFinanceExportData(payload: $payload);
 
             return generalResponse(
-                message: "Success",
+                message: "Your data is being processed. You'll rerceive a notification when the process is complete. You can check your inbox periodically to see the results",
+                data: [
+                    'report' => $data
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

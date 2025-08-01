@@ -26,6 +26,8 @@ Route::middleware(['auth:sanctum'])
         Route::get('branch/all', [BranchController::class, 'getAll'])->name('branches.get-all');
         Route::apiResource('branch', BranchController::class)->names('branches');
         Route::post('branch/bulk', [BranchController::class, 'bulkDelete'])->name('branches.bulk-delete');
+        Route::get('inboxData', [CompanyController::class, 'loadInboxData'])->name('inboxData');
+        Route::get('inboxData/clear', [CompanyController::class, 'clearInboxData']);
     });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::class)
