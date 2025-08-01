@@ -1,5 +1,8 @@
 <?php
 
+use Illuminate\Support\Facades\Bus;
+use Modules\Finance\Jobs\RejectInvoiceChangesJob;
+use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\InvoiceRequestUpdate;
 
@@ -11,6 +14,8 @@ beforeEach(function () {
 
 describe('Reject invoice changes', function () {
     it('Reject changes return success', function () {
+        Bus::fake();
+
         $firstPaymentDate = now()->addDays(30)->format('Y-m-d');
         $firstPaymentDue = now()->parse($firstPaymentDate)->addDays(7)->format('Y-m-d');
         $firstInvoice = Invoice::factory()->create([
@@ -41,7 +46,7 @@ describe('Reject invoice changes', function () {
 
         $service = setInvoiceService();
         $response = $service->rejectChanges(payload: ['reason' => 'Nothing'], invoiceUid: $invoice->uid, pendingUpdateId: $change->id);
-
+        
         expect($response['error'])->toBeFalse();
 
         $this->assertDatabaseHas('invoice_request_updates', [
@@ -62,6 +67,8 @@ describe('Reject invoice changes', function () {
             'id' => $firstInvoice->id,
             'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value
         ]);
+
+        Bus::assertDispatched(RejectInvoiceChangesJob::class);
     });
 
     it ('Reject invoice that already rejected before', function() {

@@ -508,4 +508,103 @@ class GeneralService
             'menus' => $menus
         ];
     }
+
+    /**
+     * Here we'll export project deals summary based on user selection
+     * In the result, we will display:
+     * - project name
+     * - project date
+     * - marketing name
+     * - venue
+     * - total led area
+     * - fix price
+     * - history of payments
+     * - due amount
+     *
+     * @param array $payload            With these following structure:
+     * - string $date_range
+     * - array $marketings
+     * - array $status
+     * - array $price
+     * @return Collection
+     */
+    public function getFinanceExportData(array $payload): Collection
+    {
+        $where = "id > 0";
+        $whereHas = [];
+
+        // filter based on project date
+        if (!empty($payload['date'])) {
+            $explodeDate = explode(' - ', $payload['date']);
+
+            if (isset($explodeDate[1])) {
+                $where .= " AND project_date BETWEEN '" . $explodeDate[0] . "' AND '" . $explodeDate[1] . "'";
+            } else {
+                $where .= " AND project_date >= '" . $explodeDate[0] . "'";
+            }
+        }
+
+        // filter based on marketings
+        if (!empty($payload['marketings'])) {
+            $marketings = collect($payload['marketings'])->pluck('id')->implode(',');
+
+            $whereHas[] = [
+                'relation' => 'marketings',
+                'query' => "employee_id IN ({$marketings})"
+            ];
+        }
+
+        // filter based on status
+        if (!empty($payload['status'])) {
+            $status = collect($payload['status'])->pluck('id')->implode(',');
+            $where .= " AND status IN ({$status})";
+        }
+
+        // filter based on price
+        if (!empty($payload['price'])) {
+            $price = $payload['price'];
+            $whereHas[] = [
+                'relation' => 'finalQuotation',
+                'query' => "fix_price BETWEEN " . $price[0] . " AND " . $price[1]
+            ];
+        }
+
+        $data = (new \Modules\Production\Repository\ProjectDealRepository)->list(
+            select: 'id,name,project_date,country_id,state_id,city_id,is_fully_paid,venue,status',
+            where: $where,
+            whereHas: $whereHas,
+            relation: [
+                'marketings:id,employee_id,project_deal_id',
+                'marketings.employee:id,name',
+                'finalQuotation',
+                'transactions'
+            ]
+        );
+
+        $data = $data->map(function ($project, $key) {
+            $project['marketingName'] = $project->marketings->pluck('employee.name')->implode(',');
+            $project['projectDateFormat'] = date('d F Y', strtotime($project->project_date));
+
+            $project['status_payment'] = $project->getStatusPayment();
+            $project['status_payment_color'] = $project->getStatusPaymentColor();
+
+            // remove number one transaction if transaction number more than 1
+            $otherTransactions = [];
+            if ($project->transactions->count() > 1) {
+                foreach($project->transactions as $keyTrx => $trx) {
+                    if ($keyTrx != 0) {
+                        $otherTransactions[] = $trx;
+                    }
+                }
+            }
+
+            $project['other_transactions'] = $otherTransactions;
+
+            $project['is_final'] = $project->status == ProjectDealStatus::Final ? true : false;
+
+            return $project;
+        })->values();
+
+        return $data;
+    }
 }

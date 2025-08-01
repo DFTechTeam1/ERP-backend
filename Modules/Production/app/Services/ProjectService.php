@@ -2445,7 +2445,7 @@ class ProjectService
 
             // update cache
             $referenceData = $this->formatingReferenceFiles($project->references, $project->id);
-            
+
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $project->uid,
                 necessaryUpdate: [

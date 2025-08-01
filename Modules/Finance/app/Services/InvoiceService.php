@@ -878,4 +878,46 @@ class InvoiceService {
 
         return $pdf->download(filename: $filename);
     }
+
+    /**
+     * Here we'll export project deals summary based on user selection
+     *
+     * @param array $payload            With these following structure:
+     * - string $date_range
+     * - array $marketings
+     * - array $status
+     * - array $price
+     * 
+     * @return array
+     */
+    public function exportFinanceData(array $payload): array
+    {
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+
+            $path = 'finance/report/';
+            $filename = 'finance_report_' . now() . '.xlsx';
+            $filepath = $path . $filename;
+            $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+                name: 'finance.download.export.financeReport',
+                parameters: [
+                    'fp' => $filepath
+                ],
+                expiration: now()->addHours(5)
+            );
+
+            (new \App\Exports\SummaryFinanceExport(payload: $payload, userId: $user->id, filepath: $downloadPath))->queue($filepath, 'public');
+
+            $data = $this->generalService->getFinanceExportData(payload: $payload);
+
+            return generalResponse(
+                message: "Your data is being processed. You'll rerceive a notification when the process is complete. You can check your inbox periodically to see the results",
+                data: [
+                    'report' => $data
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }

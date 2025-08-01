@@ -50,7 +50,7 @@ it("GenerateBillInvoiceWhenHaveUnpaidInvoice", function () {
     expect($response['message'])->toContain(__('notification.cannotCreateInvoiceIfYouHaveAnotherUnpaidInovice'));
 });
 
-it('GenerateBillInvoice', function () {
+it('Generate Bill Invoice', function () {
     Bus::fake();
 
     $country = Country::factory()
@@ -77,7 +77,8 @@ it('GenerateBillInvoice', function () {
     $response = $service->store(
         data: [
             'transaction_date' => now()->format('Y-m-d'),
-            'amount' => 10000000
+            'amount' => 10000000,
+            'is_down_payment' => 0
         ],
         projectDealUid: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id)
     );

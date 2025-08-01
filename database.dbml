@@ -1465,6 +1465,16 @@ Table "project_quotation_items" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "export_import_results" {
+  "id" bigint [pk, not null, increment]
+  "area" varchar(100) [not null]
+  "description" varchar(255) [not null]
+  "message" longtext [not null]
+  "user_id" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "invoices" {
   note: "This invoices table used to record all request invoice from marketing team to customer"
 

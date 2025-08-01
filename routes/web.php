@@ -155,35 +155,47 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    // return (new TelegramService)->sendTextMessage(
-    //     chatId: '1991941955',
-    //     message: "Test message",
+    // return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SummaryFinanceExport, 'summary.xlsx');
+
+    // $path = 'finance/report';
+    // $filename = 'finance_report_' . now() . '.xlsx';
+    // $filepath = $path . $filename;
+    // $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+    //     name: 'finance.download.export.financeReport',
+    //     parameters: [
+    //         'fp' => $filepath
+    //     ],
+    //     expiration: now()->addHours(5)
     // );
-    // $currentChanges = InvoiceRequestUpdate::selectRaw('id,request_by,amount,payment_date,invoice_id,approved_at')
-    //     ->with([
-    //         'user:id,email,employee_id',
-    //         'user.employee:id,name',
-    //         'invoice:id,parent_number,number'
+
+    // (new \App\Exports\SummaryFinanceExport([]))->queue($filepath, 'public')->chain([
+    //     (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
+    //         'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
+    //         'message' => '<p>Click <a href="'. $downloadPath .'" target="__blank">here</a> to download your finance report</p>',
+    //         'area' => 'finance',
+    //         'user_id' => 42
     //     ])
-    //     ->latest()
-    //     ->first();
-    // return (new ApproveInvoiceChangesNotification($currentChanges))
-    //     ->toMail('gumilang.dev@gmail.com');
-    // $current = InvoiceRequestUpdate::latest()->first();
-    // if (!$current) {
-    //     $invoice = Invoice::latest()->first();
-    //     DB::table('invoice_request_updates')->insert([
-    //         'invoice_id' => $invoice->id,
-    //         'payment_date' => now()->addDays(3)->format('Y-m-d'),
-    //         'status' => InvoiceRequestUpdateStatus::Pending->value,
-    //         'request_by' => User::latest()->first()->id,
-    //     ]);
-    //     $current = InvoiceRequestUpdate::latest()->first();
-    // }
+    // ]);
 
-    // RequestInvoiceChangeJob::dispatch($current);
+    // return response()->json([
+    //     'message' => 'Queue is on process'
+    // ]);
 
-     
+    // return view('finance.report.summaryExport');
+
+    return (new \App\Services\GeneralService)->getFinanceExportData(payload: []);
+});
+
+Route::get('pusher-check', function() {
+    (new \App\Services\PusherNotification)->send(
+        channel: "my-channel-42",
+        event: "handle-export-import-notification",
+        payload: [
+            'type' => 'exportImportSuccess',
+            'message' => 'Success import data'
+        ],
+        compressedValue: true
+    );
 });
 
 Route::get('expired', function () {

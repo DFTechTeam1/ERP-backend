@@ -20,8 +20,9 @@ class PusherNotification
         );
     }
 
-    public function send(string $channel, string $event, array $payload)
+    public function send(string $channel, string $event, array $payload, bool $compressedValue = false)
     {
+        $payload = $compressedValue ? json_encode($payload) : $payload;
         $this->pusher->trigger($channel, $event, $payload);
     }
 }

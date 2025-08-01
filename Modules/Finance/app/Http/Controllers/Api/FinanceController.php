@@ -6,18 +6,25 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Modules\Finance\Http\Requests\ExportProjectDealSummary;
+use Modules\Finance\Http\Requests\ExportRequest;
 use Modules\Finance\Http\Requests\Transaction\Create;
+use Modules\Finance\Services\InvoiceService;
 use Modules\Finance\Services\TransactionService;
 
 class FinanceController extends Controller
 {
     private $service;
 
+    private $invoiceService;
+
     public function __construct(
-        TransactionService $service
+        TransactionService $service,
+        InvoiceService $invoiceService
     )
     {
         $this->service = $service;
+        $this->invoiceService = $invoiceService;
     }
 
     /**
@@ -65,6 +72,11 @@ class FinanceController extends Controller
         return apiResponse($this->service->downloadInvoice(payload: $request->all()));
     }
 
+    public function export(ExportRequest $request)
+    {
+        
+    }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -103,5 +115,20 @@ class FinanceController extends Controller
         //
 
         return response()->json([]);
+    }
+
+    /**
+     * Here we'll export project deals summary based on user selection
+     *
+     * @param ExportProjectDealSummary $request            With these following structure:
+     * - string $date_range
+     * - array $marketings
+     * - array $status
+     * - array $price
+     * @return JsonResponse
+     */
+    public function exportFinanceData(ExportProjectDealSummary $request): JsonResponse
+    {
+        return apiResponse($this->invoiceService->exportFinanceData(payload: $request->validated()));
     }
 }

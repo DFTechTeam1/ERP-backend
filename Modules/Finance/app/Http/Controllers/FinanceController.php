@@ -4,6 +4,7 @@ namespace Modules\Finance\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class FinanceController extends Controller
 {
@@ -61,5 +62,12 @@ class FinanceController extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    public function downloadFinanceReport()
+    {
+        $filename = request('fp');
+
+        return \Illuminate\Support\Facades\Storage::download($filename);
     }
 }
