@@ -154,7 +154,6 @@ class NasFolderObserver
      */
     public function deleting(Project $project)
     {
-        Log::debug('deleted project: ', $project->toArray());
         $check = NasFolderCreation::where('project_id', $project->id)
             ->latest()
             ->first();

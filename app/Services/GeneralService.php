@@ -534,8 +534,8 @@ class GeneralService
         $whereHas = [];
 
         // filter based on project date
-        if (!empty($payload['date_range'])) {
-            $explodeDate = explode(' - ', $payload['date_range']);
+        if (!empty($payload['date'])) {
+            $explodeDate = explode(' - ', $payload['date']);
 
             if (isset($explodeDate[1])) {
                 $where .= " AND project_date BETWEEN '" . $explodeDate[0] . "' AND '" . $explodeDate[1] . "'";
@@ -546,9 +546,7 @@ class GeneralService
 
         // filter based on marketings
         if (!empty($payload['marketings'])) {
-            $marketings = collect($payload['marketings'])->map(function ($marketing) {
-                return $this->getIdFromUid(uid: $marketing, model: new \Modules\Hrd\Models\Employee());
-            })->implode(',');
+            $marketings = collect($payload['marketings'])->pluck('id')->implode(',');
 
             $whereHas[] = [
                 'relation' => 'marketings',
@@ -558,7 +556,8 @@ class GeneralService
 
         // filter based on status
         if (!empty($payload['status'])) {
-            $where .= " AND status IN (" . implode(',', $payload['status']) . ")";
+            $status = collect($payload['status'])->pluck('id')->implode(',');
+            $where .= " AND status IN ({$status})";
         }
 
         // filter based on price
@@ -575,7 +574,7 @@ class GeneralService
             where: $where,
             whereHas: $whereHas,
             relation: [
-                'marketings:id,employee_id',
+                'marketings:id,employee_id,project_deal_id',
                 'marketings.employee:id,name',
                 'finalQuotation',
                 'transactions'

@@ -12,7 +12,7 @@ class ExportProjectDealSummary extends FormRequest
     public function rules(): array
     {
         return [
-            'date_range' => 'nullable',
+            'date' => 'nullable',
             'marketings' => 'array|nullable',
             'marketings.*.id' => 'nullable',
             'marketings.*.name' => 'nullable',

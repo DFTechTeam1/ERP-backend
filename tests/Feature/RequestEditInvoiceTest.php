@@ -5,6 +5,7 @@ use App\Enums\Transaction\InvoiceStatus;
 use App\Services\GeneralService;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ApproveInvoiceChangesJob;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
@@ -122,8 +123,7 @@ it('Get data for request edit notification', function () {
 
     $response = (new GeneralService)->getDataForRequestInvoiceChangeNotification(invoiceRequestId: $invoiceRequest->id);
 
-    expect($response)->toHaveKeys(['actor', 'invoice', 'director', 'changes', 'approvalUrl', 'rejectionUrl']);
-    expect($response['approvalUrl'])->toBeUrl();
+    expect($response)->toHaveKeys(['actor', 'invoice', 'director', 'changes']);
 });
 
 it('Approval change from email', function () {
@@ -160,12 +160,19 @@ it('Approval change from email', function () {
     // generate url
     $response = (new GeneralService)->getDataForRequestInvoiceChangeNotification(invoiceRequestId: $invoiceRequest->id);
     
-    expect($response)->toHaveKeys(['actor', 'invoice', 'director', 'changes', 'approvalUrl', 'rejectionUrl']);
-    expect($response['approvalUrl'])->toBeUrl();
+    expect($response)->toHaveKeys(['actor', 'invoice', 'director', 'changes']);
 
-    $trueResponse = getJson($response['approvalUrl']);
-    
-    $trueResponse->assertStatus(201);
+    $data = $response['invoice'];
+    $approvalUrl = URL::signedRoute(
+        name: 'api.invoices.approveChanges',
+        parameters: [
+            'invoiceUid' => $data->invoice->uid,
+            'dir' => $employee->user->uid,
+            'cid' => $data->id
+        ],
+        expiration: now()->addHours(5)
+    );
+    $trueResponse = getJson($approvalUrl);
 
     $this->assertDatabaseHas('invoice_request_updates', [
         'id' => $invoiceRequest->id,

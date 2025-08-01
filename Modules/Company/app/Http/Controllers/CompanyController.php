@@ -3,17 +3,24 @@
 namespace Modules\Company\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Company\Services\CompanyService;
 use Modules\Company\Services\MasterService;
 
 class CompanyController extends Controller
 {
     private $masterService;
 
+    private $companyService;
+
     public function __construct(
-        MasterService $masterService
+        MasterService $masterService,
+        CompanyService $companyService
     ) {
         $this->masterService = $masterService;
+
+        $this->companyService = $companyService;
     }
 
     /**
@@ -205,5 +212,22 @@ class CompanyController extends Controller
         //
 
         return response()->json([]);
+    }
+
+    /**
+     * Here we get all information about export and import result from table export_import_results
+     * 
+     * We serve in the table with pagination
+     * 
+     * @return JsonResponse
+     */
+    public function loadInboxData(): JsonResponse
+    {
+        return apiResponse($this->companyService->getInboxData());
+    }
+
+    public function clearInboxData(): JsonResponse
+    {
+        return apiResponse($this->companyService->clearInboxData());
     }
 }

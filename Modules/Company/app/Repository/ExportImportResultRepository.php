@@ -24,7 +24,7 @@ class ExportImportResultRepository extends ExportImportResultInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '')
     {
         $query = $this->model->query();
 
@@ -36,6 +36,10 @@ class ExportImportResultRepository extends ExportImportResultInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
         }
 
         return $query->get();
@@ -50,11 +54,12 @@ class ExportImportResultRepository extends ExportImportResultInterface {
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
+        int $itemsPerPage,
+        int $page,
         string $select = '*',
         string $where = "",
         array $relation = [],
-        int $itemsPerPage,
-        int $page
+        string $orderBy = ''
     )
     {
         $query = $this->model->query();
@@ -65,8 +70,12 @@ class ExportImportResultRepository extends ExportImportResultInterface {
             $query->whereRaw($where);
         }
 
-        if ($relation) {
+        if (!empty($relation)) {
             $query->with($relation);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
         }
         
         return $query->skip($page)->take($itemsPerPage)->get();
@@ -136,10 +145,17 @@ class ExportImportResultRepository extends ExportImportResultInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(int $id, string $where = '')
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
+        $query = $this->model->query();
+
+        if (empty($where)) {
+            $query->where('id', $id);
+        } else {
+            $query->whereRaw($where);
+        }
+        
+        return $query->delete();
     }
 
     /**

@@ -125,9 +125,9 @@ class FinanceController extends Controller
      * - array $marketings
      * - array $status
      * - array $price
-     * @return void
+     * @return JsonResponse
      */
-    public function exportFinanceData(ExportProjectDealSummary $request)
+    public function exportFinanceData(ExportProjectDealSummary $request): JsonResponse
     {
         return apiResponse($this->invoiceService->exportFinanceData(payload: $request->validated()));
     }
