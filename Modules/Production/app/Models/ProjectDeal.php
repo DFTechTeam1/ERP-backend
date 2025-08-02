@@ -45,6 +45,9 @@ class ProjectDeal extends Model
         'is_high_season',
         'status',
         'is_fully_paid',
+        'cancel_reason',
+        'cancel_at',
+        'cancel_by',
         'identifier_number',
         'deleted_at'
     ];

@@ -11,11 +11,13 @@ use App\Enums\Transaction\TransactionType;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
@@ -197,6 +199,7 @@ class ProjectDealService
                     'can_make_final' => $item->canMakeFinal(),
                     'can_edit' => !$item->isFinal(),
                     'can_delete' => (bool) !$item->isFinal(),
+                    'can_cancel' => $item->status == ProjectDealStatus::Temporary ? true : false,
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
                         'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
@@ -850,5 +853,45 @@ class ProjectDealService
     public function getProjectDealSummary(): array
     {
         return $this->generalService->getProjectDealSummary(2025);
+    }
+
+    /**
+     * Cancel temporary project deal
+     * 
+     * @param array $payload            With this following structure
+     * - string $reason
+     * 
+     * @return array
+     */
+    public function cancelProjectDeal(array $payload, string $projectDealUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDealId = Crypt::decryptString($projectDealUid);
+            $projectDeal = $this->repo->show(uid: 'id', select: 'id,status', where: "id = {$projectDealId} and status = " . ProjectDealStatus::Temporary->value);
+
+            if (!$projectDeal) {
+                return errorResponse(message: __('notification.eventCannotBeCancel'));
+            }
+
+            $this->repo->update(data: [
+                'status' => ProjectDealStatus::Canceled,
+                'cancel_reason' => $payload['reason'],
+                'cancel_by' => Auth::id(),
+                'cancel_at' => Carbon::now()
+            ], id: $projectDealId);
+
+            ProjectDealCanceledJob::dispatch($projectDealId)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.projectDealHasBeenCanceled')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
     }
 }
