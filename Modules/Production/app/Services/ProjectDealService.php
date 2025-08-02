@@ -106,6 +106,8 @@ class ProjectDealService
                 $status = request('status');
                 $statusIds = collect($status)->pluck('id')->implode(',');
                 $where .= " AND status IN ({$statusIds})";
+            } else {
+                $where .= " AND status != " . ProjectDealStatus::Canceled->value;
             }
 
             if (request('date')) {
@@ -166,11 +168,13 @@ class ProjectDealService
                 $whereHas,
                 $sorts
             );
-            $totalData = $this->repo->list('id', $where)->count();
+            $totalData = $this->repo->list(select: 'id', where: $where, whereHas: $whereHas)->count();
 
             $paginated = $paginated->map(function ($item) {
 
                 $marketing = implode(',', $item->marketings->pluck('employee.nickname')->toArray());
+
+                $isCancel = $item->status == ProjectDealStatus::Canceled ? true : false;
 
                 return [
                     'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
@@ -194,11 +198,11 @@ class ProjectDealService
                     'is_fully_paid' => (bool) $item->is_fully_paid,
                     'status_payment' => $item->getStatusPayment(),
                     'status_payment_color' => $item->getStatusPaymentColor(),
-                    'can_make_payment' => $item->canMakePayment(),
-                    'can_publish_project' => $item->canPublishProject(),
-                    'can_make_final' => $item->canMakeFinal(),
-                    'can_edit' => !$item->isFinal(),
-                    'can_delete' => (bool) !$item->isFinal(),
+                    'can_make_payment' => $item->canMakePayment() && !$isCancel,
+                    'can_publish_project' => $item->canPublishProject() && !$isCancel,
+                    'can_make_final' => $item->canMakeFinal() && !$isCancel,
+                    'can_edit' => !$item->isFinal() && !$isCancel,
+                    'can_delete' => (bool) !$item->isFinal() && !$isCancel,
                     'can_cancel' => $item->status == ProjectDealStatus::Temporary ? true : false,
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
@@ -535,7 +539,7 @@ class ProjectDealService
 
             $data = $this->repo->show(
                 uid: $projectDealUidRaw,
-                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status",
+                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status,cancel_reason,cancel_at",
                 relation: [
                     'transactions',
                     'transactions.invoice:id,number,parent_number,paid_amount,payment_date,uid',
@@ -753,6 +757,8 @@ class ProjectDealService
                 key: config('app.salt_key_encryption'),
             );
 
+            $isFinal = $data->isFinal();
+
             $output = [
                 'customer' => [
                     'name' => $data->customer->name,
@@ -767,7 +773,11 @@ class ProjectDealService
                 'quotations' => $quotations,
                 'remaining_payment_raw' => $data->getRemainingPayment(),
                 'latest_quotation_id' => $finalQuotation->count() > 0 ? $finalQuotation['quotation_id'] : Crypt::encryptString($data->latestQuotation->quotation_id),
-                'is_final' => $data->isFinal(),
+                'is_final' => $isFinal,
+                'can_add_more_quotation' => !$isFinal && $data->status != ProjectDealStatus::Canceled,
+                'is_cancel' => $data->status == ProjectDealStatus::Canceled ? true : false,
+                'cancel_reason' => __('notification.eventHasBeenCancelBecause', ['reason' => $data->cancel_reason]),
+                'cancel_at' => $data->cancel_at ? date('d F Y H:i', strtotime($data->cancel_at)) : null,
                 'event_date' => date('d F Y', strtotime($data->project_date)),
                 'status_payment' => $data->getStatusPayment(),
                 'status_payment_color' => $data->getStatusPaymentColor(),
