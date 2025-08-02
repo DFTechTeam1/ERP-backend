@@ -1406,6 +1406,7 @@ Table "project_deals" {
   "identifier_number" varchar(100) [note: "This number will be used on all quotation and all transactions"]
   "is_high_season" bool
   "is_fully_paid" boolean [default: false, note: "Define this project has been paid off or not"]
+  "cancel_reason" varchar(255)
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "deleted_at" timestamp [default: NULL]

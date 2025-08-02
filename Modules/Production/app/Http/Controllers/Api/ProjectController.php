@@ -5,6 +5,7 @@ namespace Modules\Production\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
@@ -988,8 +989,18 @@ class ProjectController extends Controller
         return apiResponse($this->service->initProjectCount());
     }
 
-    public function getReportSummary()
+    /**
+     * Get report summary
+     * 
+     * @return JsonResponse
+     */
+    public function getReportSummary(): JsonResponse
     {
         return apiResponse($this->projectDealService->getProjectDealSummary());
+    }
+
+    public function cancelProjectDeal(CancelProjectDeal $request, string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->cancelProjectDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
     }
 }

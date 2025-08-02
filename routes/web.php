@@ -37,6 +37,7 @@ use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectQuotation;
 use Modules\Production\Models\ProjectTask;
@@ -155,6 +156,7 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
+<<<<<<< HEAD
     // return (new TelegramService)->sendTextMessage(
     //     chatId: '1991941955',
     //     message: "Test message",
@@ -184,6 +186,20 @@ Route::get('check', function () {
     // RequestInvoiceChangeJob::dispatch($current);
 
      
+=======
+});
+
+Route::get('pusher-check', function() {
+    (new \App\Services\PusherNotification)->send(
+        channel: "my-channel-42",
+        event: "handle-export-import-notification",
+        payload: [
+            'type' => 'exportImportSuccess',
+            'message' => 'Success import data'
+        ],
+        compressedValue: true
+    );
+>>>>>>> 01486a0 (Feat(86b5zm8vt): Create cancel project deal API)
 });
 
 Route::get('expired', function () {

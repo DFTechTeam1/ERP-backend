@@ -98,4 +98,6 @@ return [
     'successRequestInvoiceChanges' => 'Permohonan perubahan faktur telah diajukan. Kamu akan menerima pembaruan melalui email',
     'successApproveInvoiceChanges' => "Berhasil menyetujui perubahan faktur",
     'successRejectInvoiceChanges' => 'Berhasil menolak perubahan faktur',
+    'projectDealHasBeenCanceled' => 'Event telah berhasil di batalkan',
+    'eventCannotBeCancel' => 'Event tidak bisa di batalkan'
 ];

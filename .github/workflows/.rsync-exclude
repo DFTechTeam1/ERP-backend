@@ -1,0 +1,21 @@
+.git/
+.github/
+node_modules/
+vendor/
+tests/
+*.env
+*.log
+*.sqlite
+webpack.mix.js
+package.json
+package-lock.json
+README.md
+deploy.yml
+
+# Prevent deletion of SSL files and uploaded content
+.user.ini
+.well-known/
+storage/debugbar/
+storage/logs/*.log
+storage/*.sqlite
+public/uploads/
