@@ -40,6 +40,7 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);
+        Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
         Route::delete('project/deals/{projectDealUid}', [ProjectController::class, 'deleteProjectDeal']);
         Route::get('project/deals/publish/{projectDealUid}/{type}', [ProjectController::class, 'publishProjectDeal']);

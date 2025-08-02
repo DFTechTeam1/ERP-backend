@@ -98,4 +98,7 @@ return [
     'successRequestInvoiceChanges' => 'The invoice change request has been submitted. You will receive an update via email',
     'successApproveInvoiceChanges' => "Successfully approved the invoice change",
     'successRejectInvoiceChanges' => 'Successfully rejected the invoice change',
+    'projectDealHasBeenCanceled' => 'Event has been canceled',
+    'eventCannotBeCancel' => 'Event cannot be canceled',
+    'eventHasBeenCancelBecause' => "Event have been cancel because :reason"
 ];
