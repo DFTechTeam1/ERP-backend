@@ -33,6 +33,7 @@ use Carbon\Carbon;
 use DateTime;
 use Exception;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -5189,8 +5190,18 @@ class ProjectService
         }
     }
 
-    public function getProjectCalendars()
+    /**
+     * Here we get list of projects that will be shown in the authorized user calendar
+     * 
+     * Based on role, director, root and marketing should be see all events.
+     * Other role like Project manager, production and else will be see only project that already assign to them
+     * 
+     * @return array
+     */
+    public function getProjectCalendars(): array
     {
+        $user = Auth::user();
+        
         $where = '';
         if (request('search_date')) {
             $searchDate = date('Y-m-d', strtotime(request('search_date')));
