@@ -68,7 +68,7 @@ class ProjectController extends Controller
     public function index()
     {
         return apiResponse($this->testingService->list(
-            'id,uid,name,project_date,venue,event_type,collaboration,note,marketing_id,status,classification,led_area,led_detail,project_class_id',
+            'id,uid,name,project_date,venue,event_type,collaboration,note,marketing_id,status,classification,led_area,led_detail,project_class_id,project_deal_id',
             '',
             [
                 'marketing:id,name,employee_id',

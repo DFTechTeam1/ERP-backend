@@ -33,6 +33,7 @@ use Carbon\Carbon;
 use DateTime;
 use Exception;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -86,6 +87,7 @@ use Modules\Production\Repository\ProjectTaskReviseHistoryRepository;
 use Modules\Production\Repository\ProjectTaskWorktimeRepository;
 use Modules\Production\Repository\ProjectVjRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
+use App\Enums\Production\ProjectDealStatus;
 
 class ProjectService
 {
@@ -5189,8 +5191,18 @@ class ProjectService
         }
     }
 
-    public function getProjectCalendars()
+    /**
+     * Here we get list of projects that will be shown in the authorized user calendar
+     * 
+     * Based on role, director, root and marketing should be see all events.
+     * Other role like Project manager, production and else will be see only project that already assign to them
+     * 
+     * @return array
+     */
+    public function getProjectCalendars(): array
     {
+        $user = Auth::user();
+        
         $where = '';
         if (request('search_date')) {
             $searchDate = date('Y-m-d', strtotime(request('search_date')));
@@ -5203,6 +5215,8 @@ class ProjectService
         $start = $year.'-'.$month.'-01';
         $end = $year.'-'.$month.'-30';
         $where = "project_date >= '".$start."' and project_date <= '".$end."'";
+
+        $grouping = [];
 
         $data = $this->repo->list('id,uid,name,project_date,venue', $where, [
             'personInCharges:id,project_id,pic_id',
@@ -5239,6 +5253,7 @@ class ProjectService
             [
                 'events' => $out,
                 'group' => $grouping,
+                'role' => $user->hasRole([BaseRole::Marketing->value, BaseRole::Root->value, BaseRole::Director->value])
             ],
         );
     }
@@ -8336,7 +8351,7 @@ class ProjectService
             $url = CreateQuotation::run($payload, $this->projectQuotationRepo);
 
             // handle when project deal have a final status
-            if ($payload['status'] == 1) {
+            if ($payload['status'] == ProjectDealStatus::Final->value) {
                 // here we edit the project deal data, we update identifier number
                 // $this->projectDealRepo->update(data: [
                 //     'identifier_number' => $this->generalService->setProjectIdentifier()

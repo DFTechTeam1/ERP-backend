@@ -103,6 +103,11 @@ class ProjectDeal extends Model
         return $this->hasMany(ProjectDealMarketing::class, 'project_deal_id');
     }
 
+    public function project(): HasOne
+    {
+        return $this->hasOne(Project::class, 'project_deal_id');
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class, 'project_deal_id');

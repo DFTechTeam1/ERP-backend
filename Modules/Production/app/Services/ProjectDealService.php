@@ -201,7 +201,7 @@ class ProjectDealService
                     'can_make_payment' => $item->canMakePayment() && !$isCancel,
                     'can_publish_project' => $item->canPublishProject() && !$isCancel,
                     'can_make_final' => $item->canMakeFinal() && !$isCancel,
-                    'can_edit' => !$item->isFinal() && !$isCancel,
+                    'can_edit' => (bool) !$item->isFinal() && !$isCancel,
                     'can_delete' => (bool) !$item->isFinal() && !$isCancel,
                     'can_cancel' => $item->status == ProjectDealStatus::Temporary ? true : false,
                     'quotation' => [
@@ -483,7 +483,7 @@ class ProjectDealService
                 data: [
                     'project' => $project ?? null
                 ]
-            );                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+            );                                                                                                           
         } catch (\Throwable $th) {
             DB::rollBack();
             return errorResponse($th);
@@ -494,7 +494,7 @@ class ProjectDealService
     {
         $data = $this->repo->show(
             uid: Crypt::decryptString($quotationId),
-            select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,is_high_season,equipment_type',
+            select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,is_high_season,equipment_type,status',
             relation: [
                 'marketings:id,project_deal_id,employee_id',
                 'marketings.employee:id,uid',
@@ -511,6 +511,7 @@ class ProjectDealService
             ];
         });
         $data['quotation_items'] = $items;
+        $data['is_final'] = $data->status == ProjectDealStatus::Final ? true : false;
 
         return generalResponse(
             message: "Success",
