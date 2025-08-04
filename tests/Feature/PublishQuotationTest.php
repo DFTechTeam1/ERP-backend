@@ -82,7 +82,8 @@ describe('Publish Quotation', function () {
             'project_deal_id' => $currentDeal->id,
         ]);
         $this->assertDatabaseHas('projects', [
-            'name' => $currentDeal->name
+            'name' => $currentDeal->name,
+            'project_deal_id' => $currentDeal->id
         ]);
 
         // check marketing

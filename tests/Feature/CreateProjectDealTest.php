@@ -80,12 +80,15 @@ describe('Create Project Deal', function () {
         expect($response['error'])->toBeFalse();
         expect($response['data'])->toHaveKey('url');
 
+        $currentDeal = ProjectDeal::select("id")->where("name", $requestData['name'])->first();
+
         $this->assertDatabaseHas('project_deals', [
             'name' => 'Final Project',
             'identifier_number' => '0951'
         ]);
         $this->assertDatabaseHas('projects', [
-            'name' => 'Final Project'
+            'name' => 'Final Project',
+            'project_deal_id' => $currentDeal->id
         ]);
         $this->assertDatabaseCount('invoices', 1);
         $this->assertDatabaseHas('invoices', [

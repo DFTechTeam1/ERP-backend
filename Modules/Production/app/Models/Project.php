@@ -89,6 +89,7 @@ class Project extends Model
         'showreels_status',
         'longitude',
         'latitude',
+        'project_deal_id'
     ];
 
     protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
@@ -104,6 +105,11 @@ class Project extends Model
     public function personInCharges(): HasMany
     {
         return $this->hasMany(ProjectPersonInCharge::class, 'project_id');
+    }
+
+    public function projectDeal(): BelongsTo
+    {
+        return $this->belongsTo(ProjectDeal::class, 'project_deal_id');
     }
 
     public function songs(): HasMany

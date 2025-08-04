@@ -43,6 +43,7 @@ class CopyDealToProject
             'project_class_id' => $projectDeal->project_class_id,
             'longitude' => $longitude ?? null,
             'latitude' => $latitude ?? null,
+            'project_deal_id' => $projectDeal->id
         ]);
 
         $project->marketings()->createMany(

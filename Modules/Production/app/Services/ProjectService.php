@@ -87,6 +87,7 @@ use Modules\Production\Repository\ProjectTaskReviseHistoryRepository;
 use Modules\Production\Repository\ProjectTaskWorktimeRepository;
 use Modules\Production\Repository\ProjectVjRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
+use App\Enums\Production\ProjectDealStatus;
 
 class ProjectService
 {
@@ -5215,6 +5216,8 @@ class ProjectService
         $end = $year.'-'.$month.'-30';
         $where = "project_date >= '".$start."' and project_date <= '".$end."'";
 
+        $grouping = [];
+
         $data = $this->repo->list('id,uid,name,project_date,venue', $where, [
             'personInCharges:id,project_id,pic_id',
             'personInCharges.employee:id,uid,name',
@@ -5250,6 +5253,7 @@ class ProjectService
             [
                 'events' => $out,
                 'group' => $grouping,
+                'role' => $user->hasRole([BaseRole::Marketing->value, BaseRole::Root->value, BaseRole::Director->value])
             ],
         );
     }
@@ -8347,7 +8351,7 @@ class ProjectService
             $url = CreateQuotation::run($payload, $this->projectQuotationRepo);
 
             // handle when project deal have a final status
-            if ($payload['status'] == 1) {
+            if ($payload['status'] == ProjectDealStatus::Final->value) {
                 // here we edit the project deal data, we update identifier number
                 // $this->projectDealRepo->update(data: [
                 //     'identifier_number' => $this->generalService->setProjectIdentifier()
