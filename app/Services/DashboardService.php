@@ -3,12 +3,14 @@
 namespace App\Services;
 
 use App\Enums\Cache\CacheKey;
+use Illuminate\Database\Eloquent\Collection;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\System\BaseRole;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
+use App\Enums\Production\ProjectDealStatus;
 
 class DashboardService
 {
@@ -42,6 +44,8 @@ class DashboardService
 
     private $entertainmentTaskRepo;
 
+    private $projectDealRepo;
+
     public function __construct(
         \Modules\Production\Repository\ProjectRepository $projectRepo,
         \Modules\Inventory\Repository\InventoryRepository $inventoryRepo,
@@ -52,8 +56,11 @@ class DashboardService
         \Modules\Production\Repository\ProjectTaskPicLogRepository $projectTaskPicLogRepo,
         GeneralService $generalService,
         UserRepository $userRepo,
-        EntertainmentTaskSongRepository $entertainmentTaskRepo
+        EntertainmentTaskSongRepository $entertainmentTaskRepo,
+        \Modules\Production\Repository\ProjectDealRepository $projectDealRepo
     ) {
+        $this->projectDealRepo = $projectDealRepo;
+
         $this->generalService = $generalService;
 
         $this->projectRepo = $projectRepo;
@@ -436,12 +443,147 @@ class DashboardService
     }
 
     /**
+     * Format projects collection to be consumed in the VCalendar attributes
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    protected function formattingProjectsForCalendarObjects(Collection $projects, bool $fromProjectDeal = false): \Illuminate\Support\Collection
+    {
+        $data = $projects->map(function ($item) use ($fromProjectDeal) {
+            if ($fromProjectDeal) {
+                switch ($item->status) {
+                    case ProjectDealStatus::Canceled:
+                        $color = 'grey';
+                        $backgroundColor = '#9E9E9E';
+                        break;
+    
+                    case ProjectDealStatus::Temporary:
+                        $color = 'blue-darken-1';
+                        $backgroundColor = '#1E88E5';
+                        break;
+    
+                    case ProjectDealStatus::Final:
+                        $color = 'light-green-accent-3';
+                        $backgroundColor = '#76FF03';
+                        break;
+                    
+                    default:
+                        $color = 'light-green-accent-3';
+                        $backgroundColor = '#76FF03';
+                        break;
+                }
+            } else {
+                $color = 'orange-darken-2';
+                $backgroundColor = '#F57C00';
+            }
+
+            $status = $fromProjectDeal ? $item->status->label() : $item->status_text;
+
+            $formattedDate = date('d F Y', strtotime($item->project_date));
+
+            if (!$fromProjectDeal) {
+                $pics = collect($item->personInCharges)->pluck('employee.name')->toArray();
+                $pic = implode(', ', $pics);
+                $vj = $item->vjs->count() > 0 ? implode(',', collect($item->vjs)->pluck('employee.nickname')->toArray()) : '-';
+            } else {
+                $marketing = $item->marketings->pluck('employee.nickname')->implode(',');
+                $finalPrice = $item->finalQuotation ? "Rp" . number_format(num: $item->finalQuotation->fix_price, decimal_separator: ',') : 0;
+            }
+
+            return [
+                'key' => $item->id,
+                'content' => $item->name,
+                'highlight' => [
+                    'fillMode' => 'light',
+                    'color' => 'indigo'
+                ],
+                'dates' => $formattedDate,
+                'dot' => [
+                    'style' => [
+                        'backgroundColor' => $backgroundColor,
+                        'color' => '#ffffff'
+                    ]
+                ],
+                'popover' => [
+                    'label' => $item->name
+                ],
+                'customData' => [
+                    'name' => $item->name . " (" . $status . ")",
+                    'color' => $color,
+                    'pic' => $pic ?? null,
+                    'venue' => $item->venue,
+                    'vj' => $vj ?? null,
+                    'marketing' => $marketing ?? null,
+                    'type' => $fromProjectDeal ? 'prospect' : 'project',
+                    'finalPrice' => $finalPrice ?? 0,
+                    'userType' => $fromProjectDeal ? 'financeManagement' : 'production' // this to define who is access the data, to make it easier for the frontend when handle the detail of event
+                ],
+                'project_date' => $item->project_date
+            ];
+        });
+
+        return $data;
+    }
+
+    public function getProjectCalendarForProspectEvent(): array
+    {
+        $month = request('month') == 0 ? date('m') : request('month');
+        $year = request('year') == 0 ? date('Y') : request('year');
+        $firstDate = '01';
+        $endDate = \Carbon\Carbon::create($year, $month, $firstDate)->endOfMonth()->toDateString();
+        $startDate = \Carbon\Carbon::create($year, $month, $firstDate)->startOfMonth()->toDateString();
+
+        $data = $this->projectDealRepo->list(
+            select: "id,name,project_date,status,venue",
+            where: "project_date BETWEEN '{$startDate}' AND '{$endDate}' AND status != " . ProjectDealStatus::Final->value,
+            relation: [
+                'marketings:id,project_deal_id,employee_id',
+                'marketings.employee:id,nickname',
+                'finalQuotation:id,project_deal_id,fix_price'
+            ]
+        );
+
+        // get ongoing projects that already on production area
+        $projects = $this->projectRepo->list(
+            select: 'id,name,project_date,status,venue',
+            where: "project_date BETWEEN '{$startDate}' AND '{$endDate}'",
+            relation: [
+                'personInCharges:id,project_id,pic_id',
+                'personInCharges.employee:id,uid,name',
+                'vjs.employee:id,nickname',
+            ]
+        );
+        $projects = $this->formattingProjectsForCalendarObjects(projects: $projects);
+
+        $data = $this->formattingProjectsForCalendarObjects(projects: $data, fromProjectDeal: true);
+
+        $data = $data->merge($projects);
+        // grouping by date (for custom data)
+        $grouping = collect($data)->groupBy('project_date')->all();
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'events' => $data,
+                'group' => $grouping,
+                'month' => $month,
+                'year' => $year,
+            ],
+        );
+    }
+
+    /**
      * Function to get project calendar based on user role and months
      */
     public function getProjectCalendars(): array
     {
         $where = '';
 
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if ($user->hasRole([BaseRole::Marketing->value, BaseRole::Director->value, BaseRole::Root->value])) {
+            return $this->getProjectCalendarForProspectEvent();
+        }
         $month = request('month') == 0 ? date('m') : request('month');
         $year = request('year') == 0 ? date('Y') : request('year');
         $startDate = $year.'-'.$month.'-01';
@@ -515,8 +657,6 @@ class DashboardService
             'vjs.employee:id,nickname',
         ], $whereHas, 'project_date ASC');
 
-        logging('dashboard project calendar', ['where' => $where, 'wherehas' => $whereHas]);
-
         $out = [];
         foreach ($data as $projectKey => $project) {
             $pics = collect($project->personInCharges)->pluck('employee.name')->toArray();
@@ -524,6 +664,8 @@ class DashboardService
             $project['pic'] = $pic;
             $project['project_date_text'] = date('d F Y', strtotime($project->project_date));
             $project['vj'] = $project->vjs->count() > 0 ? implode(',', collect($project->vjs)->pluck('employee.nickname')->toArray()) : '-';
+
+            $project['userType'] = 'production'; // this to define who is access the data, to make it easier for the frontend when handle the detail of event
 
             $out[] = [
                 'key' => $project->uid,
