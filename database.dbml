@@ -1432,6 +1432,8 @@ Table "project_deal_changes" {
   "requested_at" timestamp
   "approval_by" bigint [ref: > users.id]
   "approval_at" timestamp
+  "rejected_at" timestamp
+  "rejected_by" bigint [ref: > users.id]
   "status" project_deal_changes_status
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]

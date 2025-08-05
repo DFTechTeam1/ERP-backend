@@ -13,6 +13,7 @@ use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
@@ -606,5 +607,14 @@ class GeneralService
         })->values();
 
         return $data;
+    }
+
+    public function generateApprovalUrlForProjectDealChanges(object $user, object $changeDeal, string $type)
+    {
+        $name = $type == 'approved' ? 'api.production.project-deal.approveChanges' : 'api.production.project-deal.rejectChanges';
+        
+        return route($name, [
+            'projectDetailChangesUid' => Crypt::encryptString($changeDeal->id)
+        ]) . "?aid=" . $user->id;
     }
 }

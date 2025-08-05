@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// use Modules\Production\Database\Factories\ProjectDealChangeFactory;
+use Modules\Production\Database\Factories\ProjectDealChangeFactory;
 
 class ProjectDealChange extends Model
 {
@@ -21,18 +21,19 @@ class ProjectDealChange extends Model
     protected $fillable = [
         'project_deal_id',
         'detail_changes',
-        'project_date',
         'requested_by',
         'requested_at',
         'approval_by',
         'approval_at',
+        'rejected_by',
+        'rejected_at',
         'status'
     ];
 
-    // protected static function newFactory(): ProjectDealChangeFactory
-    // {
-    //     // return ProjectDealChangeFactory::new();
-    // }
+    protected static function newFactory(): ProjectDealChangeFactory
+    {
+        return ProjectDealChangeFactory::new();
+    }
 
     protected function casts(): array
     {

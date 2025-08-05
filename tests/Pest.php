@@ -54,6 +54,7 @@ use Modules\Production\Repository\ProjectVjRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
 use Modules\Production\Services\EntertainmentTaskSongLogService;
 use Modules\Production\Services\ProjectService;
+use Spatie\Permission\Models\Permission;
 
 /*
 |--------------------------------------------------------------------------
@@ -180,7 +181,7 @@ function createProjectService(
     );
 }
 
-function initAuthenticateUser()
+function initAuthenticateUser(array $permissions = [])
 {
     $user = \App\Models\User::factory()
         ->create();
@@ -191,6 +192,13 @@ function initAuthenticateUser()
 
     if (!$checkRoot) {
         $checkRoot = \Spatie\Permission\Models\Role::create(['name' => \App\Enums\System\BaseRole::Root->value, 'guard_name' => 'sanctum']);
+    }
+    
+    if (!empty($permissions)) {
+        foreach ($permissions as $permissionName) {
+            Permission::create(['name' => $permissionName, 'guard_name' => 'sanctum']);
+            $user->givePermissionTo($permissionName);
+        }
     }
 
     $user->assignRole($checkRoot);
