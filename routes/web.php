@@ -156,35 +156,13 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    // return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SummaryFinanceExport, 'summary.xlsx');
+    $projectDealChange = \Modules\Production\Models\ProjectDealChange::latest()->first();
+    // return $projectDealChange;
+    $employee = \Modules\Hrd\Models\Employee::whereRaw("email LIKE '%gumilang%'")->first();
 
-    // $path = 'finance/report';
-    // $filename = 'finance_report_' . now() . '.xlsx';
-    // $filepath = $path . $filename;
-    // $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
-    //     name: 'finance.download.export.financeReport',
-    //     parameters: [
-    //         'fp' => $filepath
-    //     ],
-    //     expiration: now()->addHours(5)
-    // );
+    $employee->notify(new \Modules\Production\Notifications\NotifyProjectDealChangesNotification(changes: $projectDealChange, employee: $employee));
 
-    // (new \App\Exports\SummaryFinanceExport([]))->queue($filepath, 'public')->chain([
-    //     (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
-    //         'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
-    //         'message' => '<p>Click <a href="'. $downloadPath .'" target="__blank">here</a> to download your finance report</p>',
-    //         'area' => 'finance',
-    //         'user_id' => 42
-    //     ])
-    // ]);
-
-    // return response()->json([
-    //     'message' => 'Queue is on process'
-    // ]);
-
-    // return view('finance.report.summaryExport');
-
-    return (new \App\Services\GeneralService)->getFinanceExportData(payload: []);
+    return response()->json('success');
 });
 
 Route::get('pusher-check', function() {

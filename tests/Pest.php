@@ -307,7 +307,8 @@ function createProjectDealService(
     $generalService = null,
     $projectQuotationRepo = null,
     $projectRepo = null,
-    $geocoding = null
+    $geocoding = null,
+    $projectDealChangeRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository(),
@@ -315,7 +316,8 @@ function createProjectDealService(
         $generalService ? $generalService : new GeneralService(),
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository(),
         $projectRepo ? $projectRepo : new ProjectRepository,
-        $geocoding ? $geocoding : new Geocoding
+        $geocoding ? $geocoding : new Geocoding,
+        $projectDealChangeRepo ? $projectDealChangeRepo : new \Modules\Production\Repository\ProjectDealChangeRepository
     );
 }
 

@@ -39,6 +39,7 @@ Route::middleware(['auth:sanctum'])
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);
         Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
+        Route::post('project/deals/{projectDealUid}/update', [ProjectController::class, 'updateFinalDeal'])->name('project-deal.updateFinal');
         Route::delete('project/deals/{projectDealUid}', [ProjectController::class, 'deleteProjectDeal']);
         Route::get('project/deals/publish/{projectDealUid}/{type}', [ProjectController::class, 'publishProjectDeal']);
         Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);

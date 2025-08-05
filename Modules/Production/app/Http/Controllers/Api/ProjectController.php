@@ -1003,4 +1003,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->projectDealService->cancelProjectDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
     }
+
+    public function updateFinalDeal(\Modules\Production\Http\Requests\Deals\Update $request, string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->updateFinalDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
+    }
 }
