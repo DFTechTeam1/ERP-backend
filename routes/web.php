@@ -156,6 +156,13 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
+    $projectDealChange = \Modules\Production\Models\ProjectDealChange::latest()->first();
+    // return $projectDealChange;
+    $employee = \Modules\Hrd\Models\Employee::whereRaw("email LIKE '%gumilang%'")->first();
+
+    $employee->notify(new \Modules\Production\Notifications\NotifyProjectDealChangesNotification(changes: $projectDealChange, employee: $employee));
+
+    return response()->json('success');
 });
 
 Route::get('pusher-check', function() {

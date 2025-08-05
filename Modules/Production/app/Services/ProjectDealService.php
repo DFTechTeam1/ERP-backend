@@ -5,6 +5,7 @@ namespace Modules\Production\Services;
 use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
@@ -17,11 +18,13 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
 use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Repository\ProjectDealChangeRepository;
 
 class ProjectDealService
 {
@@ -37,6 +40,8 @@ class ProjectDealService
 
     private $geocoding;
 
+    private $projectDealChangeRepo;
+
     /**
      * Construction Data
      */
@@ -46,8 +51,11 @@ class ProjectDealService
         GeneralService $generalService,
         ProjectQuotationRepository $projectQuotationRepo,
         ProjectRepository $projectRepo,
-        Geocoding $geocoding
+        Geocoding $geocoding,
+        ProjectDealChangeRepository $projectDealChangeRepo
     ) {
+        $this->projectDealChangeRepo = $projectDealChangeRepo;
+
         $this->repo = $repo;
 
         $this->marketingRepo = $marketingRepo;
@@ -201,9 +209,10 @@ class ProjectDealService
                     'can_make_payment' => $item->canMakePayment() && !$isCancel,
                     'can_publish_project' => $item->canPublishProject() && !$isCancel,
                     'can_make_final' => $item->canMakeFinal() && !$isCancel,
-                    'can_edit' => (bool) !$item->isFinal() && !$isCancel,
+                    'can_edit' => (bool) !$isCancel,
                     'can_delete' => (bool) !$item->isFinal() && !$isCancel,
                     'can_cancel' => $item->status == ProjectDealStatus::Temporary ? true : false,
+                    'is_final' => $item->status == ProjectDealStatus::Final ? true : false,
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
                         'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
@@ -898,6 +907,46 @@ class ProjectDealService
 
             return generalResponse(
                 message: __('notification.projectDealHasBeenCanceled')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Here we request changes on final project deal
+     *
+     * @param array $payload                    With these following structure
+     * - array $detail_changes                              With these following structure
+     *      - string $old_value
+     *      - string $new_value
+     *      - string $label
+     * @param string $projectDealUid
+     * @return array
+     */
+    public function updateFinalDeal(array $payload, string $projectDealUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            $changes = $this->projectDealChangeRepo->store(data: [
+                'requested_by' => $user->id,
+                'requested_at' => \Carbon\Carbon::now(),
+                'detail_changes' => $payload['detail_changes'],
+                'project_deal_id' => $projectDealId,
+                'status' => ProjectDealChangeStatus::Pending
+            ]);
+
+            NotifyProjectDealChangesJob::dispatch(changesId: $changes->id)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: "Success request changes on final event"
             );
         } catch (\Throwable $th) {
             DB::rollBack();
