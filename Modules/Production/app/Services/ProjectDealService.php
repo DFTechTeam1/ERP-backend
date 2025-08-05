@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
@@ -951,6 +952,164 @@ class ProjectDealService
         } catch (\Throwable $th) {
             DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Approve project deal changes
+     * 
+     * @param string $projectDetailChangesUid
+     * 
+     * @return array
+     */
+    public function approveChangesProjectDeal(string $projectDetailChangesUid, array $payload = []): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDetailChangesId = Crypt::decryptString($projectDetailChangesUid);
+
+            // get detail project deal
+            $change = $this->projectDealChangeRepo->show(uid: $projectDetailChangesId, relation: [
+                'projectDeal:id,name,project_date',
+                'requester:id,email,employee_id',
+                'requester.employee:id,name'
+            ]);
+
+            // return a specific message if changes has been already approved
+            if ($change->status == ProjectDealChangeStatus::Approved) {
+                return errorResponse(message: "Changes has already approved");
+            }
+
+            if (!empty($payload)) { // this request came from email
+                $userId = $payload['approval_id'];
+            } else { // this request came from website
+                $user = Auth::user();
+                $userId = $user->id;
+
+                // validate permission
+                if (!$user->hasPermissionTo('approve_project_deal_change')) {
+                    return errorResponse(message: "You don't have permission to take this action", code: 403);
+                }
+            }
+
+            // update project deal table
+            $this->projectDealChangeRepo->update(
+                data: [
+                    'approval_at' => Carbon::now(),
+                    'approval_by' => $userId,
+                    'status' => ProjectDealChangeStatus::Approved
+                ],
+                id: $projectDetailChangesId
+            );
+
+            $changes = $change->detail_changes;
+            // build payload to update the main data
+            $payloadUpdate = [];
+            $mainPayload = [];
+            $needUpdateQuotationNote = false;
+            $payloadQuotation = [];
+            foreach ($changes as $key => $changeData) {
+                switch ($changeData['label']) {
+                    case 'Name':
+                        $field = 'name';
+                        break;
+
+                    case 'Event Type':
+                        $field = 'event_type';
+                        break;
+
+                    case 'Event Note':
+                        $field = 'note';
+                        break;
+
+                    case 'Led Detail':
+                        $field = 'led_detail';
+                        break;
+
+                    case 'Led Area':
+                        $field = 'led_area';
+                        break;
+
+                    case 'Quotation Note':
+                        $field = 'quotation_note';
+                        break;
+                    
+                    default:
+                        $field = null;
+                        break;
+                }
+
+                if ($field) {
+                    if ($field == 'quotation_note') {
+                        $needUpdateQuotationNote = true;
+                        $payloadQuotation['description'] = $changeData['new_value'];
+                    }
+
+                    $payloadUpdate[$field] = $changeData['new_value'];
+                    $mainPayload[$field] = $changeData['new_value'];
+                }
+            }
+
+            // change the real data
+            $this->repo->update(data: $payloadUpdate, id: $change->project_deal_id);
+
+            // update quotation if needed
+            if ($needUpdateQuotationNote) {
+                $this->projectQuotationRepo->update(
+                    data: $payloadQuotation,
+                    id: 'id',
+                    where: "project_deal_id = {$change->project_deal_id}"
+                );
+            }
+
+            // update projects
+            $this->projectRepo->update(
+                data: $payloadUpdate,
+                id: 'id',
+                where: "project_deal_id = {$change->project_deal_id}"
+            );
+
+            NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'approved')->afterCommit();
+
+            DB::commit();
+            
+            return generalResponse(
+                message: "Success"
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function rejectChangesProjectDeal(string $projectDetailChangesUid, array $payload = []): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDetailChangesId = Crypt::decryptString($projectDetailChangesUid);
+
+            if (empty($payload)) {
+                $user = Auth::user();
+                $userId = $user->id;
+            } else {
+                $userId = $payload['approval_id'];
+            }
+
+            $this->projectDealChangeRepo->update(
+                data: [
+                    'status' => ProjectDealChangeStatus::Rejected,
+                    'rejected_at' => Carbon::now(),
+                    'rejected_by' => $userId
+                ],
+                id: $projectDetailChangesId
+            );
+
+            NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'rejected')->afterCommit();
+            
+            return generalResponse(message: "Success");
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }

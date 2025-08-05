@@ -1004,8 +1004,51 @@ class ProjectController extends Controller
         return apiResponse($this->projectDealService->cancelProjectDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
     }
 
+    /**
+     * @return JsonResponse
+     */
     public function updateFinalDeal(\Modules\Production\Http\Requests\Deals\Update $request, string $projectDealUid): JsonResponse
     {
         return apiResponse($this->projectDealService->updateFinalDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
+    }
+
+    /**
+     * This request can be from email action or web directly
+     * 
+     * if request came from email, you will get 'aid' value from query parameter
+     * 
+     *  
+     * @param string $projectDetailChangesUid
+     * 
+     * @return JsonResponse
+     */
+    public function approveChangesProjectDeal(string $projectDetailChangesUid): JsonResponse
+    {
+        $payload = [];
+        if (request('aid')) {
+            $payload['approval_id'] = request('aid');
+        }
+
+        return apiResponse($this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload));
+    }
+
+    /**
+     * This request can be from email action or web directly
+     * 
+     * if request came from email, you will get 'aid' value from query parameter
+     * 
+     *  
+     * @param string $projectDetailChangesUid
+     * 
+     * @return JsonResponse
+     */
+    public function rejectChangesProjectDeal(string $projectDetailChangesUid): JsonResponse
+    {
+        $payload = [];
+        if (request('aid')) {
+            $payload['approval_id'] = request('aid');
+        }
+
+        return apiResponse($this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload));
     }
 }

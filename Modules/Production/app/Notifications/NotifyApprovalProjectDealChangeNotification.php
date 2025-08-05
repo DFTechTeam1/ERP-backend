@@ -7,24 +7,21 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class NotifyProjectDealChangesNotification extends Notification
+class NotifyApprovalProjectDealChangeNotification extends Notification
 {
     use Queueable;
 
-    private $changes;
+    private $dealChange;
 
-    private $employee;
-
-    private $approvalUrl;
+    private $type;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(\Modules\Production\Models\ProjectDealChange $changes, object $employee, string $approvalUrl)
+    public function __construct(object $dealChange, string $type)
     {
-        $this->changes = $changes;
-        $this->employee = $employee;
-        $this->approvalUrl = $approvalUrl;
+        $this->dealChange = $dealChange;
+        $this->type = $type;
     }
 
     /**
@@ -32,9 +29,7 @@ class NotifyProjectDealChangesNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return [
-            'mail'
-        ];
+        return ['mail'];
     }
 
     /**
@@ -45,13 +40,8 @@ class NotifyProjectDealChangesNotification extends Notification
         setEmailConfiguration();
 
         return (new MailMessage)
-            ->subject("Approval Required: Event Data Modification by " . $this->changes->requester->employee->nickname)
-            ->markdown('mail.deals.changeRequest', [
-                'data' => $this->changes,
-                'director' => $this->employee,
-                'approvalUrl' => $this->approvalUrl,
-                'rejectionUrl' => '',
-            ]);
+            ->greeting("Dear {$this->dealChange->requester->employee->name}")
+            ->line("Your changes in event {$this->dealChange->projectDeal->name} has been {$this->type} by {$this->dealChange->approval->employee->name}");
     }
 
     /**

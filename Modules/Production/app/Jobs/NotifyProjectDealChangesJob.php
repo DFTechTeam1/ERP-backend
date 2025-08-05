@@ -45,7 +45,14 @@ class NotifyProjectDealChangesJob implements ShouldQueue
                 ->find($this->changesId);
 
             foreach ($employees as $employee) {
-                $employee->notify(new NotifyProjectDealChangesNotification($changes, $employee));
+                // create approval url
+                $approvalUrl = (new GeneralService)->generateApprovalUrlForProjectDealChanges(user: $employee->user, changeDeal: $changes);
+                
+                $employee->notify(new NotifyProjectDealChangesNotification(
+                    $changes,
+                    $employee,
+                    $approvalUrl
+                ));
             }
         }
     }

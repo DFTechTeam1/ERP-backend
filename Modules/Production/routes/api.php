@@ -161,3 +161,5 @@ Route::middleware(['auth:sanctum'])
 Route::get('production/project/{taskId}/downloadAttachment/{attachmentId}', [ProjectController::class, 'downloadAttachment']);
 Route::get('production/project/{projectUid}/downloadProofOfWork/{proofOfWorkId}', [ProjectController::class, 'downloadProofOfWork']);
 Route::get('production/project/{projectUid}/downloadReviseMedia/{reviseId}', [ProjectController::class, 'downloadReviseMedia']);
+Route::get('production/project/deal/c/approve/{projectDetailChangesUid}', [ProjectController::class, 'approveChangesProjectDeal'])->name('production.project-deal.approveChanges');
+Route::get('production/project/deal/c/reject/{projectDetailChangesUid}', [ProjectController::class, 'rejectChangesProjectDeal'])->name('production.project-deal.rejectChanges');
