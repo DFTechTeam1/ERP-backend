@@ -95,8 +95,8 @@
         <div class="checkmark-circle">
             <div class="checkmark"></div>
         </div>
-        <h1>Invoice Approved!</h1>
-        <p>Your invoice changes have been successfully approved. The updates are now live in the system.</p>
+        <h1>{{ $title }}!</h1>
+        <p>{{ $message }}</p>
     </div>
 </body>
 </html>

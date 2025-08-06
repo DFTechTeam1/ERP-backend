@@ -55,6 +55,11 @@ class ProjectDealChange extends Model
         return $this->belongsTo(User::class, 'approval_by');
     }
 
+    public function rejecter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
+    }
+
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');

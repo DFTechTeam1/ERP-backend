@@ -17,14 +17,17 @@ class NotifyProjectDealChangesNotification extends Notification
 
     private $approvalUrl;
 
+    private $rejectionUrl;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(\Modules\Production\Models\ProjectDealChange $changes, object $employee, string $approvalUrl)
+    public function __construct(\Modules\Production\Models\ProjectDealChange $changes, object $employee, string $approvalUrl, string $rejectionUrl)
     {
         $this->changes = $changes;
         $this->employee = $employee;
         $this->approvalUrl = $approvalUrl;
+        $this->rejectionUrl = $rejectionUrl;
     }
 
     /**
@@ -50,7 +53,7 @@ class NotifyProjectDealChangesNotification extends Notification
                 'data' => $this->changes,
                 'director' => $this->employee,
                 'approvalUrl' => $this->approvalUrl,
-                'rejectionUrl' => '',
+                'rejectionUrl' => $this->rejectionUrl,
             ]);
     }
 

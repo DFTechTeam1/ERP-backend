@@ -927,7 +927,8 @@ class ProjectController extends Controller
                 'latestQuotation',
                 'finalQuotation',
                 'firstTransaction',
-                'unpaidInvoices:id,number,parent_number,project_deal_id,amount'
+                'unpaidInvoices:id,number,parent_number,project_deal_id,amount',
+                'activeProjectDealChange:id,project_deal_id'
             ]
         ));
     }
@@ -1020,16 +1021,21 @@ class ProjectController extends Controller
      *  
      * @param string $projectDetailChangesUid
      * 
-     * @return JsonResponse
      */
-    public function approveChangesProjectDeal(string $projectDetailChangesUid): JsonResponse
+    public function approveChangesProjectDeal(string $projectDetailChangesUid)
     {
         $payload = [];
         if (request('aid')) {
             $payload['approval_id'] = request('aid');
         }
 
-        return apiResponse($this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload));
+        $response = $this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
+
+        if (!$response['error'] && request('aid')) {
+            return redirect(route('invoices.approved') . "?type=deal");
+        }
+
+        return apiResponse($response);
     }
 
     /**
@@ -1040,15 +1046,20 @@ class ProjectController extends Controller
      *  
      * @param string $projectDetailChangesUid
      * 
-     * @return JsonResponse
      */
-    public function rejectChangesProjectDeal(string $projectDetailChangesUid): JsonResponse
+    public function rejectChangesProjectDeal(string $projectDetailChangesUid)
     {
         $payload = [];
         if (request('aid')) {
             $payload['approval_id'] = request('aid');
         }
 
-        return apiResponse($this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload));
+        $response = $this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
+
+        if (!$response['error'] && request('aid')) {
+            return redirect(route('invoices.rejected') . "?type=deal");
+        }
+
+        return apiResponse($response);
     }
 }

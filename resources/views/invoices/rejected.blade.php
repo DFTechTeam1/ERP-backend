@@ -114,8 +114,8 @@
                 <div class="cross-line"></div>
             </div>
         </div>
-        <h1>Invoice Rejected</h1>
-        <p>Invoice successfully changed. Change request rejected.</p>
+        <h1>{{ $title }}</h1>
+        <p>{{ $message }}</p>
     </div>
 </body>
 </html>

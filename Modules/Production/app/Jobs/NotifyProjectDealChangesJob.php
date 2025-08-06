@@ -46,12 +46,14 @@ class NotifyProjectDealChangesJob implements ShouldQueue
 
             foreach ($employees as $employee) {
                 // create approval url
-                $approvalUrl = (new GeneralService)->generateApprovalUrlForProjectDealChanges(user: $employee->user, changeDeal: $changes);
+                $approvalUrl = (new GeneralService)->generateApprovalUrlForProjectDealChanges(user: $employee->user, changeDeal: $changes, type: 'approved');
+                $rejectionUrl = (new GeneralService)->generateApprovalUrlForProjectDealChanges(user: $employee->user, changeDeal: $changes, type: 'rejected');
                 
                 $employee->notify(new NotifyProjectDealChangesNotification(
                     $changes,
                     $employee,
-                    $approvalUrl
+                    $approvalUrl,
+                    $rejectionUrl
                 ));
             }
         }
