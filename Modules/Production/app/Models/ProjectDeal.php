@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Models;
 
+use App\Enums\Production\ProjectDealChangeStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -196,6 +197,12 @@ class ProjectDeal extends Model
     public function state(): BelongsTo
     {
         return $this->belongsTo(\Modules\Company\Models\State::class, 'state_id');
+    }
+
+    public function activeProjectDealChange(): HasOne
+    {
+        return $this->hasOne(ProjectDealChange::class, 'project_deal_id')
+            ->where('status', ProjectDealChangeStatus::Pending);
     }
 
     public function formattedProjectDate(): Attribute

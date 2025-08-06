@@ -7,6 +7,12 @@ Enum "employee_families_relationship_enum" {
   "other"
 }
 
+Enum "project_deal_changes_status" {
+  "1", // for pending
+  "2", // for approved
+  "3" // for rejected
+}
+
 Enum "project_task_duration_history_enums" {
   "cross_team_collaboration"
   "single_assignee"
@@ -1438,6 +1444,21 @@ Table "project_deals" {
   Indexes {
     identifier_number [unique, name: "project_deals_identifier_number_unique"]
   }
+}
+
+Table "project_deal_changes" {
+  "id" bigint [pk, increment not null]
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "detail_changes" longtext [note: 'Will be JSON format. Json will be like this [{"field": "project_date", "old_value": "", "new_value": "", "label": ""}]']
+  "requested_by" bigint [ref: > users.id]
+  "requested_at" timestamp
+  "approval_by" bigint [ref: > users.id]
+  "approval_at" timestamp
+  "rejected_at" timestamp
+  "rejected_by" bigint [ref: > users.id]
+  "status" project_deal_changes_status
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "project_quotations" {

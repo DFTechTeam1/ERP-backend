@@ -42,6 +42,7 @@ Route::middleware(['auth:sanctum'])
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);
         Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
+        Route::post('project/deals/{projectDealUid}/update', [ProjectController::class, 'updateFinalDeal'])->name('project-deal.updateFinal');
         Route::delete('project/deals/{projectDealUid}', [ProjectController::class, 'deleteProjectDeal']);
         Route::get('project/deals/publish/{projectDealUid}/{type}', [ProjectController::class, 'publishProjectDeal']);
         Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
@@ -160,3 +161,5 @@ Route::middleware(['auth:sanctum'])
 Route::get('production/project/{taskId}/downloadAttachment/{attachmentId}', [ProjectController::class, 'downloadAttachment']);
 Route::get('production/project/{projectUid}/downloadProofOfWork/{proofOfWorkId}', [ProjectController::class, 'downloadProofOfWork']);
 Route::get('production/project/{projectUid}/downloadReviseMedia/{reviseId}', [ProjectController::class, 'downloadReviseMedia']);
+Route::get('production/project/deal/c/approve/{projectDetailChangesUid}', [ProjectController::class, 'approveChangesProjectDeal'])->name('production.project-deal.approveChanges');
+Route::get('production/project/deal/c/reject/{projectDetailChangesUid}', [ProjectController::class, 'rejectChangesProjectDeal'])->name('production.project-deal.rejectChanges');

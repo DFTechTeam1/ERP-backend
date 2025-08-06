@@ -14,6 +14,7 @@ use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\PusherNotification;
 use App\Services\Telegram\TelegramService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
@@ -156,6 +157,13 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
+    $projectDealChange = \Modules\Production\Models\ProjectDealChange::latest()->first();
+    // return $projectDealChange;
+    $employee = \Modules\Hrd\Models\Employee::whereRaw("email LIKE '%gumilang%'")->first();
+
+    $employee->notify(new \Modules\Production\Notifications\NotifyProjectDealChangesNotification(changes: $projectDealChange, employee: $employee));
+
+    return response()->json('success');
 });
 
 Route::get('pusher-check', function() {
@@ -174,9 +182,15 @@ Route::get('expired', function () {
     return view('errors.expired');
 });
 
-Route::get('i/p', function () {
-    return view('invoices.approved');
+Route::get('i/p', function (Request $request) {
+    $title = $request->type == 'deal' ? 'Event Changes Approved' : 'Invoice Approved';
+    $message = $request->type == 'deal' ? 'Event changes have been successfully approved. The updates are now live in the system.' : 'Your invoice changes have been successfully approved. The updates are now live in the system.';
+
+    return view('invoices.approved', compact('title', 'message'));
 })->name('invoices.approved');
-Route::get('i/r', function () {
-    return view('invoices.rejected');
+Route::get('i/r', function (Request $request) {
+    $title = $request->type == 'deal' ? 'Event Changes Rejected' : 'Invoice Rejected';
+    $message = $request->type == 'deal' ? 'Changes request rejected.' : 'Invoice successfully changed. Change request rejected.';
+
+    return view('invoices.rejected', compact('title', 'message'));
 })->name('invoices.rejected');

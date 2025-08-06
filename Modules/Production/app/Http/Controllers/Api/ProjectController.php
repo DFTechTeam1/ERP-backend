@@ -927,7 +927,8 @@ class ProjectController extends Controller
                 'latestQuotation',
                 'finalQuotation',
                 'firstTransaction',
-                'unpaidInvoices:id,number,parent_number,project_deal_id,amount'
+                'unpaidInvoices:id,number,parent_number,project_deal_id,amount',
+                'activeProjectDealChange:id,project_deal_id'
             ]
         ));
     }
@@ -1002,5 +1003,63 @@ class ProjectController extends Controller
     public function cancelProjectDeal(CancelProjectDeal $request, string $projectDealUid): JsonResponse
     {
         return apiResponse($this->projectDealService->cancelProjectDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    public function updateFinalDeal(\Modules\Production\Http\Requests\Deals\Update $request, string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->updateFinalDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
+    }
+
+    /**
+     * This request can be from email action or web directly
+     * 
+     * if request came from email, you will get 'aid' value from query parameter
+     * 
+     *  
+     * @param string $projectDetailChangesUid
+     * 
+     */
+    public function approveChangesProjectDeal(string $projectDetailChangesUid)
+    {
+        $payload = [];
+        if (request('aid')) {
+            $payload['approval_id'] = request('aid');
+        }
+
+        $response = $this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
+
+        if (!$response['error'] && request('aid')) {
+            return redirect(route('invoices.approved') . "?type=deal");
+        }
+
+        return apiResponse($response);
+    }
+
+    /**
+     * This request can be from email action or web directly
+     * 
+     * if request came from email, you will get 'aid' value from query parameter
+     * 
+     *  
+     * @param string $projectDetailChangesUid
+     * 
+     */
+    public function rejectChangesProjectDeal(string $projectDetailChangesUid)
+    {
+        $payload = [];
+        if (request('aid')) {
+            $payload['approval_id'] = request('aid');
+        }
+
+        $response = $this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
+
+        if (!$response['error'] && request('aid')) {
+            return redirect(route('invoices.rejected') . "?type=deal");
+        }
+
+        return apiResponse($response);
     }
 }

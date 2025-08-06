@@ -4,7 +4,9 @@ namespace Modules\Production\Services;
 
 use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
+use App\Actions\Project\DetailCache;
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
@@ -17,11 +19,14 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
+use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
 use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Repository\ProjectDealChangeRepository;
 
 class ProjectDealService
 {
@@ -37,6 +42,8 @@ class ProjectDealService
 
     private $geocoding;
 
+    private $projectDealChangeRepo;
+
     /**
      * Construction Data
      */
@@ -46,8 +53,11 @@ class ProjectDealService
         GeneralService $generalService,
         ProjectQuotationRepository $projectQuotationRepo,
         ProjectRepository $projectRepo,
-        Geocoding $geocoding
+        Geocoding $geocoding,
+        ProjectDealChangeRepository $projectDealChangeRepo
     ) {
+        $this->projectDealChangeRepo = $projectDealChangeRepo;
+
         $this->repo = $repo;
 
         $this->marketingRepo = $marketingRepo;
@@ -80,6 +90,8 @@ class ProjectDealService
         array $relation = []
     ): array {
         try {
+            $user = Auth::user();
+
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
@@ -170,11 +182,12 @@ class ProjectDealService
             );
             $totalData = $this->repo->list(select: 'id', where: $where, whereHas: $whereHas)->count();
 
-            $paginated = $paginated->map(function ($item) {
+            $paginated = $paginated->map(function ($item) use ($user) {
 
                 $marketing = implode(',', $item->marketings->pluck('employee.nickname')->toArray());
 
                 $isCancel = $item->status == ProjectDealStatus::Canceled ? true : false;
+                $isHaveActiveRequestChanges = $item->activeProjectDealChange ? true : false;
 
                 return [
                     'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
@@ -201,9 +214,12 @@ class ProjectDealService
                     'can_make_payment' => $item->canMakePayment() && !$isCancel,
                     'can_publish_project' => $item->canPublishProject() && !$isCancel,
                     'can_make_final' => $item->canMakeFinal() && !$isCancel,
-                    'can_edit' => (bool) !$item->isFinal() && !$isCancel,
+                    'can_edit' => (bool) !$isCancel && !$isHaveActiveRequestChanges,
                     'can_delete' => (bool) !$item->isFinal() && !$isCancel,
                     'can_cancel' => $item->status == ProjectDealStatus::Temporary ? true : false,
+                    'can_approve_event_changes' => $isHaveActiveRequestChanges && $user->hasPermissionTo('approve_project_deal_change') ? true : false,
+                    'can_reject_event_changes' => $isHaveActiveRequestChanges && $user->hasPermissionTo('reject_project_deal_change') ? true : false,
+                    'is_final' => $item->status == ProjectDealStatus::Final ? true : false,
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
                         'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
@@ -214,7 +230,9 @@ class ProjectDealService
                             'number' => $invoice->number,
                             'amount' => $invoice->amount,
                         ];
-                    })
+                    }),
+                    'have_request_changes' => $isHaveActiveRequestChanges,
+                    'changes_id' => $isHaveActiveRequestChanges ? Crypt::encryptString($item->activeProjectDealChange->id) : null
                 ];
             });
 
@@ -902,6 +920,220 @@ class ProjectDealService
         } catch (\Throwable $th) {
             DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Here we request changes on final project deal
+     *
+     * @param array $payload                    With these following structure
+     * - array $detail_changes                              With these following structure
+     *      - string $old_value
+     *      - string $new_value
+     *      - string $label
+     * @param string $projectDealUid
+     * @return array
+     */
+    public function updateFinalDeal(array $payload, string $projectDealUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            $changes = $this->projectDealChangeRepo->store(data: [
+                'requested_by' => $user->id,
+                'requested_at' => \Carbon\Carbon::now(),
+                'detail_changes' => $payload['detail_changes'],
+                'project_deal_id' => $projectDealId,
+                'status' => ProjectDealChangeStatus::Pending
+            ]);
+
+            NotifyProjectDealChangesJob::dispatch(changesId: $changes->id)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: "Success request changes on final event"
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Approve project deal changes
+     * 
+     * @param string $projectDetailChangesUid
+     * 
+     * @return array
+     */
+    public function approveChangesProjectDeal(string $projectDetailChangesUid, array $payload = []): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDetailChangesId = Crypt::decryptString($projectDetailChangesUid);
+
+            // get detail project deal
+            $change = $this->projectDealChangeRepo->show(uid: $projectDetailChangesId, relation: [
+                'projectDeal:id,name,project_date',
+                'projectDeal.project:id,uid,project_deal_id',
+                'requester:id,email,employee_id',
+                'requester.employee:id,name'
+            ]);
+
+            // return a specific message if changes has been already approved
+            if ($change->status == ProjectDealChangeStatus::Approved) {
+                return errorResponse(message: "Changes has already approved");
+            }
+
+            if (!empty($payload)) { // this request came from email
+                $userId = $payload['approval_id'];
+            } else { // this request came from website
+                $user = Auth::user();
+                $userId = $user->id;
+
+                // validate permission
+                if (!$user->hasPermissionTo('approve_project_deal_change')) {
+                    return errorResponse(message: "You don't have permission to take this action", code: 403);
+                }
+            }
+
+            // update project deal table
+            $this->projectDealChangeRepo->update(
+                data: [
+                    'approval_at' => Carbon::now(),
+                    'approval_by' => $userId,
+                    'status' => ProjectDealChangeStatus::Approved
+                ],
+                id: $projectDetailChangesId
+            );
+
+            $changes = $change->detail_changes;
+            // build payload to update the main data
+            $payloadUpdate = [];
+            $mainPayload = [];
+            $needUpdateQuotationNote = false;
+            $payloadQuotation = [];
+            foreach ($changes as $key => $changeData) {
+                switch ($changeData['label']) {
+                    case 'Name':
+                        $field = 'name';
+                        break;
+
+                    case 'Event Type':
+                        $field = 'event_type';
+                        break;
+
+                    case 'Event Note':
+                        $field = 'note';
+                        break;
+
+                    case 'Led Detail':
+                        $field = 'led_detail';
+                        break;
+
+                    case 'Led Area':
+                        $field = 'led_area';
+                        break;
+
+                    case 'Quotation Note':
+                        $field = 'quotation_note';
+                        break;
+                    
+                    default:
+                        $field = null;
+                        break;
+                }
+
+                if ($field) {
+                    if ($field == 'quotation_note') {
+                        $needUpdateQuotationNote = true;
+                        $payloadQuotation['description'] = $changeData['new_value'];
+                    } else {
+                        $payloadUpdate[$field] = $changeData['new_value'];
+                        $mainPayload[$field] = $changeData['new_value'];
+                    }
+
+                }
+            }
+
+            // change the real data
+            $this->repo->update(data: $payloadUpdate, id: $change->project_deal_id);
+
+            // update quotation if needed
+            if ($needUpdateQuotationNote) {
+                $this->projectQuotationRepo->update(
+                    data: $payloadQuotation,
+                    id: 'id',
+                    where: "project_deal_id = {$change->project_deal_id}"
+                );
+            }
+
+            // update projects
+            $this->projectRepo->update(
+                data: $payloadUpdate,
+                id: 'id',
+                where: "project_deal_id = {$change->project_deal_id}"
+            );
+
+            // delete project cache
+            (new GeneralService)->clearCache('detailProject'.$change->projectDeal->project->id);
+
+            NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'approved')->afterCommit();
+
+            DB::commit();
+            
+            return generalResponse(
+                message: "Success"
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Here we reject the the changes
+     * 
+     * @param string $projectDetailChangesUid
+     * @param array $payload
+     * 
+     * @return array
+     */
+    public function rejectChangesProjectDeal(string $projectDetailChangesUid, array $payload = []): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDetailChangesId = Crypt::decryptString($projectDetailChangesUid);
+
+            if (empty($payload)) {
+                $user = Auth::user();
+                $userId = $user->id;
+            } else {
+                $userId = $payload['approval_id'];
+            }
+
+            $this->projectDealChangeRepo->update(
+                data: [
+                    'status' => ProjectDealChangeStatus::Rejected,
+                    'rejected_at' => Carbon::now(),
+                    'rejected_by' => $userId
+                ],
+                id: $projectDetailChangesId
+            );
+
+            DB::commit();
+
+            NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'rejected')->afterCommit();
+            
+            return generalResponse(message: "Success reject changes");
+        } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }
