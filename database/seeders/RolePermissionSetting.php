@@ -382,6 +382,10 @@ class RolePermissionSetting extends Seeder
                 $this->getRootRole(),
                 $this->getDirectorRole(),
             ]],
+            ['name' => 'reject_project_deal_change', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
         ];
     }
 

@@ -34,17 +34,22 @@ class NotifyApprovalProjectDealChangeJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $change = (new ProjectDealChangeRepository)->show(uid: $this->typw, relation: [
+        $change = (new ProjectDealChangeRepository)->show(uid: $this->changeId, relation: [
             'projectDeal:id,name',
             'requester:id,employee_id',
-            'requester.employee:id,name',
+            'requester.employee:id,name,email',
             'approval:id,employee_id',
-            'approval.employee:id,name'
+            'approval.employee:id,name',
+            'rejecter:id,employee_id',
+            'rejecter.employee:id,name',
         ]);
 
-        $change->requester->notify(new NotifyApprovalProjectDealChangeNotification(
+        $approvalName = $this->type == 'approved' ? $change->approval->employee->name : $change->rejecter->employee->name;
+
+        $change->requester->employee->notify(new NotifyApprovalProjectDealChangeNotification(
             $change,
-            $this->type
+            $this->type,
+            $approvalName
         ));
     }
 }

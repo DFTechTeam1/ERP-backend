@@ -15,13 +15,16 @@ class NotifyApprovalProjectDealChangeNotification extends Notification
 
     private $type;
 
+    private $actor;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(object $dealChange, string $type)
+    public function __construct(object $dealChange, string $type, string $actor)
     {
         $this->dealChange = $dealChange;
         $this->type = $type;
+        $this->actor = $actor;
     }
 
     /**
@@ -41,7 +44,9 @@ class NotifyApprovalProjectDealChangeNotification extends Notification
 
         return (new MailMessage)
             ->greeting("Dear {$this->dealChange->requester->employee->name}")
-            ->line("Your changes in event {$this->dealChange->projectDeal->name} has been {$this->type} by {$this->dealChange->approval->employee->name}");
+            ->line(
+                "Your changes in event {$this->dealChange->projectDeal->name} has been {$this->type} by {$this->actor}"
+            );
     }
 
     /**
