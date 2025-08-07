@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Modules\Production\Console\ClearAllCache;
 use Modules\Production\Console\InitProjectCount;
 use Modules\Production\Console\PaymentDueReminderCommand;
+use Modules\Production\Console\SynchronizeEventDealsWithProduction;
 use Modules\Production\Console\UpdateTaskIdentifier;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
@@ -55,7 +56,8 @@ class ProductionServiceProvider extends ServiceProvider
             ClearAllCache::class,
             UpdateTaskIdentifier::class,
             InitProjectCount::class,
-            PaymentDueReminderCommand::class
+            PaymentDueReminderCommand::class,
+            SynchronizeEventDealsWithProduction::class
         ]);
     }
 
