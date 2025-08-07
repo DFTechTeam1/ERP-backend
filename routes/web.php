@@ -156,37 +156,6 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-<<<<<<< HEAD
-    // return (new TelegramService)->sendTextMessage(
-    //     chatId: '1991941955',
-    //     message: "Test message",
-    // );
-    // $currentChanges = InvoiceRequestUpdate::selectRaw('id,request_by,amount,payment_date,invoice_id,approved_at')
-    //     ->with([
-    //         'user:id,email,employee_id',
-    //         'user.employee:id,name',
-    //         'invoice:id,parent_number,number'
-    //     ])
-    //     ->latest()
-    //     ->first();
-    // return (new ApproveInvoiceChangesNotification($currentChanges))
-    //     ->toMail('gumilang.dev@gmail.com');
-    // $current = InvoiceRequestUpdate::latest()->first();
-    // if (!$current) {
-    //     $invoice = Invoice::latest()->first();
-    //     DB::table('invoice_request_updates')->insert([
-    //         'invoice_id' => $invoice->id,
-    //         'payment_date' => now()->addDays(3)->format('Y-m-d'),
-    //         'status' => InvoiceRequestUpdateStatus::Pending->value,
-    //         'request_by' => User::latest()->first()->id,
-    //     ]);
-    //     $current = InvoiceRequestUpdate::latest()->first();
-    // }
-
-    // RequestInvoiceChangeJob::dispatch($current);
-
-     
-=======
 });
 
 Route::get('pusher-check', function() {
@@ -199,7 +168,6 @@ Route::get('pusher-check', function() {
         ],
         compressedValue: true
     );
->>>>>>> 01486a0 (Feat(86b5zm8vt): Create cancel project deal API)
 });
 
 Route::get('expired', function () {
