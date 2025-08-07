@@ -1081,7 +1081,9 @@ class ProjectDealService
             );
 
             // delete project cache
-            (new GeneralService)->clearCache('detailProject'.$change->projectDeal->project->id);
+            if ($change->projectDeal->project) {
+                (new GeneralService)->clearCache('detailProject'.$change->projectDeal->project->id);
+            }
 
             NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'approved')->afterCommit();
 
