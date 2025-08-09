@@ -2222,4 +2222,41 @@ class EmployeeService
             return errorResponse($th);
         }
     }
+
+    /**
+     * This function will return who have the mosh event number in current year
+     * 
+     * @return array
+     */
+    public function getTheHighestEventNumberInPic(): array
+    {
+        try {
+            $status = [
+                Status::Deleted->value,
+                Status::Inactive->value,
+                Status::Freelance->value,
+                Status::Probation->value,
+                Status::WaitingHR->value
+            ];
+            $status = collect($status)->implode(',');
+            $results = DB::select('CALL get_highest_event_number_for_pic(?)', [$status]);
+
+            if ($results) {
+                $output = $results[0]->pic_id;
+            } else {
+                // get random pic
+                $data = DB::select('SELECT get_random_project_pic() as random_pic');
+                $output = $data[0]->random_pic;
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'uid' => $output
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }

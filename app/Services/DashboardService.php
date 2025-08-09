@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use App\Enums\Production\ProjectDealStatus;
+use Illuminate\Support\Facades\DB;
 
 class DashboardService
 {
@@ -1068,5 +1069,89 @@ class DashboardService
                 'chart_title' => $now->format('d F Y').' - '.$end->format('d F Y'),
             ]
         );
+    }
+
+    /**
+     * Here we will get project growth rate by compare total event in last year with in current year
+     * 
+     * @return array
+     */
+    public function getProjectDifference(): array
+    {
+        $result = DB::select('CALL get_project_difference()');
+
+        return generalResponse(
+            message: "Success",
+            data: [
+                'percentage' => $result[0]->percentage_difference,
+                'number_difference' => $result[0]->number_difference
+            ]
+        );
+    }
+
+    /**
+     * Here we will get success rate of event by comparing final event with canceled event
+     * 
+     * @return array
+     */
+    public function getEventSuccessRate(): array
+    {
+        $result = DB::select('CALL get_event_success_rate()');
+
+        return generalResponse(
+            message: "Success",
+            data: [
+                'total_events' => $result[0]->total_events,
+                'total_final' => $result[0]->total_final,
+                'total_cancel' => $result[0]->total_cancel,
+                'success_rate' => $result[0]->success_rate,
+                'fail_rate' => $result[0]->fail_rate,
+            ]
+        );
+    }
+
+    public function getSalesPreview(): array
+    {
+        try {
+            $data = $this->projectDealRepo->list(
+                select: 'id,project_date',
+                where: "status = " . ProjectDealStatus::Final->value . " AND YEAR(project_date) = YEAR(CURDATE())",
+                relation: [
+                    'finalQuotation:id,project_deal_id,fix_price'
+                ],
+                orderBy: 'project_date desc'
+            );
+            $data = $data->map(function ($event) {
+                $event['project_month'] = date('F', strtotime($event->project_date));
+
+                return $event;
+            });
+
+            $group = $data->groupBy('project_month')->map(function ($item) {
+                $total = $item->pluck('finalQuotation.fix_price')->sum();
+                return $total;
+            })->toArray();
+
+            $months = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ];
+
+            // filled the empty month
+            $output = [];
+            foreach ($months as $month) {
+                $output[] = $group[$month] ?? 0;
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'data' => $output,
+                    'labels' => $months
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }
