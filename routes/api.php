@@ -204,6 +204,7 @@ Route::middleware('auth:sanctum')
         Route::get('dashboard/projectDifference', [DashboardController::class, 'getProjectDifference']);
         Route::get('dashboard/eventSuccessRate', [DashboardController::class, 'getEventSuccessRate']);
         Route::get('dashboard/getSalesPreview', [DashboardController::class, 'getSalesPreview']);
+        Route::get('dashboard/getEventClassDistribution', [DashboardController::class, 'getEventClassDistribution']);
 
         // Dashboard for human resources
         Route::get('dashboard/hr/{type}', [DashboardController::class, 'getHrReport']);

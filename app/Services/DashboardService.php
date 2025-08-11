@@ -1154,4 +1154,11 @@ class DashboardService
             return errorResponse($th);
         }
     }
+
+    public function getEventClassDistribution(): array
+    {
+        $result = DB::select('CALL get_event_class_distribution()');
+
+        return generalResponse(message: 'Success', data: $result);
+    }
 }

@@ -189,4 +189,9 @@ class DashboardController extends Controller
     {
         return apiResponse($this->service->getSalesPreview());
     }
+
+    public function getEventClassDistribution(): JsonResponse
+    {
+        return apiResponse($this->service->getEventClassDistribution());
+    }
 }
