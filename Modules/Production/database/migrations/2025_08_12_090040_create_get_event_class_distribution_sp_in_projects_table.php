@@ -1,0 +1,41 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        DB::unprepared("
+        CREATE PROCEDURE erp_live_latest.get_event_class_distribution()
+        BEGIN
+            SELECT 
+                pc.name AS class_name,
+                COUNT(p.id) AS project_count
+            FROM 
+                project_classes pc
+            LEFT JOIN 
+                projects p ON pc.id = p.project_class_id 
+                AND YEAR(p.project_date) = YEAR(CURDATE())
+            GROUP BY 
+                pc.id, pc.name
+            ORDER BY 
+                pc.name;
+        END
+        ");
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        DB::unprepared("DROP PROCEDURE IF EXISTS get_event_class_distribution");
+    }
+};
