@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         DB::unprepared("
-        CREATE DEFINER=`root`@`localhost` FUNCTION `get_random_project_pic`() RETURNS varchar(255) CHARSET utf8mb4
+        CREATE FUNCTION `get_random_project_pic`() RETURNS varchar(255) CHARSET utf8mb4
             DETERMINISTIC
         BEGIN
             DECLARE OUTPUTUID VARCHAR(255);
