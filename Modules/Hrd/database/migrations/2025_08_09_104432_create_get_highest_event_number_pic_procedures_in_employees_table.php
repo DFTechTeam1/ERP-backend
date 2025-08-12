@@ -51,7 +51,7 @@ return new class extends Migration
             -- Then get all projects for this PIC in current year with the same status filter
             SET @sql = CONCAT('
                 SELECT 
-                    e.id AS pic_id,
+                    e.uid AS pic_id,
                     e.name AS pic_name,
                     COUNT(DISTINCT t.project_id) AS project_count,
                     GROUP_CONCAT(DISTINCT t.project_id) AS project_ids
