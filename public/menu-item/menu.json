@@ -5,7 +5,7 @@
             "type": "regular",
             "childs": [
                 { "path": "/admin/dashboard", "slug": "dashboard", "lang_id": "Dashboard", "lang_en": "Dashboard", "icon": "menus/dashboard.png", "permission": "dashboard_access" },
-                { "path": "/admin/dashboard/report", "slug": "dashboardReport", "lang_id": "Report", "lang_en": "Report", "icon": "menus/dashboard.png", "permission": "dashboard_access" },
+                { "path": "/admin/dashboard/report", "slug": "dashboardReport", "lang_id": "Report", "lang_en": "Report", "icon": "menus/dashboard.png", "permission": "dashboard_report_access" },
                 { "path": "/admin/setting", "slug": "setting", "lang_id": "Pengaturan", "lang_en": "Settings", "icon": "menus/setting.png", "permission": "list_setting" }
             ]
         },

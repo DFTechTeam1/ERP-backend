@@ -232,6 +232,10 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
                 $this->getRootRole(),
             ]],
+            ['name' => 'dashboard_report_access', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dashboard_access', 'group' => 'dashboard', 'used' => [
                 $this->getProjectManagerEntertainmentRole(),
                 $this->getProjectManagerRole(),
