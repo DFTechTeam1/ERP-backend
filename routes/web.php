@@ -40,6 +40,7 @@ use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectQuotation;
 use Modules\Production\Models\ProjectTask;
 
@@ -157,13 +158,23 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    $projectDealChange = \Modules\Production\Models\ProjectDealChange::latest()->first();
-    // return $projectDealChange;
-    $employee = \Modules\Hrd\Models\Employee::whereRaw("email LIKE '%gumilang%'")->first();
+    $picEmployeeIds = ProjectPersonInCharge::select('pic_id')
+        ->distinct()
+        ->pluck('pic_id')
+        ->toArray();
 
-    $employee->notify(new \Modules\Production\Notifications\NotifyProjectDealChangesNotification(changes: $projectDealChange, employee: $employee));
+    if (empty($picEmployeeIds)) {
+        return null;
+    }
 
-    return response()->json('success');
+    // Get random active employee from PICs
+    $randomEmployee = Employee::whereIn('id', $picEmployeeIds)
+        ->whereNotIn('status', [0, 5, 6, 7, 8])
+        ->inRandomOrder()
+        ->first(['uid', 'name']); // Get both uid and name if needed
+
+    return $randomEmployee ? $randomEmployee->uid : null;
+
 });
 
 Route::get('pusher-check', function() {

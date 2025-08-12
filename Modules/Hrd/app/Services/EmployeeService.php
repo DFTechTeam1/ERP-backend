@@ -35,6 +35,7 @@ use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeResignRepository;
 use Modules\Hrd\Repository\EmployeeTimeoffRepository;
 use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
@@ -2245,8 +2246,18 @@ class EmployeeService
                 $output = $results[0]->pic_id;
             } else {
                 // get random pic
-                $data = DB::select('SELECT get_random_project_pic() as random_pic');
-                $output = $data[0]->random_pic;
+                $picEmployeeIds = ProjectPersonInCharge::select('pic_id')
+                    ->distinct()
+                    ->pluck('pic_id')
+                    ->toArray();
+
+                // Get random active employee from PICs
+                $randomEmployee = Employee::whereIn('id', $picEmployeeIds)
+                    ->whereNotIn('status', [0, 5, 6, 7, 8])
+                    ->inRandomOrder()
+                    ->first(['uid', 'name']); // Get both uid and name if needed
+
+                $output = $randomEmployee ? $randomEmployee->uid : null;
             }
 
             return generalResponse(
