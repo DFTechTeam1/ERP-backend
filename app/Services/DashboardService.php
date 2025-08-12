@@ -1084,7 +1084,10 @@ class DashboardService
             message: "Success",
             data: [
                 'percentage' => $result[0]->percentage_difference,
-                'number_difference' => $result[0]->number_difference
+                'number_difference' => $result[0]->number_difference,
+                'total_last_year' => $result[0]->total_event_last_year,
+                'total_current_year' => $result[0]->total_event_current_year,
+                'color_chart' => $result[0]->total_event_last_year < $result[0]->total_event_current_year ? '#2eb331' : '#f5226c'
             ]
         );
     }
