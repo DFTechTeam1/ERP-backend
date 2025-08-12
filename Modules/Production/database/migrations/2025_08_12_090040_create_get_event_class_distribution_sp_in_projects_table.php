@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         DB::unprepared("
-        CREATE PROCEDURE erp_live_latest.get_event_class_distribution()
+        CREATE PROCEDURE get_event_class_distribution()
         BEGIN
             SELECT 
                 pc.name AS class_name,
