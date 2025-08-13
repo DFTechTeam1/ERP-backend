@@ -1849,6 +1849,170 @@ Table "client_portals" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "development_programs" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "description" text
+  "project_date" date [not null]
+  "created_by" int [default: NULL, note: "This will define who created this event which is project manager"]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_program_boards" {
+  "id" bigint [pk, not null, increment]
+  "development_program_id" bigint [not null]
+  "name" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    development_program_id [name: "development_program_boards_development_program_id_foreign"]
+  }
+}
+
+Enum development_program_references_type_enum {
+  "image" = 'image'
+  "link" = 'link'
+}
+
+Table "development_program_references" {
+  "id" bigint [pk, not null, increment]
+  "development_program_id" bigint [not null]
+  "name" varchar(255) [not null]
+  "type" development_program_references_type_enum [not null, note: 'image or link']
+  "link" varchar(255) [default: NULL, note: 'This will be used if type is link']
+  "image" varchar(255) [default: NULL, note: 'This will be used if type is image']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+// define development program task. Each task will have multiple assignee, and assignee will store to different table. Each task can have deadline. Each deadline changes should be write on history
+// will have status in tinyint waiting approval assingee, on going, check by PM, revise and completed
+Table "development_program_tasks" {
+  "id" bigint [pk, not null, increment]
+  "development_program_board_id" bigint [not null, ref: > development_program_boards.id]
+  "development_program_id" bigint [not null, ref: > development_programs.id]
+  "name" varchar(255) [not null]
+  "description" text
+  "status" tinyint [not null, default: '1', note: '1 for waiting approval assignee, 2 for on going, 3 for check by PM, 4 for revise, 5 for completed']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    development_program_board_id [name: "development_program_tasks_development_program_board_id_foreign"]
+    development_program_id [name: "development_program_tasks_development_program_id_foreign"]
+  }
+}
+
+// we will write the real work time of assignee, start time will be the time when the task is approve by assigne, and ending after upload proofof work
+Table "development_program_task_work_times" {
+  "id" bigint [pk, not null, increment]
+  "development_program_task_id" bigint [not null, ref: > development_program_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "start_time" timestamp [not null, note: 'Time when assignee approves the task and starts working']
+  "end_time" timestamp [default: NULL, note: 'Time when assignee uploads proof of work']
+  "work_duration_minutes" int [default: NULL, note: 'Calculated work duration in minutes (end_time - start_time)']
+  "task_status_when_started" tinyint [not null, note: 'Task status when work started (2=ongoing, 4=revise)']
+  "task_status_when_ended" tinyint [default: NULL, note: 'Task status when work ended (3=check by PM)']
+  "is_revision_work" tinyint(1) [not null, default: '0', note: 'Whether this work session is for revision (1) or initial work (0)']
+  "revision_round" tinyint [default: 1, note: 'Which revision round this work session belongs to']
+  "approved_at" timestamp [not null, note: 'When the assignee approved the task assignment']
+  "proof_uploaded_at" timestamp [default: NULL, note: 'When the proof of work was uploaded']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    (development_program_task_id, employee_id) [name: "work_times_task_employee_idx"]
+    start_time [name: "work_times_start_time_idx"]
+    end_time [name: "work_times_end_time_idx"]
+  }
+
+  note: 'This table records the actual work time of each assignee for a development program task. It tracks the start and end times, duration, and status changes during the work session.'
+}
+
+// define table to record proof of work for development program task
+Table "development_program_task_proofs" {
+  "id" bigint [pk, not null, increment]
+  "development_program_task_id" bigint [not null, ref: > development_program_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "work_time_id" bigint [default: NULL, ref: > development_program_task_work_times.id, note: 'Links to the work session this proof belongs to']
+  "file_name" varchar(255) [not null]
+  "file_path" varchar(255) [not null]
+  "file_type" varchar(50) [default: NULL, note: 'Type of file uploaded (image, video, document, etc.)']
+  "file_size" bigint [default: NULL, note: 'File size in bytes']
+  "revision_round" tinyint [default: 1, note: 'Which revision round this proof belongs to']
+  "uploaded_at" timestamp [not null, note: 'When the proof was uploaded']
+  "status" tinyint [not null, default: '1', note: '1=pending review, 2=approved, 3=needs revision']
+  "description" text [default: NULL, note: 'Employee description of the work done']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    (development_program_task_id, employee_id) [name: "proofs_task_employee_idx"]
+    work_time_id [name: "proofs_work_time_idx"]
+    uploaded_at [name: "proofs_uploaded_at_idx"]
+    revision_round [name: "proofs_revision_round_idx"]
+    status [name: "proofs_status_idx"]
+  }
+}
+
+// here define table to record development program task assignee
+Table "development_program_task_assignees" {
+  "id" bigint [pk, not null, increment]
+  "development_program_task_id" bigint [not null, ref: > development_program_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "assigned_at" timestamp [not null, note: 'When the task was assigned to this employee']
+  "approved_at" timestamp [default: NULL, note: 'When the assignee approved/accepted the task']
+  "status" tinyint [not null, default: '1', note: '1=pending approval, 2=approved/accepted, 3=rejected']
+  "rejection_reason" text [default: NULL, note: 'Reason if assignee rejects the task']
+  "assigned_by" bigint [not null, ref: > users.id, note: 'Who assigned this task to the employee']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    (development_program_task_id, employee_id) [name: "assignees_task_employee_unique", unique]
+    employee_id [name: "assignees_employee_idx"]
+    status [name: "assignees_status_idx"]
+  }
+}
+
+// here define dedicated table to record development program task deadline
+Table "development_program_task_deadlines" {
+  "id" bigint [pk, not null, increment]
+  "development_program_task_id" bigint [not null, ref: > development_program_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "deadline" timestamp [not null]
+  "actual_finish_time" timestamp
+  "is_first_deadline" bool [not null, default: false]
+  "due_reason" bigint [ref: > deadline_change_reasons, note: "nullable"]
+  "custom_reason" varchar
+  "updated_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+// here define table attachments
+Table "development_program_task_attachments" {
+  "id" bigint [pk, not null, increment]
+  "development_program_task_id" bigint [not null, ref: > development_program_tasks.id]
+  "file_name" varchar(255) [not null]
+  "file_path" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+// here define logs table to record all activity in the development program task
+Table "development_program_task_logs" {
+  "id" bigint [pk, not null, increment]
+  "development_program_task_id" bigint [not null, ref: > development_program_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "action" varchar(255) [not null, note: 'This will define what action is performed']
+  "description" text [default: NULL, note: 'This will define the description of the action performed']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
 
 Ref "employee_custom_inventories_custom_inventory_id_foreign":"custom_inventories"."id" < "employee_custom_inventories"."custom_inventory_id" [delete: cascade]
