@@ -7,9 +7,15 @@ Enum "employee_families_relationship_enum" {
   "other"
 }
 
+Enum "project_deal_price_changes_status" {
+  "1" // pending
+  "2" // approved
+  "3" // rejected
+}
+
 Enum "project_deal_changes_status" {
-  "1", // for pending
-  "2", // for approved
+  "1" // for pending
+  "2" // for approved
   "3" // for rejected
 }
 
@@ -21,13 +27,13 @@ Enum "project_task_duration_history_enums" {
 }
 
 Enum "invoice_statuses" {
-  "1", // unpaid
-  "2", // paid
+  "1" // unpaid
+  "2" // paid
 }
 
 Enum "transaction_enum" {
-  "down_payment",
-  "credit",
+  "down_payment"
+  "credit"
   "repayment"
 }
 
@@ -1444,6 +1450,24 @@ Table "project_deals" {
   Indexes {
     identifier_number [unique, name: "project_deals_identifier_number_unique"]
   }
+}
+
+Table "project_deal_price_changes" {
+  "id" bigint [pk, increment, not null]
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "old_price" decimal(24,2) [not null, default: '0.00']
+  "new_price" decimal(24,2) [not null, default: '0.00']
+  "reason" varchar(255) [not null]
+  "requested_by" bigint [ref: > users.id]
+  "requested_at" timestamp
+  "approved_by" bigint [ref: > users.id]
+  "approved_at" timestamp
+  "rejected_at" timestamp
+  "rejected_by" bigint [ref: > users.id]
+  "rejected_reason" varchar(255) [default: NULL]
+  "status" project_deal_price_changes_status
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "project_deal_changes" {

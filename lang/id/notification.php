@@ -100,5 +100,6 @@ return [
     'successRejectInvoiceChanges' => 'Berhasil menolak perubahan faktur',
     'projectDealHasBeenCanceled' => 'Event telah berhasil di batalkan',
     'eventCannotBeCancel' => 'Event tidak bisa di batalkan',
-    'eventHasBeenCancelBecause' => "Event telah di batalkan karena :reason"
+    'eventHasBeenCancelBecause' => "Event telah di batalkan karena :reason",
+    'projectDealHasChildInvoicesOrTransactions' => 'Project deal sudah memiliki invoice atau transaksi yang terkait',
 ];

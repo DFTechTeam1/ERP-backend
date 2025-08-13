@@ -5,6 +5,7 @@ namespace Modules\Production\Services;
 use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
 use App\Actions\Project\DetailCache;
+use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectStatus;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
@@ -44,6 +46,8 @@ class ProjectDealService
 
     private $projectDealChangeRepo;
 
+    private $projectDealPriceChangeRepo;
+
     /**
      * Construction Data
      */
@@ -54,9 +58,12 @@ class ProjectDealService
         ProjectQuotationRepository $projectQuotationRepo,
         ProjectRepository $projectRepo,
         Geocoding $geocoding,
-        ProjectDealChangeRepository $projectDealChangeRepo
+        ProjectDealChangeRepository $projectDealChangeRepo,
+        ProjectDealPriceChangeRepository $projectDealPriceChangeRepo
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
+        
+        $this->projectDealPriceChangeRepo = $projectDealPriceChangeRepo;
 
         $this->repo = $repo;
 
@@ -1139,4 +1146,54 @@ class ProjectDealService
             return errorResponse($th);
         }
     }
+
+    /**
+     * Here we will define function to request changes in project deal fix price.
+     * This changes requires approval from the management.
+     * 
+     * @param array $payload                With these following structure
+     * - string $price
+     * - string $reason
+     * @param string $projectDealUid
+     * 
+     * @return array
+     */
+    public function requestChangesFixPrice(array $payload, string $projectDealUid): array
+    {
+        try {
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            // validation
+            // return error if current project deal already have child invoice and transactions
+            $projectDeal = $this->repo->show(
+                uid: $projectDealId,
+                select: 'id,is_fully_paid',
+                relation: [
+                    'finalQuotation',
+                    'invoices',
+                    'transactions'
+                ]
+            );
+
+            if ($projectDeal->invoices->count() > 1 || $projectDeal->transactions->isNotEmpty()) {
+                return errorResponse(message: __('notification.projectDealHasChildInvoicesOrTransactions'));
+            }
+
+            // record price changes. old price came from finalQuotation->fix_price
+            $this->projectDealPriceChangeRepo->store(data: [
+                'project_deal_id' => $projectDealId,
+                'requested_by' => Auth::id(),
+                'requested_at' => Carbon::now(),
+                'old_price' => $projectDeal->finalQuotation->fix_price,
+                'new_price' => $payload['price'],
+                'requested_reason' => $payload['reason'],
+                'status' => ProjectDealChangePriceStatus::Pending
+            ]);
+
+            return generalResponse(message: 'Success');
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
 }
