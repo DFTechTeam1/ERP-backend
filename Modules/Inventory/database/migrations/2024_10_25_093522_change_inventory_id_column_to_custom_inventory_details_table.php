@@ -24,10 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('custom_inventory_details', function (Blueprint $table) {
-            $table->foreign('inventory_id')
-                ->references('id')
-                ->on('inventories')
-                ->cascadeOnDelete();
+            if (checkForeignKey('custom_inventory_details', 'inventory_id')) {
+                $table->dropForeign(['inventory_id']);
+            }
         });
 
     }

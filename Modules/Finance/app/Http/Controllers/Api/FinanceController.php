@@ -8,9 +8,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Modules\Finance\Http\Requests\ExportProjectDealSummary;
 use Modules\Finance\Http\Requests\ExportRequest;
+use Modules\Finance\Http\Requests\PriceChanges;
 use Modules\Finance\Http\Requests\Transaction\Create;
 use Modules\Finance\Services\InvoiceService;
 use Modules\Finance\Services\TransactionService;
+use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Services\ProjectDealService;
 
 class FinanceController extends Controller
 {
@@ -18,13 +21,17 @@ class FinanceController extends Controller
 
     private $invoiceService;
 
+    private ProjectDealService $projectDealService;
+
     public function __construct(
         TransactionService $service,
-        InvoiceService $invoiceService
+        InvoiceService $invoiceService,
+        ProjectDealService $projectDealService
     )
     {
         $this->service = $service;
         $this->invoiceService = $invoiceService;
+        $this->projectDealService = $projectDealService;
     }
 
     /**
@@ -130,5 +137,13 @@ class FinanceController extends Controller
     public function exportFinanceData(ExportProjectDealSummary $request): JsonResponse
     {
         return apiResponse($this->invoiceService->exportFinanceData(payload: $request->validated()));
+    }
+
+    public function requestPriceChanges(PriceChanges $request, string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->requestPriceChanges(
+            payload: $request->validated(),
+            projectDealUid: $projectDealUid
+        ));
     }
 }

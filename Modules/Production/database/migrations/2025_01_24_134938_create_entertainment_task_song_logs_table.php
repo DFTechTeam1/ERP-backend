@@ -36,9 +36,15 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('entertainment_task_song_logs', function (Blueprint $table) {
-            $table->dropForeign(['project_song_list_id']);
-            $table->dropForeign(['entertainment_task_song_id']);
-            $table->dropForeign(['employee_id']);
+            if (checkForeignKey(tableName: 'entertainment_task_song_logs', columnName: 'project_song_list_id')) {
+                $table->dropForeign(['project_song_list_id']);
+            }
+            if (checkForeignKey(tableName: 'entertainment_task_song_logs', columnName: 'entertainment_task_song_id')) {
+                $table->dropForeign(['entertainment_task_song_id']);
+            }
+            if (checkForeignKey(tableName: 'entertainment_task_song_logs', columnName: 'employee_id')) {
+                $table->dropForeign(['employee_id']);
+            }
         });
 
         Schema::dropIfExists('entertainment_task_song_logs');

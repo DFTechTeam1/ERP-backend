@@ -62,15 +62,21 @@ class CreateIndonesiaTable extends Migration
     public function down(): void
     {
         Schema::table(config('indonesia.table_prefix').'cities', function (Blueprint $table) {
-            $table->dropForeign(['province_code']);
+            if (checkForeignKey(tableName: config('indonesia.table_prefix').'cities', columnName: 'province_code')) {
+                $table->dropForeign(['province_code']);
+            }
         });
 
         Schema::table(config('indonesia.table_prefix').'districts', function (Blueprint $table) {
-            $table->dropForeign(['city_code']);
+            if (checkForeignKey(tableName: config('indonesia.table_prefix').'districts', columnName: 'city_code')) {
+                $table->dropForeign(['city_code']);
+            }
         });
 
         Schema::table(config('indonesia.table_prefix').'villages', function (Blueprint $table) {
-            $table->dropForeign(['district_code']);
+            if (checkForeignKey(tableName: config('indonesia.table_prefix').'villages', columnName: 'district_code')) {
+                $table->dropForeign(['district_code']);
+            }
         });
 
         Schema::drop(config('indonesia.table_prefix').'provinces');

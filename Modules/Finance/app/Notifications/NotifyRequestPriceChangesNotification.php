@@ -42,19 +42,18 @@ class NotifyRequestPriceChangesNotification extends Notification
      */
     public function toMail($notifiable): MailMessage
     {
+        setEmailConfiguration();
         // make standard email content to notify the director if this project price changes needs approval
         // do not render language, 
         // just natural language text
         return (new MailMessage)
             ->subject('Project Price Change Request')
-            ->greeting('Hello ' . $this->director->name)
-            ->line('A request to change the price for the project "' . $this->project->name . '" has been submitted.')
-            ->line('Please review the request and take the necessary actions.')
-            ->action('Reject', $this->rejectionUrl)
-            ->action('Approve', $this->approvalUrl)
-            ->line('Thank you for your attention to this matter.')
-            ->salutation('Best regards,')
-            ->line('The Finance Team');
+            ->markdown('mail.deals.requestPriceChange', [
+                'director' => $this->director,
+                'project' => $this->project,
+                'approvalUrl' => $this->approvalUrl,
+                'rejectionUrl' => $this->rejectionUrl,
+            ]);
     }
 
     /**
