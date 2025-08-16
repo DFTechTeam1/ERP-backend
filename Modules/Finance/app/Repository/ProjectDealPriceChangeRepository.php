@@ -86,7 +86,7 @@ class ProjectDealPriceChangeRepository extends ProjectDealPriceChangeInterface {
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
+        $query->where("id", $uid);
         
         if ($relation) {
             $query->with($relation);
@@ -122,7 +122,7 @@ class ProjectDealPriceChangeRepository extends ProjectDealPriceChangeInterface {
         if (!empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('uid', $id);
+            $query->where('id', $id);
         }
 
         $query->update($data);

@@ -17,16 +17,30 @@ class NotifyRequestPriceChangesNotification extends Notification
     protected ProjectDeal $project;
     protected string $approvalUrl;
     protected string $rejectionUrl;
+    protected string $reason;
+    protected string $oldPrice;
+    protected string $newPrice;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(Employee $director, ProjectDeal $project, string $approvalUrl, string $rejectionUrl)
+    public function __construct(
+        Employee $director,
+        ProjectDeal $project,
+        string $approvalUrl,
+        string $rejectionUrl,
+        string $reason,
+        string $oldPrice,
+        string $newPrice
+    )
     {
         $this->director = $director;
         $this->project = $project;
         $this->approvalUrl = $approvalUrl;
         $this->rejectionUrl = $rejectionUrl;
+        $this->reason = $reason;
+        $this->oldPrice = $oldPrice;
+        $this->newPrice = $newPrice;
     }
 
     /**
@@ -53,6 +67,9 @@ class NotifyRequestPriceChangesNotification extends Notification
                 'project' => $this->project,
                 'approvalUrl' => $this->approvalUrl,
                 'rejectionUrl' => $this->rejectionUrl,
+                'reason' => $this->reason,
+                'oldPrice' => $this->oldPrice,
+                'newPrice' => $this->newPrice,
             ]);
     }
 

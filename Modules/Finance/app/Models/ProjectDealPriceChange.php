@@ -5,6 +5,10 @@ namespace Modules\Finance\Models;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Finance\Database\Factories\ProjectDealPriceChangeFactory;
+use Modules\Hrd\Models\Employee;
+use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectDealChange;
 
 // use Modules\Finance\Database\Factories\ProjectDealPriceChangeFactory;
@@ -31,10 +35,10 @@ class ProjectDealPriceChange extends Model
         'status',
     ];
 
-    // protected static function newFactory(): ProjectDealPriceChangeFactory
-    // {
-    //     // return ProjectDealPriceChangeFactory::new();
-    // }
+    protected static function newFactory(): ProjectDealPriceChangeFactory
+    {
+        return ProjectDealPriceChangeFactory::new();
+    }
 
     /**
      * The attributes that should be cast to native types.
@@ -44,5 +48,15 @@ class ProjectDealPriceChange extends Model
         return [
             'status' => ProjectDealChangePriceStatus::class,
         ];
+    }
+
+    public function projectDeal(): BelongsTo
+    {
+        return $this->belongsTo(ProjectDeal::class);
+    }
+
+    public function requesterBy(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'requested_by');
     }
 }

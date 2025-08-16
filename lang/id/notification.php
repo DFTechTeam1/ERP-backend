@@ -123,4 +123,6 @@ return [
     'resignHasBeenOnScheduled' => 'Tanggal pengunduran diri telah terdaftar, dan status akan otomatis berubah pada tanggal yang ditentukan.',
     'employeeHasOngoingTasks' => 'Karyawan memiliki tugas yang sedang berlangsung dan perlu diselesaikan sebelum pengunduran diri dapat diproses.',
     'projectDealHasChildInvoicesOrTransactions' => 'Project deal sudah memiliki invoice atau transaksi yang terkait',
+    'successApprovePriceChanges' => 'Perubahan harga berhasil disetujui',
+    'successRejectPriceChanges' => 'Perubahan harga berhasil ditolak',
 ];

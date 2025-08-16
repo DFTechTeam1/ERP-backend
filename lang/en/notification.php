@@ -124,4 +124,6 @@ return [
     'employeeHasOngoingTasks' => 'Employee has ongoing tasks that need to be completed before resignation can be processed.',
     'projectDealHasChildInvoicesOrTransactions' => 'Project deal already has child invoices or transactions',
     'requestPriceChangesSuccess' => 'Request for price changes has been sent successfully. You will receive a notification once it is updated.',
+    'successApprovePriceChanges' => 'Price changes approved successfully.',
+    'successRejectPriceChanges' => 'Price changes rejected successfully.',
 ];
