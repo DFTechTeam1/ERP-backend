@@ -29,6 +29,8 @@ Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
         Route::resource('invoices', InvoiceController::class);
         Route::get('invoices/{invoiceUid}/approve/{pendingUpdateId}', [InvoiceController::class, 'approveChanges']);
         Route::get('invoices/{invoiceUid}/reject/{pendingUpdateId}', [InvoiceController::class, 'rejectChanges']);
+        Route::post('price', [ApiFinanceController::class, 'requestPriceChanges'])
+            ->name('finance.requestPriceChanges');
 
         // transaction
         Route::post('transaction', [InvoiceController::class, 'createTransaction']);

@@ -32,6 +32,7 @@ use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\InvoiceRequestUpdate;
 use Modules\Finance\Notifications\ApproveInvoiceChangesNotification;
 use Modules\Finance\Notifications\InvoiceDueCheckNotification;
+use Modules\Finance\Notifications\NotifyRequestPriceChangesNotification;
 use Modules\Finance\Notifications\ProjectHasBeenFinal;
 use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
 use Modules\Finance\Repository\InvoiceRepository;
@@ -205,3 +206,19 @@ Route::get('i/r', function (Request $request) {
 
     return view('invoices.rejected', compact('title', 'message'));
 })->name('invoices.rejected');
+
+Route::get('trying', function () {
+    $director = Employee::latest()->first();
+    $projectDeal = ProjectDeal::latest()->first();
+    $approvalUrl = 'https://google.com';
+    $rejectionUrl = 'https://google.com';
+
+    $director->notify(new NotifyRequestPriceChangesNotification(
+        $director,
+        $projectDeal,
+        $approvalUrl,
+        $rejectionUrl
+    ));
+
+    return $director;
+});

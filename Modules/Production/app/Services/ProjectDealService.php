@@ -1158,7 +1158,7 @@ class ProjectDealService
      * 
      * @return array
      */
-    public function requestChangesFixPrice(array $payload, string $projectDealUid): array
+    public function requestPriceChanges(array $payload, string $projectDealUid): array
     {
         try {
             $projectDealId = Crypt::decryptString($projectDealUid);
@@ -1186,11 +1186,11 @@ class ProjectDealService
                 'requested_at' => Carbon::now(),
                 'old_price' => $projectDeal->finalQuotation->fix_price,
                 'new_price' => $payload['price'],
-                'requested_reason' => $payload['reason'],
+                'reason' => $payload['reason'],
                 'status' => ProjectDealChangePriceStatus::Pending
             ]);
 
-            return generalResponse(message: 'Success');
+            return generalResponse(message: __('notification.requestPriceChangesSuccess'));
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
