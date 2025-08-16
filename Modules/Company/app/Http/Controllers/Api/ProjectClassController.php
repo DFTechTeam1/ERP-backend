@@ -73,7 +73,7 @@ class ProjectClassController extends Controller
     {
         return apiResponse($this->service->bulkDelete(
             collect($request->ids)->map(function ($item) {
-                return $item['uid'];
+                return gettype($item['uid']) == 'array' ? $item['uid']['uid'] : $item['uid'];
             })->toArray()
         ));
     }
