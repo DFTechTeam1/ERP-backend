@@ -102,4 +102,6 @@ return [
     'eventCannotBeCancel' => 'Event tidak bisa di batalkan',
     'eventHasBeenCancelBecause' => "Event telah di batalkan karena :reason",
     'projectDealHasChildInvoicesOrTransactions' => 'Project deal sudah memiliki invoice atau transaksi yang terkait',
+    'successApprovePriceChanges' => 'Perubahan harga berhasil disetujui',
+    'successRejectPriceChanges' => 'Perubahan harga berhasil ditolak',
 ];

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Finance\Models\Invoice;
+use Modules\Finance\Models\ProjectDealPriceChange;
 use Modules\Finance\Models\Transaction;
 use Modules\Production\Database\Factories\ProjectDealFactory;
 

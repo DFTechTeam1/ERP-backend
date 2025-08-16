@@ -3,6 +3,10 @@
 # Hello {{ $director->name }}
 
 A request to change the price for the project "{{ $project->name }}" has been submitted.
+The reason for the change is: "{{ $reason }}".
+
+The old price was: {{ $oldPrice }}<br>
+The new price is: {{ $newPrice }}<br>
 
 Please review the request and take the necessary actions.
 
@@ -14,7 +18,7 @@ Please review the request and take the necessary actions.
             </x-mail::button>
         </td>
         <td>
-            <x-mail::button :url="$approvalUrl">
+            <x-mail::button :url="$approvalUrl" color="#7367f0">
             Approve
             </x-mail::button>
         </td>

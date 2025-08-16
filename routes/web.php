@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
+use Modules\Finance\Http\Controllers\FinanceController;
 use Modules\Finance\Jobs\InvoiceDue;
 use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
@@ -207,18 +208,14 @@ Route::get('i/r', function (Request $request) {
     return view('invoices.rejected', compact('title', 'message'));
 })->name('invoices.rejected');
 
+// define route to approve or reject project deal price changes
+Route::get('project/deal/change/price/approve', [FinanceController::class, 'approvePriceChanges'])
+    ->name('project.deal.change.price.approve')
+    ->middleware('signed');
+Route::get('project/deal/change/price/reject', [FinanceController::class, 'rejectPriceChanges'])
+    ->name('project.deal.change.price.reject')
+    ->middleware('signed');
+
 Route::get('trying', function () {
-    $director = Employee::latest()->first();
-    $projectDeal = ProjectDeal::latest()->first();
-    $approvalUrl = 'https://google.com';
-    $rejectionUrl = 'https://google.com';
-
-    $director->notify(new NotifyRequestPriceChangesNotification(
-        $director,
-        $projectDeal,
-        $approvalUrl,
-        $rejectionUrl
-    ));
-
-    return $director;
+    abort(400);
 });

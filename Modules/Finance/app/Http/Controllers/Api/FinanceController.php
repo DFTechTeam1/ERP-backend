@@ -139,11 +139,44 @@ class FinanceController extends Controller
         return apiResponse($this->invoiceService->exportFinanceData(payload: $request->validated()));
     }
 
+    /**
+     * Request price changes for project deal
+     * 
+     * @param PriceChanges $request       With this following structure:
+     * - int $price
+     * - string $reason
+     */
     public function requestPriceChanges(PriceChanges $request, string $projectDealUid): JsonResponse
     {
         return apiResponse($this->projectDealService->requestPriceChanges(
             payload: $request->validated(),
             projectDealUid: $projectDealUid
+        ));
+    }
+
+    /**
+     * Approve price changes for project deal
+     * 
+     * @param string $projectDealUid
+     * @param string $changeId
+     */
+    public function approvePriceChanges(string $projectDealUid, string $changeId): JsonResponse
+    {
+        return apiResponse($this->projectDealService->approvePriceChanges(priceChangeId: $changeId));
+    }
+
+    /**
+     * Reject price changes for project deal
+     * 
+     * @param Request $request
+     * @param string $projectDealUid
+     * @param string $changeId
+     */
+    public function rejectPriceChanges(Request $request, string $projectDealUid, string $changeId): JsonResponse
+    {
+        return apiResponse($this->projectDealService->rejectPriceChanges(
+            priceChangeId: $changeId,
+            reason: $request->input('reason', '')
         ));
     }
 }

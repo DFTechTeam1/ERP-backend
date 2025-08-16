@@ -3,6 +3,7 @@
 use App\Enums\Production\ProjectDealStatus;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
+use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 
 beforeEach(function () {
@@ -12,6 +13,7 @@ beforeEach(function () {
 });
 
 it('can request price changes', function () {
+    Bus::fake();
     $projectDeal = \Modules\Production\Models\ProjectDeal::factory()
         ->withQuotation()
         ->withInvoice()
@@ -30,6 +32,8 @@ it('can request price changes', function () {
     $response->assertJson([
         'message' => __('notification.requestPriceChangesSuccess'),
     ]);
+
+    Bus::assertDispatched(NotifyRequestPriceChangesJob::class);
 });
 
 it ('cannot request price changes if project deal has child invoices or transactions', function () {

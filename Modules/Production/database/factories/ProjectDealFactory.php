@@ -59,33 +59,46 @@ class ProjectDealFactory extends Factory
         ];
     }
 
-    public function withQuotation()
+    public function withQuotation(int $price = 0)
     {
-        return $this->afterCreating(function (ProjectDeal $projectDeal) {
-            \Modules\Production\Models\ProjectQuotation::factory()->withItems(0, $projectDeal->name)->create([
+        return $this->afterCreating(function (ProjectDeal $projectDeal) use ($price) {
+            $state = [
                 'project_deal_id' => $projectDeal->id,
                 'is_final' => 1,
-            ]);
+            ];
+
+            if ($price > 0) {
+                $state['fix_price'] = $price;
+            }
+
+            \Modules\Production\Models\ProjectQuotation::factory()->withItems(0, $projectDeal->name)->create($state);
         });
     }
 
-    public function withInvoice(int $numberOfInvoice = 1)
+    public function withInvoice(int $numberOfInvoice = 1, array $rawData = [])
     {
-        return $this->afterCreating(function (ProjectDeal $projectDeal) use ($numberOfInvoice) {
+        return $this->afterCreating(function (ProjectDeal $projectDeal) use ($numberOfInvoice, $rawData) {
             $invoice = \Modules\Finance\Models\Invoice::factory()->create([
                 'project_deal_id' => $projectDeal->id,
                 'status' => InvoiceStatus::Unpaid->value,
-                'amount' => 100000000
+                'amount' => 100000000,
+                'raw_data' => $rawData ?? null,
             ]);
 
             if ($numberOfInvoice > 1) {
-                \Modules\Finance\Models\Invoice::factory()->create([
+                $state = [
                     'project_deal_id' => $projectDeal->id,  
                     'status' => InvoiceStatus::Unpaid->value,
                     'parent_number' => $invoice->number,
                     'number' => $invoice->number . "A",
                     'amount' => 100000000
-                ]);
+                ];
+
+                if (!empty($rawData)) {
+                    $state['raw_data'] = $rawData;
+                }
+
+                \Modules\Finance\Models\Invoice::factory()->create($state);
             }
         });
     }

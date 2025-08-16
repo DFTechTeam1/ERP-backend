@@ -32,6 +32,14 @@ Route::middleware(['auth:sanctum'])->prefix('finance')->group(function () {
         Route::post('price', [ApiFinanceController::class, 'requestPriceChanges'])
             ->name('finance.requestPriceChanges');
 
+        // url for apprrove price changes
+        Route::get('price/approve/{changeId}', [ApiFinanceController::class, 'approvePriceChanges'])
+            ->name('finance.approvePriceChanges');
+
+        // url for reject price changes
+        Route::post('price/reject/{changeId}', [ApiFinanceController::class, 'rejectPriceChanges'])
+            ->name('finance.rejectPriceChanges');
+
         // transaction
         Route::post('transaction', [InvoiceController::class, 'createTransaction']);
 

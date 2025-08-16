@@ -19,7 +19,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Jobs\NotifyRequestPriceChangesHasBeenApproved;
+use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
@@ -47,6 +50,8 @@ class ProjectDealService
     private $projectDealChangeRepo;
 
     private $projectDealPriceChangeRepo;
+    
+    private InvoiceRepository $invoiceRepo;
 
     /**
      * Construction Data
@@ -59,7 +64,8 @@ class ProjectDealService
         ProjectRepository $projectRepo,
         Geocoding $geocoding,
         ProjectDealChangeRepository $projectDealChangeRepo,
-        ProjectDealPriceChangeRepository $projectDealPriceChangeRepo
+        ProjectDealPriceChangeRepository $projectDealPriceChangeRepo,
+        InvoiceRepository $invoiceRepo
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
         
@@ -76,6 +82,8 @@ class ProjectDealService
         $this->projectRepo = $projectRepo;
 
         $this->geocoding = $geocoding;
+
+        $this->invoiceRepo = $invoiceRepo;
     }
 
     /**
@@ -1160,6 +1168,7 @@ class ProjectDealService
      */
     public function requestPriceChanges(array $payload, string $projectDealUid): array
     {
+        DB::beginTransaction();
         try {
             $projectDealId = Crypt::decryptString($projectDealUid);
 
@@ -1180,7 +1189,7 @@ class ProjectDealService
             }
 
             // record price changes. old price came from finalQuotation->fix_price
-            $this->projectDealPriceChangeRepo->store(data: [
+            $changes = $this->projectDealPriceChangeRepo->store(data: [
                 'project_deal_id' => $projectDealId,
                 'requested_by' => Auth::id(),
                 'requested_at' => Carbon::now(),
@@ -1190,10 +1199,134 @@ class ProjectDealService
                 'status' => ProjectDealChangePriceStatus::Pending
             ]);
 
+            // notify the director to approve this changes. Send job
+            NotifyRequestPriceChangesJob::dispatch(
+                projectDealChangeId: $changes->id,
+                newPrice: $payload['price'],
+                reason: $payload['reason']
+            )->afterCommit();
+
+            DB::commit();
+
             return generalResponse(message: __('notification.requestPriceChangesSuccess'));
         } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }
 
+    /**
+     * Approve price changes
+     * Change price on quotation and raw data on invoice
+     *
+     * @param string $priceChangeId
+     * @return array
+     */
+    public function approvePriceChanges(string $priceChangeId): array
+    {
+        DB::beginTransaction();
+        try {
+            $priceChangeId = Crypt::decryptString($priceChangeId);
+            $changes = $this->projectDealPriceChangeRepo->show(uid: $priceChangeId);
+            
+            // here we will change quotation fix price and raw_data on parent invoice
+            $this->projectQuotationRepo->update(
+                data: [
+                    'fix_price' => $changes->new_price,
+                ],
+                where: 'project_deal_id = ' . $changes->project_deal_id,
+            );
+
+            // change raw data on invoices
+            $currentInvoice = $this->invoiceRepo->show(
+                uid: 'id',
+                select: 'id,raw_data,uid',
+                where: "project_deal_id = {$changes->project_deal_id} and is_main = 1"
+            );
+            $raw = $currentInvoice->raw_data;
+            $raw['fixPrice'] = "Rp". number_format($changes->new_price, 0, ',', '.');
+            $raw['remainingPayment'] = "Rp". number_format($changes->new_price, 0, ',', '.');
+
+            $this->invoiceRepo->update(
+                data: [
+                    'raw_data' => $raw,
+                ],
+                id: $currentInvoice->uid
+            );
+
+            // updatte price changes status
+            // this action can take by user on the erp or from email
+            // if this action came from email, we will use payload to get the user id
+            if (request()->has('approvalId')) {
+                $userId = request('approvalId');
+            } else {
+                $user = Auth::user();
+                $userId = $user->id;
+            }
+
+            $this->projectDealPriceChangeRepo->update(
+                data: [
+                    'status' => ProjectDealChangePriceStatus::Approved,
+                    'approved_at' => Carbon::now(),
+                    'approved_by' => $userId,
+                ],
+                id: $priceChangeId
+            );
+
+            NotifyRequestPriceChangesHasBeenApproved::dispatch(changeId: $priceChangeId)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successApprovePriceChanges'),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Reject price changes
+     * 
+     * @param string $priceChangeId
+     * @param string|null $reason
+     * 
+     * @return array
+     */
+    public function rejectPriceChanges(string $priceChangeId, ?string $reason = null): array
+    {
+        DB::beginTransaction();
+        try {
+            $priceChangeId = Crypt::decryptString($priceChangeId);
+
+            // this action can take by user on the erp or from email
+            // if this action came from email, we will use payload to get the user id
+            if (request()->has('approvalId')) {
+                $userId = request('approvalId');
+            } else {
+                $user = Auth::user();
+                $userId = $user->id;
+            }
+
+            $this->projectDealPriceChangeRepo->update(
+                data: [
+                    'status' => ProjectDealChangePriceStatus::Rejected->value,
+                    'rejected_at' => Carbon::now(),
+                    'rejected_by' => $userId,
+                    'rejected_reason' => $reason ?? 'No reason provided'
+                ],
+                id: $priceChangeId
+            );
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successRejectPriceChanges'),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
 }
