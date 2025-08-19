@@ -104,4 +104,5 @@ return [
     'projectDealHasChildInvoicesOrTransactions' => 'Project deal sudah memiliki invoice atau transaksi yang terkait',
     'successApprovePriceChanges' => 'Perubahan harga berhasil disetujui',
     'successRejectPriceChanges' => 'Perubahan harga berhasil ditolak',
+    'waitingForApproval' => 'Menunggu persetujuan'
 ];

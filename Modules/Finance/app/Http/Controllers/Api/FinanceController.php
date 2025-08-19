@@ -179,4 +179,14 @@ class FinanceController extends Controller
             reason: $request->input('reason', '')
         ));
     }
+    
+    /**
+     * Get price change reasons
+     * 
+     * @return JsonResponse
+     */
+    public function getPriceChangeReasons(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->getPriceChangeReasons());
+    }
 }

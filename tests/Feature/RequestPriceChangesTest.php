@@ -14,6 +14,12 @@ beforeEach(function () {
 
 it('can request price changes', function () {
     Bus::fake();
+
+    // seed reason for price changes
+    $reason = \Modules\Finance\Models\PriceChangeReason::factory()->create([
+        'name' => 'Need to adjust the budget',
+    ]);
+
     $projectDeal = \Modules\Production\Models\ProjectDeal::factory()
         ->withQuotation()
         ->withInvoice()
@@ -22,7 +28,7 @@ it('can request price changes', function () {
         ]);
 
     $payload = [
-        'reason' => 'Need to adjust the budget',
+        'reason_id' => $reason->id,
         'price' => 1000,
     ];
 
@@ -31,6 +37,14 @@ it('can request price changes', function () {
     $response->assertStatus(201);
     $response->assertJson([
         'message' => __('notification.requestPriceChangesSuccess'),
+    ]);
+
+    // custom_reason on project_deal_price_changes should be null
+    $this->assertDatabaseHas('project_deal_price_changes', [
+        'project_deal_id' => $projectDeal->id,
+        'reason_id' => $reason->id,
+        'custom_reason' => null,
+        'new_price' => 1000,
     ]);
 
     Bus::assertDispatched(NotifyRequestPriceChangesJob::class);
@@ -45,7 +59,7 @@ it ('cannot request price changes if project deal has child invoices or transact
         ]);
 
     $payload = [
-        'reason' => 'Need to adjust the budget',
+        'reason_id' => 'Need to adjust the budget',
         'price' => 1000,
     ];
 

@@ -13,7 +13,8 @@ class PriceChanges extends FormRequest
     {
         return [
             'price' => 'required|numeric|min:0',
-            'reason' => 'required|string|max:255',
+            'reason_id' => 'required',
+            'custom_reason' => 'nullable|string|max:255',
         ];
     }
 

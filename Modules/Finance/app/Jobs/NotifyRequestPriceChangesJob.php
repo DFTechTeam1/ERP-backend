@@ -62,7 +62,10 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
                 $rejectionUrl = URL::temporarySignedRoute(
                     'project.deal.change.price.reject',
                     now()->addMinutes(30),
-                    ['priceChangeId' => Crypt::encryptString($this->projectDealChangeId)]
+                    [
+                        'priceChangeId' => Crypt::encryptString($this->projectDealChangeId),
+                        'approvalId' => $director->user_id
+                    ]
                 );
 
                 // send notification
@@ -71,7 +74,7 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
                     project: $projectDeal,
                     approvalUrl: $approvalUrl,
                     rejectionUrl: $rejectionUrl,
-                    reason: $change->reason,
+                    reason: $change->reason ? $change->reason->name : $change->custom_reason,
                     oldPrice: "Rp. " . number_format($change->old_price, 2),
                     newPrice: "Rp. " . number_format($change->new_price, 2)
                 ));

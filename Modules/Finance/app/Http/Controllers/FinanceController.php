@@ -108,7 +108,7 @@ class FinanceController extends Controller
 
         if (!$response['error']) {
             return view('invoices.rejected', [
-                'title' => 'Reject Price Changes',
+                'title' => 'Event Changes Rejected',
                 'message' => "Price changes rejected successfully.",
             ]);
         }
