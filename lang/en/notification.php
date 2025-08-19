@@ -126,4 +126,5 @@ return [
     'requestPriceChangesSuccess' => 'Request for price changes has been sent successfully. You will receive a notification once it is updated.',
     'successApprovePriceChanges' => 'Price changes approved successfully.',
     'successRejectPriceChanges' => 'Price changes rejected successfully.',
+    'waitingForApproval' => 'Waiting for approval'
 ];

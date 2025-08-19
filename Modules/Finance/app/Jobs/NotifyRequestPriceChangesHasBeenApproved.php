@@ -30,7 +30,8 @@ class NotifyRequestPriceChangesHasBeenApproved implements ShouldQueue
     {
         $change = ProjectDealPriceChange::with([
             'projectDeal',
-            'requesterBy'
+            'requesterBy',
+            'reason'
         ])->find($this->changeId);
 
         // here we should send notification to the requester

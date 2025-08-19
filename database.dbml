@@ -1446,7 +1446,8 @@ Table "project_deal_price_changes" {
   "project_deal_id" bigint [ref: > project_deals.id]
   "old_price" decimal(24,2) [not null, default: '0.00']
   "new_price" decimal(24,2) [not null, default: '0.00']
-  "reason" varchar(255) [not null]
+  "reason_id" bigint [ref: > price_change_reasons.id, note: "nullable, null for custom reason"]
+  "custom_reason" varchar(255) [default: NULL, note: "Custom reason"]
   "requested_by" bigint [ref: > users.id]
   "requested_at" timestamp
   "approved_by" bigint [ref: > users.id]
@@ -1455,6 +1456,13 @@ Table "project_deal_price_changes" {
   "rejected_by" bigint [ref: > users.id]
   "rejected_reason" varchar(255) [default: NULL]
   "status" project_deal_price_changes_status
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "price_change_reasons" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

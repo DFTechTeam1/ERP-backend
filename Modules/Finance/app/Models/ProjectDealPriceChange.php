@@ -3,6 +3,7 @@
 namespace Modules\Finance\Models;
 
 use App\Enums\Production\ProjectDealChangePriceStatus;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,7 +25,8 @@ class ProjectDealPriceChange extends Model
         'project_deal_id',
         'old_price',
         'new_price',
-        'reason',
+        'reason_id',
+        'custom_reason',
         'requested_by',
         'requested_at',
         'approved_by',
@@ -40,6 +42,10 @@ class ProjectDealPriceChange extends Model
         return ProjectDealPriceChangeFactory::new();
     }
 
+    protected $appends = [
+        'real_reason',
+    ];
+
     /**
      * The attributes that should be cast to native types.
      */
@@ -48,6 +54,23 @@ class ProjectDealPriceChange extends Model
         return [
             'status' => ProjectDealChangePriceStatus::class,
         ];
+    }
+
+    public function realReason(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->reason_id) {
+                    return $this->reason->name;
+                }
+                return $this->custom_reason;
+            }
+        );
+    }
+
+    public function reason(): BelongsTo
+    {
+        return $this->belongsTo(PriceChangeReason::class, 'reason_id');
     }
 
     public function projectDeal(): BelongsTo

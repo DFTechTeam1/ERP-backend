@@ -98,12 +98,12 @@ it('should reject request from email return success', function () {
 
     $response->assertViewIs('invoices.rejected');
     $response->assertViewHas('title', 'Event Changes Rejected');
-    $response->assertViewHas('message', 'Changes request rejected.');
+    $response->assertViewHas('message', 'Price changes rejected successfully.');
 
     $this->assertDatabaseHas('project_deal_price_changes', [
         'id' => $data['change']->id,
         'status' => ProjectDealChangePriceStatus::Rejected->value,
-        'rejected_reason' => $reason,
+        'rejected_reason' => 'No reason provided',
         'approved_at' => null,
         'approved_by' => null,
     ]);

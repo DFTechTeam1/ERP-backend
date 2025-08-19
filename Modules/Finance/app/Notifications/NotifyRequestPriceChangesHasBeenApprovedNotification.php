@@ -43,7 +43,7 @@ class NotifyRequestPriceChangesHasBeenApprovedNotification extends Notification
             ->line('Project Deal: ' . $this->change->projectDeal->name)
             ->line('Old Price: Rp' . number_format($this->change->old_price, 0, ',', '.'))
             ->line('New Price: Rp' . number_format($this->change->new_price, 0, ',', '.'))
-            ->line('Reason: ' . $this->change->reason);
+            ->line('Reason: ' . $this->change->reason_id ? $this->change->reason->name : $this->change->custom_reason);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Models;
 
+use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -98,6 +99,17 @@ class ProjectDeal extends Model
             get: fn ($value) => $value ? json_decode($value, true) : null,
             set: fn ($value) => $value ? json_encode($value) : null
         );
+    }
+
+    public function ProjectDealPriceChanges(): HasMany
+    {
+        return $this->hasMany(ProjectDealPriceChange::class, 'project_deal_id');
+    }
+
+    public function activeProjectDealPriceChange(): HasOne
+    {
+        return $this->hasOne(ProjectDealPriceChange::class, 'project_deal_id')
+            ->where('status', ProjectDealChangePriceStatus::Pending);
     }
 
     public function marketings(): HasMany

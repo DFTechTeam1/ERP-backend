@@ -5,6 +5,7 @@ namespace Modules\Production\Services;
 use App\Actions\CopyDealToProject;
 use App\Actions\CreateQuotation;
 use App\Actions\Project\DetailCache;
+use App\Enums\Cache\CacheKey;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
@@ -16,6 +17,7 @@ use App\Services\GeneralService;
 use App\Services\Geocoding;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
@@ -23,6 +25,7 @@ use Modules\Finance\Jobs\NotifyRequestPriceChangesHasBeenApproved;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Finance\Repository\PriceChangeReasonRepository;
 use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
@@ -53,6 +56,8 @@ class ProjectDealService
     
     private InvoiceRepository $invoiceRepo;
 
+    private PriceChangeReasonRepository $priceChangeReasonRepo;
+
     /**
      * Construction Data
      */
@@ -65,11 +70,14 @@ class ProjectDealService
         Geocoding $geocoding,
         ProjectDealChangeRepository $projectDealChangeRepo,
         ProjectDealPriceChangeRepository $projectDealPriceChangeRepo,
-        InvoiceRepository $invoiceRepo
+        InvoiceRepository $invoiceRepo,
+        PriceChangeReasonRepository $priceChangeReasonRepo
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
         
         $this->projectDealPriceChangeRepo = $projectDealPriceChangeRepo;
+
+        $this->priceChangeReasonRepo = $priceChangeReasonRepo;
 
         $this->repo = $repo;
 
@@ -107,7 +115,7 @@ class ProjectDealService
         try {
             $user = Auth::user();
 
-            $itemsPerPage = request('itemsPerPage') ?? 2;
+            $itemsPerPage = request('itemsPerPage') ?? 10;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
@@ -204,6 +212,17 @@ class ProjectDealService
                 $isCancel = $item->status == ProjectDealStatus::Canceled ? true : false;
                 $isHaveActiveRequestChanges = $item->activeProjectDealChange ? true : false;
 
+                // define status. If project deal have a request price changes, wee need to make status as 'Waiting for approval', otherwise show the real status
+                $isHaveRequestPriceChanges = $item->activeProjectDealPriceChange ? true : false;
+                $canRequestPriceChanges = !$isHaveRequestPriceChanges && $item->status == ProjectDealStatus::Final ? true : false;
+                if ($isHaveRequestPriceChanges) {
+                    $status = __('notification.waitingForApproval');
+                    $statusColor = 'grey-darken-2';
+                } else {
+                    $status = $item->status->label();
+                    $statusColor = $item->status->color();
+                }
+
                 return [
                     'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
                     'latest_quotation_id' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id),
@@ -219,8 +238,8 @@ class ProjectDealService
                     'remaining_payment' => $item->getRemainingPayment(formatPrice: true),
                     'remaining_payment_raw' => $item->getRemainingPayment(),
                     'status' => true,
-                    'status_project' => $item->status->label(),
-                    'status_project_color' => $item->status->color(),
+                    'status_project' => $status,
+                    'status_project_color' => $statusColor,
                     'fix_price' => $item->getFinalPrice(formatPrice: true),
                     'latest_price' => $item->getLatestPrice(formatPrice: true),
                     'is_fully_paid' => (bool) $item->is_fully_paid,
@@ -246,8 +265,13 @@ class ProjectDealService
                             'amount' => $invoice->amount,
                         ];
                     }),
+                    'can_request_price_changes' => $canRequestPriceChanges,
                     'have_request_changes' => $isHaveActiveRequestChanges,
-                    'changes_id' => $isHaveActiveRequestChanges ? Crypt::encryptString($item->activeProjectDealChange->id) : null
+                    'have_price_changes' => $isHaveRequestPriceChanges,
+                    'can_approve_price_changes' => $isHaveRequestPriceChanges ? true : false,
+                    'can_reject_price_changes' => $isHaveRequestPriceChanges ? true : false,
+                    'changes_id' => $isHaveActiveRequestChanges ? Crypt::encryptString($item->activeProjectDealChange->id) : null,
+                    'price_changes_id' => $isHaveRequestPriceChanges ? Crypt::encryptString($item->activeProjectDealPriceChange->id) : null
                 ];
             });
 
@@ -1195,7 +1219,8 @@ class ProjectDealService
                 'requested_at' => Carbon::now(),
                 'old_price' => $projectDeal->finalQuotation->fix_price,
                 'new_price' => $payload['price'],
-                'reason' => $payload['reason'],
+                'reason_id' => $payload['reason_id'],
+                'custom_reason' => $payload['custom_reason'] ?? null,
                 'status' => ProjectDealChangePriceStatus::Pending
             ]);
 
@@ -1203,7 +1228,7 @@ class ProjectDealService
             NotifyRequestPriceChangesJob::dispatch(
                 projectDealChangeId: $changes->id,
                 newPrice: $payload['price'],
-                reason: $payload['reason']
+                reason: $changes->real_reason
             )->afterCommit();
 
             DB::commit();
@@ -1328,5 +1353,37 @@ class ProjectDealService
             DB::rollBack();
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Get price change reasons
+     * 
+     * @return array
+     */
+    public function getPriceChangeReasons(): array
+    {
+        $data = Cache::get(CacheKey::PriceChangeReasons->value);
+
+        if (!$data) {
+            $data = Cache::remember(
+                key: CacheKey::PriceChangeReasons->value,
+                ttl: now()->addDays(7),
+                callback: function () {
+                    return $this->priceChangeReasonRepo->list(
+                        select: 'id,name'
+                    )->map(function ($item) {
+                        return [
+                            'value' => $item->id,
+                            'title' => $item->name
+                        ];
+                    })->toArray();
+                }
+            );
+        }
+
+        return generalResponse(
+            message: "Success",
+            data: $data
+        );
     }
 }
