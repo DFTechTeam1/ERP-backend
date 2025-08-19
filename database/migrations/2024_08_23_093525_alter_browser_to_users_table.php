@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('user_login_histories', function (Blueprint $table) {
-            $table->nullable('browser');
+            $table->dropColumn('browser');
         });
     }
 };

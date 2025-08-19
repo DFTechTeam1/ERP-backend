@@ -14,6 +14,7 @@ use Modules\Production\Models\ProjectDealChange;
 use function Pest\Laravel\getJson;
 
 it ("Reject changes return success", function () {
+    Bus::fake();
     $permissions = [
         'approve_project_deal_change'
     ];
@@ -49,6 +50,7 @@ it ("Reject changes return success", function () {
         'rejected_at' => null,
         'rejected_by' => null
     ]);
+    Bus::assertDispatched(NotifyApprovalProjectDealChangeJob::class);
 });
 
 it("Reject changes from email", function () {

@@ -22,7 +22,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('project_song_lists', function (Blueprint $table) {
-            $table->dropColumn('reason', 255);
+            // check column if exist or not
+            if (Schema::hasColumn('project_song_lists', 'reason')) {
+                $table->dropColumn('reason');
+            }
         });
     }
 };
