@@ -12,6 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        DB::unprepared("DROP PROCEDURE IF EXISTS get_project_difference");
         DB::unprepared("
             CREATE PROCEDURE get_project_difference()
             BEGIN

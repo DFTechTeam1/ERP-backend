@@ -7,9 +7,27 @@ Enum "employee_families_relationship_enum" {
   "other"
 }
 
+Enum "development_project_task_status_enum" {
+  "1" // for not_started
+  "2" // for in_progress
+  "3" // for completed
+}
+
+Enum "development_project_reference_enum"  {
+  "media"
+  "link"
+}
+
+Enum "development_projects_status_enum" {
+  "1" // for active
+  "2" // for completed
+  "3" // for on_hold
+  "4" // for cancelled
+}
+
 Enum "project_deal_changes_status" {
-  "1", // for pending
-  "2", // for approved
+  "1" // for pending
+  "2" // for approved
   "3" // for rejected
 }
 
@@ -21,13 +39,13 @@ Enum "project_task_duration_history_enums" {
 }
 
 Enum "invoice_statuses" {
-  "1", // unpaid
-  "2", // paid
+  "1" // unpaid
+  "2" // paid
 }
 
 Enum "transaction_enum" {
-  "down_payment",
-  "credit",
+  "down_payment"
+  "credit"
   "repayment"
 }
 
@@ -1845,6 +1863,108 @@ Table "client_portals" {
   "id" bigint [pk, increment, not null]
   "original_link" varchar(255) [not null]
   "link" varchar(100) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_projects" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "name" varchar(255) [not null]
+  "description" text
+  "status" development_projects_status_enum [default: NULL]
+  "project_date" datetime
+  "created_by" bigint [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_project_boards" {
+  "id" bigint [pk, not null, increment]
+  "development_project_id" bigint [not null, ref: > development_projects.id]
+  "name" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_project_references" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "development_project_id" bigint [not null, ref: > development_projects.id]
+  "type" development_project_reference_enum
+  "media_path" varchar(255)
+  "link" varchar(255)
+  "link_name" varchar(255)
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_project_pics" {
+  "id" bigint [pk, not null, increment]
+  "development_project_id" bigint [not null, ref: > development_projects.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_project_tasks" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "development_project_id" bigint [not null, ref: > development_projects.id]
+  "development_project_board_id" bigint [not null, ref: > development_project_boards.id]
+  "name" varchar(255) [not null]
+  "description" text
+  "status" development_project_task_status_enum [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_project_task_deadlines" {
+  "id" bigint [pk, not null, increment]
+  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "deadline" timestamp [not null]
+  "start_time" timestamp [default: NULL]
+  "actual_end_time" timestamp [default: NULL]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_project_task_attachments" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "file_path" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_project_task_timelines" {
+  "id" bigint [pk, not null, increment]
+  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "start_time" timestamp [default: NULL]
+  "end_time" timestamp [default: NULL]
+  "duration_in_seconds" varchar(100) [default: NULL, note: 'in seconds']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_project_task_pics" {
+  "id" bigint [pk, not null, increment]
+  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_task_proofs" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "nas_path" varchar(255)
+  "preview" varchar(255) [note: 'path of preview file']
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

@@ -460,7 +460,7 @@ class UserService
         try {
             // get user and validate the payload
             $user = $this->repo->detail(id: 'id', select: 'id,email,employee_id,email_verified_at,password', where: "email = '" . $payload['email'] . "'", relation: [
-                'employee:id,name,email,user_id,position_id',
+                'employee:id,name,email,user_id,position_id,uid',
                 'employee.position:id,name'
             ]);
             

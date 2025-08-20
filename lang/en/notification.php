@@ -100,5 +100,6 @@ return [
     'successRejectInvoiceChanges' => 'Successfully rejected the invoice change',
     'projectDealHasBeenCanceled' => 'Event has been canceled',
     'eventCannotBeCancel' => 'Event cannot be canceled',
-    'eventHasBeenCancelBecause' => "Event have been cancel because :reason"
+    'eventHasBeenCancelBecause' => "Event have been cancel because :reason",
+    'successCreateDevelopmentProject' => 'Development project has been created successfully'
 ];

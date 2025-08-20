@@ -12,6 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        DB::unprepared("DROP PROCEDURE IF EXISTS get_event_success_rate");
         DB::unprepared("
             CREATE PROCEDURE get_event_success_rate()
             BEGIN
