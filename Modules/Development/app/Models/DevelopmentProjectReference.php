@@ -19,7 +19,8 @@ class DevelopmentProjectReference extends Model
         'development_project_id',
         'type',
         'media_path',
-        'link'
+        'link',
+        'link_name'
     ];
 
     // protected static function newFactory(): DevelopmentProjectReferenceFactory

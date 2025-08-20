@@ -13,7 +13,9 @@ class DevelopmentProjectBoard extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = [];
+    protected $fillable = [
+        'name'
+    ];
 
     // protected static function newFactory(): DevelopmentProjectBoardFactory
     // {

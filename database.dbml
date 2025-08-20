@@ -1894,6 +1894,7 @@ Table "development_project_references" {
   "type" development_project_reference_enum
   "media_path" varchar(255)
   "link" varchar(255)
+  "link_name" varchar(255)
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

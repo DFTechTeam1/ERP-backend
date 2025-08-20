@@ -39,6 +39,17 @@ class Create extends FormRequest
                     }
                 }
             ],
+            'references.*.link_name' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    $index = explode('.', $attribute)[1];
+                    $type = request()->input("references.{$index}.type");
+
+                    if ($type == ReferenceType::Link->value && empty($value)) {
+                        $fail('The link name field is required when type is link.');
+                    }
+                }
+            ],
             'pics' => 'nullable|array',
             'pics.*.employee_id' => 'nullable|string',
             'project_date' => 'required|date_format:Y-m-d',

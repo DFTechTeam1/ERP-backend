@@ -138,6 +138,7 @@ class DevelopmentProjectService {
                         $payloadReferences[count($payloadReferences) - 1]['media_path'] = $media;
                     } else if ($reference['type'] === ReferenceType::Link->value) {
                         $payloadReferences[count($payloadReferences) - 1]['link'] = $reference['link'];
+                        $payloadReferences[count($payloadReferences) - 1]['link_name'] = $reference['link_name'];
                     }
                 }
 
@@ -161,8 +162,6 @@ class DevelopmentProjectService {
             $defaultBoards = json_decode($this->generalService->getSettingByKey('default_boards'), true);
             $defaultBoards = collect($defaultBoards)->map(function ($item) {
                 return [
-                    'based_board_id' => $item['id'],
-                    'sort' => $item['sort'],
                     'name' => $item['name'],
                 ];
             })->values()->toArray();
@@ -172,10 +171,7 @@ class DevelopmentProjectService {
 
             DB::commit();
 
-            return generalResponse(
-                'success',
-                false,
-            );
+            return generalResponse(message: __('notification.successCreateDevelopmentProject'));
         } catch (\Throwable $th) {
             DB::rollBack();
 

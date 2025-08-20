@@ -57,4 +57,9 @@ class DevelopmentProject extends Model
         return $this->hasMany(DevelopmentProjectPic::class);
     }
 
+    public function boards(): HasMany
+    {
+        return $this->hasMany(DevelopmentProjectBoard::class);
+    }
+
 }
