@@ -22,9 +22,7 @@ class DevelopmentProjectController extends Controller
      */
     public function index()
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->developmentProjectService->list());
     }
 
     /**

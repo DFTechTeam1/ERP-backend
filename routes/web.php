@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Development\Models\DevelopmentProject;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Jobs\InvoiceDue;
 use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
@@ -158,23 +159,11 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    $picEmployeeIds = ProjectPersonInCharge::select('pic_id')
-        ->distinct()
-        ->pluck('pic_id')
-        ->toArray();
+    $projects = DevelopmentProject::factory()
+        ->withPics(true)
+        ->count(2500)->create();
 
-    if (empty($picEmployeeIds)) {
-        return null;
-    }
-
-    // Get random active employee from PICs
-    $randomEmployee = Employee::whereIn('id', $picEmployeeIds)
-        ->whereNotIn('status', [0, 5, 6, 7, 8])
-        ->inRandomOrder()
-        ->first(['uid', 'name']); // Get both uid and name if needed
-
-    return $randomEmployee ? $randomEmployee->uid : null;
-
+    return $projects;
 });
 
 Route::get('pusher-check', function() {

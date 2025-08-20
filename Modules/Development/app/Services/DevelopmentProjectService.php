@@ -6,6 +6,7 @@ use App\Enums\Development\Project\ReferenceType;
 use App\Enums\ErrorCode\Code;
 use App\Services\GeneralService;
 use Illuminate\Support\Facades\DB;
+use Modules\Development\app\Services\DevelopmentProjectCacheService;
 use Modules\Development\Repository\DevelopmentProjectRepository;
 use Modules\Hrd\Models\Employee;
 
@@ -14,16 +15,20 @@ class DevelopmentProjectService {
 
     private GeneralService $generalService;
 
+    private DevelopmentProjectCacheService $cacheService;
+
     /**
      * Construction Data
      */
     public function __construct(
         DevelopmentProjectRepository $repo,
-        GeneralService $generalService
+        GeneralService $generalService,
+        DevelopmentProjectCacheService $cacheService
     )
     {
         $this->repo = $repo;
         $this->generalService = $generalService;
+        $this->cacheService = $cacheService;
     }
 
     /**
@@ -44,22 +49,50 @@ class DevelopmentProjectService {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
-            $page = $page == 1 ? 0 : $page;
-            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            // $page = $page == 1 ? 0 : $page;
+            // $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
             if (!empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
-            $paginated = $this->repo->pagination(
-                $select,
-                $where,
-                $relation,
-                $itemsPerPage,
-                $page
-            );
-            $totalData = $this->repo->list('id', $where)->count();
+            // make filter as array
+            $param = [];
+            
+            if (request('name')) {
+                $param['name'] = request('name');
+            }
+
+            if (request('status')) {
+                $param['status'] = request('status');
+            }
+
+            if (request('pics')) {
+                $param['pics'] = request('pics');
+            }
+
+            if (request('start_date')) {
+                $param['start_date'] = request('start_date');
+            }
+
+            if (request('end_date')) {
+                $param['end_date'] = request('end_date');
+            }
+
+            $rawData = $this->cacheService->getFilteredProjects(filters: $param, page: $page, perPage: $itemsPerPage);
+
+            $paginated = $rawData['data'] ?? [];
+            $totalData = $rawData['total'] ?? 0;
+
+            // $paginated = $this->repo->pagination(
+            //     $select,
+            //     $where,
+            //     $relation,
+            //     $itemsPerPage,
+            //     $page
+            // );
+            // $totalData = $this->repo->list('id', $where)->count();
 
             return generalResponse(
                 'Success',

@@ -8,8 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
-
-// use Modules\Development\Database\Factories\DevelopmentProjectFactory;
+use Modules\Development\Database\Factories\DevelopmentProjectFactory;
 
 class DevelopmentProject extends Model
 {
@@ -34,10 +33,10 @@ class DevelopmentProject extends Model
         'created_by'
     ];
 
-    // protected static function newFactory(): DevelopmentProjectFactory
-    // {
-    //     // return DevelopmentProjectFactory::new();
-    // }
+    protected static function newFactory(): DevelopmentProjectFactory
+    {
+        return DevelopmentProjectFactory::new();
+    }
 
     protected function casts(): array
     {
