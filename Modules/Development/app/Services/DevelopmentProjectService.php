@@ -6,6 +6,7 @@ use App\Enums\Development\Project\ReferenceType;
 use App\Enums\ErrorCode\Code;
 use App\Services\GeneralService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Modules\Development\app\Services\DevelopmentProjectCacheService;
 use Modules\Development\Repository\DevelopmentProjectRepository;
 use Modules\Hrd\Models\Employee;
@@ -16,6 +17,8 @@ class DevelopmentProjectService {
     private GeneralService $generalService;
 
     private DevelopmentProjectCacheService $cacheService;
+
+    private const MEDIAPATH = 'development/projects/references';
 
     /**
      * Construction Data
@@ -47,7 +50,7 @@ class DevelopmentProjectService {
     ): array
     {
         try {
-            $itemsPerPage = request('itemsPerPage') ?? 2;
+            $itemsPerPage = request('itemsPerPage') ?? 50;
             $page = request('page') ?? 1;
             // $page = $page == 1 ? 0 : $page;
             // $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
@@ -81,6 +84,7 @@ class DevelopmentProjectService {
             }
 
             $rawData = $this->cacheService->getFilteredProjects(filters: $param, page: $page, perPage: $itemsPerPage);
+            $this->cacheService->invalidateAllCacheExceptBase();
 
             $paginated = $rawData['data'] ?? [];
             $totalData = $rawData['total'] ?? 0;
@@ -121,7 +125,15 @@ class DevelopmentProjectService {
     public function show(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid, 'name,uid,id');
+            $data = $this->repo->show(
+                uid: $uid,
+                select: 'id,uid,name,description,status,project_date,created_by',
+                relation: [
+                    'pics:id,development_project_id,employee_id',
+                    'pics.employee:id,uid',
+                    'references'
+                ]
+            );
 
             return generalResponse(
                 'success',
@@ -164,7 +176,7 @@ class DevelopmentProjectService {
                     if ($reference['type'] === ReferenceType::Media->value) {
                         // handle media upload
                         $media = $this->generalService->uploadImageandCompress(
-                            path: 'development/projects/references',
+                            path: self::MEDIAPATH,
                             compressValue: 0,
                             image: $reference['image']
                         );
@@ -201,6 +213,9 @@ class DevelopmentProjectService {
             if ($defaultBoards) {
                 $project->boards()->createMany($defaultBoards);
             }
+
+            // push new data to current cache
+            $this->cacheService->pushNewProjectToAllProjectCache($project->uid);
 
             DB::commit();
 
@@ -241,20 +256,60 @@ class DevelopmentProjectService {
 
     /**
      * Delete selected data
+     * What should be done in this function:
+     * 1. Validate status. Only on hold and cancelled that can be deleted
+     * 2. Remove all references from database, remove image references from storage folder
+     * 3. Remove all tasks
+     * 4. Remove all boards
+     * 5. Remove project
+     * 6. delete cache
      *
      * @param integer $id
      * 
-     * @return void
+     * @return array
      */
-    public function delete(int $id): array
+    public function delete(string $projectUid): array
     {
+        DB::beginTransaction();
         try {
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: 'id',
+                relation: [
+                    'references',
+                ]
+            );
+
+            foreach ($project->references as $reference) {
+                if ($reference->type == ReferenceType::Media->value) {
+                    // check if file exists
+                    if (Storage::disk('public')->exists(self::MEDIAPATH . '/' . $reference->media_path)) {
+                        // delete file
+                        Storage::disk('public')->delete(self::MEDIAPATH . '/' . $reference->media_path);
+                    }
+                }
+
+                $reference->delete();
+            }
+
+            $project->pics()->delete();
+            $project->tasks()->delete();
+            $project->boards()->delete();
+            $project->delete();
+
+            // delete cache
+            $this->cacheService->deleteSpecificProjectByUid(projectUid: $projectUid);
+            $this->cacheService->invalidateAllCacheExceptBase();
+
+            DB::commit();
+
             return generalResponse(
-                'Success',
-                false,
-                $this->repo->delete($id)->toArray(),
+                __('notification.successDeleteDevelopmentProject'),
+                false
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }

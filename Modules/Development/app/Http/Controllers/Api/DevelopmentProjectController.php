@@ -38,9 +38,7 @@ class DevelopmentProjectController extends Controller
      */
     public function show($id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->developmentProjectService->show(uid: $id));
     }
 
     /**
@@ -58,8 +56,6 @@ class DevelopmentProjectController extends Controller
      */
     public function destroy($id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->developmentProjectService->delete(projectUid: $id));
     }
 }

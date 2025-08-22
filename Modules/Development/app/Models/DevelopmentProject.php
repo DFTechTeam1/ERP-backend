@@ -4,6 +4,8 @@ namespace Modules\Development\Models;
 
 use App\Enums\Development\Project\ProjectStatus;
 use App\Traits\ModelObserver;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,6 +33,10 @@ class DevelopmentProject extends Model
         'status',
         'project_date',
         'created_by'
+    ];
+
+    protected $appends = [
+        'project_date_text'
     ];
 
     protected static function newFactory(): DevelopmentProjectFactory
@@ -61,4 +67,21 @@ class DevelopmentProject extends Model
         return $this->hasMany(DevelopmentProjectBoard::class);
     }
 
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(DevelopmentProjectTask::class);
+    }
+
+    public function projectDateText(): Attribute
+    {
+        $output = '-';
+
+        if (isset($this->attributes['project_date'])) {
+            $output = Carbon::parse($this->attributes['project_date'])->format('d F Y');
+        }
+
+        return Attribute::make(
+            get: fn () => $output
+        );
+    }
 }

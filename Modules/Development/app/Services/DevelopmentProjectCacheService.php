@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\Project;
 use App\Services\GeneralService;
+use Illuminate\Database\Eloquent\Collection;
+use Modules\Development\Models\DevelopmentProject;
+use Modules\Development\Repository\DevelopmentProjectRepository;
 use Modules\Hrd\Models\Employee;
 
 class DevelopmentProjectCacheService
@@ -16,6 +19,54 @@ class DevelopmentProjectCacheService
     private const BASE_TTL = 1800; // 30 minutes
     private const FILTERED_TTL = 600; // 10 minutes
     private const MAX_CACHED_FILTERS = 50;
+    private const DEFAULT_SELECT_TABLE = 'id,uid,name,description,status,project_date,created_by';
+    private const DEFAULT_RELATIONS = [
+        'pics:id,development_project_id,employee_id',
+        'pics.employee:id,nickname'
+    ];
+
+    private DevelopmentProjectRepository $repo;
+
+    public function __construct(DevelopmentProjectRepository $repo)
+    {
+        // Ensure the cache keys are initialized
+        if (!Cache::has(self::TRACKED_KEYS)) {
+            Cache::put(self::TRACKED_KEYS, [], self::BASE_TTL);
+        }
+
+        $this->repo = $repo;
+    }
+
+    /**
+     * Format the project output for caching.
+     *
+     * @param DevelopmentProject|Collection $project
+     * @return array
+     */
+    protected function formatingProjectOutput(DevelopmentProject|Collection $project): array
+    {
+        return [
+            'id' => $project->id,
+            'uid' => $project->uid,
+            'name' => $project->name,
+            'description' => $project->description,
+            'status' => $project->status,
+            'status_text' => $project->status->label(),
+            'status_color' => $project->status->color(),
+            'project_date' => $project->project_date ? $project->project_date->format('Y-m-d') : null,
+            'project_date_text' => $project->project_date_text,
+            'created_by' => $project->created_by,
+            'pic_name' => $project->pics->pluck('employee.nickname')->implode(','),
+            'total_task' => $project->tasks->count(),
+            'pics' => $project->pics->map(function ($pic) {
+                return [
+                    'id' => $pic->employee_id,
+                    'nickname' => $pic->employee->nickname
+                ];
+            })->toArray(),
+            'pic_uids' => $project->pics->pluck('employee.uid')->toArray()
+        ];
+    }
 
     public function getFilteredProjects(array $filters, int $page = 1, int $perPage = 15, bool $withoutPagination = false): array
     {
@@ -30,9 +81,16 @@ class DevelopmentProjectCacheService
 
         // Get or create base cache
         $allProjects = Cache::remember(self::BASE_KEY, self::BASE_TTL, function () {
-            return \Modules\Development\Models\DevelopmentProject::selectRaw('*')
-                ->get()
-                ->toArray();
+            $output = $this->repo->list(
+                select: self::DEFAULT_SELECT_TABLE,
+                relation: self::DEFAULT_RELATIONS
+            );
+
+            $output = $output->map(function ($project) {
+                return $this->formatingProjectOutput($project);
+            })->toArray();
+
+            return $output;
         });
 
         // Apply filters and pagination
@@ -46,11 +104,6 @@ class DevelopmentProjectCacheService
         $result = [
             'data' => $paginatedData,
             'total' => $total,
-            // 'per_page' => $perPage,
-            // 'current_page' => $page,
-            // 'last_page' => ceil($total / $perPage),
-            // 'from' => $offset + 1,
-            // 'to' => min($offset + $perPage, $total)
         ];
 
         // Cache the result
@@ -86,6 +139,36 @@ class DevelopmentProjectCacheService
         }
     }
 
+    public function deleteSpecificProjectByUid(string $projectUid): void
+    {
+        $key = self::BASE_KEY;
+
+        $currentAllProjects = Cache::get($key, []);
+        $currentAllProjects = array_filter($currentAllProjects, fn($project) => $project['uid'] !== $projectUid);
+        Cache::put($key, $currentAllProjects, self::BASE_TTL);
+    }
+
+    /**
+     * Push a new project to the all projects cache.
+     */
+    public function pushNewProjectToAllProjectCache(string $projectUid): void
+    {
+        $project = $this->repo->show(
+            uid: $projectUid,
+            select: self::DEFAULT_SELECT_TABLE,
+            relation: self::DEFAULT_RELATIONS
+        );
+
+        $project = $this->formatingProjectOutput($project);
+
+        $key = self::BASE_KEY;
+
+        $currentAllProjects = Cache::get($key, []);
+        
+        $currentAllProjects[] = $project;
+        Cache::put($key, $currentAllProjects, self::BASE_TTL);
+    }
+
     public function invalidateAllProjectCaches(): void
     {
         // Clear base cache
@@ -108,7 +191,7 @@ class DevelopmentProjectCacheService
             if (!empty($filters['status'])) {
                 if (is_array($filters['status'])) {
                     // If status is array [1,2], check if project status is in the array
-                    if (!in_array($project['status'], $filters['status'])) {
+                    if (!in_array($project['status']->value, $filters['status'])) {
                         return false;
                     }
                 } else {
@@ -122,11 +205,7 @@ class DevelopmentProjectCacheService
             // Person in charge filter
             // filters['pics'] will have these structure [<employee_uid>, ...]. We need to convert uid to id by calling getIdFromUid method from generalService class
             if (!empty($filters['pics'])) {
-                $picIds = array_map(function ($uid) {
-                    return (new GeneralService)->getIdFromUid($uid, new Employee());
-                }, $filters['pics']);
-
-                if (!in_array($project['user_id'], $picIds)) {
+                if (!in_array($project['pic_uids'], $filters['pics'])) {
                     return false;
                 }
             }
@@ -174,10 +253,28 @@ class DevelopmentProjectCacheService
         return md5(json_encode($cleanFilters));
     }
 
-    public function invalidateSpecificFilter(array $filters): void
+    public function invalidateSpecificFilter(array $filters, int $page, int $perPage): void
     {
-        $pattern = self::FILTERED_PREFIX . $this->generateFilterHash($filters, 1, 15);
+        $pattern = self::FILTERED_PREFIX . $this->generateFilterHash($filters, $page, $perPage);
         Cache::forget($pattern);
+    }
+
+    // invalidate all cache except the base key
+    public function invalidateAllCacheExceptBase(): void
+    {
+        $trackedKeys = Cache::get(self::TRACKED_KEYS, []);
+        
+        foreach ($trackedKeys as $key => $timestamp) {
+            if ($key !== self::BASE_KEY) {
+                Cache::forget($key);
+            }
+        }
+        
+        // Clear the tracked keys cache
+        Cache::forget(self::TRACKED_KEYS);
+        
+        // Reinitialize the tracked keys
+        Cache::put(self::TRACKED_KEYS, [], self::BASE_TTL);
     }
 
     public function warmupCommonFilters(): void

@@ -3,8 +3,11 @@
 namespace Modules\Development\Models;
 
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
+
 // use Modules\Development\Database\Factories\DevelopmentProjectReferenceFactory;
 
 class DevelopmentProjectReference extends Model
@@ -23,8 +26,19 @@ class DevelopmentProjectReference extends Model
         'link_name'
     ];
 
+    protected $appends = [
+        'real_media_path'
+    ];
+
     // protected static function newFactory(): DevelopmentProjectReferenceFactory
     // {
     //     // return DevelopmentProjectReferenceFactory::new();
     // }
+
+    public function realMediaPath(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->media_path ? Storage::url('development/projects/references/' . $this->media_path) : null
+        );
+    }
 }
