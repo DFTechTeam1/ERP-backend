@@ -4,6 +4,8 @@ namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Modules\Production\Database\Factories\ProjectTaskDurationHistoryFactory;
+
 // use Modules\Production\Database\Factories\ProjectTaskDurationHistoryFactory;
 
 class ProjectTaskDurationHistory extends Model
@@ -24,16 +26,19 @@ class ProjectTaskDurationHistory extends Model
         'project_id',
         'task_id',
         'pic_id',
-        'task_duration',
-        'pm_approval_duration',
+        'employee_id',
         'task_type',
-        'is_task_revised',
-        'is_task_deadline_updated',
-        'created_at'
+        'task_full_duration',
+        'task_holded_duration',
+        'task_revised_duration',
+        'task_actual_duration',
+        'task_approval_duration',
+        'total_task_holded',
+        'total_task_revised',
     ];
 
-    // protected static function newFactory(): ProjectTaskDurationHistoryFactory
-    // {
-    //     // return ProjectTaskDurationHistoryFactory::new();
-    // }
+    protected static function newFactory(): ProjectTaskDurationHistoryFactory
+    {
+        return ProjectTaskDurationHistoryFactory::new();
+    }
 }

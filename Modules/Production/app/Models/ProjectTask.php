@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Production\Database\Factories\ProjectTaskFactory;
 
 class ProjectTask extends Model
 {
@@ -40,6 +41,11 @@ class ProjectTask extends Model
         'is_approved',
         'is_modeler_task',
     ];
+
+    protected static function newFactory(): ProjectTaskFactory
+    {
+        return ProjectTaskFactory::new();
+    }
 
     protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail', 'task_status', 'task_status_color', 'revise_detail'];
 

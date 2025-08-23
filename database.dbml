@@ -1399,15 +1399,23 @@ Table "projects" {
 
 Table "project_task_duration_histories" {
     "id" bigint [pk, increment, not null]
-    "created_at" timestamp [not null]
     "project_id" bigint [not null, note: 'References the related project', ref: > projects.id]
     "task_id" bigint [not null, note: 'References the related project task', ref: > project_tasks.id]
-    "pic_id" bigint [not null, note: 'References the person in charge (PIC) who worked on the task', ref: > employees.id]
-    "task_duration" bigint [not null, note: 'Duration spent on the task (duration in second)']
-    "pm_approval_duration" bigint [not null, note: 'Duration spent on PM clicked finish']
+    "pic_id" bigint [not null, note: 'References the person in charge (PIC) who worked on the project', ref: > employees.id]
+    "employee_id" bigint [not null, note: "References the person who in worked on the task", ref: > employees.id]
     "task_type" project_task_duration_history_enums [values: cross_team_collaboration, single_assignee, temporary_transfer, split_assignment, note: 'Type of task assignment']
-    "is_task_revised" boolean [default: false, note: 'Indicates if the task was revised']
-    "is_task_deadline_updated" boolean [default: false, note: 'Indicates if the task deadline was updated']
+    
+    "task_full_duration" bigint [default: 0]
+    "task_holded_duration" bigint [default: 0]
+    "task_revised_duration" bigint [default: 0]
+    "task_actual_duration" bigint [default: 0]
+    "task_approval_duration" bigint [default: 0]
+
+    "total_task_holded" bigint [default: 0]
+    "total_task_revised" bigint [default: 0]
+
+    "created_at" timestamp [not null]
+    "updated_at" timestamp [not null]
     Note: 'Stores duration logs for tasks, with type and revision status'
 
     Indexes {
