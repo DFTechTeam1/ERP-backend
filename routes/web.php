@@ -3,6 +3,7 @@
 use App\Actions\Project\WriteDurationTaskHistory;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Production\TaskStatus;
+use App\Enums\Production\WorkType;
 use App\Exports\ProjectDealSummary;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
@@ -43,6 +44,8 @@ use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectQuotation;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Models\ProjectTaskHold;
+use Modules\Production\Models\ProjectTaskPicLog;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -158,23 +161,34 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    $picEmployeeIds = ProjectPersonInCharge::select('pic_id')
-        ->distinct()
-        ->pluck('pic_id')
-        ->toArray();
+    $holds = ProjectTaskHold::selectRaw('project_task_id')->whereNull("end_at")->get();
+    $projectTaskIds = $holds->pluck('project_task_id')->toArray();
 
-    if (empty($picEmployeeIds)) {
-        return null;
+    $logs = ProjectTaskPicLog::whereIn('project_task_id', $projectTaskIds)->get();
+    $logs = $logs->groupBy('project_task_id');
+
+    $payload = [];
+    $a = 0;
+    foreach ($logs as $taskId => $logData) {
+        foreach ($logData as $key => $logItem) {
+            if ($logItem['work_type'] == WorkType::OnHold->value) {
+                $payload[$a] = [
+                    'task_id' => $taskId,
+                    'id' => $logItem['id'],
+                    'on_hold_at' => $logItem['time_added']
+                ];
+
+                $expectedProgressKey = $key + 1;
+                if (isset($logData[$expectedProgressKey]) && $logData[$expectedProgressKey]['work_type'] == WorkType::OnProgress->value) {
+                    $payload[$a]['in_progress_at'] = date('Y-m-d H:i:s', strtotime($logData[$expectedProgressKey]['time_added']));
+                }
+            }
+
+            $a++;
+        }
     }
 
-    // Get random active employee from PICs
-    $randomEmployee = Employee::whereIn('id', $picEmployeeIds)
-        ->whereNotIn('status', [0, 5, 6, 7, 8])
-        ->inRandomOrder()
-        ->first(['uid', 'name']); // Get both uid and name if needed
-
-    return $randomEmployee ? $randomEmployee->uid : null;
-
+    return array_values($payload);
 });
 
 Route::get('pusher-check', function() {
