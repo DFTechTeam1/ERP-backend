@@ -617,4 +617,9 @@ class GeneralService
             'projectDetailChangesUid' => Crypt::encryptString($changeDeal->id)
         ]) . "?aid=" . $user->id;
     }
+
+    public function deleteImage(string $path)
+    {
+        return deleteImage(path: $path);
+    }
 }

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use KodePandai\Indonesia\Models\District;
 use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
 
@@ -284,3 +285,24 @@ Route::get('playground', function () {
     $user = Auth::user();
     InvoiceHasBeenDeletedJob::dispatch(parentNumber: '#7773', projectName: "Project Name", user: $user);
 })->middleware('auth:sanctum');
+
+Route::get('/files/{path}', function (Request $request, $path) {
+    // remove app_url from $path
+    $path = str_replace(config('app.url') . '/storage', 'storage', $path);
+
+    // Decode the path if it's encoded
+    $decodedPath = urldecode($path);
+    
+    if (!Storage::exists($decodedPath)) {
+        abort(404);
+    }
+    
+    $file = Storage::get($decodedPath);
+    $mimeType = Storage::mimeType($decodedPath);
+    
+    return response($file, 200)
+        ->header('Content-Type', $mimeType)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', '*');
+})->where('path', '.*');

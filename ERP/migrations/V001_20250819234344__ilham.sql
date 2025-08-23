@@ -1,0 +1,6 @@
+create table `users` (`id` bigint unsigned not null auto_increment primary key, `uid` char(36) not null, `email` varchar(255) not null, `email_verified_at` timestamp null, `password` varchar(255) not null, `image` varchar(255) null, `last_login_at` timestamp null, `remember_token` varchar(100) null, `created_at` timestamp null, `updated_at` timestamp null) default character set utf8mb4 collate 'utf8mb4_unicode_ci';  
+alter table `users` add unique `users_email_unique`(`email`);
+create table `password_reset_tokens` (`email` varchar(255) not null, `token` varchar(255) not null, `created_at` timestamp null, primary key (`email`)) default character set utf8mb4 collate 'utf8mb4_unicode_ci';
+create table `sessions` (`id` varchar(255) not null, `user_id` bigint unsigned null, `ip_address` varchar(45) null, `user_agent` text null, `payload` longtext not null, `last_activity` int not null, primary key (`id`)) default character set utf8mb4 collate 'utf8mb4_unicode_ci';
+alter table `sessions` add index `sessions_user_id_index`(`user_id`);
+alter table `sessions` add index `sessions_last_activity_index`(`last_activity`);

@@ -24,7 +24,7 @@ class DevelopmentProjectTaskRepository extends DevelopmentProjectTaskInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -36,6 +36,20 @@ class DevelopmentProjectTaskRepository extends DevelopmentProjectTaskInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
         }
 
         return $query->get();

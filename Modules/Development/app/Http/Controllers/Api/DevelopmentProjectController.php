@@ -4,6 +4,7 @@ namespace Modules\Development\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Development\Http\Requests\DevelopmentProject\Update;
 use Modules\Development\Services\DevelopmentProjectService;
 
 class DevelopmentProjectController extends Controller
@@ -22,9 +23,7 @@ class DevelopmentProjectController extends Controller
      */
     public function index()
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->developmentProjectService->list());
     }
 
     /**
@@ -40,19 +39,20 @@ class DevelopmentProjectController extends Controller
      */
     public function show($id)
     {
-        //
+        return apiResponse($this->developmentProjectService->edit(uid: $id));
+    }
 
-        return response()->json([]);
+    public function detail(string $projectUid)
+    {
+        return apiResponse($this->developmentProjectService->show(uid: $projectUid));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(Update $request, $id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->developmentProjectService->update(id: $id, data: $request->validated()));
     }
 
     /**
@@ -60,8 +60,6 @@ class DevelopmentProjectController extends Controller
      */
     public function destroy($id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->developmentProjectService->delete(projectUid: $id));
     }
 }

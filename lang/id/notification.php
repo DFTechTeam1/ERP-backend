@@ -101,5 +101,7 @@ return [
     'projectDealHasBeenCanceled' => 'Event telah berhasil di batalkan',
     'eventCannotBeCancel' => 'Event tidak bisa di batalkan',
     'eventHasBeenCancelBecause' => "Event telah di batalkan karena :reason",
-    'successCreateDevelopmentProject' => 'Project pengembangan telah berhasil dibuat'
+    'successCreateDevelopmentProject' => 'Project pengembangan telah berhasil dibuat',
+    'successDeleteDevelopmentProject' => 'Project pengembangan telah berhasil dihapus',
+    'successUpdateDevelopmentProject' => 'Project pengembangan telah berhasil diperbarui',
 ];

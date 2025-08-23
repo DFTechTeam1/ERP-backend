@@ -17,6 +17,7 @@ class Create extends FormRequest
             'description' => 'nullable',
             'references' => 'nullable|array',
             'references.*.type' => 'nullable|string',
+            'references.*.remove_image_id' => 'nullable|string',
             'references.*.image' => [
                 'nullable',
                 function ($attribute, $value, $fail) {

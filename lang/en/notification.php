@@ -101,5 +101,7 @@ return [
     'projectDealHasBeenCanceled' => 'Event has been canceled',
     'eventCannotBeCancel' => 'Event cannot be canceled',
     'eventHasBeenCancelBecause' => "Event have been cancel because :reason",
-    'successCreateDevelopmentProject' => 'Development project has been created successfully'
+    'successCreateDevelopmentProject' => 'Development project has been created successfully',
+    'successDeleteDevelopmentProject' => 'Development project has been deleted successfully',
+    'successUpdateDevelopmentProject' => 'Development project has been updated successfully',
 ];

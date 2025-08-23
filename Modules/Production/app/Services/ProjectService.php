@@ -4194,7 +4194,7 @@ class ProjectService
     {
         $this->projectTaskLogRepository->store([
             'project_task_id' => $payload['task_id'],
-            'type' => 'holdTask',
+            'type' => 'holdTask', // TODO: Change to startTask
             'text' => __('global.actorStartTheTask', ['actor' => $payload['actor']]),
             'user_id' => auth()->id(),
         ]);
