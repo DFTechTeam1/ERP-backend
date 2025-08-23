@@ -33,7 +33,7 @@ it("Request changes return success", function () {
     $projectDealUid = \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id);
 
     $response = postJson(route('api.production.project-deal.updateFinal', ['projectDealUid' => $projectDealUid]), $payload);
-    logging("RESPONSE REQUEST CHANGES DEAL", $response->json());
+    
     $response->assertStatus(201);
 
     $this->assertDatabaseHas('project_deal_changes', [

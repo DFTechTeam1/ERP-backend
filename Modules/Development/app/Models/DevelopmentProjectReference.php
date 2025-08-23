@@ -27,13 +27,21 @@ class DevelopmentProjectReference extends Model
     ];
 
     protected $appends = [
-        'real_media_path'
+        'real_media_path',
+        'full_path'
     ];
 
     // protected static function newFactory(): DevelopmentProjectReferenceFactory
     // {
     //     // return DevelopmentProjectReferenceFactory::new();
     // }
+
+    public function fullPath(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->media_path ? 'development/projects/references/' . $this->media_path : null
+        );
+    }
 
     public function realMediaPath(): Attribute
     {

@@ -84,7 +84,6 @@ class DevelopmentProjectService {
             }
 
             $rawData = $this->cacheService->getFilteredProjects(filters: $param, page: $page, perPage: $itemsPerPage);
-            $this->cacheService->invalidateAllCacheExceptBase();
 
             $paginated = $rawData['data'] ?? [];
             $totalData = $rawData['total'] ?? 0;
@@ -169,9 +168,11 @@ class DevelopmentProjectService {
 
                 // upload image if type = media
                 foreach ($data['references'] as $reference) {
-                    $payloadReferences[] = [
-                        'type' => $reference['type'],
-                    ];
+                    if ($reference['type'] != 'remove') {
+                        $payloadReferences[] = [
+                            'type' => $reference['type'],
+                        ];
+                    }
 
                     if ($reference['type'] === ReferenceType::Media->value) {
                         // handle media upload
@@ -216,6 +217,7 @@ class DevelopmentProjectService {
 
             // push new data to current cache
             $this->cacheService->pushNewProjectToAllProjectCache($project->uid);
+            $this->cacheService->invalidateAllCacheExceptBase();
 
             DB::commit();
 
@@ -229,6 +231,7 @@ class DevelopmentProjectService {
 
     /**
      * Update selected data
+     * Here we only update name, project date and description
      *
      * @param array $data
      * @param string $id
@@ -243,12 +246,18 @@ class DevelopmentProjectService {
     ): array
     {
         try {
-            $this->repo->update($data, $id);
+            // update main table
+            $this->repo->update(data: $data, id: $id);
 
-            return generalResponse(
-                'success',
-                false,
+            // update cache in all project cache
+            $project = $this->cacheService->formatingProjectOutput(
+                project: $this->repo->show(uid: $id, select: '*')
             );
+
+            $this->cacheService->updateSpecificCache(payload: $project);
+            $this->cacheService->invalidateAllCacheExceptBase();
+
+            return generalResponse(message: __('notification.successUpdateDevelopmentProject'));
         } catch (\Throwable $th) {
             return errorResponse($th);
         }

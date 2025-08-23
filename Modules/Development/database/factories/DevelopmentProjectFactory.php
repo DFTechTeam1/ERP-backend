@@ -19,11 +19,9 @@ class DevelopmentProjectFactory extends Factory
      */
     public function definition(): array
     {
-        // $employee = Employee::factory()->withUser()->create();
+        $employee = Employee::factory()->withUser()->create();
 
-        // $employee = Employee::with('user')->where('id', $employee->id)->first();
-
-        $employee = Employee::with('user')->latest()->first();
+        $employee = Employee::with('user')->where('id', $employee->id)->first();
 
         return [
             'uid' => $this->faker->uuid(),

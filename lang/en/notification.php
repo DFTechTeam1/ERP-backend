@@ -103,4 +103,5 @@ return [
     'eventHasBeenCancelBecause' => "Event have been cancel because :reason",
     'successCreateDevelopmentProject' => 'Development project has been created successfully',
     'successDeleteDevelopmentProject' => 'Development project has been deleted successfully',
+    'successUpdateDevelopmentProject' => 'Development project has been updated successfully',
 ];

@@ -43,7 +43,7 @@ class DevelopmentProjectCacheService
      * @param DevelopmentProject|Collection $project
      * @return array
      */
-    protected function formatingProjectOutput(DevelopmentProject|Collection $project): array
+    public function formatingProjectOutput(DevelopmentProject|Collection $project): array
     {
         return [
             'id' => $project->id,
@@ -68,6 +68,38 @@ class DevelopmentProjectCacheService
         ];
     }
 
+    /**
+     * Store all project list to cache.
+     * 
+     * @return array
+     */
+    public function storeAllProjectListToCache(): array
+    {
+        return Cache::remember(self::BASE_KEY, self::BASE_TTL, function () {
+            $output = $this->repo->list(
+                select: self::DEFAULT_SELECT_TABLE,
+                relation: self::DEFAULT_RELATIONS,
+                orderBy: 'project_date asc'
+            );
+
+            $output = $output->map(function ($project) {
+                return $this->formatingProjectOutput($project);
+            })->toArray();
+
+            return $output;
+        });
+    }
+
+    /**
+     * Get filtered projects from cache or database.
+     * 
+     * @param array $filters
+     * @param int $page
+     * @param int $perPage
+     * @param bool $withoutPagination
+     * 
+     * @return array
+     */
     public function getFilteredProjects(array $filters, int $page = 1, int $perPage = 15, bool $withoutPagination = false): array
     {
         $filterHash = $this->generateFilterHash($filters, $page, $perPage);
@@ -80,18 +112,7 @@ class DevelopmentProjectCacheService
         }
 
         // Get or create base cache
-        $allProjects = Cache::remember(self::BASE_KEY, self::BASE_TTL, function () {
-            $output = $this->repo->list(
-                select: self::DEFAULT_SELECT_TABLE,
-                relation: self::DEFAULT_RELATIONS
-            );
-
-            $output = $output->map(function ($project) {
-                return $this->formatingProjectOutput($project);
-            })->toArray();
-
-            return $output;
-        });
+        $allProjects = $this->storeAllProjectListToCache();
 
         // Apply filters and pagination
         $filtered = $this->applyFilters($allProjects, $filters);
@@ -289,5 +310,40 @@ class DevelopmentProjectCacheService
         foreach ($commonFilters as $filters) {
             $this->getFilteredProjects($filters);
         }
+    }
+
+    /**
+     * Update specific project cache
+     * 
+     * @param array $payload
+     * 
+     * @return void
+     */
+    public function updateSpecificCache(array $payload): void
+    {
+        // search project in all caches (base key) with uid
+        $projectUid = $payload['uid'] ?? null;
+        if (!$projectUid) {
+            return;
+        }
+
+        $data = Cache::get(self::BASE_KEY, []);
+
+        if (empty($data)) {
+            return;
+        }
+
+        // update data
+        $updatedData = collect($data)->map(function ($project) use ($payload, $projectUid) {
+            if ($project['uid'] === $projectUid) {
+                // replace all key inside $payload
+                foreach ($payload as $key => $value) {
+                    $project[$key] = $value;
+                }
+            }
+            return $project;
+        })->toArray();
+
+        Cache::put(self::BASE_KEY, $updatedData);
     }
 }

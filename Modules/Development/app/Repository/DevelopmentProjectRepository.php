@@ -24,7 +24,7 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '')
     {
         $query = $this->model->query();
 
@@ -36,6 +36,10 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($orderBy)) {
+            $query->orderByRaw($orderBy);
         }
 
         return $query->get();

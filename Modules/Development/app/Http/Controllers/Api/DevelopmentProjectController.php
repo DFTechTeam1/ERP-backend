@@ -4,6 +4,7 @@ namespace Modules\Development\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Development\Http\Requests\DevelopmentProject\Update;
 use Modules\Development\Services\DevelopmentProjectService;
 
 class DevelopmentProjectController extends Controller
@@ -44,11 +45,9 @@ class DevelopmentProjectController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(Update $request, $id)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->developmentProjectService->update(id: $id, data: $request->validated()));
     }
 
     /**
