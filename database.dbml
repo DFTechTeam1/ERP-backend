@@ -1168,7 +1168,8 @@ Table "project_task_holds" {
   "reason" varchar(255) [not null]
   "hold_at" timestamp [default: NULL]
   "end_at" timestamp [default: NULL]
-  "hold_by" int [not null]
+  "hold_by" int [not null, note: 'who is assigned to this task']
+  "employee_id" bigint [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 

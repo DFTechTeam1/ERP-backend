@@ -4986,6 +4986,11 @@ class ProjectService
                 'status' => TaskStatus::OnProgress->value,
             ], $taskUid);
 
+            // update end_at in the project_task_holds table
+            $this->projectTaskHoldRepo->update([
+                'end_at' => Carbon::now(),
+            ], 'dummy', 'project_task_id = '.$taskId.' and end_at is null');
+
             $this->loggingTask([
                 'task_id' => $taskId,
                 'actor' => $employee->nickname,
@@ -5013,7 +5018,7 @@ class ProjectService
         }
     }
 
-    public function holdTask(string $projectUid, string $taskUid, array $payload = [])
+    public function holdTask(string $projectUid, string $taskUid, array $payload = []): array
     {
         DB::beginTransaction();
         try {
@@ -5023,16 +5028,22 @@ class ProjectService
             $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnHold->value);
             $employee = $this->employeeRepo->show('id', 'id,nickname', [], 'id = '.$user->employee_id);
 
+            // get current task pic
+            $currentTaskPics = $this->taskPicRepo->list('employee_id', 'project_task_id = '.$taskId, ['employee:id,uid']);
+
             $this->taskRepo->update([
                 'status' => TaskStatus::OnHold->value,
             ], $taskUid);
 
-            $this->projectTaskHoldRepo->store([
-                'project_task_id' => $taskId,
-                'reason' => $payload['reason'],
-                'hold_at' => Carbon::now(),
-                'hold_by' => auth()->user()->employee_id ?? auth()->id(),
-            ]);
+            foreach ($currentTaskPics as $currentPic) {
+                $this->projectTaskHoldRepo->store([
+                    'project_task_id' => $taskId,
+                    'reason' => $payload['reason'],
+                    'hold_at' => Carbon::now(),
+                    'hold_by' => auth()->user()->employee_id ?? auth()->id(),
+                    'employee_id' => $currentPic->employee_id
+                ]);
+            }
 
             $this->loggingTask([
                 'task_id' => $taskId,
