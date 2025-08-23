@@ -39,7 +39,12 @@ class DevelopmentProjectController extends Controller
      */
     public function show($id)
     {
-        return apiResponse($this->developmentProjectService->show(uid: $id));
+        return apiResponse($this->developmentProjectService->edit(uid: $id));
+    }
+
+    public function detail(string $projectUid)
+    {
+        return apiResponse($this->developmentProjectService->show(uid: $projectUid));
     }
 
     /**

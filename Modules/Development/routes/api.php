@@ -20,5 +20,6 @@ Route::middleware(['auth:sanctum'])->prefix('development')->group(function () {
     Route::post('/projects', [DevelopmentProjectController::class, 'store'])->name('development.projects.store');
     Route::get('/projects/{id}', [DevelopmentProjectController::class, 'show'])->name('development.projects.show');
     Route::put('/projects/{id}', [DevelopmentProjectController::class, 'update'])->name('development.projects.update');
+    Route::get('/projects/{id}/detail', [DevelopmentProjectController::class, 'detail'])->name('development.projects.detail');
     Route::delete('/projects/{id}', [DevelopmentProjectController::class, 'destroy'])->name('development.projects.destroy');
 });

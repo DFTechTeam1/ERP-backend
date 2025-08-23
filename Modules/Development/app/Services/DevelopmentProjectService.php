@@ -3,13 +3,20 @@
 namespace Modules\Development\Services;
 
 use App\Enums\Development\Project\ReferenceType;
+use App\Enums\Development\Project\Task\TaskStatus;
 use App\Enums\ErrorCode\Code;
 use App\Services\GeneralService;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Modules\Development\app\Services\DevelopmentProjectCacheService;
+use Modules\Development\Models\DevelopmentProject;
+use Modules\Development\Repository\DevelopmentProjectBoardRepository;
 use Modules\Development\Repository\DevelopmentProjectRepository;
+use Modules\Development\Repository\DevelopmentProjectTaskRepository;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Repository\EmployeeRepository;
 
 class DevelopmentProjectService {
     private $repo;
@@ -17,6 +24,12 @@ class DevelopmentProjectService {
     private GeneralService $generalService;
 
     private DevelopmentProjectCacheService $cacheService;
+
+    private EmployeeRepository $employeeRepo;
+
+    private DevelopmentProjectTaskRepository $projectTaskRepo;
+
+    private DevelopmentProjectBoardRepository $projectBoardRepo;
 
     private const MEDIAPATH = 'development/projects/references';
 
@@ -26,12 +39,18 @@ class DevelopmentProjectService {
     public function __construct(
         DevelopmentProjectRepository $repo,
         GeneralService $generalService,
-        DevelopmentProjectCacheService $cacheService
+        DevelopmentProjectCacheService $cacheService,
+        EmployeeRepository $employeeRepo,
+        DevelopmentProjectTaskRepository $projectTaskRepo,
+        DevelopmentProjectBoardRepository $projectBoardRepo
     )
     {
         $this->repo = $repo;
         $this->generalService = $generalService;
         $this->cacheService = $cacheService;
+        $this->employeeRepo = $employeeRepo;
+        $this->projectTaskRepo = $projectTaskRepo;
+        $this->projectBoardRepo = $projectBoardRepo;
     }
 
     /**
@@ -116,12 +135,148 @@ class DevelopmentProjectService {
     }
 
     /**
-     * Get detail data
+     * Calculate data for completed task
+     * We need total task and total completed task
+     */
+    protected function calculateCompletedTask(Collection|DevelopmentProject $project)
+    {
+        $totalTasks = $project->count();
+        $completedTasks = $project->where('status', TaskStatus::Completed)->count();
+        $percentage = $totalTasks > 0 ? ($completedTasks / $totalTasks) * 100 : 0;
+
+        return [
+            'total' => $totalTasks,
+            'completed' => $completedTasks,
+            'percentage' => $percentage,
+        ];
+    }
+
+    protected function calculateWeeklyProgress(Collection|DevelopmentProject $project)
+    {
+
+    }
+
+    protected function getPicTeams(int $bossId): Collection
+    {
+        return $this->employeeRepo->list(
+            select: 'id,uid,nickname,name,position_id',
+            where: "boss_id = {$bossId}",
+            relation: [
+                'position:id,name'
+            ]
+        );
+    }
+
+    protected function getTotalTaskInEachEmployeeForEachEvent(int $employeeId, int $projectId)
+    {
+        return $this->projectTaskRepo->list(
+            select: 'id',
+            where: "development_project_id = {$projectId}",
+        )->count();
+    }
+
+    public function getBoardTasks()
+    {
+
+    }
+
+    public function getProjectBoards(int $projectId): SupportCollection
+    {
+        $data = $this->projectBoardRepo->list(
+            select: 'id,name',
+            relation: [
+                'tasks:id,name,development_project_id,development_project_board_id,description,status'
+            ],
+            where: "development_project_id = {$projectId}"
+        );
+
+        return $data->map(function ($board) {
+            return [
+                'id' => $board->id,
+                'name' => $board->name,
+                'tasks' => $board->tasks->map(function ($task) {
+                    return [
+                        'id' => $task->id,
+                        'name' => $task->name,
+                        'description' => $task->description,
+                        'status' => $task->status,
+                    ];
+                }),
+            ];
+        })->values();
+    }
+
+    /**
+     * Get detail data for show
      *
      * @param string $uid
      * @return array
      */
     public function show(string $uid): array
+    {
+        try {
+            $data = $this->repo->show(uid: $uid, relation: [
+                'tasks:id,name',
+                'pics',
+                'pics.employee:id,name,position_id',
+                'pics.employee.position:id,name',
+                'references'
+            ]);
+
+            // get complete task percentage
+            $completeTaskPercentage = $this->calculateCompletedTask($data);
+            
+            $teams = [];
+            foreach ($data->pics as $pic) {
+                $teams[] = $this->getPicTeams(bossId: $pic->employee_id);
+            }
+
+            $teams = collect($teams)->flatten(1)->unique('id')->values()->map(function ($team) {
+                return [
+                    'uid' => $team->uid,
+                    'name' => $team->name,
+                    'position' => [
+                        'name' => $team->position->name,
+                    ],
+                    'loan' => false,
+                    'is_lead_modeller' => false,
+                    'total_task' => 0
+                ];
+            });
+
+            // get project boards include with all task in each board
+            $boards = $this->getProjectBoards(projectId: $data->id);
+
+            $output = [
+                'completeTaskPercentage' => $completeTaskPercentage,
+                'uid' => $data->uid,
+                'name' => $data->name,
+                'description' => $data->description,
+                'status_text' => $data->status->label(),
+                'status_color' => $data->status->color(),
+                'project_date' => $data->project_date_text,
+                'pic_names' => $data->pics->pluck('employee.nickname')->implode(','),
+                'teams' => $teams,
+                'references' => $data->references,
+                'boards' => $boards,
+            ];
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get detail data for edit
+     *
+     * @param string $uid
+     * @return array
+     */
+    public function edit(string $uid): array
     {
         try {
             $data = $this->repo->show(
