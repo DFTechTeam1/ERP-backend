@@ -2,6 +2,8 @@
 
 use App\Actions\Project\WriteDurationTaskHistory;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
+use App\Enums\Production\ProjectStatus;
+use App\Enums\Production\TaskHistoryType;
 use App\Enums\Production\TaskStatus;
 use App\Enums\Production\WorkType;
 use App\Exports\ProjectDealSummary;
@@ -15,6 +17,7 @@ use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\PusherNotification;
 use App\Services\Telegram\TelegramService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +27,8 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Company\Models\City;
+use Modules\Company\Models\PositionBackup;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Jobs\InvoiceDue;
 use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
@@ -40,10 +45,13 @@ use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
+use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectBoard;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectQuotation;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Models\ProjectTaskDurationHistory;
 use Modules\Production\Models\ProjectTaskHold;
 use Modules\Production\Models\ProjectTaskPicLog;
 
@@ -160,35 +168,135 @@ Route::get('dummy-send-email', function () {
     return 'User not found.';
 });
 
-Route::get('check', function () {
-    $holds = ProjectTaskHold::selectRaw('project_task_id')->whereNull("end_at")->get();
-    $projectTaskIds = $holds->pluck('project_task_id')->toArray();
+Route::get('checkdummy', function () {
+    DB::beginTransaction();
+    try {
+        $city = City::first();
+        $marketing = Employee::latest()->first();
 
-    $logs = ProjectTaskPicLog::whereIn('project_task_id', $projectTaskIds)->get();
-    $logs = $logs->groupBy('project_task_id');
+        $project = Project::factory()->create([
+            'status' => ProjectStatus::Completed->value,
+            'name' => "DUMMY DATA PROJECT",
+            'city_id' => $city->id,
+            'state_id' => $city->state_id,
+            'country_id' => $city->country_id,
+            'marketing_id' => $marketing->id
+        ]);
 
-    $payload = [];
-    $a = 0;
-    foreach ($logs as $taskId => $logData) {
-        foreach ($logData as $key => $logItem) {
-            if ($logItem['work_type'] == WorkType::OnHold->value) {
-                $payload[$a] = [
-                    'task_id' => $taskId,
-                    'id' => $logItem['id'],
-                    'on_hold_at' => $logItem['time_added']
-                ];
-
-                $expectedProgressKey = $key + 1;
-                if (isset($logData[$expectedProgressKey]) && $logData[$expectedProgressKey]['work_type'] == WorkType::OnProgress->value) {
-                    $payload[$a]['in_progress_at'] = date('Y-m-d H:i:s', strtotime($logData[$expectedProgressKey]['time_added']));
-                }
+        $projectBoards = ProjectBoard::create([
+            'project_id' => $project->id,
+            'name' => '3D modeller',
+            'sort' => 0,
+            'base_board_id' => 1
+        ]);
+    
+        $pm = PositionBackup::where('name', 'Project Manager')->first();
+        $personAsPm = Employee::whereRaw("name like '%rudhi%'")->first();
+    
+        $pmStaffs = Employee::where('boss_id', $personAsPm->id)->get();
+    
+        if ($pm) {
+            // Do something with the project manager
+            ProjectPersonInCharge::create([
+                'project_id' => $project->id,
+                'pic_id' => $personAsPm->id
+            ]);
+        }
+    
+        $tasks = ProjectTask::factory()->count(3)->create([
+            'project_id' => $project->id,
+            'is_approved' => 1,
+            'is_modeler_task' => 0,
+            'project_board_id' => $projectBoards->id
+        ]);
+    
+        foreach ($tasks as $key => $task) {
+            if ($key == 0) {
+                // create task
+                // create data for project_task_duration_histories with:
+                // 1. task_full_duration is 3 hour (in second)
+                // 2. task_holded_duration is 33 minutes (in second)
+                // 3. task_revised_duration is 0 (in second)
+                // 4. task_approval_duration is 45 minutes (in second)
+                // 5. task_actual_duration is 3 hour - 33 minutes (in second)
+                ProjectTaskDurationHistory::create([
+                    'project_id' => $project->id,
+                    'task_id' => $task->id,
+                    'pic_id' => $personAsPm->id,
+                    'employee_id' => $pmStaffs[0]->id,
+                    'task_type' => TaskHistoryType::SingleAssignee->value,
+                    'task_full_duration' => 10800,
+                    'task_holded_duration' => 1980,
+                    'task_revised_duration' => 0,
+                    'task_approval_duration' => 2700,
+                    'task_actual_duration' => 10800 - 1980,
+                    'total_task_holded' => 2,
+                    'total_task_revised' => 0,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                ]);
+            }
+    
+            if ($key == 1) {
+                // create task
+                // create data for project_task_duration_histories with:
+                // 1. task_full_duration is 32 hour (in second)
+                // 2. task_holded_duration is 24 minutes (in second)
+                // 3. task_revised_duration is 0 (in second)
+                // 4. task_approval_duration is 50 minutes (in second)
+                // 5. task_actual_duration is 32 hour - 24 minutes (in second)
+                ProjectTaskDurationHistory::create([
+                    'project_id' => $project->id,
+                    'task_id' => $task->id,
+                    'pic_id' => $personAsPm->id,
+                    'employee_id' => $pmStaffs[1]->id,
+                    'task_type' => TaskHistoryType::SingleAssignee->value,
+                    'task_full_duration' => 115200,
+                    'task_holded_duration' => 1440,
+                    'task_revised_duration' => 0,
+                    'task_approval_duration' => 3000,
+                    'task_actual_duration' => 115200 - 1440,
+                    'total_task_holded' => 2,
+                    'total_task_revised' => 0,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                ]);
             }
 
-            $a++;
+            if ($key == 2) {
+                // create task
+                // create data for project_task_duration_histories with:
+                // 1. task_full_duration is 14 hour (in second)
+                // 2. task_holded_duration is 0 minutes (in second)
+                // 3. task_revised_duration is 4 hour (in second)
+                // 4. task_approval_duration is 50 minutes (in second)
+                // 5. task_actual_duration is 14 hour - 4 hour (in second)
+                ProjectTaskDurationHistory::create([
+                    'project_id' => $project->id,
+                    'task_id' => $task->id,
+                    'pic_id' => $personAsPm->id,
+                    'employee_id' => $pmStaffs[0]->id,
+                    'task_type' => TaskHistoryType::SingleAssignee->value,
+                    'task_full_duration' => 50400,
+                    'task_holded_duration' => 0,
+                    'task_revised_duration' => 14400,
+                    'task_approval_duration' => 3000,
+                    'task_actual_duration' => 50400 - 14400,
+                    'total_task_holded' => 2,
+                    'total_task_revised' => 0,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                ]);
+            }
         }
-    }
 
-    return array_values($payload);
+        DB::commit();
+        
+        return $project;
+    } catch (\Throwable $th) {
+        DB::rollBack();
+        return errorMessage($th);
+    }
 });
 
 Route::get('pusher-check', function() {
