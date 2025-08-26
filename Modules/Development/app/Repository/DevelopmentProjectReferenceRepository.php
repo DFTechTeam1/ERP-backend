@@ -86,7 +86,7 @@ class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceI
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
+        $query->where("id", $uid);
         
         if ($relation) {
             $query->with($relation);

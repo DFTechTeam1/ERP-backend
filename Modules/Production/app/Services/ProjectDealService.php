@@ -3,6 +3,7 @@
 namespace Modules\Production\Services;
 
 use App\Actions\CopyDealToProject;
+use App\Actions\CreateInteractiveProject;
 use App\Actions\CreateQuotation;
 use App\Actions\Project\DetailCache;
 use App\Enums\Production\ProjectDealStatus;
@@ -469,7 +470,7 @@ class ProjectDealService
                 // update quotation to final
                 $detail = $this->repo->show(
                     uid: $projectDealId,
-                    select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,longitude,latitude,status',
+                    select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,longitude,latitude,status,is_have_interactive_element',
                     relation: [
                         'latestQuotation',
                         'city:id,name',
@@ -486,8 +487,13 @@ class ProjectDealService
                     id: $detail->latestQuotation->id
                 );
 
-                $project = CopyDealToProject::run($detail, $this->generalService);
+                $project = CopyDealToProject::run($detail, $this->generalService, $detail->is_have_interactive_element);
 
+                // create interactive project if needed
+                if ($detail->is_have_interactive_element) {
+                    CreateInteractiveProject::run($project->id);
+                }
+                
                 // generate master invoice
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
 

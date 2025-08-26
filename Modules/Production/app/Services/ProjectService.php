@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Actions\CreateInteractiveProject;
 use App\Actions\CreateQuotation;
 use App\Actions\DefineTaskAction;
 use App\Actions\GenerateQuotationNumber;
@@ -4194,7 +4195,7 @@ class ProjectService
     {
         $this->projectTaskLogRepository->store([
             'project_task_id' => $payload['task_id'],
-            'type' => 'holdTask',
+            'type' => 'holdTask', // TODO: Change to startTask
             'text' => __('global.actorStartTheTask', ['actor' => $payload['actor']]),
             'user_id' => auth()->id(),
         ]);
@@ -8368,7 +8369,12 @@ class ProjectService
                 //     'identifier_number' => $this->generalService->setProjectIdentifier()
                 // ], id: $project->id);
 
-                \App\Actions\CopyDealToProject::run($project, $this->generalService);
+                $realProject = \App\Actions\CopyDealToProject::run($project, $this->generalService, $payload['is_have_interactive_element']);
+
+                // create interactive project if needed
+                if ($payload['is_have_interactive_element']) {
+                    CreateInteractiveProject::run($realProject->id);
+                }
 
                 // gerenrate invoice master
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $project->id);

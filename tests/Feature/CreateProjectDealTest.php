@@ -75,7 +75,7 @@ describe('Create Project Deal', function () {
         $service = createProjectService(); 
 
         $response = $service->storeProjectDeals(payload: $requestData);
-
+        
         expect($response)->toHaveKey('error');
         expect($response['error'])->toBeFalse();
         expect($response['data'])->toHaveKey('url');

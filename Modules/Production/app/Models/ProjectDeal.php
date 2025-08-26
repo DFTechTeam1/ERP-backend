@@ -50,7 +50,8 @@ class ProjectDeal extends Model
         'cancel_at',
         'cancel_by',
         'identifier_number',
-        'deleted_at'
+        'deleted_at',
+        'is_have_interactive_element'
     ];
 
     protected static function booted(): void

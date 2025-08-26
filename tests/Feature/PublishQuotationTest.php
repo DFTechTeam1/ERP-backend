@@ -10,13 +10,14 @@ use Modules\Company\Models\ProjectClass;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
+use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\QuotationItem;
 
 function createDeal($customer, $projectClass, $employee, $quotationItem) {
-    $payload = getProjectDealPayload($customer, $projectClass, $employee, $quotationItem);
+    $payload = getProjectDealPayload($customer, $projectClass, $employee, $quotationItem, true);
     $projectService = createProjectService();
-
+    logging('PAYLOAD INTE', $payload);
     $response = $projectService->storeProjectDeals($payload);
 
     return ProjectDeal::where('name', $payload['name'])
@@ -84,6 +85,13 @@ describe('Publish Quotation', function () {
         $this->assertDatabaseHas('projects', [
             'name' => $currentDeal->name,
             'project_deal_id' => $currentDeal->id
+        ]);
+        $projectData = Project::where('name', $currentDeal->name)
+            ->where('project_deal_id', $currentDeal->id)
+            ->first();
+        $this->assertDatabaseHas('interactive_projects', [
+            'name' => $currentDeal->name,
+            'parent_project' => $projectData->id
         ]);
 
         // check marketing

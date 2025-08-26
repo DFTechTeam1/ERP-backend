@@ -241,7 +241,8 @@ function getProjectDealPayload(
     object $customer,
     ?object $projectClass = null,
     ?object $employee = null,
-    ?object $quotationItem = null
+    ?object $quotationItem = null,
+    bool $withInteractive = false
 ) {
     $country = Country::factory()
         ->has(
@@ -281,6 +282,7 @@ function getProjectDealPayload(
         'latitude' => fake()->latitude(),
         'equipment_type' => 'lasika',
         'is_high_season' => 1,
+        'is_have_interactive_element' => $withInteractive,
         'client_portal' => 'wedding-anniversary',
         'marketing_id' => [
             $employee ? $employee->uid : 'f063164d-62ff-44cf-823d-7c456dad1f4b'

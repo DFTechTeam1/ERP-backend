@@ -17,3 +17,5 @@ use Modules\Development\Http\Controllers\DevelopmentController;
 Route::group([], function () {
     Route::resource('development', DevelopmentController::class)->names('development');
 });
+
+Route::get('development/project/{taskUid}/downloadAttachment/{attachmentId}', [DevelopmentController::class, 'downloadAttachment'])->name('development.project.downloadAttachment');

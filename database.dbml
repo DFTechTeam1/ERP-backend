@@ -1036,6 +1036,19 @@ Table "project_boards" {
   }
 }
 
+Table "interactive_project_boards" {
+  "id" bigint [pk, not null, increment]
+  "project_id" bigint [not null, ref: > interactive_projects.id]
+  "name" varchar(255) [not null]
+  "sort" varchar(2) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+
+  Indexes {
+    project_id [name: "project_boards_project_id_foreign"]
+  }
+}
+
 Table "project_classes" {
   "id" bigint [pk, not null, increment]
   "name" varchar(255) [not null]
@@ -1397,6 +1410,40 @@ Table "projects" {
   "project_deal_id" bigint [ref: > project_deals.id]
 }
 
+Table "interactive_projects" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "client_portal" varchar(255) [not null]
+  "parent_project" bigint [ref: > project.id]
+  "project_date" date [not null]
+  "event_type" projects_event_type_enum [default: NULL]
+  "venue" varchar(255) [not null]
+  "marketing_id" int [default: NULL]
+  "collaboration" varchar(255) [default: NULL]
+  "note" text
+  "status" tinyint [default: NULL]
+  "created_by" int [default: NULL]
+  "updated_by" int [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "led_area" double [not null, default: '0']
+  "led_detail" longtext
+  "uid" char(36) [not null]
+  "showreels" varchar(255) [default: NULL]
+  "country_id" int [default: NULL]
+  "state_id" int [default: NULL]
+  "city_id" int [default: NULL]
+  "city_name" varchar(255) [default: NULL]
+  "project_class_id" int [default: NULL]
+  "classification" varchar(255) [default: NULL]
+  "showreels_status" tinyint [default: NULL]
+  "longitude" varchar(150) [default: NULL]
+  "latitude" varchar(150) [default: NULL]
+  "feedback" text
+
+  "project_deal_id" bigint [ref: > project_deals.id]
+}
+
 Table "project_task_duration_histories" {
     "id" bigint [pk, increment, not null]
     "project_id" bigint [not null, note: 'References the related project', ref: > projects.id]
@@ -1464,6 +1511,7 @@ Table "project_deals" {
   "is_high_season" bool
   "is_fully_paid" boolean [default: false, note: "Define this project has been paid off or not"]
   "cancel_reason" varchar(255)
+  "is_have_interactive_element" bool [default: false]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "deleted_at" timestamp [default: NULL]
@@ -1923,18 +1971,37 @@ Table "development_project_tasks" {
   "development_project_board_id" bigint [not null, ref: > development_project_boards.id]
   "name" varchar(255) [not null]
   "description" text
-  "status" development_project_task_status_enum [default: NULL]
+  "deadline" timestamp
+  "status" development_project_task_status_enum [default: NULL],
+  "current_pic_id" varchar [note: 'this will indicate who is the current worker, when task is revise, pic should be the same with this value']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_revises" {
+  "id" bigint [pk, not null, increment]
+  "task_id" bigint [ref: > development_project_tasks.id]
+  "reason" text
+  "assigned_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_revise_images" {
+  "id" bigint [pk, not null, increment]
+  "revise_id" bigint [not null, ref: > dev_project_task_revises.id]
+  "image_path" varchar(255)
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
 
 Table "development_project_task_deadlines" {
   "id" bigint [pk, not null, increment]
-  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
   "deadline" timestamp [not null]
   "start_time" timestamp [default: NULL]
   "actual_end_time" timestamp [default: NULL]
-  "employee_id" bigint [not null, ref: > employees.id]
+  "employee_id" bigint [ref: > employees.id, note: 'null']
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -1942,7 +2009,7 @@ Table "development_project_task_deadlines" {
 Table "development_project_task_attachments" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
-  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
   "file_path" varchar(255) [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
@@ -1961,19 +2028,55 @@ Table "development_project_task_timelines" {
 
 Table "development_project_task_pics" {
   "id" bigint [pk, not null, increment]
-  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
   "employee_id" bigint [not null, ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_pic_histories" {
+  "id" bigint [pk, not null, increment]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "is_until_finish" tinyint [default: 1]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_pic_workstates" {
+  "id" bigint [pk, not null, increment]
+  "started_at" timestamp [default: NULL]
+  "finished_at" timestamp [default: NULL]
+  "task_id" bigint [ref: > development_project_tasks.id]
+  "employee_id" bigint [ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_pic_holdstates" {
+  "id" bigint [pk, not null, increment]
+  "holded_at" timestamp [default: NULL]
+  "unholded_at" timestamp [default: NULL]
+  "task_id" bigint [ref: > development_project_tasks.id]
+  "employee_id" bigint [ref: > employees.id]
+  "work_state_id" bigint [ref: > dev_project_task_pics_workstates.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
 
 Table "development_task_proofs" {
   "id" bigint [pk, not null, increment]
-  "uid" char(36) [not null]
-  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
   "employee_id" bigint [not null, ref: > employees.id]
   "nas_path" varchar(255)
-  "preview" varchar(255) [note: 'path of preview file']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_task_proof_images" {
+  "id" bigint [pk, not null, increment]
+  "development_task_proof_id" bigint [not null, ref: > development_task_proofs.id]
+  "image_path" varchar(255)
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

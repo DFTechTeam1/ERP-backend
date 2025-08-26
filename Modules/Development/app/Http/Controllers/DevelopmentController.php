@@ -4,9 +4,17 @@ namespace Modules\Development\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Development\Services\DevelopmentProjectService;
 
 class DevelopmentController extends Controller
 {
+    private DevelopmentProjectService $service;
+
+    public function __construct(DevelopmentProjectService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -61,5 +69,10 @@ class DevelopmentController extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    public function downloadAttachment(string $taskUid, string $attachmentId)
+    {
+        return $this->service->downloadAttachment($taskUid, $attachmentId);
     }
 }
