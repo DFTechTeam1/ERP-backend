@@ -104,4 +104,16 @@ return [
     'successCreateDevelopmentProject' => 'Development project has been created successfully',
     'successDeleteDevelopmentProject' => 'Development project has been deleted successfully',
     'successUpdateDevelopmentProject' => 'Development project has been updated successfully',
+    'successCreateTask' => 'Task has been created successfully',
+    'errorUploadTaskImage' => 'Failed to upload task image',
+    'successAssignPicToTask' => 'Successfully assigned PIC to task',
+    'successAddDeadline' => 'Successfully assigned new deadline to task',
+    'attachmentHasBeenDeleted' => 'Attachment has been deleted successfully',
+    'successDeleteTask' => 'Task has been deleted successfully',
+    'taskHasBeenApproved' => 'Task has been approved successfully',
+    'taskHasBeenHold' => 'Task has been hold successfully',
+    'taskHasBeenStartedAgain' => 'Task has been started again',
+    'taskSubmitted' => 'Task has been submitted successfully',
+    'taskHasBeenComplete' => 'Task has been complete',
+    'revisedHasBeenSubmitted' => 'Task revision has been submitted successfully'
 ];

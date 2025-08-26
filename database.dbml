@@ -1923,18 +1923,37 @@ Table "development_project_tasks" {
   "development_project_board_id" bigint [not null, ref: > development_project_boards.id]
   "name" varchar(255) [not null]
   "description" text
-  "status" development_project_task_status_enum [default: NULL]
+  "deadline" timestamp
+  "status" development_project_task_status_enum [default: NULL],
+  "current_pic_id" varchar [note: 'this will indicate who is the current worker, when task is revise, pic should be the same with this value']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_revises" {
+  "id" bigint [pk, not null, increment]
+  "task_id" bigint [ref: > development_project_tasks.id]
+  "reason" text
+  "assigned_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_revise_images" {
+  "id" bigint [pk, not null, increment]
+  "revise_id" bigint [not null, ref: > dev_project_task_revises.id]
+  "image_path" varchar(255)
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
 
 Table "development_project_task_deadlines" {
   "id" bigint [pk, not null, increment]
-  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
   "deadline" timestamp [not null]
   "start_time" timestamp [default: NULL]
   "actual_end_time" timestamp [default: NULL]
-  "employee_id" bigint [not null, ref: > employees.id]
+  "employee_id" bigint [ref: > employees.id, note: 'null']
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -1942,7 +1961,7 @@ Table "development_project_task_deadlines" {
 Table "development_project_task_attachments" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
-  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
   "file_path" varchar(255) [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
@@ -1961,19 +1980,55 @@ Table "development_project_task_timelines" {
 
 Table "development_project_task_pics" {
   "id" bigint [pk, not null, increment]
-  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
   "employee_id" bigint [not null, ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_pic_histories" {
+  "id" bigint [pk, not null, increment]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "is_until_finish" tinyint [default: 1]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_pic_workstates" {
+  "id" bigint [pk, not null, increment]
+  "started_at" timestamp [default: NULL]
+  "finished_at" timestamp [default: NULL]
+  "task_id" bigint [ref: > development_project_tasks.id]
+  "employee_id" bigint [ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "dev_project_task_pic_holdstates" {
+  "id" bigint [pk, not null, increment]
+  "holded_at" timestamp [default: NULL]
+  "unholded_at" timestamp [default: NULL]
+  "task_id" bigint [ref: > development_project_tasks.id]
+  "employee_id" bigint [ref: > employees.id]
+  "work_state_id" bigint [ref: > dev_project_task_pics_workstates.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
 
 Table "development_task_proofs" {
   "id" bigint [pk, not null, increment]
-  "uid" char(36) [not null]
-  "development_project_task_id" bigint [not null, ref: > development_project_tasks.id]
+  "task_id" bigint [not null, ref: > development_project_tasks.id]
   "employee_id" bigint [not null, ref: > employees.id]
   "nas_path" varchar(255)
-  "preview" varchar(255) [note: 'path of preview file']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_task_proof_images" {
+  "id" bigint [pk, not null, increment]
+  "development_task_proof_id" bigint [not null, ref: > development_task_proofs.id]
+  "image_path" varchar(255)
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

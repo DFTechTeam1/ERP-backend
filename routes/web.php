@@ -170,11 +170,9 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    $projects = DevelopmentProject::factory()
-        ->withPics(true)
-        ->count(2500)->create();
+    $check = \Modules\Development\Models\DevelopmentProject::where('id', 1)->with('pics')->first();
 
-    return $projects;
+    return !$check->pics->where('employee_id', 5)->isEmpty();
 });
 
 Route::get('pusher-check', function() {

@@ -33,6 +33,17 @@ class DevelopmentProjectFactory extends Factory
         ];
     }
 
+    public function withBoards()
+    {
+        return $this->afterCreating(function (DevelopmentProject $project) {
+            $project->boards()->createMany([
+                ['name' => 'To Do'],
+                ['name' => 'In Progress'],
+                ['name' => 'Done'],
+            ]);
+        });
+    }
+
     public function withPics(bool $withRealEmployee = false)
     {
         return $this->afterCreating(function (DevelopmentProject $project) use ($withRealEmployee) {

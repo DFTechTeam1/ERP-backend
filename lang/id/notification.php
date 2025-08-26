@@ -104,4 +104,16 @@ return [
     'successCreateDevelopmentProject' => 'Project pengembangan telah berhasil dibuat',
     'successDeleteDevelopmentProject' => 'Project pengembangan telah berhasil dihapus',
     'successUpdateDevelopmentProject' => 'Project pengembangan telah berhasil diperbarui',
+    'successCreateTask' => 'Tugas telah berhasil dibuat',
+    'errorUploadTaskImage' => 'Gagal mengunggah gambar tugas',
+    'successAssignPicToTask' => 'Berhasil menetapkan PIC ke tugas',
+    'successAddDeadline' => "Berhasil menambahkan tenggat waktu ke tugas",
+    'attachmentHasBeenDeleted' => 'Lampiran telah berhasil dihapus',
+    'successDeleteTask' => 'Tugas telah berhasil dihapus',
+    'taskHasBeenApproved' => 'Tugas telah berhasil disetujui',
+    'taskHasBeenHold' => 'Tugas telah di tunda untuk sementara',
+    'taskHasBeenStartedAgain' => "Tugas telah dimulai kembali",
+    'taskSubmitted' => 'Tugas telah berhasil diserahkan',
+    'taskHasBeenComplete' => 'Tugas telah selesai',
+    'revisedHasBeenSubmitted' => 'Revisi tugas telah berhasil diserahkan'
 ];

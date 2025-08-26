@@ -41,7 +41,7 @@ it('Add more quotation return success', function () {
     $service = createProjectDealService();
 
     $response = $service->addMoreQuotation(payload: $payload, projectDealUid: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id));
-    logging('RESPONSE ADD QUOT', $response);
+    
     expect($response)->toHaveKey('error');
     expect($response['error'])->toBeFalse();
     

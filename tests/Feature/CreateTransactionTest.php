@@ -153,6 +153,7 @@ describe('Create Transaction', function () use ($requestData) {
         ];
 
         $response = $service->store(payload: $payload, projectDealUid: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id));
+        logging('RESPONSE CREATE TRX', $response);
         
         expect($response)->toHaveKeys(['error', 'message']);
         expect($response['error'])->toBeFalse();

@@ -148,12 +148,10 @@ class DevelopmentProjectTaskRepository extends DevelopmentProjectTaskInterface {
      * Delete Data
      *
      * @param integer|string $id
-     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
+        return $this->model->where('id', $id)->delete();
     }
 
     /**
