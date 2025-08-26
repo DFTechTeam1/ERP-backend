@@ -170,9 +170,7 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    $check = \Modules\Development\Models\DevelopmentProject::where('id', 1)->with('pics')->first();
-
-    return !$check->pics->where('employee_id', 5)->isEmpty();
+    
 });
 
 Route::get('pusher-check', function() {

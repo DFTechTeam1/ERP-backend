@@ -30,8 +30,12 @@ Route::middleware(['auth:sanctum'])->prefix('development')->group(function () {
     Route::get('projects/tasks/{taskUid}/approved', [DevelopmentProjectController::class, 'approveTask'])->name('development.projects.tasks.approved');
     Route::get('projects/tasks/{taskUid}/completeTask', [DevelopmentProjectController::class, 'completeTask'])->name('development.projects.tasks.completed');
     Route::post('projects/tasks/{taskUid}/reviseTask', [DevelopmentProjectController::class, 'reviseTask'])->name('development.projects.tasks.revised');
+    Route::post('projects/tasks/{projectUid}/references', [DevelopmentProjectController::class, 'storeReferences'])->name('development.projects.tasks.references.store');
+    Route::post('projects/tasks/{taskUid}/attachments', [DevelopmentProjectController::class, 'storeAttachments'])->name('development.projects.tasks.attachments.store');
     Route::get('projects/tasks/{taskUid}/holded', [DevelopmentProjectController::class, 'holdTask'])->name('development.projects.tasks.holded');
     Route::get('projects/tasks/{taskUid}/start', [DevelopmentProjectController::class, 'startTaskAfterHold'])->name('development.projects.tasks.start');
+    Route::get('projects/{projectUid}/getRelatedTask/{taskUid}', [DevelopmentProjectController::class, 'getRelatedTask'])->name('development.projects.tasks.related');
+    Route::delete('projects/{projectUid}/references/{referenceId}', [DevelopmentProjectController::class, 'deleteReference'])->name('development.projects.references.destroy');
     Route::delete('projects/{projectUid}/tasks/{taskUid}/attachments/{attachmentId}', [DevelopmentProjectController::class, 'deleteTaskAttachment'])->name('development.projects.tasks.attachments.destroy');
     Route::get('projects/tasks/{taskUid}/move/{boardId}', [DevelopmentProjectController::class, 'moveBoardId'])->name('development.projects.tasks.move');
 });

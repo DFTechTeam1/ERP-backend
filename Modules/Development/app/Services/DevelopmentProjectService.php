@@ -123,8 +123,8 @@ class DevelopmentProjectService {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 50;
             $page = request('page') ?? 1;
-            // $page = $page == 1 ? 0 : $page;
-            // $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
             if (!empty($search)) {
@@ -154,19 +154,44 @@ class DevelopmentProjectService {
                 $param['end_date'] = request('end_date');
             }
 
-            $rawData = $this->cacheService->getFilteredProjects(filters: $param, page: $page, perPage: $itemsPerPage);
+            // $rawData = $this->cacheService->getFilteredProjects(filters: $param, page: $page, perPage: $itemsPerPage);
+            
 
-            $paginated = $rawData['data'] ?? [];
-            $totalData = $rawData['total'] ?? 0;
+            // $paginated = $rawData['data'] ?? [];
+            // $totalData = $rawData['total'] ?? 0;
 
-            // $paginated = $this->repo->pagination(
-            //     $select,
-            //     $where,
-            //     $relation,
-            //     $itemsPerPage,
-            //     $page
-            // );
-            // $totalData = $this->repo->list('id', $where)->count();
+            $paginated = $this->repo->pagination(
+                $select,
+                $where,
+                $relation,
+                $itemsPerPage,
+                $page
+            );
+            $paginated = $paginated->map(function ($project) {
+                return [
+                    'id' => $project->id,
+                    'uid' => $project->uid,
+                    'name' => $project->name,
+                    'description' => $project->description,
+                    'status' => $project->status,
+                    'status_text' => $project->status->label(),
+                    'status_color' => $project->status->color(),
+                    'project_date' => $project->project_date ? $project->project_date->format('Y-m-d') : null,
+                    'project_date_text' => $project->project_date_text,
+                    'created_by' => $project->created_by,
+                    'pic_name' => $project->pics->pluck('employee.nickname')->implode(','),
+                    'total_task' => $project->tasks->count(),
+                    'pics' => $project->pics->map(function ($pic) {
+                        return [
+                            'id' => $pic->employee_id,
+                            'nickname' => $pic->employee->nickname
+                        ];
+                    })->toArray(),
+                    'pic_uids' => $project->pics->pluck('employee.uid')->toArray()
+                ];
+            });
+
+            $totalData = $this->repo->list('id', $where)->count();
 
             return generalResponse(
                 'Success',
@@ -242,7 +267,8 @@ class DevelopmentProjectService {
                 'tasks.pics:id,task_id,employee_id',
                 'tasks.pics.employee:id,uid,nickname,avatar_color,name',
                 'tasks.taskProofs:id,task_id,nas_path,created_at',
-                'tasks.taskProofs.images:id,development_task_proof_id,image_path'
+                'tasks.taskProofs.images:id,development_task_proof_id,image_path',
+                'tasks.revises.images'
             ],
             where: "development_project_id = {$projectId}"
         );
@@ -252,7 +278,6 @@ class DevelopmentProjectService {
                 'id' => $board->id,
                 'name' => $board->name,
                 'tasks' => $board->tasks->map(function ($task) use ($board) {
-                    $task['revises'] = collect([]);
                     $task['proofOfWorks'] = collect([]);
 
                     return [
@@ -265,6 +290,14 @@ class DevelopmentProjectService {
                         'status_text' => $task->status->label(),
                         'status_color' => $task->status->color(),
                         'board_id' => $board->id,
+                        'revises' => $task->revises->map(function ($revise) {
+                            return [
+                                'revise_at' => date('d F Y H:i', strtotime($revise->created_at)),
+                                'images' => $revise->images,
+                                'id' => $revise->id,
+                                'reason' => $revise->reason,
+                            ];
+                        }),
                         'proof_of_works' => $task->taskProofs->map(function ($proof) {
                             $items = $proof->images->map(function ($image) {
                                 return $image->real_image_path;
@@ -451,6 +484,34 @@ class DevelopmentProjectService {
         }
     }
 
+    protected function uploadProjectReferences(Collection|DevelopmentProject $project, array $references): void
+    {
+        // upload image if type = media
+        foreach ($references as $reference) {
+            if ($reference['type'] != 'remove') {
+                $payloadReferences[] = [
+                    'type' => $reference['type'],
+                ];
+            }
+
+            if ($reference['type'] === ReferenceType::Media->value) {
+                // handle media upload
+                $media = $this->generalService->uploadImageandCompress(
+                    path: self::MEDIAPATH,
+                    compressValue: 0,
+                    image: $reference['image']
+                );
+                $payloadReferences[count($payloadReferences) - 1]['media_path'] = $media;
+            } else if ($reference['type'] === ReferenceType::Link->value) {
+                $payloadReferences[count($payloadReferences) - 1]['link'] = $reference['link'];
+                $payloadReferences[count($payloadReferences) - 1]['link_name'] = $reference['link_name'];
+            }
+        }
+
+
+        $project->references()->createMany($payloadReferences);
+    }
+
     /**
      * Store data
      *
@@ -474,29 +535,7 @@ class DevelopmentProjectService {
                 $payloadReferences = [];
 
                 // upload image if type = media
-                foreach ($data['references'] as $reference) {
-                    if ($reference['type'] != 'remove') {
-                        $payloadReferences[] = [
-                            'type' => $reference['type'],
-                        ];
-                    }
-
-                    if ($reference['type'] === ReferenceType::Media->value) {
-                        // handle media upload
-                        $media = $this->generalService->uploadImageandCompress(
-                            path: self::MEDIAPATH,
-                            compressValue: 0,
-                            image: $reference['image']
-                        );
-                        $payloadReferences[count($payloadReferences) - 1]['media_path'] = $media;
-                    } else if ($reference['type'] === ReferenceType::Link->value) {
-                        $payloadReferences[count($payloadReferences) - 1]['link'] = $reference['link'];
-                        $payloadReferences[count($payloadReferences) - 1]['link_name'] = $reference['link_name'];
-                    }
-                }
-
-
-                $project->references()->createMany($payloadReferences);
+                $this->uploadProjectReferences($project, $data['references']);
             }
 
             // attach pics if exists
@@ -829,7 +868,7 @@ class DevelopmentProjectService {
         $tmpFiles = [];
         try {
             $project = $this->repo->show(uid: $projectUid, select: 'id');
-            $payload['status'] = TaskStatus::Draft->value;
+            $payload['status'] = (isset($payload['pics'])) && (!empty($payload['pics'])) ? TaskStatus::WaitingApproval->value : TaskStatus::Draft->value;
 
             $task = $project->tasks()->create([
                 'development_project_board_id' => $payload['board_id'],
@@ -1624,4 +1663,165 @@ class DevelopmentProjectService {
             return errorResponse($th);
         }
     }
-} 
+
+    /**
+     * Store project references.
+     * 
+     * @param array $payload
+     * @param string $projectUid
+     * 
+     * @return array
+     */
+    public function storeReferences(array $payload, string $projectUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $project = $this->repo->show(uid: $projectUid, select: 'id');
+
+            $this->uploadProjectReferences($project, $payload['references']);
+
+            $references = $this->getProjectReferences(projectId: $project->id);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successAddReference'),
+                data: $references->toArray()
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete a project reference.
+     * 
+     * @param string $taskUid
+     * @param int $referenceId
+     * 
+     * @return array
+     */
+    public function deleteReference(string $projectUid, int $referenceId): array
+    {
+        try {
+            $project = $this->repo->show(uid: $projectUid, select: 'id');
+
+            $reference = $this->projectReferenceRepo->show(uid: $referenceId, select: 'id,media_path,type');
+
+            if (Storage::disk('public')->exists(self::MEDIAPATH . '/' . $reference->media_path)) {
+                Storage::disk('public')->delete(self::MEDIAPATH . '/' . $reference->media_path);
+            }
+
+            $reference->delete();
+
+            $references = $this->getProjectReferences(projectId: $project->id);
+
+            return generalResponse(
+                message: __('notification.referenceHasBeenDeleted'),
+                data: $references->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get related tasks for a specific project.
+     * 
+     * @param string $projectUid
+     * @param string $taskUid
+     * 
+     * @return array
+     */
+    public function getRelatedTask(string $projectUid, string $taskUid): array
+    {
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new DevelopmentProject());
+
+            $tasks = $this->projectTaskRepo->list(
+                relation: [],
+                select: 'id,uid,name',
+                where: "development_project_id = {$projectId} and uid != '{$taskUid}' and status != " . TaskStatus::Draft->value,
+            );
+
+            return generalResponse(
+                message: "Success",
+                data: $tasks->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Store attachments for a specific task.
+     * 
+     * @param array $payload
+     * @param string $taskUid
+     * 
+     * @return array
+     */
+    public function storeAttachments(array $payload, string $taskUid): array
+    {
+        DB::beginTransaction();
+        $tmpFiles = [];
+        try {
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,development_project_id', relation: [
+                'attachments'
+            ]);
+
+            // upload task attachments if any
+            if (
+                (isset($payload['images'])) &&
+                (!empty($payload['images']))
+            ) {
+                foreach ($payload['images'] as $image) {
+                    $media = $this->generalService->uploadImageandCompress(
+                        path: self::MEDIATASKPATH,
+                        compressValue: 0,
+                        image: $image['image']
+                    );
+
+                    if (!$media) {
+                        // return error
+                        throw new \Exception(__('notification.errorUploadTaskImage'));
+                    }
+
+                    $tmpFiles[] = $media;
+                }
+            }
+
+            if (!empty($tmpFiles)) {
+                foreach ($tmpFiles as $tmpFile) {
+                    $task->attachments()->create([
+                        'file_path' => $tmpFile,
+                    ]);
+                }
+            }
+
+            $boards = $this->getProjectBoards(projectId: $task->development_project_id);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successAddAttachment'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            // delete tmp files
+            if (!empty($tmpFiles)) {
+                foreach ($tmpFiles as $tmpFile) {
+                    if (Storage::disk('public')->exists(self::MEDIATASKPATH . '/' . $tmpFile)) {
+                        Storage::disk('public')->delete(self::MEDIATASKPATH . '/' . $tmpFile);
+                    }
+                }
+            }
+
+            return errorResponse($th);
+        }
+    }
+}

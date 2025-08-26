@@ -1,18 +1,18 @@
 <?php
 
-namespace Modules\Development\Repository;
+namespace Modules\Production\Repository;
 
-use Modules\Development\Models\DevelopmentProjectReference;
-use Modules\Development\Repository\Interface\DevelopmentProjectReferenceInterface;
+use Modules\Production\Models\InteractiveProject;
+use Modules\Production\Repository\Interface\InteractiveProjectInterface;
 
-class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceInterface {
+class InteractiveProjectRepository extends InteractiveProjectInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new DevelopmentProjectReference();
+        $this->model = new InteractiveProject();
         $this->key = 'id';
     }
 
@@ -86,7 +86,7 @@ class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceI
 
         $query->selectRaw($select);
 
-        $query->where("id", $uid);
+        $query->where("uid", $uid);
         
         if ($relation) {
             $query->with($relation);

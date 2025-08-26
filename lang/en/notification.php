@@ -115,5 +115,8 @@ return [
     'taskHasBeenStartedAgain' => 'Task has been started again',
     'taskSubmitted' => 'Task has been submitted successfully',
     'taskHasBeenComplete' => 'Task has been complete',
-    'revisedHasBeenSubmitted' => 'Task revision has been submitted successfully'
+    'revisedHasBeenSubmitted' => 'Task revision has been submitted successfully',
+    'successAddReference' => 'Reference has been added successfully',
+    'referenceHasBeenDeleted' => 'Reference has been deleted successfully',
+    'successAddAttachment' => 'Attachment has been added successfully'
 ];

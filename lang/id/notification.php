@@ -115,5 +115,8 @@ return [
     'taskHasBeenStartedAgain' => "Tugas telah dimulai kembali",
     'taskSubmitted' => 'Tugas telah berhasil diserahkan',
     'taskHasBeenComplete' => 'Tugas telah selesai',
-    'revisedHasBeenSubmitted' => 'Revisi tugas telah berhasil diserahkan'
+    'revisedHasBeenSubmitted' => 'Revisi tugas telah berhasil diserahkan',
+    'successAddReference' => 'Referensi telah berhasil ditambahkan',
+    'referenceHasBeenDeleted' => 'Referensi telah berhasil dihapus',
+    'successAddAttachment' => 'Lampiran telah berhasil ditambahkan'
 ];

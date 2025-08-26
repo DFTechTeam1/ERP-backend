@@ -1071,6 +1071,89 @@ class DashboardService
         );
     }
 
+    public function getProjectGrowth()
+    {
+        $currentYear = $targetYear ?? Carbon::now()->year;
+        $currentMonth = $targetMonth ?? Carbon::now()->month;
+        $previousYear = $currentYear - 1;
+        
+        // Current year data (Jan to target month)
+        $currentYearEvents = DB::table('projects')
+            ->whereYear('project_date', $currentYear)
+            ->whereMonth('project_date', '<=', $currentMonth)
+            ->count();
+            
+        // Previous year data (Jan to same month)
+        $previousYearEvents = DB::table('projects')
+            ->whereYear('project_date', $previousYear)
+            ->whereMonth('project_date', '<=', $currentMonth)
+            ->count();
+            
+        // Calculate growth
+        $absoluteGrowth = $currentYearEvents - $previousYearEvents;
+        $growthPercentage = $previousYearEvents > 0 
+            ? round(($absoluteGrowth / $previousYearEvents) * 100, 2)
+            : ($currentYearEvents > 0 ? 100 : 0);
+            
+        // Get detailed breakdown by classification
+        $detailedBreakdown = DB::table('projects')
+            ->select(
+                DB::raw('YEAR(project_date) as year'),
+                DB::raw('MONTH(project_date) as month'),
+                'classification',
+                DB::raw('COUNT(*) as events_count')
+            )
+            ->where(function($query) use ($currentYear, $previousYear, $currentMonth) {
+                $query->where(function($q) use ($currentYear, $currentMonth) {
+                    $q->whereYear('project_date', $currentYear)
+                        ->whereMonth('project_date', '<=', $currentMonth);
+                })
+                ->orWhere(function($q) use ($previousYear, $currentMonth) {
+                    $q->whereYear('project_date', $previousYear)
+                        ->whereMonth('project_date', '<=', $currentMonth);
+                });
+            })
+            ->groupBy(DB::raw('YEAR(project_date)'), DB::raw('MONTH(project_date)'), 'classification')
+            ->orderBy(DB::raw('YEAR(project_date)'))
+            ->orderBy(DB::raw('MONTH(project_date)'))
+            ->orderBy('classification')
+            ->get()
+            ->map(function($item) {
+                // Add month name after the query
+                $monthNames = [
+                    1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
+                    5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug', 
+                    9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec'
+                ];
+                $item->month_name = $monthNames[$item->month];
+                return $item;
+            });
+
+        $growthStatus = '';
+        if ($growthPercentage > 0) {
+            $growthStatus = 'Growth';
+        } elseif ($growthPercentage < 0) {
+            $growthStatus = 'Decline';
+        } else {
+            $growthStatus = 'No Change';
+        }
+            
+        return [
+            'summary' => [
+                'current_year' => $currentYear,
+                'previous_year' => $previousYear,
+                'comparison_month' => $currentMonth,
+                'period_range' => 'Jan - ' . Carbon::createFromFormat('m', $currentMonth)->format('M'),
+                'current_year_events' => $currentYearEvents,
+                'previous_year_events' => $previousYearEvents,
+                'absolute_growth' => $absoluteGrowth,
+                'growth_percentage' => $growthPercentage,
+                'growth_status' => $growthStatus
+            ],
+            'detailed_breakdown' => $detailedBreakdown
+        ];
+    }
+
     /**
      * Here we will get project growth rate by compare total event in last year with in current year
      * 
@@ -1080,14 +1163,19 @@ class DashboardService
     {
         $result = DB::select('CALL get_project_difference()');
 
+        $data = $this->getProjectGrowth();
+
+        $totalCurrentYear = $data['summary']['current_year_events'];
+        $totalPreviousYear = $data['summary']['previous_year_events'];
+
         return generalResponse(
             message: "Success",
             data: [
-                'percentage' => $result[0]->percentage_difference,
-                'number_difference' => $result[0]->number_difference,
-                'total_last_year' => $result[0]->total_event_last_year,
-                'total_current_year' => $result[0]->total_event_current_year,
-                'color_chart' => $result[0]->total_event_last_year < $result[0]->total_event_current_year ? '#2eb331' : '#f5226c'
+                'percentage' => $data['summary']['growth_percentage'],
+                'number_difference' => $data['summary']['absolute_growth'],
+                'total_last_year' => $totalCurrentYear,
+                'total_current_year' => $totalPreviousYear,
+                'color_chart' => $totalPreviousYear < $totalCurrentYear ? '#2eb331' : '#f5226c'
             ]
         );
     }

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\DeadlineChangeReasonController;
+use Modules\Production\Http\Controllers\Api\InteractiveController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Http\Controllers\Api\TeamTransferController;
@@ -62,6 +63,10 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
         Route::get('project/{projectUid}/precheck', [ProjectController::class, 'precheck']);
         Route::post('project/{projectUid}/completeUnfinishedTask', [ProjectController::class, 'completeUnfinishedTask']);
+
+        // interactives
+        Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
+        Route::get('interactives/{uid}', [InteractiveController::class, 'show'])->name('interactives.show');
 
         // songs
         Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');

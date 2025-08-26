@@ -443,7 +443,7 @@ class DefineTaskAction
     {
         $revise = null;
 
-        if ($this->hasSuperPower() && $task->status == TaskStatus::CheckByPm->value) {
+        if ($this->hasSuperPower() && $task->status == TaskStatus::CheckByPm) {
             $revise = $this->buildOutput($key, false, $detail);
         }
 

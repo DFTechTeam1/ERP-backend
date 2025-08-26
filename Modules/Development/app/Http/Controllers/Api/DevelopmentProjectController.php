@@ -10,6 +10,8 @@ use Modules\Development\Http\Requests\DevelopmentProject\Task\SubmitProof;
 use Modules\Development\Services\DevelopmentProjectService;
 use Illuminate\Http\JsonResponse;
 use Modules\Development\Http\Requests\DevelopmentProject\Task\ReviseTask;
+use Modules\Development\Http\Requests\DevelopmentProject\Task\StoreReference;
+use Modules\Development\Http\Requests\DevelopmentProject\Task\TaskAttachment;
 
 class DevelopmentProjectController extends Controller
 {
@@ -27,7 +29,14 @@ class DevelopmentProjectController extends Controller
      */
     public function index()
     {
-        return apiResponse($this->developmentProjectService->list());
+        return apiResponse($this->developmentProjectService->list(
+            relation: [
+                'pics:id,development_project_id,employee_id',
+                'pics.employee:id,nickname',
+                'tasks:id,development_project_id'
+            ],
+            select: 'id,uid,name,description,status,project_date,created_by'
+        ));
     }
 
     /**
@@ -198,5 +207,41 @@ class DevelopmentProjectController extends Controller
     public function moveBoardId(string $taskUid, int $boardId): JsonResponse
     {
         return apiResponse($this->developmentProjectService->moveBoardId(taskUid: $taskUid, boardId: $boardId));
+    }
+
+    public function storeReferences(StoreReference $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->developmentProjectService->storeReferences($request->validated(), $projectUid));
+    }
+
+    /**
+     * Delete a project reference.
+     * 
+     * @param string $taskUid
+     * @param int $referenceId
+     *
+     * @return JsonResponse
+     */
+    public function deleteReference(string $projectUid, int $referenceId): JsonResponse
+    {
+        return apiResponse($this->developmentProjectService->deleteReference($projectUid, $referenceId));
+    }
+
+    /**
+     * Get related tasks for a specific project.
+     * 
+     * @param string $projectUid
+     * @param string $taskUid
+     * 
+     * @return JsonResponse
+     */
+    public function getRelatedTask(string $projectUid, string $taskUid): JsonResponse
+    {
+        return apiResponse($this->developmentProjectService->getRelatedTask($projectUid, $taskUid));
+    }
+
+    public function storeAttachments(TaskAttachment $request, string $taskUid): JsonResponse
+    {
+        return apiResponse($this->developmentProjectService->storeAttachments($request->validated(), $taskUid));
     }
 }
