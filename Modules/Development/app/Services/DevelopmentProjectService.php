@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Modules\Development\app\Services\DevelopmentProjectCacheService;
+use Modules\Development\Jobs\NotifyTaskAssigneeJob;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Development\Repository\DevelopmentProjectBoardRepository;
@@ -775,9 +776,13 @@ class DevelopmentProjectService {
                     $picId = $this->generalService->getIdFromUid($pic['employee_uid'], new \Modules\Hrd\Models\Employee());
 
                     // assign to main table
-                    $task->pics()->create([
-                        'employee_id' => $picId
-                    ]);
+                    // if pic_id and employee_id combination already exists, do not insert the record
+                    $check = $this->projectTaskPicRepo->show(uid: 'id', select: 'id', where: "task_id = {$task->id} AND employee_id = {$picId}");
+                    if (!$check) {
+                        $task->pics()->create([
+                            'employee_id' => $picId
+                        ]);
+                    }
 
                     // assign to pic histories table
                     $this->projectTaskPicHistoryRepo->upsert(
@@ -913,6 +918,12 @@ class DevelopmentProjectService {
                 if ($pic['error']) {
                     throw new Exception($pic['message']);
                 }
+
+                // send notification
+                NotifyTaskAssigneeJob::dispatch(
+                    asignessUids: collect($payload['pics'])->pluck('employee_uid')->toArray(),
+                    task: $task
+                )->afterCommit();
             }
 
             DB::commit();
@@ -1057,7 +1068,7 @@ class DevelopmentProjectService {
             );
 
             // if task pics is empty and task status is InProgress, then change task status to draft
-            $newTask = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status', relation: [
+            $newTask = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,deadline,name', relation: [
                 'pics'
             ]);
             if ($newTask->status === TaskStatus::InProgress && $newTask->pics->isEmpty()) {
@@ -1080,6 +1091,14 @@ class DevelopmentProjectService {
                     ],
                     id: $taskUid
                 );
+            }
+
+            if (!empty($payload['users'])) {
+                // send notification
+                NotifyTaskAssigneeJob::dispatch(
+                    asignessUids: $payload['users'],
+                    task: $newTask
+                )->afterCommit();
             }
 
             // get project boards
@@ -1118,6 +1137,8 @@ class DevelopmentProjectService {
 
             // delete all pics
             $task->pics()->delete();
+
+            $task->picHistories()->delete();
 
             // delete all attachment in the storage first
             $task->attachments->each(function ($attachment) {

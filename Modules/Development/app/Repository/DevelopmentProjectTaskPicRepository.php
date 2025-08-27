@@ -80,14 +80,18 @@ class DevelopmentProjectTaskPicRepository extends DevelopmentProjectTaskPicInter
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
-        
+        if (!empty($where)) {
+            $query->whereRaw($where);
+        } else {
+            $query->where("id", $uid);
+        }
+
         if ($relation) {
             $query->with($relation);
         }
@@ -128,6 +132,15 @@ class DevelopmentProjectTaskPicRepository extends DevelopmentProjectTaskPicInter
         $query->update($data);
 
         return $query;
+    }
+
+    public function upsert(array $payload, array $uniqueBy, array $updateValue)
+    {
+        return DevelopmentProjectTaskPic::upsert(
+            $payload,
+            uniqueBy: $uniqueBy,
+            update: $updateValue
+        );
     }
 
     /**

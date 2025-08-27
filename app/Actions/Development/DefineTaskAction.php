@@ -366,7 +366,7 @@ class DefineTaskAction
     {
         $hold = null;
 
-        if (($this->hasSuperPower() || $this->isMyTask) && ($task->status == TaskStatus::InProgress->value || $task->status == TaskStatus::Revise->value)) {
+        if (($this->hasSuperPower() || $this->isMyTask) && ($task->status == TaskStatus::InProgress || $task->status == TaskStatus::Revise)) {
             $hold = $this->buildOutput($key, false, $detail);
         }
 

@@ -170,7 +170,15 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {
-    
+    // send notification
+    $employee = \Modules\Hrd\Models\Employee::whereNotNull('telegram_chat_id')->first();
+    $task = \Modules\Development\Models\DevelopmentProjectTask::first();
+    Modules\Development\Jobs\NotifyTaskAssigneeJob::dispatch(
+        asignessUids: [$employee->uid],
+        task: $task
+    )->afterCommit();
+
+    return $task;
 });
 
 Route::get('pusher-check', function() {

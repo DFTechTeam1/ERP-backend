@@ -16,7 +16,6 @@ class DevelopmentProjectTaskPic extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'development_project_id',
         'employee_id',
         'task_id'
     ];
@@ -29,5 +28,10 @@ class DevelopmentProjectTaskPic extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(\Modules\Hrd\Models\Employee::class);
+    }
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(DevelopmentProjectTask::class, 'task_id', 'id');
     }
 }

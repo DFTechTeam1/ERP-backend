@@ -3,7 +3,9 @@
 use App\Enums\Development\Project\ProjectStatus;
 use App\Enums\Development\Project\Task\TaskStatus;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use Modules\Development\Jobs\NotifyTaskAssigneeJob;
 
 beforeEach(function () {
     $user = initAuthenticateUser();
@@ -78,6 +80,7 @@ it('Create task with deadline only without pic and references', function () {
 });
 
 it('Create task with deadline and pic', function () {
+    Bus::fake();
     $project = \Modules\Development\Models\DevelopmentProject::factory()->withBoards()->create([
         'status' => ProjectStatus::Active->value
     ]);
@@ -126,9 +129,13 @@ it('Create task with deadline and pic', function () {
         'employee_id' => $employee->id,
         'is_until_finish' => 1
     ]);
+    
+    Bus::assertDispatched(NotifyTaskAssigneeJob::class);
 });
 
 it ('Create task only with pic and no deadline', function () {
+    Bus::fake();
+
     $project = \Modules\Development\Models\DevelopmentProject::factory()->withBoards()->create([
         'status' => ProjectStatus::Active->value
     ]);
@@ -177,4 +184,6 @@ it ('Create task only with pic and no deadline', function () {
 
     $this->assertDatabaseEmpty('development_project_task_attachments');
     $this->assertDatabaseEmpty('development_project_task_deadlines');
+
+    Bus::assertDispatched(NotifyTaskAssigneeJob::class);
 });

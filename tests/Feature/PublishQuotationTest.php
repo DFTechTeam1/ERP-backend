@@ -17,7 +17,7 @@ use Modules\Production\Models\QuotationItem;
 function createDeal($customer, $projectClass, $employee, $quotationItem) {
     $payload = getProjectDealPayload($customer, $projectClass, $employee, $quotationItem, true);
     $projectService = createProjectService();
-    logging('PAYLOAD INTE', $payload);
+    
     $response = $projectService->storeProjectDeals($payload);
 
     return ProjectDeal::where('name', $payload['name'])
