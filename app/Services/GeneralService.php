@@ -364,7 +364,7 @@ class GeneralService
 
         // this cannot be null
         $director = \Modules\Hrd\Models\Employee::with(['user:id,employee_id,uid'])
-            ->where('email', 'wesleywiyadi@gmail.com') 
+            ->where('email', 'wesley@dfactory.pro') 
             ->first();
 
         $output = [
