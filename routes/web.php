@@ -2,6 +2,9 @@
 
 use App\Actions\Project\WriteDurationTaskHistory;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
+use App\Enums\Production\ProjectDealChangeStatus;
+use App\Enums\Production\ProjectStatus;
+use App\Enums\Production\TaskHistoryType;
 use App\Enums\Production\TaskStatus;
 use App\Exports\ProjectDealSummary;
 use App\Http\Controllers\Api\InteractiveController;
@@ -38,8 +41,11 @@ use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Models\ProjectDealChange;
+use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectQuotation;
 use Modules\Production\Models\ProjectTask;
 
@@ -194,3 +200,21 @@ Route::get('i/r', function (Request $request) {
 
     return view('invoices.rejected', compact('title', 'message'));
 })->name('invoices.rejected');
+
+Route::get('send-pending-deal-changes', function () {
+    $deals = ProjectDealChange::where('status', ProjectDealChangeStatus::Pending)->get();
+
+    foreach ($deals as $deal) {
+        NotifyProjectDealChangesJob::dispatch($deal->id);
+    }
+    
+    return $deals;
+});
+Route::get('send-pending-invoice-changes', function () {
+    $invoices = InvoiceRequestUpdate::where('status', InvoiceRequestUpdateStatus::Pending)->get();
+
+    foreach ($invoices as $invoice) {
+        RequestInvoiceChangeJob::dispatch($invoice);
+    }
+    return $invoices;
+});
