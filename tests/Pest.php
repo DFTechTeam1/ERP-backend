@@ -3,10 +3,13 @@
 use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\System\BaseRole;
+use App\Models\User;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
 use App\Services\UserRoleManagement;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Company\Models\City;
 use Modules\Company\Models\Country;
@@ -181,17 +184,19 @@ function createProjectService(
     );
 }
 
-function initAuthenticateUser(array $permissions = [])
+function initAuthenticateUser(array $permissions = [], string $roleName = BaseRole::Root->value, mixed $user = null)
 {
-    $user = \App\Models\User::factory()
-        ->create();
+    if (!$user) {
+        $user = \App\Models\User::factory()
+            ->create();
+    }
 
     $checkRoot = \Illuminate\Support\Facades\DB::table('roles')
-        ->where('name', \App\Enums\System\BaseRole::Root->value)
+        ->where('name', $roleName)
         ->first();
 
     if (!$checkRoot) {
-        $checkRoot = \Spatie\Permission\Models\Role::create(['name' => \App\Enums\System\BaseRole::Root->value, 'guard_name' => 'sanctum']);
+        $checkRoot = \Spatie\Permission\Models\Role::create(['name' => $roleName, 'guard_name' => 'sanctum']);
     }
     
     if (!empty($permissions)) {

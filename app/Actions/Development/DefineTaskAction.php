@@ -296,9 +296,9 @@ class DefineTaskAction
     {
         $logs = null;
 
-        if ($this->hasSuperPower()) {
-            $logs = $this->buildOutput($key, false, $detail);
-        }
+        // if ($this->hasSuperPower()) {
+        //     $logs = $this->buildOutput($key, false, $detail);
+        // }
 
         return $logs;
     }
@@ -311,9 +311,9 @@ class DefineTaskAction
     {
         $tracker = null;
 
-        if ($this->hasSuperPower()) {
-            $tracker = $this->buildOutput($key, false, $detail);
-        }
+        // if ($this->hasSuperPower()) {
+        //     $tracker = $this->buildOutput($key, false, $detail);
+        // }
 
         return $tracker;
     }

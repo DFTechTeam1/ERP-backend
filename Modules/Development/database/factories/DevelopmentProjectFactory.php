@@ -4,6 +4,7 @@ namespace Modules\Development\Database\Factories;
 
 use App\Enums\Development\Project\ProjectStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\Company\Models\PositionBackup;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Hrd\Models\Employee;
 
@@ -44,14 +45,17 @@ class DevelopmentProjectFactory extends Factory
         });
     }
 
-    public function withPics(bool $withRealEmployee = false)
+    public function withPics(bool $withRealEmployee = false, mixed $employee = null)
     {
-        return $this->afterCreating(function (DevelopmentProject $project) use ($withRealEmployee) {
+        return $this->afterCreating(function (DevelopmentProject $project) use ($withRealEmployee, $employee) {
             // create pics data by do factory on employee model
-            if ($withRealEmployee) {
-                $employee = Employee::latest()->first();
-            } else {
-                $employee = Employee::factory()->withUser()->create();
+            if (!$employee) {
+                if ($withRealEmployee) {
+                    $position = PositionBackup::where('name', 'like', '%project manager%')->first();
+                    $employee = Employee::latest()->first();
+                } else {
+                    $employee = Employee::factory()->withUser()->create();
+                }
             }
 
             $project->pics()->create([

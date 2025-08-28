@@ -24,7 +24,7 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '')
+    public function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '', array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -36,6 +36,20 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($whereHas)) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
         }
 
         if (!empty($orderBy)) {
@@ -57,8 +71,9 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
         string $select = '*',
         string $where = "",
         array $relation = [],
-        int $itemsPerPage,
-        int $page
+        int $itemsPerPage = 10,
+        int $page = 1,
+        array $whereHas = []
     )
     {
         $query = $this->model->query();
@@ -71,6 +86,20 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (!empty($whereHas)) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
         }
         
         return $query->skip($page)->take($itemsPerPage)->get();

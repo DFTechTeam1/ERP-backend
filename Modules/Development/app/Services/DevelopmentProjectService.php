@@ -8,6 +8,8 @@ use App\Actions\Development\DefineTaskAction;
 use App\Enums\Development\Project\ReferenceType;
 use App\Enums\Development\Project\Task\TaskStatus;
 use App\Enums\ErrorCode\Code;
+use App\Enums\System\BaseRole;
+use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -60,6 +62,8 @@ class DevelopmentProjectService {
     private DevelopmentProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo;
 
     private DevelopmentTaskProofRepository $taskProofRepo;
+    
+    private UserRepository $user;
 
     private const MEDIAPATH = 'development/projects/references';
 
@@ -87,6 +91,7 @@ class DevelopmentProjectService {
         DevelopmentProjectTaskPicWorkstateRepository $projectTaskWorkStateRepo,
         DevelopmentTaskProofRepository $taskProofRepo,
         DevelopmentProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
+        UserRepository $user
     )
     {
         $this->repo = $repo;
@@ -104,6 +109,7 @@ class DevelopmentProjectService {
         $this->taskProofRepo = $taskProofRepo;
         $this->projectTaskPicHistoryRepo = $projectTaskPicHistoryRepo;
         $this->employeeRepo = $employeeRepo;
+        $this->user = $user;
     }
 
     /**
@@ -122,38 +128,15 @@ class DevelopmentProjectService {
     ): array
     {
         try {
+            $user = $this->user->detail(id: Auth::id(), select: 'id,email,employee_id', relation: [
+                'employee:id'
+            ]);
+
             $itemsPerPage = request('itemsPerPage') ?? 50;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
-
-            if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
-            }
-
-            // make filter as array
-            $param = [];
-            
-            if (request('name')) {
-                $param['name'] = request('name');
-            }
-
-            if (request('status')) {
-                $param['status'] = request('status');
-            }
-
-            if (request('pics')) {
-                $param['pics'] = request('pics');
-            }
-
-            if (request('start_date')) {
-                $param['start_date'] = request('start_date');
-            }
-
-            if (request('end_date')) {
-                $param['end_date'] = request('end_date');
-            }
 
             // $rawData = $this->cacheService->getFilteredProjects(filters: $param, page: $page, perPage: $itemsPerPage);
             
@@ -161,12 +144,73 @@ class DevelopmentProjectService {
             // $paginated = $rawData['data'] ?? [];
             // $totalData = $rawData['total'] ?? 0;
 
+            $where = "id > 0";
+
+            // show list based on role
+            $whereHas = [];
+
+            if ($user->hasRole(BaseRole::Production->value)) {
+                $tasks = $this->projectTaskRepo->list(
+                    select: 'id',
+                    whereHas: [
+                        [
+                            'relation' => 'pics',
+                            'query' => "employee_id = {$user->employee->id}"
+                        ]
+                    ]
+                );
+
+                $taskIds = $tasks->pluck('id')->implode(',');
+                $query = $tasks->count() > 0 ? "id IN ({$taskIds})" : "1 = 0";
+
+                $whereHas[] = [
+                    'relation' => 'tasks',
+                    'query' => $query
+                ];
+            }
+
+            if ($user->hasRole(BaseRole::ProjectManager->value) || $user->hasRole(BaseRole::ProjectManagerAdmin->value) || $user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
+                $whereHas[] = [
+                    'relation' => 'pics',
+                    'query' => "employee_id = {$user->employee->id}"
+                ];
+            }
+
+            // applied filter
+            if (request('status')) {
+                $statusIds = collect(request('status'))->pluck('id')->implode(',');
+
+                if (!empty($statusIds)) {
+                    $where .= " and status IN ({$statusIds})";
+                }
+            }
+
+            if (request('pics')) {
+                $employeeUids = collect(request('pics'))->map(function ($picUid) {
+                    if ($picUid) {
+                        return $this->generalService->getIdFromUid($picUid, new Employee());
+                    }
+                })->implode(',');
+
+                if (!empty($employeeUids)) {
+                    $whereHas[] = [
+                        'relation' => 'pics',
+                        'query' => "employee_id IN ({$employeeUids})"
+                    ];
+                }
+            }
+
+            if (request('event') && !empty(request('event'))) {
+                $where .= " and name LIKE '%" . request('event') . "%'";
+            }
+
             $paginated = $this->repo->pagination(
-                $select,
-                $where,
-                $relation,
-                $itemsPerPage,
-                $page
+                select: $select,
+                where: $where,
+                relation: $relation,
+                itemsPerPage: $itemsPerPage,
+                page: $page,
+                whereHas: $whereHas
             );
             $paginated = $paginated->map(function ($project) {
                 return [
@@ -192,7 +236,7 @@ class DevelopmentProjectService {
                 ];
             });
 
-            $totalData = $this->repo->list('id', $where)->count();
+            $totalData = $this->repo->list(select: 'id', where: $where, whereHas: $whereHas)->count();
 
             return generalResponse(
                 'Success',
@@ -286,7 +330,7 @@ class DevelopmentProjectService {
                         'name' => $task->name,
                         'description' => $task->description,
                         'start_date' => date('d F Y H:i', strtotime($task->created_at)),
-                        'end_date' => date('d M Y, H:i', strtotime($task->deadline)),
+                        'end_date' => $task->deadline ? date('d M Y, H:i', strtotime($task->deadline)) : null,
                         'status' => $task->status,
                         'status_text' => $task->status->label(),
                         'status_color' => $task->status->color(),
@@ -326,7 +370,7 @@ class DevelopmentProjectService {
                             $initial = substr($pic->employee->name, 0, 1);
                             return [
                                 'uid' => $pic->employee->uid,
-                                'name' => $pic->employee->nickname,
+                                'name' => $pic->employee->name,
                                 'avatar_color' => $pic->employee->avatar_color,
                                 'initial' => $initial
                             ];
