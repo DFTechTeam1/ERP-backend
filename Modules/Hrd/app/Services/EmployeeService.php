@@ -26,8 +26,9 @@ use Modules\Company\Models\PositionBackup;
 use Modules\Company\Repository\JobLevelRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
+use Modules\Hrd\Jobs\DeleteOfficeEmailJob;
 use Modules\Hrd\Models\Employee;
-use Modules\Hrd\Models\EmployeeResign;
+use Modules\Hrd\Repository\DeleteOfficeEmailQueueRepository;
 use Modules\Hrd\Repository\EmployeeActiveReportRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
 use Modules\Hrd\Repository\EmployeeFamilyRepository;
@@ -40,6 +41,7 @@ use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectVjRepository;
+use Modules\Production\Models\ProjectPersonInCharge;
 
 class EmployeeService
 {
@@ -87,6 +89,8 @@ class EmployeeService
 
     private $employeeResignRepo;
 
+    private $deleteOfficeEmailQueueRepo;
+
     public function __construct(
         EmployeeRepository $employeeRepo,
         PositionRepository $positionRepo,
@@ -105,7 +109,8 @@ class EmployeeService
         EmployeeActiveReportRepository $employeeActiveRepo,
         EmployeeTimeoffRepository $employeeTimeoffRepo,
         TalentaService $talentaService,
-        EmployeeResignRepository $employeeResignRepo
+        EmployeeResignRepository $employeeResignRepo,
+        DeleteOfficeEmailQueueRepository $deleteOfficeEmailQueueRepo
     ) {
         $this->talentaService = $talentaService;
 
@@ -142,6 +147,8 @@ class EmployeeService
         $this->employeeTimeoffRepo = $employeeTimeoffRepo;
 
         $this->employeeResignRepo = $employeeResignRepo;
+
+        $this->deleteOfficeEmailQueueRepo = $deleteOfficeEmailQueueRepo;
     }
 
     /**
@@ -1761,6 +1768,99 @@ class EmployeeService
     }
 
     /**
+     * Turn off employee
+     * This function will be deactive user, and then send notification to the root user to delete office email in the server manually
+     */
+    public function turnOffEmployee(
+        string $resignDate,
+        string $employeeUid,
+        string|int $employeeId,
+        bool $afterCommit = false
+    ): void {
+        $employee = $this->repo->show(uid: $employeeUid, select: 'email');
+
+        $this->repo->update(
+            data: [
+                'status' => Status::Inactive->value,
+                'end_date' => $resignDate,
+            ],
+            uid: $employeeUid
+        );
+
+        // then change user_status in users table to false
+        $this->userRepo->update(
+            data: [
+                'user_status' => false,
+            ],
+            key: 'employee_id',
+            value: $employeeId
+        );
+
+        // notify root user to delete office email in the server
+        $this->deleteOfficeEmailQueueRepo->store(data: [
+            'employee_id' => $employeeId,
+            'email' => $employee->email,
+        ]);
+
+        if (! $afterCommit) {
+            DeleteOfficeEmailJob::dispatch();
+        } else {
+            DeleteOfficeEmailJob::dispatch()->afterCommit();
+        }
+    }
+
+    /**
+     * Main logic for employee resignation
+     *
+     * @param  array  $data  With these following structure
+     *                       - string $reason
+     *                       - string $resign_date
+     *                       - string $severance
+     *                       - string $employee_uid
+     */
+    public function mainResignLogic(
+        array $data,
+        bool $useTransaction = false,
+        bool $notifyAfterCommit = false
+    ): void {
+        if ($useTransaction) {
+            DB::beginTransaction();
+        }
+
+        try {
+            $employeeId = $this->generalService->getIdFromUid($data['employee_uid'], new Employee);
+
+            $this->employeeResignRepo->store(data: [
+                'employee_id' => $employeeId,
+                'reason' => $data['reason'],
+                'resign_date' => date('Y-m-d', strtotime($data['resign_date'])),
+                'severance' => $data['severance'],
+            ]);
+
+            // if today date is the same with resign_date, change employee status otherwise do not change anything in employee model
+            $resignDate = Carbon::parse($data['resign_date']);
+            $now = Carbon::now();
+            $diff = $now->diffInDays($resignDate, false);
+            if ($diff <= 0) {
+                $this->turnOffEmployee(
+                    resignDate: date('Y-m-d', strtotime($data['resign_date'])),
+                    employeeUid: $data['employee_uid'],
+                    employeeId: $employeeId,
+                    afterCommit: $notifyAfterCommit
+                );
+            }
+
+            if ($useTransaction) {
+                DB::commit();
+            }
+        } catch (\Throwable $th) {
+            if ($useTransaction) {
+                DB::rollBack();
+            }
+        }
+    }
+
+    /**
      * Employee is resign
      *
      * @param  array<string, string>  $data
@@ -1771,47 +1871,9 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
-            /**
-             * What should be done when we delete:
-             *
-             * 1. Unattach from all tasks he have
-             * 2. Make sure all equipment are already given back and in good condition
-             * 3. Take back the access from system
-             * 4. Tack back the access from email
-             * 5. Tack back the access from talenta
-             * 6. Write a history for a record
-             * 7. Change status
-             * 8. Don't DELETE UNTIL THE DESIRE TIME REACHED
-             */
-            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee);
+            $data['employee_uid'] = $employeeUid;
 
-            $employee = $this->repo->show(
-                uid: $employeeUid,
-                select: 'id,email'
-            );
-
-            $payloadUpdate = [
-                'end_date' => $data['resign_date'],
-                'resign_reason' => $data['reason'],
-            ];
-
-            /**
-             * Update status when resign date is less or same with now date
-             */
-            $resignDate = Carbon::parse($data['resign_date']);
-            $now = Carbon::now();
-            $diff = $now->diffInDays($resignDate, false);
-            if ($diff <= 0) {
-                $payloadUpdate['status'] = \App\Enums\Employee\Status::Inactive->value;
-
-                // delete user immediately
-                \App\Models\User::where('employee_id', $employeeId)->delete();
-            }
-
-            $this->repo->update($payloadUpdate, $employeeUid);
-
-            // store to employee resign table as a note
-            $employee->resignData()->save(new EmployeeResign($data));
+            $this->mainResignLogic(data: $data, notifyAfterCommit: true);
 
             DB::commit();
 
@@ -2199,13 +2261,23 @@ class EmployeeService
      */
     public function cancelResign(string $employeeUid): array
     {
+        DB::beginTransaction();
         try {
             $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee);
+
+            $employee = $this->repo->show(uid: $employeeUid, select: 'id,email,status');
+
+            // validate data only active employee can be used this action
+            if ($employee->status == Status::Inactive->value || $employee->status == Status::Deleted->value) {
+                return errorResponse(
+                    message: __('notification.cannotCancelResignationInactiveOrDeleted')
+                );
+            }
 
             $this->repo->update(
                 data: [
                     'end_date' => null,
-                    'reason' => null,
+                    'resign_reason' => null,
                 ],
                 uid: $employeeUid
             );
@@ -2215,8 +2287,59 @@ class EmployeeService
                 where: "employee_id = {$employeeId}"
             );
 
+            $this->deleteOfficeEmailQueueRepo->delete(id: 0, where: "email = '{$employee->email}'");
+
+            DB::commit();
+
             return generalResponse(
                 message: __('notification.resignationHasBeenCanceled')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * This function will return who have the mosh event number in current year
+     */
+    public function getTheHighestEventNumberInPic(): array
+    {
+        try {
+            $status = [
+                Status::Deleted->value,
+                Status::Inactive->value,
+                Status::Freelance->value,
+                Status::Probation->value,
+                Status::WaitingHR->value,
+            ];
+            $status = collect($status)->implode(',');
+            $results = DB::select('CALL get_highest_event_number_for_pic(?)', [$status]);
+
+            if ($results) {
+                $output = $results[0]->pic_id;
+            } else {
+                // get random pic
+                $picEmployeeIds = ProjectPersonInCharge::select('pic_id')
+                    ->distinct()
+                    ->pluck('pic_id')
+                    ->toArray();
+
+                // Get random active employee from PICs
+                $randomEmployee = Employee::whereIn('id', $picEmployeeIds)
+                    ->whereNotIn('status', [0, 5, 6, 7, 8])
+                    ->inRandomOrder()
+                    ->first(['uid', 'name']); // Get both uid and name if needed
+
+                $output = $randomEmployee ? $randomEmployee->uid : null;
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'uid' => $output,
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

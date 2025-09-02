@@ -215,14 +215,14 @@ Route::middleware('auth:sanctum')
 
                 return $item;
             });
-            $service = new EncryptionService();
+            $service = new EncryptionService;
             $encrypt = $service->encrypt(json_encode($notifications), config('app.salt_key_encryption'));
 
             return apiResponse(
                 generalResponse(
                     message: 'success',
                     data: [
-                        'data' => $encrypt
+                        'data' => $encrypt,
                     ]
                 )
             );
@@ -278,5 +278,26 @@ Route::get('notification', function () {
 
 Route::get('playground', function () {
     $user = Auth::user();
-    InvoiceHasBeenDeletedJob::dispatch(parentNumber: '#7773', projectName: "Project Name", user: $user);
+    InvoiceHasBeenDeletedJob::dispatch(parentNumber: '#7773', projectName: 'Project Name', user: $user);
 })->middleware('auth:sanctum');
+
+Route::get('/files/{path}', function (Request $request, $path) {
+    // remove app_url from $path
+    $path = str_replace(config('app.url').'/storage', 'storage', $path);
+
+    // Decode the path if it's encoded
+    $decodedPath = urldecode($path);
+
+    if (! Storage::exists($decodedPath)) {
+        abort(404);
+    }
+
+    $file = Storage::get($decodedPath);
+    $mimeType = Storage::mimeType($decodedPath);
+
+    return response($file, 200)
+        ->header('Content-Type', $mimeType)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', '*');
+})->where('path', '.*');
