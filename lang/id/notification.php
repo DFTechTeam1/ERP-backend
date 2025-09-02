@@ -118,5 +118,6 @@ return [
     'revisedHasBeenSubmitted' => 'Revisi tugas telah berhasil diserahkan',
     'successAddReference' => 'Referensi telah berhasil ditambahkan',
     'referenceHasBeenDeleted' => 'Referensi telah berhasil dihapus',
-    'successAddAttachment' => 'Lampiran telah berhasil ditambahkan'
+    'successAddAttachment' => 'Lampiran telah berhasil ditambahkan',
+    'cannotCancelResignationInactiveOrDeleted' => 'Tidak dapat membatalkan pengunduran diri untuk karyawan yang tidak aktif atau dihapus'
 ];
