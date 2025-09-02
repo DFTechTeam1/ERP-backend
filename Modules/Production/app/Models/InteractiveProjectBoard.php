@@ -2,8 +2,9 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Production\Database\Factories\InteractiveProjectBoardFactory;
 
 class InteractiveProjectBoard extends Model
@@ -16,7 +17,7 @@ class InteractiveProjectBoard extends Model
     protected $fillable = [
         'project_id',
         'name',
-        'sort'
+        'sort',
     ];
 
     // protected static function newFactory(): InteractiveProjectBoardFactory

@@ -16,7 +16,7 @@ class Create extends FormRequest
             'name' => 'string|required',
             'description' => 'string|nullable',
             'board_id' => 'required',
-            
+
             // attachments
             'images' => 'nullable|array',
             'images.*.image' => 'file|mimes:jpeg,png,jpg,gif,webp|max:2048',

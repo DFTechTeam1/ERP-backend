@@ -5,32 +5,30 @@ namespace Modules\Development\Repository;
 use Modules\Development\Models\DevelopmentProjectReference;
 use Modules\Development\Repository\Interface\DevelopmentProjectReferenceInterface;
 
-class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceInterface {
+class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new DevelopmentProjectReference();
+        $this->model = new DevelopmentProjectReference;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,40 +42,33 @@ class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceI
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [])
@@ -86,8 +77,8 @@ class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceI
 
         $query->selectRaw($select);
 
-        $query->where("id", $uid);
-        
+        $query->where('id', $uid);
+
         if ($relation) {
             $query->with($relation);
         }
@@ -100,7 +91,6 @@ class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceI
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -111,15 +101,14 @@ class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceI
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -133,7 +122,7 @@ class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceI
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -145,7 +134,6 @@ class DevelopmentProjectReferenceRepository extends DevelopmentProjectReferenceI
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

@@ -25,8 +25,7 @@ class ProjectTaskDeadlineFactory extends Factory
             'deadline' => now()->addWeeks(3)->format('Y-m-d H:i:s'),
             'is_first_deadline' => true,
             'due_reason' => null,
-            'updated_by' => User::factory()
+            'updated_by' => User::factory(),
         ];
     }
 }
-

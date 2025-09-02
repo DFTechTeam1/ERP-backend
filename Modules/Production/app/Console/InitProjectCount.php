@@ -2,11 +2,9 @@
 
 namespace Modules\Production\Console;
 
-use App\Enums\Cache\CacheKey;
 use Illuminate\Console\Command;
-use Modules\Production\Models\Project;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class InitProjectCount extends Command
 {

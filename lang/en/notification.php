@@ -118,5 +118,6 @@ return [
     'revisedHasBeenSubmitted' => 'Task revision has been submitted successfully',
     'successAddReference' => 'Reference has been added successfully',
     'referenceHasBeenDeleted' => 'Reference has been deleted successfully',
-    'successAddAttachment' => 'Attachment has been added successfully'
+    'successAddAttachment' => 'Attachment has been added successfully',
+    'successUpdateDeadline' => 'Deadline has been updated successfully'
 ];

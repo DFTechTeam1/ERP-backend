@@ -4,9 +4,8 @@ namespace Modules\Finance\Notifications;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class InvoiceHasBeenDeletedNotification extends Notification
 {
@@ -37,7 +36,7 @@ class InvoiceHasBeenDeletedNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            'mail'
+            'mail',
         ];
     }
 
@@ -50,7 +49,7 @@ class InvoiceHasBeenDeletedNotification extends Notification
 
         return (new MailMessage)
             ->subject('Invoice has been deleted')
-            ->greeting('Dear ' . $this->financeUser->employee->name)
+            ->greeting('Dear '.$this->financeUser->employee->name)
             ->line("Invoice **{$this->parentNumber}** for event {$this->projectName} has been deleted by {$this->actor->employee->name}");
     }
 

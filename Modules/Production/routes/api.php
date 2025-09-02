@@ -151,7 +151,7 @@ Route::middleware(['auth:sanctum'])
         Route::put('quotations/{id}', [QuotationController::class, 'update']);
         Route::delete('quotations/{id}', [QuotationController::class, 'destroy']);
         Route::post('quotations', [QuotationController::class, 'store']);
-        
+
         Route::get('team-transfers', [TeamTransferController::class, 'index']);
         Route::post('team-transfers/cancel', [TeamTransferController::class, 'cancelRequest']);
         Route::post('team-transfers/chooseTeam/{transferUid}', [TeamTransferController::class, 'chooseTeam']);

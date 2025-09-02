@@ -67,7 +67,7 @@ return new class extends Migration
             $table->dropForeign(['task_id']);
             $table->dropForeign(['pic_id']);
         });
-        
+
         Schema::dropIfExists('project_task_duration_histories');
 
         $types = TaskHistoryType::cases();

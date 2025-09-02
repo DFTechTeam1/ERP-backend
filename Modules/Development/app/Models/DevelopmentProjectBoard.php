@@ -2,8 +2,8 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // use Modules\Development\Database\Factories\DevelopmentProjectBoardFactory;
@@ -17,7 +17,7 @@ class DevelopmentProjectBoard extends Model
      */
     protected $fillable = [
         'name',
-        'development_project_id'
+        'development_project_id',
     ];
 
     // protected static function newFactory(): DevelopmentProjectBoardFactory

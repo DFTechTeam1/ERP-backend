@@ -13,7 +13,7 @@ class AssignMember extends FormRequest
     {
         return [
             'removed' => 'array|nullable',
-            'users' => 'array|nullable'
+            'users' => 'array|nullable',
         ];
     }
 

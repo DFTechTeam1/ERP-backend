@@ -11,7 +11,7 @@ use Modules\Production\Database\Factories\CustomerFactory;
 
 class Customer extends Model
 {
-    use HasFactory, FlushCacheOnModelChange;
+    use FlushCacheOnModelChange, HasFactory;
 
     /**
      * The attributes that are mass assignable.

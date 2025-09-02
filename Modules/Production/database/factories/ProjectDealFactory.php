@@ -4,13 +4,11 @@ namespace Modules\Production\Database\Factories;
 
 use App\Enums\Production\EventType;
 use App\Enums\Production\ProjectDealStatus;
-use App\Enums\Production\ProjectStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\ProjectClass;
 use Modules\Company\Models\Province;
-use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
 
 class ProjectDealFactory extends Factory
@@ -53,8 +51,7 @@ class ProjectDealFactory extends Factory
             'is_high_season' => false,
             'longitude' => fake()->longitude(),
             'latitude' => fake()->latitude(),
-            'status' => ProjectDealStatus::Draft->value
+            'status' => ProjectDealStatus::Draft->value,
         ];
     }
 }
-

@@ -40,7 +40,7 @@ class ProjectQuotationRepository extends ProjectQuotationInterface
             $query->limit($limit);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 

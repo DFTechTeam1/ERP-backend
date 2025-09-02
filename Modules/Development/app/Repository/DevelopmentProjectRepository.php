@@ -5,32 +5,30 @@ namespace Modules\Development\Repository;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Repository\Interface\DevelopmentProjectInterface;
 
-class DevelopmentProjectRepository extends DevelopmentProjectInterface {
+class DevelopmentProjectRepository extends DevelopmentProjectInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new DevelopmentProject();
+        $this->model = new DevelopmentProject;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '', array $whereHas = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '', array $whereHas = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -38,7 +36,7 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
             $query->with($relation);
         }
 
-        if (!empty($whereHas)) {
+        if (! empty($whereHas)) {
             foreach ($whereHas as $queryItem) {
                 if (! isset($queryItem['type'])) {
                     $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
@@ -52,7 +50,7 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
             }
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -62,25 +60,21 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
         string $select = '*',
-        string $where = "",
+        string $where = '',
         array $relation = [],
         int $itemsPerPage = 10,
         int $page = 1,
         array $whereHas = []
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -88,7 +82,7 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
             $query->with($relation);
         }
 
-        if (!empty($whereHas)) {
+        if (! empty($whereHas)) {
             foreach ($whereHas as $queryItem) {
                 if (! isset($queryItem['type'])) {
                     $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
@@ -101,16 +95,13 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
                 }
             }
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [])
@@ -119,8 +110,8 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
-        
+        $query->where('uid', $uid);
+
         if ($relation) {
             $query->with($relation);
         }
@@ -133,7 +124,6 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -144,15 +134,14 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -166,7 +155,7 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -178,7 +167,6 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

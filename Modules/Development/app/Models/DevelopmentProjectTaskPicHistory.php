@@ -2,8 +2,8 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Hrd\Models\Employee;
 
@@ -21,7 +21,7 @@ class DevelopmentProjectTaskPicHistory extends Model
     protected $fillable = [
         'task_id',
         'employee_id',
-        'is_until_finish'
+        'is_until_finish',
     ];
 
     // protected static function newFactory(): DevelopmentProjectTaskPicHistoryFactory

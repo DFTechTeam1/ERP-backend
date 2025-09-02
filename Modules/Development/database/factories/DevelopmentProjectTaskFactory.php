@@ -2,15 +2,14 @@
 
 namespace Modules\Development\Database\Factories;
 
+use App\Enums\Development\Project\Task\TaskStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Development\Models\DevelopmentProject;
+use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Development\Models\DevelopmentProjectTaskDeadline;
 use Modules\Development\Models\DevelopmentProjectTaskPicHistory;
 use Modules\Development\Models\DevelopmentProjectTaskPicWorkstate;
-use App\Enums\Development\Project\Task\TaskStatus;
-use Illuminate\Database\Eloquent\Collection;
-use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Hrd\Models\Employee;
 
 class DevelopmentProjectTaskFactory extends Factory
@@ -37,27 +36,27 @@ class DevelopmentProjectTaskFactory extends Factory
             'description' => $this->faker->paragraph,
             'deadline' => null,
             'status' => TaskStatus::InProgress->value,
-            'current_pic_id' => null
+            'current_pic_id' => null,
         ];
     }
 
     public function withPic(?string $deadline = null, bool $withWorkState = false, ?object $employee = null)
     {
         return $this->afterCreating(function (DevelopmentProjectTask $task) use ($deadline, $withWorkState, $employee) {
-            if (!$employee) {
+            if (! $employee) {
                 $employee = Employee::factory()
                     ->withUser()
                     ->create();
             }
-            
+
             $task->pics()->create([
-                'employee_id' => $employee->id
+                'employee_id' => $employee->id,
             ]);
 
             // assign current pic id
             DevelopmentProjectTask::where('id', $task->id)
                 ->update([
-                    'current_pic_id' => $employee->id
+                    'current_pic_id' => $employee->id,
                 ]);
 
             DevelopmentProjectTaskPicHistory::upsert(
@@ -65,15 +64,15 @@ class DevelopmentProjectTaskFactory extends Factory
                     [
                         'task_id' => $task->id,
                         'employee_id' => $employee->id,
-                        'is_until_finish' => 1
-                    ]
+                        'is_until_finish' => 1,
+                    ],
                 ],
                 [
                     'task_id',
-                    'employee_id'
+                    'employee_id',
                 ],
                 [
-                    'is_until_finish'
+                    'is_until_finish',
                 ]
             );
 
@@ -82,15 +81,20 @@ class DevelopmentProjectTaskFactory extends Factory
                     'task_id' => $task->id,
                     'deadline' => $deadline,
                     'employee_id' => $employee->id,
-                    'start_time' => $task->status == \App\Enums\Development\Project\Task\TaskStatus::InProgress ? Carbon::now() : null
+                    'start_time' => $task->status == \App\Enums\Development\Project\Task\TaskStatus::InProgress ? Carbon::now() : null,
                 ]);
+
+                DevelopmentProjectTask::where('id', $task->id)
+                    ->update([
+                        'deadline' => $deadline,
+                    ]);
             }
 
             if ($withWorkState) {
                 DevelopmentProjectTaskPicWorkstate::create([
                     'task_id' => $task->id,
                     'employee_id' => $employee->id,
-                    'started_at' => Carbon::now()
+                    'started_at' => Carbon::now(),
                 ]);
             }
         });
@@ -108,7 +112,7 @@ class DevelopmentProjectTaskFactory extends Factory
                 $task->holdStates()->create([
                     'employee_id' => $pic->employee_id,
                     'holded_at' => Carbon::now(),
-                    'work_state_id' => $workState ? $workState->id : null
+                    'work_state_id' => $workState ? $workState->id : null,
                 ]);
 
                 if ($task->status == TaskStatus::InProgress) {
@@ -119,4 +123,3 @@ class DevelopmentProjectTaskFactory extends Factory
         });
     }
 }
-

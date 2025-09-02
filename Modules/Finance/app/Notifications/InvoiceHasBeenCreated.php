@@ -3,9 +3,8 @@
 namespace Modules\Finance\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class InvoiceHasBeenCreated extends Notification
 {
@@ -27,7 +26,7 @@ class InvoiceHasBeenCreated extends Notification
     public function via($notifiable): array
     {
         return [
-            'database'
+            'database',
         ];
     }
 
@@ -52,7 +51,7 @@ class InvoiceHasBeenCreated extends Notification
             'title' => 'Invoice issued to customer',
             'message' => "An invoice has been created for project <b>{$this->projectDeal->name}</b>. Ensure it’s tracked and sent to the customer.",
             'button' => null,
-            'href' => '/admin/deals/' . \Illuminate\Support\Facades\Crypt::encryptString($this->projectDeal->id)
+            'href' => '/admin/deals/'.\Illuminate\Support\Facades\Crypt::encryptString($this->projectDeal->id),
         ];
     }
 }

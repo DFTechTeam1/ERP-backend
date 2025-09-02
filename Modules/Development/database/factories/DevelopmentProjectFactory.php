@@ -30,7 +30,7 @@ class DevelopmentProjectFactory extends Factory
             'description' => $this->faker->paragraph(),
             'status' => ProjectStatus::Active->value,
             'project_date' => $this->faker->date(),
-            'created_by' => $employee->user->id
+            'created_by' => $employee->user->id,
         ];
     }
 
@@ -49,7 +49,7 @@ class DevelopmentProjectFactory extends Factory
     {
         return $this->afterCreating(function (DevelopmentProject $project) use ($withRealEmployee, $employee) {
             // create pics data by do factory on employee model
-            if (!$employee) {
+            if (! $employee) {
                 if ($withRealEmployee) {
                     $position = PositionBackup::where('name', 'like', '%project manager%')->first();
                     $employee = Employee::latest()->first();
@@ -64,4 +64,3 @@ class DevelopmentProjectFactory extends Factory
         });
     }
 }
-

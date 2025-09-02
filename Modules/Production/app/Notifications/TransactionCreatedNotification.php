@@ -3,9 +3,8 @@
 namespace Modules\Production\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Models\Transaction;
 
@@ -43,7 +42,7 @@ class TransactionCreatedNotification extends Notification
     {
         return [
             'mail',
-            'database'
+            'database',
         ];
     }
 
@@ -56,7 +55,7 @@ class TransactionCreatedNotification extends Notification
 
         // define attachments
         $attachments = collect($this->transaction->attachments)->pluck('real_path')->toArray();
-        
+
         return (new MailMessage)
             ->subject("New Transaction {$this->transaction->trx_id}")
             ->attachMany($attachments)
@@ -72,15 +71,15 @@ class TransactionCreatedNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-         return [
+        return [
             'type' => 'transaction_created',
             'title' => 'New transaction recorded',
             'message' => "A new transaction has been added the for project <b>{$this->transaction->projectDeal->name}</b>. Please review and validate the entry",
             'button' => [
                 'text' => 'Download Invoice',
-                'button' => $this->url
+                'button' => $this->url,
             ],
-            'href' => null
+            'href' => null,
         ];
     }
 }

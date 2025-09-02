@@ -22,7 +22,7 @@ class ProjectTaskHold extends Model
         'hold_at',
         'end_at',
         'hold_by',
-        'employee_id'
+        'employee_id',
     ];
 
     public function task(): BelongsTo

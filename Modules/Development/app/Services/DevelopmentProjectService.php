@@ -2,15 +2,14 @@
 
 namespace Modules\Development\Services;
 
-use Exception;
-use Carbon\Carbon;
 use App\Actions\Development\DefineTaskAction;
 use App\Enums\Development\Project\ReferenceType;
 use App\Enums\Development\Project\Task\TaskStatus;
-use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
+use Carbon\Carbon;
+use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Auth;
@@ -18,23 +17,27 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Modules\Development\app\Services\DevelopmentProjectCacheService;
 use Modules\Development\Jobs\NotifyTaskAssigneeJob;
+use Modules\Development\Jobs\SubmitProofsJob;
+use Modules\Development\Jobs\TaskHasBeenCompleteJob;
+use Modules\Development\Jobs\UpdateTaskDeadlineJob;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Development\Repository\DevelopmentProjectBoardRepository;
 use Modules\Development\Repository\DevelopmentProjectReferenceRepository;
 use Modules\Development\Repository\DevelopmentProjectRepository;
-use Modules\Development\Repository\DevelopmentProjectTaskRepository;
-use Modules\Development\Repository\DevelopmentProjectTaskPicRepository;
-use Modules\Development\Repository\DevelopmentProjectTaskDeadlineRepository;
 use Modules\Development\Repository\DevelopmentProjectTaskAttachmentRepository;
-use Modules\Development\Repository\DevelopmentProjectTaskPicHoldstateRepository;
-use Modules\Development\Repository\DevelopmentProjectTaskPicWorkstateRepository;
+use Modules\Development\Repository\DevelopmentProjectTaskDeadlineRepository;
 use Modules\Development\Repository\DevelopmentProjectTaskPicHistoryRepository;
+use Modules\Development\Repository\DevelopmentProjectTaskPicHoldstateRepository;
+use Modules\Development\Repository\DevelopmentProjectTaskPicRepository;
+use Modules\Development\Repository\DevelopmentProjectTaskPicWorkstateRepository;
+use Modules\Development\Repository\DevelopmentProjectTaskRepository;
 use Modules\Development\Repository\DevelopmentTaskProofRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 
-class DevelopmentProjectService {
+class DevelopmentProjectService
+{
     private $repo;
 
     private GeneralService $generalService;
@@ -62,7 +65,7 @@ class DevelopmentProjectService {
     private DevelopmentProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo;
 
     private DevelopmentTaskProofRepository $taskProofRepo;
-    
+
     private UserRepository $user;
 
     private const MEDIAPATH = 'development/projects/references';
@@ -92,8 +95,7 @@ class DevelopmentProjectService {
         DevelopmentTaskProofRepository $taskProofRepo,
         DevelopmentProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
         UserRepository $user
-    )
-    {
+    ) {
         $this->repo = $repo;
         $this->generalService = $generalService;
         $this->cacheService = $cacheService;
@@ -114,22 +116,15 @@ class DevelopmentProjectService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $user = $this->user->detail(id: Auth::id(), select: 'id,email,employee_id', relation: [
-                'employee:id'
+                'employee:id',
             ]);
 
             $itemsPerPage = request('itemsPerPage') ?? 50;
@@ -139,12 +134,11 @@ class DevelopmentProjectService {
             $search = request('search');
 
             // $rawData = $this->cacheService->getFilteredProjects(filters: $param, page: $page, perPage: $itemsPerPage);
-            
 
             // $paginated = $rawData['data'] ?? [];
             // $totalData = $rawData['total'] ?? 0;
 
-            $where = "id > 0";
+            $where = 'id > 0';
 
             // show list based on role
             $whereHas = [];
@@ -155,24 +149,24 @@ class DevelopmentProjectService {
                     whereHas: [
                         [
                             'relation' => 'pics',
-                            'query' => "employee_id = {$user->employee->id}"
-                        ]
+                            'query' => "employee_id = {$user->employee->id}",
+                        ],
                     ]
                 );
 
                 $taskIds = $tasks->pluck('id')->implode(',');
-                $query = $tasks->count() > 0 ? "id IN ({$taskIds})" : "1 = 0";
+                $query = $tasks->count() > 0 ? "id IN ({$taskIds})" : '1 = 0';
 
                 $whereHas[] = [
                     'relation' => 'tasks',
-                    'query' => $query
+                    'query' => $query,
                 ];
             }
 
             if ($user->hasRole(BaseRole::ProjectManager->value) || $user->hasRole(BaseRole::ProjectManagerAdmin->value) || $user->hasRole(BaseRole::ProjectManagerEntertainment->value)) {
                 $whereHas[] = [
                     'relation' => 'pics',
-                    'query' => "employee_id = {$user->employee->id}"
+                    'query' => "employee_id = {$user->employee->id}",
                 ];
             }
 
@@ -180,7 +174,7 @@ class DevelopmentProjectService {
             if (request('status')) {
                 $statusIds = collect(request('status'))->pluck('id')->implode(',');
 
-                if (!empty($statusIds)) {
+                if (! empty($statusIds)) {
                     $where .= " and status IN ({$statusIds})";
                 }
             }
@@ -188,20 +182,20 @@ class DevelopmentProjectService {
             if (request('pics')) {
                 $employeeUids = collect(request('pics'))->map(function ($picUid) {
                     if ($picUid) {
-                        return $this->generalService->getIdFromUid($picUid, new Employee());
+                        return $this->generalService->getIdFromUid($picUid, new Employee);
                     }
                 })->implode(',');
 
-                if (!empty($employeeUids)) {
+                if (! empty($employeeUids)) {
                     $whereHas[] = [
                         'relation' => 'pics',
-                        'query' => "employee_id IN ({$employeeUids})"
+                        'query' => "employee_id IN ({$employeeUids})",
                     ];
                 }
             }
 
-            if (request('event') && !empty(request('event'))) {
-                $where .= " and name LIKE '%" . request('event') . "%'";
+            if (request('event') && ! empty(request('event'))) {
+                $where .= " and name LIKE '%".request('event')."%'";
             }
 
             $paginated = $this->repo->pagination(
@@ -229,10 +223,10 @@ class DevelopmentProjectService {
                     'pics' => $project->pics->map(function ($pic) {
                         return [
                             'id' => $pic->employee_id,
-                            'nickname' => $pic->employee->nickname
+                            'nickname' => $pic->employee->nickname,
                         ];
                     })->toArray(),
-                    'pic_uids' => $project->pics->pluck('employee.uid')->toArray()
+                    'pic_uids' => $project->pics->pluck('employee.uid')->toArray(),
                 ];
             });
 
@@ -273,10 +267,7 @@ class DevelopmentProjectService {
         ];
     }
 
-    protected function calculateWeeklyProgress(Collection|DevelopmentProject $project)
-    {
-
-    }
+    protected function calculateWeeklyProgress(Collection|DevelopmentProject $project) {}
 
     protected function getPicTeams(int $bossId): Collection
     {
@@ -284,7 +275,7 @@ class DevelopmentProjectService {
             select: 'id,uid,nickname,name,position_id,avatar_color',
             where: "boss_id = {$bossId}",
             relation: [
-                'position:id,name'
+                'position:id,name',
             ]
         );
     }
@@ -297,10 +288,7 @@ class DevelopmentProjectService {
         )->count();
     }
 
-    public function getBoardTasks()
-    {
-
-    }
+    public function getBoardTasks() {}
 
     public function getProjectBoards(int $projectId): SupportCollection
     {
@@ -313,7 +301,7 @@ class DevelopmentProjectService {
                 'tasks.pics.employee:id,uid,nickname,avatar_color,name',
                 'tasks.taskProofs:id,task_id,nas_path,created_at',
                 'tasks.taskProofs.images:id,development_task_proof_id,image_path',
-                'tasks.revises.images'
+                'tasks.revises.images',
             ],
             where: "development_project_id = {$projectId}"
         );
@@ -347,36 +335,39 @@ class DevelopmentProjectService {
                             $items = $proof->images->map(function ($image) {
                                 return $image->real_image_path;
                             });
+
                             return [
                                 'images' => $items,
                                 'id' => $proof->id,
                                 'nas_path' => $proof->nas_path,
-                                'created_at' => Carbon::parse($proof->created_at)->format('d F Y H:i')
+                                'created_at' => Carbon::parse($proof->created_at)->format('d F Y H:i'),
                             ];
                         })->groupBy('created_at'),
                         'medias' => $task->attachments->map(function ($attachment) {
                             // get extenstion type
                             $extension = pathinfo($attachment->real_file_path, PATHINFO_EXTENSION);
+
                             return [
                                 'id' => $attachment->uid,
                                 'media_type' => 'media',
                                 'media_link' => $attachment->real_file_path,
                                 'ext' => $extension,
-                                'update_timing' => date('d F Y H:i', strtotime($attachment->created_at))
+                                'update_timing' => date('d F Y H:i', strtotime($attachment->created_at)),
                             ];
                         }),
                         'pics' => $task->pics->map(function ($pic) {
                             // set initial name based on name value
                             $initial = substr($pic->employee->name, 0, 1);
+
                             return [
                                 'uid' => $pic->employee->uid,
                                 'name' => $pic->employee->name,
                                 'avatar_color' => $pic->employee->avatar_color,
-                                'initial' => $initial
+                                'initial' => $initial,
                             ];
                         }),
                         'can_delete_attachment' => true,
-                        'action_list' => DefineTaskAction::run($task)
+                        'action_list' => DefineTaskAction::run($task),
                     ];
                 }),
             ];
@@ -399,7 +390,7 @@ class DevelopmentProjectService {
             $type = 'link';
             $extension = null;
             if ($reference->type == \App\Enums\Development\Project\ReferenceType::Media->value) {
-                $extension = pathinfo(storage_path('app/public/' . $reference->full_path), PATHINFO_EXTENSION);
+                $extension = pathinfo(storage_path('app/public/'.$reference->full_path), PATHINFO_EXTENSION);
 
                 if (in_array($extension, ['docx', 'doc', 'pdf'])) {
                     $type = 'pdf';
@@ -409,7 +400,6 @@ class DevelopmentProjectService {
                 }
             }
 
-
             return [
                 'id' => $reference->id,
                 'type' => $type,
@@ -417,7 +407,7 @@ class DevelopmentProjectService {
                 'media_path' => $reference->real_media_path,
                 'link' => $reference->link,
                 'link_name' => $reference->link_name,
-                'image_name' => $reference->media_path
+                'image_name' => $reference->media_path,
             ];
         });
 
@@ -429,9 +419,6 @@ class DevelopmentProjectService {
 
     /**
      * Get detail data for show
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -445,7 +432,7 @@ class DevelopmentProjectService {
 
             // get complete task percentage
             $completeTaskPercentage = $this->calculateCompletedTask($data);
-            
+
             $teams = [];
             foreach ($data->pics as $pic) {
                 $teams[] = $this->getPicTeams(bossId: $pic->employee_id);
@@ -462,7 +449,7 @@ class DevelopmentProjectService {
                     'is_lead_modeller' => false,
                     'total_task' => 0,
                     'avatar_color' => $team->avatar_color,
-                    'image' => asset('images/user.png')
+                    'image' => asset('images/user.png'),
                 ];
             });
 
@@ -487,12 +474,12 @@ class DevelopmentProjectService {
                 'boards' => $boards,
                 'project_is_complete' => $data->status === \App\Enums\Development\Project\ProjectStatus::Completed ? true : false,
                 'permission_list' => [
-                    'add_task' => true
-                ]
+                    'add_task' => true,
+                ],
             ];
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $output
             );
         } catch (\Throwable $th) {
@@ -502,9 +489,6 @@ class DevelopmentProjectService {
 
     /**
      * Get detail data for edit
-     *
-     * @param string $uid
-     * @return array
      */
     public function edit(string $uid): array
     {
@@ -515,7 +499,7 @@ class DevelopmentProjectService {
                 relation: [
                     'pics:id,development_project_id,employee_id',
                     'pics.employee:id,uid',
-                    'references'
+                    'references',
                 ]
             );
 
@@ -547,12 +531,11 @@ class DevelopmentProjectService {
                     image: $reference['image']
                 );
                 $payloadReferences[count($payloadReferences) - 1]['media_path'] = $media;
-            } else if ($reference['type'] === ReferenceType::Link->value) {
+            } elseif ($reference['type'] === ReferenceType::Link->value) {
                 $payloadReferences[count($payloadReferences) - 1]['link'] = $reference['link'];
                 $payloadReferences[count($payloadReferences) - 1]['link_name'] = $reference['link_name'];
             }
         }
-
 
         $project->references()->createMany($payloadReferences);
     }
@@ -560,13 +543,12 @@ class DevelopmentProjectService {
     /**
      * Store data
      *
-     * @param array $data               With these following structure
-     * - name: string
-     * - description: string|null
-     * - references: array|null
-     * - pics: array|null
-     * - project_date: string (format: Y-m-d)
-     * @return array
+     * @param  array  $data  With these following structure
+     *                       - name: string
+     *                       - description: string|null
+     *                       - references: array|null
+     *                       - pics: array|null
+     *                       - project_date: string (format: Y-m-d)
      */
     public function store(array $data): array
     {
@@ -575,7 +557,7 @@ class DevelopmentProjectService {
             $project = $this->repo->store($data);
 
             // attach references if exists
-            if (!empty($data['references'])) {
+            if (! empty($data['references'])) {
                 // create new variables as payload to references table
                 $payloadReferences = [];
 
@@ -584,11 +566,11 @@ class DevelopmentProjectService {
             }
 
             // attach pics if exists
-            if (!empty($data['pics'])) {
+            if (! empty($data['pics'])) {
                 // get id of each employee id. Employee_id is string which is using uid
                 $employees = collect($data['pics'])->map(function ($pic) {
                     return [
-                        'employee_id' => $this->generalService->getIdFromUid($pic['employee_id'], new Employee()),
+                        'employee_id' => $this->generalService->getIdFromUid($pic['employee_id'], new Employee),
                     ];
                 })->toArray();
 
@@ -623,19 +605,12 @@ class DevelopmentProjectService {
     /**
      * Update selected data
      * Here we only update name, project date and description
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             // update main table
             $this->repo->update(data: $data, id: $id);
@@ -652,7 +627,7 @@ class DevelopmentProjectService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
@@ -664,9 +639,7 @@ class DevelopmentProjectService {
      * 5. Remove project
      * 6. delete cache
      *
-     * @param integer $id
-     * 
-     * @return array
+     * @param  int  $id
      */
     public function delete(string $projectUid): array
     {
@@ -677,19 +650,32 @@ class DevelopmentProjectService {
                 select: 'id',
                 relation: [
                     'references',
+                    'tasks:id,development_project_id',
+                    'tasks.attachments',
                 ]
             );
 
             foreach ($project->references as $reference) {
                 if ($reference->type == ReferenceType::Media->value) {
                     // check if file exists
-                    if (Storage::disk('public')->exists(self::MEDIAPATH . '/' . $reference->media_path)) {
+                    if (Storage::disk('public')->exists(self::MEDIAPATH.'/'.$reference->media_path)) {
                         // delete file
-                        Storage::disk('public')->delete(self::MEDIAPATH . '/' . $reference->media_path);
+                        Storage::disk('public')->delete(self::MEDIATASKPATH.'/'.$reference->media_path);
                     }
                 }
 
                 $reference->delete();
+            }
+
+            // delete task attachments
+            foreach ($project->tasks as $task) {
+                // delete from storage
+                foreach ($task->attachments as $attachment) {
+                    if (Storage::disk('public')->exists(self::MEDIAPATH.'/'.$attachment->file_path)) {
+                        Storage::disk('public')->delete(self::MEDIAPATH.'/'.$attachment->file_path);
+                    }
+                }
+                $task->attachments()->delete();
             }
 
             $project->pics()->delete();
@@ -716,10 +702,6 @@ class DevelopmentProjectService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -737,11 +719,6 @@ class DevelopmentProjectService {
 
     /**
      * Assign PIC to task
-     *
-     * @param array $payload
-     * @param string $taskUid
-     * @param boolean $useTransaction
-     * @return array
      */
     public function assignDeadlineToTask(array $payload, string $taskUid, bool $useTransaction = true): array
     {
@@ -754,11 +731,11 @@ class DevelopmentProjectService {
             }
 
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id', relation: [
-                'pics'
+                'pics',
             ]);
 
             $payloadUpsert = [
-                ['task_id' => $task->id, 'deadline' => $payload['end_date']]
+                ['task_id' => $task->id, 'deadline' => $payload['end_date']],
             ];
 
             if ($task->pics->count() > 0) {
@@ -770,7 +747,7 @@ class DevelopmentProjectService {
                     $payloadUpsert[] = [
                         'task_id' => $task->id,
                         'employee_id' => $pic->employee_id,
-                        'deadline' => $payload['end_date']
+                        'deadline' => $payload['end_date'],
                     ];
                 }
             }
@@ -789,6 +766,7 @@ class DevelopmentProjectService {
             if ($useTransaction) {
                 DB::rollBack();
             }
+
             return errorResponse($th);
         }
     }
@@ -796,9 +774,7 @@ class DevelopmentProjectService {
     /**
      * Assign PIC to task
      *
-     * @param array $payload
-     * @param integer $projectId
-     * @return array
+     * @param  int  $projectId
      */
     public function assignPicToTask(array $payload, string $taskUid, bool $useTransaction = true): array
     {
@@ -808,43 +784,47 @@ class DevelopmentProjectService {
 
         try {
             $task = $this->projectTaskRepo->show(uid: $taskUid, relation: [
-                'deadlines'
+                'deadlines',
             ]);
-    
+
             // attach pics if payload contain 'pics' and payload['pics'] is not empty
             if (
                 (isset($payload['pics'])) &&
-                (!empty($payload['pics']))
+                (! empty($payload['pics']))
             ) {
                 foreach ($payload['pics'] as $pic) {
-                    $picId = $this->generalService->getIdFromUid($pic['employee_uid'], new \Modules\Hrd\Models\Employee());
+                    $picId = $this->generalService->getIdFromUid($pic['employee_uid'], new \Modules\Hrd\Models\Employee);
 
                     // assign to main table
                     // if pic_id and employee_id combination already exists, do not insert the record
-                    $check = $this->projectTaskPicRepo->show(uid: 'id', select: 'id', where: "task_id = {$task->id} AND employee_id = {$picId}");
-                    if (!$check) {
+                    $check = $this->projectTaskPicRepo->show(
+                        uid: 'id',
+                        select: 'id',
+                        where: "task_id = {$task->id} AND employee_id = {$picId}"
+                    );
+                    if (! $check) {
                         $task->pics()->create([
-                            'employee_id' => $picId
+                            'employee_id' => $picId,
                         ]);
                     }
 
                     // assign to pic histories table
                     $this->projectTaskPicHistoryRepo->upsert(
                         payload: [
-                            ['task_id' => $task->id, 'employee_id' => $picId, 'is_until_finish' => true]
+                            ['task_id' => $task->id, 'employee_id' => $picId, 'is_until_finish' => true],
                         ],
                         uniqueBy: ['task_id', 'employee_id'],
                         updateValue: ['is_until_finish']
                     );
 
                     // if task already have a deadline and give picId is not associated with this task deadline, we need to add this pic to table development_project_task_deadlines
-                    if ($task->deadline && $task->deadlines->where('employee_id', $picId)->isEmpty()) {
+                    if ($task->deadline && $task->deadlines->where('employee_id', $picId)->where('actual_end_time', null)->isEmpty()) {
                         $this->projectTaskDeadlineRepo->store([
                             'employee_id' => $picId,
                             'deadline' => $task->deadline,
                             'task_id' => $task->id,
                             // if task status already InProgress, then start time should be Carbon::now()
-                            'start_time' => $task->status === \App\Enums\Development\Project\Task\TaskStatus::InProgress ? Carbon::now() : null
+                            'start_time' => $task->status === \App\Enums\Development\Project\Task\TaskStatus::InProgress ? Carbon::now() : null,
                         ]);
                     }
 
@@ -878,37 +858,31 @@ class DevelopmentProjectService {
     /**
      * Update all tasks inside of selected board.
      * Get all tasks from selected board
-     *
-     * @param string $projectUid
-     * @return array
      */
     public function updateProjectBoards(string $projectUid): array
     {
-        $projectId = $this->generalService->getIdFromUid($projectUid, new \Modules\Development\Models\DevelopmentProject());
+        $projectId = $this->generalService->getIdFromUid($projectUid, new \Modules\Development\Models\DevelopmentProject);
 
         $boards = $this->getProjectBoards($projectId);
 
         return generalResponse(
-            message: "Success",
+            message: 'Success',
             data: $boards->toArray()
         );
     }
 
     /**
      * Create task for development project task
-     * 
-     * @param array $payload                    With these following structure:
-     * - string $name
-     * - string $description
-     * - int $board_id
-     * - array $images                              With these following structure:
-     *   - File $image
-     * - array $pics                                 With these following structure:
-     *   - string $employee_uid
-     * - string $end_date
-     * @param string $projectUid
-     * 
-     * @return array
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - string $name
+     *                          - string $description
+     *                          - int $board_id
+     *                          - array $images                              With these following structure:
+     *                          - File $image
+     *                          - array $pics                                 With these following structure:
+     *                          - string $employee_uid
+     *                          - string $end_date
      */
     public function storeTask(array $payload, string $projectUid): array
     {
@@ -917,7 +891,7 @@ class DevelopmentProjectService {
         $tmpFiles = [];
         try {
             $project = $this->repo->show(uid: $projectUid, select: 'id');
-            $payload['status'] = (isset($payload['pics'])) && (!empty($payload['pics'])) ? TaskStatus::WaitingApproval->value : TaskStatus::Draft->value;
+            $payload['status'] = (isset($payload['pics'])) && (! empty($payload['pics'])) ? TaskStatus::WaitingApproval->value : TaskStatus::Draft->value;
 
             $task = $project->tasks()->create([
                 'development_project_board_id' => $payload['board_id'],
@@ -930,7 +904,7 @@ class DevelopmentProjectService {
             // upload task attachments if any
             if (
                 (isset($payload['images'])) &&
-                (!empty($payload['images']))
+                (! empty($payload['images']))
             ) {
                 foreach ($payload['images'] as $image) {
                     $media = $this->generalService->uploadImageandCompress(
@@ -939,7 +913,7 @@ class DevelopmentProjectService {
                         image: $image['image']
                     );
 
-                    if (!$media) {
+                    if (! $media) {
                         // return error
                         throw new \Exception(__('notification.errorUploadTaskImage'));
                     }
@@ -948,7 +922,7 @@ class DevelopmentProjectService {
                 }
             }
 
-            if (!empty($tmpFiles)) {
+            if (! empty($tmpFiles)) {
                 foreach ($tmpFiles as $tmpFile) {
                     $task->attachments()->create([
                         'file_path' => $tmpFile,
@@ -958,7 +932,7 @@ class DevelopmentProjectService {
 
             if (isset($payload['pics'])) {
                 $pic = $this->assignPicToTask(payload: $payload, taskUid: $task->uid, useTransaction: false);
-    
+
                 if ($pic['error']) {
                     throw new Exception($pic['message']);
                 }
@@ -979,10 +953,10 @@ class DevelopmentProjectService {
             DB::rollBack();
 
             // delete tmp files
-            if (!empty($tmpFiles)) {
+            if (! empty($tmpFiles)) {
                 foreach ($tmpFiles as $tmpFile) {
-                    if (Storage::disk('public')->exists(self::MEDIATASKPATH . '/' . $tmpFile)) {
-                        Storage::disk('public')->delete(self::MEDIATASKPATH . '/' . $tmpFile);
+                    if (Storage::disk('public')->exists(self::MEDIATASKPATH.'/'.$tmpFile)) {
+                        Storage::disk('public')->delete(self::MEDIATASKPATH.'/'.$tmpFile);
                     }
                 }
             }
@@ -995,8 +969,8 @@ class DevelopmentProjectService {
     {
         try {
             $data = $this->projectTaskAttachmentRepo->show($attachmentId, 'file_path,task_id', [], "id = {$attachmentId}");
-            
-            return \Illuminate\Support\Facades\Storage::download(self::MEDIATASKPATH . '/' . $data->file_path);
+
+            return \Illuminate\Support\Facades\Storage::download(self::MEDIATASKPATH.'/'.$data->file_path);
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
@@ -1004,26 +978,22 @@ class DevelopmentProjectService {
 
     /**
      * Delete a task attachment.
-     * 
-     * @param string $projectUId
-     * @param string $taskUid
-     * @param string $attachmentId
-     * 
-     * @return array
+     *
+     * @param  string  $projectUId
      */
     public function deleteTaskAttachment(string $projectUid, string $taskUid, string $attachmentId): array
     {
         try {
             $image = $this->projectTaskAttachmentRepo->show(uid: $attachmentId);
 
-            if (Storage::disk('public')->exists(self::MEDIATASKPATH . '/' . $image->file_path)) {
-                Storage::disk('public')->delete(self::MEDIATASKPATH . '/' . $image->file_path);
+            if (Storage::disk('public')->exists(self::MEDIATASKPATH.'/'.$image->file_path)) {
+                Storage::disk('public')->delete(self::MEDIATASKPATH.'/'.$image->file_path);
             }
 
             $image->delete();
 
             // get detail of project board
-            $projectId = $this->generalService->getIdFromUid($projectUid, new DevelopmentProject());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new DevelopmentProject);
             $boards = $this->getProjectBoards(projectId: $projectId);
 
             return generalResponse(
@@ -1037,25 +1007,21 @@ class DevelopmentProjectService {
 
     /**
      * Remove current members from a task.
-     *
-     * @param array $memberIds
-     * @param integer $taskId
-     * @return void
      */
     protected function removeMembersFromTask(array $memberIds, int $taskId): void
     {
         foreach ($memberIds as $memberId) {
             // Remove deadline history for selected member
-            $this->projectTaskDeadlineRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId}");
+            $this->projectTaskDeadlineRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and actual_end_time is null");
 
             // Remove from task pics
             $this->projectTaskPicRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId}");
 
             // remove from workstates
-            $this->projectTaskWorkStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId}");
+            $this->projectTaskWorkStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and finished_at is null");
 
             // remove from holdstates
-            $this->projectTaskHoldStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId}");
+            $this->projectTaskHoldStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and unholded_at is null");
 
             // update task pic histories
             $this->projectTaskPicHistoryRepo->update(
@@ -1069,19 +1035,15 @@ class DevelopmentProjectService {
 
     /**
      * Assign pictures to a task.
-     *
-     * @param array $payload
-     * @param string $taskUid
-     * @return array
      */
     public function addTaskMember(array $payload, string $taskUid): array
     {
         DB::beginTransaction();
         try {
-            $taskId = $this->generalService->getIdFromUid($taskUid, new \Modules\Development\Models\DevelopmentProjectTask());
+            $taskId = $this->generalService->getIdFromUid($taskUid, new \Modules\Development\Models\DevelopmentProjectTask);
 
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,development_project_id', relation: [
-                'picHistories'
+                'picHistories',
             ]);
 
             // remove pic if needed
@@ -1090,10 +1052,10 @@ class DevelopmentProjectService {
                 ($payload['removed'])
             ) {
                 $removedIds = collect($payload['removed'])->map(function ($item) {
-                    return $this->generalService->getIdFromUid($item, new Employee());
+                    return $this->generalService->getIdFromUid($item, new Employee);
                 })->toArray();
 
-                if (!empty($removedIds)) {
+                if (! empty($removedIds)) {
                     $this->removeMembersFromTask(memberIds: $removedIds, taskId: $taskId);
                 }
             }
@@ -1103,9 +1065,9 @@ class DevelopmentProjectService {
                 payload: [
                     'pics' => collect($payload['users'])->map(function ($user) {
                         return [
-                            'employee_uid' => $user
+                            'employee_uid' => $user,
                         ];
-                    })->toArray()
+                    })->toArray(),
                 ],
                 taskUid: $taskUid,
                 useTransaction: false
@@ -1113,7 +1075,7 @@ class DevelopmentProjectService {
 
             // if task pics is empty and task status is InProgress, then change task status to draft
             $newTask = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,deadline,name', relation: [
-                'pics'
+                'pics',
             ]);
             if ($newTask->status === TaskStatus::InProgress && $newTask->pics->isEmpty()) {
                 $this->projectTaskRepo->update(
@@ -1137,7 +1099,7 @@ class DevelopmentProjectService {
                 );
             }
 
-            if (!empty($payload['users'])) {
+            if (! empty($payload['users'])) {
                 // send notification
                 NotifyTaskAssigneeJob::dispatch(
                     asignessUids: $payload['users'],
@@ -1163,9 +1125,6 @@ class DevelopmentProjectService {
 
     /**
      * Delete a task and all its related resources.
-     *
-     * @param string $taskUid
-     * @return array
      */
     public function deleteTask(string $taskUid): array
     {
@@ -1174,7 +1133,7 @@ class DevelopmentProjectService {
             $task = $this->projectTaskRepo->show(uid: $taskUid, relation: [
                 'pics',
                 'attachments',
-                'deadlines'
+                'deadlines',
             ]);
 
             $currentProjectId = $task->development_project_id;
@@ -1186,8 +1145,8 @@ class DevelopmentProjectService {
 
             // delete all attachment in the storage first
             $task->attachments->each(function ($attachment) {
-                if (Storage::disk('public')->exists(self::MEDIATASKPATH . '/' . $attachment->file_path)) {
-                    Storage::delete(self::MEDIATASKPATH . '/' . $attachment->file_path);
+                if (Storage::disk('public')->exists(self::MEDIATASKPATH.'/'.$attachment->file_path)) {
+                    Storage::delete(self::MEDIATASKPATH.'/'.$attachment->file_path);
                 }
             });
 
@@ -1217,8 +1176,6 @@ class DevelopmentProjectService {
 
     /**
      * Record the work state of a task.
-     *
-     * @param DevelopmentProjectTask|Collection $task
      */
     public function recordWorkState(DevelopmentProjectTask|Collection $task): void
     {
@@ -1234,9 +1191,6 @@ class DevelopmentProjectService {
 
     /**
      * Record the hold state of a task.
-     *
-     * @param DevelopmentProjectTask|Collection $task
-     * @return void
      */
     public function recordHoldState(DevelopmentProjectTask|Collection $task): void
     {
@@ -1250,7 +1204,7 @@ class DevelopmentProjectService {
             $workState->holdStates()->create([
                 'employee_id' => $pic->employee_id,
                 'task_id' => $task->id,
-                'holded_at' => Carbon::now()
+                'holded_at' => Carbon::now(),
             ]);
         }
     }
@@ -1268,7 +1222,7 @@ class DevelopmentProjectService {
             // stop the hold state
             $this->projectTaskHoldStateRepo->update(
                 data: [
-                    'unholded_at' => Carbon::now()
+                    'unholded_at' => Carbon::now(),
                 ],
                 where: "work_state_id = {$currentWorkState->id}"
             );
@@ -1277,10 +1231,6 @@ class DevelopmentProjectService {
 
     /**
      * Approve a task and update its deadlines.
-     * 
-     * @param string $taskUid
-     * 
-     * @return array
      */
     public function approveTask(string $taskUid): array
     {
@@ -1288,12 +1238,12 @@ class DevelopmentProjectService {
         try {
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id', relation: [
                 'deadlines',
-                'pics'
+                'pics',
             ]);
 
             $this->projectTaskRepo->update(
                 data: [
-                    'status' => TaskStatus::InProgress->value
+                    'status' => TaskStatus::InProgress->value,
                 ],
                 id: $taskUid
             );
@@ -1303,7 +1253,7 @@ class DevelopmentProjectService {
                 foreach ($task->deadlines as $deadline) {
                     $this->projectTaskDeadlineRepo->update(
                         data: [
-                            'start_time' => Carbon::now()
+                            'start_time' => Carbon::now(),
                         ],
                         id: $deadline->id
                     );
@@ -1331,10 +1281,6 @@ class DevelopmentProjectService {
 
     /**
      * Hold a task and update its hold states.
-     *
-     * @param string $taskUid
-     *
-     * @return array
      */
     public function holdTask(string $taskUid): array
     {
@@ -1342,13 +1288,13 @@ class DevelopmentProjectService {
 
         try {
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id', relation: [
-                'pics:id,task_id,employee_id'
+                'pics:id,task_id,employee_id',
             ]);
 
             // update task status
             $this->projectTaskRepo->update(
                 data: [
-                    'status' => TaskStatus::OnHold->value
+                    'status' => TaskStatus::OnHold->value,
                 ],
                 id: $taskUid
             );
@@ -1374,10 +1320,6 @@ class DevelopmentProjectService {
 
     /**
      * Start the task after tas has been hold
-     * 
-     * @param string $taskUid
-     * 
-     * @return array
      */
     public function startTaskAfterHold(string $taskUid): array
     {
@@ -1385,13 +1327,13 @@ class DevelopmentProjectService {
 
         try {
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id', relation: [
-                'pics:id,task_id,employee_id'
+                'pics:id,task_id,employee_id',
             ]);
 
             // update task status
             $this->projectTaskRepo->update(
                 data: [
-                    'status' => TaskStatus::InProgress->value
+                    'status' => TaskStatus::InProgress->value,
                 ],
                 id: $taskUid
             );
@@ -1410,17 +1352,13 @@ class DevelopmentProjectService {
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
 
     /**
      * Submit task proofs.
-     * 
-     * @param array $payload
-     * @param string $taskUid
-     * 
-     * @return array
      */
     public function submitTaskProofs(array $payload, string $taskUid): array
     {
@@ -1428,10 +1366,13 @@ class DevelopmentProjectService {
 
         DB::beginTransaction();
         try {
-            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id', relation: [
+            $user = Auth::user();
+
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id,name', relation: [
                 'pics:id,task_id,employee_id',
                 'workStates',
-                'deadlines:id,task_id'
+                'deadlines:id,task_id',
+                'developmentProject:id,name',
             ]);
 
             // upload proof of works
@@ -1442,7 +1383,7 @@ class DevelopmentProjectService {
                     image: $image['image']
                 );
 
-                if (!$media) {
+                if (! $media) {
                     // return error
                     throw new \Exception(__('notification.errorUploadTaskImage'));
                 }
@@ -1454,12 +1395,12 @@ class DevelopmentProjectService {
             foreach ($task->pics as $pic) {
                 $proof = $task->taskProofs()->create([
                     'nas_path' => $payload['nas_path'],
-                    'employee_id' => $pic->employee_id
+                    'employee_id' => $pic->employee_id,
                 ]);
 
                 foreach ($tmpFiles as $file) {
                     $proof->images()->create([
-                        'image_path' => $file
+                        'image_path' => $file,
                     ]);
                 }
 
@@ -1475,7 +1416,7 @@ class DevelopmentProjectService {
             $this->projectTaskRepo->update(
                 data: [
                     'status' => TaskStatus::CheckByPm->value,
-                    'current_pic_id' => $task->pics->pluck('employee_id')->implode(',')
+                    'current_pic_id' => $task->pics->pluck('employee_id')->implode(','),
                 ],
                 id: $taskUid
             );
@@ -1486,7 +1427,7 @@ class DevelopmentProjectService {
             // assign to boss
             foreach ($bossIds as $bossId) {
                 $task->pics()->create([
-                    'employee_id' => $bossId
+                    'employee_id' => $bossId,
                 ]);
             }
 
@@ -1494,7 +1435,7 @@ class DevelopmentProjectService {
             foreach ($task->workStates as $state) {
                 $this->projectTaskWorkStateRepo->update(
                     data: [
-                        'finished_at' => Carbon::now()
+                        'finished_at' => Carbon::now(),
                     ],
                     id: $state->id
                 );
@@ -1504,7 +1445,7 @@ class DevelopmentProjectService {
             foreach ($task->deadlines as $deadline) {
                 $this->projectTaskDeadlineRepo->update(
                     data: [
-                        'actual_end_time' => Carbon::now()
+                        'actual_end_time' => Carbon::now(),
                     ],
                     id: $deadline->id
                 );
@@ -1512,6 +1453,8 @@ class DevelopmentProjectService {
 
             // update boards
             $boards = $this->getProjectBoards(projectId: $task->development_project_id);
+
+            SubmitProofsJob::dispatch($task, $bossIds, $user)->afterCommit();
 
             DB::commit();
 
@@ -1522,10 +1465,10 @@ class DevelopmentProjectService {
         } catch (\Throwable $th) {
             DB::rollBack();
 
-            if (!empty($tmpFiles)) {
+            if (! empty($tmpFiles)) {
                 foreach ($tmpFiles as $file) {
-                    if (Storage::disk('public')->exists(self::PROOFPATH . '/' . $file)) {
-                        Storage::disk('public')->delete(self::PROOFPATH . '/' . $file);
+                    if (Storage::disk('public')->exists(self::PROOFPATH.'/'.$file)) {
+                        Storage::disk('public')->delete(self::PROOFPATH.'/'.$file);
                     }
                 }
             }
@@ -1536,24 +1479,22 @@ class DevelopmentProjectService {
 
     /**
      * Complete a task
-     * 
-     * @param string $taskUid
-     * 
-     * @return array
      */
     public function completeTask(string $taskUid): array
     {
         DB::beginTransaction();
         try {
             // get task detail
-            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id,development_project_board_id', relation: [
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id,development_project_board_id,current_pic_id', relation: [
                 'pics:id,task_id,employee_id',
-                'developmentProject:id',
-                'developmentProject.boards'
+                'developmentProject:id,name',
+                'developmentProject.boards',
             ]);
 
+            $currentPicIds = explode(',', $task->current_pic_id);
+
             $payloadTask = [
-                'status' => TaskStatus::Completed
+                'status' => TaskStatus::Completed,
             ];
 
             // move to the next board
@@ -1563,7 +1504,7 @@ class DevelopmentProjectService {
             if (isset($currentBoards[$nextKey])) {
                 $payloadTask['development_project_board_id'] = $currentBoards[$nextKey];
             }
-                
+
             // update task status
             $this->projectTaskRepo->update(
                 data: $payloadTask,
@@ -1576,6 +1517,8 @@ class DevelopmentProjectService {
             $task->pics()->delete();
 
             $boards = $this->getProjectBoards(projectId: $task->development_project_id);
+
+            TaskHasBeenCompleteJob::dispatch($currentPicIds, $task)->afterCommit();
 
             DB::commit();
 
@@ -1592,11 +1535,11 @@ class DevelopmentProjectService {
 
     /**
      * Revise a task
-     * 
-     * @param array $paylad                 With these following structure
-     * - array $images                          With these following structure
-     *      - File $image
-     * - string $reason
+     *
+     * @param  array  $paylad  With these following structure
+     *                         - array $images                          With these following structure
+     *                         - File $image
+     *                         - string $reason
      */
     public function reviseTask(array $payload, string $taskUid): array
     {
@@ -1605,7 +1548,7 @@ class DevelopmentProjectService {
         try {
             // get detail task
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id,current_pic_id', relation: [
-                'pics:id,task_id,employee_id'
+                'pics:id,task_id,employee_id',
             ]);
 
             foreach ($payload['images'] as $image) {
@@ -1615,7 +1558,7 @@ class DevelopmentProjectService {
                     image: $image['image']
                 );
 
-                if (!$media) {
+                if (! $media) {
                     // return error
                     throw new \Exception(__('notification.errorUploadTaskImage'));
                 }
@@ -1625,18 +1568,18 @@ class DevelopmentProjectService {
 
             $revise = $task->revises()->create([
                 'reason' => $payload['reason'],
-                'assigned_by' => Auth::id()
+                'assigned_by' => Auth::id(),
             ]);
 
             // update task status
             $this->projectTaskRepo->update(
                 data: [
-                    'status' => TaskStatus::Revise
+                    'status' => TaskStatus::Revise,
                 ],
                 id: $taskUid
             );
 
-            if (!empty($tmpFiles)) {
+            if (! empty($tmpFiles)) {
                 foreach ($tmpFiles as $tmpFile) {
                     $revise->images()->create([
                         'image_path' => $tmpFile,
@@ -1667,7 +1610,7 @@ class DevelopmentProjectService {
             // );
             foreach ($currentPicIds as $currentPicId) {
                 $task->pics()->create([
-                    'employee_id' => $currentPicId
+                    'employee_id' => $currentPicId,
                 ]);
             }
 
@@ -1684,10 +1627,10 @@ class DevelopmentProjectService {
             DB::rollBack();
 
             // delete tmp files
-            if (!empty($tmpFiles)) {
+            if (! empty($tmpFiles)) {
                 foreach ($tmpFiles as $tmpFile) {
-                    if (Storage::disk('public')->exists(self::MEDIATASKPATH . '/' . $tmpFile)) {
-                        Storage::disk('public')->delete(self::MEDIATASKPATH . '/' . $tmpFile);
+                    if (Storage::disk('public')->exists(self::MEDIATASKPATH.'/'.$tmpFile)) {
+                        Storage::disk('public')->delete(self::MEDIATASKPATH.'/'.$tmpFile);
                     }
                 }
             }
@@ -1698,22 +1641,17 @@ class DevelopmentProjectService {
 
     /**
      * Move task to a different board
-     * 
-     * @param string $taskUid
-     * @param int $boardId
-     * 
-     * @return array
      */
     public function moveBoardId(string $taskUid, int $boardId): array
     {
         try {
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,development_project_id', relation: [
-                'pics:id,task_id,employee_id'
+                'pics:id,task_id,employee_id',
             ]);
 
             $this->projectTaskRepo->update(
                 data: [
-                    'development_project_board_id' => $boardId
+                    'development_project_board_id' => $boardId,
                 ],
                 id: $taskUid
             );
@@ -1731,11 +1669,6 @@ class DevelopmentProjectService {
 
     /**
      * Store project references.
-     * 
-     * @param array $payload
-     * @param string $projectUid
-     * 
-     * @return array
      */
     public function storeReferences(array $payload, string $projectUid): array
     {
@@ -1762,11 +1695,8 @@ class DevelopmentProjectService {
 
     /**
      * Delete a project reference.
-     * 
-     * @param string $taskUid
-     * @param int $referenceId
-     * 
-     * @return array
+     *
+     * @param  string  $taskUid
      */
     public function deleteReference(string $projectUid, int $referenceId): array
     {
@@ -1775,8 +1705,8 @@ class DevelopmentProjectService {
 
             $reference = $this->projectReferenceRepo->show(uid: $referenceId, select: 'id,media_path,type');
 
-            if (Storage::disk('public')->exists(self::MEDIAPATH . '/' . $reference->media_path)) {
-                Storage::disk('public')->delete(self::MEDIAPATH . '/' . $reference->media_path);
+            if (Storage::disk('public')->exists(self::MEDIAPATH.'/'.$reference->media_path)) {
+                Storage::disk('public')->delete(self::MEDIAPATH.'/'.$reference->media_path);
             }
 
             $reference->delete();
@@ -1794,25 +1724,20 @@ class DevelopmentProjectService {
 
     /**
      * Get related tasks for a specific project.
-     * 
-     * @param string $projectUid
-     * @param string $taskUid
-     * 
-     * @return array
      */
     public function getRelatedTask(string $projectUid, string $taskUid): array
     {
         try {
-            $projectId = $this->generalService->getIdFromUid($projectUid, new DevelopmentProject());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new DevelopmentProject);
 
             $tasks = $this->projectTaskRepo->list(
                 relation: [],
                 select: 'id,uid,name',
-                where: "development_project_id = {$projectId} and uid != '{$taskUid}' and status != " . TaskStatus::Draft->value,
+                where: "development_project_id = {$projectId} and uid != '{$taskUid}' and status != ".TaskStatus::Draft->value,
             );
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $tasks->toArray()
             );
         } catch (\Throwable $th) {
@@ -1822,11 +1747,6 @@ class DevelopmentProjectService {
 
     /**
      * Store attachments for a specific task.
-     * 
-     * @param array $payload
-     * @param string $taskUid
-     * 
-     * @return array
      */
     public function storeAttachments(array $payload, string $taskUid): array
     {
@@ -1834,13 +1754,13 @@ class DevelopmentProjectService {
         $tmpFiles = [];
         try {
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,development_project_id', relation: [
-                'attachments'
+                'attachments',
             ]);
 
             // upload task attachments if any
             if (
                 (isset($payload['images'])) &&
-                (!empty($payload['images']))
+                (! empty($payload['images']))
             ) {
                 foreach ($payload['images'] as $image) {
                     $media = $this->generalService->uploadImageandCompress(
@@ -1849,7 +1769,7 @@ class DevelopmentProjectService {
                         image: $image['image']
                     );
 
-                    if (!$media) {
+                    if (! $media) {
                         // return error
                         throw new \Exception(__('notification.errorUploadTaskImage'));
                     }
@@ -1858,7 +1778,7 @@ class DevelopmentProjectService {
                 }
             }
 
-            if (!empty($tmpFiles)) {
+            if (! empty($tmpFiles)) {
                 foreach ($tmpFiles as $tmpFile) {
                     $task->attachments()->create([
                         'file_path' => $tmpFile,
@@ -1878,13 +1798,81 @@ class DevelopmentProjectService {
             DB::rollBack();
 
             // delete tmp files
-            if (!empty($tmpFiles)) {
+            if (! empty($tmpFiles)) {
                 foreach ($tmpFiles as $tmpFile) {
-                    if (Storage::disk('public')->exists(self::MEDIATASKPATH . '/' . $tmpFile)) {
-                        Storage::disk('public')->delete(self::MEDIATASKPATH . '/' . $tmpFile);
+                    if (Storage::disk('public')->exists(self::MEDIATASKPATH.'/'.$tmpFile)) {
+                        Storage::disk('public')->delete(self::MEDIATASKPATH.'/'.$tmpFile);
                     }
                 }
             }
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update the deadline for a specific task.
+     *
+     * @param  array  $payload  Required structure:
+     *                          - end_date: string (format: Y-m-d H:i:s)
+     */
+    public function updateTaskDeadline(array $payload, string $taskUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,development_project_id,name', relation: [
+                'deadlines',
+                'pics:id,task_id,employee_id',
+                'pics.employee:id,name,email,telegram_chat_id',
+                'developmentProject:id,name',
+            ]);
+            // Update deadlines for each PIC if actual_end_time is null
+            // task have pics, and actual_end_time in deadline model have null value then update the value based on task id and each pic.employee_id
+            if ($task->pics->isNotEmpty()) {
+                foreach ($task->pics as $pic) {
+                    $targetDeadline = $this->projectTaskDeadlineRepo->show(uid: 'id', select: 'id', where: "task_id = {$task->id} and employee_id = {$pic->employee_id} and actual_end_time IS NULL");
+
+                    // create if not exists and update if exists
+                    if ($targetDeadline) {
+                        $this->projectTaskDeadlineRepo->update(
+                            data: [
+                                'deadline' => Carbon::parse($payload['end_date'])->format('Y-m-d H:i:s'),
+                            ],
+                            id: $targetDeadline->id
+                        );
+                    } else {
+                        $this->projectTaskDeadlineRepo->store([
+                            'task_id' => $task->id,
+                            'employee_id' => $pic->employee_id,
+                            'deadline' => Carbon::parse($payload['end_date'])->format('Y-m-d H:i:s'),
+                        ]);
+                    }
+                }
+            }
+
+            // update deadline in the task repo
+            $this->projectTaskRepo->update(
+                data: [
+                    'deadline' => Carbon::parse($payload['end_date'])->format('Y-m-d H:i:s'),
+                ],
+                id: $taskUid
+            );
+
+            $boards = $this->getProjectBoards(projectId: $task->development_project_id);
+
+            // notify all pics if exists
+            if ($task->pics->isNotEmpty()) {
+                UpdateTaskDeadlineJob::dispatch($task, $payload)->afterCommit();
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successUpdateDeadline'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
 
             return errorResponse($th);
         }

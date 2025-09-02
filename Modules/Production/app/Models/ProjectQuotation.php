@@ -5,7 +5,6 @@ namespace Modules\Production\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Production\Database\Factories\ProjectQuotationFactory;
 
@@ -34,7 +33,7 @@ class ProjectQuotation extends Model
         'quotation_id',
         'is_final',
         'description',
-        'design_job'
+        'design_job',
     ];
 
     protected static function newFactory(): ProjectQuotationFactory

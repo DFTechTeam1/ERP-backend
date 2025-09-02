@@ -4,8 +4,8 @@ namespace Modules\Production\Models;
 
 use App\Enums\Production\ProjectStatus;
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -35,13 +35,13 @@ class InteractiveProject extends Model
         'led_detail',
         'project_class_id',
         'created_by',
-        'updated_by'
+        'updated_by',
     ];
 
     protected function casts()
     {
         return [
-            'status' => ProjectStatus::class
+            'status' => ProjectStatus::class,
         ];
     }
 

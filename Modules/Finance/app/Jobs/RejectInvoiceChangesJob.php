@@ -3,10 +3,10 @@
 namespace Modules\Finance\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Finance\Models\InvoiceRequestUpdate;
 use Modules\Finance\Notifications\RejectInvoiceChangesNotification;
 
@@ -33,7 +33,7 @@ class RejectInvoiceChangesJob implements ShouldQueue
             ->with([
                 'user:id,email,employee_id',
                 'user.employee:id,name',
-                'invoice:id,parent_number,number'
+                'invoice:id,parent_number,number',
             ])
             ->find($this->invoiceUpdateId);
 

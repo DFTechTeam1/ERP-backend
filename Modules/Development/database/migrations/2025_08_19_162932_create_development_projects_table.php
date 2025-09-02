@@ -13,8 +13,8 @@ return new class extends Migration
     public function up(): void
     {
         $projectStatus = ProjectStatus::cases();
-        $projectStatus = array_map(fn($status) => $status->value, $projectStatus);
-        Schema::create('development_projects', function (Blueprint $table) use($projectStatus) {
+        $projectStatus = array_map(fn ($status) => $status->value, $projectStatus);
+        Schema::create('development_projects', function (Blueprint $table) use ($projectStatus) {
             $table->id();
             $table->char('uid', 36);
             $table->string('name');

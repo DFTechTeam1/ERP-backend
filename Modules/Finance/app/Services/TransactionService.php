@@ -2,22 +2,20 @@
 
 namespace Modules\Finance\Services;
 
-use App\Enums\ErrorCode\Code;
 use App\Enums\Transaction\TransactionType;
 use App\Services\GeneralService;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
-use Modules\Finance\Models\TransactionImage;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
 
-class TransactionService {
+class TransactionService
+{
     private $repo;
 
     private $projectQuotationRepo;
@@ -37,8 +35,7 @@ class TransactionService {
         GeneralService $generalService,
         ProjectDealRepository $projectDealRepo,
         InvoiceRepository $invoiceRepo
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->projectQuotationRepo = $projectQuotationRepo;
@@ -52,19 +49,12 @@ class TransactionService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -72,7 +62,7 @@ class TransactionService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -105,9 +95,6 @@ class TransactionService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -126,18 +113,15 @@ class TransactionService {
 
     /**
      * Create transaction based on invoice
-     * 
-     * @param array $payload                    With this following structure:
-     * - string|int $payment_amount
-     * - string $transaction_date
-     * - string $invoice_id
-     * - ?string $note
-     * - ?string $reference
-     * - array $images                              With this following structure:
-     *      - object $image
-     * @param string $projectDealUid
-     * 
-     * @return array
+     *
+     * @param  array  $payload  With this following structure:
+     *                          - string|int $payment_amount
+     *                          - string $transaction_date
+     *                          - string $invoice_id
+     *                          - ?string $note
+     *                          - ?string $reference
+     *                          - array $images                              With this following structure:
+     *                          - object $image
      */
     public function store(array $payload, string $projectDealUid): array
     {
@@ -151,7 +135,7 @@ class TransactionService {
                 select: 'id,customer_id,is_fully_paid,identifier_number',
                 relation: [
                     'transactions:id,project_deal_id,payment_amount',
-                    'finalQuotation:id,project_deal_id,fix_price'
+                    'finalQuotation:id,project_deal_id,fix_price',
                 ]
             );
 
@@ -160,22 +144,22 @@ class TransactionService {
             // define transaction type
             if ($projectDeal->transactions->count() == 0) {
                 $type = TransactionType::DownPayment;
-            } else if ($projectDeal->getRemainingPayment() == $payload['payment_amount']) {
+            } elseif ($projectDeal->getRemainingPayment() == $payload['payment_amount']) {
                 $type = TransactionType::Repayment;
                 $allPaid = true;
             } else {
-                $type = TransactionType::Credit;   
+                $type = TransactionType::Credit;
             }
 
             // get invoice id based on invoice uid
             $invoiceUid = $payload['invoice_id'];
-            $invoiceId = $this->generalService->getIdFromUid($payload['invoice_id'], new Invoice());
+            $invoiceId = $this->generalService->getIdFromUid($payload['invoice_id'], new Invoice);
 
             $payload['project_deal_id'] = $projectDeal->id;
             $payload['customer_id'] = $projectDeal->customer_id;
             $payload['transaction_type'] = $type;
             $payload['invoice_id'] = $invoiceId;
-            $payload['trx_id'] = "TRX - {$projectDeal->identifier_number} - " . now()->format('Y');
+            $payload['trx_id'] = "TRX - {$projectDeal->identifier_number} - ".now()->format('Y');
 
             $trx = $this->repo->store(
                 collect($payload)->except(['images'])->toArray()
@@ -189,16 +173,17 @@ class TransactionService {
                         image: $image['image'],
                         compressValue: 1
                     );
-                    
-                    if (!$imageName) {
+
+                    if (! $imageName) {
                         DB::rollBack();
+
                         return errorMessage(message: 'Failed to process transaction');
                     }
-    
+
                     $tmp[] = $imageName;
-    
+
                     $payloadImage[] = [
-                        'image' => $imageName
+                        'image' => $imageName,
                     ];
                 }
             }
@@ -218,10 +203,10 @@ class TransactionService {
 
                 return $transaction;
             })->toArray();
-            
+
             $rawData['transactions'] = $currentTransactions;
             $this->invoiceRepo->update(data: [
-                'raw_data' => $rawData
+                'raw_data' => $rawData,
             ], id: $invoiceUid);
 
             // update project deal data when all invoice has been paid
@@ -235,15 +220,15 @@ class TransactionService {
             DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
             // delete image
             if (count($tmp) > 0) {
                 foreach ($tmp as $tmpFile) {
-                    if (Storage::exists('transactions/' . $tmpFile)) {
-                        Storage::delete('transactions/' . $tmpFile);
+                    if (Storage::exists('transactions/'.$tmpFile)) {
+                        Storage::delete('transactions/'.$tmpFile);
                     }
                 }
             }
@@ -256,19 +241,12 @@ class TransactionService {
 
     /**
      * Update selected data
-     *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -279,13 +257,12 @@ class TransactionService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
      *
-     * @param integer $id
-     * 
+     *
      * @return void
      */
     public function delete(int $id): array
@@ -303,10 +280,6 @@ class TransactionService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -333,7 +306,7 @@ class TransactionService {
                 return [
                     'name' => 'Main Stage',
                     'total' => $item['totalRaw'],
-                    'size' => $item['textDetail']
+                    'size' => $item['textDetail'],
                 ];
             })->toArray();
         }
@@ -343,7 +316,7 @@ class TransactionService {
                 return [
                     'name' => 'Prefunction',
                     'total' => $item['totalRaw'],
-                    'size' => $item['textDetail']
+                    'size' => $item['textDetail'],
                 ];
             })->toArray();
         }
@@ -351,22 +324,18 @@ class TransactionService {
 
     /**
      * Generated signed url invoice
-     * 
-     * @param array $payload                    With this following structure:
-     * - string $uid
-     * - string $type (bill or current)
-     * - string $amount
-     * - string $date
-     * - string $output (stream or download)
-     * 
-     * @return array
+     *
+     * @param  array  $payload  With this following structure:
+     *                          - string $uid
+     *                          - string $type (bill or current)
+     *                          - string $amount
+     *                          - string $date
+     *                          - string $output (stream or download)
      */
     public function downloadInvoice(array $payload): array
     {
         //
     }
 
-    protected function generateInvoice(int $id, array $payload, string $filepath, string $cacheKey): string
-    {
-    }
+    protected function generateInvoice(int $id, array $payload, string $filepath, string $cacheKey): string {}
 }

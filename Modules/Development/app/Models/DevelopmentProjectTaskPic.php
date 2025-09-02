@@ -2,8 +2,8 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 // use Modules\Development\Database\Factories\DevelopmentProjectTaskPicFactory;
@@ -17,7 +17,7 @@ class DevelopmentProjectTaskPic extends Model
      */
     protected $fillable = [
         'employee_id',
-        'task_id'
+        'task_id',
     ];
 
     // protected static function newFactory(): DevelopmentProjectTaskPicFactory

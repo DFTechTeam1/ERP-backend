@@ -24,7 +24,7 @@ class StoreReference extends FormRequest
                     if ($type == ReferenceType::Media->value && empty($value)) {
                         $fail('The image field is required when type is media.');
                     }
-                }
+                },
             ],
             'references.*.link' => [
                 'nullable',
@@ -35,7 +35,7 @@ class StoreReference extends FormRequest
                     if ($type == ReferenceType::Link->value && empty($value)) {
                         $fail('The link field is required when type is link.');
                     }
-                }
+                },
             ],
             'references.*.link_name' => [
                 'nullable',
@@ -46,7 +46,7 @@ class StoreReference extends FormRequest
                     if ($type == ReferenceType::Link->value && empty($value)) {
                         $fail('The link name field is required when type is link.');
                     }
-                }
+                },
             ],
         ];
     }

@@ -6,8 +6,8 @@ use App\Enums\Development\Project\ProjectStatus;
 use App\Traits\ModelObserver;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 use Modules\Development\Database\Factories\DevelopmentProjectFactory;
@@ -32,11 +32,11 @@ class DevelopmentProject extends Model
         'description',
         'status',
         'project_date',
-        'created_by'
+        'created_by',
     ];
 
     protected $appends = [
-        'project_date_text'
+        'project_date_text',
     ];
 
     protected static function newFactory(): DevelopmentProjectFactory
@@ -48,7 +48,7 @@ class DevelopmentProject extends Model
     {
         return [
             'status' => ProjectStatus::class,
-            'project_date' => 'datetime:Y-m-d'
+            'project_date' => 'datetime:Y-m-d',
         ];
     }
 

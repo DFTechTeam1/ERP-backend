@@ -3,9 +3,8 @@
 namespace Modules\Finance\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Modules\Production\Models\ProjectDeal;
 
 class ProjectHasBeenFinal extends Notification
@@ -29,7 +28,7 @@ class ProjectHasBeenFinal extends Notification
     {
         return [
             'mail',
-            'database'
+            'database',
         ];
     }
 
@@ -39,7 +38,7 @@ class ProjectHasBeenFinal extends Notification
     public function toMail($notifiable): MailMessage
     {
         setEmailConfiguration();
-        
+
         return (new MailMessage)
             ->subject('Project Finalized - Ready for invoicing')
             ->greeting('Hello Finance Team,')
@@ -59,7 +58,7 @@ class ProjectHasBeenFinal extends Notification
             'title' => 'Project finalized - Invoice can be issued',
             'message' => "The project <b>{$this->projectDeal->name}</b> has been finalized. You can now create an invoice for the customer",
             'button' => null,
-            'href' => '/admin/deals/' . \Illuminate\Support\Facades\Crypt::encryptString($this->projectDeal->id)
+            'href' => '/admin/deals/'.\Illuminate\Support\Facades\Crypt::encryptString($this->projectDeal->id),
         ];
     }
 }

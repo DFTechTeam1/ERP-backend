@@ -14,7 +14,7 @@ class SubmitProof extends FormRequest
         return [
             'images' => 'array|required',
             'images.*image' => 'required|mimes:jpg,png,webp,jpeg',
-            'nas_path' => 'required'
+            'nas_path' => 'required',
         ];
     }
 

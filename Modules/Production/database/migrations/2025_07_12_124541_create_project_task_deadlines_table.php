@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('project_task_deadlines', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('project_task_id')    
+            $table->foreignId('project_task_id')
                 ->references('id')
                 ->on('project_tasks')
                 ->cascadeOnDelete();
@@ -39,7 +39,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table("project_task_deadlines", function (Blueprint $table) {
+        Schema::table('project_task_deadlines', function (Blueprint $table) {
             $table->dropForeign(['project_task_id']);
             $table->dropForeign(['employee_id']);
             $table->dropForeign(['due_reason']);

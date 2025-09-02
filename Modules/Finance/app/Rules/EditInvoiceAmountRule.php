@@ -4,7 +4,6 @@ namespace Modules\Finance\Rules;
 
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Models\Invoice;
 
 class EditInvoiceAmountRule implements ValidationRule

@@ -2,8 +2,9 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Development\Database\Factories\DevelopmentProjectTaskPicHoldstateFactory;
 
 class DevelopmentProjectTaskPicHoldstate extends Model
@@ -20,7 +21,7 @@ class DevelopmentProjectTaskPicHoldstate extends Model
         'unholded_at',
         'task_id',
         'employee_id',
-        'work_state_id'
+        'work_state_id',
     ];
 
     // protected static function newFactory(): DevelopmentProjectTaskPicHoldstateFactory

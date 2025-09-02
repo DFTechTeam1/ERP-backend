@@ -19,7 +19,7 @@ class ExportProjectDealSummary extends FormRequest
             'status' => 'array|nullable',
             'status.*.id' => 'nullable',
             'status.*.name' => 'nullable',
-            'price' => 'array|nullable'
+            'price' => 'array|nullable',
         ];
     }
 

@@ -4,10 +4,10 @@ namespace Modules\Production\Jobs;
 
 use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Notifications\ProjectDealCanceledNotification;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -33,13 +33,13 @@ class ProjectDealCanceledJob implements ShouldQueue
     {
         $projectDeal = (new ProjectDealRepository)->show(uid: $this->projectDealId, select: 'id,name,project_date,cancel_reason', relation: [
             'marketings',
-            'marketings.employee:id,name'
+            'marketings.employee:id,name',
         ]);
 
         $uids = json_decode((new GeneralService)->getSettingByKey('person_to_approve_invoice_changes'), true);
 
         if ($uids) {
-            $uids = "'" . implode("','", $uids) . "'";
+            $uids = "'".implode("','", $uids)."'";
             $employees = (new EmployeeRepository)->list(select: 'id,name,email,nickname,telegram_chat_id', where: "uid IN ({$uids})");
 
             foreach ($employees as $employee) {

@@ -4,11 +4,10 @@ namespace Modules\Production\Jobs;
 
 use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Production\Notifications\PaymentDueReminderNotification;
 
 class PaymentDueReminderJob implements ShouldQueue
@@ -28,7 +27,7 @@ class PaymentDueReminderJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $generalService = new GeneralService();
+        $generalService = new GeneralService;
 
         $data = $generalService->getUpcomingPaymentDue();
 

@@ -29,7 +29,7 @@ class InvoiceFactory extends Factory
             'customer_id' => Customer::factory(),
             'status' => fake()->randomElement([InvoiceStatus::Unpaid->value, InvoiceStatus::Paid->value]),
             'raw_data' => null,
-            
+
             // numbering
             'parent_number' => null,
             'number' => 'IV/2025 - 950',
@@ -38,8 +38,7 @@ class InvoiceFactory extends Factory
 
             'uid' => null,
 
-            'created_by' => User::factory()
+            'created_by' => User::factory(),
         ];
     }
 }
-
