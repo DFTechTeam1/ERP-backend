@@ -47,7 +47,9 @@ it ('Employee will be resign in the next 7 days', function () {
         'employee_id' => $employee->id,
         'resign_date' => $resignDate,
         'reason' => $reason,
-        'severance' => $severance
+        'severance' => $severance,
+        'current_position_id' => $employee->position_id,
+        'current_employee_status' => $employee->status
     ]);
 
     $this->assertDatabaseEmpty('delete_office_email_queues');
@@ -91,7 +93,9 @@ it ("Employee will be resign today", function () {
         'employee_id' => $employee->id,
         'resign_date' => $resignDate,
         'reason' => $reason,
-        'severance' => $severance
+        'severance' => $severance,
+        'current_position_id' => $employee->position_id,
+        'current_employee_status' => $employee->status
     ]);
 
     $this->assertDatabaseHas('delete_office_email_queues', [

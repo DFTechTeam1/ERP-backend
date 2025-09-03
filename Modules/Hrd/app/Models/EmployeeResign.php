@@ -19,6 +19,8 @@ class EmployeeResign extends Model
         'reason',
         'resign_date',
         'severance',
+        'current_position_id',
+        'current_employee_status'
     ];
 
     // protected static function newFactory(): EmployeeResignFactory
