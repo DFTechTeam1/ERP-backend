@@ -404,6 +404,8 @@ Table "employee_resigns" {
   "reason" text [not null]
   "resign_date" date [not null]
   "severance" decimal(20,2) [not null]
+  "current_position_id" bigint [ref: > position_backups.id]
+  "current_employee_status" tinyint [note: 'nullable']
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 

@@ -119,4 +119,15 @@ class EmployeeFactory extends Factory
                 ]);
         });
     }
+
+    public function withResignation()
+    {
+        return $this->afterCreating(function (Employee $employee) {
+            $employee->resignData()->create([
+                'reason' => 'Resign reason',
+                'resign_date' => fake()->dateTimeBetween('now', '+3 months')->format('Y-m-d'),
+                'severance' => 0,
+            ]);
+        });
+    }
 }

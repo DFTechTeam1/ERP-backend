@@ -1830,11 +1830,15 @@ class EmployeeService
         try {
             $employeeId = $this->generalService->getIdFromUid($data['employee_uid'], new Employee);
 
+            $employee = $this->repo->show(uid: $data['employee_uid'], select: 'id,position_id,status');
+
             $this->employeeResignRepo->store(data: [
                 'employee_id' => $employeeId,
                 'reason' => $data['reason'],
                 'resign_date' => date('Y-m-d', strtotime($data['resign_date'])),
                 'severance' => $data['severance'],
+                'current_position_id' => $employee->position_id,
+                'current_employee_status' => $employee->status
             ]);
 
             // if today date is the same with resign_date, change employee status otherwise do not change anything in employee model
@@ -2266,9 +2270,9 @@ class EmployeeService
             $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee);
 
             $employee = $this->repo->show(uid: $employeeUid, select: 'id,email,status');
-
+            
             // validate data only active employee can be used this action
-            if ($employee->status == Status::Inactive->value || $employee->status == Status::Deleted->value) {
+            if ($employee->status == Status::Inactive || $employee->status == Status::Deleted) {
                 return errorResponse(
                     message: __('notification.cannotCancelResignationInactiveOrDeleted')
                 );
