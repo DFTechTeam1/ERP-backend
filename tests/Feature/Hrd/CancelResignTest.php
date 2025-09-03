@@ -55,6 +55,8 @@ it ('Cancel resignation return success', function () {
 
     $this->assertDatabaseHas('employees', [
         'id' => $employee->id,
-        'status' => Status::Inactive->value
+        'status' => Status::Permanent->value
     ]);
+
+    $this->assertDatabaseCount('employee_resigns', 0);
 });

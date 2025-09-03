@@ -51,7 +51,7 @@ class DeleteOfficeEmailJob implements ShouldQueue
             }
             // Send the email
 
-            if ($user->employee->telegram_chat_id) {
+            if (($user->employee) && ($user->employee->telegram_chat_id)) {
                 $user->notify(new DeleteOfficeEmailNotification($message, [$user->employee->telegram_chat_id]));
             }
         }
