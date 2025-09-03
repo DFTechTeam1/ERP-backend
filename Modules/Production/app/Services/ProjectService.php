@@ -6097,7 +6097,7 @@ class ProjectService
             }
         }
 
-        return $output;
+        return array_values($output);
     }
 
     /**
