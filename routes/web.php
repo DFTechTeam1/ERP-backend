@@ -5,6 +5,7 @@ use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
+use App\Imports\SummaryInventoryReport;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Notifications\DummyNotification;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Maatwebsite\Excel\Facades\Excel;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
@@ -135,6 +137,16 @@ Route::get('dummy-send-email', function () {
 });
 
 Route::get('check', function () {});
+
+Route::get('inventory-check', function () {
+    $service = app(\Modules\Inventory\Services\InventoryService::class);
+
+    $data = $service->getInventoriesTree();
+
+    Excel::store(new SummaryInventoryReport($data), 'inventory_report.xlsx', 'public');
+
+    return $data;
+});
 
 Route::get('pusher-check', function () {
     (new \App\Services\PusherNotification)->send(

@@ -43,8 +43,8 @@ return new class extends Migration
             if (checkForeignKey('inventories', 'supplier_id')) {
                 $table->dropForeign(['supplier_id']);
             }
-            if (checkForeignKey('inventories', 'supplier_id')) {
-                $table->dropForeign(['supplier_id']);
+            if (checkForeignKey('inventories', 'item_type')) {
+                $table->dropForeign(['item_type']);
             }
         });
     }

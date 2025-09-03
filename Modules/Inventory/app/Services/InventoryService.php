@@ -1627,4 +1627,67 @@ class InventoryService
             return errorResponse($th);
         }
     }
+
+    public function getInventoriesTree()
+    {
+        $data = $this->repo->list(
+            select: 'id,name,item_type,brand_id,supplier_id,unit_id',
+            relation: [
+                'items:id,inventory_id,inventory_code,current_location,purchase_price,warranty,year_of_purchase',
+                'brand:id,name',
+                'itemTypeRelation:id,name',
+                'supplier:id,name'
+            ]
+        );
+
+        $output = [];
+
+        foreach ($data as $inventory) {
+            foreach ($inventory->items as $item) {
+                $output[] = [
+                    'name' => $inventory->name,
+                    'code' => $item->inventory_code,
+                    'brand' => $inventory->brand->name,
+                    'supplier' => $inventory->supplier ? $inventory->supplier->name : '-',
+                    'item_type' => $inventory->itemTypeRelation ? $inventory->itemTypeRelation->name : '-',
+                    'purchase_price' => "Rp" . number_format($item->purchase_price, 0, ',', '.'),
+                    'purchase_price_raw' => $item->purchase_price,
+                    'year_of_purchase' => $item->year_of_purchase,
+                ];
+            }
+        }
+
+        $perBrands = collect($output)->groupBy('brand')->map(function ($brand) {
+            return [
+                'total_item' => $brand->count(),
+                'total_price' => "Rp" . number_format($brand->sum('purchase_price_raw'), 0, ',', '.'),
+                'items' => $brand,
+            ];
+        });
+
+        $perItemType = collect($output)->groupBy('item_type')->map(function ($itemType) {
+            return [
+                'total_item' => $itemType->count(),
+                'total_price' => "Rp" . number_format($itemType->sum('purchase_price_raw'), 0, ',', '.'),
+                'items' => $itemType,
+            ];
+        });
+
+        $perYear = collect($output)->groupBy('year_of_purchase')->map(function ($year) {
+            return [
+                'total_item' => $year->count(),
+                'total_price' => "Rp" . number_format($year->sum('purchase_price_raw'), 0, ',', '.'),
+                'items' => $year,
+            ];
+        });
+
+        return [
+            'total_price' => "Rp" . number_format(collect($output)->sum('purchase_price_raw'), 0, ',', '.'),
+            'total_items' => collect($output)->count(),
+            'inventories' => $output,
+            'per_brand' => $perBrands,
+            'per_item' => $perItemType,
+            'per_year' => $perYear,
+        ];
+    }
 }
