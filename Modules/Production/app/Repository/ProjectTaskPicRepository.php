@@ -22,7 +22,7 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '', int $limit = 0)
+    public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '', int $limit = 0, array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -34,6 +34,20 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
         }
 
         if (! empty($orderBy)) {

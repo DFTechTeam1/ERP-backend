@@ -459,11 +459,16 @@ class UserService
     {
         try {
             // get user and validate the payload
-            $user = $this->repo->detail(id: 'id', select: 'id,email,employee_id,email_verified_at,password', where: "email = '" . $payload['email'] . "'", relation: [
-                'employee:id,name,email,user_id,position_id,uid',
-                'employee.position:id,name'
-            ]);
-            
+            $user = $this->repo->detail(
+                id: 'id',
+                select: 'id,email,employee_id,email_verified_at,password',
+                where: "email = '" . $payload['email'] . "' and user_status = 1",
+                relation: [
+                    'employee:id,name,email,user_id,position_id,uid',
+                    'employee.position:id,name'
+                ]
+            );
+
             if (!$user) {
                 return errorResponse(message: __('global.userNotFound'));
             }

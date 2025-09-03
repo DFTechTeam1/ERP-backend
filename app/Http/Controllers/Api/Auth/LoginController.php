@@ -87,6 +87,10 @@ class LoginController extends Controller
 
             $generatedToken = $this->userService->login($validated);
 
+            if (isset($generatedToken['error'])) {
+                return apiResponse($generatedToken);
+            }
+
             // TODO: further development
             // $encryptedPayload = $this->service->encrypt(json_encode($payload), env('SALT_KEY'));
 

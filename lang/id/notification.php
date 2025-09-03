@@ -119,5 +119,7 @@ return [
     'successAddReference' => 'Referensi telah berhasil ditambahkan',
     'referenceHasBeenDeleted' => 'Referensi telah berhasil dihapus',
     'successAddAttachment' => 'Lampiran telah berhasil ditambahkan',
-    'cannotCancelResignationInactiveOrDeleted' => 'Tidak dapat membatalkan pengunduran diri untuk karyawan yang tidak aktif atau dihapus'
+    'cannotCancelResignationInactiveOrDeleted' => 'Tidak dapat membatalkan pengunduran diri untuk karyawan yang tidak aktif atau dihapus',
+    'resignHasBeenOnScheduled' => 'Tanggal pengunduran diri telah terdaftar, dan status akan otomatis berubah pada tanggal yang ditentukan.',
+    'employeeHasOngoingTasks' => 'Karyawan memiliki tugas yang sedang berlangsung dan perlu diselesaikan sebelum pengunduran diri dapat diproses.'
 ];

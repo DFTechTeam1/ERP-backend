@@ -119,5 +119,7 @@ return [
     'successAddReference' => 'Reference has been added successfully',
     'referenceHasBeenDeleted' => 'Reference has been deleted successfully',
     'successAddAttachment' => 'Attachment has been added successfully',
-    'cannotCancelResignationInactiveOrDeleted' => 'Cannot cancel resignation for inactive or deleted employees'
+    'cannotCancelResignationInactiveOrDeleted' => 'Cannot cancel resignation for inactive or deleted employees',
+    'resignHasBeenOnScheduled' => 'The resignation date has been registered, and the status will automatically change on the specified date.',
+    'employeeHasOngoingTasks' => 'Employee has ongoing tasks that need to be completed before resignation can be processed.'
 ];

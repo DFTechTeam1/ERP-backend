@@ -7,6 +7,7 @@ use App\Enums\Employee\Gender;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
+use App\Enums\Production\TaskStatus;
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
 use App\Exceptions\EmployeeException;
@@ -38,6 +39,7 @@ use Modules\Hrd\Repository\EmployeeTimeoffRepository;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
+use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
@@ -91,6 +93,8 @@ class EmployeeService
 
     private $deleteOfficeEmailQueueRepo;
 
+    private $projectTaskPicRepo;
+
     public function __construct(
         EmployeeRepository $employeeRepo,
         PositionRepository $positionRepo,
@@ -110,7 +114,8 @@ class EmployeeService
         EmployeeTimeoffRepository $employeeTimeoffRepo,
         TalentaService $talentaService,
         EmployeeResignRepository $employeeResignRepo,
-        DeleteOfficeEmailQueueRepository $deleteOfficeEmailQueueRepo
+        DeleteOfficeEmailQueueRepository $deleteOfficeEmailQueueRepo,
+        ProjectTaskPicRepository $projectTaskPicRepo
     ) {
         $this->talentaService = $talentaService;
 
@@ -149,6 +154,8 @@ class EmployeeService
         $this->employeeResignRepo = $employeeResignRepo;
 
         $this->deleteOfficeEmailQueueRepo = $deleteOfficeEmailQueueRepo;
+
+        $this->projectTaskPicRepo = $projectTaskPicRepo;
     }
 
     /**
@@ -177,11 +184,13 @@ class EmployeeService
                             'field' => 'status',
                             'condition' => 'not_contain',
                             'value' => Status::Deleted->value,
+                            'data_type' => 'integer'
                         ],
                         [
                             'field' => 'status',
                             'condition' => 'not_contain',
                             'value' => Status::Inactive->value,
+                            'data_type' => 'integer'
                         ],
                     ])->toArray();
                 }
@@ -190,6 +199,8 @@ class EmployeeService
             } else {
                 $where = 'status != '.Status::Deleted->value.' and status != '.Status::Inactive->value;
             }
+
+            logging('where employee', [$where]);
 
             $sort = 'name asc';
             if (request('sort')) {
@@ -1730,40 +1741,30 @@ class EmployeeService
      */
     public function checkEmployeeWhoResignToday(): void
     {
-        try {
-            $notAllowed = [
-                Status::Inactive->value,
-                Status::Deleted->value,
-            ];
+        DB::beginTransaction();
 
-            $employees = $this->repo->list(
-                select: 'id,uid,status,user_id',
-                where: 'status NOT IN ('.implode(',', $notAllowed).')',
-                whereHas: [
-                    [
-                        'relation' => 'resignData',
-                        'query' => 'DATE(resign_date) <= NOW()',
-                    ],
+        try {
+            $data = $this->employeeResignRepo->list(
+                select: 'id,employee_id',
+                where: "resign_date = NOW()",
+                relation: [
+                    'employee:id,uid'
                 ]
             );
-            $userIds = collect($employees)->pluck('user_id')->toArray();
 
-            foreach ($employees as $employee) {
-                $this->repo->update(
-                    data: [
-                        'status' => Status::Inactive->value,
-                    ],
-                    uid: $employee->uid
+            foreach ($data as $employee) {
+                $this->turnOffEmployee(
+                    resignDate: date('Y-m-d'),
+                    employeeUid: $employee->employee->uid,
+                    employeeId: $employee->employee_id,
+                    afterCommit: true
                 );
             }
 
-            // delete erp account
-            $this->userRepo->bulkDelete(
-                ids: $userIds,
-            );
+            DB::commit();
         } catch (\Throwable $th) {
-            // write log
-            errorResponse($th);
+            DB::rollBack();
+            errorMessage($th);
         }
     }
 
@@ -1817,12 +1818,14 @@ class EmployeeService
      *                       - string $resign_date
      *                       - string $severance
      *                       - string $employee_uid
+     * 
+     * @return array
      */
     public function mainResignLogic(
         array $data,
         bool $useTransaction = false,
         bool $notifyAfterCommit = false
-    ): void {
+    ): array {
         if ($useTransaction) {
             DB::beginTransaction();
         }
@@ -1830,7 +1833,23 @@ class EmployeeService
         try {
             $employeeId = $this->generalService->getIdFromUid($data['employee_uid'], new Employee);
 
-            $employee = $this->repo->show(uid: $data['employee_uid'], select: 'id,position_id,status');
+            $employee = $this->repo->show(uid: $data['employee_uid'], select: 'id,position_id,status,name');
+
+            // validate employee work, check relation to the production task
+            $tasks = $this->taskRepo->list(
+                select: 'id',
+                whereHas: [
+                    [
+                        'relation' => 'pics',
+                        'query' => "employee_id = {$employee->id}"
+                    ]
+                ],
+                where: 'status = ' . TaskStatus::OnProgress->value
+            );
+            
+            if ($tasks->isNotEmpty()) {
+                return errorResponse(message: __('notification.employeeHasOngoingTasks'));
+            }
 
             $this->employeeResignRepo->store(data: [
                 'employee_id' => $employeeId,
@@ -1845,6 +1864,10 @@ class EmployeeService
             $resignDate = Carbon::parse($data['resign_date']);
             $now = Carbon::now();
             $diff = $now->diffInDays($resignDate, false);
+
+            // define proper message
+            $message = __('notification.resignHasBeenOnScheduled');
+
             if ($diff <= 0) {
                 $this->turnOffEmployee(
                     resignDate: date('Y-m-d', strtotime($data['resign_date'])),
@@ -1852,15 +1875,23 @@ class EmployeeService
                     employeeId: $employeeId,
                     afterCommit: $notifyAfterCommit
                 );
+
+                $message = __('notification.successResign', ['name' => $employee->name]);
             }
 
             if ($useTransaction) {
                 DB::commit();
             }
+
+            return generalResponse(
+                message: $message
+            );
         } catch (\Throwable $th) {
             if ($useTransaction) {
                 DB::rollBack();
             }
+            
+            return errorResponse($th);
         }
     }
 
@@ -1877,14 +1908,11 @@ class EmployeeService
         try {
             $data['employee_uid'] = $employeeUid;
 
-            $this->mainResignLogic(data: $data, notifyAfterCommit: true);
+            $resign = $this->mainResignLogic(data: $data, notifyAfterCommit: true); // will return message
 
             DB::commit();
 
-            return generalResponse(
-                __('notification.successResign'),
-                false
-            );
+            return $resign;
         } catch (\Throwable $th) {
             DB::rollBack();
 
