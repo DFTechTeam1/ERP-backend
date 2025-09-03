@@ -790,8 +790,17 @@ if (! function_exists('formatSearchConditions')) {
                 }
 
             } elseif ($data['condition'] == 'not_contain') {
-                $condition = ' not like ';
-                $value = "'%{$value}%'";
+                $condition = ' != ';
+
+                if (isset($data['data_type'])) {
+                    if ($data['data_type'] == 'integer') {
+                        $value = (int)$value;
+                    } else if ($data['data_type'] == 'string') {
+                        $value = "'%{$value}%'";        
+                    }
+                } else {
+                    $value = "'%{$value}%'";
+                }
             } elseif ($data['condition'] == 'equal') {
                 $condition = ' = ';
             } elseif ($data['condition'] == 'not_equal') {

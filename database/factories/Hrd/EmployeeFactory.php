@@ -119,4 +119,24 @@ class EmployeeFactory extends Factory
                 ]);
         });
     }
+
+    public function withResignation(bool $updateToInactive = false)
+    {
+        return $this->afterCreating(function (Employee $employee) use ($updateToInactive) {
+            $employee->resignData()->create([
+                'reason' => 'Resign reason',
+                'resign_date' => fake()->dateTimeBetween('now', '+3 months')->format('Y-m-d'),
+                'severance' => 0,
+                'current_position_id' => $employee->position_id,
+                'current_employee_status' => $employee->status
+            ]);
+
+            if ($updateToInactive) {
+                Employee::where('id', $employee->id)
+                    ->update([
+                        'status' => Status::Inactive->value
+                    ]);
+            }
+        });
+    }
 }

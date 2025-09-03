@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Production\Repository;
+namespace Modules\Hrd\Repository;
 
-use Modules\Production\Models\ProjectTaskPic;
-use Modules\Production\Repository\Interface\ProjectTaskPicInterface;
+use Modules\Hrd\Models\DeleteOfficeEmailQueue;
+use Modules\Hrd\Repository\Interface\DeleteOfficeEmailQueueInterface;
 
-class ProjectTaskPicRepository extends ProjectTaskPicInterface
+class DeleteOfficeEmailQueueRepository extends DeleteOfficeEmailQueueInterface
 {
     private $model;
 
@@ -13,7 +13,7 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface
 
     public function __construct()
     {
-        $this->model = new ProjectTaskPic;
+        $this->model = new DeleteOfficeEmailQueue;
         $this->key = 'id';
     }
 
@@ -22,7 +22,7 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '', int $limit = 0, array $whereHas = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
@@ -34,28 +34,6 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface
 
         if ($relation) {
             $query->with($relation);
-        }
-
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                if (! isset($queryItem['type'])) {
-                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                        $qd->whereRaw($queryItem['query']);
-                    });
-                } else {
-                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                        $qd->whereRaw($queryItem['query']);
-                    });
-                }
-            }
-        }
-
-        if (! empty($orderBy)) {
-            $query->orderByRaw($orderBy);
-        }
-
-        if ($limit > 0) {
-            $query->limit($limit);
         }
 
         return $query->get();
@@ -91,20 +69,15 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface
     /**
      * Get Detail Data
      *
-     * @param  string  $uid
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(int $id, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (! empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where('id', $id);
-        }
+        $query->where('uid', $uid);
 
         if ($relation) {
             $query->with($relation);
@@ -152,17 +125,19 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface
      * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id = 0, string $where = '')
+    public function delete(int $id, string $where = '')
     {
         $query = $this->model->query();
 
-        if (empty($where)) {
-            $query->where('id', $id);
-        } else {
+        if (! empty($where)) {
             $query->whereRaw($where);
+        } else {
+            $query->where('id', $id);
         }
 
-        return $query->delete();
+        $query->delete();
+
+        return $query;
     }
 
     /**
@@ -177,16 +152,5 @@ class ProjectTaskPicRepository extends ProjectTaskPicInterface
         }
 
         return $this->model->whereIn($key, $ids)->delete();
-    }
-
-    public function deleteWithCondition(string $where)
-    {
-        return $this->model->whereRaw($where)
-            ->delete();
-    }
-
-    public function upsert(array $data, array $unique, array $updatedColumn)
-    {
-        return $this->model->upsert($data, $unique, $updatedColumn);
     }
 }

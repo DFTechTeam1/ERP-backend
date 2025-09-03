@@ -6073,7 +6073,10 @@ class ProjectService
      */
     protected function mainProcessToGetPicScheduler(string $projectUid): array
     {
-        $project = $this->repo->show($projectUid, 'id,name,project_date');
+        $project = $this->repo->show(
+            uid: $projectUid,
+            select: 'id,name,project_date'
+        );
         $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
         $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
 
@@ -6087,16 +6090,22 @@ class ProjectService
         $output = [];
         foreach ($pics as $key => $pic) {
             if ($pic['employee_id']) {
-                $employee = $this->employeeRepo->show('dummy', 'id,uid,name,email,employee_id', [], 'id = '.$pic['employee_id']);
+                $employee = $this->employeeRepo->show(
+                    uid: 'dummy',
+                    select: 'id,uid,name,email,employee_id',
+                    where: 'id = '.$pic['employee_id'] . ' and status != ' . \App\Enums\Employee\Status::Inactive->value . ' and status != ' . \App\Enums\Employee\Status::Deleted->value
+                );
 
-                $output[$key] = [
-                    'id' => $employee->uid,
-                    'name' => $employee->name,
-                    'email' => $employee->email,
-                    'employee_id' => $employee->employee_id,
-                    'projects' => $this->getPicWorkload($employee, $projectUid),
-                    'is_recommended' => false,
-                ];
+                if ($employee) {
+                    $output[$key] = [
+                        'id' => $employee->uid,
+                        'name' => $employee->name,
+                        'email' => $employee->email,
+                        'employee_id' => $employee->employee_id,
+                        'projects' => $this->getPicWorkload($employee, $projectUid),
+                        'is_recommended' => false,
+                    ];
+                }
             }
         }
 

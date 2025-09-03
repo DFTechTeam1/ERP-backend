@@ -1,63 +1,27 @@
 <?php
 
-use App\Actions\Project\WriteDurationTaskHistory;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
-use App\Enums\Production\ProjectStatus;
-use App\Enums\Production\TaskHistoryType;
 use App\Enums\Production\TaskStatus;
-use App\Enums\Production\WorkType;
-use App\Exports\ProjectDealSummary;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
-use App\Jobs\ProjectDealSummaryJob;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Notifications\DummyNotification;
-use App\Services\EncryptionService;
-use App\Services\GeneralService;
-use App\Services\PusherNotification;
-use App\Services\Telegram\TelegramService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\URL;
-use Maatwebsite\Excel\Facades\Excel;
-use Modules\Company\Models\City;
-use Modules\Company\Models\PositionBackup;
-use Modules\Development\Models\DevelopmentProject;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
-use Modules\Finance\Jobs\InvoiceDue;
-use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
-use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\InvoiceRequestUpdate;
-use Modules\Finance\Notifications\ApproveInvoiceChangesNotification;
-use Modules\Finance\Notifications\InvoiceDueCheckNotification;
-use Modules\Finance\Notifications\ProjectHasBeenFinal;
-use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
-use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Hrd\Models\Employee;
-use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
-use Modules\Production\Jobs\ProjectDealCanceledJob;
-use Modules\Production\Models\Project;
-use Modules\Production\Models\ProjectBoard;
-use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectDealChange;
-use Modules\Production\Models\ProjectPersonInCharge;
-use Modules\Production\Models\ProjectQuotation;
 use Modules\Production\Models\ProjectTask;
-use Modules\Production\Models\ProjectTaskDurationHistory;
-use Modules\Production\Models\ProjectTaskHold;
-use Modules\Production\Models\ProjectTaskPicLog;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -77,8 +41,7 @@ Route::get('send-email-testing', function () {
     Notification::send($user, new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt, $password));
 });
 
-Route::get('quotation/{quotationId}/{token}', function (string $quotationId, string $token) {
-});
+Route::get('quotation/{quotationId}/{token}', function (string $quotationId, string $token) {});
 
 Route::get('barcode', function () {
     //    $data = \Modules\Inventory\Models\CustomInventory::select('barcode', 'build_series', 'id')
@@ -146,7 +109,6 @@ Route::get('login', function () {
     return view('auth.login');
 })->name('login');
 
-
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
 
 // route to download invoice after
@@ -172,17 +134,15 @@ Route::get('dummy-send-email', function () {
     return 'User not found.';
 });
 
-Route::get('check', function () {
-    
-});
+Route::get('check', function () {});
 
-Route::get('pusher-check', function() {
+Route::get('pusher-check', function () {
     (new \App\Services\PusherNotification)->send(
-        channel: "my-channel-42",
-        event: "handle-export-import-notification",
+        channel: 'my-channel-42',
+        event: 'handle-export-import-notification',
         payload: [
             'type' => 'exportImportSuccess',
-            'message' => 'Success import data'
+            'message' => 'Success import data',
         ],
         compressedValue: true
     );
@@ -211,7 +171,7 @@ Route::get('send-pending-deal-changes', function () {
     foreach ($deals as $deal) {
         NotifyProjectDealChangesJob::dispatch($deal->id);
     }
-    
+
     return $deals;
 });
 Route::get('send-pending-invoice-changes', function () {
@@ -220,5 +180,6 @@ Route::get('send-pending-invoice-changes', function () {
     foreach ($invoices as $invoice) {
         RequestInvoiceChangeJob::dispatch($invoice);
     }
+
     return $invoices;
 });
