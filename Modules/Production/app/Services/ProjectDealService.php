@@ -223,6 +223,12 @@ class ProjectDealService
                     $statusColor = $item->status->color();
                 }
 
+                $finalPrice = $item->getFinalPrice(formatPrice: true);
+                $newPrice = $isHaveRequestPriceChanges ? $item->activeProjectDealPriceChange->new_price : 0;
+                if ($newPrice > 0) {
+                    $newPrice = "Rp" . number_format(num: $newPrice, decimal_separator: ',');
+                }
+
                 return [
                     'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
                     'latest_quotation_id' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id),
@@ -240,7 +246,8 @@ class ProjectDealService
                     'status' => true,
                     'status_project' => $status,
                     'status_project_color' => $statusColor,
-                    'fix_price' => $item->getFinalPrice(formatPrice: true),
+                    'fix_price' => $finalPrice,
+                    'new_price' => $newPrice,
                     'latest_price' => $item->getLatestPrice(formatPrice: true),
                     'is_fully_paid' => (bool) $item->is_fully_paid,
                     'status_payment' => $item->getStatusPayment(),
@@ -1344,6 +1351,8 @@ class ProjectDealService
                 id: $priceChangeId
             );
 
+            NotifyRequestPriceChangesHasBeenApproved::dispatch(changeId: $priceChangeId, type: 'rejected')->afterCommit();
+
             DB::commit();
 
             return generalResponse(
@@ -1385,5 +1394,58 @@ class ProjectDealService
             message: "Success",
             data: $data
         );
+    }
+
+    /**
+     * Get list of request changes on project deal price
+     * 
+     * @return array
+     */
+    public function requestChangesList(): array
+    {
+        try {
+            $user = Auth::user();
+
+            $itemsPerPage = request('itemsPerPage') ?? 10;
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $where = 'status = ' . ProjectDealChangePriceStatus::Pending->value;
+
+            $data = $this->projectDealPriceChangeRepo->pagination(
+                select: 'id,project_deal_id,old_price,new_price,status,requested_by,requested_at,reason_id,custom_reason',
+                relation: [
+                    'projectDeal:id,name,project_date',
+                    'requesterBy:id,name',
+                    'reason:id,name'
+                ],
+                page: $page,
+                itemsPerPage: $itemsPerPage,
+                where: $where
+            );
+            $totalData = $this->projectDealPriceChangeRepo->list(select: 'id', where: $where)->count();
+
+            $output = $data->map(function ($item) {
+                return [
+                    'uid' => Crypt::encryptString($item->id),
+                    'event_name' => $item->projectDeal->name,
+                    'project_date' => date('d F Y', strtotime($item->projectDeal->project_date)),
+                    'request_by' => $item->requesterBy->name,
+                    'old_price' => "Rp". number_format($item->old_price, 0, ',', '.'),
+                    'new_price' => "Rp". number_format($item->new_price, 0, ',', '.'),
+                    'reason' => $item->real_reason,
+                ];
+            });
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

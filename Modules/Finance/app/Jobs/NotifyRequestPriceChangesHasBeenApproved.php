@@ -15,12 +15,15 @@ class NotifyRequestPriceChangesHasBeenApproved implements ShouldQueue
 
     protected string $changeId;
 
+    protected string $type;
+
     /**
      * Create a new job instance.
      */
-    public function __construct(string $changeId)
+    public function __construct(string $changeId, string $type = 'approved')
     {
         $this->changeId = $changeId;
+        $this->type = $type;
     }
 
     /**
@@ -36,7 +39,7 @@ class NotifyRequestPriceChangesHasBeenApproved implements ShouldQueue
 
         // here we should send notification to the requester
         if ($change) {
-            $change->requesterBy->notify(new \Modules\Finance\Notifications\NotifyRequestPriceChangesHasBeenApprovedNotification($change));
+            $change->requesterBy->notify(new \Modules\Finance\Notifications\NotifyRequestPriceChangesHasBeenApprovedNotification($change, $this->type));
         }
     }
 }
