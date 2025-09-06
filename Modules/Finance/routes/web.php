@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Finance\Http\Controllers\FinanceController;
+use Modules\Inventory\Http\Controllers\Api\InventoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,4 +19,5 @@ Route::group([], function () {
     Route::resource('finance', FinanceController::class)->names('finance');
 
     Route::get('finance/download/export/financeReport', [FinanceController::class, 'downloadFinanceReport'])->name('finance.download.export.financeReport');
+    Route::get('download/export/inventoryReport', [InventoryController::class, 'downloadInventoryReport'])->name('inventory.download.export.inventoryReport')->middleware('signed');
 });

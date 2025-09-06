@@ -2,6 +2,7 @@
 
 namespace Modules\Company\Services;
 
+use App\Enums\Company\ExportImportAreaType;
 use Illuminate\Support\Facades\Auth;
 use Modules\Company\Repository\ExportImportResultRepository;
 
@@ -17,9 +18,12 @@ class CompanyService {
      * Get inbox data content for data table
      * We get data from export_import_results table
      * 
+     * @param string $type
+     * Type will be 'new_area' or 'old_area'. You can refer this enums in App\Enums\Company\ExportImportAreaType
+     * 
      * @return array
      */
-    public function getInboxData(): array
+    public function getInboxData(string $type = ExportImportAreaType::OldArea->value): array
     {
         try {
             $user = Auth::user();
@@ -29,7 +33,7 @@ class CompanyService {
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
-            $where = "user_id = {$user->id}";
+            $where = "user_id = {$user->id} and type = '{$type}'";
 
             if (!empty($search)) {
                 $where .= " and lower(name) LIKE '%{$search}%'";
@@ -57,9 +61,9 @@ class CompanyService {
         }
     }
 
-    public function clearInboxData(): array
+    public function clearInboxData(string $type): array
     {
-        $this->exportImportRepo->delete(id: 0, where: "id > 0");
+        $this->exportImportRepo->delete(id: 0, where: "id > 0 and user_id = " . Auth::id() . " and type = '{$type}'");
 
         return generalResponse(message: "All records has been cleared");
     }

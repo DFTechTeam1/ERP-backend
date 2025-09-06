@@ -2,6 +2,7 @@
 
 namespace Modules\Company\Http\Controllers;
 
+use App\Enums\Company\ExportImportAreaType;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -223,11 +224,13 @@ class CompanyController extends Controller
      */
     public function loadInboxData(): JsonResponse
     {
-        return apiResponse($this->companyService->getInboxData());
+        $type = request('type', ExportImportAreaType::OldArea->value); // default is old_area
+        return apiResponse($this->companyService->getInboxData($type));
     }
 
     public function clearInboxData(): JsonResponse
     {
-        return apiResponse($this->companyService->clearInboxData());
+        $type = request('type', ExportImportAreaType::OldArea->value); // default is old_area
+        return apiResponse($this->companyService->clearInboxData($type));
     }
 }
