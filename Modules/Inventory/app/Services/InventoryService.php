@@ -5,6 +5,8 @@ namespace Modules\Inventory\Services;
 use App\Enums\ErrorCode\Code;
 use App\Enums\Inventory\InventoryStatus;
 use App\Enums\Production\RequestEquipmentStatus;
+use App\Exports\SummaryInventoryReport;
+use App\Services\GeneralService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -12,8 +14,10 @@ use Illuminate\Support\Str;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Company\Services\SettingService;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Inventory\Jobs\InventoryExportHasBeenCompleted;
 use Modules\Inventory\Models\Brand;
 use Modules\Inventory\Models\Inventory;
+use Modules\Inventory\Models\InventoryType;
 use Modules\Inventory\Models\Supplier;
 use Modules\Inventory\Models\Unit;
 use Modules\Inventory\Repository\BrandRepository;
@@ -30,37 +34,39 @@ use Modules\Production\Repository\ProjectRepository;
 
 class InventoryService
 {
-    private $repo;
+    private InventoryRepository $repo;
 
-    private $inventoryTypeRepo;
+    private InventoryTypeRepository $inventoryTypeRepo;
 
-    private $inventoryItemRepo;
+    private InventoryItemRepository $inventoryItemRepo;
 
-    private $inventoryImageRepo;
+    private InventoryImageRepository $inventoryImageRepo;
 
-    private $brandRepo;
+    private BrandRepository $brandRepo;
 
-    private $supplierRepo;
+    private SupplierRepository $supplierRepo;
 
-    private $projectEquipmentRepo;
+    private ProjectEquipmentRepository $projectEquipmentRepo;
 
-    private $projectRepo;
+    private ProjectRepository $projectRepo;
 
-    private $customItemRepo;
+    private CustomInventoryRepository $customItemRepo;
 
-    private $customItemDetailRepo;
+    private CustomInventoryDetailRepository $customItemDetailRepo;
 
-    private $unitRepo;
+    private UnitRepository $unitRepo;
 
-    private $settingRepo;
+    private SettingRepository $settingRepo;
 
-    private $settingService;
+    private SettingService $settingService;
 
-    private $employeeRepo;
+    private EmployeeRepository $employeeRepo;
 
     private string $imageFolder = 'inventory';
 
     private string $buildSeriesPrefix = 'CB-';
+
+    private GeneralService $generalService;
 
     /**
      * Construction Data
@@ -79,7 +85,8 @@ class InventoryService
         CustomInventoryRepository $customInventoryRepo,
         CustomInventoryDetailRepository $customInventoryDetailRepo,
         SettingRepository $settingRepo,
-        SettingService $settingService
+        SettingService $settingService,
+        GeneralService $generalService
     ) {
         $this->repo = $repo;
 
@@ -108,6 +115,8 @@ class InventoryService
         $this->settingRepo = $settingRepo;
 
         $this->settingService = $settingService;
+
+        $this->generalService = $generalService;
     }
 
     /**
@@ -1624,6 +1633,120 @@ class InventoryService
         } catch (\Throwable $th) {
             DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    public function getInventoriesTree(array $payload = [])
+    {
+        $where = "";
+
+        if (!empty($payload)) {
+            // if 'all' is not in the payload
+            if (!in_array('all', $payload['type_id'])) {
+                $payload = collect($payload['type_id'])->map(function ($item) {
+                    return $this->generalService->getIdFromUid($item, new InventoryType());
+                })->implode(',');
+
+                $where = "item_type IN ({$payload})";
+            }
+        }
+
+        $data = $this->repo->list(
+            select: 'id,name,item_type,brand_id,supplier_id,unit_id',
+            where: $where,
+            relation: [
+                'items:id,inventory_id,inventory_code,current_location,purchase_price,warranty,year_of_purchase',
+                'brand:id,name',
+                'itemTypeRelation:id,name',
+                'supplier:id,name'
+            ]
+        );
+
+        $output = [];
+
+        foreach ($data as $inventory) {
+            foreach ($inventory->items as $item) {
+                $output[] = [
+                    'name' => $inventory->name,
+                    'code' => $item->inventory_code,
+                    'brand' => $inventory->brand->name,
+                    'supplier' => $inventory->supplier ? $inventory->supplier->name : '-',
+                    'item_type' => $inventory->itemTypeRelation ? $inventory->itemTypeRelation->name : '-',
+                    'purchase_price' => "Rp" . number_format($item->purchase_price, 0, ',', '.'),
+                    'purchase_price_raw' => $item->purchase_price,
+                    'year_of_purchase' => $item->year_of_purchase,
+                ];
+            }
+        }
+
+        $perBrands = collect($output)->groupBy('brand')->map(function ($brand) {
+            return [
+                'total_item' => $brand->count(),
+                'total_price' => "Rp" . number_format($brand->sum('purchase_price_raw'), 0, ',', '.'),
+                'total_price_raw' => $brand->sum('purchase_price_raw'),
+                'items' => $brand,
+            ];
+        });
+
+        $perItemType = collect($output)->groupBy('item_type')->map(function ($itemType) {
+            return [
+                'total_item' => $itemType->count(),
+                'name' => $itemType[0]['item_type'],
+                'total_price' => "Rp" . number_format($itemType->sum('purchase_price_raw'), 0, ',', '.'),
+                'items' => $itemType,
+            ];
+        });
+
+        $perYear = collect($output)->groupBy('year_of_purchase')->map(function ($year) {
+            return [
+                'total_item' => $year->count(),
+                'total_price' => "Rp" . number_format($year->sum('purchase_price_raw'), 0, ',', '.'),
+                'items' => $year,
+            ];
+        });
+
+        return [
+            'total_price' => "Rp" . number_format(collect($output)->sum('purchase_price_raw'), 0, ',', '.'),
+            'total_items' => collect($output)->count(),
+            'inventories' => $output,
+            'per_brand' => $perBrands,
+            'per_item' => $perItemType,
+            'per_year' => $perYear,
+        ];
+    }
+
+    /**
+     * Export inventory data
+     * 
+     * @return array
+     */
+    public function export(array $payload): array
+    {
+        try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+
+            $path = 'inventory/report/';
+            $filename = 'inventory_report_' . now() . '.xlsx';
+            $filepath = $path . $filename;
+            $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+                name: 'inventory.download.export.inventoryReport',
+                parameters: [
+                    'fp' => $filepath
+                ],
+                expiration: now()->addHours(5)
+            );
+
+            $data = $this->getInventoriesTree($payload);
+
+            (new SummaryInventoryReport($data, $user, $downloadPath))->queue($filepath, 'public')->chain([
+                new InventoryExportHasBeenCompleted($user, $downloadPath)
+            ]);
+
+            return generalResponse(
+                message: "Your data is being processed. You'll rerceive a notification when the process is complete. You can check your inbox periodically to see the results",
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }
