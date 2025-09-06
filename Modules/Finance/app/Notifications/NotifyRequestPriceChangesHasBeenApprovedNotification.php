@@ -14,12 +14,16 @@ class NotifyRequestPriceChangesHasBeenApprovedNotification extends Notification
 
     protected ProjectDealPriceChange $change;
 
+    protected string $type;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(ProjectDealPriceChange $change)
+    public function __construct(ProjectDealPriceChange $change, string $type = 'approved')
     {
         $this->change = $change;
+
+        $this->type = $type;
     }
 
     /**
@@ -38,12 +42,12 @@ class NotifyRequestPriceChangesHasBeenApprovedNotification extends Notification
         setEmailConfiguration();
         
         return (new MailMessage)
-            ->subject('Price Change Request Approved')
-            ->line('Your request for price changes has been approved.')
+            ->subject('Price Change Request ' . ucfirst($this->type))
+            ->line('Your request for price changes has been ' . $this->type . '.')
             ->line('Project Deal: ' . $this->change->projectDeal->name)
             ->line('Old Price: Rp' . number_format($this->change->old_price, 0, ',', '.'))
             ->line('New Price: Rp' . number_format($this->change->new_price, 0, ',', '.'))
-            ->line('Reason: ' . $this->change->reason_id ? $this->change->reason->name : $this->change->custom_reason);
+            ->line('Reason: ' . $this->change->real_reason);
     }
 
     /**
