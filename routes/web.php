@@ -143,15 +143,14 @@ Route::get('inventory-check', function () {
 
     $data = $service->getInventoriesTree();
 
-    Excel::store(new SummaryInventoryReport($data), 'inventory_report.xlsx', 'public');
-
+    // Excel::store(new SummaryInventoryReport($data), 'inventory_report.xlsx', 'public');
     return $data;
 });
 
 Route::get('pusher-check', function () {
     (new \App\Services\PusherNotification)->send(
         channel: 'my-channel-42',
-        event: 'handle-export-import-notification',
+        event: 'handle-export-import-notification-new',
         payload: [
             'type' => 'exportImportSuccess',
             'message' => 'Success import data',

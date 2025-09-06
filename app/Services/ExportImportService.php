@@ -5,14 +5,14 @@ namespace App\Services;
 use Modules\Company\Repository\ExportImportResultRepository;
 
 class ExportImportService {
-    public function handleSuccessProcessing(array $payload)
+    public function handleSuccessProcessing(array $payload, string $event = 'handle-export-import-notification')
     {
         $this->storeDatabase($payload);
 
         // send user notification via pusher
         (new PusherNotification)->send(
             channel: "my-channel-" . $payload['user_id'],
-            event: "handle-export-import-notification",
+            event: $event,
             payload: [
                 'type' => 'exportImportSuccess',
                 'message' => $payload['description']

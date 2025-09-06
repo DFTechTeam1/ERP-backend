@@ -2,6 +2,7 @@
 
 namespace Modules\Company\Models;
 
+use App\Enums\Company\ExportImportAreaType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,8 +22,16 @@ class ExportImportResult extends Model
         'area',
         'description',
         'message',
-        'user_id'
+        'user_id',
+        'type'
     ];
+
+    protected function casts()
+    {
+        return [
+            'type' => ExportImportAreaType::class
+        ];
+    }
 
     public function user(): BelongsTo
     {
