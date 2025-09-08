@@ -1410,10 +1410,20 @@ class ProjectDealService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $where = 'status = ' . ProjectDealChangePriceStatus::Pending->value;
+            $where = 'id > 0';
+
+            if (request('status')) {
+                $statuses = [
+                    'pending' => ProjectDealChangePriceStatus::Pending->value,
+                    'approved' => ProjectDealChangePriceStatus::Approved->value,
+                    'rejected' => ProjectDealChangePriceStatus::Rejected->value,
+                ];
+
+                $where .= " and status = " . $statuses[request('status')];
+            }
 
             $data = $this->projectDealPriceChangeRepo->pagination(
-                select: 'id,project_deal_id,old_price,new_price,status,requested_by,requested_at,reason_id,custom_reason',
+                select: 'id,project_deal_id,old_price,new_price,status,requested_by,requested_at,reason_id,custom_reason,rejected_at,approved_at',
                 relation: [
                     'projectDeal:id,name,project_date',
                     'requesterBy:id,name',
@@ -1434,6 +1444,8 @@ class ProjectDealService
                     'old_price' => "Rp". number_format($item->old_price, 0, ',', '.'),
                     'new_price' => "Rp". number_format($item->new_price, 0, ',', '.'),
                     'reason' => $item->real_reason,
+                    'approved_at' => $item->approved_at ? date('d F Y, H:i', strtotime($item->approved_at)) : null,
+                    'rejected_at' => $item->rejected_at ? date('d F Y, H:i', strtotime($item->rejected_at)) : null,
                 ];
             });
 
