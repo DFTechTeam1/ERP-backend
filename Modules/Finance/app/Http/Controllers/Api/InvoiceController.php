@@ -180,6 +180,6 @@ class InvoiceController extends Controller
 
     public function downloadGeneralInvoice()
     {
-        return $this->service->downloadGeneralInvoice();
+        // return $this->service->downloadGeneralInvoice();
     }
 }

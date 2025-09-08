@@ -27,6 +27,9 @@ enum CacheKey: string
     case MaxDiscountFormula = 'maxDiscountFormula';
     case MaxMarkupFormula = 'maxMarkupFormula';
 
+    // price changes reason
+    case PriceChangeReasons = 'priceChangeReasons';
+
     case ProjectCount = 'projectCount';
     case ProjectDealIdentifierNumber = 'projectDealIdentifierNumber';
 }

@@ -5,6 +5,7 @@ namespace Modules\Production\Database\Factories;
 use App\Enums\Production\EventType;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectStatus;
+use App\Enums\Transaction\InvoiceStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
@@ -12,6 +13,7 @@ use Modules\Company\Models\ProjectClass;
 use Modules\Company\Models\Province;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
+use Modules\Production\Models\ProjectDeal;
 
 class ProjectDealFactory extends Factory
 {
@@ -55,6 +57,50 @@ class ProjectDealFactory extends Factory
             'latitude' => fake()->latitude(),
             'status' => ProjectDealStatus::Draft->value
         ];
+    }
+
+    public function withQuotation(int $price = 0)
+    {
+        return $this->afterCreating(function (ProjectDeal $projectDeal) use ($price) {
+            $state = [
+                'project_deal_id' => $projectDeal->id,
+                'is_final' => 1,
+            ];
+
+            if ($price > 0) {
+                $state['fix_price'] = $price;
+            }
+
+            \Modules\Production\Models\ProjectQuotation::factory()->withItems(0, $projectDeal->name)->create($state);
+        });
+    }
+
+    public function withInvoice(int $numberOfInvoice = 1, array $rawData = [])
+    {
+        return $this->afterCreating(function (ProjectDeal $projectDeal) use ($numberOfInvoice, $rawData) {
+            $invoice = \Modules\Finance\Models\Invoice::factory()->create([
+                'project_deal_id' => $projectDeal->id,
+                'status' => InvoiceStatus::Unpaid->value,
+                'amount' => 100000000,
+                'raw_data' => $rawData ?? null,
+            ]);
+
+            if ($numberOfInvoice > 1) {
+                $state = [
+                    'project_deal_id' => $projectDeal->id,  
+                    'status' => InvoiceStatus::Unpaid->value,
+                    'parent_number' => $invoice->number,
+                    'number' => $invoice->number . "A",
+                    'amount' => 100000000
+                ];
+
+                if (!empty($rawData)) {
+                    $state['raw_data'] = $rawData;
+                }
+
+                \Modules\Finance\Models\Invoice::factory()->create($state);
+            }
+        });
     }
 }
 

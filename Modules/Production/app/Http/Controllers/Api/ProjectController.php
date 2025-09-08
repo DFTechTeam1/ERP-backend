@@ -928,7 +928,8 @@ class ProjectController extends Controller
                 'finalQuotation',
                 'firstTransaction',
                 'unpaidInvoices:id,number,parent_number,project_deal_id,amount',
-                'activeProjectDealChange:id,project_deal_id'
+                'activeProjectDealChange:id,project_deal_id',
+                'activeProjectDealPriceChange:id,project_deal_id,new_price'
             ]
         ));
     }
@@ -1061,5 +1062,15 @@ class ProjectController extends Controller
         }
 
         return apiResponse($response);
+    }
+
+    /**
+     * Get request changes list
+     * 
+     * @return JsonResponse
+     */
+    public function requestChangesList(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->requestChangesList());
     }
 }
