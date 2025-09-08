@@ -8,9 +8,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Modules\Finance\Http\Requests\ExportProjectDealSummary;
 use Modules\Finance\Http\Requests\ExportRequest;
+use Modules\Finance\Http\Requests\PriceChanges;
 use Modules\Finance\Http\Requests\Transaction\Create;
 use Modules\Finance\Services\InvoiceService;
 use Modules\Finance\Services\TransactionService;
+use Modules\Production\Models\ProjectDeal;
+use Modules\Production\Services\ProjectDealService;
 
 class FinanceController extends Controller
 {
@@ -18,13 +21,17 @@ class FinanceController extends Controller
 
     private $invoiceService;
 
+    private ProjectDealService $projectDealService;
+
     public function __construct(
         TransactionService $service,
-        InvoiceService $invoiceService
+        InvoiceService $invoiceService,
+        ProjectDealService $projectDealService
     )
     {
         $this->service = $service;
         $this->invoiceService = $invoiceService;
+        $this->projectDealService = $projectDealService;
     }
 
     /**
@@ -130,5 +137,56 @@ class FinanceController extends Controller
     public function exportFinanceData(ExportProjectDealSummary $request): JsonResponse
     {
         return apiResponse($this->invoiceService->exportFinanceData(payload: $request->validated()));
+    }
+
+    /**
+     * Request price changes for project deal
+     * 
+     * @param PriceChanges $request       With this following structure:
+     * - int $price
+     * - string $reason
+     */
+    public function requestPriceChanges(PriceChanges $request, string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->requestPriceChanges(
+            payload: $request->validated(),
+            projectDealUid: $projectDealUid
+        ));
+    }
+
+    /**
+     * Approve price changes for project deal
+     * 
+     * @param string $projectDealUid
+     * @param string $changeId
+     */
+    public function approvePriceChanges(string $projectDealUid, string $changeId): JsonResponse
+    {
+        return apiResponse($this->projectDealService->approvePriceChanges(priceChangeId: $changeId));
+    }
+
+    /**
+     * Reject price changes for project deal
+     * 
+     * @param Request $request
+     * @param string $projectDealUid
+     * @param string $changeId
+     */
+    public function rejectPriceChanges(Request $request, string $projectDealUid, string $changeId): JsonResponse
+    {
+        return apiResponse($this->projectDealService->rejectPriceChanges(
+            priceChangeId: $changeId,
+            reason: $request->input('reason', '')
+        ));
+    }
+    
+    /**
+     * Get price change reasons
+     * 
+     * @return JsonResponse
+     */
+    public function getPriceChangeReasons(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->getPriceChangeReasons());
     }
 }

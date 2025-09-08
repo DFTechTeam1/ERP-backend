@@ -16,9 +16,18 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
+use Modules\Finance\Http\Controllers\FinanceController;
+use Modules\Finance\Jobs\InvoiceDue;
+use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\InvoiceRequestUpdate;
+use Modules\Finance\Notifications\ApproveInvoiceChangesNotification;
+use Modules\Finance\Notifications\InvoiceDueCheckNotification;
+use Modules\Finance\Notifications\NotifyRequestPriceChangesNotification;
+use Modules\Finance\Notifications\ProjectHasBeenFinal;
+use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
@@ -176,21 +185,14 @@ Route::get('i/r', function (Request $request) {
     return view('invoices.rejected', compact('title', 'message'));
 })->name('invoices.rejected');
 
-Route::get('send-pending-deal-changes', function () {
-    $deals = ProjectDealChange::where('status', ProjectDealChangeStatus::Pending)->get();
+// define route to approve or reject project deal price changes
+Route::get('project/deal/change/price/approve', [FinanceController::class, 'approvePriceChanges'])
+    ->name('project.deal.change.price.approve')
+    ->middleware('signed');
+Route::get('project/deal/change/price/reject', [FinanceController::class, 'rejectPriceChanges'])
+    ->name('project.deal.change.price.reject')
+    ->middleware('signed');
 
-    foreach ($deals as $deal) {
-        NotifyProjectDealChangesJob::dispatch($deal->id);
-    }
-
-    return $deals;
-});
-Route::get('send-pending-invoice-changes', function () {
-    $invoices = InvoiceRequestUpdate::where('status', InvoiceRequestUpdateStatus::Pending)->get();
-
-    foreach ($invoices as $invoice) {
-        RequestInvoiceChangeJob::dispatch($invoice);
-    }
-
-    return $invoices;
+Route::get('trying', function () {
+    abort(400);
 });

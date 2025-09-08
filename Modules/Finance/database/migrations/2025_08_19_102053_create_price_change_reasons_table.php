@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('project_song_lists', function (Blueprint $table) {
-            $table->string('reason', 255)->nullable();
+        Schema::create('price_change_reasons', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->unique()->comment('Reason for price change');
+            $table->timestamps();
         });
     }
 
@@ -21,8 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('project_song_lists', function (Blueprint $table) {
-            $table->dropColumn('reason');
-        });
+        Schema::dropIfExists('price_change_reasons');
     }
 };

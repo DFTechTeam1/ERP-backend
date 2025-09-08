@@ -30,10 +30,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('custom_inventory_details', function (Blueprint $table) {
-            if (checkForeignKey(tableName: 'custom_inventory_details', columnName: 'custom_inventory_id')) {
+            if (checkForeignKey('custom_inventory_details', 'custom_inventory_id')) {
                 $table->dropForeign(['custom_inventory_id']);
             }
-            if (checkForeignKey(tableName: 'custom_inventory_details', columnName: 'inventory_id')) {
+            if (checkForeignKey('custom_inventory_details', 'inventory_id')) {
                 $table->dropForeign(['inventory_id']);
             }
         });

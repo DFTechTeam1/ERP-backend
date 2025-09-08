@@ -6,6 +6,8 @@ use App\Actions\CopyDealToProject;
 use App\Actions\CreateInteractiveProject;
 use App\Actions\CreateQuotation;
 use App\Actions\Project\DetailCache;
+use App\Enums\Cache\CacheKey;
+use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectStatus;
@@ -16,10 +18,16 @@ use App\Services\GeneralService;
 use App\Services\Geocoding;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Jobs\NotifyRequestPriceChangesHasBeenApproved;
+use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Finance\Repository\PriceChangeReasonRepository;
+use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
@@ -45,6 +53,12 @@ class ProjectDealService
 
     private $projectDealChangeRepo;
 
+    private $projectDealPriceChangeRepo;
+    
+    private InvoiceRepository $invoiceRepo;
+
+    private PriceChangeReasonRepository $priceChangeReasonRepo;
+
     /**
      * Construction Data
      */
@@ -55,9 +69,16 @@ class ProjectDealService
         ProjectQuotationRepository $projectQuotationRepo,
         ProjectRepository $projectRepo,
         Geocoding $geocoding,
-        ProjectDealChangeRepository $projectDealChangeRepo
+        ProjectDealChangeRepository $projectDealChangeRepo,
+        ProjectDealPriceChangeRepository $projectDealPriceChangeRepo,
+        InvoiceRepository $invoiceRepo,
+        PriceChangeReasonRepository $priceChangeReasonRepo
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
+        
+        $this->projectDealPriceChangeRepo = $projectDealPriceChangeRepo;
+
+        $this->priceChangeReasonRepo = $priceChangeReasonRepo;
 
         $this->repo = $repo;
 
@@ -70,6 +91,8 @@ class ProjectDealService
         $this->projectRepo = $projectRepo;
 
         $this->geocoding = $geocoding;
+
+        $this->invoiceRepo = $invoiceRepo;
     }
 
     /**
@@ -93,7 +116,7 @@ class ProjectDealService
         try {
             $user = Auth::user();
 
-            $itemsPerPage = request('itemsPerPage') ?? 2;
+            $itemsPerPage = request('itemsPerPage') ?? 10;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
@@ -190,6 +213,23 @@ class ProjectDealService
                 $isCancel = $item->status == ProjectDealStatus::Canceled ? true : false;
                 $isHaveActiveRequestChanges = $item->activeProjectDealChange ? true : false;
 
+                // define status. If project deal have a request price changes, wee need to make status as 'Waiting for approval', otherwise show the real status
+                $isHaveRequestPriceChanges = $item->activeProjectDealPriceChange ? true : false;
+                $canRequestPriceChanges = !$isHaveRequestPriceChanges && $item->status == ProjectDealStatus::Final ? true : false;
+                if ($isHaveRequestPriceChanges) {
+                    $status = __('notification.waitingForApproval');
+                    $statusColor = 'grey-darken-2';
+                } else {
+                    $status = $item->status->label();
+                    $statusColor = $item->status->color();
+                }
+
+                $finalPrice = $item->getFinalPrice(formatPrice: true);
+                $newPrice = $isHaveRequestPriceChanges ? $item->activeProjectDealPriceChange->new_price : 0;
+                if ($newPrice > 0) {
+                    $newPrice = "Rp" . number_format(num: $newPrice, decimal_separator: ',');
+                }
+
                 return [
                     'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
                     'latest_quotation_id' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id),
@@ -205,9 +245,10 @@ class ProjectDealService
                     'remaining_payment' => $item->getRemainingPayment(formatPrice: true),
                     'remaining_payment_raw' => $item->getRemainingPayment(),
                     'status' => true,
-                    'status_project' => $item->status->label(),
-                    'status_project_color' => $item->status->color(),
-                    'fix_price' => $item->getFinalPrice(formatPrice: true),
+                    'status_project' => $status,
+                    'status_project_color' => $statusColor,
+                    'fix_price' => $finalPrice,
+                    'new_price' => $newPrice,
                     'latest_price' => $item->getLatestPrice(formatPrice: true),
                     'is_fully_paid' => (bool) $item->is_fully_paid,
                     'status_payment' => $item->getStatusPayment(),
@@ -232,8 +273,13 @@ class ProjectDealService
                             'amount' => $invoice->amount,
                         ];
                     }),
+                    'can_request_price_changes' => $canRequestPriceChanges,
                     'have_request_changes' => $isHaveActiveRequestChanges,
-                    'changes_id' => $isHaveActiveRequestChanges ? Crypt::encryptString($item->activeProjectDealChange->id) : null
+                    'have_price_changes' => $isHaveRequestPriceChanges,
+                    'can_approve_price_changes' => $isHaveRequestPriceChanges ? true : false,
+                    'can_reject_price_changes' => $isHaveRequestPriceChanges ? true : false,
+                    'changes_id' => $isHaveActiveRequestChanges ? Crypt::encryptString($item->activeProjectDealChange->id) : null,
+                    'price_changes_id' => $isHaveRequestPriceChanges ? Crypt::encryptString($item->activeProjectDealPriceChange->id) : null
                 ];
             });
 
@@ -1142,6 +1188,269 @@ class ProjectDealService
             return generalResponse(message: "Success reject changes");
         } catch (\Throwable $th) {
             DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Here we will define function to request changes in project deal fix price.
+     * This changes requires approval from the management.
+     * 
+     * @param array $payload                With these following structure
+     * - string $price
+     * - string $reason
+     * @param string $projectDealUid
+     * 
+     * @return array
+     */
+    public function requestPriceChanges(array $payload, string $projectDealUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            // validation
+            // return error if current project deal already have child invoice and transactions
+            $projectDeal = $this->repo->show(
+                uid: $projectDealId,
+                select: 'id,is_fully_paid',
+                relation: [
+                    'finalQuotation',
+                    'invoices',
+                    'transactions'
+                ]
+            );
+
+            if ($projectDeal->invoices->count() > 1 || $projectDeal->transactions->isNotEmpty()) {
+                return errorResponse(message: __('notification.projectDealHasChildInvoicesOrTransactions'));
+            }
+
+            // record price changes. old price came from finalQuotation->fix_price
+            $changes = $this->projectDealPriceChangeRepo->store(data: [
+                'project_deal_id' => $projectDealId,
+                'requested_by' => Auth::id(),
+                'requested_at' => Carbon::now(),
+                'old_price' => $projectDeal->finalQuotation->fix_price,
+                'new_price' => $payload['price'],
+                'reason_id' => $payload['reason_id'],
+                'custom_reason' => $payload['custom_reason'] ?? null,
+                'status' => ProjectDealChangePriceStatus::Pending
+            ]);
+
+            // notify the director to approve this changes. Send job
+            NotifyRequestPriceChangesJob::dispatch(
+                projectDealChangeId: $changes->id,
+                newPrice: $payload['price'],
+                reason: $changes->real_reason
+            )->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(message: __('notification.requestPriceChangesSuccess'));
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Approve price changes
+     * Change price on quotation and raw data on invoice
+     *
+     * @param string $priceChangeId
+     * @return array
+     */
+    public function approvePriceChanges(string $priceChangeId): array
+    {
+        DB::beginTransaction();
+        try {
+            $priceChangeId = Crypt::decryptString($priceChangeId);
+            $changes = $this->projectDealPriceChangeRepo->show(uid: $priceChangeId);
+            
+            // here we will change quotation fix price and raw_data on parent invoice
+            $this->projectQuotationRepo->update(
+                data: [
+                    'fix_price' => $changes->new_price,
+                ],
+                where: 'project_deal_id = ' . $changes->project_deal_id,
+            );
+
+            // change raw data on invoices
+            $currentInvoice = $this->invoiceRepo->show(
+                uid: 'id',
+                select: 'id,raw_data,uid',
+                where: "project_deal_id = {$changes->project_deal_id} and is_main = 1"
+            );
+            $raw = $currentInvoice->raw_data;
+            $raw['fixPrice'] = "Rp". number_format($changes->new_price, 0, ',', '.');
+            $raw['remainingPayment'] = "Rp". number_format($changes->new_price, 0, ',', '.');
+
+            $this->invoiceRepo->update(
+                data: [
+                    'raw_data' => $raw,
+                ],
+                id: $currentInvoice->uid
+            );
+
+            // updatte price changes status
+            // this action can take by user on the erp or from email
+            // if this action came from email, we will use payload to get the user id
+            if (request()->has('approvalId')) {
+                $userId = request('approvalId');
+            } else {
+                $user = Auth::user();
+                $userId = $user->id;
+            }
+
+            $this->projectDealPriceChangeRepo->update(
+                data: [
+                    'status' => ProjectDealChangePriceStatus::Approved,
+                    'approved_at' => Carbon::now(),
+                    'approved_by' => $userId,
+                ],
+                id: $priceChangeId
+            );
+
+            NotifyRequestPriceChangesHasBeenApproved::dispatch(changeId: $priceChangeId)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successApprovePriceChanges'),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Reject price changes
+     * 
+     * @param string $priceChangeId
+     * @param string|null $reason
+     * 
+     * @return array
+     */
+    public function rejectPriceChanges(string $priceChangeId, ?string $reason = null): array
+    {
+        DB::beginTransaction();
+        try {
+            $priceChangeId = Crypt::decryptString($priceChangeId);
+
+            // this action can take by user on the erp or from email
+            // if this action came from email, we will use payload to get the user id
+            if (request()->has('approvalId')) {
+                $userId = request('approvalId');
+            } else {
+                $user = Auth::user();
+                $userId = $user->id;
+            }
+
+            $this->projectDealPriceChangeRepo->update(
+                data: [
+                    'status' => ProjectDealChangePriceStatus::Rejected->value,
+                    'rejected_at' => Carbon::now(),
+                    'rejected_by' => $userId,
+                    'rejected_reason' => $reason ?? 'No reason provided'
+                ],
+                id: $priceChangeId
+            );
+
+            NotifyRequestPriceChangesHasBeenApproved::dispatch(changeId: $priceChangeId, type: 'rejected')->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successRejectPriceChanges'),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get price change reasons
+     * 
+     * @return array
+     */
+    public function getPriceChangeReasons(): array
+    {
+        $data = Cache::get(CacheKey::PriceChangeReasons->value);
+
+        if (!$data) {
+            $data = Cache::remember(
+                key: CacheKey::PriceChangeReasons->value,
+                ttl: now()->addDays(7),
+                callback: function () {
+                    return $this->priceChangeReasonRepo->list(
+                        select: 'id,name'
+                    )->map(function ($item) {
+                        return [
+                            'value' => $item->id,
+                            'title' => $item->name
+                        ];
+                    })->toArray();
+                }
+            );
+        }
+
+        return generalResponse(
+            message: "Success",
+            data: $data
+        );
+    }
+
+    /**
+     * Get list of request changes on project deal price
+     * 
+     * @return array
+     */
+    public function requestChangesList(): array
+    {
+        try {
+            $user = Auth::user();
+
+            $itemsPerPage = request('itemsPerPage') ?? 10;
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $where = 'status = ' . ProjectDealChangePriceStatus::Pending->value;
+
+            $data = $this->projectDealPriceChangeRepo->pagination(
+                select: 'id,project_deal_id,old_price,new_price,status,requested_by,requested_at,reason_id,custom_reason',
+                relation: [
+                    'projectDeal:id,name,project_date',
+                    'requesterBy:id,name',
+                    'reason:id,name'
+                ],
+                page: $page,
+                itemsPerPage: $itemsPerPage,
+                where: $where
+            );
+            $totalData = $this->projectDealPriceChangeRepo->list(select: 'id', where: $where)->count();
+
+            $output = $data->map(function ($item) {
+                return [
+                    'uid' => Crypt::encryptString($item->id),
+                    'event_name' => $item->projectDeal->name,
+                    'project_date' => date('d F Y', strtotime($item->projectDeal->project_date)),
+                    'request_by' => $item->requesterBy->name,
+                    'old_price' => "Rp". number_format($item->old_price, 0, ',', '.'),
+                    'new_price' => "Rp". number_format($item->new_price, 0, ',', '.'),
+                    'reason' => $item->real_reason,
+                ];
+            });
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }

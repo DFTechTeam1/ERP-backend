@@ -17,6 +17,7 @@ use Modules\Company\Repository\ProjectClassRepository;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\InvoiceRequestUpdateRepository;
+use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Finance\Services\TransactionService;
 use Modules\Hrd\Models\Employee;
@@ -318,7 +319,10 @@ function createProjectDealService(
     $projectQuotationRepo = null,
     $projectRepo = null,
     $geocoding = null,
-    $projectDealChangeRepo = null
+    $projectDealChangeRepo = null,
+    $projectDealPriceChangeRepo = null,
+    $invoiceRepo = null,
+    $priceChangeReasonRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository(),
@@ -327,7 +331,10 @@ function createProjectDealService(
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository(),
         $projectRepo ? $projectRepo : new ProjectRepository,
         $geocoding ? $geocoding : new Geocoding,
-        $projectDealChangeRepo ? $projectDealChangeRepo : new \Modules\Production\Repository\ProjectDealChangeRepository
+        $projectDealChangeRepo ? $projectDealChangeRepo : new \Modules\Production\Repository\ProjectDealChangeRepository,
+        $projectDealPriceChangeRepo ? $projectDealPriceChangeRepo : new ProjectDealPriceChangeRepository,
+        $invoiceRepo ? $invoiceRepo : new InvoiceRepository(),
+        $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository()
     );
 }
 
