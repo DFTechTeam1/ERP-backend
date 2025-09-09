@@ -39,7 +39,10 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
     public function handle(): void
     {
         // get director and project deal
-        $change = ProjectDealPriceChange::findOrFail($this->projectDealChangeId);
+        $change = ProjectDealPriceChange::with([
+            'requesterBy:id,employee_id',
+            'requesterBy.employee:id,name'
+        ])->findOrFail($this->projectDealChangeId);
         $projectDealId = $change->project_deal_id;
         $projectDeal = ProjectDeal::findOrFail($projectDealId);
         $employeeUids = (new GeneralService)->getSettingByKey('person_to_approve_invoice_changes');
@@ -72,6 +75,7 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
                 $director->notify(new NotifyRequestPriceChangesNotification(
                     director: $director,
                     project: $projectDeal,
+                    actor: $change->requesterBy->employee,
                     approvalUrl: $approvalUrl,
                     rejectionUrl: $rejectionUrl,
                     reason: $change->reason ? $change->reason->name : $change->custom_reason,

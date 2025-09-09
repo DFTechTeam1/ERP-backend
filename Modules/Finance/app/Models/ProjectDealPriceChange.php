@@ -3,6 +3,7 @@
 namespace Modules\Finance\Models;
 
 use App\Enums\Production\ProjectDealChangePriceStatus;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -80,6 +81,6 @@ class ProjectDealPriceChange extends Model
 
     public function requesterBy(): BelongsTo
     {
-        return $this->belongsTo(Employee::class, 'requested_by');
+        return $this->belongsTo(User::class, 'requested_by');
     }
 }

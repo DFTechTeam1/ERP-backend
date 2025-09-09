@@ -2,8 +2,10 @@
 
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealStatus;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Jobs\NotifyRequestPriceChangesHasBeenApproved;
 use Modules\Finance\Models\ProjectDealPriceChange;
 use Modules\Production\Models\ProjectDeal;
 
@@ -46,6 +48,8 @@ function seedDataReject() {
 }
 
 it('should reject request for price changes', function () {
+    Bus::fake();
+
     $data = seedDataReject();
     $oldPrice = $data['oldPrice'];
     $projectDeal = $data['projectDeal'];
@@ -76,9 +80,13 @@ it('should reject request for price changes', function () {
         'fix_price' => $oldPrice,
         'project_deal_id' => $projectDeal->id,
     ]);
+    
+    Bus::assertDispatched(NotifyRequestPriceChangesHasBeenApproved::class);
 });
 
 it('should reject request from email return success', function () {
+    Bus::fake();
+
     $data = seedDataReject();
     $oldPrice = $data['oldPrice'];
     $projectDeal = $data['projectDeal'];
@@ -112,4 +120,6 @@ it('should reject request from email return success', function () {
         'fix_price' => $oldPrice,
         'project_deal_id' => $projectDeal->id,
     ]);
+
+    Bus::assertDispatched(NotifyRequestPriceChangesHasBeenApproved::class);
 });

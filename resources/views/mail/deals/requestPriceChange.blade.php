@@ -2,7 +2,7 @@
 <x-mail::message>
 # Hello {{ $director->name }}
 
-A request to change the price for the project "{{ $project->name }}" has been submitted.
+A request to change the price for the project "{{ $project->name }}" has been submitted by {{ $user->name }}.
 The reason for the change is: "{{ $reason }}".
 
 The old price was: {{ $oldPrice }}<br>
