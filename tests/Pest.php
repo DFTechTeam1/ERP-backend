@@ -182,10 +182,18 @@ function createProjectService(
     );
 }
 
-function initAuthenticateUser(array $permissions = [])
+function initAuthenticateUser(array $permissions = [], bool $withEmployee = false)
 {
-    $user = \App\Models\User::factory()
-        ->create();
+    if (!$withEmployee) {
+        $user = \App\Models\User::factory()
+            ->create();
+    } else {
+        $employee = Employee::factory()
+            ->withUser()
+            ->create();
+
+        $user = \App\Models\User::where('employee_id', $employee->id)->first();
+    }
 
     $checkRoot = \Illuminate\Support\Facades\DB::table('roles')
         ->where('name', \App\Enums\System\BaseRole::Root->value)
@@ -322,7 +330,8 @@ function createProjectDealService(
     $projectDealChangeRepo = null,
     $projectDealPriceChangeRepo = null,
     $invoiceRepo = null,
-    $priceChangeReasonRepo = null
+    $priceChangeReasonRepo = null,
+    $employeeRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository(),
@@ -334,7 +343,8 @@ function createProjectDealService(
         $projectDealChangeRepo ? $projectDealChangeRepo : new \Modules\Production\Repository\ProjectDealChangeRepository,
         $projectDealPriceChangeRepo ? $projectDealPriceChangeRepo : new ProjectDealPriceChangeRepository,
         $invoiceRepo ? $invoiceRepo : new InvoiceRepository(),
-        $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository()
+        $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository(),
+        $employeeRepo ? $employeeRepo : new EmployeeRepository
     );
 }
 

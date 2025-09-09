@@ -7,9 +7,9 @@ use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 
 beforeEach(function () {
-    $user = initAuthenticateUser();
+    $this->user = initAuthenticateUser(withEmployee: true);
 
-    $this->actingAs($user);
+    $this->actingAs($this->user);
 });
 
 it('can request price changes', function () {
@@ -33,6 +33,8 @@ it('can request price changes', function () {
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
+
+    logging('REQUEST PRICE 1', $response->json());
     
     $response->assertStatus(201);
     $response->assertJson([
@@ -45,6 +47,7 @@ it('can request price changes', function () {
         'reason_id' => $reason->id,
         'custom_reason' => null,
         'new_price' => 1000,
+        'requested_by' => $this->user->id,
     ]);
 
     Bus::assertDispatched(NotifyRequestPriceChangesJob::class);
@@ -64,6 +67,7 @@ it ('cannot request price changes if project deal has child invoices or transact
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
+    logging('REQUEST PRICE 2', $response->json());
     
     $response->assertStatus(400);
     $response->assertJson([

@@ -28,6 +28,7 @@ use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\PriceChangeReasonRepository;
 use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
@@ -59,6 +60,8 @@ class ProjectDealService
 
     private PriceChangeReasonRepository $priceChangeReasonRepo;
 
+    private EmployeeRepository $employeeRepo;
+
     /**
      * Construction Data
      */
@@ -72,7 +75,8 @@ class ProjectDealService
         ProjectDealChangeRepository $projectDealChangeRepo,
         ProjectDealPriceChangeRepository $projectDealPriceChangeRepo,
         InvoiceRepository $invoiceRepo,
-        PriceChangeReasonRepository $priceChangeReasonRepo
+        PriceChangeReasonRepository $priceChangeReasonRepo,
+        EmployeeRepository $employeeRepo
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
         
@@ -93,6 +97,8 @@ class ProjectDealService
         $this->geocoding = $geocoding;
 
         $this->invoiceRepo = $invoiceRepo;
+
+        $this->employeeRepo = $employeeRepo;
     }
 
     /**
@@ -1432,7 +1438,8 @@ class ProjectDealService
                 select: 'id,project_deal_id,old_price,new_price,status,requested_by,requested_at,reason_id,custom_reason,rejected_at,approved_at',
                 relation: [
                     'projectDeal:id,name,project_date',
-                    'requesterBy:id,name',
+                    'requesterBy:id,employee_id',
+                    'requesterBy.employee:id,name',
                     'reason:id,name'
                 ],
                 page: $page,
@@ -1446,7 +1453,7 @@ class ProjectDealService
                     'uid' => Crypt::encryptString($item->id),
                     'event_name' => $item->projectDeal->name,
                     'project_date' => date('d F Y', strtotime($item->projectDeal->project_date)),
-                    'request_by' => $item->requesterBy->name,
+                    'request_by' => $item->requesterBy->employee->name,
                     'old_price' => "Rp". number_format($item->old_price, 0, ',', '.'),
                     'new_price' => "Rp". number_format($item->new_price, 0, ',', '.'),
                     'reason' => $item->real_reason,
