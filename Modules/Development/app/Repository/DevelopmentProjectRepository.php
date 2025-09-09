@@ -104,7 +104,7 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -114,6 +114,20 @@ class DevelopmentProjectRepository extends DevelopmentProjectInterface
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (! empty($whereHas)) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
         }
 
         $data = $query->first();

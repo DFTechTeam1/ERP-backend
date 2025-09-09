@@ -119,5 +119,7 @@ return [
     'successAddReference' => 'Referensi telah berhasil ditambahkan',
     'referenceHasBeenDeleted' => 'Referensi telah berhasil dihapus',
     'successAddAttachment' => 'Lampiran telah berhasil ditambahkan',
-    'successUpdateDeadline' => 'Tenggat waktu telah berhasil diperbarui'
+    'successUpdateDeadline' => 'Tenggat waktu telah berhasil diperbarui',
+    'pleaseCompleteAllTasksManually' => 'Silakan selesaikan semua tugas secara manual, lalu lanjutkan untuk menyelesaikan proyek.',
+    'projectHasBeenCompleted' => 'Proyek telah berhasil diselesaikan',
 ];

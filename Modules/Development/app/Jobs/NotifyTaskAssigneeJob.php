@@ -17,16 +17,16 @@ class NotifyTaskAssigneeJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private array $asignessUids;
+    private array $asignessIds;
 
     private Collection|DevelopmentProjectTask $task;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(array $asignessUids, Collection|DevelopmentProjectTask $task)
+    public function __construct(array $asignessIds, Collection|DevelopmentProjectTask $task)
     {
-        $this->asignessUids = $asignessUids;
+        $this->asignessIds = $asignessIds;
         $this->task = $task;
     }
 
@@ -36,10 +36,10 @@ class NotifyTaskAssigneeJob implements ShouldQueue
     public function handle(): void
     {
         // build message
-        $uids = implode("','", $this->asignessUids);
+        $ids = implode("','", $this->asignessIds);
         $employees = (new EmployeeRepository)->list(
             select: 'id,telegram_chat_id,name',
-            where: "uid IN ('{$uids}')"
+            where: "id IN ('{$ids}')"
         );
 
         $dealine = $this->task->deadline ? date('d F Y H:i', strtotime($this->task->deadline)) : '-';

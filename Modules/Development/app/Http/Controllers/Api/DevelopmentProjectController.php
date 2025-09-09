@@ -206,4 +206,9 @@ class DevelopmentProjectController extends Controller
     {
         return apiResponse($this->developmentProjectService->updateTaskDeadline($request->validated(), $taskUid));
     }
+
+    public function completeProject(string $projectUid): JsonResponse
+    {
+        return apiResponse($this->developmentProjectService->completeProject(projectUid: $projectUid));
+    }
 }

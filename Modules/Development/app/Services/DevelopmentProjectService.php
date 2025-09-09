@@ -3,6 +3,7 @@
 namespace Modules\Development\Services;
 
 use App\Actions\Development\DefineTaskAction;
+use App\Enums\Development\Project\ProjectStatus;
 use App\Enums\Development\Project\ReferenceType;
 use App\Enums\Development\Project\Task\TaskStatus;
 use App\Enums\System\BaseRole;
@@ -75,6 +76,8 @@ class DevelopmentProjectService
     private const MEDIATASKPATH = 'development/projects/tasks';
 
     private const REVISEPATH = 'development/projects/tasks/revises';
+
+    private array $taskTmpProofFiles = [];
 
     /**
      * Construction Data
@@ -170,7 +173,7 @@ class DevelopmentProjectService
                 ];
             }
 
-            // applied filter
+            // apply status filter
             if (request('status')) {
                 $statusIds = collect(request('status'))->pluck('id')->implode(',');
 
@@ -179,6 +182,7 @@ class DevelopmentProjectService
                 }
             }
 
+            // apply PM filter
             if (request('pics')) {
                 $employeeUids = collect(request('pics'))->map(function ($picUid) {
                     if ($picUid) {
@@ -194,8 +198,22 @@ class DevelopmentProjectService
                 }
             }
 
+            // apply name filter
             if (request('event') && ! empty(request('event'))) {
                 $where .= " and name LIKE '%".request('event')."%'";
+            }
+
+            // apply date filter
+            if (request('date') && !empty(request('date'))) {
+                $splitDate = explode(' - ', request('date'));
+                $startDate = $splitDate[0];
+                $endDate = isset($splitDate[1]) ? $splitDate[1] : null;
+
+                if (empty($endDate)) {
+                    $where .= " and project_date = '{$startDate}'";
+                } else {
+                    $where .= " and project_date BETWEEN '{$startDate}' AND '{$endDate}'";
+                }
             }
 
             $paginated = $this->repo->pagination(
@@ -939,7 +957,7 @@ class DevelopmentProjectService
 
                 // send notification
                 NotifyTaskAssigneeJob::dispatch(
-                    asignessUids: collect($payload['pics'])->pluck('employee_uid')->toArray(),
+                    asignessIds: collect($payload['pics'])->pluck('employee_uid')->toArray(),
                     task: $task
                 )->afterCommit();
             }
@@ -1044,7 +1062,10 @@ class DevelopmentProjectService
 
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,development_project_id', relation: [
                 'picHistories',
+                'pics:id,task_id,employee_id',
             ]);
+
+            $currentEmployeeIds = $task->pics->pluck('employee_id')->toArray();
 
             // remove pic if needed
             if (
@@ -1100,9 +1121,16 @@ class DevelopmentProjectService
             }
 
             if (! empty($payload['users'])) {
+                // only send notification for new users
+                $newUsers = collect($payload['users'])->map(function ($user) {
+                    return $this->generalService->getIdFromUid($user, new Employee);
+                })->filter(function ($userId) use ($currentEmployeeIds) {
+                    return ! in_array($userId, $currentEmployeeIds);
+                })->toArray();
+
                 // send notification
                 NotifyTaskAssigneeJob::dispatch(
-                    asignessUids: $payload['users'],
+                    asignessIds: $newUsers,
                     task: $newTask
                 )->afterCommit();
             }
@@ -1358,7 +1386,119 @@ class DevelopmentProjectService
     }
 
     /**
+     * Main function to submit task proofs.
+     * 
+     * @param  array  $payload  With these following structure:
+     *                          - string $nas_path
+     *                          - array $images                              With these following structure:
+     *                          - File $image
+     * @param  DevelopmentProjectTask|Collection  $task
+     * @param  bool  $forceComplete  If true, the task will be marked as complete without assigning to the boss.
+     *                              This is useful for admin or superadmin to directly complete the task.
+     * @return void
+     * @throws \Exception
+     */
+    protected function mainSubmitTask(
+        array $payload,
+        DevelopmentProjectTask|Collection $task,
+        bool $forceComplete = false
+    ): void {
+        $user = Auth::user();
+
+        // upload proof of works
+        if ($forceComplete) {
+            $this->taskTmpProofFiles = [$payload['images'][0]['image']];
+        } else {
+            foreach ($payload['images'] as $image) {
+                $media = $this->generalService->uploadImageandCompress(
+                    path: self::PROOFPATH,
+                    compressValue: 0,
+                    image: $image['image']
+                );
+    
+                if (! $media) {
+                    // return error
+                    throw new \Exception(__('notification.errorUploadTaskImage'));
+                }
+    
+                $this->taskTmpProofFiles[] = $media;
+            }
+        }
+
+        $bossIds = [];
+        foreach ($task->pics as $pic) {
+            $proof = $task->taskProofs()->create([
+                'nas_path' => $payload['nas_path'],
+                'employee_id' => $pic->employee_id,
+            ]);
+
+            foreach ($this->taskTmpProofFiles as $file) {
+                $proof->images()->create([
+                    'image_path' => $file,
+                ]);
+            }
+
+            // get boss id
+            $boss = $this->employeeRepo->show(uid: 'id', where: "id = {$pic->employee_id}", select: 'id,boss_id');
+            $bossIds[] = $boss->boss_id;
+        }
+
+        // remove duplicate from bossIds
+        $bossIds = array_values(array_unique($bossIds));
+
+        // update task status
+        $this->projectTaskRepo->update(
+            data: [
+                'status' => $forceComplete ? TaskStatus::Completed->value : TaskStatus::CheckByPm->value,
+                'current_pic_id' => $task->pics->pluck('employee_id')->implode(','),
+            ],
+            id: $task->uid
+        );
+
+        // remove all current pics
+        $task->pics()->delete();
+
+        // update finished_at in workstate stable
+        foreach ($task->workStates as $state) {
+            $this->projectTaskWorkStateRepo->update(
+                data: [
+                    'finished_at' => Carbon::now(),
+                ],
+                id: $state->id
+            );
+        }
+
+        // update deadline actual_end_time if exists
+        foreach ($task->deadlines as $deadline) {
+            $this->projectTaskDeadlineRepo->update(
+                data: [
+                    'actual_end_time' => Carbon::now(),
+                ],
+                id: $deadline->id
+            );
+        }
+
+        // assign to boss
+        if (!$forceComplete) {
+            foreach ($bossIds as $bossId) {
+                $task->pics()->create([
+                    'employee_id' => $bossId,
+                ]);
+            }
+
+            SubmitProofsJob::dispatch($task, $bossIds, $user)->afterCommit();
+        }
+    }
+
+    /**
      * Submit task proofs.
+     * 
+     * @param  array  $payload  With these following structure:
+     *                          - string $nas_path
+     *                          - array $images                              With these following structure:
+     *                          - File $image
+     * @param $taskUid
+     * @return array
      */
     public function submitTaskProofs(array $payload, string $taskUid): array
     {
@@ -1366,95 +1506,17 @@ class DevelopmentProjectService
 
         DB::beginTransaction();
         try {
-            $user = Auth::user();
-
-            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,development_project_id,name', relation: [
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'uid,id,status,development_project_id,name', relation: [
                 'pics:id,task_id,employee_id',
                 'workStates',
                 'deadlines:id,task_id',
                 'developmentProject:id,name',
             ]);
 
-            // upload proof of works
-            foreach ($payload['images'] as $image) {
-                $media = $this->generalService->uploadImageandCompress(
-                    path: self::PROOFPATH,
-                    compressValue: 0,
-                    image: $image['image']
-                );
-
-                if (! $media) {
-                    // return error
-                    throw new \Exception(__('notification.errorUploadTaskImage'));
-                }
-
-                $tmpFiles[] = $media;
-            }
-
-            $bossIds = [];
-            foreach ($task->pics as $pic) {
-                $proof = $task->taskProofs()->create([
-                    'nas_path' => $payload['nas_path'],
-                    'employee_id' => $pic->employee_id,
-                ]);
-
-                foreach ($tmpFiles as $file) {
-                    $proof->images()->create([
-                        'image_path' => $file,
-                    ]);
-                }
-
-                // get boss id
-                $boss = $this->employeeRepo->show(uid: 'id', where: "id = {$pic->employee_id}", select: 'id,boss_id');
-                $bossIds[] = $boss->boss_id;
-            }
-
-            // remove duplicate from bossIds
-            $bossIds = array_values(array_unique($bossIds));
-
-            // update task status
-            $this->projectTaskRepo->update(
-                data: [
-                    'status' => TaskStatus::CheckByPm->value,
-                    'current_pic_id' => $task->pics->pluck('employee_id')->implode(','),
-                ],
-                id: $taskUid
-            );
-
-            // remove all current pics
-            $task->pics()->delete();
-
-            // assign to boss
-            foreach ($bossIds as $bossId) {
-                $task->pics()->create([
-                    'employee_id' => $bossId,
-                ]);
-            }
-
-            // update finished_at in workstate stable
-            foreach ($task->workStates as $state) {
-                $this->projectTaskWorkStateRepo->update(
-                    data: [
-                        'finished_at' => Carbon::now(),
-                    ],
-                    id: $state->id
-                );
-            }
-
-            // update deadline actual_end_time if exists
-            foreach ($task->deadlines as $deadline) {
-                $this->projectTaskDeadlineRepo->update(
-                    data: [
-                        'actual_end_time' => Carbon::now(),
-                    ],
-                    id: $deadline->id
-                );
-            }
+            $this->mainSubmitTask(payload: $payload, task: $task);
 
             // update boards
             $boards = $this->getProjectBoards(projectId: $task->development_project_id);
-
-            SubmitProofsJob::dispatch($task, $bossIds, $user)->afterCommit();
 
             DB::commit();
 
@@ -1465,8 +1527,8 @@ class DevelopmentProjectService
         } catch (\Throwable $th) {
             DB::rollBack();
 
-            if (! empty($tmpFiles)) {
-                foreach ($tmpFiles as $file) {
+            if (! empty($this->taskTmpProofFiles)) {
+                foreach ($this->taskTmpProofFiles as $file) {
                     if (Storage::disk('public')->exists(self::PROOFPATH.'/'.$file)) {
                         Storage::disk('public')->delete(self::PROOFPATH.'/'.$file);
                     }
@@ -1874,6 +1936,84 @@ class DevelopmentProjectService
         } catch (\Throwable $th) {
             DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Complete a project and all its related tasks.
+     *
+     * @param  string  $projectUid
+     * @return array
+     */
+    public function completeProject(string $projectUid): array
+    {
+        DB::beginTransaction();
+
+        try {
+            // validate number of task. If this project have more than 5 tasks ongoing task, return error and inform user to complete all tasks manually
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: 'id,status',
+                relation: [
+                    'tasks:id,development_project_id,status,uid',
+                ],
+                whereHas: [
+                    [
+                        'relation' => 'tasks',
+                        'query' => "status = " . TaskStatus::InProgress->value . " or status = " . TaskStatus::WaitingApproval->value . " or status = " . TaskStatus::CheckByPm->value . " or status = " . TaskStatus::OnHold->value . " or status = " . TaskStatus::Revise->value,
+                    ]
+                ]
+            );
+            if ($project->tasks->count() > 5) {
+                return errorResponse(
+                    message: __('notification.pleaseCompleteAllTasksManually')
+                );
+            }
+
+            // here we check if have tasks, system will complete all task
+            foreach ($project->tasks as $task) {
+                if (! in_array($task->status, [TaskStatus::Completed, TaskStatus::Draft])) {
+                    $payloadTask = [
+                        'nas_path' => 'http://12345',
+                        'images' => [
+                            [
+                                // get static image from public folder
+                                'image' => 'default-complete.jpg'
+                            ]
+                        ]
+                    ];
+                    
+                    $this->mainSubmitTask(payload: $payloadTask, task: $task, forceComplete: true);
+                }
+            }
+
+            // update project status
+            $this->repo->update(
+                data: [
+                    'status' => ProjectStatus::Completed->value,
+                ],
+                id: $projectUid
+            );
+
+            $boards = $this->getProjectBoards(projectId: $project->id);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.projectHasBeenCompleted'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            if (! empty($this->taskTmpProofFiles)) {
+                foreach ($this->taskTmpProofFiles as $file) {
+                    if (Storage::disk('public')->exists(self::PROOFPATH.'/'.$file)) {
+                        Storage::disk('public')->delete(self::PROOFPATH.'/'.$file);
+                    }
+                }
+            }
+
+            DB::rollBack();
             return errorResponse($th);
         }
     }

@@ -119,5 +119,7 @@ return [
     'successAddReference' => 'Reference has been added successfully',
     'referenceHasBeenDeleted' => 'Reference has been deleted successfully',
     'successAddAttachment' => 'Attachment has been added successfully',
-    'successUpdateDeadline' => 'Deadline has been updated successfully'
+    'successUpdateDeadline' => 'Deadline has been updated successfully',
+    'pleaseCompleteAllTasksManually' => 'Please complete all tasks manually, then continue to complete the project.',
+    'projectHasBeenCompleted' => 'Project has been completed successfully',
 ];

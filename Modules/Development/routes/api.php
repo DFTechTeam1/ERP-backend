@@ -20,6 +20,7 @@ Route::middleware(['auth:sanctum'])->prefix('development')->group(function () {
     Route::get('/projects/{id}', [DevelopmentProjectController::class, 'show'])->name('development.projects.show');
     Route::put('/projects/{id}', [DevelopmentProjectController::class, 'update'])->name('development.projects.update');
     Route::delete('/projects/{id}', [DevelopmentProjectController::class, 'destroy'])->name('development.projects.destroy');
+    Route::get('/projects/{projectUid}/complete', [DevelopmentProjectController::class, 'completeProject'])->name('development.projects.complete');
     Route::get('/projects/{id}/detail', [DevelopmentProjectController::class, 'detail'])->name('development.projects.detail');
     Route::get('/projects/{id}/boards', [DevelopmentProjectController::class, 'updateProjectBoards'])->name('development.projects.boards.update');
     Route::post('/projects/{projectUid}/tasks', [DevelopmentProjectController::class, 'createTask'])->name('development.projects.tasks.store');
