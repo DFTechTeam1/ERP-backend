@@ -22,6 +22,7 @@ class ProjectQuotation extends Model
         'project_deal_id',
         'main_ballroom',
         'prefunction',
+        'interactive',
         'high_season_fee',
         'equipment_fee',
         'sub_total',

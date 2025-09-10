@@ -38,6 +38,8 @@ class ProjectDeal extends Model
         'note',
         'led_area',
         'led_detail',
+        'interactive_detail',
+        'interactive_note',
         'country_id',
         'state_id',
         'city_id',
@@ -95,6 +97,14 @@ class ProjectDeal extends Model
     ];
 
     public function ledDetail(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? json_decode($value, true) : null,
+            set: fn ($value) => $value ? json_encode($value) : null
+        );
+    }
+
+    public function interactiveDetail(): Attribute
     {
         return Attribute::make(
             get: fn ($value) => $value ? json_decode($value, true) : null,
