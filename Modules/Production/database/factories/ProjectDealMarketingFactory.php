@@ -21,8 +21,7 @@ class ProjectDealMarketingFactory extends Factory
 
         return [
             'project_deal_id' => ProjectDeal::factory()->create(),
-            'employee_id' => Employee::factory()->create()
+            'employee_id' => Employee::factory()->create(),
         ];
     }
 }
-

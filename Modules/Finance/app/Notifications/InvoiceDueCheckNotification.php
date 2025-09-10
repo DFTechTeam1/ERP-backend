@@ -4,10 +4,9 @@ namespace Modules\Finance\Notifications;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class InvoiceDueCheckNotification extends Notification
 {
@@ -33,7 +32,7 @@ class InvoiceDueCheckNotification extends Notification
     {
         return [
             'mail',
-            'database'
+            'database',
         ];
     }
 
@@ -48,7 +47,7 @@ class InvoiceDueCheckNotification extends Notification
             ->subject('Payment Due')
             ->markdown('mail.payment.reminder', [
                 'invoices' => $this->invoices,
-                'user' => $this->user
+                'user' => $this->user,
             ]);
     }
 
@@ -62,7 +61,7 @@ class InvoiceDueCheckNotification extends Notification
             'title' => '🔔 Payment Due Reminder',
             'message' => "You have {$this->invoices->count()} inovice(s) due soon.",
             'button' => null,
-            'href' => '/admin/deals'
+            'href' => '/admin/deals',
         ];
     }
 }

@@ -4,11 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Messages\MailMessage;
-use Modules\Production\Emails\PaymentDueReminder;
+use Illuminate\Notifications\Notification;
 use Modules\Production\Models\ProjectDeal;
 
 class PaymentDueReminderNotification extends Notification
@@ -27,7 +24,7 @@ class PaymentDueReminderNotification extends Notification
         $this->projectDeal = $projectDeal;
 
         // general service
-        $generalService = new GeneralService();
+        $generalService = new GeneralService;
         $this->invoiceNumber = $generalService->generateInvoiceNumber();
     }
 
@@ -37,7 +34,7 @@ class PaymentDueReminderNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            'mail'
+            'mail',
         ];
     }
 
@@ -55,8 +52,8 @@ class PaymentDueReminderNotification extends Notification
             ->markdown('mail.payment.paymentDue', [
                 'projectDeal' => $this->projectDeal,
                 'invoiceNumber' => $this->invoiceNumber,
-                'url' => url("deal-invoice/download/{$uid}/stream") . '?amount=' . $this->projectDeal->getRemainingPayment() . '&date=' . now()->format('Y-m-d'),
-                'remainingPayment' => $this->projectDeal->getRemainingPayment(formatPrice: true)
+                'url' => url("deal-invoice/download/{$uid}/stream").'?amount='.$this->projectDeal->getRemainingPayment().'&date='.now()->format('Y-m-d'),
+                'remainingPayment' => $this->projectDeal->getRemainingPayment(formatPrice: true),
             ]);
     }
 

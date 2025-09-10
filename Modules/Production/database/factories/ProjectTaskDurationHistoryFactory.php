@@ -39,4 +39,3 @@ class ProjectTaskDurationHistoryFactory extends Factory
         ];
     }
 }
-

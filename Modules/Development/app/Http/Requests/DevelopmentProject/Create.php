@@ -27,7 +27,7 @@ class Create extends FormRequest
                     if ($type == ReferenceType::Media->value && empty($value)) {
                         $fail('The image field is required when type is media.');
                     }
-                }
+                },
             ],
             'references.*.link' => [
                 'nullable',
@@ -38,7 +38,7 @@ class Create extends FormRequest
                     if ($type == ReferenceType::Link->value && empty($value)) {
                         $fail('The link field is required when type is link.');
                     }
-                }
+                },
             ],
             'references.*.link_name' => [
                 'nullable',
@@ -49,7 +49,7 @@ class Create extends FormRequest
                     if ($type == ReferenceType::Link->value && empty($value)) {
                         $fail('The link name field is required when type is link.');
                     }
-                }
+                },
             ],
             'pics' => 'nullable|array',
             'pics.*.employee_id' => 'nullable|string',

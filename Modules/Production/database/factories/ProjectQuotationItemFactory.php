@@ -19,4 +19,3 @@ class ProjectQuotationItemFactory extends Factory
         return [];
     }
 }
-

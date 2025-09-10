@@ -57,7 +57,7 @@ class ProductionServiceProvider extends ServiceProvider
             UpdateTaskIdentifier::class,
             InitProjectCount::class,
             PaymentDueReminderCommand::class,
-            SynchronizeEventDealsWithProduction::class
+            SynchronizeEventDealsWithProduction::class,
         ]);
     }
 

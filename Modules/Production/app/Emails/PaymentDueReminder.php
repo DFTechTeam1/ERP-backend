@@ -5,7 +5,6 @@ namespace Modules\Production\Emails;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Modules\Production\Models\ProjectDeal;
 
 class PaymentDueReminder extends Mailable

@@ -10,9 +10,7 @@ use App\Enums\Cache\CacheKey;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
-use App\Enums\Production\ProjectStatus;
 use App\Enums\Transaction\InvoiceStatus;
-use App\Enums\Transaction\TransactionType;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
@@ -28,14 +26,15 @@ use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\PriceChangeReasonRepository;
 use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
+use Modules\Production\Repository\ProjectDealChangeRepository;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
 use Modules\Production\Repository\ProjectRepository;
-use Modules\Production\Repository\ProjectDealChangeRepository;
 
 class ProjectDealService
 {
@@ -59,6 +58,8 @@ class ProjectDealService
 
     private PriceChangeReasonRepository $priceChangeReasonRepo;
 
+    private EmployeeRepository $employeeRepo;
+
     /**
      * Construction Data
      */
@@ -72,7 +73,8 @@ class ProjectDealService
         ProjectDealChangeRepository $projectDealChangeRepo,
         ProjectDealPriceChangeRepository $projectDealPriceChangeRepo,
         InvoiceRepository $invoiceRepo,
-        PriceChangeReasonRepository $priceChangeReasonRepo
+        PriceChangeReasonRepository $priceChangeReasonRepo,
+        EmployeeRepository $employeeRepo
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
         
@@ -93,11 +95,13 @@ class ProjectDealService
         $this->geocoding = $geocoding;
 
         $this->invoiceRepo = $invoiceRepo;
+
+        $this->employeeRepo = $employeeRepo;
     }
 
     /**
      * Get list of data
-     * 
+     *
      * Filter can be:
      * - multiple name
      * - muliple customer name
@@ -105,10 +109,8 @@ class ProjectDealService
      * - multiple status
      * - range price
      * - multiple marketing
-     * 
-     * @return array
      */
-    public function list (
+    public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
@@ -121,7 +123,7 @@ class ProjectDealService
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
-            $where = "deleted_at is null";
+            $where = 'deleted_at is null';
             $whereHas = [];
 
             if (request('event')) {
@@ -134,7 +136,7 @@ class ProjectDealService
                 $customerIds = implode(',', $customer);
                 $whereHas[] = [
                     'relation' => 'customer',
-                    'query' => "id IN ({$customerIds})"
+                    'query' => "id IN ({$customerIds})",
                 ];
             }
 
@@ -143,15 +145,15 @@ class ProjectDealService
                 $statusIds = collect($status)->pluck('id')->implode(',');
                 $where .= " AND status IN ({$statusIds})";
             } else {
-                $where .= " AND status != " . ProjectDealStatus::Canceled->value;
+                $where .= ' AND status != '.ProjectDealStatus::Canceled->value;
             }
 
             if (request('date')) {
                 $dateSplit = explode(' - ', request('date'));
                 if (isset($dateSplit[1])) {
-                    $where .= " AND project_date BETWEEN '" . $dateSplit[0] . "' AND '" . $dateSplit[1] . "'";
-                } else if (!isset($dateSplite[1]) && isset($dateSplit[0])) {
-                    $where .= " AND project_date = '" . $dateSplit[0] . "'";
+                    $where .= " AND project_date BETWEEN '".$dateSplit[0]."' AND '".$dateSplit[1]."'";
+                } elseif (! isset($dateSplite[1]) && isset($dateSplit[0])) {
+                    $where .= " AND project_date = '".$dateSplit[0]."'";
                 }
             }
 
@@ -159,15 +161,15 @@ class ProjectDealService
                 $price = request('price');
                 $whereHas[] = [
                     'relation' => 'latestQuotation',
-                    'query' => "fix_price BETWEEN " . $price[0] . " AND " . $price[1]
+                    'query' => 'fix_price BETWEEN '.$price[0].' AND '.$price[1],
                 ];
             }
 
             if (request('marketing')) {
                 $marketing = request('marketing') ?? [];
-                
+
                 $marketingIds = collect($marketing)->map(function ($itemMarketing) {
-                    $id = $this->generalService->getIdFromUid($itemMarketing['uid'], new \Modules\Hrd\Models\Employee());
+                    $id = $this->generalService->getIdFromUid($itemMarketing['uid'], new \Modules\Hrd\Models\Employee);
 
                     return $id;
                 })->toArray();
@@ -175,7 +177,7 @@ class ProjectDealService
 
                 $whereHas[] = [
                     'relation' => 'marketings',
-                    'query' => "employee_id IN ({$marketingIds})"
+                    'query' => "employee_id IN ({$marketingIds})",
                 ];
             }
 
@@ -253,18 +255,18 @@ class ProjectDealService
                     'is_fully_paid' => (bool) $item->is_fully_paid,
                     'status_payment' => $item->getStatusPayment(),
                     'status_payment_color' => $item->getStatusPaymentColor(),
-                    'can_make_payment' => $item->canMakePayment() && !$isCancel,
-                    'can_publish_project' => $item->canPublishProject() && !$isCancel,
-                    'can_make_final' => $item->canMakeFinal() && !$isCancel,
-                    'can_edit' => (bool) !$isCancel && !$isHaveActiveRequestChanges,
-                    'can_delete' => (bool) !$item->isFinal() && !$isCancel,
+                    'can_make_payment' => $item->canMakePayment() && ! $isCancel,
+                    'can_publish_project' => $item->canPublishProject() && ! $isCancel,
+                    'can_make_final' => $item->canMakeFinal() && ! $isCancel,
+                    'can_edit' => (bool) ! $isCancel && ! $isHaveActiveRequestChanges,
+                    'can_delete' => (bool) ! $item->isFinal() && ! $isCancel,
                     'can_cancel' => $item->status == ProjectDealStatus::Temporary ? true : false,
                     'can_approve_event_changes' => $isHaveActiveRequestChanges && $user->hasPermissionTo('approve_project_deal_change') ? true : false,
                     'can_reject_event_changes' => $isHaveActiveRequestChanges && $user->hasPermissionTo('reject_project_deal_change') ? true : false,
                     'is_final' => $item->status == ProjectDealStatus::Final ? true : false,
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
-                        'fix_price' => "Rp" . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
+                        'fix_price' => 'Rp'.number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
                     ],
                     'unpaidInvoices' => $item->unpaidInvoices->map(function ($invoice) {
                         return [
@@ -275,6 +277,7 @@ class ProjectDealService
                     }),
                     'can_request_price_changes' => $canRequestPriceChanges,
                     'have_request_changes' => $isHaveActiveRequestChanges,
+                    'changes_id' => $isHaveActiveRequestChanges ? Crypt::encryptString($item->activeProjectDealChange->id) : null,
                     'have_price_changes' => $isHaveRequestPriceChanges,
                     'can_approve_price_changes' => $isHaveRequestPriceChanges ? true : false,
                     'can_reject_price_changes' => $isHaveRequestPriceChanges ? true : false,
@@ -358,9 +361,6 @@ class ProjectDealService
 
     /**
      * Delete selected data
-     *
-     *
-     * @return array
      */
     public function delete(string $id): array
     {
@@ -369,11 +369,13 @@ class ProjectDealService
             $detail = $this->repo->show(uid: (string) \Illuminate\Support\Facades\Crypt::decryptString($id), select: 'id,name,status', relation: [
                 'marketings',
                 'quotations',
-                'quotations.items'
+                'quotations.items',
             ]);
 
             // only not finalized project that can be deleted
-            if ($detail->isFinal()) return errorResponse('Cannot delete finalized project');
+            if ($detail->isFinal()) {
+                return errorResponse('Cannot delete finalized project');
+            }
 
             foreach ($detail->quotations as $quotation) {
                 $quotation->items()->delete();
@@ -447,11 +449,6 @@ class ProjectDealService
 
     /**
      * Create new quotation data in existing deal
-     * 
-     * @param array $payload
-     * @param string $projectDealId
-     * 
-     * @return array
      */
     public function createNewQuotation(array $payload, string $projectDealId): array
     {
@@ -465,7 +462,7 @@ class ProjectDealService
                     'finalQuotation:id,project_deal_id',
                 ]
             );
-            
+
             if ($projectDeal->finalQuotation) {
                 return errorResponse(message: __('notification.quotationAlreadyFinal'));
             }
@@ -476,9 +473,9 @@ class ProjectDealService
             DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
-                    'url' => $url
+                    'url' => $url,
                 ]
             );
         } catch (\Throwable $th) {
@@ -490,11 +487,6 @@ class ProjectDealService
 
     /**
      * Publish project deal
-     * 
-     * @param string $projectDealId
-     * @param string $type
-     * 
-     * @return array
      */
     public function publishProjectDeal(string $projectDealId, string $type): array
     {
@@ -522,7 +514,7 @@ class ProjectDealService
                         'city:id,name',
                         'state:id,name',
                         'class:id,name',
-                        'marketings:id,project_deal_id,employee_id'
+                        'marketings:id,project_deal_id,employee_id',
                     ]
                 );
 
@@ -539,7 +531,7 @@ class ProjectDealService
                 if ($detail->is_have_interactive_element) {
                     CreateInteractiveProject::run($project->id);
                 }
-                
+
                 // generate master invoice
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
 
@@ -551,11 +543,12 @@ class ProjectDealService
             return generalResponse(
                 message: __('notification.successPublishProjectDeal'),
                 data: [
-                    'project' => $project ?? null
+                    'project' => $project ?? null,
                 ]
-            );                                                                                                           
+            );
         } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -570,31 +563,29 @@ class ProjectDealService
                 'marketings.employee:id,uid',
                 'latestQuotation',
                 'latestQuotation.items:id,quotation_id,item_id',
-                'latestQuotation.items.item:id,name'
+                'latestQuotation.items.item:id,name',
             ]
         );
 
         $items = $data->latestQuotation->items->map(function ($item) {
             return [
                 'value' => $item->item->id,
-                'title' => $item->item->name
+                'title' => $item->item->name,
             ];
         });
         $data['quotation_items'] = $items;
         $data['is_final'] = $data->status == ProjectDealStatus::Final ? true : false;
 
         return generalResponse(
-            message: "Success",
+            message: 'Success',
             data: $data->toArray()
         );
     }
 
     /**
      * Get detail of project deal
-     * 
-     * @param string $quotationId
-     * 
-     * @return array
+     *
+     * @param  string  $quotationId
      */
     public function detailProjectDeal(string $projectDealUid): array
     {
@@ -610,7 +601,7 @@ class ProjectDealService
 
             $data = $this->repo->show(
                 uid: $projectDealUidRaw,
-                select: "id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status,cancel_reason,cancel_at",
+                select: 'id,name,project_date,customer_id,event_type,venue,collaboration,project_class_id,city_id,note,led_detail,is_fully_paid,status,cancel_reason,cancel_at',
                 relation: [
                     'transactions',
                     'transactions.invoice:id,number,parent_number,paid_amount,payment_date,uid',
@@ -627,9 +618,9 @@ class ProjectDealService
                         $queryInvoice->where('is_main', 0)
                             ->with([
                                 'transaction:id,invoice_id,created_at,transaction_date',
-                                'pendingUpdate:id,invoice_id'
+                                'pendingUpdate:id,invoice_id',
                             ]);
-                    }
+                    },
                 ]
             );
 
@@ -670,16 +661,16 @@ class ProjectDealService
                     'is_final' => (bool) $item->is_final,
                     'design_job' => $item->design_job,
                     'detail' => [
-                        'office'=> [
-                            'logo' => asset('storage/settings/' . $this->generalService->getSettingByKey('company_logo')),
+                        'office' => [
+                            'logo' => asset('storage/settings/'.$this->generalService->getSettingByKey('company_logo')),
                             'address' => $this->generalService->getSettingByKey('company_address'),
                             'phone' => $this->generalService->getSettingByKey('company_phone'),
                             'email' => $this->generalService->getSettingByKey('company_email'),
-                            'name' => $this->generalService->getSettingByKey('company_name')
+                            'name' => $this->generalService->getSettingByKey('company_name'),
                         ],
                         'customer' => [
                             'name' => $data->customer->name,
-                            'place' => $data->city->name
+                            'place' => $data->city->name,
                         ],
                         'quotation_number' => $item->quotation_id,
                         'event' => [
@@ -692,7 +683,7 @@ class ProjectDealService
                             ],
                             'itemPreviews' => collect($item->items)->pluck('item.name')->toArray(),
                             'price' => $item->fix_price,
-                            'name' => $data->name
+                            'name' => $data->name,
                         ],
                         'note' => $item->description,
                         'rules' => '
@@ -703,8 +694,8 @@ class ProjectDealService
                                 <li>Biaya layanan diatas hanya termasuk perlengkapan multimedia DFACTORY dan tidak termasuk persewaan unit LED dan sistem multimedia lainnya bila diperlukan.</li>
                                 <li>Biaya diatas termasuk Akomodasi untuk Crew bertugas di hari-H event.</li>
                             </ul>
-                        '
-                    ]
+                        ',
+                    ],
                 ];
             })->toArray();
 
@@ -714,10 +705,10 @@ class ProjectDealService
             $main = [];
             $prefunction = [];
             if ($data->finalQuotation) {
-                $finalQuotation = $data->quotations->filter(fn($value) => $value->is_final)->values()[0];
+                $finalQuotation = $data->quotations->filter(fn ($value) => $value->is_final)->values()[0];
 
                 $finalQuotation['quotation_id'] = Crypt::encryptString($finalQuotation->quotation_id);
-                
+
                 $finalQuotation['remaining'] = $data->getRemainingPayment();
             }
 
@@ -726,8 +717,8 @@ class ProjectDealService
             if (isset($outputLed['main'])) {
                 $main = [
                     'product' => 'Main Stage',
-                    'description' => collect($outputLed['main'])->sum('totalRaw') . ' m<sup>2</sup>',
-                    'amount' => $data->latestQuotation->main_ballroom
+                    'description' => collect($outputLed['main'])->sum('totalRaw').' m<sup>2</sup>',
+                    'amount' => $data->latestQuotation->main_ballroom,
                 ];
 
                 $products[] = $main;
@@ -736,8 +727,8 @@ class ProjectDealService
             if (isset($outputLed['prefunction'])) {
                 $prefunction = [
                     'product' => 'Prefunction',
-                    'description' => collect($outputLed['prefunction'])->sum('totalRaw') . ' m<sup>2</sup>',
-                    'amount' => $data->latestQuotation->prefunction
+                    'description' => collect($outputLed['prefunction'])->sum('totalRaw').' m<sup>2</sup>',
+                    'amount' => $data->latestQuotation->prefunction,
                 ];
 
                 $products[] = $prefunction;
@@ -747,7 +738,7 @@ class ProjectDealService
                 $products[] = [
                     'product' => 'Equipment',
                     'description' => '',
-                    'amount' => $data->latestQuotation->equipment_fee
+                    'amount' => $data->latestQuotation->equipment_fee,
                 ];
             }
 
@@ -755,7 +746,7 @@ class ProjectDealService
                 $trx['description'] = 'Receiving invoice payment';
                 $trx['images'] = collect($trx->attachments)->pluck('real_path')->toArray();
                 $trx['customer'] = [
-                    'name' => $data->customer->name
+                    'name' => $data->customer->name,
                 ];
                 $trx['invoice_date'] = date('d F Y', strtotime($trx->invoice->payment_date));
                 $trx['payment_date'] = date('d F Y', strtotime($trx->created_at));
@@ -772,7 +763,7 @@ class ProjectDealService
                         'projectDealUid' => $projectDealUid,
                         'invoiceUid' => $invoice->uid,
                         'amount' => $invoice->amount,
-                        'paymentDate' => $invoice->payment_date
+                        'paymentDate' => $invoice->payment_date,
                     ],
                     expiration: now()->addHours(5)
                 );
@@ -810,15 +801,15 @@ class ProjectDealService
                     'is_down_payment' => $invoice->is_down_payment,
                 ];
             });
-            
-            $encryptionService = new EncryptionService();
+
+            $encryptionService = new EncryptionService;
             $invoiceList = $encryptionService->encrypt(string: json_encode($invoiceList), key: config('app.salt_key_encryption'));
 
             // generate general invoice download url
             $generalInvoiceUrl = URL::signedRoute(
                 name: 'invoice.general.download',
                 parameters: [
-                    'i' => \Illuminate\Support\Facades\Crypt::encryptString($projectDealUidRaw)
+                    'i' => \Illuminate\Support\Facades\Crypt::encryptString($projectDealUidRaw),
                 ],
                 expiration: now()->addHours(6)
             );
@@ -845,7 +836,7 @@ class ProjectDealService
                 'remaining_payment_raw' => $data->getRemainingPayment(),
                 'latest_quotation_id' => $finalQuotation->count() > 0 ? $finalQuotation['quotation_id'] : Crypt::encryptString($data->latestQuotation->quotation_id),
                 'is_final' => $isFinal,
-                'can_add_more_quotation' => !$isFinal && $data->status != ProjectDealStatus::Canceled,
+                'can_add_more_quotation' => ! $isFinal && $data->status != ProjectDealStatus::Canceled,
                 'is_cancel' => $data->status == ProjectDealStatus::Canceled ? true : false,
                 'cancel_reason' => __('notification.eventHasBeenCancelBecause', ['reason' => $data->cancel_reason]),
                 'cancel_at' => $data->cancel_at ? date('d F Y H:i', strtotime($data->cancel_at)) : null,
@@ -856,11 +847,11 @@ class ProjectDealService
                 'fix_price' => $finalQuotation->count() > 0 ? $finalQuotation->fix_price : $data->latestQuotation->fix_price,
                 'remaining_price' => $data->getRemainingPayment(),
                 'invoices' => $invoiceList,
-                'general_invoice_url' => $generalInvoiceUrl
+                'general_invoice_url' => $generalInvoiceUrl,
             ];
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $output
             );
         } catch (\Throwable $th) {
@@ -870,10 +861,6 @@ class ProjectDealService
 
     /**
      * Adding more quotation in the selected project deal
-     *
-     * @param array $payload
-     * @param string $projectDealUid
-     * @return array
      */
     public function addMoreQuotation(array $payload, string $projectDealUid): array
     {
@@ -892,7 +879,7 @@ class ProjectDealService
                     ];
                 })->toArray()
             );
-            
+
             DB::commit();
 
             return generalResponse(
@@ -907,8 +894,6 @@ class ProjectDealService
 
     /**
      * Get design job number
-     *
-     * @return array
      */
     public function getDesignJob(): array
     {
@@ -921,9 +906,9 @@ class ProjectDealService
             $designJobNumber = $data + 1;
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
-                    'designJob' => $designJobNumber
+                    'designJob' => $designJobNumber,
                 ]
             );
         } catch (\Throwable $th) {
@@ -938,20 +923,18 @@ class ProjectDealService
 
     /**
      * Cancel temporary project deal
-     * 
-     * @param array $payload            With this following structure
-     * - string $reason
-     * 
-     * @return array
+     *
+     * @param  array  $payload  With this following structure
+     *                          - string $reason
      */
     public function cancelProjectDeal(array $payload, string $projectDealUid): array
     {
         DB::beginTransaction();
         try {
             $projectDealId = Crypt::decryptString($projectDealUid);
-            $projectDeal = $this->repo->show(uid: 'id', select: 'id,status', where: "id = {$projectDealId} and status = " . ProjectDealStatus::Temporary->value);
+            $projectDeal = $this->repo->show(uid: 'id', select: 'id,status', where: "id = {$projectDealId} and status = ".ProjectDealStatus::Temporary->value);
 
-            if (!$projectDeal) {
+            if (! $projectDeal) {
                 return errorResponse(message: __('notification.eventCannotBeCancel'));
             }
 
@@ -959,7 +942,7 @@ class ProjectDealService
                 'status' => ProjectDealStatus::Canceled,
                 'cancel_reason' => $payload['reason'],
                 'cancel_by' => Auth::id(),
-                'cancel_at' => Carbon::now()
+                'cancel_at' => Carbon::now(),
             ], id: $projectDealId);
 
             ProjectDealCanceledJob::dispatch($projectDealId)->afterCommit();
@@ -979,13 +962,11 @@ class ProjectDealService
     /**
      * Here we request changes on final project deal
      *
-     * @param array $payload                    With these following structure
-     * - array $detail_changes                              With these following structure
-     *      - string $old_value
-     *      - string $new_value
-     *      - string $label
-     * @param string $projectDealUid
-     * @return array
+     * @param  array  $payload  With these following structure
+     *                          - array $detail_changes                              With these following structure
+     *                          - string $old_value
+     *                          - string $new_value
+     *                          - string $label
      */
     public function updateFinalDeal(array $payload, string $projectDealUid): array
     {
@@ -999,7 +980,7 @@ class ProjectDealService
                 'requested_at' => \Carbon\Carbon::now(),
                 'detail_changes' => $payload['detail_changes'],
                 'project_deal_id' => $projectDealId,
-                'status' => ProjectDealChangeStatus::Pending
+                'status' => ProjectDealChangeStatus::Pending,
             ]);
 
             NotifyProjectDealChangesJob::dispatch(changesId: $changes->id)->afterCommit();
@@ -1007,7 +988,7 @@ class ProjectDealService
             DB::commit();
 
             return generalResponse(
-                message: "Success request changes on final event"
+                message: 'Success request changes on final event'
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -1018,10 +999,6 @@ class ProjectDealService
 
     /**
      * Approve project deal changes
-     * 
-     * @param string $projectDetailChangesUid
-     * 
-     * @return array
      */
     public function approveChangesProjectDeal(string $projectDetailChangesUid, array $payload = []): array
     {
@@ -1034,22 +1011,22 @@ class ProjectDealService
                 'projectDeal:id,name,project_date',
                 'projectDeal.project:id,uid,project_deal_id',
                 'requester:id,email,employee_id',
-                'requester.employee:id,name'
+                'requester.employee:id,name',
             ]);
 
             // return a specific message if changes has been already approved
             if ($change->status == ProjectDealChangeStatus::Approved) {
-                return errorResponse(message: "Changes has already approved");
+                return errorResponse(message: 'Changes has already approved');
             }
 
-            if (!empty($payload)) { // this request came from email
+            if (! empty($payload)) { // this request came from email
                 $userId = $payload['approval_id'];
             } else { // this request came from website
                 $user = Auth::user();
                 $userId = $user->id;
 
                 // validate permission
-                if (!$user->hasPermissionTo('approve_project_deal_change')) {
+                if (! $user->hasPermissionTo('approve_project_deal_change')) {
                     return errorResponse(message: "You don't have permission to take this action", code: 403);
                 }
             }
@@ -1059,7 +1036,7 @@ class ProjectDealService
                 data: [
                     'approval_at' => Carbon::now(),
                     'approval_by' => $userId,
-                    'status' => ProjectDealChangeStatus::Approved
+                    'status' => ProjectDealChangeStatus::Approved,
                 ],
                 id: $projectDetailChangesId
             );
@@ -1095,7 +1072,7 @@ class ProjectDealService
                     case 'Quotation Note':
                         $field = 'quotation_note';
                         break;
-                    
+
                     default:
                         $field = null;
                         break;
@@ -1140,9 +1117,9 @@ class ProjectDealService
             NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'approved')->afterCommit();
 
             DB::commit();
-            
+
             return generalResponse(
-                message: "Success"
+                message: 'Success'
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -1153,11 +1130,6 @@ class ProjectDealService
 
     /**
      * Here we reject the the changes
-     * 
-     * @param string $projectDetailChangesUid
-     * @param array $payload
-     * 
-     * @return array
      */
     public function rejectChangesProjectDeal(string $projectDetailChangesUid, array $payload = []): array
     {
@@ -1176,7 +1148,7 @@ class ProjectDealService
                 data: [
                     'status' => ProjectDealChangeStatus::Rejected,
                     'rejected_at' => Carbon::now(),
-                    'rejected_by' => $userId
+                    'rejected_by' => $userId,
                 ],
                 id: $projectDetailChangesId
             );
@@ -1184,10 +1156,11 @@ class ProjectDealService
             DB::commit();
 
             NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'rejected')->afterCommit();
-            
-            return generalResponse(message: "Success reject changes");
+
+            return generalResponse(message: 'Success reject changes');
         } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -1432,7 +1405,8 @@ class ProjectDealService
                 select: 'id,project_deal_id,old_price,new_price,status,requested_by,requested_at,reason_id,custom_reason,rejected_at,approved_at',
                 relation: [
                     'projectDeal:id,name,project_date',
-                    'requesterBy:id,name',
+                    'requesterBy:id,employee_id',
+                    'requesterBy.employee:id,name',
                     'reason:id,name'
                 ],
                 page: $page,
@@ -1446,7 +1420,7 @@ class ProjectDealService
                     'uid' => Crypt::encryptString($item->id),
                     'event_name' => $item->projectDeal->name,
                     'project_date' => date('d F Y', strtotime($item->projectDeal->project_date)),
-                    'request_by' => $item->requesterBy->name,
+                    'request_by' => $item->requesterBy->employee->name,
                     'old_price' => "Rp". number_format($item->old_price, 0, ',', '.'),
                     'new_price' => "Rp". number_format($item->new_price, 0, ',', '.'),
                     'reason' => $item->real_reason,

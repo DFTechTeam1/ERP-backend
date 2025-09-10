@@ -5,32 +5,30 @@ namespace Modules\Finance\Repository;
 use Modules\Finance\Models\Transaction;
 use Modules\Finance\Repository\Interface\TransactionInterface;
 
-class TransactionRepository extends TransactionInterface {
+class TransactionRepository extends TransactionInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new Transaction();
+        $this->model = new Transaction;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], int $limit = 0, int $page = 0, string $orderBy = '')
+    public function list(string $select = '*', string $where = '', array $relation = [], int $limit = 0, int $page = 0, string $orderBy = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -42,7 +40,7 @@ class TransactionRepository extends TransactionInterface {
             $query->limit($limit);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -52,40 +50,33 @@ class TransactionRepository extends TransactionInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
@@ -95,11 +86,11 @@ class TransactionRepository extends TransactionInterface {
         $query->selectRaw($select);
 
         if (empty($where)) {
-            $query->where("uid", $uid);
+            $query->where('uid', $uid);
         } else {
             $query->whereRaw($where);
         }
-        
+
         if ($relation) {
             $query->with($relation);
         }
@@ -112,7 +103,6 @@ class TransactionRepository extends TransactionInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -123,15 +113,14 @@ class TransactionRepository extends TransactionInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -145,7 +134,7 @@ class TransactionRepository extends TransactionInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -157,7 +146,6 @@ class TransactionRepository extends TransactionInterface {
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

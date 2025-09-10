@@ -5,6 +5,7 @@ namespace Modules\Finance\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Notifications\Messages\MailMessage;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\ProjectDeal;
@@ -14,6 +15,7 @@ class NotifyRequestPriceChangesNotification extends Notification
     use Queueable;
 
     protected Employee $director;
+    protected Employee|Collection $actor;
     protected ProjectDeal $project;
     protected string $approvalUrl;
     protected string $rejectionUrl;
@@ -26,12 +28,13 @@ class NotifyRequestPriceChangesNotification extends Notification
      */
     public function __construct(
         Employee $director,
+        Employee|Collection $actor,
         ProjectDeal $project,
         string $approvalUrl,
         string $rejectionUrl,
         string $reason,
         string $oldPrice,
-        string $newPrice
+        string $newPrice,
     )
     {
         $this->director = $director;
@@ -41,6 +44,7 @@ class NotifyRequestPriceChangesNotification extends Notification
         $this->reason = $reason;
         $this->oldPrice = $oldPrice;
         $this->newPrice = $newPrice;
+        $this->actor = $actor;
     }
 
     /**
@@ -70,6 +74,7 @@ class NotifyRequestPriceChangesNotification extends Notification
                 'reason' => $this->reason,
                 'oldPrice' => $this->oldPrice,
                 'newPrice' => $this->newPrice,
+                'user' => $this->actor,
             ]);
     }
 

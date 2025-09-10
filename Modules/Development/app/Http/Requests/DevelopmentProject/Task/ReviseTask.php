@@ -14,7 +14,7 @@ class ReviseTask extends FormRequest
         return [
             'reason' => 'required|string',
             'images' => 'required|array',
-            'images.*.image' => 'required|mimes:jpg,png,jpeg,webp'
+            'images.*.image' => 'required|mimes:jpg,png,jpeg,webp',
         ];
     }
 

@@ -2,8 +2,8 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // use Modules\Development\Database\Factories\DevelopmentProjectTaskReviseFactory;
@@ -20,7 +20,7 @@ class DevelopmentProjectTaskRevise extends Model
     protected $fillable = [
         'task_id',
         'reason',
-        'assigned_by'
+        'assigned_by',
     ];
 
     // protected static function newFactory(): DevelopmentProjectTaskReviseFactory

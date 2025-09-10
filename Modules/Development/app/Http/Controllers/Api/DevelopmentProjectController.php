@@ -3,15 +3,16 @@
 namespace Modules\Development\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Modules\Development\Http\Requests\DevelopmentProject\Update;
-use Modules\Development\Http\Requests\DevelopmentProject\Task\AssignMember;
-use Modules\Development\Http\Requests\DevelopmentProject\Task\SubmitProof;
-use Modules\Development\Services\DevelopmentProjectService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Modules\Development\Http\Requests\DevelopmentProject\Task\AssignMember;
 use Modules\Development\Http\Requests\DevelopmentProject\Task\ReviseTask;
 use Modules\Development\Http\Requests\DevelopmentProject\Task\StoreReference;
+use Modules\Development\Http\Requests\DevelopmentProject\Task\SubmitProof;
 use Modules\Development\Http\Requests\DevelopmentProject\Task\TaskAttachment;
+use Modules\Development\Http\Requests\DevelopmentProject\Task\UpdateTaskDeadline;
+use Modules\Development\Http\Requests\DevelopmentProject\Update;
+use Modules\Development\Services\DevelopmentProjectService;
 
 class DevelopmentProjectController extends Controller
 {
@@ -19,8 +20,7 @@ class DevelopmentProjectController extends Controller
 
     public function __construct(
         DevelopmentProjectService $developmentProjectService
-    )
-    {
+    ) {
         $this->developmentProjectService = $developmentProjectService;
     }
 
@@ -33,7 +33,7 @@ class DevelopmentProjectController extends Controller
             relation: [
                 'pics:id,development_project_id,employee_id',
                 'pics.employee:id,nickname',
-                'tasks:id,development_project_id'
+                'tasks:id,development_project_id',
             ],
             select: 'id,uid,name,description,status,project_date,created_by'
         ));
@@ -78,10 +78,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Create a new task for the specified project.
-     *
-     * @param \Modules\Development\Http\Requests\DevelopmentProject\Task\Create $request
-     * @param string $projectUid
-     * @return JsonResponse
      */
     public function createTask(\Modules\Development\Http\Requests\DevelopmentProject\Task\Create $request, string $projectUid): JsonResponse
     {
@@ -90,9 +86,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param string $projectUid
-     * @return JsonResponse
      */
     public function updateProjectBoards(string $projectUid): JsonResponse
     {
@@ -101,11 +94,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Delete task attachments
-     *
-     * @param string $projectUid
-     * @param string $taskUid
-     * @param string $attachmentId
-     * @return JsonResponse
      */
     public function deleteTaskAttachment(string $projectUid, string $taskUid, string $attachmentId): JsonResponse
     {
@@ -114,10 +102,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Remove members from a task.
-     *
-     * @param AssignMember $request
-     * @param string $taskUid
-     * @return JsonResponse
      */
     public function addTaskMember(AssignMember $request, string $taskUid): JsonResponse
     {
@@ -126,9 +110,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Delete a task.
-     *
-     * @param string $taskUid
-     * @return JsonResponse
      */
     public function deleteTask(string $taskUid): JsonResponse
     {
@@ -137,9 +118,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Approve a task.
-     *
-     * @param string $taskUid
-     * @return JsonResponse
      */
     public function approveTask(string $taskUid): JsonResponse
     {
@@ -148,9 +126,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Hold a task.
-     *
-     * @param string $taskUid
-     * @return JsonResponse
      */
     public function holdTask(string $taskUid): JsonResponse
     {
@@ -159,9 +134,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Start a task after it has been put on hold.
-     *
-     * @param string $taskUid
-     * @return JsonResponse
      */
     public function startTaskAfterHold(string $taskUid): JsonResponse
     {
@@ -171,8 +143,7 @@ class DevelopmentProjectController extends Controller
     /**
      * Submit task proofs.
      *
-     * @param array $payload
-     * @param string $taskUid
+     * @param  array  $payload
      * @return array
      */
     public function submitTaskProofs(SubmitProof $request, string $taskUid): JsonResponse
@@ -182,10 +153,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Complete a task.
-     * 
-     * @param string $taskUid
-     * 
-     * @return JsonResponse
      */
     public function completeTask(string $taskUid): JsonResponse
     {
@@ -195,9 +162,7 @@ class DevelopmentProjectController extends Controller
     /**
      * Revise a task.
      *
-     * @param Request $request
-     * @param string $taskUid
-     * @return JsonResponse
+     * @param  Request  $request
      */
     public function reviseTask(ReviseTask $request, string $taskUid): JsonResponse
     {
@@ -216,11 +181,8 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Delete a project reference.
-     * 
-     * @param string $taskUid
-     * @param int $referenceId
      *
-     * @return JsonResponse
+     * @param  string  $taskUid
      */
     public function deleteReference(string $projectUid, int $referenceId): JsonResponse
     {
@@ -229,11 +191,6 @@ class DevelopmentProjectController extends Controller
 
     /**
      * Get related tasks for a specific project.
-     * 
-     * @param string $projectUid
-     * @param string $taskUid
-     * 
-     * @return JsonResponse
      */
     public function getRelatedTask(string $projectUid, string $taskUid): JsonResponse
     {
@@ -243,5 +200,15 @@ class DevelopmentProjectController extends Controller
     public function storeAttachments(TaskAttachment $request, string $taskUid): JsonResponse
     {
         return apiResponse($this->developmentProjectService->storeAttachments($request->validated(), $taskUid));
+    }
+
+    public function updateTaskDeadline(UpdateTaskDeadline $request, string $taskUid): JsonResponse
+    {
+        return apiResponse($this->developmentProjectService->updateTaskDeadline($request->validated(), $taskUid));
+    }
+
+    public function completeProject(string $projectUid): JsonResponse
+    {
+        return apiResponse($this->developmentProjectService->completeProject(projectUid: $projectUid));
     }
 }

@@ -3,10 +3,10 @@
 namespace Modules\Finance\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Finance\Notifications\InvoiceHasBeenCreated;
 use Modules\Finance\Repository\InvoiceRepository;
 
@@ -29,7 +29,7 @@ class InvoiceHasBeenCreatedJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $repo = new InvoiceRepository();
+        $repo = new InvoiceRepository;
 
         $invoice = $repo->show(uid: $this->invoiceId, select: 'id,project_deal_id', relation: ['projectDeal:id,name']);
 
@@ -42,7 +42,7 @@ class InvoiceHasBeenCreatedJob implements ShouldQueue
             $user->notify(new InvoiceHasBeenCreated($invoice->projectDeal));
 
             $pusher->send("my-channel-{$user->id}", 'notification-event', [
-                'type' => 'finance'
+                'type' => 'finance',
             ]);
         }
     }

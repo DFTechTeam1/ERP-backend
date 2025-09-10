@@ -1,9 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,8 +10,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::unprepared("DROP PROCEDURE IF EXISTS get_event_success_rate");
-        DB::unprepared("
+        DB::unprepared('DROP PROCEDURE IF EXISTS get_event_success_rate');
+        DB::unprepared('
             CREATE PROCEDURE get_event_success_rate()
             BEGIN
                 DECLARE total_events INT DEFAULT 0;
@@ -57,7 +55,7 @@ return new class extends Migration
                     (total_events - decided_events) AS pending_events,
                     ROUND(((total_events - decided_events) / total_events) * 100, 2) AS pending_rate;
             END
-        ");
+        ');
     }
 
     /**
@@ -65,6 +63,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::unprepared("DROP PROCEDURE IF EXISTS get_event_success_rate");
+        DB::unprepared('DROP PROCEDURE IF EXISTS get_event_success_rate');
     }
 };

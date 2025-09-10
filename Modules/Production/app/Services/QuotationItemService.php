@@ -175,9 +175,6 @@ class QuotationItemService
 
     /**
      * Delete selected data
-     *
-     *
-     * @return array
      */
     public function delete(int $id): array
     {

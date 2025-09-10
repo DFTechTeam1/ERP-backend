@@ -3,10 +3,11 @@
 namespace Modules\Development\Models;
 
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+
 // use Modules\Development\Database\Factories\DevelopmentProjectTaskAttachmentFactory;
 
 class DevelopmentProjectTaskAttachment extends Model
@@ -19,11 +20,11 @@ class DevelopmentProjectTaskAttachment extends Model
     protected $fillable = [
         'uid',
         'task_id',
-        'file_path'
+        'file_path',
     ];
 
     protected $appends = [
-        'real_file_path'
+        'real_file_path',
     ];
 
     // protected static function newFactory(): DevelopmentProjectTaskAttachmentFactory
@@ -36,9 +37,9 @@ class DevelopmentProjectTaskAttachment extends Model
         $output = null;
 
         if (isset($this->attributes['file_path'])) {
-            $output = Storage::disk('public')->exists('development/projects/tasks/' . $this->attributes['file_path']) ? asset('storage/development/projects/tasks/' . $this->attributes['file_path']) : null
-            ;
+            $output = Storage::disk('public')->exists('development/projects/tasks/'.$this->attributes['file_path']) ? asset('storage/development/projects/tasks/'.$this->attributes['file_path']) : null;
         }
+
         return Attribute::make(
             get: fn () => $output
         );

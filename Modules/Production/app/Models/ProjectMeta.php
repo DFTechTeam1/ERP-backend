@@ -3,8 +3,9 @@
 namespace Modules\Production\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Production\Database\Factories\ProjectMetaFactory;
 
 class ProjectMeta extends Model
@@ -16,7 +17,7 @@ class ProjectMeta extends Model
      */
     protected $fillable = [
         'project_id',
-        'teams_meta'
+        'teams_meta',
     ];
 
     // protected static function newFactory(): ProjectMetaFactory

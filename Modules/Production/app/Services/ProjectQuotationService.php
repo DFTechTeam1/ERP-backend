@@ -2,7 +2,6 @@
 
 namespace Modules\Production\Services;
 
-use App\Services\GeneralService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Repository\TransactionRepository;
@@ -27,8 +26,7 @@ class ProjectQuotationService
         \App\Services\GeneralService $generalService,
         TransactionRepository $transactionRepo,
         ProjectDealRepository $projectDealRepo,
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->generalService = $generalService;
@@ -191,7 +189,7 @@ class ProjectQuotationService
                 'deal.marketings:id,employee_id,project_deal_id',
                 'deal.marketings.employee:id,name',
                 'items:quotation_id,id,item_id',
-                'items.item:id,name'
+                'items.item:id,name',
             ],
             where: "quotation_id = '{$quotationId}'"
         );
@@ -208,21 +206,21 @@ class ProjectQuotationService
             'date' => date('d F Y', strtotime($data->deal->project_date)),
             'designJob' => $data->design_job,
             'description' => $data->description,
-            'price' => 'Rp' . number_format(num: $data->fix_price, decimal_separator: ','),
+            'price' => 'Rp'.number_format(num: $data->fix_price, decimal_separator: ','),
             'client' => [
                 'name' => $data->deal->customer->name,
                 'city' => $data->deal->city->name,
-                'country' => $data->deal->country->name
+                'country' => $data->deal->country->name,
             ],
             'event' => [
                 'title' => $data->deal->name,
                 'date' => date('d F Y', strtotime($data->deal->project_date)),
-                'venue' => $data->deal->venue
+                'venue' => $data->deal->venue,
             ],
             'ledDetails' => collect($data->deal->led_detail)->map(function ($item) {
                 return [
                     'name' => $item['name'] == 'main' ? 'Main Stage' : 'Prefunction',
-                    'size' => $item['textDetail']
+                    'size' => $item['textDetail'],
                 ];
             })->toArray(),
             'marketing' => [
@@ -230,18 +228,18 @@ class ProjectQuotationService
             ],
             'items' => collect($data->items)->map(function ($item) {
                 return $item->item->name;
-            })->toArray()
+            })->toArray(),
         ];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("quotation.quotation-lato", $output)
-        ->setPaper('14')
-        ->setOption([
-            'isPhpEnabled' => true,
-            'isHtml5ParserEnabled' => true,
-            'debugPng' => false,
-            'debugLayout' => false,
-            'debugCss' => false
-        ]);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation-lato', $output)
+            ->setPaper('14')
+            ->setOption([
+                'isPhpEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+                'debugPng' => false,
+                'debugLayout' => false,
+                'debugCss' => false,
+            ]);
 
         $filename = "Quot {$data->quotation_id} - {$data->deal->customer->name} - {$data->deal->project_date}.pdf";
 
@@ -263,7 +261,7 @@ class ProjectQuotationService
                 return [
                     'name' => 'Main Stage',
                     'total' => $item['totalRaw'],
-                    'size' => $item['textDetail']
+                    'size' => $item['textDetail'],
                 ];
             })->toArray();
         }
@@ -273,7 +271,7 @@ class ProjectQuotationService
                 return [
                     'name' => 'Prefunction',
                     'total' => $item['totalRaw'],
-                    'size' => $item['textDetail']
+                    'size' => $item['textDetail'],
                 ];
             })->toArray();
         }
@@ -285,12 +283,12 @@ class ProjectQuotationService
         $uid = request('uid');
         $output = request('output');
 
-        if (!$type || !$uid) {
+        if (! $type || ! $uid) {
             abort(404);
         }
         $requestAmount = request('amount');
         $requestDate = request('date');
-        
+
         if ($type === 'current') {
             // get project deal id from transaction uid
             $transaction = $this->transactionRepo->show(
@@ -314,7 +312,7 @@ class ProjectQuotationService
                 'finalQuotation.items.item:id,name',
                 'city:name,id',
                 'country:name,id',
-                'customer:id,name'
+                'customer:id,name',
             ]
         );
 
@@ -335,15 +333,15 @@ class ProjectQuotationService
         // set transactions
         $transactions = $deal->transactions->map(function ($transaction) {
             return [
-                'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
-                'transaction_date' => date('d F Y', strtotime($transaction->transaction_date))
+                'payment' => 'Rp'.number_format(num: $transaction->payment_amount, decimal_separator: ','),
+                'transaction_date' => date('d F Y', strtotime($transaction->transaction_date)),
             ];
         });
 
         if ($type === 'bill') { // merge amount and transaction date
             $transactions = collect($transactions)->push([
-                'payment' => "Rp" . number_format(num: $requestAmount, decimal_separator: ','),
-                'transaction_date' => date('d F Y', strtotime($requestDate))
+                'payment' => 'Rp'.number_format(num: $requestAmount, decimal_separator: ','),
+                'transaction_date' => date('d F Y', strtotime($requestDate)),
             ]);
         }
 
@@ -351,8 +349,8 @@ class ProjectQuotationService
             'projectName' => $deal->name,
             'projectDate' => "{$date} {$month} {$year}",
             'venue' => $deal->venue,
-            'fixPrice' => "Rp" . number_format(num: $deal->finalQuotation->fix_price, decimal_separator: ','),
-            'payment' => "Rp" . number_format(num: $requestAmount, decimal_separator: ','),
+            'fixPrice' => 'Rp'.number_format(num: $deal->finalQuotation->fix_price, decimal_separator: ','),
+            'payment' => 'Rp'.number_format(num: $requestAmount, decimal_separator: ','),
             'customer' => [
                 'name' => $deal->customer->name,
                 'city' => $deal->city->name,
@@ -370,21 +368,21 @@ class ProjectQuotationService
             'paymentDue' => now()->parse($requestDate)->addDays(7)->format('d F Y'),
             'led' => [
                 'main' => $main,
-                'prefunction' => $prefunction
+                'prefunction' => $prefunction,
             ],
             'items' => collect($deal->finalQuotation->items)->pluck('item.name')->toArray(),
-            'remainingPayment' => $deal->getRemainingPayment(formatPrice: true)
+            'remainingPayment' => $deal->getRemainingPayment(formatPrice: true),
         ];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $payload)
-        ->setPaper('A4')
-        ->setOption([
-            'isPhpEnabled' => true,
-            'isHtml5ParserEnabled' => true,
-            'debugPng' => false,
-            'debugLayout' => false,
-            'debugCss' => false
-        ]);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.invoice', $payload)
+            ->setPaper('A4')
+            ->setOption([
+                'isPhpEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+                'debugPng' => false,
+                'debugLayout' => false,
+                'debugCss' => false,
+            ]);
 
         $filename = "Inv {$prefix}-{$number} - {$deal->customer->name} - {$deal->project_date}.pdf";
 

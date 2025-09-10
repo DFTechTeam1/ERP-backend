@@ -5,32 +5,30 @@ namespace Modules\Development\Repository;
 use Modules\Development\Models\DevelopmentProjectTaskDeadline;
 use Modules\Development\Repository\Interface\DevelopmentProjectTaskDeadlineInterface;
 
-class DevelopmentProjectTaskDeadlineRepository extends DevelopmentProjectTaskDeadlineInterface {
+class DevelopmentProjectTaskDeadlineRepository extends DevelopmentProjectTaskDeadlineInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new DevelopmentProjectTaskDeadline();
+        $this->model = new DevelopmentProjectTaskDeadline;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -44,50 +42,47 @@ class DevelopmentProjectTaskDeadlineRepository extends DevelopmentProjectTaskDea
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select = '*',
-        string $where = "",
-        array $relation = [],
+        string $select,
+        string $where,
+        array $relation,
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
-        
+        if (! empty($where)) {
+            $query->whereRaw($where);
+        } else {
+            $query->where('id', $uid);
+        }
+
         if ($relation) {
             $query->with($relation);
         }
@@ -100,7 +95,6 @@ class DevelopmentProjectTaskDeadlineRepository extends DevelopmentProjectTaskDea
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -120,15 +114,14 @@ class DevelopmentProjectTaskDeadlineRepository extends DevelopmentProjectTaskDea
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('id', $id);
@@ -142,14 +135,14 @@ class DevelopmentProjectTaskDeadlineRepository extends DevelopmentProjectTaskDea
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id, string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('id', $id);
@@ -163,7 +156,6 @@ class DevelopmentProjectTaskDeadlineRepository extends DevelopmentProjectTaskDea
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

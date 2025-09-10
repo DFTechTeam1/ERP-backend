@@ -3,10 +3,13 @@
 use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\System\BaseRole;
+use App\Models\User;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
 use App\Services\UserRoleManagement;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Company\Models\City;
 use Modules\Company\Models\Country;
@@ -182,17 +185,27 @@ function createProjectService(
     );
 }
 
-function initAuthenticateUser(array $permissions = [])
+function initAuthenticateUser(array $permissions = [], bool $withEmployee = false, string $roleName = BaseRole::Root->value, ?object $user = null)
 {
-    $user = \App\Models\User::factory()
-        ->create();
+    if (!$withEmployee) {
+        if (!$user) {
+            $user = \App\Models\User::factory()
+                ->create();
+        }
+    } else {
+        $employee = Employee::factory()
+            ->withUser()
+            ->create();
+
+        $user = \App\Models\User::where('employee_id', $employee->id)->first();
+    }
 
     $checkRoot = \Illuminate\Support\Facades\DB::table('roles')
-        ->where('name', \App\Enums\System\BaseRole::Root->value)
+        ->where('name', $roleName)
         ->first();
 
     if (!$checkRoot) {
-        $checkRoot = \Spatie\Permission\Models\Role::create(['name' => \App\Enums\System\BaseRole::Root->value, 'guard_name' => 'sanctum']);
+        $checkRoot = \Spatie\Permission\Models\Role::create(['name' => $roleName, 'guard_name' => 'sanctum']);
     }
     
     if (!empty($permissions)) {
@@ -322,7 +335,8 @@ function createProjectDealService(
     $projectDealChangeRepo = null,
     $projectDealPriceChangeRepo = null,
     $invoiceRepo = null,
-    $priceChangeReasonRepo = null
+    $priceChangeReasonRepo = null,
+    $employeeRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository(),
@@ -334,7 +348,8 @@ function createProjectDealService(
         $projectDealChangeRepo ? $projectDealChangeRepo : new \Modules\Production\Repository\ProjectDealChangeRepository,
         $projectDealPriceChangeRepo ? $projectDealPriceChangeRepo : new ProjectDealPriceChangeRepository,
         $invoiceRepo ? $invoiceRepo : new InvoiceRepository(),
-        $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository()
+        $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository(),
+        $employeeRepo ? $employeeRepo : new EmployeeRepository
     );
 }
 

@@ -1,9 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,8 +10,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::unprepared("DROP PROCEDURE IF EXISTS get_event_class_distribution");
-        DB::unprepared("
+        DB::unprepared('DROP PROCEDURE IF EXISTS get_event_class_distribution');
+        DB::unprepared('
         CREATE PROCEDURE get_event_class_distribution()
         BEGIN
             SELECT 
@@ -29,7 +27,7 @@ return new class extends Migration
             ORDER BY 
                 pc.name;
         END
-        ");
+        ');
     }
 
     /**
@@ -37,6 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::unprepared("DROP PROCEDURE IF EXISTS get_event_class_distribution");
+        DB::unprepared('DROP PROCEDURE IF EXISTS get_event_class_distribution');
     }
 };

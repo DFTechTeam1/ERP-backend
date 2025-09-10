@@ -882,9 +882,8 @@ class ProjectController extends Controller
 
     /**
      * Create and create quotation for project deal
-     * 
-     * @param \Modules\Production\Http\Requests\Deals\Store $request
-     * 
+     *
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function storeProjectDeals(\Modules\Production\Http\Requests\Deals\Store $request)
@@ -897,9 +896,8 @@ class ProjectController extends Controller
 
     /**
      * Create and create quotation for project deal
-     * 
-     * @param \Modules\Production\Http\Requests\Deals\Store $request
-     * 
+     *
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateProjectDeal(\Modules\Production\Http\Requests\Deals\Store $request, string $projectDealUid)
@@ -912,8 +910,6 @@ class ProjectController extends Controller
 
     /**
      * Return list of project deals
-     * 
-     * @return JsonResponse
      */
     public function listProjectDeals(): JsonResponse
     {
@@ -934,18 +930,10 @@ class ProjectController extends Controller
         ));
     }
 
-    public function createNewQuotation(NewQuotation $request, string $projectDealId)
-    {
-        
-    }
+    public function createNewQuotation(NewQuotation $request, string $projectDealId) {}
 
     /**
      * Publish project deal
-     *
-     * @param string $projectDealId
-     * @param string $type
-     * 
-     * @return JsonResponse
      */
     public function publishProjectDeal(string $projectDealId, string $type): JsonResponse
     {
@@ -955,8 +943,6 @@ class ProjectController extends Controller
     /**
      * Get detail of project deals
      * Get all transactions and quotations
-     * 
-     * @return JsonResponse
      */
     public function detailProjectDeal(string $projectDealUid): JsonResponse
     {
@@ -966,7 +952,6 @@ class ProjectController extends Controller
     /**
      * Delete current project deal
      *
-     * @param string $projectDealUid
      * @return JsonReponse
      */
     public function deleteProjectDeal(string $projectDealUid): JsonResponse
@@ -977,9 +962,7 @@ class ProjectController extends Controller
     /**
      * Adding more quotation in the selected project deal
      *
-     * @param array $payload
-     * @param string $projectDealUid
-     * @return JsonResponse
+     * @param  array  $payload
      */
     public function addMoreQuotation(\Modules\Production\Http\Requests\Deals\MoreQuotation $request, string $projectDealUid): JsonResponse
     {
@@ -993,8 +976,6 @@ class ProjectController extends Controller
 
     /**
      * Get report summary
-     * 
-     * @return JsonResponse
      */
     public function getReportSummary(): JsonResponse
     {
@@ -1006,9 +987,6 @@ class ProjectController extends Controller
         return apiResponse($this->projectDealService->cancelProjectDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
     }
 
-    /**
-     * @return JsonResponse
-     */
     public function updateFinalDeal(\Modules\Production\Http\Requests\Deals\Update $request, string $projectDealUid): JsonResponse
     {
         return apiResponse($this->projectDealService->updateFinalDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
@@ -1016,12 +994,8 @@ class ProjectController extends Controller
 
     /**
      * This request can be from email action or web directly
-     * 
+     *
      * if request came from email, you will get 'aid' value from query parameter
-     * 
-     *  
-     * @param string $projectDetailChangesUid
-     * 
      */
     public function approveChangesProjectDeal(string $projectDetailChangesUid)
     {
@@ -1032,8 +1006,8 @@ class ProjectController extends Controller
 
         $response = $this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
-        if (!$response['error'] && request('aid')) {
-            return redirect(route('invoices.approved') . "?type=deal");
+        if (! $response['error'] && request('aid')) {
+            return redirect(route('invoices.approved').'?type=deal');
         }
 
         return apiResponse($response);
@@ -1041,12 +1015,8 @@ class ProjectController extends Controller
 
     /**
      * This request can be from email action or web directly
-     * 
+     *
      * if request came from email, you will get 'aid' value from query parameter
-     * 
-     *  
-     * @param string $projectDetailChangesUid
-     * 
      */
     public function rejectChangesProjectDeal(string $projectDetailChangesUid)
     {
@@ -1057,8 +1027,8 @@ class ProjectController extends Controller
 
         $response = $this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
-        if (!$response['error'] && request('aid')) {
-            return redirect(route('invoices.rejected') . "?type=deal");
+        if (! $response['error'] && request('aid')) {
+            return redirect(route('invoices.rejected').'?type=deal');
         }
 
         return apiResponse($response);

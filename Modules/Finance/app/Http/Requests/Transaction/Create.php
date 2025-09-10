@@ -3,7 +3,6 @@
 namespace Modules\Finance\Http\Requests\Transaction;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class Create extends FormRequest
 {
@@ -20,9 +19,9 @@ class Create extends FormRequest
             'reference' => 'nullable',
             'images' => [
                 'nullable',
-                'array'
+                'array',
             ],
-            'images.*image' => 'image'
+            'images.*image' => 'image',
         ];
     }
 

@@ -130,7 +130,7 @@ class PriceSettingSeeder extends Seeder
                     ],
                     'high_season' => [
                         'type' => 'percentage',
-                        'value' => 25
+                        'value' => 25,
                     ],
                     'minimum_price' => '35000000',
                     'prefunction_percentage' => '25',

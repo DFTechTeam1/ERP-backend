@@ -2,9 +2,10 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Development\Database\Factories\DevelopmentTaskProofImageFactory;
 
 class DevelopmentTaskProofImage extends Model
@@ -16,11 +17,11 @@ class DevelopmentTaskProofImage extends Model
      */
     protected $fillable = [
         'development_task_proof_id',
-        'image_path'
+        'image_path',
     ];
 
     protected $appends = [
-        'real_image_path'
+        'real_image_path',
     ];
 
     // protected static function newFactory(): DevelopmentTaskProofImageFactory
@@ -33,7 +34,7 @@ class DevelopmentTaskProofImage extends Model
         $output = null;
 
         if (isset($this->attributes['image_path'])) {
-            $output = asset('storage/development/projects/tasks/proofs/' . $this->attributes['image_path']);
+            $output = asset('storage/development/projects/tasks/proofs/'.$this->attributes['image_path']);
         }
 
         return Attribute::make(

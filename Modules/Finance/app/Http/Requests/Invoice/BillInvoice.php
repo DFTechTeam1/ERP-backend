@@ -14,7 +14,7 @@ class BillInvoice extends FormRequest
         return [
             'amount' => 'required',
             'transaction_date' => 'required|date_format:Y-m-d',
-            'is_down_payment' => 'nullable|boolean'
+            'is_down_payment' => 'nullable|boolean',
         ];
     }
 
