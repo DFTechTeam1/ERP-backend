@@ -185,11 +185,13 @@ function createProjectService(
     );
 }
 
-function initAuthenticateUser(array $permissions = [], bool $withEmployee = false)
+function initAuthenticateUser(array $permissions = [], bool $withEmployee = false, string $roleName = BaseRole::Root->value, ?object $user = null)
 {
     if (!$withEmployee) {
-        $user = \App\Models\User::factory()
-            ->create();
+        if (!$user) {
+            $user = \App\Models\User::factory()
+                ->create();
+        }
     } else {
         $employee = Employee::factory()
             ->withUser()
