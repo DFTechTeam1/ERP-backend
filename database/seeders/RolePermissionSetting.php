@@ -760,6 +760,20 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function developmentPermission()
+    {
+        return [
+            ['name' => 'development_add_task', 'group' => 'development', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
+            ['name' => 'development_complete_project', 'group' => 'development', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole()
+            ]],
+        ];
+    }
+
     protected function projectPermission()
     {
         return [
@@ -1077,7 +1091,8 @@ class RolePermissionSetting extends Seeder
             ->merge($this->settingPermission())
             ->merge($this->taskPermission())
             ->merge($this->financePermission())
-            ->merge($this->projectPermission());
+            ->merge($this->projectPermission())
+            ->merge($this->developmentPermission());
 
         return $permissions;
     }

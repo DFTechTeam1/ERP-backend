@@ -245,6 +245,10 @@ class DevelopmentProjectService
                         ];
                     })->toArray(),
                     'pic_uids' => $project->pics->pluck('employee.uid')->toArray(),
+                    'actions' => [
+                        'can_delete' => $project->status != ProjectStatus::Completed ? true : false,
+                        'can_edit' => $project->status != ProjectStatus::Completed ? true : false,
+                    ]
                 ];
             });
 
@@ -441,6 +445,8 @@ class DevelopmentProjectService
     public function show(string $uid): array
     {
         try {
+            $user = $this->user->detail(id: Auth::id(), select: 'id,email,employee_id');
+
             $data = $this->repo->show(uid: $uid, relation: [
                 'tasks:id,name',
                 'pics',
@@ -477,6 +483,13 @@ class DevelopmentProjectService
             // get project references
             $references = $this->getProjectReferences(projectId: $data->id);
 
+            // define permissions for authenticated users
+            // if user have root or director role, they have all permissions, if user is pic of this project, they have all permissions except delete project
+            $isPic = $data->pics->where('employee_id', $user->employee_id)->count() > 0 ? true : false;
+
+            $canCreateTask = ($user->hasRole([BaseRole::Root->value, BaseRole::Director->value]) || $isPic) && $user->hasPermissionTo('development_add_task') ? true : false;
+            $canCompleteProject = ($user->hasRole([BaseRole::Root->value, BaseRole::Director->value]) || $isPic) && $user->hasPermissionTo('development_complete_project') ? true : false;
+
             $output = [
                 'completeTaskPercentage' => $completeTaskPercentage,
                 'uid' => $data->uid,
@@ -486,13 +499,15 @@ class DevelopmentProjectService
                 'status_text' => $data->status->label(),
                 'status_color' => $data->status->color(),
                 'project_date' => $data->project_date_text,
+                'is_completed' => $data->status === ProjectStatus::Completed ? true : false,
                 'pic_names' => $data->pics->pluck('employee.name')->implode(','),
                 'teams' => $teams,
                 'references' => $references,
                 'boards' => $boards,
                 'project_is_complete' => $data->status === \App\Enums\Development\Project\ProjectStatus::Completed ? true : false,
                 'permission_list' => [
-                    'add_task' => true,
+                    'add_task' => $canCreateTask,
+                    'complete_project' => $canCompleteProject,
                 ],
             ];
 
@@ -2002,7 +2017,9 @@ class DevelopmentProjectService
 
             return generalResponse(
                 message: __('notification.projectHasBeenCompleted'),
-                data: $boards->toArray()
+                data: [
+                    'boards' => $boards->toArray(),
+                ]
             );
         } catch (\Throwable $th) {
             if (! empty($this->taskTmpProofFiles)) {

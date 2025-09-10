@@ -145,13 +145,28 @@ class DefineTaskAction
         $this->isMyCurrentTask = ! $currentPicTasks ? false : (in_array($this->user->employee_id, $currentPicTasks) ? true : false);
     }
 
+    protected function isProjectPic(int $projectId, int $employeeId): bool
+    {
+        // check if the user is a PIC of the project
+        $isPic = false;
+        $project = \Modules\Development\Models\DevelopmentProject::where('id', $projectId)
+            ->with('pics')
+            ->first();
+
+        if ($project) {
+            $isPic = $project->pics->where('employee_id', $employeeId)->count() > 0 ? true : false;
+        }
+
+        return $isPic;
+    }
+
     /**
      * This action will define which button should be appear in the selected task
      */
     public function handle(object $task): array
     {
         $this->user = auth()->user();
-        $this->isProjectPic = isProjectPIC((int) $task->development_project_id, $this->user->employee_id);
+        $this->isProjectPic = $this->isProjectPic($task->development_project_id, $this->user->employee_id);
         $this->isDirector = isDirector();
         $this->defineMyTask($task);
         $this->defineMyCurrentTask($task);
