@@ -1191,16 +1191,16 @@ class EmployeeService
             ];
         }
 
+        $whereEmployee = 'status != '.\App\Enums\Employee\Status::Inactive->value.' and status != '.\App\Enums\Employee\Status::Deleted->value;
+
         $data = $this->repo->list(
-            'id, uid as value, name as title',
-            'status != '.\App\Enums\Employee\Status::Inactive->value,
-            $relation,
-            '',
-            '',
-            $whereHas
+            select: 'id, uid as value, name as title',
+            where: $whereEmployee,
+            relation: $relation,
+            whereHas: $whereHas
         );
 
-        $employees = collect($data)->map(function ($item) use ($date, $month, $maximumProjectPerPM) {
+        $employees = collect((object) $data)->map(function ($item) use ($date, $month, $maximumProjectPerPM) {
             $projects = collect($item->projects)->pluck('project.project_date')->values();
             $item['workload_on_date'] = 0;
             if (! empty($date)) {

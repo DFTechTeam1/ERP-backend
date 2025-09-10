@@ -145,13 +145,28 @@ class DefineTaskAction
         $this->isMyCurrentTask = ! $currentPicTasks ? false : (in_array($this->user->employee_id, $currentPicTasks) ? true : false);
     }
 
+    protected function isProjectPic(int $projectId, int $employeeId): bool
+    {
+        // check if the user is a PIC of the project
+        $isPic = false;
+        $project = \Modules\Development\Models\DevelopmentProject::where('id', $projectId)
+            ->with('pics')
+            ->first();
+
+        if ($project) {
+            $isPic = $project->pics->where('employee_id', $employeeId)->count() > 0 ? true : false;
+        }
+
+        return $isPic;
+    }
+
     /**
      * This action will define which button should be appear in the selected task
      */
     public function handle(object $task): array
     {
         $this->user = auth()->user();
-        $this->isProjectPic = isProjectPIC((int) $task->development_project_id, $this->user->employee_id);
+        $this->isProjectPic = $this->isProjectPic($task->development_project_id, $this->user->employee_id);
         $this->isDirector = isDirector();
         $this->defineMyTask($task);
         $this->defineMyCurrentTask($task);
@@ -296,9 +311,9 @@ class DefineTaskAction
     {
         $logs = null;
 
-        if ($this->hasSuperPower()) {
-            $logs = $this->buildOutput($key, false, $detail);
-        }
+        // if ($this->hasSuperPower()) {
+        //     $logs = $this->buildOutput($key, false, $detail);
+        // }
 
         return $logs;
     }
@@ -311,9 +326,9 @@ class DefineTaskAction
     {
         $tracker = null;
 
-        if ($this->hasSuperPower()) {
-            $tracker = $this->buildOutput($key, false, $detail);
-        }
+        // if ($this->hasSuperPower()) {
+        //     $tracker = $this->buildOutput($key, false, $detail);
+        // }
 
         return $tracker;
     }
@@ -366,7 +381,7 @@ class DefineTaskAction
     {
         $hold = null;
 
-        if (($this->hasSuperPower() || $this->isMyTask) && ($task->status == TaskStatus::InProgress->value || $task->status == TaskStatus::Revise->value)) {
+        if (($this->hasSuperPower() || $this->isMyTask) && ($task->status == TaskStatus::InProgress || $task->status == TaskStatus::Revise)) {
             $hold = $this->buildOutput($key, false, $detail);
         }
 

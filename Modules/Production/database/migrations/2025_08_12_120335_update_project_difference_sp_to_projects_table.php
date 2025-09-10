@@ -1,9 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,8 +10,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::unprepared("DROP PROCEDURE IF EXISTS get_project_difference");
-        DB::unprepared("
+        DB::unprepared('DROP PROCEDURE IF EXISTS get_project_difference');
+        DB::unprepared('
             CREATE PROCEDURE get_project_difference()
             BEGIN
                 DECLARE total_current_year INT DEFAULT 0;
@@ -42,7 +40,7 @@ return new class extends Migration
                        total_current_year AS total_event_current_year,
                        total_last_year AS total_event_last_year;
             END
-        ");
+        ');
     }
 
     /**
@@ -50,6 +48,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::unprepared("DROP PROCEDURE IF EXISTS get_project_difference");
+        DB::unprepared('DROP PROCEDURE IF EXISTS get_project_difference');
     }
 };

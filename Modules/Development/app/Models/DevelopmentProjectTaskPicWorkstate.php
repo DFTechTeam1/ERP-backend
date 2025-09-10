@@ -2,8 +2,8 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // use Modules\Development\Database\Factories\DevelopmentProjectTaskPicWorkstateFactory;
@@ -21,7 +21,7 @@ class DevelopmentProjectTaskPicWorkstate extends Model
         'started_at',
         'finished_at',
         'task_id',
-        'employee_id'
+        'employee_id',
     ];
 
     // protected static function newFactory(): DevelopmentProjectTaskPicWorkstateFactory

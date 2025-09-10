@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         $types = ReferenceType::cases();
-        $types = array_map(fn($type) => $type->value, $types);
+        $types = array_map(fn ($type) => $type->value, $types);
         Schema::create('development_project_references', function (Blueprint $table) use ($types) {
             $table->id();
             $table->char('uid', 36);

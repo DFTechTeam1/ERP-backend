@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Development\Http\Controllers\DevelopmentController;
 use Modules\Development\Http\Controllers\Api\DevelopmentProjectController;
 
 /*
@@ -21,6 +20,7 @@ Route::middleware(['auth:sanctum'])->prefix('development')->group(function () {
     Route::get('/projects/{id}', [DevelopmentProjectController::class, 'show'])->name('development.projects.show');
     Route::put('/projects/{id}', [DevelopmentProjectController::class, 'update'])->name('development.projects.update');
     Route::delete('/projects/{id}', [DevelopmentProjectController::class, 'destroy'])->name('development.projects.destroy');
+    Route::get('/projects/{projectUid}/complete', [DevelopmentProjectController::class, 'completeProject'])->name('development.projects.complete');
     Route::get('/projects/{id}/detail', [DevelopmentProjectController::class, 'detail'])->name('development.projects.detail');
     Route::get('/projects/{id}/boards', [DevelopmentProjectController::class, 'updateProjectBoards'])->name('development.projects.boards.update');
     Route::post('/projects/{projectUid}/tasks', [DevelopmentProjectController::class, 'createTask'])->name('development.projects.tasks.store');
@@ -34,6 +34,7 @@ Route::middleware(['auth:sanctum'])->prefix('development')->group(function () {
     Route::post('projects/tasks/{taskUid}/attachments', [DevelopmentProjectController::class, 'storeAttachments'])->name('development.projects.tasks.attachments.store');
     Route::get('projects/tasks/{taskUid}/holded', [DevelopmentProjectController::class, 'holdTask'])->name('development.projects.tasks.holded');
     Route::get('projects/tasks/{taskUid}/start', [DevelopmentProjectController::class, 'startTaskAfterHold'])->name('development.projects.tasks.start');
+    Route::post('projects/tasks/{taskUid}/deadline', [DevelopmentProjectController::class, 'updateTaskDeadline'])->name('development.projects.tasks.deadline.update');
     Route::get('projects/{projectUid}/getRelatedTask/{taskUid}', [DevelopmentProjectController::class, 'getRelatedTask'])->name('development.projects.tasks.related');
     Route::delete('projects/{projectUid}/references/{referenceId}', [DevelopmentProjectController::class, 'deleteReference'])->name('development.projects.references.destroy');
     Route::delete('projects/{projectUid}/tasks/{taskUid}/attachments/{attachmentId}', [DevelopmentProjectController::class, 'deleteTaskAttachment'])->name('development.projects.tasks.attachments.destroy');

@@ -53,7 +53,7 @@ class ProjectDeal extends Model
         'cancel_by',
         'identifier_number',
         'deleted_at',
-        'is_have_interactive_element'
+        'is_have_interactive_element',
     ];
 
     protected static function booted(): void
@@ -91,7 +91,7 @@ class ProjectDeal extends Model
     protected $casts = [
         'event_type' => \App\Enums\Production\EventType::class,
         'equipment_type' => \App\Enums\Production\EquipmentType::class,
-        'status' => \App\Enums\Production\ProjectDealStatus::class
+        'status' => \App\Enums\Production\ProjectDealStatus::class,
     ];
 
     public function ledDetail(): Attribute
@@ -286,10 +286,6 @@ class ProjectDeal extends Model
     // ###### CUSTOM FUNCTIONS
     /**
      * Get final price of project deals
-     * 
-     * @param bool $formatPrice
-     * 
-     * @return float|string
      */
     public function getFinalPrice(bool $formatPrice = false): float|string
     {
@@ -298,15 +294,11 @@ class ProjectDeal extends Model
             $output = $this->finalQuotation ? $this->finalQuotation->fix_price : 0;
         }
 
-        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
      * Get price of latest quotations
-     * 
-     * @param bool $formatPrice
-     * 
-     * @return float|string
      */
     public function getLatestPrice(bool $formatPrice = false): float|string
     {
@@ -316,15 +308,11 @@ class ProjectDeal extends Model
             $output = $this->latestQuotation->fix_price;
         }
 
-        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
      * Get down payment amount
-     * 
-     * @param bool $formatPrice
-     * 
-     * @return float|string
      */
     public function getDownPaymentAmount(bool $formatPrice = false): float|string
     {
@@ -334,22 +322,18 @@ class ProjectDeal extends Model
             $output = $this->firstTransaction ? $this->firstTransaction->payment_amount : 0;
         }
 
-        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
      * Get amount of remaining payment
-     * 
-     * @param bool $formatPrice
-     * 
-     * @return float|string
      */
     public function getRemainingPayment(bool $formatPrice = false, int $deductionAmount = 0): float|string
     {
         $output = 0;
 
         if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid']) && $this->getFinalPrice() > 0) {
-            if (!$this->attributes['is_fully_paid']) {
+            if (! $this->attributes['is_fully_paid']) {
                 $output = $this->getFinalPrice() - $this->transactions->pluck('payment_amount')->sum();
 
                 if ($deductionAmount > 0) {
@@ -358,13 +342,11 @@ class ProjectDeal extends Model
             }
         }
 
-        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
      * Get status of payment in each project deals
-     * 
-     * @return string
      */
     public function getStatusPayment(): string
     {
@@ -373,9 +355,9 @@ class ProjectDeal extends Model
         if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid'])) {
             if ($this->attributes['is_fully_paid']) {
                 $output = __('global.paid');
-            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
                 $output = __('global.partial');
-            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
                 $output = __('global.unpaid');
             }
         }
@@ -385,8 +367,6 @@ class ProjectDeal extends Model
 
     /**
      * Get color status of payment in each project deals
-     * 
-     * @return string
      */
     public function getStatusPaymentColor(): string
     {
@@ -395,9 +375,9 @@ class ProjectDeal extends Model
         if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid'])) {
             if ($this->attributes['is_fully_paid']) {
                 $output = 'green-lighten-3';
-            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
                 $output = 'lime-darken-1';
-            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
                 $output = 'red-darken-1';
             }
         }
@@ -413,7 +393,7 @@ class ProjectDeal extends Model
         }
 
         // if project deal has no final quotation, return false
-        if (!$this->relationLoaded('finalQuotation') || !$this->finalQuotation) {
+        if (! $this->relationLoaded('finalQuotation') || ! $this->finalQuotation) {
             return false;
         }
 
@@ -439,7 +419,7 @@ class ProjectDeal extends Model
     {
         $output = false;
 
-        if ($this->relationLoaded('finalQuotation') && !$this->finalQuotation && !$this->isDraft() && !$this->isFinal()) {
+        if ($this->relationLoaded('finalQuotation') && ! $this->finalQuotation && ! $this->isDraft() && ! $this->isFinal()) {
             // if project deal has latest quotation, return true
             $output = true;
         }

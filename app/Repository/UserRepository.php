@@ -131,7 +131,7 @@ class UserRepository
         }
 
         if (! empty($id) && empty($where)) {
-            $query->where('uid', $id);
+            $query->where('id', $id);
         }
 
         return $query->first();

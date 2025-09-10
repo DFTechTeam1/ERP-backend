@@ -54,7 +54,7 @@ class ProjectDealRepository extends ProjectDealInterface
             $query->limit($limit);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -105,7 +105,7 @@ class ProjectDealRepository extends ProjectDealInterface
             $query->with($relation);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 

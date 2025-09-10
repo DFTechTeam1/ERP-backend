@@ -5,6 +5,8 @@ use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Hrd\Models\Employee;
 use App\Enums\Development\Project\Task\TaskStatus;
 use App\Actions\Development\DefineTaskAction;
+use Illuminate\Support\Facades\Bus;
+use Modules\Development\Jobs\TaskHasBeenCompleteJob;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser();
@@ -13,6 +15,8 @@ beforeEach(function () {
 });
 
 it('Complete task', function () {
+    Bus::fake();
+
     // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
@@ -69,4 +73,6 @@ it('Complete task', function () {
         'employee_id' => $worker->id,
         'is_until_finish' => 1
     ]);
+
+    Bus::assertDispatched(TaskHasBeenCompleteJob::class);
 });

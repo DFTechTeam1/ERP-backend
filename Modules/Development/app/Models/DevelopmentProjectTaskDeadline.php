@@ -2,8 +2,9 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Development\Database\Factories\DevelopmentProjectTaskDeadlineFactory;
 
 class DevelopmentProjectTaskDeadline extends Model
@@ -18,7 +19,7 @@ class DevelopmentProjectTaskDeadline extends Model
         'deadline',
         'start_time',
         'actual_end_time',
-        'employee_id'
+        'employee_id',
     ];
 
     // protected static function newFactory(): DevelopmentProjectTaskDeadlineFactory

@@ -8,7 +8,9 @@ use Modules\Hrd\Models\Employee;
 use App\Enums\Development\Project\Task\TaskStatus;
 use App\Actions\Development\DefineTaskAction;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use Modules\Development\Jobs\SubmitProofsJob;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser();
@@ -18,6 +20,8 @@ beforeEach(function () {
 
 it('Submit approve task proofs', function () {
     Storage::fake('public');
+
+    Bus::fake();
 
     // fake action
     DefineTaskAction::mock()
@@ -65,7 +69,7 @@ it('Submit approve task proofs', function () {
     ];
 
     $response = $this->postJson(route('api.development.projects.tasks.proof.store', $task->uid), $payload);
-    logging('submit task', $response->json());
+    
     $response->assertStatus(201);
 
     // check task status
@@ -122,4 +126,6 @@ it('Submit approve task proofs', function () {
         'task_id' => $task->id,
         'employee_id' => $boss->id
     ]);
+
+    Bus::assertDispatched(SubmitProofsJob::class);
 });

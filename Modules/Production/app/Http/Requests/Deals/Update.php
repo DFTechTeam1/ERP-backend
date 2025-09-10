@@ -12,7 +12,7 @@ class Update extends FormRequest
     public function rules(): array
     {
         return [
-            'detail_changes' => 'array|required'
+            'detail_changes' => 'array|required',
         ];
     }
 

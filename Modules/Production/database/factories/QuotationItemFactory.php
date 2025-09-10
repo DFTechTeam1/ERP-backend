@@ -17,8 +17,7 @@ class QuotationItemFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => 'Item ' . rand(9, 10000)
+            'name' => 'Item '.rand(9, 10000),
         ];
     }
 }
-

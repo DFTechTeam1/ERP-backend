@@ -23,7 +23,8 @@ use Modules\Finance\Repository\InvoiceRequestUpdateRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
 
-class InvoiceService {
+class InvoiceService
+{
     private $repo;
 
     private $projectDealRepo;
@@ -43,8 +44,7 @@ class InvoiceService {
         GeneralService $generalService,
         TransactionRepository $transactionRepo,
         InvoiceRequestUpdateRepository $invoiceRequestUpdateRepo
-    )
-    {
+    ) {
         $this->repo = $repo;
 
         $this->projectDealRepo = $projectDealRepo;
@@ -58,19 +58,12 @@ class InvoiceService {
 
     /**
      * Get list of data
-     *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
-     * 
-     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array
-    {
+    ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -78,7 +71,7 @@ class InvoiceService {
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -99,8 +92,8 @@ class InvoiceService {
                     'uid' => $uid,
                     'number' => $item->parent_number,
                     'sequence' => $item->sequence,
-                    'amount' => "Rp" . number_format(num: $item->amount, decimal_separator: ','),
-                    'paid_amount' => "Rp" . number_format(num: $item->paid_amount, decimal_separator: ','),
+                    'amount' => 'Rp'.number_format(num: $item->amount, decimal_separator: ','),
+                    'paid_amount' => 'Rp'.number_format(num: $item->paid_amount, decimal_separator: ','),
                     'status' => $item->status->label(),
                     'status_color' => $item->status->color(),
                 ];
@@ -126,9 +119,6 @@ class InvoiceService {
 
     /**
      * Get detail data
-     *
-     * @param string $uid
-     * @return array
      */
     public function show(string $uid): array
     {
@@ -145,20 +135,15 @@ class InvoiceService {
         }
     }
 
-
     /**
      * Generate new invoice
-     * 
+     *
      * If current project deal have unpaid invoice, return error
      *
-     * @param array $data               With this following structure
-     * - string $transaction_date
-     * - string|int $amount
-     * 
-     * @param string $projectDealUid
-     * @param string $type              Type will be 'bill', 'current' or 'general'
-     * 
-     * @return array
+     * @param  array  $data  With this following structure
+     *                       - string $transaction_date
+     *                       - string|int $amount
+     * @param  string  $type  Type will be 'bill', 'current' or 'general'
      */
     public function store(array $data, string $projectDealUid): array
     {
@@ -173,7 +158,7 @@ class InvoiceService {
                 'transactions',
                 'finalQuotation',
                 'unpaidInvoice:id,project_deal_id',
-                'invoices:id,project_deal_id'
+                'invoices:id,project_deal_id',
             ]);
             $currentInvoiceCount = $projectDeal->invoices->count();
 
@@ -184,7 +169,7 @@ class InvoiceService {
             // get invoice parent
             $invoiceParent = $this->repo->show(uid: 'uid', select: 'id,number,project_deal_id', where: "project_deal_id = {$projectDeal->id} AND is_main = 1");
             $lastInvoice = $invoiceParent->getLastInvoice();
-            
+
             $nextSequence = $lastInvoice->sequence + 1;
 
             // define next suffix invoice
@@ -211,7 +196,7 @@ class InvoiceService {
             ];
 
             $invoice = $this->repo->store($payload);
-            
+
             // generate url with expired time
             $paramSignedRoute = [
                 'i' => $projectDealUid,
@@ -223,7 +208,7 @@ class InvoiceService {
             if ($currentInvoiceCount == 0) {
                 $paramSignedRoute['t'] = 'downPayment';
             }
-            
+
             $url = \Illuminate\Support\Facades\URL::signedRoute(
                 name: 'invoice.download.type',
                 parameters: [
@@ -232,7 +217,7 @@ class InvoiceService {
                     'invoiceUid' => $invoice->uid,
                     'amount' => $data['amount'],
                     'paymentDate' => $paymentDate,
-                    'isDownPayment' => $data['is_down_payment'] ? 1 : 0
+                    'isDownPayment' => $data['is_down_payment'] ? 1 : 0,
                 ],
                 expiration: now()->addMinutes(5)
             );
@@ -243,7 +228,7 @@ class InvoiceService {
             return generalResponse(
                 message: 'success',
                 data: [
-                    'url' => $url
+                    'url' => $url,
                 ]
             );
         } catch (\Throwable $th) {
@@ -255,22 +240,20 @@ class InvoiceService {
      * Here we save temporary data for invoice update.
      * Need Director approval to change the invoice.
      *
-     * @param array $payload
-     * @param integer $invoiceId
-     * @return array
+     * @param  int  $invoiceId
      */
     public function updateTemporaryData(array $payload): array
     {
         DB::beginTransaction();
         try {
-            $invoiceId = $this->generalService->getIdFromUid($payload['invoice_uid'], new Invoice());
+            $invoiceId = $this->generalService->getIdFromUid($payload['invoice_uid'], new Invoice);
             $payload['invoice_id'] = $invoiceId;
             $payload['status'] = InvoiceRequestUpdateStatus::Pending->value;
             $updateData = $this->invoiceRequestUpdateRepo->store(data: $payload);
 
             // update invoice status
             $this->repo->update(data: [
-                'status' => InvoiceStatus::WaitingChangesApproval
+                'status' => InvoiceStatus::WaitingChangesApproval,
             ], id: $payload['invoice_uid']);
 
             // send notification to director
@@ -283,25 +266,22 @@ class InvoiceService {
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
 
     /**
      * Reject changes for invoice
-     * @param array $payload                     With these following structure
-     * * - string $reason
-     * @param string $invoiceUid
-     * @param bool $fromExternalUrl
-     * @param string|int|null $pendingUpdateId 
-     * 
-     * @return array
+     *
+     * @param  array  $payload  With these following structure
+     *                          * - string $reason
      */
     public function rejectChanges(array $payload, string $invoiceUid, bool $fromExternalUrl = false, string|int|null $pendingUpdateId = null): array
     {
         DB::beginTransaction();
         try {
-            $invoiceId = $this->generalService->getIdFromUid($invoiceUid, new Invoice());
+            $invoiceId = $this->generalService->getIdFromUid($invoiceUid, new Invoice);
 
             // validate current data, return error if current changes already approved or rejected
             $currentChanges = $this->invoiceRequestUpdateRepo->show(
@@ -310,13 +290,14 @@ class InvoiceService {
             );
             if ($currentChanges->status == InvoiceRequestUpdateStatus::Approved || $currentChanges->status == InvoiceRequestUpdateStatus::Rejected) {
                 DB::rollBack();
+
                 return errorResponse(message: __('notification.noChangesToApprove'));
             }
 
             $actorId = Auth::id();
             if ($fromExternalUrl) {
                 $actorUid = request('dir');
-                $actorId = $this->generalService->getIdFromUid($actorUid, new User());
+                $actorId = $this->generalService->getIdFromUid($actorUid, new User);
                 $pendingUpdateId = request('cid');
             }
 
@@ -333,7 +314,7 @@ class InvoiceService {
 
             // update invoice status to unpaid
             $this->repo->update(data: [
-                'status' => InvoiceStatus::Unpaid->value
+                'status' => InvoiceStatus::Unpaid->value,
             ], id: $invoiceUid);
 
             // call job to send notification just like in approveChanges method
@@ -346,29 +327,24 @@ class InvoiceService {
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
 
     /**
      * Approve changes for invoice
-     * 
-     * @param string $invoiceUid
-     * @param bool $fromExternalUrl
-     * @param string|int|null $pendingUpdateId
-     * 
-     * @return array
      */
     public function approveChanges(string $invoiceUid, bool $fromExternalUrl = false, string|int|null $pendingUpdateId = null): array
     {
         DB::beginTransaction();
         try {
-            $invoiceId = $this->generalService->getIdFromUid($invoiceUid, new Invoice());
+            $invoiceId = $this->generalService->getIdFromUid($invoiceUid, new Invoice);
 
             $actorId = Auth::id();
             if ($fromExternalUrl) {
                 $actorUid = request('dir');
-                $actorId = $this->generalService->getIdFromUid($actorUid, new User());
+                $actorId = $this->generalService->getIdFromUid($actorUid, new User);
                 $pendingUpdateId = request('cid');
             }
 
@@ -378,13 +354,14 @@ class InvoiceService {
                 relation: [
                     'invoice:id,parent_number,number,sequence,raw_data',
                     'user:id,email,employee_id',
-                    'user.employee:id,name'
+                    'user.employee:id,name',
                 ]
             );
 
             // validate if current changes already approved
             if ($currentChanges->status == InvoiceRequestUpdateStatus::Approved || $currentChanges->status == InvoiceRequestUpdateStatus::Rejected) {
                 DB::rollBack();
+
                 return errorResponse(message: __('notification.noChangesToApprove'));
             }
 
@@ -404,20 +381,20 @@ class InvoiceService {
             $transactions = $rawData['transactions'] ?? [];
 
             $payloadUpdate = [
-                'status' => InvoiceStatus::Unpaid->value
+                'status' => InvoiceStatus::Unpaid->value,
             ];
 
             if ($currentChanges->amount) {
                 $payloadUpdate['amount'] = $currentChanges->amount;
-                
+
                 // set remaining payment
                 $remainingPayment = $rawDataFixPrice - $currentChanges->amount;
-                $rawData['remainingPayment'] = "Rp" . number_format(num: $remainingPayment, decimal_separator: ',');
+                $rawData['remainingPayment'] = 'Rp'.number_format(num: $remainingPayment, decimal_separator: ',');
 
                 // update latest transaction item if transactions exists
                 if (count($transactions) > 0) {
                     $lastTransaction = end($transactions);
-                    $lastTransaction['payment'] = "Rp" . number_format(num: $currentChanges->amount, decimal_separator: ',');
+                    $lastTransaction['payment'] = 'Rp'.number_format(num: $currentChanges->amount, decimal_separator: ',');
 
                     // replace old latest transaction with new one
                     $transactions[count($transactions) - 1] = $lastTransaction;
@@ -448,7 +425,7 @@ class InvoiceService {
             ApproveInvoiceChangesJob::dispatch($currentChanges->id)->afterCommit();
 
             DB::commit();
-            
+
             return generalResponse(
                 message: __('notification.successApproveInvoiceChanges')
             );
@@ -461,21 +438,14 @@ class InvoiceService {
 
     /**
      * Update selected data
-     * 
-     * Here we will update in main table which is invoices table, then update invoice content in the raw_date column
      *
-     * @param array $data
-     * @param string $id
-     * @param string $where
-     * 
-     * @return array
+     * Here we will update in main table which is invoices table, then update invoice content in the raw_date column
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array
-    {
+    ): array {
         try {
             $this->repo->update($data, $id);
 
@@ -486,23 +456,19 @@ class InvoiceService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }   
+    }
 
     /**
      * Delete selected data
-     *
-     * @param string $invoiceUid
-     * 
-     * @return array
      */
     public function delete(string $invoiceUid): array
     {
         try {
             $invoice = $this->repo->show(
                 uid: $invoiceUid,
-                select: "id,uid,parent_number,project_deal_id,status",
+                select: 'id,uid,parent_number,project_deal_id,status',
                 relation: [
-                    'projectDeal:id,name'
+                    'projectDeal:id,name',
                 ]
             );
 
@@ -516,7 +482,7 @@ class InvoiceService {
             $user = Auth::user();
 
             $this->repo->delete(invoiceUid: $invoiceUid);
-            
+
             InvoiceHasBeenDeletedJob::dispatch($parentNumber, $projectName, $user);
 
             return generalResponse(
@@ -529,10 +495,6 @@ class InvoiceService {
 
     /**
      * Delete bulk data
-     *
-     * @param array $ids
-     * 
-     * @return array
      */
     public function bulkDelete(array $ids): array
     {
@@ -550,7 +512,6 @@ class InvoiceService {
 
     /**
      * Download the invoice based on invoice id
-     * 
      */
     public function downloadInvoice()
     {
@@ -564,7 +525,7 @@ class InvoiceService {
 
         $description = $invoice->projectDeal->finalQuotation->description;
 
-        // only get the parent number 
+        // only get the parent number
         $invoiceNumber = $invoice->sequence == 0 ? $invoice->number : $invoice->parent_number;
 
         // replace '\' or '/' to avoid error in the file name
@@ -574,11 +535,11 @@ class InvoiceService {
 
         // set the amount and transaction date based on user input when invoice type is downpayment
         if ($invoiceType == 'downPayment') {
-            $rawData['amountRequest'] = "Rp" . number_format(num: $invoice->amount, decimal_separator: ',');
+            $rawData['amountRequest'] = 'Rp'.number_format(num: $invoice->amount, decimal_separator: ',');
             $rawData['transactionDateRequest'] = date('d F Y', strtotime($invoice->payment_date));
             $rawData['transactions'] = [];
             $remaining = (float) $rawData['fixPrice'] - (float) $invoice->amount;
-            $rawData['remainingPayment'] = "Rp" . number_format(num: $remaining, decimal_separator: ',');
+            $rawData['remainingPayment'] = 'Rp'.number_format(num: $remaining, decimal_separator: ',');
         }
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, $rawData)
@@ -588,7 +549,7 @@ class InvoiceService {
                 'isHtml5ParserEnabled' => true,
                 'debugPng' => false,
                 'debugLayout' => false,
-                'debugCss' => false
+                'debugCss' => false,
             ]);
 
         $filename = "Inv {$invoiceNumber} - {$invoice->projectDeal->customer->name} - {$invoice->projectDeal->project_date}.pdf";
@@ -598,10 +559,9 @@ class InvoiceService {
 
     /**
      * Download general invoice based on invoice id
-     * @param $payload          Will have these following structure
-     * - string $projectDealUid
-     * 
-     * @return Response
+     *
+     * @param  $payload  Will have these following structure
+     *                  - string $projectDealUid
      */
     public function downloadGeneralInvoice(array $payload): Response
     {
@@ -611,11 +571,11 @@ class InvoiceService {
             select: 'id',
             relation: [
                 'mainInvoice',
-                'finalQuotation:id,project_deal_id,description'
+                'finalQuotation:id,project_deal_id,description',
             ]
         );
 
-        // only get the parent number 
+        // only get the parent number
         $invoiceNumber = $projectDeal->mainInvoice->sequence == 0 ? $projectDeal->mainInvoice->number : $projectDeal->mainInvoice->parent_number;
 
         // reformat transaction and remaining payment
@@ -632,15 +592,15 @@ class InvoiceService {
         if (empty($rawData['invoiceNumber'])) {
             $rawData['invoiceNumber'] = $invoiceNumber;
         }
- 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.invoice", $rawData)
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.invoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
                 'isHtml5ParserEnabled' => true,
                 'debugPng' => false,
                 'debugLayout' => false,
-                'debugCss' => false
+                'debugCss' => false,
             ]);
 
         $filename = "Inv {$invoiceNumber} - {$projectDeal->mainInvoice->projectDeal->customer->name} - {$projectDeal->mainInvoice->projectDeal->project_date}.pdf";
@@ -655,14 +615,9 @@ class InvoiceService {
      * - collection invoice
      * - proof of payment invoice
      * - history invoice
-     * 
+     *
      * Here we we will call another method based on type, for example
      * if type is 'general', we will call downloadGeneralInvoice method.
-     * 
-     * @param string $type
-     * @param array $payload
-     * 
-     * @return Response
      */
     public function downloadInvoiceBasedOnType(string $type, array $payload): Response
     {
@@ -678,20 +633,18 @@ class InvoiceService {
             default:
                 abort(404);
         }
-        
+
         abort(404);
     }
 
     /**
      * Here invoice will only have amount that need to be paid, no remaining payment, no total invoice amount.
-     * 
-     * @param array $payload            Will have these following structure
-     * - string $amount
-     * - string $projectDealUid
-     * - string $paymentDate
-     * - bool $isDownPayment
-     * 
-     * @return Response
+     *
+     * @param  array  $payload  Will have these following structure
+     *                          - string $amount
+     *                          - string $projectDealUid
+     *                          - string $paymentDate
+     *                          - bool $isDownPayment
      */
     public function downloadCollectionInvoice(array $payload): Response
     {
@@ -725,23 +678,23 @@ class InvoiceService {
             $rawData['invoiceNumber'] = $invoiceNumber;
         }
 
-        $rawData['payment'] = "Rp" . number_format(num: $amount, decimal_separator: ',');
+        $rawData['payment'] = 'Rp'.number_format(num: $amount, decimal_separator: ',');
 
         // override date
         $rawData['paymentDate'] = date('d F Y', strtotime($payload['paymentDate']));
-        $rawData['paymentDue'] = date('d F Y', strtotime($payload['paymentDate'] . ' +7 days'));
+        $rawData['paymentDue'] = date('d F Y', strtotime($payload['paymentDate'].' +7 days'));
 
         // define down payment status
         $rawData['isDownPayment'] = $currentInvoice->is_down_payment;
- 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.collectionInvoice", $rawData)
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.collectionInvoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
                 'isHtml5ParserEnabled' => true,
                 'debugPng' => false,
                 'debugLayout' => false,
-                'debugCss' => false
+                'debugCss' => false,
             ]);
 
         $filename = "Inv {$invoiceNumber} - {$projectDeal->mainInvoice->projectDeal->customer->name} - {$projectDeal->mainInvoice->projectDeal->project_date}.pdf";
@@ -751,12 +704,10 @@ class InvoiceService {
 
     /**
      * Here invoice will only have amount that need to be paid, with 0 remaining payment, no total invoice amount.
-     * 
-     * @param array $payload            Will have these following structure
-     * - string $projectDealUid
-     * - string $invoiceUid
-     * 
-     * @return Response
+     *
+     * @param  array  $payload  Will have these following structure
+     *                          - string $projectDealUid
+     *                          - string $invoiceUid
      */
     public function downloadProofOfPaymentInvoice(array $payload): Response
     {
@@ -793,19 +744,19 @@ class InvoiceService {
         $rawData['currentInvoice'] = $currentInvoice;
         // set the real payment date
         $rawData['invoiceDate'] = date('d F Y', strtotime($currentInvoice->payment_date));
-        $rawData['paymentDue'] = date('d F Y', strtotime($currentInvoice->payment_date . ' +7 days'));
+        $rawData['paymentDue'] = date('d F Y', strtotime($currentInvoice->payment_date.' +7 days'));
         $rawData['paymentDate'] = date('d F Y', strtotime($currentInvoice->transaction->transaction_date));
 
-        $rawData['payment'] = "Rp" . number_format(num: $currentInvoice->paid_amount, decimal_separator: ',');
- 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.proofOfPaymentInvoice", $rawData)
+        $rawData['payment'] = 'Rp'.number_format(num: $currentInvoice->paid_amount, decimal_separator: ',');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.proofOfPaymentInvoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
                 'isHtml5ParserEnabled' => true,
                 'debugPng' => false,
                 'debugLayout' => false,
-                'debugCss' => false
+                'debugCss' => false,
             ]);
 
         $filename = "Inv {$invoiceNumber} - {$projectDeal->mainInvoice->projectDeal->customer->name} - {$projectDeal->mainInvoice->projectDeal->project_date}.pdf";
@@ -815,9 +766,9 @@ class InvoiceService {
 
     /**
      * Here we get transactions history based on project_deals table
-     * 
-     * @param array $payload            Will have these following structure
-     * - string $projectDealUid
+     *
+     * @param  array  $payload  Will have these following structure
+     *                          - string $projectDealUid
      */
     public function downloadHistoryInvoice(array $payload)
     {
@@ -828,7 +779,7 @@ class InvoiceService {
             select: 'id,customer_id,identifier_number,led_detail,country_id,state_id,city_id,name,venue,project_date,is_fully_paid',
             relation: [
                 'finalQuotation',
-                'transactions'
+                'transactions',
             ]
         );
 
@@ -838,7 +789,7 @@ class InvoiceService {
         $rawData['transactions'] = $projectDeal->transactions->map(function ($transaction) {
             return [
                 'transaction_date' => date('d F Y', strtotime($transaction->transaction_date)),
-                'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
+                'payment' => 'Rp'.number_format(num: $transaction->payment_amount, decimal_separator: ','),
             ];
         })->toArray();
 
@@ -861,17 +812,16 @@ class InvoiceService {
         $rawData['paymentDue'] = date('d F Y', strtotime($projectDeal->project_date));
 
         // define fix price, amount is take from finalQuotation relation
-        $rawData['fixPrice'] = "Rp" . number_format(num: $projectDeal->finalQuotation->fix_price, decimal_separator: ',');
+        $rawData['fixPrice'] = 'Rp'.number_format(num: $projectDeal->finalQuotation->fix_price, decimal_separator: ',');
 
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("invoices.historyInvoice", $rawData)
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.historyInvoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
                 'isHtml5ParserEnabled' => true,
                 'debugPng' => false,
                 'debugLayout' => false,
-                'debugCss' => false
+                'debugCss' => false,
             ]);
 
         $filename = "Inv {$invoiceNumber} - {$projectDeal->mainInvoice->projectDeal->customer->name} - {$projectDeal->mainInvoice->projectDeal->project_date}.pdf";
@@ -882,13 +832,11 @@ class InvoiceService {
     /**
      * Here we'll export project deals summary based on user selection
      *
-     * @param array $payload            With these following structure:
-     * - string $date_range
-     * - array $marketings
-     * - array $status
-     * - array $price
-     * 
-     * @return array
+     * @param  array  $payload  With these following structure:
+     *                          - string $date_range
+     *                          - array $marketings
+     *                          - array $status
+     *                          - array $price
      */
     public function exportFinanceData(array $payload): array
     {
@@ -896,12 +844,12 @@ class InvoiceService {
             $user = \Illuminate\Support\Facades\Auth::user();
 
             $path = 'finance/report/';
-            $filename = 'finance_report_' . now() . '.xlsx';
-            $filepath = $path . $filename;
+            $filename = 'finance_report_'.now().'.xlsx';
+            $filepath = $path.$filename;
             $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
                 name: 'finance.download.export.financeReport',
                 parameters: [
-                    'fp' => $filepath
+                    'fp' => $filepath,
                 ],
                 expiration: now()->addHours(5)
             );
@@ -913,7 +861,7 @@ class InvoiceService {
             return generalResponse(
                 message: "Your data is being processed. You'll rerceive a notification when the process is complete. You can check your inbox periodically to see the results",
                 data: [
-                    'report' => $data
+                    'report' => $data,
                 ]
             );
         } catch (\Throwable $th) {

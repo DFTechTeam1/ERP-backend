@@ -15,10 +15,10 @@ class EditInvoice extends FormRequest
         return [
             'amount' => [
                 'nullable',
-                new EditInvoiceAmountRule()
+                new EditInvoiceAmountRule,
             ],
             'payment_date' => 'nullable|date_format:Y-m-d',
-            'invoice_uid' => 'required'
+            'invoice_uid' => 'required',
         ];
     }
 

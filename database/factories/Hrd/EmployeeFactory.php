@@ -103,6 +103,7 @@ class EmployeeFactory extends Factory
             'salary_type' => SalaryType::Monthly->value,
             'ptkp_status' => PtkpStatus::K0->value,
             'branch_id' => Branch::factory(),
+            'user_id' => null
         ];
     }
 

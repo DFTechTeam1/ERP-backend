@@ -2,8 +2,9 @@
 
 namespace Modules\Development\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 // use Modules\Development\Database\Factories\DevelopmentTaskPicHistoryFactory;
 
 class DevelopmentTaskPicHistory extends Model

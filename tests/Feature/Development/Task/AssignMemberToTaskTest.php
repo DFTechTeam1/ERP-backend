@@ -84,8 +84,10 @@ it ('Assign pic to task that already have pic deadline', function() {
 
     $deadline = now()->addDays(7)->format('Y-m-d H:i');
 
+    $currentPic = Employee::factory()->create();
+
     $task = DevelopmentProjectTask::factory()
-        ->withPic($deadline)
+        ->withPic(deadline: $deadline, employee: $currentPic)
         ->create([
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
@@ -99,7 +101,7 @@ it ('Assign pic to task that already have pic deadline', function() {
 
     $response = $this->postJson(route('api.development.projects.tasks.members.store', $task->uid), [
         'removed' => [],
-        'users' => [$newPic->uid]
+        'users' => [$newPic->uid, $currentPic->uid]
     ]);
 
     $response->assertStatus(201);
@@ -108,6 +110,9 @@ it ('Assign pic to task that already have pic deadline', function() {
         'task_id' => $task->id,
         'employee_id' => $newPic->id
     ]);
+
+    // make sure there no duplicate data on database
+    $this->assertDatabaseCount('development_project_task_pics', 2);
 
     // count data
     $this->assertDatabaseCount('development_project_task_deadlines', 2);

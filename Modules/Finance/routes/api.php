@@ -1,11 +1,8 @@
 <?php
 
-use App\Http\Middleware\CustomSignedRouteMiddleware;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Modules\Finance\Http\Controllers\Api\FinanceController as ApiFinanceController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
-use Modules\Finance\Http\Controllers\FinanceController;
 
 /*
  *--------------------------------------------------------------------------

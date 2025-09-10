@@ -19,6 +19,7 @@ use App\Actions\Project\SaveTaskState;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\Production\Entertainment\TaskSongLogType;
+use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskSongStatus;
 use App\Enums\Production\TaskStatus;
@@ -88,7 +89,6 @@ use Modules\Production\Repository\ProjectTaskReviseHistoryRepository;
 use Modules\Production\Repository\ProjectTaskWorktimeRepository;
 use Modules\Production\Repository\ProjectVjRepository;
 use Modules\Production\Repository\TransferTeamMemberRepository;
-use App\Enums\Production\ProjectDealStatus;
 
 class ProjectService
 {
@@ -2452,7 +2452,7 @@ class ProjectService
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $project->uid,
                 necessaryUpdate: [
-                    'references' => $referenceData
+                    'references' => $referenceData,
                 ]
             );
 
@@ -2518,14 +2518,9 @@ class ProjectService
      *
      * If $isRevise is TRUE, no need to change task status (Already handle in parent function)
      *
-     * @param array $data                   With these following structure
-     * - array <string> $users
-     * - array <string> $remmoved
-     * @param string $taskUid
-     * @param bool $isForProjectManager
-     * @param bool $isRevise
-     * @param bool $needChangeTaskStatus
-     * 
+     * @param  array  $data  With these following structure
+     *                       - array <string> $users
+     *                       - array <string> $remmoved
      * @return array
      */
     public function assignMemberToTask(
@@ -3019,11 +3014,11 @@ class ProjectService
 
             // update cache
             $referenceData = $this->formatingReferenceFiles($project->references, $project->id);
-            
+
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $project->uid,
                 necessaryUpdate: [
-                    'references' => $referenceData
+                    'references' => $referenceData,
                 ]
             );
 
@@ -4749,29 +4744,29 @@ class ProjectService
 
         $marketings = \Illuminate\Support\Facades\Cache::get(CacheKey::MarketingList->value);
 
-        if (!$marketings) {
-            $marketings= \Illuminate\Support\Facades\Cache::rememberForever(CacheKey::MarketingList->value, function () use ($user) {
+        if (! $marketings) {
+            $marketings = \Illuminate\Support\Facades\Cache::rememberForever(CacheKey::MarketingList->value, function () use ($user) {
                 $positionAsMarketing = getSettingByKey('position_as_marketing');
                 $positionAsDirectors = json_decode(getSettingByKey('position_as_directors'), true);
-        
+
                 if ($positionAsDirectors) {
                     $combine = array_merge($positionAsDirectors, [$positionAsMarketing]);
                 } else {
                     $combine = [$positionAsMarketing];
                 }
-        
+
                 $combine = implode("','", $combine);
                 $condition = "'".$combine;
                 $condition .= "'";
-        
+
                 $positions = $this->positionRepo->list('id', "uid in ({$condition})");
-        
+
                 $positionIds = collect($positions)->pluck('id')->all();
                 $combinePositionIds = implode(',', $positionIds);
-        
+
                 $where = "position_id in ({$combinePositionIds}) and status != ".\App\Enums\Employee\Status::Inactive->value;
                 $marketings = $this->employeeRepo->list('id,uid,name', $where);
-        
+
                 $marketings = collect((object) $marketings)->map(function ($item) use ($user) {
                     $item['selected'] = false;
                     if (
@@ -4780,7 +4775,7 @@ class ProjectService
                     ) {
                         $item['selected'] = true;
                     }
-        
+
                     return $item;
                 });
 
@@ -5042,7 +5037,7 @@ class ProjectService
                     'reason' => $payload['reason'],
                     'hold_at' => Carbon::now(),
                     'hold_by' => auth()->user()->employee_id ?? auth()->id(),
-                    'employee_id' => $currentPic->employee_id
+                    'employee_id' => $currentPic->employee_id,
                 ]);
             }
 
@@ -5205,16 +5200,14 @@ class ProjectService
 
     /**
      * Here we get list of projects that will be shown in the authorized user calendar
-     * 
+     *
      * Based on role, director, root and marketing should be see all events.
      * Other role like Project manager, production and else will be see only project that already assign to them
-     * 
-     * @return array
      */
     public function getProjectCalendars(): array
     {
         $user = Auth::user();
-        
+
         $where = '';
         if (request('search_date')) {
             $searchDate = date('Y-m-d', strtotime(request('search_date')));
@@ -5265,7 +5258,7 @@ class ProjectService
             [
                 'events' => $out,
                 'group' => $grouping,
-                'role' => $user->hasRole([BaseRole::Marketing->value, BaseRole::Root->value, BaseRole::Director->value])
+                'role' => $user->hasRole([BaseRole::Marketing->value, BaseRole::Root->value, BaseRole::Director->value]),
             ],
         );
     }
@@ -5361,7 +5354,7 @@ class ProjectService
 
                     foreach ($employeeIds as $employeeId) {
                         $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
-    
+
                         \Modules\Production\Jobs\AssignTaskJob::dispatch($employeeIds, $task->id, $userData);
                     }
                 }
@@ -8342,10 +8335,6 @@ class ProjectService
 
     /**
      * Create project deals and generate quotation
-     * 
-     * @param array $payload
-     * 
-     * @return array
      */
     public function storeProjectDeals(array $payload): array
     {
@@ -8390,7 +8379,7 @@ class ProjectService
 
                 ProjectHasBeenFinal::dispatch($project->id)->afterCommit();
             }
-            
+
             DB::commit();
 
             return generalResponse(
@@ -8408,10 +8397,6 @@ class ProjectService
 
     /**
      * Create project deals and generate quotation
-     * 
-     * @param array $payload
-     * 
-     * @return array
      */
     public function updateProjectDeals(array $payload, string $projectDealUid): array
     {
@@ -8424,7 +8409,7 @@ class ProjectService
                 select: 'id',
                 relation: [
                     'marketings:id,project_deal_id,employee_id',
-                    'latestQuotation'
+                    'latestQuotation',
                 ]
             );
 
@@ -8458,13 +8443,13 @@ class ProjectService
             // update quotation items
             $latestQuotation = $project->latestQuotation;
             $latestQuotation->items()->delete();
-            
+
             foreach ($payload['quotation']['items'] as $item) {
                 $latestQuotation->items()->create([
-                    'item_id' => $item
+                    'item_id' => $item,
                 ]);
             }
-            
+
             DB::commit();
 
             return generalResponse(
@@ -8479,12 +8464,10 @@ class ProjectService
 
     /**
      * Function to initialize project count
-     * 
-     * @return array
      */
     public function initProjectCount(): array
     {
-        $projectDealId = !empty(request('projectDealUid')) ? \Illuminate\Support\Facades\Crypt::decryptString(request('projectDealUid')) : null;
+        $projectDealId = ! empty(request('projectDealUid')) ? \Illuminate\Support\Facades\Crypt::decryptString(request('projectDealUid')) : null;
 
         // if projectDealId exist, get the identity number instead of generate new one
         if ($projectDealId) {
@@ -8494,9 +8477,9 @@ class ProjectService
         }
 
         return generalResponse(
-            message: "Success",
+            message: 'Success',
             data: [
-                'count' => $count
+                'count' => $count,
             ]
         );
     }

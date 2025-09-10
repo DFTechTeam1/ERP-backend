@@ -5,10 +5,9 @@ namespace Modules\Production\Models;
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
 use Modules\Production\Database\Factories\ProjectDealChangeFactory;
 
 class ProjectDealChange extends Model
@@ -27,7 +26,7 @@ class ProjectDealChange extends Model
         'approval_at',
         'rejected_by',
         'rejected_at',
-        'status'
+        'status',
     ];
 
     protected static function newFactory(): ProjectDealChangeFactory
@@ -38,15 +37,15 @@ class ProjectDealChange extends Model
     protected function casts(): array
     {
         return [
-            'status' => ProjectDealChangeStatus::class
+            'status' => ProjectDealChangeStatus::class,
         ];
     }
 
     public function detailChanges(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => $value ? json_decode($value, true) : null,
-            set: fn($value) => $value ? json_encode($value) : null
+            get: fn ($value) => $value ? json_decode($value, true) : null,
+            set: fn ($value) => $value ? json_encode($value) : null
         );
     }
 
