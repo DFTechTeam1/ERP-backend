@@ -122,4 +122,12 @@ return [
     'successUpdateDeadline' => 'Deadline has been updated successfully',
     'pleaseCompleteAllTasksManually' => 'Please complete all tasks manually, then continue to complete the project.',
     'projectHasBeenCompleted' => 'Project has been completed successfully',
+    'cannotCancelResignationInactiveOrDeleted' => 'Cannot cancel resignation for inactive or deleted employees',
+    'resignHasBeenOnScheduled' => 'The resignation date has been registered, and the status will automatically change on the specified date.',
+    'employeeHasOngoingTasks' => 'Employee has ongoing tasks that need to be completed before resignation can be processed.',
+    'projectDealHasChildInvoicesOrTransactions' => 'Project deal already has child invoices or transactions',
+    'requestPriceChangesSuccess' => 'Request for price changes has been sent successfully. You will receive a notification once it is updated.',
+    'successApprovePriceChanges' => 'Price changes approved successfully.',
+    'successRejectPriceChanges' => 'Price changes rejected successfully.',
+    'waitingForApproval' => 'Waiting for approval'
 ];

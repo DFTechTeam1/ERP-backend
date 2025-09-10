@@ -37,7 +37,8 @@ Route::middleware(['auth:sanctum'])
         Route::get('project', [ProjectController::class, 'index'])->name('project-list');
         Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
         Route::post('project/deals', [ProjectController::class, 'storeProjectDeals'])->name('project-deal.store');
-        Route::get('project/deals', [ProjectController::class, 'listProjectDeals']);
+        Route::get('project/deals', [ProjectController::class, 'listProjectDeals'])->name('project-deal.list');
+        Route::get('project/deals/price-changes', [ProjectController::class, 'requestChangesList'])->name('project-deal.requestChangesList');
         Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);

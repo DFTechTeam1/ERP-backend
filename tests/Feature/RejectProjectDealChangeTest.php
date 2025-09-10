@@ -37,7 +37,7 @@ it ("Reject changes return success", function () {
         projectDetailChangesUid: Crypt::encryptString($change->id),
         payload: []
     );
-
+    
     expect($response['error'])->toBeFalse();
 
     $this->assertDatabaseHas('project_deal_changes', [

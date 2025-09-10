@@ -22,4 +22,7 @@ return [
     \Modules\Company\Models\Setting::class => [
         CacheKey::PriceGuideSetting->value,
     ],
+    \Modules\Finance\Models\PriceChangeReason::class => [
+        CacheKey::PriceChangeReasons->value
+    ],
 ];

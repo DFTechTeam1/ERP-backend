@@ -170,4 +170,16 @@ class InventoryController extends Controller
     {
         return apiResponse($this->service->requestEquipmentList());
     }
+
+    public function export(Request $request)
+    {
+        return apiResponse($this->service->export($request->all()));
+    }
+
+    public function downloadInventoryReport()
+    {
+        $filename = request('fp');
+
+        return \Illuminate\Support\Facades\Storage::download($filename);
+    }
 }

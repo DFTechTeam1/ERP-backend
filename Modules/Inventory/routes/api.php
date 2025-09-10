@@ -19,6 +19,7 @@ $namespace = 'Modules\Inventory\Http\Controllers\Api';
 Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
     Route::get('inventories/list-request-equipment', [InventoryController::class, 'getEquipmentForProjectRequest']);
 
+    Route::post('inventories/export', "{$namespace}\InventoryController@export");
     Route::post('inventories/bulk', "{$namespace}\InventoryController@bulkDelete");
     Route::post('inventories/import', "{$namespace}\InventoryController@import");
     Route::get('inventories/getAll', "{$namespace}\InventoryController@getAll");

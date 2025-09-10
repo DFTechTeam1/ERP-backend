@@ -5,7 +5,6 @@ namespace Modules\Hrd\Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Schema;
 use Modules\Company\Models\Position;
-use Modules\Hrd\Models\Employee;
 
 class EmployeeSeeder extends Seeder
 {
