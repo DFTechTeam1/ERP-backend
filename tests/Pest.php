@@ -296,7 +296,46 @@ function getProjectDealPayload(
         'latitude' => fake()->latitude(),
         'equipment_type' => 'lasika',
         'is_high_season' => 1,
-        'is_have_interactive_element' => $withInteractive,
+        'interactive_area' => $withInteractive ? 92 : 0,
+        'interactive_detail' => $withInteractive ? [
+            [
+                "name" => "main",
+                "led" => [
+                    [
+                        "height" => "10",
+                        "width" => "5"
+                    ],
+                    [
+                        "height" => "5",
+                        "width" => "4"
+                    ]
+                ],
+                "total" => "70 m<sup>2</sup>",
+                "totalRaw" => "70",
+                "textDetail" => "5 x 10 m , 4 x 5 m"
+            ],
+            [
+                "name" => "prefunction",
+                "led" => [
+                    [
+                        "height" => "3",
+                        "width" => "3"
+                    ],
+                    [
+                        "height" => "3",
+                        "width" => "2"
+                    ],
+                    [
+                        "height" => "5",
+                        "width" => "4"
+                    ]
+                ],
+                "total" => "35 m<sup>2</sup>",
+                "totalRaw" => "35",
+                "textDetail" => "3 x 3 m , 2 x 3 m4 x 5 m"
+            ]
+        ] : null,
+        'interactive_note' => $withInteractive ? 'This is interactive note' : null,
         'client_portal' => 'wedding-anniversary',
         'marketing_id' => [
             $employee ? $employee->uid : 'f063164d-62ff-44cf-823d-7c456dad1f4b'

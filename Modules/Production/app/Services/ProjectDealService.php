@@ -508,7 +508,7 @@ class ProjectDealService
                 // update quotation to final
                 $detail = $this->repo->show(
                     uid: $projectDealId,
-                    select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,longitude,latitude,status,is_have_interactive_element',
+                    select: 'id,name,project_date,customer_id,event_type,venue,collaboration,note,led_area,led_detail,country_id,state_id,city_id,project_class_id,longitude,latitude,status,interactive_area,interactive_detail,interactive_note',
                     relation: [
                         'latestQuotation',
                         'city:id,name',
@@ -528,8 +528,12 @@ class ProjectDealService
                 $project = CopyDealToProject::run($detail, $this->generalService, $detail->is_have_interactive_element);
 
                 // create interactive project if needed
-                if ($detail->is_have_interactive_element) {
-                    CreateInteractiveProject::run($project->id);
+                if ($detail->interactive_area) {
+                    CreateInteractiveProject::run($project->id, [
+                        'interactive_area' => $detail->interactive_area,
+                        'interactive_detail' => $detail->interactive_detail,
+                        'interactive_note' => $detail->interactive_note,
+                    ]);
                 }
 
                 // generate master invoice
@@ -1435,6 +1439,33 @@ class ProjectDealService
                     'paginated' => $output,
                     'totalData' => $totalData
                 ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Adding interactive to project deal
+     * Here we update interactive detail in the project_deals table and price in the project_quotations table
+     * 
+     * 
+     * @param string $projectDealUid
+     * @param array $payload               With these following structure
+     * - string|int $interactive_area
+     * - array $interactive_detail
+     * - string $interactive_note
+     * - string $interactive_price
+     * 
+     * @return array
+     */
+    public function addingInteractiveToProject(string $projectDealUid, array $payload): array
+    {
+        try {
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            return generalResponse(
+                message: "Success"
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

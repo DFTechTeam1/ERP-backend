@@ -36,7 +36,9 @@ class Store extends FormRequest
             'marketing_id.*' => 'string',
             'status' => 'nullable',
 
-            'is_have_interactive_element' => 'required|boolean',
+            'interactive_area' => 'nullable',
+            'interactive_detail' => 'nullable',
+            'interactive_note' => 'nullable',
 
             // quotation
             'quotation' => 'required|array',

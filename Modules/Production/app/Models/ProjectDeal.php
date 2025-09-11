@@ -38,6 +38,7 @@ class ProjectDeal extends Model
         'note',
         'led_area',
         'led_detail',
+        'interactive_area',
         'interactive_detail',
         'interactive_note',
         'country_id',
