@@ -176,4 +176,90 @@ describe('Create Project Deal', function () {
     })->with([
         fn() => Customer::factory()->create()
     ]);
+
+    it ('Create project deal with interactive element', function (Customer $customer) {
+        Bus::fake();
+
+        $requestData = getProjectDealPayload($customer);
+        $requestData = prepareProjectDeal($requestData);
+
+        // change name
+        $requestData['name'] = 'Project with Interactive Element';
+
+        // set to final
+        $requestData['status'] = ProjectDealStatus::Final->value;
+
+        // modify quotation id
+        $requestData['quotation']['quotation_id'] = 'DF0010';
+        $requestData['quotation']['is_final'] = 1;
+
+        // set interactive element
+        $requestData['interactive_area'] = 92;
+        $requestData['interactive_detail'] = [
+            [
+                "name" => "main",
+                "led" => [
+                    [
+                        "height" => "10",
+                        "width" => "5"
+                    ],
+                    [
+                        "height" => "5",
+                        "width" => "4"
+                    ]
+                ],
+                "total" => "70 m<sup>2</sup>",
+                "totalRaw" => "70",
+                "textDetail" => "5 x 10 m , 4 x 5 m"
+            ],
+            [
+                "name" => "prefunction",
+                "led" => [
+                    [
+                        "height" => "3",
+                        "width" => "3"
+                    ],
+                    [
+                        "height" => "3",
+                        "width" => "2"
+                    ],
+                    [
+                        "height" => "5",
+                        "width" => "4"
+                    ]
+                ],
+                "total" => "35 m<sup>2</sup>",
+                "totalRaw" => "35",
+                "textDetail" => "3 x 3 m , 2 x 3 m4 x 5 m"
+            ]
+        ];
+        $requestData['interactive_note'] = 'This is interactive note';
+
+        $response = postJson(route('api.production.project-deal.store'), $requestData);
+
+        logging('RESPONSE INTERACTIVE ELEMENT', $response->json());
+
+        $response->assertStatus(201);
+        $this->assertDatabaseCount('project_deals', 1);
+        $this->assertDatabaseHas('project_deals', [
+            'name' => 'Project with Interactive Element',
+        ]);
+        $this->assertDatabaseCount('projects', 1);
+        $this->assertDatabaseHas('projects', [
+            'name' => 'Project with Interactive Element',
+        ]);
+        $this->assertDatabaseCount('interactive_projects', 1);
+        $this->assertDatabaseHas('interactive_projects', [
+            'name' => 'Project with Interactive Element',
+            'note' => 'This is interactive note',
+            'led_area' => $requestData['interactive_area'],
+        ]);
+        $this->assertDatabaseCount('project_quotations', 1);
+        $this->assertDatabaseCount('project_deal_marketings', 1);
+        $this->assertDatabaseCount('interactive_project_boards', 3);
+
+        Bus::assertDispatched(ProjectHasBeenFinal::class);
+    })->with([
+        fn() => Customer::factory()->create()
+    ]);
 });

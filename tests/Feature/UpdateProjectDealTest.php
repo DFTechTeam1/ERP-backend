@@ -81,6 +81,8 @@ it('Update project with different marketing', function(Customer $customer) {
     $service = createProjectService();
     $response = $service->updateProjectDeals(payload: $requestData, projectDealUid: Crypt::encryptString($projectDeal->id));
 
+    logging('response update project deal', $response);
+
     expect($response)->toHaveKey('error');
     expect($response['error'])->toBeFalse();
 

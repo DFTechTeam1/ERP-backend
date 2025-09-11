@@ -33,8 +33,6 @@ it('can request price changes', function () {
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
-
-    logging('REQUEST PRICE 1', $response->json());
     
     $response->assertStatus(201);
     $response->assertJson([
@@ -67,7 +65,6 @@ it ('cannot request price changes if project deal has child invoices or transact
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
-    logging('REQUEST PRICE 2', $response->json());
     
     $response->assertStatus(400);
     $response->assertJson([

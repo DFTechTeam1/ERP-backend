@@ -8335,6 +8335,10 @@ class ProjectService
 
     /**
      * Create project deals and generate quotation
+     * 
+     * @param  array  $payload
+     * 
+     * @return array
      */
     public function storeProjectDeals(array $payload): array
     {
@@ -8367,11 +8371,11 @@ class ProjectService
                 //     'identifier_number' => $this->generalService->setProjectIdentifier()
                 // ], id: $project->id);
 
-                $realProject = \App\Actions\CopyDealToProject::run($project, $this->generalService, $payload['is_have_interactive_element']);
+                $realProject = \App\Actions\CopyDealToProject::run($project, $this->generalService);
 
                 // create interactive project if needed
-                if ($payload['is_have_interactive_element']) {
-                    CreateInteractiveProject::run($realProject->id);
+                if (isset($payload['interactive_area'])) {
+                    CreateInteractiveProject::run($realProject->id, $payload);
                 }
 
                 // gerenrate invoice master

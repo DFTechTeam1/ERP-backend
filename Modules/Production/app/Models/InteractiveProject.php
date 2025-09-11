@@ -4,6 +4,7 @@ namespace Modules\Production\Models;
 
 use App\Enums\Production\ProjectStatus;
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -49,6 +50,14 @@ class InteractiveProject extends Model
     // {
     //     // return InteractiveProjectFactory::new();
     // }
+
+    public function ledDetail(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? json_decode($value, true) : null,
+            set: fn ($value) => $value ? json_encode($value) : null
+        );
+    }
 
     public function parentProject(): BelongsTo
     {
