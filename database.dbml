@@ -7,7 +7,6 @@ Enum "employee_families_relationship_enum" {
   "other"
 }
 
-<<<<<<< HEAD
 Enum "development_project_task_status_enum" {
   "1" // for not_started
   "2" // for in_progress
