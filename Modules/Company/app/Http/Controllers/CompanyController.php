@@ -217,20 +217,20 @@ class CompanyController extends Controller
 
     /**
      * Here we get all information about export and import result from table export_import_results
-     * 
+     *
      * We serve in the table with pagination
-     * 
-     * @return JsonResponse
      */
     public function loadInboxData(): JsonResponse
     {
         $type = request('type', ExportImportAreaType::OldArea->value); // default is old_area
+
         return apiResponse($this->companyService->getInboxData($type));
     }
 
     public function clearInboxData(): JsonResponse
     {
         $type = request('type', ExportImportAreaType::OldArea->value); // default is old_area
+
         return apiResponse($this->companyService->clearInboxData($type));
     }
 }

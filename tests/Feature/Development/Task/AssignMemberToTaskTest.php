@@ -1,10 +1,10 @@
 <?php
 
+use App\Actions\Development\DefineTaskAction;
+use App\Enums\Development\Project\Task\TaskStatus;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Hrd\Models\Employee;
-use App\Enums\Development\Project\Task\TaskStatus;
-use App\Actions\Development\DefineTaskAction;
 
 beforeEach(function () {
     $user = initAuthenticateUser();
@@ -31,7 +31,7 @@ it('Assign new member to empty task with deadline with in progress status', func
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $newPic = Employee::factory()
@@ -40,37 +40,37 @@ it('Assign new member to empty task with deadline with in progress status', func
 
     $response = $this->postJson(route('api.development.projects.tasks.members.store', $task->uid), [
         'removed' => [],
-        'users' => [$newPic->uid]
+        'users' => [$newPic->uid],
     ]);
 
     $response->assertStatus(201);
 
     $this->assertDatabaseHas('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $newPic->id
+        'employee_id' => $newPic->id,
     ]);
 
     // check development project task deadlines table
     $this->assertDatabaseHas('development_project_task_deadlines', [
         'task_id' => $task->id,
         'deadline' => $deadline,
-        'employee_id' => $newPic->id
+        'employee_id' => $newPic->id,
     ]);
 
     $this->assertDatabaseMissing('development_project_task_deadlines', [
         'task_id' => $task->id,
         'deadline' => $deadline,
-        'start_time' => null
+        'start_time' => null,
     ]);
 
     $this->assertDatabaseHas('dev_project_task_pic_histories', [
         'task_id' => $task->id,
         'employee_id' => $newPic->id,
-        'is_until_finish' => 1
+        'is_until_finish' => 1,
     ]);
 });
 
-it ('Assign pic to task that already have pic deadline', function() {
+it('Assign pic to task that already have pic deadline', function () {
     // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
@@ -92,7 +92,7 @@ it ('Assign pic to task that already have pic deadline', function() {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $newPic = Employee::factory()
@@ -101,14 +101,14 @@ it ('Assign pic to task that already have pic deadline', function() {
 
     $response = $this->postJson(route('api.development.projects.tasks.members.store', $task->uid), [
         'removed' => [],
-        'users' => [$newPic->uid, $currentPic->uid]
+        'users' => [$newPic->uid, $currentPic->uid],
     ]);
 
     $response->assertStatus(201);
 
     $this->assertDatabaseHas('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $newPic->id
+        'employee_id' => $newPic->id,
     ]);
 
     // make sure there no duplicate data on database
@@ -116,36 +116,36 @@ it ('Assign pic to task that already have pic deadline', function() {
 
     // count data
     $this->assertDatabaseCount('development_project_task_deadlines', 2);
-    
+
     // check development project task deadlines table
     $this->assertDatabaseHas('development_project_task_deadlines', [
         'task_id' => $task->id,
         'deadline' => $deadline,
-        'employee_id' => $newPic->id
+        'employee_id' => $newPic->id,
     ]);
 
     $this->assertDatabaseMissing('development_project_task_deadlines', [
         'task_id' => $task->id,
         'deadline' => $deadline,
         'employee_id' => $newPic->id,
-        'start_time' => null
+        'start_time' => null,
     ]);
 
     // workstates table should be not empty
     $this->assertDatabaseHas('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
-        'employee_id' => $newPic->id
+        'employee_id' => $newPic->id,
     ]);
     $this->assertDatabaseMissing('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
         'employee_id' => $newPic->id,
-        'started_at' => null
+        'started_at' => null,
     ]);
 
     $this->assertDatabaseHas('dev_project_task_pic_histories', [
         'task_id' => $task->id,
         'employee_id' => $newPic->id,
-        'is_until_finish' => 1
+        'is_until_finish' => 1,
     ]);
 });
 
@@ -169,7 +169,7 @@ it('Remove current pic from task', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $removeEmployee = Employee::select('uid', 'id')
@@ -177,9 +177,9 @@ it('Remove current pic from task', function () {
 
     $payload = [
         'removed' => [
-            $removeEmployee->uid
+            $removeEmployee->uid,
         ],
-        'users' => []
+        'users' => [],
     ];
 
     $response = $this->postJson(route('api.development.projects.tasks.members.store', $task->uid), $payload);
@@ -195,24 +195,24 @@ it('Remove current pic from task', function () {
     // check task status, it should be draft
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
-        'status' => TaskStatus::Draft->value
+        'status' => TaskStatus::Draft->value,
     ]);
 
     $this->assertDatabaseHas('dev_project_task_pic_histories', [
         'task_id' => $task->id,
         'employee_id' => $removeEmployee->id,
-        'is_until_finish' => 0
+        'is_until_finish' => 0,
     ]);
 });
 
-it ('Assign pic to task without deadline', function () {
+it('Assign pic to task without deadline', function () {
     // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
         ->withAnyArgs()
         ->andReturn([]);
-        
-   $project = DevelopmentProject::factory()
+
+    $project = DevelopmentProject::factory()
         ->withBoards()
         ->withPics()
         ->create();
@@ -223,7 +223,7 @@ it ('Assign pic to task without deadline', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => null,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $newPic = Employee::factory()
@@ -232,14 +232,14 @@ it ('Assign pic to task without deadline', function () {
 
     $response = $this->postJson(route('api.development.projects.tasks.members.store', $task->uid), [
         'removed' => [],
-        'users' => [$newPic->uid]
+        'users' => [$newPic->uid],
     ]);
 
     $response->assertStatus(201);
 
     $this->assertDatabaseHas('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $newPic->id
+        'employee_id' => $newPic->id,
     ]);
 
     $this->assertDatabaseMissing('development_project_task_deadlines', [
@@ -251,18 +251,18 @@ it ('Assign pic to task without deadline', function () {
     $this->assertDatabaseHas('dev_project_task_pic_histories', [
         'task_id' => $task->id,
         'employee_id' => $newPic->id,
-        'is_until_finish' => 1
+        'is_until_finish' => 1,
     ]);
 });
 
-it ('Remove user from task when already have workstate', function () {
+it('Remove user from task when already have workstate', function () {
     // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
         ->withAnyArgs()
         ->andReturn([]);
-        
-   $project = DevelopmentProject::factory()
+
+    $project = DevelopmentProject::factory()
         ->withBoards()
         ->withPics()
         ->create();
@@ -273,12 +273,12 @@ it ('Remove user from task when already have workstate', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => null,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
-        
+
     $this->assertDatabaseHas('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
-        'employee_id' => $task->pics->first()->employee_id
+        'employee_id' => $task->pics->first()->employee_id,
     ]);
 
     $employee = Employee::select('uid', 'id')
@@ -290,11 +290,11 @@ it ('Remove user from task when already have workstate', function () {
 
     $payload = [
         'removed' => [
-            $employee->uid
+            $employee->uid,
         ],
         'users' => [
-            $newPic->uid
-        ]
+            $newPic->uid,
+        ],
     ];
 
     $response = $this->postJson(route('api.development.projects.tasks.members.store', $task->uid), $payload);
@@ -303,32 +303,32 @@ it ('Remove user from task when already have workstate', function () {
 
     $this->assertDatabaseMissing('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $employee->id
+        'employee_id' => $employee->id,
     ]);
 
     $this->assertDatabaseMissing('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
-        'employee_id' => $employee->id
+        'employee_id' => $employee->id,
     ]);
     $this->assertDatabaseHas('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
-        'employee_id' => $newPic->id
+        'employee_id' => $newPic->id,
     ]);
     $this->assertDatabaseHas('dev_project_task_pic_histories', [
         'task_id' => $task->id,
         'employee_id' => $employee->id,
-        'is_until_finish' => 0
+        'is_until_finish' => 0,
     ]);
 });
 
-it ('Assign pic when task status is draft', function () {
-     // fake action
+it('Assign pic when task status is draft', function () {
+    // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
         ->withAnyArgs()
         ->andReturn([]);
-        
-   $project = DevelopmentProject::factory()
+
+    $project = DevelopmentProject::factory()
         ->withBoards()
         ->withPics()
         ->create();
@@ -338,7 +338,7 @@ it ('Assign pic when task status is draft', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => null,
-            'status' => TaskStatus::Draft->value
+            'status' => TaskStatus::Draft->value,
         ]);
 
     $employee = Employee::factory()->create();
@@ -346,8 +346,8 @@ it ('Assign pic when task status is draft', function () {
     $payload = [
         'removed' => [],
         'users' => [
-            $employee->uid
-        ]
+            $employee->uid,
+        ],
     ];
 
     $response = $this->postJson(route('api.development.projects.tasks.members.store', $task->uid), $payload);
@@ -356,6 +356,6 @@ it ('Assign pic when task status is draft', function () {
 
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
-        'status' => TaskStatus::WaitingApproval->value
+        'status' => TaskStatus::WaitingApproval->value,
     ]);
 });

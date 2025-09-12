@@ -10,7 +10,7 @@ beforeEach(function () {
     $this->actingAs($user);
 });
 
-it ('Update deadline when task already have deadline', function () {
+it('Update deadline when task already have deadline', function () {
     // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
@@ -27,33 +27,33 @@ it ('Update deadline when task already have deadline', function () {
 
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $tasks->id,
-        'deadline' => $currentDeadline
+        'deadline' => $currentDeadline,
     ]);
 
     $response = $this->postJson(route('api.development.projects.tasks.deadline.update', ['taskUid' => $tasks->uid]), [
-        'end_date' => $newDeadline
+        'end_date' => $newDeadline,
     ]);
 
     $response->assertStatus(201);
     $response->assertJsonStructure([
         'message',
-        'data'
+        'data',
     ]);
 
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $tasks->id,
-        'deadline' => $newDeadline
+        'deadline' => $newDeadline,
     ]);
 
     $this->assertDatabaseHas('development_project_task_deadlines', [
         'task_id' => $tasks->id,
         'actual_end_time' => null,
         'deadline' => $newDeadline,
-        'employee_id' => $taskPics->first()->employee_id
+        'employee_id' => $taskPics->first()->employee_id,
     ]);
 });
 
-it ('Update deadline when task do not have any deadline', function () {
+it('Update deadline when task do not have any deadline', function () {
     // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
@@ -70,30 +70,30 @@ it ('Update deadline when task do not have any deadline', function () {
 
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
-        'deadline' => null
+        'deadline' => null,
     ]);
 
     $this->assertDatabaseCount('development_project_task_deadlines', 0);
 
     $response = $this->postJson(route('api.development.projects.tasks.deadline.update', ['taskUid' => $task->uid]), [
-        'end_date' => $newDeadline
+        'end_date' => $newDeadline,
     ]);
 
     $response->assertStatus(201);
     $response->assertJsonStructure([
         'message',
-        'data'
+        'data',
     ]);
 
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
-        'deadline' => $newDeadline
+        'deadline' => $newDeadline,
     ]);
 
     $this->assertDatabaseHas('development_project_task_deadlines', [
         'task_id' => $task->id,
         'actual_end_time' => null,
         'deadline' => $newDeadline,
-        'employee_id' => $taskPics->first()->employee_id
+        'employee_id' => $taskPics->first()->employee_id,
     ]);
 });

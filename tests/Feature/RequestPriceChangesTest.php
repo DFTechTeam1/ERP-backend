@@ -4,7 +4,6 @@ use App\Enums\Production\ProjectDealStatus;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
-use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser(withEmployee: true);
@@ -33,7 +32,7 @@ it('can request price changes', function () {
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
-    
+
     $response->assertStatus(201);
     $response->assertJson([
         'message' => __('notification.requestPriceChangesSuccess'),
@@ -51,7 +50,7 @@ it('can request price changes', function () {
     Bus::assertDispatched(NotifyRequestPriceChangesJob::class);
 });
 
-it ('cannot request price changes if project deal has child invoices or transactions', function () {
+it('cannot request price changes if project deal has child invoices or transactions', function () {
     $projectDeal = \Modules\Production\Models\ProjectDeal::factory()
         ->withQuotation()
         ->withInvoice(2)
@@ -65,7 +64,7 @@ it ('cannot request price changes if project deal has child invoices or transact
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
-    
+
     $response->assertStatus(400);
     $response->assertJson([
         'message' => __('notification.projectDealHasChildInvoicesOrTransactions'),

@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Actions\Project\DetailCache;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Modules\Production\Models\Project;

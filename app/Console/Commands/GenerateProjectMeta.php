@@ -38,9 +38,9 @@ class GenerateProjectMeta extends Command
                         ->whereIn('status', [
                             TransferTeamStatus::Approved->value,
                             TransferTeamStatus::Completed->value,
-                            TransferTeamStatus::ApprovedWithAlternative->value
+                            TransferTeamStatus::ApprovedWithAlternative->value,
                         ]);
-                }
+                },
             ])
             ->where('status', ProjectStatus::Completed->value)
             ->get();
@@ -49,14 +49,14 @@ class GenerateProjectMeta extends Command
         foreach ($projects as $key => $project) {
             $format[$key] = [
                 'project_id' => $project->id,
-                'teams_meta' => []
+                'teams_meta' => [],
             ];
 
             foreach ($project->personInCharges as $keyPic => $pic) {
                 $format[$key]['teams_meta'][$keyPic] = [
                     'pic_id' => $pic->pic_id,
                     'teams' => [],
-                    'team_transfer' => []
+                    'team_transfer' => [],
                 ];
 
                 // generate teams member
@@ -73,7 +73,7 @@ class GenerateProjectMeta extends Command
 
                 $transferAlternative = collect($project->teamTransfer)->where('requested_by', '=', $pic->pic_id)
                     ->pluck('employee_id')->toArray();
-                    
+
                 $transferDirect = collect($transferDirect)->merge($transferAlternative);
 
                 $format[$key]['teams_meta'][$keyPic]['team_transfer'] = $transferDirect;

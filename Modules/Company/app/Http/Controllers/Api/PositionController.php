@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Company\Http\Requests\PositionCreateRequest;
 use Modules\Company\Http\Requests\PositionUpdateRequest;
-use Modules\Company\Models\Position;
 use Modules\Company\Services\PositionService;
 
 class PositionController extends Controller

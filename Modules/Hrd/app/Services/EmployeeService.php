@@ -7,8 +7,8 @@ use App\Enums\Employee\Gender;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
-use App\Enums\Production\TaskStatus;
 use App\Enums\ErrorCode\Code;
+use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
 use App\Exceptions\EmployeeException;
 use App\Exports\EmployeeExport;
@@ -39,9 +39,9 @@ use Modules\Hrd\Repository\EmployeeTimeoffRepository;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
-use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
+use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectVjRepository;
 
@@ -184,13 +184,13 @@ class EmployeeService
                             'field' => 'status',
                             'condition' => 'not_contain',
                             'value' => Status::Deleted->value,
-                            'data_type' => 'integer'
+                            'data_type' => 'integer',
                         ],
                         [
                             'field' => 'status',
                             'condition' => 'not_contain',
                             'value' => Status::Inactive->value,
-                            'data_type' => 'integer'
+                            'data_type' => 'integer',
                         ],
                     ])->toArray();
                 }
@@ -1746,9 +1746,9 @@ class EmployeeService
         try {
             $data = $this->employeeResignRepo->list(
                 select: 'id,employee_id',
-                where: "resign_date = NOW()",
+                where: 'resign_date = NOW()',
                 relation: [
-                    'employee:id,uid'
+                    'employee:id,uid',
                 ]
             );
 
@@ -1818,8 +1818,6 @@ class EmployeeService
      *                       - string $resign_date
      *                       - string $severance
      *                       - string $employee_uid
-     * 
-     * @return array
      */
     public function mainResignLogic(
         array $data,
@@ -1841,12 +1839,12 @@ class EmployeeService
                 whereHas: [
                     [
                         'relation' => 'pics',
-                        'query' => "employee_id = {$employee->id}"
-                    ]
+                        'query' => "employee_id = {$employee->id}",
+                    ],
                 ],
-                where: 'status = ' . TaskStatus::OnProgress->value
+                where: 'status = '.TaskStatus::OnProgress->value
             );
-            
+
             if ($tasks->isNotEmpty()) {
                 return errorResponse(message: __('notification.employeeHasOngoingTasks'));
             }
@@ -1857,7 +1855,7 @@ class EmployeeService
                 'resign_date' => date('Y-m-d', strtotime($data['resign_date'])),
                 'severance' => $data['severance'],
                 'current_position_id' => $employee->position_id,
-                'current_employee_status' => $employee->status
+                'current_employee_status' => $employee->status,
             ]);
 
             // if today date is the same with resign_date, change employee status otherwise do not change anything in employee model
@@ -1890,7 +1888,7 @@ class EmployeeService
             if ($useTransaction) {
                 DB::rollBack();
             }
-            
+
             return errorResponse($th);
         }
     }
@@ -2298,7 +2296,7 @@ class EmployeeService
             $employeeId = $this->generalService->getIdFromUid($employeeUid, new Employee);
 
             $employee = $this->repo->show(uid: $employeeUid, select: 'id,email,status');
-            
+
             // validate data only active employee can be used this action
             if ($employee->status == Status::Inactive || $employee->status == Status::Deleted) {
                 return errorResponse(

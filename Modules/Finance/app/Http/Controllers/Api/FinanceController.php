@@ -11,7 +11,6 @@ use Modules\Finance\Http\Requests\PriceChanges;
 use Modules\Finance\Http\Requests\Transaction\Create;
 use Modules\Finance\Services\InvoiceService;
 use Modules\Finance\Services\TransactionService;
-use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Services\ProjectDealService;
 
 class FinanceController extends Controller
@@ -26,8 +25,7 @@ class FinanceController extends Controller
         TransactionService $service,
         InvoiceService $invoiceService,
         ProjectDealService $projectDealService
-    )
-    {
+    ) {
         $this->service = $service;
         $this->invoiceService = $invoiceService;
         $this->projectDealService = $projectDealService;
@@ -134,10 +132,10 @@ class FinanceController extends Controller
 
     /**
      * Request price changes for project deal
-     * 
-     * @param PriceChanges $request       With this following structure:
-     * - int $price
-     * - string $reason
+     *
+     * @param  PriceChanges  $request  With this following structure:
+     *                                 - int $price
+     *                                 - string $reason
      */
     public function requestPriceChanges(PriceChanges $request, string $projectDealUid): JsonResponse
     {
@@ -149,9 +147,6 @@ class FinanceController extends Controller
 
     /**
      * Approve price changes for project deal
-     * 
-     * @param string $projectDealUid
-     * @param string $changeId
      */
     public function approvePriceChanges(string $projectDealUid, string $changeId): JsonResponse
     {
@@ -160,10 +155,6 @@ class FinanceController extends Controller
 
     /**
      * Reject price changes for project deal
-     * 
-     * @param Request $request
-     * @param string $projectDealUid
-     * @param string $changeId
      */
     public function rejectPriceChanges(Request $request, string $projectDealUid, string $changeId): JsonResponse
     {
@@ -172,11 +163,9 @@ class FinanceController extends Controller
             reason: $request->input('reason', '')
         ));
     }
-    
+
     /**
      * Get price change reasons
-     * 
-     * @return JsonResponse
      */
     public function getPriceChangeReasons(): JsonResponse
     {

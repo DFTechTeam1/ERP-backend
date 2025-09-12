@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\Production\ProjectStatus;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Production\Jobs\NotifyNewInteractiveProject;
 
 class CreateInteractiveProject
 {
@@ -11,11 +12,11 @@ class CreateInteractiveProject
 
     public function handle(int $projectId, array $payload)
     {
-        $project = (new \Modules\Production\Repository\ProjectRepository())
+        $project = (new \Modules\Production\Repository\ProjectRepository)
             ->show(uid: 'id', select: '*', where: "id = {$projectId}");
 
         // Create interactive project
-        $interactive = (new \Modules\Production\Repository\InteractiveProjectRepository())
+        $interactive = (new \Modules\Production\Repository\InteractiveProjectRepository)
             ->store(data: [
                 'name' => $project->name,
                 'client_portal' => $project->client_portal,
@@ -36,16 +37,18 @@ class CreateInteractiveProject
         $interactive->boards()->createMany([
             [
                 'name' => 'Asset 3D',
-                'sort' => '1'
+                'sort' => '1',
             ],
             [
                 'name' => 'Compositing',
-                'sort' => '2'
+                'sort' => '2',
             ],
             [
                 'name' => 'Finalize',
-                'sort' => '3'
+                'sort' => '3',
             ],
         ]);
+
+        // NotifyNewInteractiveProject::dispatch($interactive);
     }
 }

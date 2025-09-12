@@ -4,7 +4,6 @@ namespace Modules\Finance\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Modules\Production\Services\ProjectDealService;
 
@@ -83,15 +82,15 @@ class FinanceController extends Controller
     public function approvePriceChanges()
     {
         $priceChangeId = request('priceChangeId');
-        
+
         $response = $this->projectDealService->approvePriceChanges(
             priceChangeId: $priceChangeId,
         );
 
-        if (!$response['error']) {
+        if (! $response['error']) {
             return view('invoices.approved', [
                 'title' => 'Approve Price Changes',
-                'message' => "Price changes approved successfully.",
+                'message' => 'Price changes approved successfully.',
             ]);
         }
 
@@ -106,10 +105,10 @@ class FinanceController extends Controller
             priceChangeId: $priceChangeId,
         );
 
-        if (!$response['error']) {
+        if (! $response['error']) {
             return view('invoices.rejected', [
                 'title' => 'Event Changes Rejected',
-                'message' => "Price changes rejected successfully.",
+                'message' => 'Price changes rejected successfully.',
             ]);
         }
 

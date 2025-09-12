@@ -1,12 +1,12 @@
 <?php
 
+use App\Actions\Development\DefineTaskAction;
+use App\Enums\Development\Project\Task\TaskStatus;
+use Illuminate\Support\Facades\Bus;
+use Modules\Development\Jobs\TaskHasBeenCompleteJob;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Hrd\Models\Employee;
-use App\Enums\Development\Project\Task\TaskStatus;
-use App\Actions\Development\DefineTaskAction;
-use Illuminate\Support\Facades\Bus;
-use Modules\Development\Jobs\TaskHasBeenCompleteJob;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser();
@@ -32,12 +32,12 @@ it('Complete task', function () {
 
     $worker = Employee::factory()
         ->create([
-            'user_id' => $this->user->id
+            'user_id' => $this->user->id,
         ]);
 
     // update users employee_id
     \App\Models\User::where('id', $this->user->id)->update([
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     $task = DevelopmentProjectTask::factory()
@@ -46,7 +46,7 @@ it('Complete task', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $response = $this->getJson(route('api.development.projects.tasks.completed', $task->uid));
@@ -65,13 +65,13 @@ it('Complete task', function () {
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
         'status' => TaskStatus::Completed->value,
-        'development_project_board_id' => $boardId
+        'development_project_board_id' => $boardId,
     ]);
 
     $this->assertDatabaseHas('dev_project_task_pic_histories', [
         'task_id' => $task->id,
         'employee_id' => $worker->id,
-        'is_until_finish' => 1
+        'is_until_finish' => 1,
     ]);
 
     Bus::assertDispatched(TaskHasBeenCompleteJob::class);

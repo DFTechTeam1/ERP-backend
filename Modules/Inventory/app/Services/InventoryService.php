@@ -1639,13 +1639,13 @@ class InventoryService
 
     public function getInventoriesTree(array $payload = [])
     {
-        $where = "";
+        $where = '';
 
-        if (!empty($payload)) {
+        if (! empty($payload)) {
             // if 'all' is not in the payload
-            if (!in_array('all', $payload['type_id'])) {
+            if (! in_array('all', $payload['type_id'])) {
                 $payload = collect($payload['type_id'])->map(function ($item) {
-                    return $this->generalService->getIdFromUid($item, new InventoryType());
+                    return $this->generalService->getIdFromUid($item, new InventoryType);
                 })->implode(',');
 
                 $where = "item_type IN ({$payload})";
@@ -1659,7 +1659,7 @@ class InventoryService
                 'items:id,inventory_id,inventory_code,current_location,purchase_price,warranty,year_of_purchase',
                 'brand:id,name',
                 'itemTypeRelation:id,name',
-                'supplier:id,name'
+                'supplier:id,name',
             ]
         );
 
@@ -1673,7 +1673,7 @@ class InventoryService
                     'brand' => $inventory->brand->name,
                     'supplier' => $inventory->supplier ? $inventory->supplier->name : '-',
                     'item_type' => $inventory->itemTypeRelation ? $inventory->itemTypeRelation->name : '-',
-                    'purchase_price' => "Rp" . number_format($item->purchase_price, 0, ',', '.'),
+                    'purchase_price' => 'Rp'.number_format($item->purchase_price, 0, ',', '.'),
                     'purchase_price_raw' => $item->purchase_price,
                     'year_of_purchase' => $item->year_of_purchase,
                 ];
@@ -1683,7 +1683,7 @@ class InventoryService
         $perBrands = collect($output)->groupBy('brand')->map(function ($brand) {
             return [
                 'total_item' => $brand->count(),
-                'total_price' => "Rp" . number_format($brand->sum('purchase_price_raw'), 0, ',', '.'),
+                'total_price' => 'Rp'.number_format($brand->sum('purchase_price_raw'), 0, ',', '.'),
                 'total_price_raw' => $brand->sum('purchase_price_raw'),
                 'items' => $brand,
             ];
@@ -1693,7 +1693,7 @@ class InventoryService
             return [
                 'total_item' => $itemType->count(),
                 'name' => $itemType[0]['item_type'],
-                'total_price' => "Rp" . number_format($itemType->sum('purchase_price_raw'), 0, ',', '.'),
+                'total_price' => 'Rp'.number_format($itemType->sum('purchase_price_raw'), 0, ',', '.'),
                 'items' => $itemType,
             ];
         });
@@ -1701,13 +1701,13 @@ class InventoryService
         $perYear = collect($output)->groupBy('year_of_purchase')->map(function ($year) {
             return [
                 'total_item' => $year->count(),
-                'total_price' => "Rp" . number_format($year->sum('purchase_price_raw'), 0, ',', '.'),
+                'total_price' => 'Rp'.number_format($year->sum('purchase_price_raw'), 0, ',', '.'),
                 'items' => $year,
             ];
         });
 
         return [
-            'total_price' => "Rp" . number_format(collect($output)->sum('purchase_price_raw'), 0, ',', '.'),
+            'total_price' => 'Rp'.number_format(collect($output)->sum('purchase_price_raw'), 0, ',', '.'),
             'total_items' => collect($output)->count(),
             'inventories' => $output,
             'per_brand' => $perBrands,
@@ -1718,8 +1718,6 @@ class InventoryService
 
     /**
      * Export inventory data
-     * 
-     * @return array
      */
     public function export(array $payload): array
     {
@@ -1727,12 +1725,12 @@ class InventoryService
             $user = \Illuminate\Support\Facades\Auth::user();
 
             $path = 'inventory/report/';
-            $filename = 'inventory_report_' . now() . '.xlsx';
-            $filepath = $path . $filename;
+            $filename = 'inventory_report_'.now().'.xlsx';
+            $filepath = $path.$filename;
             $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
                 name: 'inventory.download.export.inventoryReport',
                 parameters: [
-                    'fp' => $filepath
+                    'fp' => $filepath,
                 ],
                 expiration: now()->addHours(5)
             );
@@ -1740,7 +1738,7 @@ class InventoryService
             $data = $this->getInventoriesTree($payload);
 
             (new SummaryInventoryReport($data, $user, $downloadPath))->queue($filepath, 'public')->chain([
-                new InventoryExportHasBeenCompleted($user, $downloadPath)
+                new InventoryExportHasBeenCompleted($user, $downloadPath),
             ]);
 
             return generalResponse(

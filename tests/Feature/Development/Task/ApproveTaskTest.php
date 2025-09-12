@@ -1,10 +1,10 @@
 <?php
 
+use App\Actions\Development\DefineTaskAction;
+use App\Enums\Development\Project\Task\TaskStatus;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Hrd\Models\Employee;
-use App\Enums\Development\Project\Task\TaskStatus;
-use App\Actions\Development\DefineTaskAction;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser();
@@ -28,12 +28,12 @@ it('Approve task return success', function () {
 
     $worker = Employee::factory()
         ->create([
-            'user_id' => $this->user->id
+            'user_id' => $this->user->id,
         ]);
 
     // update users employee_id
     \App\Models\User::where('id', $this->user->id)->update([
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     $task = DevelopmentProjectTask::factory()
@@ -42,7 +42,7 @@ it('Approve task return success', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::WaitingApproval->value
+            'status' => TaskStatus::WaitingApproval->value,
         ]);
 
     $this->assertDatabaseCount('dev_project_task_pic_workstates', 0);
@@ -54,24 +54,24 @@ it('Approve task return success', function () {
 
     $this->assertDatabaseHas('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     // check workstates
     $this->assertDatabaseHas('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     // check task status
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
-        'status' => TaskStatus::InProgress->value
+        'status' => TaskStatus::InProgress->value,
     ]);
 
     // check response format
     $response->assertJsonStructure([
         'message',
-        'data'
+        'data',
     ]);
 });

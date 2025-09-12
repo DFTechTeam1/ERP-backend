@@ -13,6 +13,6 @@ class ReportTokenHistory extends Model
         'user_id',
         'access_token',
         'refresh_token',
-        'created_at'
+        'created_at',
     ];
 }

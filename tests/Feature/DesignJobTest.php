@@ -8,7 +8,7 @@ use Modules\Production\Models\Customer;
 
 describe('Project count will be update when', function () {
     it('New project is created', function () {
-        $generalService = new \App\Services\GeneralService();
+        $generalService = new \App\Services\GeneralService;
         $initialCount = $generalService->getCache(CacheKey::ProjectCount->value) ?? 0;
 
         // Simulate project creation
@@ -19,7 +19,7 @@ describe('Project count will be update when', function () {
     });
 
     it('Project is deleted', function () {
-        $generalService = new \App\Services\GeneralService();
+        $generalService = new \App\Services\GeneralService;
         $initialCount = $generalService->getCache(CacheKey::ProjectCount->value) ?? 0;
 
         // Simulate project creation
@@ -32,7 +32,7 @@ describe('Project count will be update when', function () {
         expect($updatedCount)->toBe($initialCount + 1);
     });
 
-    it("Project deal has been created", function (Customer $customer) {
+    it('Project deal has been created', function (Customer $customer) {
         Bus::fake();
 
         $requestData = getProjectDealPayload($customer);
@@ -41,10 +41,10 @@ describe('Project count will be update when', function () {
         // set to final
         $requestData['status'] = ProjectDealStatus::Final->value;
         $requestData['quotation']['is_final'] = 1;
-        
+
         // change name
         $requestData['name'] = 'Final Project';
-        
+
         // modify quotation id
         $requestData['quotation']['quotation_id'] = 'DF0010';
 
@@ -57,18 +57,18 @@ describe('Project count will be update when', function () {
         expect($response['data'])->toHaveKey('url');
 
         $this->assertDatabaseHas('project_deals', [
-            'name' => 'Final Project'
+            'name' => 'Final Project',
         ]);
         $this->assertDatabaseHas('projects', [
-            'name' => 'Final Project'
+            'name' => 'Final Project',
         ]);
 
-        $generalService = new \App\Services\GeneralService();
+        $generalService = new \App\Services\GeneralService;
         $updatedCount = $generalService->getCache(CacheKey::ProjectCount->value);
         expect($updatedCount)->toBe(2);
 
         Bus::assertDispatched(ProjectHasBeenFinal::class);
     })->with([
-        fn() => Customer::factory()->create()
+        fn () => Customer::factory()->create(),
     ]);
 });

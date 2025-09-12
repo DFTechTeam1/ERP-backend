@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Modules\Company\Models\Setting;
 
@@ -22,7 +21,7 @@ class UpdatePriceGuideSetting extends Seeder
                     return $item['area'] === 'Interactive';
                 })->first();
 
-                if (!$interactiveKey) {
+                if (! $interactiveKey) {
                     $currentAreaGuidePrice['area'][] = [
                         'area' => 'Interactive',
                         'settings' => [
@@ -44,7 +43,7 @@ class UpdatePriceGuideSetting extends Seeder
                                 'value' => 10,
                                 'fixType' => 'flexible',
                             ],
-                        ]
+                        ],
                     ];
 
                     Setting::updateOrCreate(

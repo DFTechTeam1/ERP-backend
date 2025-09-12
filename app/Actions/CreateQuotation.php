@@ -18,7 +18,7 @@ class CreateQuotation
          */
         $quotationId = GenerateQuotationNumber::run();
         $payload['quotation']['quotation_id'] = $quotationId;
-        
+
         $quotation = $projectQuotationRepo->store(
             data: collect($payload['quotation'])->except('items')->toArray()
         );

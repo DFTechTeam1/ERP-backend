@@ -1,7 +1,5 @@
 <?php
 
-use App\Enums\Finance\InvoiceRequestUpdateStatus;
-use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
@@ -17,21 +15,9 @@ use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
-use Modules\Finance\Jobs\InvoiceDue;
-use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
-use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
-use Modules\Finance\Models\InvoiceRequestUpdate;
-use Modules\Finance\Notifications\ApproveInvoiceChangesNotification;
-use Modules\Finance\Notifications\InvoiceDueCheckNotification;
-use Modules\Finance\Notifications\NotifyRequestPriceChangesNotification;
-use Modules\Finance\Notifications\ProjectHasBeenFinal;
-use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
-use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\QuotationController;
-use Modules\Production\Jobs\NotifyProjectDealChangesJob;
-use Modules\Production\Models\ProjectDealChange;
 use Modules\Production\Models\ProjectTask;
 
 Route::get('/', [LandingPageController::class, 'index']);

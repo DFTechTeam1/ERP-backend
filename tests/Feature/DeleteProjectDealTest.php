@@ -36,7 +36,7 @@ it('Delete final project deals', function () {
     $projectDeal = ProjectDeal::factory()
         ->has(ProjectDealMarketing::factory()->count(2), 'marketings')
         ->create([
-            'status' => \App\Enums\Production\ProjectDealStatus::Final->value
+            'status' => \App\Enums\Production\ProjectDealStatus::Final->value,
         ]);
 
     $service = createProjectDealService();

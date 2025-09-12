@@ -17,14 +17,15 @@ beforeEach(function () {
     $this->actingAs($user);
 });
 
-function seedData() {
+function seedData()
+{
     $oldPrice = 150000000;
     $newPrice = 160000000;
     $projectDeal = ProjectDeal::factory()
         ->withQuotation($oldPrice)
         ->withInvoice(1, [
-            'fixPrice' => "Rp" . number_format($oldPrice, 0, ',', '.'),
-            'remainingPayment' => "Rp" . number_format($oldPrice, 0, ',', '.'),
+            'fixPrice' => 'Rp'.number_format($oldPrice, 0, ',', '.'),
+            'remainingPayment' => 'Rp'.number_format($oldPrice, 0, ',', '.'),
         ])
         ->create([
             'status' => ProjectDealStatus::Final->value,
@@ -65,7 +66,7 @@ it('Approve changes from system return success', function () {
         'projectDealUid' => Crypt::encryptString($projectDeal->id),
         'changeId' => $changeId,
     ]));
-    
+
     $response->assertStatus(201);
 
     $this->assertDatabaseHas('project_deal_price_changes', [
@@ -80,7 +81,7 @@ it('Approve changes from system return success', function () {
     ]);
 
     // check invoice raw data
-    $formattedNewPrice = "Rp" . number_format($newPrice, 0, ',', '.');
+    $formattedNewPrice = 'Rp'.number_format($newPrice, 0, ',', '.');
     $invoice = Invoice::select('id', 'raw_data')
         ->where('project_deal_id', $projectDeal->id)
         ->first();
@@ -114,7 +115,7 @@ it('Approve changes from email and return success', function () {
         now()->addMinutes(30),
         [
             'priceChangeId' => $changeId,
-            'approvalId' => $employee->user_id
+            'approvalId' => $employee->user_id,
         ]
     );
 
@@ -133,7 +134,7 @@ it('Approve changes from email and return success', function () {
     ]);
 
     // check invoice raw data
-    $formattedNewPrice = "Rp" . number_format($newPrice, 0, ',', '.');
+    $formattedNewPrice = 'Rp'.number_format($newPrice, 0, ',', '.');
     $invoice = Invoice::select('id', 'raw_data')
         ->where('project_deal_id', $projectDeal->id)
         ->first();

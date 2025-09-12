@@ -31,7 +31,7 @@ it('Move task successfully', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $targetBoardId = $project->boards->last()->id;

@@ -70,7 +70,7 @@ class SettingService
                     $item['value'] = json_decode($item['value'], true);
                 } elseif ($item['key'] == 'default_boards') {
                     $item['value'] = $this->formatKanbanSetting($item);
-                } elseif ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment' || $item['key'] == 'person_to_approve_invoice_changes') {
+                } elseif ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment' || $item['key'] == 'person_to_approve_invoice_changes' || $item['key'] == 'interactive_pic') {
                     $item['value'] = json_decode($item['value'], true);
                 }
 
@@ -253,6 +253,7 @@ class SettingService
                 if (isset($setting['value'])) {
                     $setting['value'] = str_replace(['.', ','], '', $setting['value']);
                 }
+
                 return $setting;
             })->toArray();
 
@@ -271,6 +272,7 @@ class SettingService
                 if (isset($equipment['value'])) {
                     $equipment['value'] = str_replace(['.', ','], '', $equipment['value']);
                 }
+
                 return $equipment;
             })->toArray();
         }
@@ -522,8 +524,6 @@ class SettingService
 
     /**
      * Get price calculation for project deals
-     * 
-     * @return array
      */
     public function getPriceCalculation(): array
     {
@@ -533,41 +533,41 @@ class SettingService
             $guides = $this->generalService->getSettingByKey(param: 'area_guide_price');
 
             if ($guides) {
-                $guides = json_decode($guides, true);;
-                
+                $guides = json_decode($guides, true);
+
                 $areaPricing = [];
                 $areas = [];
-    
+
                 foreach ($guides['area'] as $area) {
                     $areas[] = [
                         'title' => $area['area'],
-                        'value' => strtolower(str_replace(' ', '_', $area['area']))
+                        'value' => strtolower(str_replace(' ', '_', $area['area'])),
                     ];
 
                     $settings = [];
                     foreach ($area['settings'] as $setting) {
                         if ($setting['name'] == 'Main Ballroom Fee') {
                             $settings['mainBallroom'] = [
-                                'fixed' => "{total_led}*" . $setting['value'],
-                                'percentage' => null
+                                'fixed' => '{total_led}*'.$setting['value'],
+                                'percentage' => null,
                             ];
-                        } else if ($setting['name'] == 'Prefunction Fee') {
+                        } elseif ($setting['name'] == 'Prefunction Fee') {
                             $percent = 100 - $guides['prefunction_percentage'];
                             $settings['prefunction'] = [
-                                'fixed' => "{total_led}*(" . $setting['value'] . "*" . $percent . "/100)",
-                                'percentage' => null
+                                'fixed' => '{total_led}*('.$setting['value'].'*'.$percent.'/100)',
+                                'percentage' => null,
                             ];
-                        } else if ($setting['name'] == 'Max Discount') {
+                        } elseif ($setting['name'] == 'Max Discount') {
                             $percentage = null;
                             $fixed = null;
                             if ($setting['type'] == 'percentage') {
-                                $percentage = "({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*". $setting['value'] ."/100";
-                            } else if ($setting['type'] == 'fixed') {
-                                $fixed = "({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})-". $setting['value'];
+                                $percentage = '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})*'.$setting['value'].'/100';
+                            } elseif ($setting['type'] == 'fixed') {
+                                $fixed = '({main_ballroom_price}+{prefunction_price}+{high_season_price}+{equipment_price})-'.$setting['value'];
                             }
                             $settings['discount'] = [
                                 'percentage' => $percentage,
-                                "fixed" => $fixed
+                                'fixed' => $fixed,
                             ];
                         }
                     }
@@ -583,14 +583,14 @@ class SettingService
 
                 // high season fee
                 $output['highSeason'] = [
-                    'percentage' => $guides['high_season']['type'] == 'percentage' ? "({main_ballroom_price}+{prefunction_price})*" . $guides['high_season']['value'] . "/100" : null,
-                    'fixed' => $guides['high_season']['type'] == 'fixed' ? $guides['high_season']['value'] : null
+                    'percentage' => $guides['high_season']['type'] == 'percentage' ? '({main_ballroom_price}+{prefunction_price})*'.$guides['high_season']['value'].'/100' : null,
+                    'fixed' => $guides['high_season']['type'] == 'fixed' ? $guides['high_season']['value'] : null,
                 ];
 
                 // markup
                 $output['markup'] = [
-                    'percentaage' => $guides['price_up']['type'] == 'percentage' ? "{total_contract}*" . $guides['price_up']['value'] . "/100" : null,
-                    'fixed' => $guides['price_up']['type'] == 'fixed' ? "{total_contract}+" . $guides['price_up']['value'] : null
+                    'percentaage' => $guides['price_up']['type'] == 'percentage' ? '{total_contract}*'.$guides['price_up']['value'].'/100' : null,
+                    'fixed' => $guides['price_up']['type'] == 'fixed' ? '{total_contract}+'.$guides['price_up']['value'] : null,
                 ];
 
                 // equipment
@@ -610,7 +610,7 @@ class SettingService
                 $output['equipmentList'] = collect($guides['equipment'])->map(function ($map) {
                     return [
                         'title' => $map['name'],
-                        'value' => strtolower($map['name'])
+                        'value' => strtolower($map['name']),
                     ];
                 });
 

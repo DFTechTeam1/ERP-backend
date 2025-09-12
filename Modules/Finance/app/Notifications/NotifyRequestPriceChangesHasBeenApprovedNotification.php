@@ -3,9 +3,8 @@
 namespace Modules\Finance\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Modules\Finance\Models\ProjectDealPriceChange;
 
 class NotifyRequestPriceChangesHasBeenApprovedNotification extends Notification
@@ -40,14 +39,14 @@ class NotifyRequestPriceChangesHasBeenApprovedNotification extends Notification
     public function toMail($notifiable): MailMessage
     {
         setEmailConfiguration();
-        
+
         return (new MailMessage)
-            ->subject('Price Change Request ' . ucfirst($this->type))
-            ->line('Your request for price changes has been ' . $this->type . '.')
-            ->line('Project Deal: ' . $this->change->projectDeal->name)
-            ->line('Old Price: Rp' . number_format($this->change->old_price, 0, ',', '.'))
-            ->line('New Price: Rp' . number_format($this->change->new_price, 0, ',', '.'))
-            ->line('Reason: ' . $this->change->real_reason);
+            ->subject('Price Change Request '.ucfirst($this->type))
+            ->line('Your request for price changes has been '.$this->type.'.')
+            ->line('Project Deal: '.$this->change->projectDeal->name)
+            ->line('Old Price: Rp'.number_format($this->change->old_price, 0, ',', '.'))
+            ->line('New Price: Rp'.number_format($this->change->new_price, 0, ',', '.'))
+            ->line('Reason: '.$this->change->real_reason);
     }
 
     /**

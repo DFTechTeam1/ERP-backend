@@ -23,7 +23,7 @@ it('Complete ongoing project with 7 active task', function () {
         ->withBoards()
         ->withPics()
         ->create([
-            'status' => ProjectStatus::Active->value
+            'status' => ProjectStatus::Active->value,
         ]);
 
     $deadline = now()->addDays(7)->format('Y-m-d H:i');
@@ -35,7 +35,7 @@ it('Complete ongoing project with 7 active task', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $response = $this->getJson(route('api.development.projects.complete', $project->uid));
@@ -47,11 +47,11 @@ it('Complete ongoing project with 7 active task', function () {
 
     $this->assertDatabaseHas('development_projects', [
         'id' => $project->id,
-        'status' => ProjectStatus::Active->value
+        'status' => ProjectStatus::Active->value,
     ]);
 });
 
-it ('Complete ongoing project with 4 active task', function () {
+it('Complete ongoing project with 4 active task', function () {
     Storage::fake('public');
 
     // fake action
@@ -64,7 +64,7 @@ it ('Complete ongoing project with 4 active task', function () {
         ->withBoards()
         ->withPics()
         ->create([
-            'status' => ProjectStatus::Active->value
+            'status' => ProjectStatus::Active->value,
         ]);
 
     $deadline = now()->addDays(7)->format('Y-m-d H:i');
@@ -76,7 +76,7 @@ it ('Complete ongoing project with 4 active task', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $response = $this->getJson(route('api.development.projects.complete', $project->uid));
@@ -86,13 +86,13 @@ it ('Complete ongoing project with 4 active task', function () {
 
     $this->assertDatabaseHas('development_projects', [
         'id' => $project->id,
-        'status' => ProjectStatus::Completed->value
+        'status' => ProjectStatus::Completed->value,
     ]);
 
     foreach ($task as $t) {
         $this->assertDatabaseHas('development_project_tasks', [
             'id' => $t->id,
-            'status' => TaskStatus::Completed->value
+            'status' => TaskStatus::Completed->value,
         ]);
 
         $this->assertDatabaseMissing('development_project_task_pics', [

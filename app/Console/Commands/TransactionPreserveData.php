@@ -39,9 +39,9 @@ class TransactionPreserveData extends Command
         $transactions = Transaction::with([
             'projectDeal',
             'projectDeal.finalQuotation',
-            'projectDeal.transactions'
+            'projectDeal.transactions',
         ])
-        ->get();
+            ->get();
 
         // create invoice based on transaction data
         foreach ($transactions as $key => $transaction) {
@@ -62,7 +62,7 @@ class TransactionPreserveData extends Command
                 'number' => $transaction->trx_id,
                 'is_main' => 1,
                 'sequence' => 0,
-                'created_by' => $transaction->created_by
+                'created_by' => $transaction->created_by,
             ];
 
             Invoice::create($payloadParent);
@@ -78,10 +78,10 @@ class TransactionPreserveData extends Command
                 'status' => InvoiceStatus::Paid->value,
                 'raw_data' => $generateInvoiceContent,
                 'parent_number' => null,
-                'number' => $transaction->trx_id . ' ' . chr(64 + $key + 1),
+                'number' => $transaction->trx_id.' '.chr(64 + $key + 1),
                 'is_main' => 0,
                 'sequence' => $key + 1,
-                'created_by' => $transaction->created_by
+                'created_by' => $transaction->created_by,
             ];
 
             $last = Invoice::create($payload);
@@ -89,7 +89,7 @@ class TransactionPreserveData extends Command
             Transaction::where('id', $transaction->id)
                 ->update([
                     'invoice_id' => $last->id,
-                    'transaction_type' => TransactionType::DownPayment
+                    'transaction_type' => TransactionType::DownPayment,
                 ]);
 
             $this->info('Invoice updated');

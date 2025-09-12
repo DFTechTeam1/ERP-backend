@@ -31,10 +31,10 @@ class UpdateUidToExistingInvoice extends Command
 
         $count = 0;
         foreach ($invoices as $invoice) {
-            if (!$invoice->uid) {
+            if (! $invoice->uid) {
                 \Modules\Finance\Models\Invoice::where('id', $invoice->id)
                     ->update([
-                        'uid' => \Illuminate\Support\Str::orderedUuid()
+                        'uid' => \Illuminate\Support\Str::orderedUuid(),
                     ]);
 
                 $count++;

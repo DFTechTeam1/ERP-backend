@@ -3,15 +3,15 @@
 namespace App\Services;
 
 use App\Enums\Cache\CacheKey;
-use Illuminate\Database\Eloquent\Collection;
+use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\System\BaseRole;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
-use Modules\Production\Repository\EntertainmentTaskSongRepository;
-use App\Enums\Production\ProjectDealStatus;
 use Illuminate\Support\Facades\DB;
+use Modules\Production\Repository\EntertainmentTaskSongRepository;
 
 class DashboardService
 {
@@ -445,8 +445,6 @@ class DashboardService
 
     /**
      * Format projects collection to be consumed in the VCalendar attributes
-     *
-     * @return \Illuminate\Support\Collection
      */
     protected function formattingProjectsForCalendarObjects(Collection $projects, bool $fromProjectDeal = false): \Illuminate\Support\Collection
     {
@@ -457,17 +455,17 @@ class DashboardService
                         $color = 'grey';
                         $backgroundColor = '#9E9E9E';
                         break;
-    
+
                     case ProjectDealStatus::Temporary:
                         $color = 'blue-darken-1';
                         $backgroundColor = '#1E88E5';
                         break;
-    
+
                     case ProjectDealStatus::Final:
                         $color = 'light-green-accent-3';
                         $backgroundColor = '#76FF03';
                         break;
-                    
+
                     default:
                         $color = 'light-green-accent-3';
                         $backgroundColor = '#76FF03';
@@ -482,13 +480,13 @@ class DashboardService
 
             $formattedDate = date('d F Y', strtotime($item->project_date));
 
-            if (!$fromProjectDeal) {
+            if (! $fromProjectDeal) {
                 $pics = collect($item->personInCharges)->pluck('employee.name')->toArray();
                 $pic = implode(', ', $pics);
                 $vj = $item->vjs->count() > 0 ? implode(',', collect($item->vjs)->pluck('employee.nickname')->toArray()) : '-';
             } else {
                 $marketing = $item->marketings->pluck('employee.nickname')->implode(',');
-                $finalPrice = $item->finalQuotation ? "Rp" . number_format(num: $item->finalQuotation->fix_price, decimal_separator: ',') : 0;
+                $finalPrice = $item->finalQuotation ? 'Rp'.number_format(num: $item->finalQuotation->fix_price, decimal_separator: ',') : 0;
             }
 
             return [
@@ -496,20 +494,20 @@ class DashboardService
                 'content' => $item->name,
                 'highlight' => [
                     'fillMode' => 'light',
-                    'color' => 'indigo'
+                    'color' => 'indigo',
                 ],
                 'dates' => $formattedDate,
                 'dot' => [
                     'style' => [
                         'backgroundColor' => $backgroundColor,
-                        'color' => '#ffffff'
-                    ]
+                        'color' => '#ffffff',
+                    ],
                 ],
                 'popover' => [
-                    'label' => $item->name
+                    'label' => $item->name,
                 ],
                 'customData' => [
-                    'name' => $item->name . " (" . $status . ")",
+                    'name' => $item->name.' ('.$status.')',
                     'color' => $color,
                     'pic' => $pic ?? null,
                     'venue' => $item->venue,
@@ -517,9 +515,9 @@ class DashboardService
                     'marketing' => $marketing ?? null,
                     'type' => $fromProjectDeal ? 'prospect' : 'project',
                     'finalPrice' => $finalPrice ?? 0,
-                    'userType' => $fromProjectDeal ? 'financeManagement' : 'production' // this to define who is access the data, to make it easier for the frontend when handle the detail of event
+                    'userType' => $fromProjectDeal ? 'financeManagement' : 'production', // this to define who is access the data, to make it easier for the frontend when handle the detail of event
                 ],
-                'project_date' => $item->project_date
+                'project_date' => $item->project_date,
             ];
         });
 
@@ -535,12 +533,12 @@ class DashboardService
         $startDate = \Carbon\Carbon::create($year, $month, $firstDate)->startOfMonth()->toDateString();
 
         $data = $this->projectDealRepo->list(
-            select: "id,name,project_date,status,venue",
-            where: "project_date BETWEEN '{$startDate}' AND '{$endDate}' AND status != " . ProjectDealStatus::Final->value,
+            select: 'id,name,project_date,status,venue',
+            where: "project_date BETWEEN '{$startDate}' AND '{$endDate}' AND status != ".ProjectDealStatus::Final->value,
             relation: [
                 'marketings:id,project_deal_id,employee_id',
                 'marketings.employee:id,nickname',
-                'finalQuotation:id,project_deal_id,fix_price'
+                'finalQuotation:id,project_deal_id,fix_price',
             ]
         );
 
@@ -1076,25 +1074,25 @@ class DashboardService
         $currentYear = $targetYear ?? Carbon::now()->year;
         $currentMonth = $targetMonth ?? Carbon::now()->month;
         $previousYear = $currentYear - 1;
-        
+
         // Current year data (Jan to target month)
         $currentYearEvents = DB::table('projects')
             ->whereYear('project_date', $currentYear)
             ->whereMonth('project_date', '<=', $currentMonth)
             ->count();
-            
+
         // Previous year data (Jan to same month)
         $previousYearEvents = DB::table('projects')
             ->whereYear('project_date', $previousYear)
             ->whereMonth('project_date', '<=', $currentMonth)
             ->count();
-            
+
         // Calculate growth
         $absoluteGrowth = $currentYearEvents - $previousYearEvents;
-        $growthPercentage = $previousYearEvents > 0 
+        $growthPercentage = $previousYearEvents > 0
             ? round(($absoluteGrowth / $previousYearEvents) * 100, 2)
             : ($currentYearEvents > 0 ? 100 : 0);
-            
+
         // Get detailed breakdown by classification
         $detailedBreakdown = DB::table('projects')
             ->select(
@@ -1103,29 +1101,30 @@ class DashboardService
                 'classification',
                 DB::raw('COUNT(*) as events_count')
             )
-            ->where(function($query) use ($currentYear, $previousYear, $currentMonth) {
-                $query->where(function($q) use ($currentYear, $currentMonth) {
+            ->where(function ($query) use ($currentYear, $previousYear, $currentMonth) {
+                $query->where(function ($q) use ($currentYear, $currentMonth) {
                     $q->whereYear('project_date', $currentYear)
                         ->whereMonth('project_date', '<=', $currentMonth);
                 })
-                ->orWhere(function($q) use ($previousYear, $currentMonth) {
-                    $q->whereYear('project_date', $previousYear)
-                        ->whereMonth('project_date', '<=', $currentMonth);
-                });
+                    ->orWhere(function ($q) use ($previousYear, $currentMonth) {
+                        $q->whereYear('project_date', $previousYear)
+                            ->whereMonth('project_date', '<=', $currentMonth);
+                    });
             })
             ->groupBy(DB::raw('YEAR(project_date)'), DB::raw('MONTH(project_date)'), 'classification')
             ->orderBy(DB::raw('YEAR(project_date)'))
             ->orderBy(DB::raw('MONTH(project_date)'))
             ->orderBy('classification')
             ->get()
-            ->map(function($item) {
+            ->map(function ($item) {
                 // Add month name after the query
                 $monthNames = [
                     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
-                    5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug', 
-                    9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec'
+                    5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug',
+                    9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec',
                 ];
                 $item->month_name = $monthNames[$item->month];
+
                 return $item;
             });
 
@@ -1137,27 +1136,25 @@ class DashboardService
         } else {
             $growthStatus = 'No Change';
         }
-            
+
         return [
             'summary' => [
                 'current_year' => $currentYear,
                 'previous_year' => $previousYear,
                 'comparison_month' => $currentMonth,
-                'period_range' => 'Jan - ' . Carbon::createFromFormat('m', $currentMonth)->format('M'),
+                'period_range' => 'Jan - '.Carbon::createFromFormat('m', $currentMonth)->format('M'),
                 'current_year_events' => $currentYearEvents,
                 'previous_year_events' => $previousYearEvents,
                 'absolute_growth' => $absoluteGrowth,
                 'growth_percentage' => $growthPercentage,
-                'growth_status' => $growthStatus
+                'growth_status' => $growthStatus,
             ],
-            'detailed_breakdown' => $detailedBreakdown
+            'detailed_breakdown' => $detailedBreakdown,
         ];
     }
 
     /**
      * Here we will get project growth rate by compare total event in last year with in current year
-     * 
-     * @return array
      */
     public function getProjectDifference(): array
     {
@@ -1169,28 +1166,26 @@ class DashboardService
         $totalPreviousYear = $data['summary']['previous_year_events'];
 
         return generalResponse(
-            message: "Success",
+            message: 'Success',
             data: [
                 'percentage' => $data['summary']['growth_percentage'],
                 'number_difference' => $data['summary']['absolute_growth'],
                 'total_last_year' => $totalCurrentYear,
                 'total_current_year' => $totalPreviousYear,
-                'color_chart' => $totalPreviousYear < $totalCurrentYear ? '#2eb331' : '#f5226c'
+                'color_chart' => $totalPreviousYear < $totalCurrentYear ? '#2eb331' : '#f5226c',
             ]
         );
     }
 
     /**
      * Here we will get success rate of event by comparing final event with canceled event
-     * 
-     * @return array
      */
     public function getEventSuccessRate(): array
     {
         $result = DB::select('CALL get_event_success_rate()');
 
         return generalResponse(
-            message: "Success",
+            message: 'Success',
             data: [
                 'total_events' => $result[0]->total_events,
                 'total_final' => $result[0]->total_final,
@@ -1206,9 +1201,9 @@ class DashboardService
         try {
             $data = $this->projectDealRepo->list(
                 select: 'id,project_date',
-                where: "status = " . ProjectDealStatus::Final->value . " AND YEAR(project_date) = YEAR(CURDATE())",
+                where: 'status = '.ProjectDealStatus::Final->value.' AND YEAR(project_date) = YEAR(CURDATE())',
                 relation: [
-                    'finalQuotation:id,project_deal_id,fix_price'
+                    'finalQuotation:id,project_deal_id,fix_price',
                 ],
                 orderBy: 'project_date desc'
             );
@@ -1220,12 +1215,13 @@ class DashboardService
 
             $group = $data->groupBy('project_month')->map(function ($item) {
                 $total = $item->pluck('finalQuotation.fix_price')->sum();
+
                 return $total;
             })->toArray();
 
             $months = [
-                "January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December',
             ];
 
             // filled the empty month
@@ -1235,10 +1231,10 @@ class DashboardService
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'data' => $output,
-                    'labels' => $months
+                    'labels' => $months,
                 ]
             );
         } catch (\Throwable $th) {

@@ -32,13 +32,13 @@ class MigrateProjectTaskDurationHistory extends Command
      */
     public function handle()
     {
-        $projectTaskPicLogRepo = new ProjectTaskPicLogRepository();
-        $projectRepo = new ProjectRepository();
+        $projectTaskPicLogRepo = new ProjectTaskPicLogRepository;
+        $projectRepo = new ProjectRepository;
 
         $projects = $projectRepo->list(
             select: 'id',
             relation: [
-                'tasks:id,project_id'
+                'tasks:id,project_id',
             ]
         );
 
@@ -49,7 +49,7 @@ class MigrateProjectTaskDurationHistory extends Command
         foreach ($projects as $project) {
             foreach ($project->tasks as $task) {
                 $projectTaskId = $task->id;
-                
+
                 $tasks = $projectTaskPicLogRepo->list(
                     select: 'id,employee_id,project_task_id,time_added,work_type',
                     where: "project_task_id = {$projectTaskId}",
@@ -58,15 +58,15 @@ class MigrateProjectTaskDurationHistory extends Command
                         'task:id,project_id',
                         'task.project:id',
                         'task.project.personInCharges',
-                        'employee:id,name'
+                        'employee:id,name',
                     ]
                 );
-        
+
                 if (count($tasks) > 0) {
                     $pm = collect($tasks[0]->task->project->personInCharges)->pluck('pic_id')->toArray();
-            
+
                     $output = $tasks->filter(function ($filter) use ($pm) {
-                        return !in_array($filter->employee_id, $pm);
+                        return ! in_array($filter->employee_id, $pm);
                     })->values()->map(function ($mapping) {
                         return [
                             'id' => $mapping->id,
@@ -78,13 +78,13 @@ class MigrateProjectTaskDurationHistory extends Command
                             'project_id' => $mapping->task->project_id,
                         ];
                     })->groupBy('employee_id')->toArray();
-            
+
                     // format output to be filled to the new table
                     foreach ($output as $employeeId => $dataGroup) {
                         $start = Carbon::parse($dataGroup[0]['time_added']);
                         $end = Carbon::parse($dataGroup[count($dataGroup) - 1]['time_added']);
                         $duration = $start->diffInSeconds($end);
-            
+
                         $payload = [
                             'project_id' => $dataGroup[0]['project_id'],
                             'task_id' => $dataGroup[0]['project_task_id'],
@@ -92,9 +92,9 @@ class MigrateProjectTaskDurationHistory extends Command
                             'task_duration' => $duration,
                             'pm_approval_duration' => null,
                             'task_type' => TaskHistoryType::SingleAssignee,
-                            'created_at' => Carbon::now()
+                            'created_at' => Carbon::now(),
                         ];
-    
+
                         ProjectTaskDurationHistory::create($payload);
                     }
                 }

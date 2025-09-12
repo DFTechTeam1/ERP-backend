@@ -3,6 +3,7 @@
 namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Services\InteractiveProjectService;
 
@@ -59,5 +60,10 @@ class InteractiveController extends Controller
         //
 
         return response()->json([]);
+    }
+
+    public function getTeamList(): JsonResponse
+    {
+        return apiResponse($this->service->getTeamList());
     }
 }
