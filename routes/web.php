@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
+use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
@@ -18,10 +19,12 @@ use Maatwebsite\Excel\Facades\Excel;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
 use Modules\Finance\Jobs\InvoiceDue;
+use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Finance\Jobs\ProjectHasBeenFinal as JobsProjectHasBeenFinal;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\InvoiceRequestUpdate;
+use Modules\Finance\Models\ProjectDealPriceChange;
 use Modules\Finance\Notifications\ApproveInvoiceChangesNotification;
 use Modules\Finance\Notifications\InvoiceDueCheckNotification;
 use Modules\Finance\Notifications\NotifyRequestPriceChangesNotification;
@@ -203,3 +206,26 @@ Route::get('send-pending-invoice-changes', function () {
 
     return $invoices;
 });
+
+Route::get('send-pending-price-changes', function () {
+    $changes = ProjectDealPriceChange::where('status', ProjectDealChangePriceStatus::Pending)->get();
+
+    // notify the director to approve this changes. Send job
+    foreach ($changes as $change) {
+        NotifyRequestPriceChangesJob::dispatch(
+            projectDealChangeId: $change->id,
+            newPrice: $change->new_price,
+            reason: $change->real_reason
+        );
+    }
+
+    return $changes;
+});
+
+// define route to approve or reject project deal price changes
+Route::get('project/deal/change/price/approve', [FinanceController::class, 'approvePriceChanges'])
+    ->name('project.deal.change.price.approve')
+    ->middleware('signed');
+Route::get('project/deal/change/price/reject', [FinanceController::class, 'rejectPriceChanges'])
+    ->name('project.deal.change.price.reject')
+    ->middleware('signed');
