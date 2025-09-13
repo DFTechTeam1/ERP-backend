@@ -130,4 +130,8 @@ return [
     'successApprovePriceChanges' => 'Price changes approved successfully.',
     'successRejectPriceChanges' => 'Price changes rejected successfully.',
     'waitingForApproval' => 'Waiting for approval',
+    'successAddInteractiveRequestAndWaitingApproval' => 'Interactive request has been added successfully and is pending approval from the Director.',
+    'eventAlreadyHaveInteractiveRequest' => 'Event already has an interactive request',
+    'successApproveInteractiveRequest' => 'Interactive request has been approved successfully',
+    'successRejectInteractiveRequest' => 'Interactive request has been rejected successfully',
 ];

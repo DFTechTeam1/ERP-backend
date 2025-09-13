@@ -7,6 +7,12 @@ Enum "employee_families_relationship_enum" {
   "other"
 }
 
+Enum "interactive_requests_status" {
+  "1" // for pending
+  "2" // for approved
+  "3" // for rejected
+}
+
 Enum "development_project_task_status_enum" {
   "1" // for not_started
   "2" // for in_progress
@@ -1511,6 +1517,7 @@ Table "project_deals" {
   "led_detail" json [default: NULL, note: '[{"name":"main","led":[{"width":"1","height":"1"}],"total":"1 m<sup>2<\/sup>","totalRaw":"1","textDetail":"1 x 1 m"}]']
   "interactive_area" double [not null, default: '0']
   "interactive_detail" json [default: NULL, note: '[{"name":"interactive","led":[{"width":"1","height":"1"}],"total":"1 m<sup>2<\/sup>","totalRaw":"1","textDetail":"1 x 1 m"}]']
+  "interactive_note" text [default: NULL]
   "country_id" int [default: NULL]
   "state_id" int [default: NULL]
   "city_id" int [default: NULL]
@@ -1531,6 +1538,24 @@ Table "project_deals" {
   Indexes {
     identifier_number [unique, name: "project_deals_identifier_number_unique"]
   }
+}
+
+Table "interactive_requests" {
+  "id" bigint [pk, not null, increment]
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "requester_id" bigint [ref: > users.id]
+  "status" interactive_requests_status
+  "interactive_detail" json [default: NULL, note: '[{"name":"interactive","led":[{"width":"1","height":"1"}],"total":"1 m<sup>2<\/sup>","totalRaw":"1","textDetail":"1 x 1 m"}]']
+  "interactive_area" double [not null, default: '0']
+  "interactive_note" text [default: NULL]
+  "interactive_fee" decimal(24,2) [default: NULL, default: '0.00']
+  "fix_price" decimal(24,2) [default: NULL, default: '0.00']
+  "approved_at" timestamp [default: NULL]
+  "approved_by" bigint [ref: > users.id]
+  "rejected_at" timestamp [default: NULL]
+  "rejected_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "project_deal_price_changes" {

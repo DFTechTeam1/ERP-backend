@@ -45,6 +45,7 @@ Route::middleware(['auth:sanctum'])
         Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
         Route::post('project/deals/{projectDealUid}/update', [ProjectController::class, 'updateFinalDeal'])->name('project-deal.updateFinal');
+        Route::post('project/deals/{projectDealUid}/interactives', [InteractiveController::class, 'store'])->name('project-deal.addInteractive');
         Route::delete('project/deals/{projectDealUid}', [ProjectController::class, 'deleteProjectDeal']);
         Route::get('project/deals/publish/{projectDealUid}/{type}', [ProjectController::class, 'publishProjectDeal']);
         Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
@@ -67,6 +68,8 @@ Route::middleware(['auth:sanctum'])
 
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
+        Route::get('interactives/approve', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
+        Route::get('interactives/reject', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');
         Route::get('interactives/{uid}', [InteractiveController::class, 'show'])->name('interactives.show');
 
         // songs

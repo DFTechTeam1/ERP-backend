@@ -5,7 +5,7 @@
             "type": "regular",
             "childs": [
                 { "path": "/admin/dashboard", "slug": "dashboard", "lang_id": "Dashboard", "lang_en": "Dashboard", "icon": "menus/dashboard.png", "permission": "dashboard_access" },
-                { "path": "/admin/dashboard/report", "slug": "dashboardReport", "lang_id": "Report", "lang_en": "Report", "icon": "menus/dashboard.png", "permission": "dashboard_report_access" },
+                { "path": "/admin/dashboard/report", "slug": "dashboardReport", "lang_id": "Report", "lang_en": "Report", "icon": "menus/chart.png", "permission": "dashboard_report_access" },
                 { "path": "/admin/setting", "slug": "setting", "lang_id": "Pengaturan", "lang_en": "Settings", "icon": "menus/setting.png", "permission": "list_setting" }
             ]
         },
@@ -20,11 +20,12 @@
             "name": "Production",
             "type": "regular",
             "childs": [
-                { "path": "/admin/master/projectClass", "slug": "projectClass", "lang_id": "Event Class", "lang_en": "Event class", "icon": "menus/projects.png", "permission": "list_division" },
+                { "path": "/admin/master/projectClass", "slug": "projectClass", "lang_id": "Event Class", "lang_en": "Event class", "icon": "menus/class.png", "permission": "list_division" },
                 { "path": "/admin/production/projects", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "menus/projects.png", "permission": "list_project" },
-                { "path": "/admin/production/interactives", "slug": "interactiveProject", "lang_id": "Interactive Event", "lang_en": "Interactive Event", "icon": "menus/projects.png", "permission": "list_project" },
+                { "path": "/admin/production/interactives", "slug": "interactiveProject", "lang_id": "Interactive Event", "lang_en": "Interactive Event", "icon": "menus/screen.png", "permission": "list_project" },
                 { "path": "/admin/deals", "slug": "projectDeals", "lang_id": "Deals", "lang_en": "Deals", "icon": "menus/deals.png", "permission": "list_deals" },
                 { "path": "/admin/deals/price-changes", "slug": "projectDealPriceChanges", "lang_id": "Perubahan Harga", "lang_en": "Price Changes", "icon": "menus/money.png", "permission": "list_deal_price_changes" },
+                { "path": "/admin/deals/price-changes", "slug": "interactiveRequest", "lang_id": "Permintaan Interaktif", "lang_en": "Interactive Request", "icon": "menus/requestinteractive.png", "permission": "list_deal_price_changes" },
                 { "path": "/admin/quotation-items", "slug": "manage-quotaiton-items", "lang_id": "Kelola Quotation Item", "lang_en": "Manage Quotation Item", "icon": "menus/paper-ori.png", "permission": "list_quotation_items" },
                 { "path": "/admin/deadline-change-reason", "slug": "deadline-change-reason", "lang_id": "Kelola Alasan Deadline", "lang_en": "Manage Deadline Reason", "icon": "menus/paper-ori.png", "permission": "list_deadline_reasons" },
                 { "path": "/admin/production/files", "slug": "files", "lang_id": "Files", "lang_en": "Files", "icon": "menus/folder.png", "permission": "list_file_manager" },

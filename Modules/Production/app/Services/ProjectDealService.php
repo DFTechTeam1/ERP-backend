@@ -6,6 +6,7 @@ use App\Actions\CopyDealToProject;
 use App\Actions\CreateInteractiveProject;
 use App\Actions\CreateQuotation;
 use App\Enums\Cache\CacheKey;
+use App\Enums\Interactive\InteractiveRequestStatus;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectDealStatus;
@@ -26,9 +27,11 @@ use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\PriceChangeReasonRepository;
 use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
+use Modules\Production\Repository\InteractiveRequestRepository;
 use Modules\Production\Repository\ProjectDealChangeRepository;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -59,6 +62,8 @@ class ProjectDealService
 
     private EmployeeRepository $employeeRepo;
 
+    private InteractiveRequestRepository $interactiveRequestRepo;
+
     /**
      * Construction Data
      */
@@ -73,7 +78,8 @@ class ProjectDealService
         ProjectDealPriceChangeRepository $projectDealPriceChangeRepo,
         InvoiceRepository $invoiceRepo,
         PriceChangeReasonRepository $priceChangeReasonRepo,
-        EmployeeRepository $employeeRepo
+        EmployeeRepository $employeeRepo,
+        InteractiveRequestRepository $interactiveRequestRepo,
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
 
@@ -96,6 +102,8 @@ class ProjectDealService
         $this->invoiceRepo = $invoiceRepo;
 
         $this->employeeRepo = $employeeRepo;
+
+        $this->interactiveRequestRepo = $interactiveRequestRepo;
     }
 
     /**
@@ -1441,24 +1449,185 @@ class ProjectDealService
 
     /**
      * Adding interactive to project deal
-     * Here we update interactive detail in the project_deals table and price in the project_quotations table
-     *
+     * Here we just create interactive request, and wait for approval from director
      *
      * @param  array  $payload  With these following structure
      *                          - string|int $interactive_area
      *                          - array $interactive_detail
      *                          - string $interactive_note
-     *                          - string $interactive_price
+     *                          - string $interactive_fee
+     *                          - string $fix_price
      */
-    public function addingInteractiveToProject(string $projectDealUid, array $payload): array
+    public function addInteractive(string $projectDealUid, array $payload): array
     {
+        DB::beginTransaction();
         try {
             $projectDealId = Crypt::decryptString($projectDealUid);
 
+            $project = $this->repo->show(
+                uid: $projectDealId,
+                select: 'id,status',
+                relation: [
+                    'interactiveRequests:id,project_deal_id',
+                ]
+            );
+
+            // validate request, if already have interactive request, return error
+            if ($project->interactiveRequests->count() > 0) {
+                return errorResponse(message: __('notification.eventAlreadyHaveInteractiveRequest'));
+            }
+
+            $project->interactiveRequests()->create([
+                'status' => InteractiveRequestStatus::Pending,
+                'interactive_detail' => $payload['interactive_detail'],
+                'interactive_area' => $payload['interactive_area'],
+                'interactive_note' => $payload['interactive_note'],
+                'interactive_fee' => $payload['interactive_fee'],
+                'fix_price' => $payload['fix_price'],
+            ]);
+
+            AddInteractiveProjectJob::dispatch($projectDealId)->afterCommit();
+
+            DB::commit();
+
             return generalResponse(
-                message: 'Success'
+                message: __('notification.successAddInteractiveRequestAndWaitingApproval'),
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Adding interactive to project deal
+     * Here we update interactive detail in the project_deals table and price in the project_quotations table
+     */
+    public function approveInteractiveRequest(int $requestId): array
+    {
+        DB::beginTransaction();
+        try {
+            $request = $this->interactiveRequestRepo->show(
+                uid: $requestId,
+                select: 'id,project_deal_id,interactive_detail,interactive_area,interactive_note,interactive_fee,fix_price,status',
+                relation: [
+                    'projectDeal:id,name,project_date,status',
+                    'projectDeal.latestQuotation',
+                    'projectDeal.invoices',
+                    'projectDeal.project:id,project_deal_id',
+                    'requester:id,email,employee_id',
+                    'requester.employee:id,name',
+                ]
+            );
+
+            // update project deal table
+            $this->repo->update(
+                data: [
+                    'interactive_detail' => $request->interactive_detail,
+                    'interactive_area' => $request->interactive_area,
+                    'interactive_note' => $request->interactive_note,
+                ],
+                id: $request->project_deal_id
+            );
+
+            // update project_quotations table
+            $subTotal = $request->projectDeal->latestQuotation->sub_total + $request->interactive_fee;
+            $total = $subTotal - $request->projectDeal->latestQuotation->maximum_discount;
+            $fixPrice = $request->fix_price > 0 ? $request->fix_price : $request->projectDeal->latestQuotation->fix_price;
+            $this->projectQuotationRepo->update(
+                data: [
+                    'fix_price' => $fixPrice,
+                    'interactive_fee' => $request->interactive_fee,
+                    'sub_total' => $subTotal,
+                    'total' => $total,
+                ],
+                where: "project_deal_id = {$request->project_deal_id} and is_final = 1"
+            );
+
+            // update raw data in all invoices
+            foreach ($request->projectDeal->invoices as $invoice) {
+                $rawData = $invoice->raw_data;
+
+                $currentTransactions = collect($rawData['transactions'])->map(function ($trx) {
+                    return str_replace(['Rp', '.', ',00', ','], '', $trx['payment']);
+                });
+                $remainingPayment = $fixPrice - (! empty($currentTransactions) ? $currentTransactions->sum() : 0);
+
+                $fixPrice = 'Rp'.number_format($fixPrice, 0, '.', ',');
+                $remainingPayment = 'Rp'.number_format($remainingPayment, 0, '.', ',');
+                $rawData['remainingPayment'] = $remainingPayment;
+                $rawData['fixPrice'] = $fixPrice;
+
+                // inject led interactive
+                $currentLed = $rawData['led'];
+                $newLed = array_merge($currentLed, $request->interactive_detail);
+                $rawData['led'] = $newLed;
+
+                // update invoice
+                $this->invoiceRepo->update(
+                    data: [
+                        'raw_data' => $rawData,
+                    ],
+                    id: $invoice->uid
+                );
+            }
+
+            // update request
+            $this->interactiveRequestRepo->update(
+                data: [
+                    'status' => InteractiveRequestStatus::Approved,
+                    'approved_at' => Carbon::now(),
+                    'approved_by' => Auth::id(),
+                ],
+                id: $requestId
+            );
+
+            // create interactive project
+            if ($request->projectDeal->status == ProjectDealStatus::Final) {
+                CreateInteractiveProject::run(projectId: $request->projectDeal->project->id, payload: [
+                    'interactive_detail' => $request->interactive_detail,
+                    'interactive_area' => $request->interactive_area,
+                    'interactive_note' => $request->interactive_note,
+                ]);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successApproveInteractiveRequest')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Reject interactive request
+     */
+    public function rejectInteractiveRequest(int $requestId): array
+    {
+        DB::beginTransaction();
+        try {
+            $this->interactiveRequestRepo->update(
+                data: [
+                    'status' => InteractiveRequestStatus::Rejected,
+                    'rejected_at' => Carbon::now(),
+                    'rejected_by' => Auth::id(),
+                ],
+                id: $requestId
+            );
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successRejectInteractiveRequest')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }

@@ -100,4 +100,14 @@ class ProjectDealFactory extends Factory
             }
         });
     }
+
+    public function withProject()
+    {
+        return $this->afterCreating(function (ProjectDeal $projectDeal) {
+            \Modules\Production\Models\Project::factory()->create([
+                'project_deal_id' => $projectDeal->id,
+                'name' => $projectDeal->name,
+            ]);
+        });
+    }
 }
