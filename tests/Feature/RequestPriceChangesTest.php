@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\Transaction\InvoiceStatus;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
+use Modules\Finance\Models\Invoice;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 
 beforeEach(function () {
@@ -33,8 +35,6 @@ it('can request price changes', function () {
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
-
-    logging('REQUEST PRICE 1', $response->json());
     
     $response->assertStatus(201);
     $response->assertJson([
@@ -53,24 +53,57 @@ it('can request price changes', function () {
     Bus::assertDispatched(NotifyRequestPriceChangesJob::class);
 });
 
-it ('cannot request price changes if project deal has child invoices or transactions', function () {
+it ('Request price changes when already have multiple invoices', function () {
+    $price = 100000000;
+
     $projectDeal = \Modules\Production\Models\ProjectDeal::factory()
-        ->withQuotation()
-        ->withInvoice(2)
+        ->withQuotation(price: $price)
         ->create([
             'status' => ProjectDealStatus::Final->value,
         ]);
 
+    Invoice::factory()->create([
+        'project_deal_id' => $projectDeal->id,
+        'status' => InvoiceStatus::Unpaid->value,
+        'amount' => 100000000,
+        'raw_data' => [
+            'fixPrice' => "Rp100,000,000",
+            'remainingPayment' => "Rp100,000,000",
+            'transactions' => []
+        ],
+    ]);
+    Invoice::factory()->create([
+        'project_deal_id' => $projectDeal->id,
+        'status' => InvoiceStatus::Unpaid->value,
+        'amount' => 20000000,
+        'raw_data' => [
+            'fixPrice' => "Rp100,000,000",
+            'remainingPayment' => "Rp80,000,000",
+            'transactions' => [
+                [
+                    'id' => 1,
+                    'payment' => "Rp20,000,000",
+                    'transaction_date' => "05 September 2025"
+                ]
+            ]
+        ],
+    ]);
+
     $payload = [
-        'reason_id' => 'Need to adjust the budget',
-        'price' => 1000,
+        'custom_reason' => 'Need to adjust the budget',
+        'reason_id' => 0,
+        'price' => 120000000,
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
-    logging('REQUEST PRICE 2', $response->json());
     
-    $response->assertStatus(400);
-    $response->assertJson([
-        'message' => __('notification.projectDealHasChildInvoicesOrTransactions'),
+    $response->assertStatus(201);
+
+    $this->assertDatabaseHas('project_deal_price_changes', [
+        'project_deal_id' => $projectDeal->id,
+        'custom_reason' => 'Need to adjust the budget',
+        'reason_id' => 0,
+        'new_price' => 120000000,
+        'requested_by' => $this->user->id,
     ]);
 });
