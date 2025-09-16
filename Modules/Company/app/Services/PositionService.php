@@ -112,6 +112,7 @@ class PositionService
             return [
                 'title' => $item->name,
                 'value' => $item->uid,
+                'id' => $item->id,
             ];
         })->toArray();
 

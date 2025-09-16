@@ -23,7 +23,7 @@ class StateFactory extends Factory
         return [
             'country_id' => Country::factory(),
             'name' => fake()->firstName(),
-            'country_code' => fake()->countryISOAlpha3()
+            'country_code' => fake()->countryISOAlpha3(),
         ];
     }
 }

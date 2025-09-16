@@ -4,7 +4,7 @@ use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectDealMarketing;
 use Modules\Production\Models\ProjectQuotation;
 
-it("Delete quotation item when already have quotation data", function () {
+it('Delete quotation item when already have quotation data', function () {
     $projectDeal = ProjectDeal::factory()
         ->has(ProjectDealMarketing::factory()->count(2), 'marketings')
         ->create();

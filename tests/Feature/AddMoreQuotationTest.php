@@ -9,7 +9,7 @@ it('Add more quotation return success', function () {
     $projectDeal = ProjectDeal::factory()
         ->has(ProjectDealMarketing::factory()->count(2), 'marketings')
         ->create([
-            'name' => 'New Deal'
+            'name' => 'New Deal',
         ]);
 
     $quuotationItem = QuotationItem::factory()->create();
@@ -31,10 +31,10 @@ it('Add more quotation return success', function () {
             'is_high_season' => 1,
             'equipment_type' => 'lasika',
             'items' => [
-                $quuotationItem->id
+                $quuotationItem->id,
             ],
             'description' => '',
-            'design_job' => 1
+            'design_job' => 1,
         ],
     ];
 
@@ -44,12 +44,12 @@ it('Add more quotation return success', function () {
 
     expect($response)->toHaveKey('error');
     expect($response['error'])->toBeFalse();
-    
+
     $this->assertDatabaseHas('project_deals', [
-        'name' => $projectDeal->name
+        'name' => $projectDeal->name,
     ]);
     $this->assertDatabaseCount('project_quotations', 1);
     $this->assertDatabaseHas('project_quotations', [
-        'project_deal_id' => $projectDeal->id
+        'project_deal_id' => $projectDeal->id,
     ]);
 });

@@ -390,7 +390,9 @@
                                         <ul style="list-style: circle; padding-left: 10px; padding-top: 0; font-size: 12px; line-height: 1.4">
                                             <li>Minimum Down Payment sebesar 50% dari total biaya yang ditagihkan, biaya tersebut tidak dapat dikembalikan.</li>
                                             <li>Pembayaran melalui rekening BCA 188 060 1225 a/n Wesley Wiyadi / Edwin Chandra Wijaya</li>
+                                            @if (!$include_tax)
                                             <li>Biaya diatas tidak termasuk pajak.</li>
+                                            @endif
                                             <li>Biaya layanan diatas hanya termasuk perlengkapan multimedia DFACTORY dan tidak termasuk persewaan unit LED dan sistem multimedia lainnya bila diperlukan.</li>
                                             <li>Biaya diatas termasuk Akomodasi untuk Crew bertugas di hari-H event.</li>
                                         </ul>

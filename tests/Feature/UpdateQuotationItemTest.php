@@ -1,9 +1,5 @@
 <?php
 
-use App\Actions\CreateQuotation;
-
-use function Pest\Laravel\{putJson, withHeaders, actingAs};
-
 beforeEach(function () {
     $user = initAuthenticateUser();
 
@@ -13,8 +9,8 @@ beforeEach(function () {
 it('Update quotation item with unique name', function () {
     $quotation = \Modules\Production\Models\QuotationItem::factory()->count(2)->create();
 
-    $response = $this->putJson('/api/production/quotations/' . $quotation[1]->id, [
-        'name' => $quotation[0]->name
+    $response = $this->putJson('/api/production/quotations/'.$quotation[1]->id, [
+        'name' => $quotation[0]->name,
     ]);
 
     $response->assertStatus(422);
@@ -25,7 +21,7 @@ it('Update quotation item with unique name', function () {
 
 it('Update quotation return success', function () {
     $payload = [
-        'name' => 'Name'
+        'name' => 'Name',
     ];
 
     $quotation = \Modules\Production\Models\QuotationItem::factory()->create();
@@ -39,6 +35,6 @@ it('Update quotation return success', function () {
 
     $this->assertDatabaseHas('quotation_items', [
         'name' => $payload['name'],
-        'id' => $quotation->id
+        'id' => $quotation->id,
     ]);
 });

@@ -12,7 +12,8 @@ beforeEach(function () {
     $this->actingAs($user);
 });
 
-function projectDealListStructure() {
+function projectDealListStructure()
+{
     return [
         'uid',
         'latest_quotation_id',
@@ -43,7 +44,7 @@ function projectDealListStructure() {
         'is_final',
         'quotation' => [
             'id',
-            'fix_price'
+            'fix_price',
         ],
         'unpaidInvoices',
         'can_request_price_changes',
@@ -52,7 +53,7 @@ function projectDealListStructure() {
         'can_approve_price_changes',
         'can_reject_price_changes',
         'changes_id',
-        'price_changes_id'
+        'price_changes_id',
     ];
 }
 
@@ -62,18 +63,18 @@ it('Should return the correct number of project deals', function () {
         ->count(4)
         ->create();
 
-    $data = getJson(route('api.production.project-deal.list') . "?itemsPerPage=10&page=1");
-    
+    $data = getJson(route('api.production.project-deal.list').'?itemsPerPage=10&page=1');
+
     $data->assertStatus(201);
 
     $data->assertJsonStructure([
         'message',
         'data' => [
             'paginated' => [
-                '*' => projectDealListStructure()
+                '*' => projectDealListStructure(),
             ],
-            'totalData'
-        ]
+            'totalData',
+        ],
     ]);
 
     expect($data->json()['data']['totalData'])->toBe(4);
@@ -84,29 +85,29 @@ it('List deal with filter', function () {
         ->withQuotation()
         ->count(4)
         ->create([
-            'status' => ProjectDealStatus::Temporary->value
+            'status' => ProjectDealStatus::Temporary->value,
         ]);
 
     ProjectDeal::factory()
         ->withQuotation()
         ->create([
             'name' => 'custom name',
-            'status' => ProjectDealStatus::Final->value
+            'status' => ProjectDealStatus::Final->value,
         ]);
 
-    $response = getJson(route('api.production.project-deal.list') . '?itemPerPage=10&page=1&status[0][id]=' . ProjectDealStatus::Final->value . '&status[0][name]=' . ProjectDealStatus::Final->label());
-    
+    $response = getJson(route('api.production.project-deal.list').'?itemPerPage=10&page=1&status[0][id]='.ProjectDealStatus::Final->value.'&status[0][name]='.ProjectDealStatus::Final->label());
+
     $response->assertStatus(201);
     $response->assertJsonStructure([
         'message',
         'data' => [
             'paginated' => [
-                '*' => projectDealListStructure()
+                '*' => projectDealListStructure(),
             ],
-            'totalData'
-        ]
+            'totalData',
+        ],
     ]);
-    
+
     expect($response->json()['data']['totalData'])->toBe(1);
 });
 
@@ -115,31 +116,31 @@ it('List deal when have price request changes', function () {
         ->withQuotation()
         ->count(4)
         ->create([
-            'status' => ProjectDealStatus::Temporary->value
+            'status' => ProjectDealStatus::Temporary->value,
         ]);
 
     $project = ProjectDeal::factory()
         ->withQuotation()
         ->create([
             'name' => 'custom name',
-            'status' => ProjectDealStatus::Final->value
+            'status' => ProjectDealStatus::Final->value,
         ]);
 
     ProjectDealPriceChange::factory()->create([
-        'project_deal_id' => $project->id
+        'project_deal_id' => $project->id,
     ]);
 
-    $response = getJson(route('api.production.project-deal.list') . '?itemPerPage=10&page=1&status[0][id]=' . ProjectDealStatus::Final->value . '&status[0][name]=' . ProjectDealStatus::Final->label());
-    
+    $response = getJson(route('api.production.project-deal.list').'?itemPerPage=10&page=1&status[0][id]='.ProjectDealStatus::Final->value.'&status[0][name]='.ProjectDealStatus::Final->label());
+
     $response->assertStatus(201);
     $response->assertJsonStructure([
         'message',
         'data' => [
             'paginated' => [
-                '*' => projectDealListStructure()
+                '*' => projectDealListStructure(),
             ],
-            'totalData'
-        ]
+            'totalData',
+        ],
     ]);
 
     expect($response->json()['data']['totalData'])->toBe(1);

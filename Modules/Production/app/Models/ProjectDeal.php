@@ -49,6 +49,7 @@ class ProjectDeal extends Model
         'status',
         'is_fully_paid',
         'cancel_reason',
+        'include_tax',
         'cancel_at',
         'cancel_by',
         'identifier_number',

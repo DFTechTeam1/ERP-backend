@@ -3,10 +3,10 @@
 namespace Modules\Finance\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Finance\Models\ProjectDealPriceChange;
 
 class NotifyRequestPriceChangesHasBeenApproved implements ShouldQueue
@@ -34,7 +34,7 @@ class NotifyRequestPriceChangesHasBeenApproved implements ShouldQueue
         $change = ProjectDealPriceChange::with([
             'projectDeal',
             'requesterBy',
-            'reason'
+            'reason',
         ])->find($this->changeId);
 
         // here we should send notification to the requester

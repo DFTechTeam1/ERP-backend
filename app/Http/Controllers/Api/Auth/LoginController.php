@@ -44,9 +44,6 @@ class LoginController extends Controller
 
     /**
      * Generate token to login into new interface
-     *
-     * @param string $code
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getDetailFromMigrate(string $code): \Illuminate\Http\JsonResponse
     {
@@ -74,7 +71,7 @@ class LoginController extends Controller
                     'mEnc' => $generatedToken['mEnc'],
                     'pEnc' => $generatedToken['pEnc'],
                     'menus' => $generatedToken['menus'],
-                    'main' => $generatedToken['mainToken']
+                    'main' => $generatedToken['mainToken'],
                 ]
             )
         );
@@ -104,7 +101,7 @@ class LoginController extends Controller
                         'mEnc' => $generatedToken['mEnc'],
                         'pEnc' => $generatedToken['pEnc'],
                         'menus' => $generatedToken['menus'],
-                        'main' => $generatedToken['mainToken']
+                        'main' => $generatedToken['mainToken'],
                     ],
                 ),
             );

@@ -4,18 +4,19 @@ use App\Services\GeneralService;
 use App\Services\Geocoding;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Log;
-use Modules\Company\Models\Country;
 use Modules\Company\Models\ProjectClass;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
+use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\QuotationItem;
 
-function createDeal($customer, $projectClass, $employee, $quotationItem) {
-    $payload = getProjectDealPayload($customer, $projectClass, $employee, $quotationItem);
+function createDeal($customer, $projectClass, $employee, $quotationItem)
+{
+    $payload = getProjectDealPayload($customer, $projectClass, $employee, $quotationItem, true);
     $projectService = createProjectService();
+
     $response = $projectService->storeProjectDeals($payload);
 
     return ProjectDeal::where('name', $payload['name'])
@@ -25,16 +26,16 @@ function createDeal($customer, $projectClass, $employee, $quotationItem) {
 
 // define datasets
 dataset('dataDeals', [
-    fn() => [
+    fn () => [
         Customer::factory()->create(),
         ProjectClass::factory()->create(),
         Employee::factory()->create(),
         QuotationItem::factory()->create(),
-    ]
+    ],
 ]);
 
 describe('Publish Quotation', function () {
-    it("Publish quotation as final return success", function (Customer $customer, ProjectClass $projectClass, Employee $employee, QuotationItem $quotationItem) {
+    it('Publish quotation as final return success', function (Customer $customer, ProjectClass $projectClass, Employee $employee, QuotationItem $quotationItem) {
         Bus::fake();
 
         $currentDeal = createDeal($customer, $projectClass, $employee, $quotationItem);
@@ -82,12 +83,19 @@ describe('Publish Quotation', function () {
         ]);
         $this->assertDatabaseHas('projects', [
             'name' => $currentDeal->name,
-            'project_deal_id' => $currentDeal->id
+            'project_deal_id' => $currentDeal->id,
+        ]);
+        $projectData = Project::where('name', $currentDeal->name)
+            ->where('project_deal_id', $currentDeal->id)
+            ->first();
+        $this->assertDatabaseHas('interactive_projects', [
+            'name' => $currentDeal->name,
+            'parent_project' => $projectData->id,
         ]);
 
         // check marketing
         $this->assertDatabaseHas('project_marketings', [
-            'project_id' => $response['data']['project']['id']
+            'project_id' => $response['data']['project']['id'],
         ]);
 
         $this->assertDatabaseCount('invoices', 1);
@@ -96,16 +104,16 @@ describe('Publish Quotation', function () {
             'parent_number' => null,
             'sequence' => 0,
             'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
-            'paid_amount' => 0
+            'paid_amount' => 0,
         ]);
         $this->assertDatabaseHas('project_boards', [
-            'project_id' => $response['data']['project']['id']
+            'project_id' => $response['data']['project']['id'],
         ]);
 
         Bus::assertDispatched(ProjectHasBeenFinal::class);
     })->with('dataDeals');
 
-    it("Publish quotation as temporary return success", function (Customer $customer, ProjectClass $projectClass, Employee $employee, QuotationItem $quotationItem) {
+    it('Publish quotation as temporary return success', function (Customer $customer, ProjectClass $projectClass, Employee $employee, QuotationItem $quotationItem) {
         $currentDeal = createDeal($customer, $projectClass, $employee, $quotationItem);
         $service = createProjectDealService();
 

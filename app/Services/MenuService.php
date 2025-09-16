@@ -32,7 +32,7 @@ class MenuService
         $old = collect($old)->map(function ($oldMenu) use ($permissionData) {
             $childs = collect($oldMenu['childs'])->filter(function ($filter) use ($permissionData) {
                 return in_array($filter['permission'], collect($permissionData)->pluck('name')->toArray());
-            })->values()->map(function($map) {
+            })->values()->map(function ($map) {
                 unset($map['permission']);
 
                 return $map;

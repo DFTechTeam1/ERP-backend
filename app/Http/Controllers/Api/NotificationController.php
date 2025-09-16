@@ -92,7 +92,7 @@ class NotificationController extends Controller
 
         return apiResponse(
             generalResponse(
-                message: "Success"
+                message: 'Success'
             )
         );
     }

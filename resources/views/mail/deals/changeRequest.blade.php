@@ -29,6 +29,12 @@ An event modification requires your approval:
                     <td style="border: 1px solid #e6e6e6; padding: 4px 8px;">{!! $values['old_value'] !!}</td>
                     <td style="border: 1px solid #e6e6e6; padding: 4px 8px;">{!! $values['new_value'] !!}</td>
                 </tr>
+            @elseif (gettype($values['new_value']) == 'boolean')
+                <tr>
+                    <td style="border: 1px solid #e6e6e6; padding: 4px 8px;">{{ $values['label'] }}</td>
+                    <td style="border: 1px solid #e6e6e6; padding: 4px 8px;">{!! $values['old_value'] ? 'Yes' : 'No' !!}</td>
+                    <td style="border: 1px solid #e6e6e6; padding: 4px 8px;">{!! $values['new_value'] ? 'Yes' : 'No' !!}</td>
+                </tr>
             @elseif(gettype($values['new_value']) == 'array')
                 <tr>
                     <td style="border: 1px solid #e6e6e6; padding: 4px 8px;">{{ $values['label'] }}</td>

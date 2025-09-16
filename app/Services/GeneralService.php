@@ -14,10 +14,7 @@ use App\Enums\Transaction\TransactionType;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\URL;
 use Modules\Finance\Repository\InvoiceRepository;
-use Modules\Finance\Repository\TransactionRepository;
-use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Repository\ProjectDealRepository;
 use Vinkla\Hashids\Facades\Hashids;
 
@@ -112,13 +109,11 @@ class GeneralService
 
     /**
      * Generate identifier number for each project deal
-     * 
+     *
      * This will increase every time
      * This identifier number will be used as 'DESIGN JOB' in the quotation and as SUFFIX NUMBER on invoice
-     * 
-     * The output will be like 0950 or 01001 and so on
      *
-     * @return string
+     * The output will be like 0950 or 01001 and so on
      */
     public function generateDealIdentifierNumber(): string
     {
@@ -126,19 +121,19 @@ class GeneralService
 
         $number = $this->getCache(cacheId: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value);
 
-        if (!$number) {
-            $repo = new ProjectDealRepository();
+        if (! $number) {
+            $repo = new ProjectDealRepository;
             $currentData = $repo->list(
                 select: 'id,identifier_number',
                 limit: 1,
                 orderBy: 'created_at DESC',
                 withDeleted: true
             )->toArray();
-    
+
             if (count($currentData) == 0) {
                 $number = $cutoff + 1;
             } else {
-                if (!$currentData[0]['identifier_number']) {
+                if (! $currentData[0]['identifier_number']) {
                     $number = $cutoff + 1;
                 } else {
                     $number = $currentData[0]['identifier_number'] + 1;
@@ -166,16 +161,12 @@ class GeneralService
 
     /**
      * Generate romawi month
-     * 
-     * @param int $month
-     * 
-     * @return string
      */
     public function monthToRoman(int $month): string
     {
         // Validate input
-        if (!is_numeric($month) || $month < 1 || $month > 12) {
-            return "Invalid month";
+        if (! is_numeric($month) || $month < 1 || $month > 12) {
+            return 'Invalid month';
         }
 
         $romanNumerals = [
@@ -190,7 +181,7 @@ class GeneralService
             9 => 'IX',
             10 => 'X',
             11 => 'XI',
-            12 => 'XII'
+            12 => 'XII',
         ];
 
         return $romanNumerals[$month];
@@ -203,10 +194,10 @@ class GeneralService
      */
     public function getUpcomingPaymentDue(): Collection
     {
-        $repo = new ProjectDealRepository();
+        $repo = new ProjectDealRepository;
 
         // only get final project deal and not fully paid
-        $where = "status = " . \App\Enums\Production\ProjectDealStatus::Final->value . " AND is_fully_paid = 0 AND DATEDIFF(project_date, CURRENT_DATE) BETWEEN 1 AND 5";
+        $where = 'status = '.\App\Enums\Production\ProjectDealStatus::Final->value.' AND is_fully_paid = 0 AND DATEDIFF(project_date, CURRENT_DATE) BETWEEN 1 AND 5';
 
         $data = $repo->list(
             select: 'id,customer_id,name,DATEDIFF(project_date, CURRENT_DATE) as interval_due,project_date,city_id,country_id,is_fully_paid',
@@ -218,13 +209,13 @@ class GeneralService
                 'city:id,name',
                 'country:id,name',
                 'transactions',
-                'finalQuotation'
+                'finalQuotation',
             ],
             whereHas: [
                 [
                     'relation' => 'finalQuotation',
-                    'query' => 'id > 0'
-                ]
+                    'query' => 'id > 0',
+                ],
             ]
         );
 
@@ -249,22 +240,20 @@ class GeneralService
 
     /**
      * Get all invoice that have due from now to the next 5 days
-     * 
+     *
      * Finance and marketing will be notified about this
-     * 
-     * @return Collection
      */
     public function getInvoiceDueData(): Collection
     {
-        $repo = new InvoiceRepository();
+        $repo = new InvoiceRepository;
 
         $data = $repo->list(
             select: 'id,project_deal_id,customer_id,number,amount,payment_due,status',
-            where: "DATEDIFF(payment_due, CURRENT_DATE) BETWEEN 1 AND 5 AND status = " . InvoiceStatus::Unpaid->value,
+            where: 'DATEDIFF(payment_due, CURRENT_DATE) BETWEEN 1 AND 5 AND status = '.InvoiceStatus::Unpaid->value,
             relation: [
                 'projectDeal:id,name',
                 'customer:id,name',
-                'projectDeal.marketings:id,employee_id,project_deal_id'
+                'projectDeal.marketings:id,employee_id,project_deal_id',
             ]
         );
 
@@ -274,17 +263,17 @@ class GeneralService
     public function getProjectDealSummary(string|int $year): array
     {
         try {
-            $repo = new ProjectDealRepository();
+            $repo = new ProjectDealRepository;
             $data = $repo->list(
-                select: "id,name,collaboration,project_date,city_id,led_area,venue",
+                select: 'id,name,collaboration,project_date,city_id,led_area,venue',
                 relation: [
                     'city:id,name',
                     'marketings:id,project_deal_id,employee_id',
                     'marketings.employee:id,nickname',
                     'finalQuotation',
-                    'transactions'
+                    'transactions',
                 ],
-                where: "status = " . ProjectDealStatus::Final->value . " AND YEAR(project_date) = {$year}"
+                where: 'status = '.ProjectDealStatus::Final->value." AND YEAR(project_date) = {$year}"
             );
 
             $data = $data->map(function ($project) {
@@ -312,7 +301,7 @@ class GeneralService
                 $project['repayment'] = $repayment;
                 $project['repayment_date'] = $repaymentDate;
 
-                //TODO: Build the feature
+                // TODO: Build the feature
                 $project['refund'] = 0;
                 $project['refund_date'] = '';
 
@@ -320,9 +309,9 @@ class GeneralService
             })->values();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
-                    'projects' => $data
+                    'projects' => $data,
                 ]
             );
         } catch (\Throwable $th) {
@@ -333,10 +322,10 @@ class GeneralService
     public function getDataForRequestInvoiceChangeNotification(int $invoiceRequestId): array
     {
         $data = \Modules\Finance\Models\InvoiceRequestUpdate::with([
-                'invoice:id,uid,parent_number,amount,payment_date,customer_id,project_deal_id,number',
-                'invoice.customer:id,name',
-                'invoice.projectDeal:id,name'
-            ])
+            'invoice:id,uid,parent_number,amount,payment_date,customer_id,project_deal_id,number',
+            'invoice.customer:id,name',
+            'invoice.projectDeal:id,name',
+        ])
             ->find($invoiceRequestId);
 
         $changes = [];
@@ -345,8 +334,8 @@ class GeneralService
             ($data->amount)
         ) {
             $changes['amount'] = [
-                'old' => "Rp" . number_format(num: $data->invoice->amount, decimal_separator: ','),
-                'new' => "Rp" . number_format(num: $data->amount, decimal_separator: ',')
+                'old' => 'Rp'.number_format(num: $data->invoice->amount, decimal_separator: ','),
+                'new' => 'Rp'.number_format(num: $data->amount, decimal_separator: ','),
             ];
         }
         if (
@@ -355,7 +344,7 @@ class GeneralService
         ) {
             $changes['payment_date'] = [
                 'old' => date('Y-m-d', strtotime($data->invoice->payment_date)),
-                'new' => $data->payment_date
+                'new' => $data->payment_date,
             ];
         }
 
@@ -364,7 +353,7 @@ class GeneralService
 
         // this cannot be null
         $director = \Modules\Hrd\Models\Employee::with(['user:id,employee_id,uid'])
-            ->where('email', 'wesley@dfactory.pro') 
+            ->where('email', 'wesleywiyadi@gmail.com')
             ->first();
 
         $output = [
@@ -401,21 +390,21 @@ class GeneralService
             'roles' => $roles,
             'role' => $role,
             'role_id' => $roleId,
-            'permissions' => $permissions
+            'permissions' => $permissions,
         ];
     }
 
     public function authorizeReportingAccess(string $email): string
     {
         $response = \Illuminate\Support\Facades\Http::post(
-            url: config('app.python_endpoint') . '/auth/access-token',
+            url: config('app.python_endpoint').'/auth/access-token',
             data: [
-                'email' => $email
+                'email' => $email,
             ]
         );
 
         if ($response->status() != 200) {
-            throw new \App\Exceptions\UserNotFound(message: "Failed to generate token");
+            throw new \App\Exceptions\UserNotFound(message: 'Failed to generate token');
         }
 
         $token = $response->json()['data']['access_token'];
@@ -437,8 +426,6 @@ class GeneralService
      *          - finance
      *          - hrd
      *          - production
-     *
-     * @return array
      */
     public function getEncryptedPayloadData(array $tokenizer): array
     {
@@ -464,15 +451,12 @@ class GeneralService
                 'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
                 'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
-            ]
+            ],
         ];
     }
 
     /**
      * Here we define all variable that will be saved in the frontend
-     *
-     * @param \App\Models\User $user
-     * @return array
      */
     public function generateAuthorizationToken(\App\Models\User $user): array
     {
@@ -483,21 +467,21 @@ class GeneralService
         $token = $tokenizer['token'];
 
         $encryptedPayload = $this->getEncryptedPayloadData(tokenizer: $tokenizer);
-        
+
         // generate reporting token
         $reportingToken = $this->authorizeReportingAccess(email: $user->email);
-        
+
         $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
-        
+
         $menus = (new \App\Services\MenuService)->getNewFormattedMenu($user->getAllPermissions()->toArray(), $roles->toArray());
-        
-        $encryptionService = new \App\services\EncryptionService();
+
+        $encryptionService = new \App\services\EncryptionService;
         $encryptedPayload = $encryptionService->encrypt(string: json_encode($encryptedPayload), key: config('app.salt_key_encryption'));
         $permissionsEncrypted = $encryptionService->encrypt(string: json_encode([
-            'permissions' => $permissions
+            'permissions' => $permissions,
         ]), key: config('app.salt_key_encryption'));
         $menusEncrypted = $encryptionService->encrypt(string: json_encode([
-            'menus' => $menus
+            'menus' => $menus,
         ]), key: config('app.salt_key_encryption'));
 
         return [
@@ -506,7 +490,7 @@ class GeneralService
             'pEnc' => $permissionsEncrypted,
             'mEnc' => $menusEncrypted,
             'mainToken' => $token->plainTextToken,
-            'menus' => $menus
+            'menus' => $menus,
         ];
     }
 
@@ -522,51 +506,50 @@ class GeneralService
      * - history of payments
      * - due amount
      *
-     * @param array $payload            With these following structure:
-     * - string $date_range
-     * - array $marketings
-     * - array $status
-     * - array $price
-     * @return Collection
+     * @param  array  $payload  With these following structure:
+     *                          - string $date_range
+     *                          - array $marketings
+     *                          - array $status
+     *                          - array $price
      */
     public function getFinanceExportData(array $payload): Collection
     {
-        $where = "id > 0";
+        $where = 'id > 0';
         $whereHas = [];
 
         // filter based on project date
-        if (!empty($payload['date'])) {
+        if (! empty($payload['date'])) {
             $explodeDate = explode(' - ', $payload['date']);
 
             if (isset($explodeDate[1])) {
-                $where .= " AND project_date BETWEEN '" . $explodeDate[0] . "' AND '" . $explodeDate[1] . "'";
+                $where .= " AND project_date BETWEEN '".$explodeDate[0]."' AND '".$explodeDate[1]."'";
             } else {
-                $where .= " AND project_date >= '" . $explodeDate[0] . "'";
+                $where .= " AND project_date >= '".$explodeDate[0]."'";
             }
         }
 
         // filter based on marketings
-        if (!empty($payload['marketings'])) {
+        if (! empty($payload['marketings'])) {
             $marketings = collect($payload['marketings'])->pluck('id')->implode(',');
 
             $whereHas[] = [
                 'relation' => 'marketings',
-                'query' => "employee_id IN ({$marketings})"
+                'query' => "employee_id IN ({$marketings})",
             ];
         }
 
         // filter based on status
-        if (!empty($payload['status'])) {
+        if (! empty($payload['status'])) {
             $status = collect($payload['status'])->pluck('id')->implode(',');
             $where .= " AND status IN ({$status})";
         }
 
         // filter based on price
-        if (!empty($payload['price'])) {
+        if (! empty($payload['price'])) {
             $price = $payload['price'];
             $whereHas[] = [
                 'relation' => 'finalQuotation',
-                'query' => "fix_price BETWEEN " . $price[0] . " AND " . $price[1]
+                'query' => 'fix_price BETWEEN '.$price[0].' AND '.$price[1],
             ];
         }
 
@@ -578,7 +561,7 @@ class GeneralService
                 'marketings:id,employee_id,project_deal_id',
                 'marketings.employee:id,name',
                 'finalQuotation',
-                'transactions'
+                'transactions',
             ]
         );
 
@@ -592,7 +575,7 @@ class GeneralService
             // remove number one transaction if transaction number more than 1
             $otherTransactions = [];
             if ($project->transactions->count() > 1) {
-                foreach($project->transactions as $keyTrx => $trx) {
+                foreach ($project->transactions as $keyTrx => $trx) {
                     if ($keyTrx != 0) {
                         $otherTransactions[] = $trx;
                     }
@@ -612,9 +595,9 @@ class GeneralService
     public function generateApprovalUrlForProjectDealChanges(object $user, object $changeDeal, string $type)
     {
         $name = $type == 'approved' ? 'api.production.project-deal.approveChanges' : 'api.production.project-deal.rejectChanges';
-        
+
         return route($name, [
-            'projectDetailChangesUid' => Crypt::encryptString($changeDeal->id)
-        ]) . "?aid=" . $user->id;
+            'projectDetailChangesUid' => Crypt::encryptString($changeDeal->id),
+        ]).'?aid='.$user->id;
     }
 }

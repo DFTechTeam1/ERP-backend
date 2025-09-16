@@ -929,7 +929,7 @@ class ProjectController extends Controller
                 'firstTransaction',
                 'unpaidInvoices:id,number,parent_number,project_deal_id,amount',
                 'activeProjectDealChange:id,project_deal_id',
-                'activeProjectDealPriceChange:id,project_deal_id,new_price'
+                'activeProjectDealPriceChange:id,project_deal_id,new_price',
             ]
         ));
     }
@@ -1066,8 +1066,6 @@ class ProjectController extends Controller
 
     /**
      * Get request changes list
-     * 
-     * @return JsonResponse
      */
     public function requestChangesList(): JsonResponse
     {

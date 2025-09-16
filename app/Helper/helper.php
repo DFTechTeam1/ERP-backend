@@ -794,9 +794,9 @@ if (! function_exists('formatSearchConditions')) {
 
                 if (isset($data['data_type'])) {
                     if ($data['data_type'] == 'integer') {
-                        $value = (int)$value;
-                    } else if ($data['data_type'] == 'string') {
-                        $value = "'%{$value}%'";        
+                        $value = (int) $value;
+                    } elseif ($data['data_type'] == 'string') {
+                        $value = "'%{$value}%'";
                     }
                 } else {
                     $value = "'%{$value}%'";
@@ -1170,18 +1170,18 @@ if (! function_exists('getPriceGuideSetting')) {
     }
 }
 
-if (!function_exists('linkShortener')) {
+if (! function_exists('linkShortener')) {
     /**
      * Link shortener for client portal
-     * 
-     * @return string
      */
-    function linkShortener(int $length = 8): string {
+    function linkShortener(int $length = 8): string
+    {
         $chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $code = '';
         for ($i = 0; $i < $length; $i++) {
             $code .= $chars[rand(0, strlen($chars) - 1)];
         }
+
         return $code;
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Modules\Company\Models\City;
 use Modules\Company\Models\Country;
@@ -23,9 +22,9 @@ class MyanmarSeeder extends Seeder
                     'iso3' => 'MMR',
                     'phone_code' => '95',
                     'currency' => 'MMK',
-                ]
+                ],
             ],
-            
+
             'states' => [
                 // States/Regions of Myanmar with their cities
                 [
@@ -37,8 +36,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Myaungmya'],
                         ['name' => 'Pyapon'],
                         ['name' => 'Maubin'],
-                        ['name' => 'Labutta']
-                    ]
+                        ['name' => 'Labutta'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -47,8 +46,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Bago'],
                         ['name' => 'Taungoo'],
                         ['name' => 'Pyay'],
-                        ['name' => 'Tharyarwady']
-                    ]
+                        ['name' => 'Tharyarwady'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -57,8 +56,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Hakha'],
                         ['name' => 'Falam'],
                         ['name' => 'Mindat'],
-                        ['name' => 'Matupi']
-                    ]
+                        ['name' => 'Matupi'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -67,8 +66,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Myitkyina'],
                         ['name' => 'Bhamo'],
                         ['name' => 'Putao'],
-                        ['name' => 'Mohnyin']
-                    ]
+                        ['name' => 'Mohnyin'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -76,8 +75,8 @@ class MyanmarSeeder extends Seeder
                     'cities' => [
                         ['name' => 'Loikaw'],
                         ['name' => 'Demoso'],
-                        ['name' => 'Pruso']
-                    ]
+                        ['name' => 'Pruso'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -85,8 +84,8 @@ class MyanmarSeeder extends Seeder
                     'cities' => [
                         ['name' => 'Hpa-an'],
                         ['name' => 'Myawaddy'],
-                        ['name' => 'Kawkareik']
-                    ]
+                        ['name' => 'Kawkareik'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -96,8 +95,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Pakokku'],
                         ['name' => 'Minbu'],
                         ['name' => 'Thayet'],
-                        ['name' => 'Gangaw']
-                    ]
+                        ['name' => 'Gangaw'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -107,8 +106,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Meiktila'],
                         ['name' => 'Pyin Oo Lwin'],
                         ['name' => 'Yamethin'],
-                        ['name' => 'Myingyan']
-                    ]
+                        ['name' => 'Myingyan'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -117,8 +116,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Mawlamyine'],
                         ['name' => 'Thaton'],
                         ['name' => 'Kyaikto'],
-                        ['name' => 'Chaungzon']
-                    ]
+                        ['name' => 'Chaungzon'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -127,8 +126,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Naypyidaw'],
                         ['name' => 'Lewe'],
                         ['name' => 'Pyinmana'],
-                        ['name' => 'Zabuthiri']
-                    ]
+                        ['name' => 'Zabuthiri'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -137,8 +136,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Sittwe'],
                         ['name' => 'Thandwe'],
                         ['name' => 'Maungdaw'],
-                        ['name' => 'Kyaukpyu']
-                    ]
+                        ['name' => 'Kyaukpyu'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -148,8 +147,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Monywa'],
                         ['name' => 'Shwebo'],
                         ['name' => 'Kale'],
-                        ['name' => 'Katha']
-                    ]
+                        ['name' => 'Katha'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -159,8 +158,8 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Lashio'],
                         ['name' => 'Kengtung'],
                         ['name' => 'Tachileik'],
-                        ['name' => 'Muse']
-                    ]
+                        ['name' => 'Muse'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -168,8 +167,8 @@ class MyanmarSeeder extends Seeder
                     'cities' => [
                         ['name' => 'Dawei'],
                         ['name' => 'Myeik'],
-                        ['name' => 'Kawthaung']
-                    ]
+                        ['name' => 'Kawthaung'],
+                    ],
                 ],
                 [
                     'country_code' => 'MM',
@@ -179,10 +178,10 @@ class MyanmarSeeder extends Seeder
                         ['name' => 'Thanlyin'],
                         ['name' => 'Hlegu'],
                         ['name' => 'Hmawbi'],
-                        ['name' => 'Taikkyi']
-                    ]
-                ]
-            ]
+                        ['name' => 'Taikkyi'],
+                    ],
+                ],
+            ],
         ];
 
         // delete first
@@ -194,7 +193,7 @@ class MyanmarSeeder extends Seeder
         }
 
         $country = Country::create($myanmarData['country'][0]);
-        
+
         foreach ($myanmarData['states'] as $state) {
             $payloadState = collect($state)->except(['cities'])->toArray();
 

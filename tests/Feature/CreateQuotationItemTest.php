@@ -1,7 +1,6 @@
 <?php
 
 use Modules\Production\Models\QuotationItem;
-use function Pest\Laravel\{postJson, withHeaders, actingAs};
 
 beforeEach(function () {
     $user = initAuthenticateUser();
@@ -16,7 +15,7 @@ it('Create quotation item with unique name', function () {
     ]);
 
     $response = $this->postJson('/api/production/quotations', [
-        'name' => $name
+        'name' => $name,
     ]);
 
     $response->assertStatus(422);
@@ -25,9 +24,9 @@ it('Create quotation item with unique name', function () {
     expect($response->json()['errors']['name'][0])->toBe('The name has already been taken.');
 });
 
-it('Create quotation item return success', function() {
+it('Create quotation item return success', function () {
     $payload = [
-        'name' => "Item"
+        'name' => 'Item',
     ];
 
     $service = createQuotationItemService();
@@ -38,6 +37,6 @@ it('Create quotation item return success', function() {
     expect($response['error'])->toBeFalse();
 
     $this->assertDatabaseHas('quotation_items', [
-        'name' => $payload['name']
+        'name' => $payload['name'],
     ]);
 });

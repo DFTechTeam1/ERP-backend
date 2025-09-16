@@ -5,32 +5,30 @@ namespace Modules\Company\Repository;
 use Modules\Company\Models\ExportImportResult;
 use Modules\Company\Repository\Interface\ExportImportResultInterface;
 
-class ExportImportResultRepository extends ExportImportResultInterface {
+class ExportImportResultRepository extends ExportImportResultInterface
+{
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new ExportImportResult();
+        $this->model = new ExportImportResult;
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [], string $orderBy = '')
+    public function list(string $select = '*', string $where = '', array $relation = [], string $orderBy = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
@@ -38,7 +36,7 @@ class ExportImportResultRepository extends ExportImportResultInterface {
             $query->with($relation);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -48,45 +46,38 @@ class ExportImportResultRepository extends ExportImportResultInterface {
     /**
      * Paginated data for datatable
      *
-     * @param string $select
-     * @param string $where
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
         int $itemsPerPage,
         int $page,
         string $select = '*',
-        string $where = "",
+        string $where = '',
         array $relation = [],
         string $orderBy = ''
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         }
 
-        if (!empty($relation)) {
+        if (! empty($relation)) {
             $query->with($relation);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
-     * @param string $uid
-     * @param string $select
-     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [])
@@ -95,8 +86,8 @@ class ExportImportResultRepository extends ExportImportResultInterface {
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
-        
+        $query->where('uid', $uid);
+
         if ($relation) {
             $query->with($relation);
         }
@@ -109,7 +100,6 @@ class ExportImportResultRepository extends ExportImportResultInterface {
     /**
      * Store Data
      *
-     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -120,15 +110,14 @@ class ExportImportResultRepository extends ExportImportResultInterface {
     /**
      * Update Data
      *
-     * @param array $data
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (!empty($where)) {
+        if (! empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -142,7 +131,7 @@ class ExportImportResultRepository extends ExportImportResultInterface {
     /**
      * Delete Data
      *
-     * @param integer|string $id
+     * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id, string $where = '')
@@ -154,14 +143,13 @@ class ExportImportResultRepository extends ExportImportResultInterface {
         } else {
             $query->whereRaw($where);
         }
-        
+
         return $query->delete();
     }
 
     /**
      * Bulk Delete Data
      *
-     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

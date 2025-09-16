@@ -371,17 +371,17 @@ class RolePermissionSetting extends Seeder
             ['name' => 'list_deal_price_changes', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
-                $this->getFinanceRole()
+                $this->getFinanceRole(),
             ]],
             ['name' => 'approve_invoice_changes', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
-                $this->getFinanceRole()
+                $this->getFinanceRole(),
             ]],
             ['name' => 'reject_invoice_changes', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
-                $this->getFinanceRole()
+                $this->getFinanceRole(),
             ]],
             ['name' => 'approve_project_deal_change', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
@@ -761,32 +761,62 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function developmentPermission()
+    {
+        return [
+            ['name' => 'development_add_task', 'group' => 'development', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'development_complete_project', 'group' => 'development', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+        ];
+    }
+
     protected function projectPermission()
     {
         return [
+            ['name' => 'list_deadline_reasons', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_deadline_reasons', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'edit_deadline_reasons', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_deadline_reasons', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'create_deals', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
-                $this->getDirectorRole()
+                $this->getDirectorRole(),
             ]],
             ['name' => 'list_deals', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
-                $this->getDirectorRole()
+                $this->getDirectorRole(),
             ]],
             ['name' => 'list_quotation_items', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
-                $this->getDirectorRole()
+                $this->getDirectorRole(),
             ]],
             ['name' => 'create_quotation_item', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
-                $this->getDirectorRole()
+                $this->getDirectorRole(),
             ]],
             ['name' => 'edit_quotation_item', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
-                $this->getDirectorRole()
+                $this->getDirectorRole(),
             ]],
             ['name' => 'delete_quotation_item', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
-                $this->getDirectorRole()
+                $this->getDirectorRole(),
             ]],
             ['name' => 'complete_project', 'group' => 'production', 'used' => [
                 $this->getRootRole(),

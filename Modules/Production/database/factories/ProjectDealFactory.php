@@ -4,7 +4,6 @@ namespace Modules\Production\Database\Factories;
 
 use App\Enums\Production\EventType;
 use App\Enums\Production\ProjectDealStatus;
-use App\Enums\Production\ProjectStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Company\Models\IndonesiaCity;
@@ -87,14 +86,14 @@ class ProjectDealFactory extends Factory
 
             if ($numberOfInvoice > 1) {
                 $state = [
-                    'project_deal_id' => $projectDeal->id,  
+                    'project_deal_id' => $projectDeal->id,
                     'status' => InvoiceStatus::Unpaid->value,
                     'parent_number' => $invoice->number,
-                    'number' => $invoice->number . "A",
-                    'amount' => 100000000
+                    'number' => $invoice->number.'A',
+                    'amount' => 100000000,
                 ];
 
-                if (!empty($rawData)) {
+                if (! empty($rawData)) {
                     $state['raw_data'] = $rawData;
                 }
 

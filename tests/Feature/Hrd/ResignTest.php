@@ -11,13 +11,13 @@ beforeEach(function () {
     $this->actingAs($user);
 });
 
-it ('Employee will be resign in the next 7 days', function () {
+it('Employee will be resign in the next 7 days', function () {
     Bus::fake();
 
     $employee = Employee::factory()
         ->withUser()
         ->create([
-            'status' => Status::Permanent->value
+            'status' => Status::Permanent->value,
         ]);
 
     $resignDate = now()->addDays(7)->format('Y-m-d');
@@ -27,7 +27,7 @@ it ('Employee will be resign in the next 7 days', function () {
     $response = $this->postJson(route('api.employees.resign', ['employeeUid' => $employee->uid]), [
         'reason' => $reason,
         'resign_date' => $resignDate,
-        'severance' => $severance
+        'severance' => $severance,
     ]);
 
     $response->assertStatus(201);
@@ -40,7 +40,7 @@ it ('Employee will be resign in the next 7 days', function () {
     $this->assertDatabaseHas('employees', [
         'id' => $employee->id,
         'status' => Status::Permanent->value,
-        'end_date' => null
+        'end_date' => null,
     ]);
 
     $this->assertDatabaseHas('employee_resigns', [
@@ -49,7 +49,7 @@ it ('Employee will be resign in the next 7 days', function () {
         'reason' => $reason,
         'severance' => $severance,
         'current_position_id' => $employee->position_id,
-        'current_employee_status' => $employee->status
+        'current_employee_status' => $employee->status,
     ]);
 
     $this->assertDatabaseEmpty('delete_office_email_queues');
@@ -57,13 +57,13 @@ it ('Employee will be resign in the next 7 days', function () {
     Bus::assertNotDispatched(DeleteOfficeEmailJob::class);
 });
 
-it ("Employee will be resign today", function () {
+it('Employee will be resign today', function () {
     Bus::fake();
 
     $employee = Employee::factory()
         ->withUser()
         ->create([
-            'status' => Status::Permanent->value
+            'status' => Status::Permanent->value,
         ]);
 
     $resignDate = now()->format('Y-m-d');
@@ -73,7 +73,7 @@ it ("Employee will be resign today", function () {
     $response = $this->postJson(route('api.employees.resign', ['employeeUid' => $employee->uid]), [
         'reason' => $reason,
         'resign_date' => $resignDate,
-        'severance' => $severance
+        'severance' => $severance,
     ]);
 
     $response->assertStatus(201);
@@ -86,7 +86,7 @@ it ("Employee will be resign today", function () {
     $this->assertDatabaseHas('employees', [
         'id' => $employee->id,
         'status' => Status::Inactive->value,
-        'end_date' => $resignDate
+        'end_date' => $resignDate,
     ]);
 
     $this->assertDatabaseHas('employee_resigns', [
@@ -95,12 +95,12 @@ it ("Employee will be resign today", function () {
         'reason' => $reason,
         'severance' => $severance,
         'current_position_id' => $employee->position_id,
-        'current_employee_status' => $employee->status
+        'current_employee_status' => $employee->status,
     ]);
 
     $this->assertDatabaseHas('delete_office_email_queues', [
         'employee_id' => $employee->id,
-        'email' => $employee->email
+        'email' => $employee->email,
     ]);
 
     Bus::assertDispatched(DeleteOfficeEmailJob::class);

@@ -2,8 +2,6 @@
 
 use Modules\Production\Models\DeadlineChangeReason;
 
-use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
-
 beforeEach(function () {
     $user = initAuthenticateUser();
 
@@ -16,37 +14,37 @@ test('Create reason with missing parameter', function () {
     $response = $this->postJson(route('api.production.deadlineReason.store'), $payload);
 
     $response->assertStatus(422);
-    
+
     expect($response->json())->toHaveKeys([
         'message',
-        'errors.name'
+        'errors.name',
     ]);
 });
 
-test("Create reason with same name", function () {
+test('Create reason with same name', function () {
     $reason = DeadlineChangeReason::factory()->create();
 
     $response = $this->postJson(route('api.production.deadlineReason.store'), [
-        'name' => $reason->name
+        'name' => $reason->name,
     ]);
 
     $response->assertStatus(422);
-    
+
     expect($response->json())->toHaveKeys([
         'message',
-        'errors.name'
+        'errors.name',
     ]);
 });
 
 test('Create reason return success', function () {
     $response = $this->postJson(route('api.production.deadlineReason.store'), [
-        'name' => 'name'
+        'name' => 'name',
     ]);
 
     $response->assertStatus(201);
 
     $this->assertDatabaseCount('deadline_change_reasons', 1);
     $this->assertDatabaseHas('deadline_change_reasons', [
-        'name' => 'name'
+        'name' => 'name',
     ]);
 });

@@ -17,7 +17,7 @@ class CustomSignedRouteMiddleware
     {
         $timestamp = strtotime('now');
         $expires = request('expires');
-        
+
         if ($timestamp > $expires) {
             return redirect('/expired');
         }

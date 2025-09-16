@@ -10,7 +10,7 @@ use Modules\Production\Models\ProjectQuotation;
 it('Update project deal with same marketing data', function (Customer $customer) {
     $projectDeal = ProjectDeal::factory()
         ->create([
-            'name' => "First project"
+            'name' => 'First project',
         ]);
 
     $marketings = ProjectDealMarketing::factory()
@@ -45,21 +45,21 @@ it('Update project deal with same marketing data', function (Customer $customer)
     expect($response['error'])->toBeFalse();
 
     $this->assertDatabaseHas('project_deals', [
-        'name' => 'Update project'
+        'name' => 'Update project',
     ]);
     $this->assertDatabaseMissing('project_deals', [
-        'name' => 'First project'
+        'name' => 'First project',
     ]);
     $this->assertDatabaseCount('project_deal_marketings', 2);
 
 })->with([
-    fn() => Customer::factory()->create()
+    fn () => Customer::factory()->create(),
 ]);
 
-it('Update project with different marketing', function(Customer $customer) {
+it('Update project with different marketing', function (Customer $customer) {
     $projectDeal = ProjectDeal::factory()
         ->create([
-            'name' => "First project"
+            'name' => 'First project',
         ]);
 
     $marketings = ProjectDealMarketing::factory()
@@ -85,12 +85,12 @@ it('Update project with different marketing', function(Customer $customer) {
     expect($response['error'])->toBeFalse();
 
     $this->assertDatabaseHas('project_deals', [
-        'name' => 'Update project'
+        'name' => 'Update project',
     ]);
     $this->assertDatabaseMissing('project_deals', [
-        'name' => 'First project'
+        'name' => 'First project',
     ]);
     $this->assertDatabaseCount('project_deal_marketings', 1);
 })->with([
-    fn() => Customer::factory()->create()
+    fn () => Customer::factory()->create(),
 ]);

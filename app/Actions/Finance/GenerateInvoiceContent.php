@@ -12,17 +12,13 @@ class GenerateInvoiceContent
 
     /**
      * Generate invoice content
-     * 
-     * @param ProjectDeal $deal
-     * @param string|int $amount
-     * @param string $invoiceNumber
-     * @param string $requestDate
-     * 
+     *
+     *
      * @return array
      */
     public function handle(ProjectDeal $deal, string|int $amount, string $invoiceNumber, string $requestDate, bool $isFromCommand = false)
     {
-        $generalService = new GeneralService();
+        $generalService = new GeneralService;
 
         $projectDate = $deal->project_date;
         $month = MonthInBahasa(search: date('m', strtotime($projectDate)));
@@ -36,8 +32,8 @@ class GenerateInvoiceContent
             $transactions = $deal->transactions->map(function ($transaction) {
                 return [
                     'id' => $transaction->id,
-                    'payment' => "Rp" . number_format(num: $transaction->payment_amount, decimal_separator: ','),
-                    'transaction_date' => date('d F Y', strtotime($transaction->transaction_date))
+                    'payment' => 'Rp'.number_format(num: $transaction->payment_amount, decimal_separator: ','),
+                    'transaction_date' => date('d F Y', strtotime($transaction->transaction_date)),
                 ];
             })->toArray();
         }
@@ -46,9 +42,9 @@ class GenerateInvoiceContent
             $transactions = collect($transactions)->merge([
                 [
                     'id' => null,
-                    'payment' => "Rp" . number_format(num: $amount, decimal_separator: ','),
-                    'transaction_date' => date('d F Y', strtotime($requestDate))
-                ]
+                    'payment' => 'Rp'.number_format(num: $amount, decimal_separator: ','),
+                    'transaction_date' => date('d F Y', strtotime($requestDate)),
+                ],
             ]);
 
             if ($isFromCommand) {
@@ -62,7 +58,7 @@ class GenerateInvoiceContent
 
         $main = [];
         $prefunction = [];
-        
+
         // call magic method
         $this->setProjectLed(main: $main, prefunction: $prefunction, ledDetailData: $deal->led_detail);
 
@@ -70,7 +66,7 @@ class GenerateInvoiceContent
             'projectName' => $deal->name,
             'projectDate' => "{$date} {$month} {$year}",
             'venue' => $deal->venue,
-            'fixPrice' => "Rp" . number_format(num: $deal->finalQuotation->fix_price, decimal_separator: ','),
+            'fixPrice' => 'Rp'.number_format(num: $deal->finalQuotation->fix_price, decimal_separator: ','),
             'customer' => [
                 'name' => $deal->customer->name,
                 'city' => $deal->city->name,
@@ -88,10 +84,10 @@ class GenerateInvoiceContent
             'paymentDue' => now()->parse($requestDate)->addDays(7)->format('d F Y'),
             'led' => [
                 'main' => $main,
-                'prefunction' => $prefunction
+                'prefunction' => $prefunction,
             ],
             'items' => collect($deal->finalQuotation->items)->pluck('item.name')->toArray(),
-            'remainingPayment' => $remainingPayment
+            'remainingPayment' => $remainingPayment,
         ];
 
         return $payload;
@@ -99,10 +95,6 @@ class GenerateInvoiceContent
 
     /**
      * Set LED for invoice
-     * 
-     * @param array &$main
-     * @param array &$prefunction
-     * @param array $ledDetailData
      */
     protected function setProjectLed(array &$main, array &$prefunction, array $ledDetailData): void
     {
@@ -115,7 +107,7 @@ class GenerateInvoiceContent
                 return [
                     'name' => 'Main Stage',
                     'total' => $item['totalRaw'],
-                    'size' => $item['textDetail']
+                    'size' => $item['textDetail'],
                 ];
             })->toArray();
         }
@@ -125,7 +117,7 @@ class GenerateInvoiceContent
                 return [
                     'name' => 'Prefunction',
                     'total' => $item['totalRaw'],
-                    'size' => $item['textDetail']
+                    'size' => $item['textDetail'],
                 ];
             })->toArray();
         }

@@ -3,16 +3,14 @@
 namespace App\Exports;
 
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class InventoryGeneralReport implements FromView, WithTitle, ShouldAutoSize, WithEvents
+class InventoryGeneralReport implements FromView, ShouldAutoSize, WithEvents, WithTitle
 {
     private $data;
 
@@ -24,7 +22,7 @@ class InventoryGeneralReport implements FromView, WithTitle, ShouldAutoSize, Wit
     public function view(): View
     {
         return view('reports.inventory.inventory_general', [
-            'data' => $this->data
+            'data' => $this->data,
         ]);
     }
 
@@ -46,16 +44,16 @@ class InventoryGeneralReport implements FromView, WithTitle, ShouldAutoSize, Wit
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
-                        ]
-                    ]  
+                            'color' => ['rgb' => '000000'],
+                        ],
+                    ],
                 ]);
 
                 // set header to bold
                 $event->sheet->getDelegate()->getStyle('B1:G1')->applyFromArray([
                     'font' => [
-                        'bold' => true
-                    ]
+                        'bold' => true,
+                    ],
                 ]);
 
                 // notify user
@@ -65,7 +63,7 @@ class InventoryGeneralReport implements FromView, WithTitle, ShouldAutoSize, Wit
                 //     'area' => 'finance',
                 //     'user_id' => $this->userId
                 // ]);
-            }
+            },
         ];
     }
 }

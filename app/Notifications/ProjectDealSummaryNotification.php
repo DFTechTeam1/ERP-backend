@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Exports\ProjectDealSummary;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Maatwebsite\Excel\Facades\Excel;
@@ -39,15 +38,15 @@ class ProjectDealSummaryNotification extends Notification
     {
         setEmailConfiguration();
 
-        $filePath = "finance/reports/summary/Project Deal " . now()->format('Y-m-d') . ".xlsx";
-        Excel::store(export: new ProjectDealSummary, filePath: $filePath, disk: "public");
+        $filePath = 'finance/reports/summary/Project Deal '.now()->format('Y-m-d').'.xlsx';
+        Excel::store(export: new ProjectDealSummary, filePath: $filePath, disk: 'public');
 
         return (new MailMessage)
-                    ->subject('Event Summary')
-                    ->greeting("Dear Finance Team,")
-                    ->line('Please find attached the daily report for Today '. Carbon::now()->format('d F Y'))
-                    ->line('Thank you')
-                    ->attach(storage_path("app/public/{$filePath}"));
+            ->subject('Event Summary')
+            ->greeting('Dear Finance Team,')
+            ->line('Please find attached the daily report for Today '.Carbon::now()->format('d F Y'))
+            ->line('Thank you')
+            ->attach(storage_path("app/public/{$filePath}"));
     }
 
     /**

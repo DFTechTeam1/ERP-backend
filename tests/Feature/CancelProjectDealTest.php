@@ -14,14 +14,14 @@ beforeEach(function () {
     $this->actingAs($user);
 });
 
-it("Cancel project deal when status is final", function () {
+it('Cancel project deal when status is final', function () {
     $project = ProjectDeal::factory()
         ->create([
-            'status' => ProjectDealStatus::Final->value
+            'status' => ProjectDealStatus::Final->value,
         ]);
 
     $response = postJson(route('api.production.project-deal.cancel', ['projectDealUid' => Crypt::encryptString($project->id)]), [
-        'reason' => 'Batal' 
+        'reason' => 'Batal',
     ]);
     $response->assertStatus(400);
 
@@ -37,24 +37,24 @@ it("Cancel project deal when status is final", function () {
     ]);
 });
 
-it("Cancel project deal return success", function () {
+it('Cancel project deal return success', function () {
     Bus::fake();
 
     $project = ProjectDeal::factory()
         ->create([
-            'status' => ProjectDealStatus::Temporary->value
+            'status' => ProjectDealStatus::Temporary->value,
         ]);
 
     $response = postJson(route('api.production.project-deal.cancel', ['projectDealUid' => Crypt::encryptString($project->id)]), [
-        'reason' => 'Batal' 
+        'reason' => 'Batal',
     ]);
-    
+
     $response->assertStatus(201);
 
     $this->assertDatabaseHas('project_deals', [
         'id' => $project->id,
         'status' => ProjectDealStatus::Canceled->value,
-        'cancel_reason' => 'Batal'
+        'cancel_reason' => 'Batal',
     ]);
 
     Bus::assertDispatched(ProjectDealCanceledJob::class);

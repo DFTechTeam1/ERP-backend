@@ -4,7 +4,6 @@ namespace App\Exports;
 
 use App\Services\GeneralService;
 use Illuminate\Contracts\View\View;
-use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -24,7 +23,7 @@ class ProjectDealSummaryPerYear implements FromView, ShouldAutoSize, WithEvents,
 
     public function view(): View
     {
-        $service = new GeneralService();
+        $service = new GeneralService;
 
         $output = $service->getProjectDealSummary($this->year);
 
@@ -49,12 +48,12 @@ class ProjectDealSummaryPerYear implements FromView, ShouldAutoSize, WithEvents,
                 $event->sheet->getDelegate()->getStyle('A1:Q1')->applyFromArray([
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
-                        'color' => ['rgb' => '000000']
+                        'color' => ['rgb' => '000000'],
                     ],
                     'font' => [
                         'bold' => true,
-                        'color' => ['rgb' => 'ffffff']
-                    ]
+                        'color' => ['rgb' => 'ffffff'],
+                    ],
                 ]);
 
                 // set borders
@@ -63,11 +62,11 @@ class ProjectDealSummaryPerYear implements FromView, ShouldAutoSize, WithEvents,
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000']
-                        ]
-                    ]
+                            'color' => ['rgb' => '000000'],
+                        ],
+                    ],
                 ]);
-            }
+            },
         ];
     }
 
