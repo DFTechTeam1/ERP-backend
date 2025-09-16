@@ -21,8 +21,7 @@ class ExportImportResultFactory extends Factory
             'user_id' => User::factory(),
             'description' => fake()->text(150),
             'message' => fake()->text(200),
-            'area' => 'finance'
+            'area' => 'finance',
         ];
     }
 }
-

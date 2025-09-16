@@ -8,7 +8,7 @@ enum ProjectDealStatus: int
     case Final = 1;
     case Temporary = 2;
     case Canceled = 3;
-    
+
     public function label()
     {
         return match ($this) {

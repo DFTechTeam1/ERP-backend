@@ -21,4 +21,3 @@ class PriceChangeReasonFactory extends Factory
         ];
     }
 }
-

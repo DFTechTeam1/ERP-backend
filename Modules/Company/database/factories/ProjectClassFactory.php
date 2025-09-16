@@ -22,4 +22,3 @@ class ProjectClassFactory extends Factory
         ];
     }
 }
-

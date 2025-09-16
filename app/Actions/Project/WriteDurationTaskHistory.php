@@ -14,7 +14,7 @@ class WriteDurationTaskHistory
     public function handle(int $projectTaskId)
     {
         // get duration first
-        $projectTaskPicLogRepo = new ProjectTaskPicLogRepository();
+        $projectTaskPicLogRepo = new ProjectTaskPicLogRepository;
 
         $tasks = $projectTaskPicLogRepo->list(
             select: 'id,employee_id,project_task_id,time_added,work_type',
@@ -24,14 +24,14 @@ class WriteDurationTaskHistory
                 'task:id,project_id',
                 'task.project:id',
                 'task.project.personInCharges',
-                'employee:id,name'
+                'employee:id,name',
             ]
         );
 
         $pm = collect($tasks[0]->task->project->personInCharges)->pluck('pic_id')->toArray();
 
         $output = $tasks->filter(function ($filter) use ($pm) {
-            return !in_array($filter->employee_id, $pm);
+            return ! in_array($filter->employee_id, $pm);
         })->values()->map(function ($mapping) {
             return [
                 'id' => $mapping->id,
@@ -58,7 +58,7 @@ class WriteDurationTaskHistory
                 'task_duration' => $duration,
                 'pm_approval_duration' => null,
                 'task_type' => TaskHistoryType::SingleAssignee,
-                'created_at' => Carbon::now()
+                'created_at' => Carbon::now(),
             ];
         }
 

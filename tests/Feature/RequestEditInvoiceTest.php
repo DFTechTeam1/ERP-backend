@@ -4,7 +4,6 @@ use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Services\GeneralService;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ApproveInvoiceChangesJob;
 use Modules\Finance\Jobs\RequestInvoiceChangeJob;
@@ -12,7 +11,8 @@ use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\InvoiceRequestUpdate;
 use Modules\Hrd\Models\Employee;
 
-use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs, putJson};
+use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertEquals;
 
@@ -27,7 +27,7 @@ it('Request invoice test with no changes in it', function () {
 
     $invoice = Invoice::factory()
         ->create([
-            'status' => InvoiceStatus::Unpaid->value
+            'status' => InvoiceStatus::Unpaid->value,
         ]);
 
     $response = postJson(
@@ -35,7 +35,7 @@ it('Request invoice test with no changes in it', function () {
         data: [
             'amount' => $invoice->amount,
             'payment_date' => date('Y-m-d', strtotime($invoice->payment_date)),
-            'invoice_uid' => $invoice->uid
+            'invoice_uid' => $invoice->uid,
         ]
     );
 
@@ -53,29 +53,29 @@ it('Request invoice test with changes in amount', function () {
     $invoice = Invoice::factory()
         ->create([
             'status' => InvoiceStatus::Unpaid->value,
-            'amount' => 15000000
+            'amount' => 15000000,
         ]);
     $response = postJson(
         uri: route('api.invoices.updateTemporaryData', ['projectDealUid' => $invoice->project_deal_id]),
         data: [
             'amount' => 17000000,
-            'invoice_uid' => $invoice->uid
+            'invoice_uid' => $invoice->uid,
         ]
     );
 
     $response->assertStatus(201);
-    
+
     $this->assertDatabaseHas('invoice_request_updates', [
         'amount' => '17000000.00',
         'payment_date' => null,
         'invoice_id' => $invoice->id,
         'status' => InvoiceRequestUpdateStatus::Pending->value,
-        'request_by' => auth()->id()
+        'request_by' => auth()->id(),
     ]);
 
     $this->assertDatabaseHas('invoices', [
         'id' => $invoice->id,
-        'status' => InvoiceStatus::WaitingChangesApproval->value
+        'status' => InvoiceStatus::WaitingChangesApproval->value,
     ]);
 
     Bus::assertDispatched(RequestInvoiceChangeJob::class);
@@ -88,24 +88,24 @@ it('Request invoice test with changes in payment date', function () {
     $invoice = Invoice::factory()
         ->create([
             'status' => InvoiceStatus::Unpaid->value,
-            'amount' => 15000000
+            'amount' => 15000000,
         ]);
     $response = postJson(
         uri: route('api.invoices.updateTemporaryData', ['projectDealUid' => $invoice->project_deal_id]),
         data: [
             'payment_date' => $changesDate,
-            'invoice_uid' => $invoice->uid
+            'invoice_uid' => $invoice->uid,
         ]
     );
 
     $response->assertStatus(201);
-    
+
     $this->assertDatabaseHas('invoice_request_updates', [
         'amount' => null,
         'payment_date' => $changesDate,
         'invoice_id' => $invoice->id,
         'status' => InvoiceRequestUpdateStatus::Pending->value,
-        'request_by' => auth()->id()
+        'request_by' => auth()->id(),
     ]);
 
     Bus::assertDispatched(RequestInvoiceChangeJob::class);
@@ -116,7 +116,7 @@ it('Get data for request edit notification', function () {
     Employee::factory()
         ->withUser()
         ->create([
-            'email' => 'wesleywiyadi@gmail.com'
+            'email' => 'wesleywiyadi@gmail.com',
         ]);
 
     $invoiceRequest = InvoiceRequestUpdate::factory()->create();
@@ -137,29 +137,29 @@ it('Approval change from email', function () {
                 [
                     'id' => null,
                     'payment' => 'Rp20,000,000',
-                    'transaction_date' => '23 July 2025'
-                ]
+                    'transaction_date' => '23 July 2025',
+                ],
             ],
             'paymentDue' => '23 July 2025',
-            'trxDate' => '19 July 2025'
-        ]
+            'trxDate' => '19 July 2025',
+        ],
     ]);
 
     $invoiceRequest = InvoiceRequestUpdate::factory()->create([
-        'invoice_id' => $invoice->id
+        'invoice_id' => $invoice->id,
     ]);
 
     $director = Employee::factory()
         ->withUser()
         ->create([
-            'email' => 'wesleywiyadi@gmail.com'
+            'email' => 'wesleywiyadi@gmail.com',
         ]);
     $employee = Employee::with('user:id,uid,employee_id')
         ->find($director->id);
 
     // generate url
     $response = (new GeneralService)->getDataForRequestInvoiceChangeNotification(invoiceRequestId: $invoiceRequest->id);
-    
+
     expect($response)->toHaveKeys(['actor', 'invoice', 'director', 'changes']);
 
     $data = $response['invoice'];
@@ -168,7 +168,7 @@ it('Approval change from email', function () {
         parameters: [
             'invoiceUid' => $data->invoice->uid,
             'dir' => $employee->user->uid,
-            'cid' => $data->id
+            'cid' => $data->id,
         ],
         expiration: now()->addHours(5)
     );
@@ -177,7 +177,7 @@ it('Approval change from email', function () {
     $this->assertDatabaseHas('invoice_request_updates', [
         'id' => $invoiceRequest->id,
         'status' => InvoiceRequestUpdateStatus::Approved->value,
-        'approved_by' => $employee->user->id
+        'approved_by' => $employee->user->id,
     ]);
 
     Bus::assertDispatched(ApproveInvoiceChangesJob::class);

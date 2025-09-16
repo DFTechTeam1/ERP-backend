@@ -149,5 +149,5 @@ return [
 
     'python_endpoint' => env('PYTHON_ENDPOINT', null),
 
-    'salt_key_encryption' => env('SALT_KEY')
+    'salt_key_encryption' => env('SALT_KEY'),
 ];

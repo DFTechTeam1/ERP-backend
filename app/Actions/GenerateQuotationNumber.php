@@ -12,10 +12,10 @@ class GenerateQuotationNumber
 
     public function handle(?ProjectQuotationRepository $projectQuotationRepo = null): string
     {
-        if (!$projectQuotationRepo) {
-            $projectQuotationRepo = new ProjectQuotationRepository();
+        if (! $projectQuotationRepo) {
+            $projectQuotationRepo = new ProjectQuotationRepository;
         }
-        
+
         // get latest quotation
         $latestData = $projectQuotationRepo->list(
             select: 'id,quotation_id',

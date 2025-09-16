@@ -4,12 +4,10 @@ use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\System\BaseRole;
-use App\Models\User;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
 use App\Services\UserRoleManagement;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Company\Models\City;
 use Modules\Company\Models\Country;
@@ -139,10 +137,9 @@ function createProjectService(
     $projectQuotationRepo = null,
     $projectDealRepo = null,
     $projectDealMarketingRepo = null
-)
-{
+) {
     return new ProjectService(
-        $userRoleManagement ? $userRoleManagement : new UserRoleManagement(),
+        $userRoleManagement ? $userRoleManagement : new UserRoleManagement,
         $projectBoardRepo ? $projectBoardRepo : new ProjectBoardRepository,
         $geoCoding ? $geoCoding : new Geocoding,
         $projectTaskHoldRepo ? $projectTaskHoldRepo : new ProjectTaskHoldRepository,
@@ -187,8 +184,8 @@ function createProjectService(
 
 function initAuthenticateUser(array $permissions = [], bool $withEmployee = false, string $roleName = BaseRole::Root->value, ?object $user = null)
 {
-    if (!$withEmployee) {
-        if (!$user) {
+    if (! $withEmployee) {
+        if (! $user) {
             $user = \App\Models\User::factory()
                 ->create();
         }
@@ -204,11 +201,11 @@ function initAuthenticateUser(array $permissions = [], bool $withEmployee = fals
         ->where('name', $roleName)
         ->first();
 
-    if (!$checkRoot) {
+    if (! $checkRoot) {
         $checkRoot = \Spatie\Permission\Models\Role::create(['name' => $roleName, 'guard_name' => 'sanctum']);
     }
-    
-    if (!empty($permissions)) {
+
+    if (! empty($permissions)) {
         foreach ($permissions as $permissionName) {
             Permission::create(['name' => $permissionName, 'guard_name' => 'sanctum']);
             $user->givePermissionTo($permissionName);
@@ -280,13 +277,13 @@ function getProjectDealPayload(
                 'led' => [
                     [
                         'height' => '5.5',
-                        'width' => '20'
-                    ]
+                        'width' => '20',
+                    ],
                 ],
                 'total' => '110 m<sup>2</sup>',
                 'totalRaw' => '110',
-                'textDetail' => '20 x 5.5 m'
-            ]
+                'textDetail' => '20 x 5.5 m',
+            ],
         ],
         'country_id' => $country->id,
         'state_id' => $country->states[0]->id,
@@ -299,7 +296,7 @@ function getProjectDealPayload(
         'is_have_interactive_element' => $withInteractive,
         'client_portal' => 'wedding-anniversary',
         'marketing_id' => [
-            $employee ? $employee->uid : 'f063164d-62ff-44cf-823d-7c456dad1f4b'
+            $employee ? $employee->uid : 'f063164d-62ff-44cf-823d-7c456dad1f4b',
         ],
         'status' => ProjectDealStatus::Draft->value, // 1 is active, 0 is draft
         'quotation' => [
@@ -319,9 +316,10 @@ function getProjectDealPayload(
             'equipment_type' => 'lasika',
             'items' => $quotationItem ? [$quotationItem->id] : [1, 2],
             'description' => '',
-            'design_job' => 1
+            'design_job' => 1,
         ],
-        'request_type' => 'save_and_download' // will be draft,save,save_and_download
+        'request_type' => 'save_and_download', // will be draft,save,save_and_download
+        'include_tax' => false,
     ];
 }
 
@@ -339,16 +337,16 @@ function createProjectDealService(
     $employeeRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
-        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository(),
-        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository(),
-        $generalService ? $generalService : new GeneralService(),
-        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository(),
+        $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
+        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
+        $generalService ? $generalService : new GeneralService,
+        $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
         $projectRepo ? $projectRepo : new ProjectRepository,
         $geocoding ? $geocoding : new Geocoding,
         $projectDealChangeRepo ? $projectDealChangeRepo : new \Modules\Production\Repository\ProjectDealChangeRepository,
         $projectDealPriceChangeRepo ? $projectDealPriceChangeRepo : new ProjectDealPriceChangeRepository,
-        $invoiceRepo ? $invoiceRepo : new InvoiceRepository(),
-        $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository(),
+        $invoiceRepo ? $invoiceRepo : new InvoiceRepository,
+        $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository,
         $employeeRepo ? $employeeRepo : new EmployeeRepository
     );
 }
@@ -357,7 +355,7 @@ function createQuotationItemService(
     $quotationItemRepo = null
 ) {
     return new \Modules\Production\Services\QuotationItemService(
-        $quotationItemRepo ? $quotationItemRepo : new \Modules\Production\Repository\QuotationItemRepository()
+        $quotationItemRepo ? $quotationItemRepo : new \Modules\Production\Repository\QuotationItemRepository
     );
 }
 
@@ -367,8 +365,7 @@ function setTransactionService(
     $generalService = null,
     $projectDealRepo = null,
     $invoiceRepo = null
-)
-{
+) {
     return new TransactionService(
         $repo ? $repo : new TransactionRepository,
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,

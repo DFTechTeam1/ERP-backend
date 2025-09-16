@@ -4,18 +4,19 @@ namespace App\Services;
 
 use Modules\Company\Repository\ExportImportResultRepository;
 
-class ExportImportService {
+class ExportImportService
+{
     public function handleSuccessProcessing(array $payload, string $event = 'handle-export-import-notification')
     {
         $this->storeDatabase($payload);
 
         // send user notification via pusher
         (new PusherNotification)->send(
-            channel: "my-channel-" . $payload['user_id'],
+            channel: 'my-channel-'.$payload['user_id'],
             event: $event,
             payload: [
                 'type' => 'exportImportSuccess',
-                'message' => $payload['description']
+                'message' => $payload['description'],
             ],
             compressedValue: true
         );
@@ -30,11 +31,11 @@ class ExportImportService {
      * Handle error processing when do export or import
      * send user notification
      *
-     * @param array $payload            With these following structure
-     * - string $description
-     * - string $message
-     * - string $area
-     * - int $user_id
+     * @param  array  $payload  With these following structure
+     *                          - string $description
+     *                          - string $message
+     *                          - string $area
+     *                          - int $user_id
      * @return void
      */
     public function handleErrorProcessing(array $payload)
@@ -43,11 +44,11 @@ class ExportImportService {
 
         // send user notification via pusher
         (new PusherNotification)->send(
-            channel: "my-channel-" . $payload['user_id'],
-            event: "handle-export-import-notification",
+            channel: 'my-channel-'.$payload['user_id'],
+            event: 'handle-export-import-notification',
             payload: [
                 'type' => 'exportImportFailed',
-                'message' => $payload['description']
+                'message' => $payload['description'],
             ],
             compressedValue: true
         );

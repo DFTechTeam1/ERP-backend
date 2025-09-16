@@ -1,11 +1,11 @@
 <?php
 
+use App\Actions\Development\DefineTaskAction;
+use App\Enums\Development\Project\Task\TaskStatus;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Development\Models\DevelopmentProjectTaskPicWorkstate;
 use Modules\Hrd\Models\Employee;
-use App\Enums\Development\Project\Task\TaskStatus;
-use App\Actions\Development\DefineTaskAction;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser();
@@ -28,12 +28,12 @@ function mainHoldTaskSeeder($user)
 
     $worker = Employee::factory()
         ->create([
-            'user_id' => $user->id
+            'user_id' => $user->id,
         ]);
 
     // update users employee_id
     \App\Models\User::where('id', $user->id)->update([
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     $task = DevelopmentProjectTask::factory()
@@ -42,16 +42,16 @@ function mainHoldTaskSeeder($user)
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => null,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     return [
         'task' => $task,
-        'worker' => $worker
+        'worker' => $worker,
     ];
 }
 
-it ('Hold existing task', function () {
+it('Hold existing task', function () {
     $data = mainHoldTaskSeeder($this->user);
     $task = $data['task'];
     $worker = $data['worker'];
@@ -59,7 +59,7 @@ it ('Hold existing task', function () {
     $this->assertDatabaseCount('dev_project_task_pic_workstates', 1);
     $this->assertDatabaseHas('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     // hold the task
@@ -68,7 +68,7 @@ it ('Hold existing task', function () {
     $response->assertStatus(201);
     $response->assertJsonStructure([
         'message',
-        'data'
+        'data',
     ]);
 
     // get current workstate
@@ -78,17 +78,17 @@ it ('Hold existing task', function () {
 
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
-        'status' => TaskStatus::OnHold->value
+        'status' => TaskStatus::OnHold->value,
     ]);
 
     $this->assertDatabaseHas('dev_project_task_pic_holdstates', [
         'task_id' => $task->id,
         'employee_id' => $worker->id,
-        'work_state_id' => $workState->id
+        'work_state_id' => $workState->id,
     ]);
     $this->assertDatabaseMissing('dev_project_task_pic_holdstates', [
         'task_id' => $task->id,
         'employee_id' => $worker->id,
-        'holded_at' => null
+        'holded_at' => null,
     ]);
 });

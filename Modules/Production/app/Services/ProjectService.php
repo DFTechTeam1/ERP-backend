@@ -6086,7 +6086,7 @@ class ProjectService
                 $employee = $this->employeeRepo->show(
                     uid: 'dummy',
                     select: 'id,uid,name,email,employee_id',
-                    where: 'id = '.$pic['employee_id'] . ' and status != ' . \App\Enums\Employee\Status::Inactive->value . ' and status != ' . \App\Enums\Employee\Status::Deleted->value
+                    where: 'id = '.$pic['employee_id'].' and status != '.\App\Enums\Employee\Status::Inactive->value.' and status != '.\App\Enums\Employee\Status::Deleted->value
                 );
 
                 if ($employee) {

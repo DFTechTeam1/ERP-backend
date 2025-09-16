@@ -416,8 +416,6 @@ class UserService
      *          - finance
      *          - hrd
      *          - production
-     *
-     * @return array
      */
     protected function getEncryptedPayloadData(array $tokenizer): array
     {
@@ -443,17 +441,12 @@ class UserService
                 'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
                 'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
-            ]
+            ],
         ];
     }
 
     /**
      * Login user
-     *
-     * @param array $payload
-     * @param boolean $unitTesting
-     * @param boolean $onActing
-     * @return array
      */
     public function login(array $payload, bool $unitTesting = false, bool $onActing = false): array
     {
@@ -462,26 +455,26 @@ class UserService
             $user = $this->repo->detail(
                 id: 'id',
                 select: 'id,email,employee_id,email_verified_at,password',
-                where: "email = '" . $payload['email'] . "' and user_status = 1",
+                where: "email = '".$payload['email']."' and user_status = 1",
                 relation: [
                     'employee:id,name,email,user_id,position_id,uid',
-                    'employee.position:id,name'
+                    'employee.position:id,name',
                 ]
             );
 
-            if (!$user) {
+            if (! $user) {
                 return errorResponse(message: __('global.userNotFound'));
             }
 
-            if (!$user->email_verified_at) {
+            if (! $user->email_verified_at) {
                 return errorResponse(message: __('userNotActive'));
             }
 
-            if (!Hash::check($payload['password'], $user->password)) {
+            if (! Hash::check($payload['password'], $user->password)) {
                 return errorResponse(message: __('global.credentialDoesNotMatch'));
             }
 
-            if (!isset($user->getRoleNames()[0])) {
+            if (! isset($user->getRoleNames()[0])) {
                 return errorResponse(message: __('notification.doNotHaveAppPermission'));
             }
 
@@ -502,7 +495,7 @@ class UserService
             /**
              * here we generate all payload that will temporary saved in the frontent
              * We generate these:
-             * 
+             *
              * Encrypted payload:           With these format:
              *      - token exp
              *      - user
@@ -516,7 +509,7 @@ class UserService
              *          - finance
              *          - hrd
              *          - production
-             * 
+             *
              * reportingToken
              * permissionEncrypted
              * menusEncrypted
@@ -658,7 +651,7 @@ class UserService
                 'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
                 'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
-            ]
+            ],
         ];
 
         // this data is used when changing to other subdomains
@@ -673,10 +666,10 @@ class UserService
         // here we will break the payload into some parts to avoid long context in the encrypted payload string
         // we will remove permissions, menus, and notifications from the payload
         $permissionsEncrypted = $encryptionService->encrypt(json_encode([
-            'permissions' => $permissions
+            'permissions' => $permissions,
         ]), config('app.salt_key_encryption'));
         $menusEncrypted = $encryptionService->encrypt(json_encode([
-            'menus' => $menus
+            'menus' => $menus,
         ]), config('app.salt_key_encryption'));
 
         // store histories
@@ -701,21 +694,21 @@ class UserService
             'pEnc' => $permissionsEncrypted,
             'mEnc' => $menusEncrypted,
             'mainToken' => $token->plainTextToken,
-            'menus' => $menus
+            'menus' => $menus,
         ];
     }
 
     protected function authorizeReportingAccess(string $email)
     {
         $response = \Illuminate\Support\Facades\Http::post(
-            url: config('app.python_endpoint') . '/auth/access-token',
+            url: config('app.python_endpoint').'/auth/access-token',
             data: [
-                'email' => $email
+                'email' => $email,
             ]
         );
 
         if ($response->status() != 200) {
-            throw new UserNotFound(message: "Failed to generate token");
+            throw new UserNotFound(message: 'Failed to generate token');
         }
 
         $token = $response->json()['data']['access_token'];

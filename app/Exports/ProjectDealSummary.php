@@ -10,7 +10,7 @@ class ProjectDealSummary implements WithMultipleSheets
     public function sheets(): array
     {
         $years = DB::table('project_deals')
-            ->selectRaw("DISTINCT(YEAR(project_date)) as year")
+            ->selectRaw('DISTINCT(YEAR(project_date)) as year')
             ->get()->toArray();
 
         if (count($years) == 0) {
@@ -18,7 +18,7 @@ class ProjectDealSummary implements WithMultipleSheets
         }
 
         $sheets = [];
-        foreach($years as $year)  {
+        foreach ($years as $year) {
             $sheets[] = new ProjectDealSummaryPerYear((int) $year->year);
         }
 

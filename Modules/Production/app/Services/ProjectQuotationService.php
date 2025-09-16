@@ -180,7 +180,7 @@ class ProjectQuotationService
             uid: 'uid',
             select: 'id,project_deal_id,fix_price,quotation_id,description,design_job',
             relation: [
-                'deal:id,name,project_date,customer_id,event_type,venue,collaboration,led_detail,country_id,state_id,city_id,project_class_id',
+                'deal:id,name,project_date,customer_id,event_type,venue,collaboration,led_detail,country_id,state_id,city_id,project_class_id,include_tax',
                 'deal.city:id,name',
                 'deal.country:id,name',
                 'deal.state:id,name',
@@ -195,6 +195,7 @@ class ProjectQuotationService
         );
 
         $output = [
+            'include_tax' => $data->deal->include_tax,
             'rules' => $this->generalService->getSettingByKey('quotation_rules'),
             'company' => [
                 'address' => $this->generalService->getSettingByKey('company_address'),

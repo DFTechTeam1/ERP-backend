@@ -14,6 +14,6 @@ class ReportToken extends Model
         'last_used_at',
         'access_token',
         'refresh_token',
-        'created_at'
+        'created_at',
     ];
 }

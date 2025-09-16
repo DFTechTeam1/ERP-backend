@@ -6,8 +6,6 @@ use Database\Factories\StateFactory as FactoriesStateFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Modules\Company\Database\Factories\StateFactory;
-
 
 class State extends Model
 {

@@ -4,8 +4,8 @@ namespace Modules\Company\Models;
 
 use App\Enums\Company\ExportImportAreaType;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Company\Database\Factories\ExportImportResultFactory;
 
@@ -23,13 +23,13 @@ class ExportImportResult extends Model
         'description',
         'message',
         'user_id',
-        'type'
+        'type',
     ];
 
     protected function casts()
     {
         return [
-            'type' => ExportImportAreaType::class
+            'type' => ExportImportAreaType::class,
         ];
     }
 

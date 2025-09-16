@@ -18,14 +18,14 @@ it('Show pagination content of import export results', function () {
     $lists = ExportImportResult::factory()
         ->count(5)
         ->create([
-            'user_id' => $user->id
+            'user_id' => $user->id,
         ]);
 
-    $route = route('api.company.inboxData') . "?itemsPerPage=10&page=1";
+    $route = route('api.company.inboxData').'?itemsPerPage=10&page=1';
     $response = getJson($route);
 
     $response->assertStatus(201);
-    
+
     expect($response->json())->toHaveKeys(['message', 'data.paginated', 'data.totalData']);
 
     expect(count($response->json()['data']['paginated']))->toBe(5);

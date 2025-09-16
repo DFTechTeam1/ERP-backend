@@ -13,7 +13,6 @@ use Modules\Company\Models\Branch;
 use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\IndonesiaVillage;
-use Modules\Company\Models\Position;
 use Modules\Company\Models\PositionBackup;
 use Modules\Company\Models\Province;
 use Modules\Hrd\Models\Employee;
@@ -103,7 +102,7 @@ class EmployeeFactory extends Factory
             'salary_type' => SalaryType::Monthly->value,
             'ptkp_status' => PtkpStatus::K0->value,
             'branch_id' => Branch::factory(),
-            'user_id' => null
+            'user_id' => null,
         ];
     }
 
@@ -111,12 +110,12 @@ class EmployeeFactory extends Factory
     {
         return $this->afterCreating(function (Employee $employee) {
             $user = User::factory()->create([
-                'employee_id' => $employee->id
+                'employee_id' => $employee->id,
             ]);
 
             Employee::where('id', $employee->id)
                 ->update([
-                    'user_id' => $user->id
+                    'user_id' => $user->id,
                 ]);
         });
     }
@@ -129,13 +128,13 @@ class EmployeeFactory extends Factory
                 'resign_date' => fake()->dateTimeBetween('now', '+3 months')->format('Y-m-d'),
                 'severance' => 0,
                 'current_position_id' => $employee->position_id,
-                'current_employee_status' => $employee->status
+                'current_employee_status' => $employee->status,
             ]);
 
             if ($updateToInactive) {
                 Employee::where('id', $employee->id)
                     ->update([
-                        'status' => Status::Inactive->value
+                        'status' => Status::Inactive->value,
                     ]);
             }
         });

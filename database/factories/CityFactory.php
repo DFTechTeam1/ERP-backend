@@ -29,7 +29,7 @@ class CityFactory extends Factory
             'country_id' => $country->id,
             'state_id' => $country->states[0]->id,
             'name' => fake()->city(),
-            'country_code' => $country->iso3
+            'country_code' => $country->iso3,
         ];
     }
 }

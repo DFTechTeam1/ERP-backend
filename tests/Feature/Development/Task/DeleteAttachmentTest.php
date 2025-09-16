@@ -1,11 +1,11 @@
 <?php
 
+use App\Actions\Development\DefineTaskAction;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Models\DevelopmentProjectTask;
 use Modules\Development\Models\DevelopmentProjectTaskAttachment;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use App\Actions\Development\DefineTaskAction;
 
 beforeEach(function () {
     $user = initAuthenticateUser();
@@ -31,13 +31,13 @@ it('Delete image return success', function () {
     $task = DevelopmentProjectTask::factory()
         ->for($project)
         ->create([
-            'development_project_board_id' => $project->boards->first()->id
+            'development_project_board_id' => $project->boards->first()->id,
         ]);
 
     // create attachments
     $attachment = DevelopmentProjectTaskAttachment::create([
         'task_id' => $task->id,
-        'file_path' => 'test.jpg'
+        'file_path' => 'test.jpg',
     ]);
 
     $file = UploadedFile::fake()->image('test.jpg');
@@ -50,7 +50,7 @@ it('Delete image return success', function () {
     $response = $this->deleteJson(route('api.development.projects.tasks.attachments.destroy', [
         'projectUid' => $project->uid,
         'taskUid' => $task->uid,
-        'attachmentId' => $attachment->uid
+        'attachmentId' => $attachment->uid,
     ]));
 
     $response->assertStatus(201);
@@ -60,6 +60,6 @@ it('Delete image return success', function () {
 
     // check database attachments is missing
     $this->assertDatabaseMissing('development_project_task_attachments', [
-        'id' => $attachment->id
+        'id' => $attachment->id,
     ]);
 });

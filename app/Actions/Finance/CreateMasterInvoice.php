@@ -2,7 +2,6 @@
 
 namespace App\Actions\Finance;
 
-use App\Actions\Finance\GenerateInvoiceContent;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Services\GeneralService;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -16,9 +15,9 @@ class CreateMasterInvoice
     public function handle(int $projectDealId)
     {
         // generate content
-        $repo = new ProjectDealRepository();
-        $generalService = new GeneralService();
-        
+        $repo = new ProjectDealRepository;
+        $generalService = new GeneralService;
+
         $projectDeal = $repo->show(
             uid: $projectDealId,
             select: 'id,name,project_date,led_detail,venue,customer_id,city_id,country_id,is_fully_paid,identifier_number',
@@ -28,10 +27,10 @@ class CreateMasterInvoice
                 'transactions',
                 'city:id,name',
                 'country:id,name',
-                'customer:id,name'
+                'customer:id,name',
             ]
         );
-        
+
         $content = GenerateInvoiceContent::run(deal: $projectDeal, amount: 0, invoiceNumber: '', requestDate: '');
 
         $invoiceNumber = $generalService->generateInvoiceNumber(identifierNumber: $projectDeal->identifier_number);

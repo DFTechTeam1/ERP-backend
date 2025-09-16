@@ -14,7 +14,7 @@ class CopyDealToProject
 
     public function handle(object $projectDeal, GeneralService $generalService, bool $isHaveInteractiveElement = false)
     {
-        $geocoding = new Geocoding();
+        $geocoding = new Geocoding;
         if ($projectDeal->city && $projectDeal->state) {
             $coordinate = $geocoding->getCoordinate($projectDeal->city->name.', '.$projectDeal->state->name);
             if (count($coordinate) > 0) {
@@ -23,10 +23,10 @@ class CopyDealToProject
             }
         }
 
-        $projectRepo = new ProjectRepository();
+        $projectRepo = new ProjectRepository;
         $project = $projectRepo->store(data: [
             'name' => $projectDeal->name,
-            'client_portal' => config('app.frontend_url') . '/' . $generalService->linkShortener(length: 10),
+            'client_portal' => config('app.frontend_url').'/'.$generalService->linkShortener(length: 10),
             'project_date' => $projectDeal->project_date,
             'event_type' => $projectDeal->event_type,
             'venue' => $projectDeal->venue,
@@ -43,20 +43,20 @@ class CopyDealToProject
             'project_class_id' => $projectDeal->project_class_id,
             'longitude' => $longitude ?? null,
             'latitude' => $latitude ?? null,
-            'project_deal_id' => $projectDeal->id
+            'project_deal_id' => $projectDeal->id,
         ]);
 
         $project->marketings()->createMany(
             collect($projectDeal->marketings)->map(function ($marketing) {
                 return [
-                    'marketing_id' => $marketing->employee_id
+                    'marketing_id' => $marketing->employee_id,
                 ];
             })->toArray()
         );
 
         // create boards data
         $defaultBoards = json_decode($generalService->getSettingByKey('default_boards'), true);
-        
+
         $defaultBoards = collect($defaultBoards)->map(function ($item) {
             return [
                 'based_board_id' => $item['id'],

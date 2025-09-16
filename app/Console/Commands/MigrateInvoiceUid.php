@@ -29,6 +29,7 @@ class MigrateInvoiceUid extends Command
 
         if ($invoices->isEmpty()) {
             $this->info('No invoices found without UID.');
+
             return;
         }
 
@@ -39,6 +40,7 @@ class MigrateInvoiceUid extends Command
         }
 
         $this->info('All invoices have been processed.');
+
         return 0;
     }
 }

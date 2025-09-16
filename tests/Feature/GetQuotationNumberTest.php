@@ -18,11 +18,11 @@ it('Generate quotation when data is empty', function () {
     expect($response['data']['number'])->toBe('DF0001');
 });
 
-it("Generate quotation number when we have 100 data", function () {
+it('Generate quotation number when we have 100 data', function () {
     $output = collect([
         [
-            'quotation_id' => 'DF0100'
-        ]
+            'quotation_id' => 'DF0100',
+        ],
     ]);
 
     $mock = Mockery::mock(ProjectQuotationRepository::class);
@@ -45,11 +45,11 @@ it("Generate quotation number when we have 100 data", function () {
     expect($response['data']['number'])->toBe('DF0101');
 });
 
-it("Generate quotation number when we have 1000 data", function () {
+it('Generate quotation number when we have 1000 data', function () {
     $output = collect([
         [
-            'quotation_id' => 'DF01100'
-        ]
+            'quotation_id' => 'DF01100',
+        ],
     ]);
 
     $mock = Mockery::mock(ProjectQuotationRepository::class);

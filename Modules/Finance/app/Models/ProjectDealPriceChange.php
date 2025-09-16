@@ -5,13 +5,11 @@ namespace Modules\Finance\Models;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Finance\Database\Factories\ProjectDealPriceChangeFactory;
-use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\ProjectDeal;
-use Modules\Production\Models\ProjectDealChange;
 
 // use Modules\Finance\Database\Factories\ProjectDealPriceChangeFactory;
 
@@ -64,6 +62,7 @@ class ProjectDealPriceChange extends Model
                 if ($this->reason_id) {
                     return $this->reason->name;
                 }
+
                 return $this->custom_reason;
             }
         );

@@ -10,7 +10,7 @@ beforeEach(function () {
     $this->actingAs($user);
 });
 
-it ('Create development project without reference and pic', function () {
+it('Create development project without reference and pic', function () {
     $response = $this->postJson(route('api.development.projects.store'), [
         'name' => 'Test Project',
         'description' => 'This is a test project.',
@@ -19,7 +19,7 @@ it ('Create development project without reference and pic', function () {
 
     $response->assertStatus(201)
         ->assertJsonStructure([
-            'message'
+            'message',
         ]);
 
     $this->assertDatabaseHas('development_projects', [
@@ -48,7 +48,7 @@ it('Create development project with link reference only', function () {
 
     $response->assertStatus(201)
         ->assertJsonStructure([
-            'message'
+            'message',
         ]);
 
     // get current development project by calling its model
@@ -96,7 +96,7 @@ it('Create development project with image only', function () {
 
     $response->assertStatus(201)
         ->assertJsonStructure([
-            'message'
+            'message',
         ]);
 
     $project = \Modules\Development\Models\DevelopmentProject::with(['references'])->where('name', 'Test Project')->first();
@@ -118,5 +118,5 @@ it('Create development project with image only', function () {
     ]);
 
     // check if 'media_path' value exists in storage
-    Storage::disk('public')->assertExists('development/projects/references/' . $project->references()->first()->media_path);
+    Storage::disk('public')->assertExists('development/projects/references/'.$project->references()->first()->media_path);
 });

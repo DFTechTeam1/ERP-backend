@@ -4,7 +4,6 @@ namespace Modules\Company\Models;
 
 use Database\Factories\CountryFactory as FactoriesCountryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 

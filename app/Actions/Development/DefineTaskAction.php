@@ -362,7 +362,7 @@ class DefineTaskAction
         if (
             (
                 $this->hasSuperPower() || $this->isMyTask
-            ) && 
+            ) &&
             $task->status == TaskStatus::WaitingApproval
         ) {
             $approve = $this->buildOutput($key, false, $detail);

@@ -21,16 +21,16 @@ it('Delete invoice return success', function () {
         ->create([
             'status' => InvoiceStatus::Unpaid->value,
             'uid' => \Illuminate\Support\Str::uuid(),
-            'parent_number' => 'IV/2025 - 950'
+            'parent_number' => 'IV/2025 - 950',
         ]);
 
     $invoiceData = Invoice::selectRaw('id,uid')
         ->find($invoice->id);
-    
+
     $projectDealUid = Crypt::encryptString($invoice->project_deal_id);
 
     $response = deleteJson(route('api.invoices.destroy', ['invoice' => $invoiceData->uid, 'projectDealUid' => $projectDealUid]));
-    
+
     $response->assertStatus(201);
 
     $this->assertDatabaseCount('invoices', 0);
@@ -38,23 +38,23 @@ it('Delete invoice return success', function () {
     Bus::assertDispatched(InvoiceHasBeenDeletedJob::class);
 });
 
-it("Delete paid invoice", function () {
+it('Delete paid invoice', function () {
     Bus::fake();
 
     $invoice = Invoice::factory()
         ->create([
             'status' => InvoiceStatus::Paid->value,
             'uid' => \Illuminate\Support\Str::uuid(),
-            'parent_number' => 'IV/2025 - 950'
+            'parent_number' => 'IV/2025 - 950',
         ]);
 
     $invoiceData = Invoice::selectRaw('id,uid')
         ->find($invoice->id);
-    
+
     $projectDealUid = Crypt::encryptString($invoice->project_deal_id);
 
     $response = deleteJson(route('api.invoices.destroy', ['invoice' => $invoiceData->uid, 'projectDealUid' => $projectDealUid]));
-    
+
     $response->assertStatus(400);
 
     $this->assertDatabaseCount('invoices', 1);

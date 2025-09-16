@@ -15,14 +15,15 @@ beforeEach(function () {
     $this->actingAs($user);
 });
 
-function seedDataReject() {
+function seedDataReject()
+{
     $oldPrice = 150000000;
     $newPrice = 160000000;
     $projectDeal = ProjectDeal::factory()
         ->withQuotation($oldPrice)
         ->withInvoice(1, [
-            'fixPrice' => "Rp" . number_format($oldPrice, 0, ',', '.'),
-            'remainingPayment' => "Rp" . number_format($oldPrice, 0, ',', '.'),
+            'fixPrice' => 'Rp'.number_format($oldPrice, 0, ',', '.'),
+            'remainingPayment' => 'Rp'.number_format($oldPrice, 0, ',', '.'),
         ])
         ->create([
             'status' => ProjectDealStatus::Final->value,
@@ -65,7 +66,7 @@ it('should reject request for price changes', function () {
 
     $response->assertStatus(201);
     $response->assertJsonStructure([
-        'message'
+        'message',
     ]);
 
     $this->assertDatabaseHas('project_deal_price_changes', [
@@ -80,7 +81,7 @@ it('should reject request for price changes', function () {
         'fix_price' => $oldPrice,
         'project_deal_id' => $projectDeal->id,
     ]);
-    
+
     Bus::assertDispatched(NotifyRequestPriceChangesHasBeenApproved::class);
 });
 
