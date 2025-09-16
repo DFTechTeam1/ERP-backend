@@ -1221,9 +1221,9 @@ class ProjectDealService
                 ]
             );
 
-            if ($projectDeal->invoices->count() > 1 || $projectDeal->transactions->isNotEmpty()) {
-                return errorResponse(message: __('notification.projectDealHasChildInvoicesOrTransactions'));
-            }
+            // if ($projectDeal->invoices->count() > 1 || $projectDeal->transactions->isNotEmpty()) {
+            //     return errorResponse(message: __('notification.projectDealHasChildInvoicesOrTransactions'));
+            // }
 
             // record price changes. old price came from finalQuotation->fix_price
             $changes = $this->projectDealPriceChangeRepo->store(data: [
@@ -1276,23 +1276,34 @@ class ProjectDealService
             );
 
             // change raw data on invoices
-            $currentInvoice = $this->invoiceRepo->show(
-                uid: 'id',
+            $currentInvoices = $this->invoiceRepo->list(
                 select: 'id,raw_data,uid',
-                where: "project_deal_id = {$changes->project_deal_id} and is_main = 1"
-            );
-            $raw = $currentInvoice->raw_data;
-            $raw['fixPrice'] = "Rp". number_format($changes->new_price, 0, ',', '.');
-            $raw['remainingPayment'] = "Rp". number_format($changes->new_price, 0, ',', '.');
-
-            $this->invoiceRepo->update(
-                data: [
-                    'raw_data' => $raw,
-                ],
-                id: $currentInvoice->uid
+                where: "project_deal_id = {$changes->project_deal_id}"
             );
 
-            // updatte price changes status
+            foreach ($currentInvoices as $invoice) {
+                $rawData = $invoice->raw_data;
+
+                $currentFixPrice = $changes->new_price;
+                $transactions = $rawData['transactions'];
+
+                $transactionAmount = collect($transactions)->map(function ($trx) {
+                    return str_replace(["Rp", ",", "."], '', $trx['payment']);
+                })->sum();
+                $remaining = $currentFixPrice - $transactionAmount;
+
+                $rawData['fixPrice'] = "Rp" . number_format(num: $currentFixPrice);
+                $rawData['remainingPayment'] = "Rp" . number_format(num: $remaining);
+
+                $this->invoiceRepo->update(
+                    data: [
+                        'raw_data' => $rawData
+                    ],
+                    id: $invoice->uid
+                );
+            }
+
+            // update price changes status
             // this action can take by user on the erp or from email
             // if this action came from email, we will use payload to get the user id
             if (request()->has('approvalId')) {
