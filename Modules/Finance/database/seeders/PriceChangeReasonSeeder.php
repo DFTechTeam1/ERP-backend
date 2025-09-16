@@ -16,7 +16,7 @@ class PriceChangeReasonSeeder extends Seeder
             ['name' => 'Cost Increase'],
             ['name' => 'Client Request'],
             ['name' => 'Project Scope Change'],
-            ['name' => 'Currency Fluctuation']
+            ['name' => 'Currency Fluctuation'],
         ];
 
         foreach ($data as $item) {

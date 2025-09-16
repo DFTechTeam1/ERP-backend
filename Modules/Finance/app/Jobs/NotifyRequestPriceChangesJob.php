@@ -4,10 +4,10 @@ namespace Modules\Finance\Jobs;
 
 use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Models\ProjectDealPriceChange;
@@ -20,7 +20,9 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     private int $projectDealChangeId;
+
     private int $newPrice;
+
     private string $reason;
 
     /**
@@ -41,7 +43,7 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
         // get director and project deal
         $change = ProjectDealPriceChange::with([
             'requesterBy:id,employee_id',
-            'requesterBy.employee:id,name'
+            'requesterBy.employee:id,name',
         ])->findOrFail($this->projectDealChangeId);
         $projectDealId = $change->project_deal_id;
         $projectDeal = ProjectDeal::findOrFail($projectDealId);
@@ -58,7 +60,7 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
                     now()->addMinutes(30),
                     [
                         'priceChangeId' => Crypt::encryptString($this->projectDealChangeId),
-                        'approvalId' => $director->user_id
+                        'approvalId' => $director->user_id,
                     ]
                 );
 
@@ -67,7 +69,7 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
                     now()->addMinutes(30),
                     [
                         'priceChangeId' => Crypt::encryptString($this->projectDealChangeId),
-                        'approvalId' => $director->user_id
+                        'approvalId' => $director->user_id,
                     ]
                 );
 
@@ -79,8 +81,8 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
                     approvalUrl: $approvalUrl,
                     rejectionUrl: $rejectionUrl,
                     reason: $change->reason ? $change->reason->name : $change->custom_reason,
-                    oldPrice: "Rp. " . number_format($change->old_price, 2),
-                    newPrice: "Rp. " . number_format($change->new_price, 2)
+                    oldPrice: 'Rp. '.number_format($change->old_price, 2),
+                    newPrice: 'Rp. '.number_format($change->new_price, 2)
                 ));
             }
         }

@@ -344,5 +344,5 @@ return [
     'unpaid' => 'Unpaid',
     'partial' => 'Partial',
     'final' => 'Final',
-    'temporary' => 'Temporary'
+    'temporary' => 'Temporary',
 ];

@@ -34,7 +34,7 @@ class SetWebhookCommand extends Command
     {
         $service = new TelegramService;
         $set = $service->setWebhook(env('TELEGRAM_WEBHOOK_URL'));
-        logging("set webhook", $set);
+        logging('set webhook', $set);
         if ($set['ok']) {
             $this->info('Webhook is already pointing to '.env('TELEGRAM_WEBHOOK_URL'));
         }

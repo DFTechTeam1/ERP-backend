@@ -11,13 +11,13 @@ it('No invoice due found', function () {
             'payment_due' => now()->addDays(14)->format('Y-m-d'),
         ]);
 
-    $service = new GeneralService();
+    $service = new GeneralService;
 
     $response = $service->getInvoiceDueData();
 
     expect($response->count())->toBe(0);
     $this->assertDatabaseHas('invoices', [
-        'id' => $invoice->id
+        'id' => $invoice->id,
     ]);
     $this->assertDatabaseCount('invoices', 1);
 });
@@ -27,16 +27,16 @@ it('Due invoice detected', function () {
         ->create([
             'payment_date' => now()->subDays(4)->format('Y-m-d'),
             'payment_due' => now()->addDays(3)->format('Y-m-d'),
-            'status' => InvoiceStatus::Unpaid->value
+            'status' => InvoiceStatus::Unpaid->value,
         ]);
 
-    $service = new GeneralService();
+    $service = new GeneralService;
 
     $response = $service->getInvoiceDueData();
 
     expect($response->count())->toBe(1);
     $this->assertDatabaseHas('invoices', [
-        'id' => $invoice->id
+        'id' => $invoice->id,
     ]);
     $this->assertDatabaseCount('invoices', 1);
 });

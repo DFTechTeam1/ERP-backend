@@ -60,7 +60,6 @@ class InteractiveController extends Controller
             ->where('identifier', $identifier)
             ->first();
 
-            
         if (! $image) {
             return view('interactive/image_not_found');
         }

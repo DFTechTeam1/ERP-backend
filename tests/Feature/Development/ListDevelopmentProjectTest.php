@@ -17,7 +17,7 @@ it('Get list project with root role', function () {
         ->create();
 
     $response = $this->getJson(route('api.development.projects.index'));
-    
+
     $response->assertStatus(201);
     $response->assertJsonStructure([
         'message',
@@ -39,20 +39,20 @@ it('Get list project with root role', function () {
                     'pics' => [
                         '*' => [
                             'id',
-                            'nickname'
-                        ]
+                            'nickname',
+                        ],
                     ],
-                    'pic_uids'
-                ]
+                    'pic_uids',
+                ],
             ],
-            'totalData'
-        ]
+            'totalData',
+        ],
     ]);
 
     expect($response->json()['data']['totalData'])->toBe(1);
 });
 
-it ('Get list project as project manager who have assigned project', function () {
+it('Get list project as project manager who have assigned project', function () {
     $pic = Employee::factory()
         ->withUser()
         ->create();
@@ -60,7 +60,7 @@ it ('Get list project as project manager who have assigned project', function ()
     $employee = Employee::find($pic->id);
 
     $userData = User::find($employee->user_id);
-    
+
     $user = initAuthenticateUser(roleName: BaseRole::ProjectManager->value, user: $userData);
     $this->actingAs($user);
 
@@ -70,7 +70,7 @@ it ('Get list project as project manager who have assigned project', function ()
         ->create();
 
     $response = $this->getJson(route('api.development.projects.index'));
-    
+
     $response->assertStatus(201);
     $response->assertJsonStructure([
         'message',
@@ -92,14 +92,14 @@ it ('Get list project as project manager who have assigned project', function ()
                     'pics' => [
                         '*' => [
                             'id',
-                            'nickname'
-                        ]
+                            'nickname',
+                        ],
                     ],
-                    'pic_uids'
-                ]
+                    'pic_uids',
+                ],
             ],
-            'totalData'
-        ]
+            'totalData',
+        ],
     ]);
 
     expect($response->json()['data']['totalData'])->toBe(1);
@@ -108,7 +108,7 @@ it ('Get list project as project manager who have assigned project', function ()
     expect($response->json()['data']['paginated'][0]['id'])->toBe($project->id);
 });
 
-it ("Get list project acting as Project manager who do not have project init", function () {
+it('Get list project acting as Project manager who do not have project init', function () {
     $pic = Employee::factory()
         ->withUser()
         ->create();
@@ -116,7 +116,7 @@ it ("Get list project acting as Project manager who do not have project init", f
     $employee = Employee::find($pic->id);
 
     $userData = User::find($employee->user_id);
-    
+
     $user = initAuthenticateUser(roleName: BaseRole::ProjectManager->value, user: $userData);
     $this->actingAs($user);
 
@@ -126,20 +126,20 @@ it ("Get list project acting as Project manager who do not have project init", f
         ->create();
 
     $response = $this->getJson(route('api.development.projects.index'));
-    
+
     $response->assertStatus(201);
     $response->assertJsonStructure([
         'message',
         'data' => [
             'paginated',
-            'totalData'
-        ]
+            'totalData',
+        ],
     ]);
 
     expect($response->json()['data']['totalData'])->toBe(0);
 });
 
-it ('Get list project acting as production employee who have a assigned task', function () {
+it('Get list project acting as production employee who have a assigned task', function () {
     $pic = Employee::factory()
         ->withUser()
         ->create();
@@ -147,7 +147,7 @@ it ('Get list project acting as production employee who have a assigned task', f
     $employee = Employee::find($pic->id);
 
     $userData = User::find($employee->user_id);
-    
+
     $user = initAuthenticateUser(roleName: BaseRole::Production->value, user: $userData);
     $this->actingAs($user);
 
@@ -164,7 +164,7 @@ it ('Get list project acting as production employee who have a assigned task', f
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $response = $this->getJson(route('api.development.projects.index'));
@@ -189,14 +189,14 @@ it ('Get list project acting as production employee who have a assigned task', f
                     'pics' => [
                         '*' => [
                             'id',
-                            'nickname'
-                        ]
+                            'nickname',
+                        ],
                     ],
-                    'pic_uids'
-                ]
+                    'pic_uids',
+                ],
             ],
-            'totalData'
-        ]
+            'totalData',
+        ],
     ]);
 
     expect($response->json()['data']['totalData'])->toBe(1);
@@ -205,7 +205,7 @@ it ('Get list project acting as production employee who have a assigned task', f
     expect($response->json()['data']['paginated'][0]['id'])->toBe($project->id);
 });
 
-it ('Get list project as production and do not have any task', function () {
+it('Get list project as production and do not have any task', function () {
     $pic = Employee::factory()
         ->withUser()
         ->create();
@@ -213,7 +213,7 @@ it ('Get list project as production and do not have any task', function () {
     $employee = Employee::find($pic->id);
 
     $userData = User::find($employee->user_id);
-    
+
     $user = initAuthenticateUser(roleName: BaseRole::Production->value, user: $userData);
     $this->actingAs($user);
 
@@ -230,7 +230,7 @@ it ('Get list project as production and do not have any task', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $response = $this->getJson(route('api.development.projects.index'));
@@ -239,8 +239,8 @@ it ('Get list project as production and do not have any task', function () {
         'message',
         'data' => [
             'paginated',
-            'totalData'
-        ]
+            'totalData',
+        ],
     ]);
 
     expect($response->json()['data']['totalData'])->toBe(0);

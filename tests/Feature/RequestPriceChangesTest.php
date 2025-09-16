@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Finance\Models\Invoice;
-use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser(withEmployee: true);
@@ -35,7 +34,7 @@ it('can request price changes', function () {
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
-    
+
     $response->assertStatus(201);
     $response->assertJson([
         'message' => __('notification.requestPriceChangesSuccess'),
@@ -53,7 +52,7 @@ it('can request price changes', function () {
     Bus::assertDispatched(NotifyRequestPriceChangesJob::class);
 });
 
-it ('Request price changes when already have multiple invoices', function () {
+it('Request price changes when already have multiple invoices', function () {
     $price = 100000000;
 
     $projectDeal = \Modules\Production\Models\ProjectDeal::factory()
@@ -67,9 +66,9 @@ it ('Request price changes when already have multiple invoices', function () {
         'status' => InvoiceStatus::Unpaid->value,
         'amount' => 100000000,
         'raw_data' => [
-            'fixPrice' => "Rp100,000,000",
-            'remainingPayment' => "Rp100,000,000",
-            'transactions' => []
+            'fixPrice' => 'Rp100,000,000',
+            'remainingPayment' => 'Rp100,000,000',
+            'transactions' => [],
         ],
     ]);
     Invoice::factory()->create([
@@ -77,15 +76,15 @@ it ('Request price changes when already have multiple invoices', function () {
         'status' => InvoiceStatus::Unpaid->value,
         'amount' => 20000000,
         'raw_data' => [
-            'fixPrice' => "Rp100,000,000",
-            'remainingPayment' => "Rp80,000,000",
+            'fixPrice' => 'Rp100,000,000',
+            'remainingPayment' => 'Rp80,000,000',
             'transactions' => [
                 [
                     'id' => 1,
-                    'payment' => "Rp20,000,000",
-                    'transaction_date' => "05 September 2025"
-                ]
-            ]
+                    'payment' => 'Rp20,000,000',
+                    'transaction_date' => '05 September 2025',
+                ],
+            ],
         ],
     ]);
 
@@ -96,7 +95,7 @@ it ('Request price changes when already have multiple invoices', function () {
     ];
 
     $response = $this->postJson(route('api.finance.requestPriceChanges', ['projectDealUid' => Crypt::encryptString($projectDeal->id)]), $payload);
-    
+
     $response->assertStatus(201);
 
     $this->assertDatabaseHas('project_deal_price_changes', [

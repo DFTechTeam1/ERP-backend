@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
 use Modules\Hrd\Services\PerformanceReportService;
-use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Services\ProjectRepositoryGroup;
 
 class LandingPageController extends Controller

@@ -1,13 +1,13 @@
 <?php
 
-use Modules\Development\Models\DevelopmentProject;
-use Modules\Development\Models\DevelopmentProjectTask;
-use Modules\Hrd\Models\Employee;
-use Modules\Development\Models\DevelopmentProjectTaskPic;
-use App\Enums\Development\Project\Task\TaskStatus;
 use App\Actions\Development\DefineTaskAction;
+use App\Enums\Development\Project\Task\TaskStatus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Modules\Development\Models\DevelopmentProject;
+use Modules\Development\Models\DevelopmentProjectTask;
+use Modules\Development\Models\DevelopmentProjectTaskPic;
+use Modules\Hrd\Models\Employee;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser();
@@ -17,7 +17,7 @@ beforeEach(function () {
 
 it('Revise task', function () {
     Storage::fake('public');
-    
+
     // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
@@ -36,7 +36,7 @@ it('Revise task', function () {
     $worker = Employee::factory()
         ->withUser()
         ->create([
-            'boss_id' => $boss->id
+            'boss_id' => $boss->id,
         ]);
 
     $task = DevelopmentProjectTask::factory()
@@ -45,13 +45,13 @@ it('Revise task', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     // manually update the status
     DevelopmentProjectTask::where('id', $task->id)
         ->update([
-            'status' => TaskStatus::CheckByPm->value
+            'status' => TaskStatus::CheckByPm->value,
         ]);
 
     // manually remove pic
@@ -63,30 +63,30 @@ it('Revise task', function () {
         'reason' => 'revisi',
         'images' => [
             [
-                'image' => UploadedFile::fake()->image('test.jpg')
-            ]
-        ]
+                'image' => UploadedFile::fake()->image('test.jpg'),
+            ],
+        ],
     ]);
 
     $response->assertStatus(201);
 
     $this->assertDatabaseMissing('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $boss->id
+        'employee_id' => $boss->id,
     ]);
 
     $this->assertDatabaseHas('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
-        'status' => TaskStatus::Revise->value
+        'status' => TaskStatus::Revise->value,
     ]);
 
     $this->assertDatabaseHas('dev_project_task_revises', [
         'task_id' => $task->id,
-        'reason' => 'revisi'
+        'reason' => 'revisi',
     ]);
 });

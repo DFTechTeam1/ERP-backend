@@ -4,7 +4,6 @@ use Carbon\Carbon;
 use Modules\Development\app\Services\DevelopmentProjectCacheService;
 use Modules\Development\Models\DevelopmentProject;
 
-use function Pest\Laravel\getJson;
 use function Pest\Laravel\putJson;
 
 beforeEach(function () {
@@ -36,11 +35,11 @@ it('Update project return success with updating current cache', function () {
 
     $payload = [
         'name' => 'updated name',
-        'project_date' => Carbon::parse($project->project_date)->addDays(2)->format('Y-m-d')
+        'project_date' => Carbon::parse($project->project_date)->addDays(2)->format('Y-m-d'),
     ];
 
     $response = putJson(route('api.development.projects.update', ['id' => $project->uid]), $payload);
-    
+
     $response->assertStatus(201);
     $this->assertDatabaseHas('development_projects', $payload);
 

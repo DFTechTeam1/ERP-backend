@@ -41,7 +41,7 @@ class User extends Authenticatable
         'email_verified_at',
         'reset_password_token_claim',
         'reset_password_token_exp',
-        'user_status'
+        'user_status',
     ];
 
     /**

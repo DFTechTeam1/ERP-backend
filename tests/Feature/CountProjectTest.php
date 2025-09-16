@@ -1,7 +1,7 @@
 <?php
 
-use \Illuminate\Support\Facades\Cache;
-use \App\Enums\Cache\CacheKey;
+use App\Enums\Cache\CacheKey;
+use Illuminate\Support\Facades\Cache;
 
 test('Total project cache has been updated', function () {
     $count = 3;

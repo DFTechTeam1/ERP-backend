@@ -82,8 +82,6 @@ class SettingController extends Controller
 
     /**
      * Get all price calculation formula
-     * 
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getPriceCalculation(): \Illuminate\Http\JsonResponse
     {

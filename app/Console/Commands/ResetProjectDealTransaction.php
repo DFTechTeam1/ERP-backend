@@ -38,7 +38,7 @@ class ResetProjectDealTransaction extends Command
             \Illuminate\Support\Facades\DB::commit();
             $this->info('Success reset project deal transactions');
         } catch (\Throwable $th) {
-            $this->error("Error: " . errorMessage($th));
+            $this->error('Error: '.errorMessage($th));
             \Illuminate\Support\Facades\DB::rollBack();
         }
     }

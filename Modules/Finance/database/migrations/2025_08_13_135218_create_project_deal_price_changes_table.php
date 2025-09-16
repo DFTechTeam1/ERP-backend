@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         $status = ProjectDealChangePriceStatus::cases();
-        $status = array_map(fn($case) => $case->value, $status);
+        $status = array_map(fn ($case) => $case->value, $status);
 
         Schema::create('project_deal_price_changes', function (Blueprint $table) use ($status) {
             $table->id();

@@ -2,8 +2,6 @@
 
 use Modules\Production\Models\DeadlineChangeReason;
 
-use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
-
 beforeEach(function () {
     $user = initAuthenticateUser();
 
@@ -17,7 +15,7 @@ test('Update data with name is not unique', function () {
     $response = $this->putJson(
         route('api.production.deadlineReason.update', ['deadlineReason' => $reasonLast->id]),
         [
-            'name' => $reason->name
+            'name' => $reason->name,
         ]
     );
 
@@ -25,17 +23,17 @@ test('Update data with name is not unique', function () {
 
     expect($response->json())->toHaveKeys([
         'message',
-        'errors.name'
+        'errors.name',
     ]);
 });
 
-test("Update data return success", function () {
+test('Update data return success', function () {
     $reason = DeadlineChangeReason::factory()->create();
 
     $response = $this->putJson(
         route('api.production.deadlineReason.update', ['deadlineReason' => $reason->id]),
         [
-            'name' => 'update name'
+            'name' => 'update name',
         ]
     );
 
@@ -43,6 +41,6 @@ test("Update data return success", function () {
 
     $this->assertDatabaseHas('deadline_change_reasons', [
         'name' => 'update name',
-        'id' => $reason->id
+        'id' => $reason->id,
     ]);
 });

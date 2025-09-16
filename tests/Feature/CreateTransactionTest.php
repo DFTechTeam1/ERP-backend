@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\Production\ProjectDealStatus;
-use App\Services\GeneralService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Modules\Company\Models\City;
@@ -11,8 +10,6 @@ use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectQuotation;
-
-use function Pest\Laravel\{getJson, postJson, withHeaders, actingAs};
 
 beforeEach(function () {
     $this->actingAs(initAuthenticateUser());
@@ -33,13 +30,13 @@ $requestData = [
             'led' => [
                 [
                     'height' => '5.5',
-                    'width' => '20'
-                ]
+                    'width' => '20',
+                ],
             ],
             'total' => '110 m<sup>2</sup>',
             'totalRaw' => '110',
-            'textDetail' => '20 x 5.5 m'
-        ]
+            'textDetail' => '20 x 5.5 m',
+        ],
     ],
     'country_id' => '102',
     'state_id' => '1827',
@@ -51,7 +48,7 @@ $requestData = [
     'is_high_season' => 1,
     'client_portal' => 'wedding-anniversary',
     'marketing_id' => [
-        'f063164d-62ff-44cf-823d-7c456dad1f4b'
+        'f063164d-62ff-44cf-823d-7c456dad1f4b',
     ],
     'status' => 1, // 1 is active, 0 is draft
     'quotation' => [
@@ -71,12 +68,13 @@ $requestData = [
         'equipment_type' => 'lasika',
         'items' => [1, 2],
         'description' => '',
-        'design_job' => 1
+        'design_job' => 1,
     ],
-    'request_type' => 'save_and_download' // will be draft,save,save_and_download
+    'request_type' => 'save_and_download', // will be draft,save,save_and_download
 ];
 
-function getEmptyPayload() {
+function getEmptyPayload()
+{
     return [
         'payment_amount' => '',
         'transaction_date' => '',
@@ -86,7 +84,8 @@ function getEmptyPayload() {
     ];
 }
 
-function getPayload() {
+function getPayload()
+{
     $file = UploadedFile::fake()->image('testing.jpg');
 
     return [
@@ -96,14 +95,14 @@ function getPayload() {
         'reference' => '',
         'images' => [
             [
-                'image' => $file
-            ]
+                'image' => $file,
+            ],
         ],
     ];
 }
 
-describe('Create Transaction', function () use ($requestData) {
-    it('Create Transaction On Current Invoice', function () use ($requestData) {
+describe('Create Transaction', function () {
+    it('Create Transaction On Current Invoice', function () {
         Bus::fake();
 
         $country = Country::factory()
@@ -115,7 +114,7 @@ describe('Create Transaction', function () use ($requestData) {
 
         $projectDeal = ProjectDeal::factory()
             ->has(ProjectQuotation::factory()->state([
-                'is_final' => 1
+                'is_final' => 1,
             ]), 'quotations')
             ->has(Invoice::factory()->state([
                 'status' => \App\Enums\Transaction\InvoiceStatus::Unpaid->value,
@@ -124,14 +123,14 @@ describe('Create Transaction', function () use ($requestData) {
                 'sequence' => 1,
                 'amount' => 10000000,
                 'raw_data' => [
-                    'transactions' => []
-                ]
+                    'transactions' => [],
+                ],
             ]))
             ->create([
                 'country_id' => $country->id,
                 'state_id' => $country->states[0]->id,
                 'state_id' => $country->states[0]->cities[0]->id,
-                'status' => ProjectDealStatus::Final->value
+                'status' => ProjectDealStatus::Final->value,
             ]);
 
         $service = setTransactionService();
@@ -147,14 +146,13 @@ describe('Create Transaction', function () use ($requestData) {
             'reference' => '',
             'images' => [
                 [
-                    'image' => $file
-                ]
-            ]
+                    'image' => $file,
+                ],
+            ],
         ];
 
         $response = $service->store(payload: $payload, projectDealUid: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id));
-        logging('RESPONSE CREATE TRX', $response);
-        
+
         expect($response)->toHaveKeys(['error', 'message']);
         expect($response['error'])->toBeFalse();
 
@@ -164,7 +162,7 @@ describe('Create Transaction', function () use ($requestData) {
         ]);
         $this->assertDatabaseHas('invoices', [
             'id' => $projectDeal->invoices[0]->id,
-            'status' => \App\Enums\Transaction\InvoiceStatus::Paid->value
+            'status' => \App\Enums\Transaction\InvoiceStatus::Paid->value,
         ]);
 
         Bus::assertDispatched(TransactionCreatedJob::class);

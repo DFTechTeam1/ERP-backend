@@ -23,7 +23,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('finance')->group(function () {
         Route::post('transaction/{projectDealUid}', [ApiFinanceController::class, 'createTransaction']);
         Route::post('invoices/download', [ApiFinanceController::class, 'downloadInvoice']);
-    
+
         // manage invoice
         Route::prefix('{projectDealUid}')->group(function () {
             Route::post('/billInvoice', [InvoiceController::class, 'generateBillInvoice']);
@@ -31,18 +31,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::resource('invoices', InvoiceController::class);
             Route::get('invoices/{invoiceUid}/approve/{pendingUpdateId}', [InvoiceController::class, 'approveChanges']);
             Route::get('invoices/{invoiceUid}/reject/{pendingUpdateId}', [InvoiceController::class, 'rejectChanges']);
-    
+
             Route::post('price', [ApiFinanceController::class, 'requestPriceChanges'])
                 ->name('finance.requestPriceChanges');
-    
+
             // url for apprrove price changes
             Route::get('price/approve/{changeId}', [ApiFinanceController::class, 'approvePriceChanges'])
                 ->name('finance.approvePriceChanges');
-    
+
             // url for reject price changes
             Route::post('price/reject/{changeId}', [ApiFinanceController::class, 'rejectPriceChanges'])
                 ->name('finance.rejectPriceChanges');
-    
+
             // transaction
             Route::post('transaction', [InvoiceController::class, 'createTransaction']);
         });

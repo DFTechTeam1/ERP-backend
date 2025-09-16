@@ -24,7 +24,7 @@ class CountryFactory extends Factory
             'iso3' => fake()->countryISOAlpha3(),
             'iso2' => fake()->countryISOAlpha3(),
             'phone_code' => fake()->e164PhoneNumber(),
-            'currency' => fake()->currencyCode()
+            'currency' => fake()->currencyCode(),
         ];
     }
 }

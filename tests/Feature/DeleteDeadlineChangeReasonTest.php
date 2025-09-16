@@ -2,8 +2,6 @@
 
 use Modules\Production\Models\DeadlineChangeReason;
 
-use function Pest\Laravel\{deleteJson, withHeaders, actingAs};
-
 beforeEach(function () {
     $user = initAuthenticateUser();
 
@@ -20,6 +18,6 @@ test('Delete data return success', function () {
     $this->assertDatabaseCount('deadline_change_reasons', 1);
     $this->assertDatabaseMissing('deadline_change_reasons', [
         'id' => $reason->id,
-        'deleted_at' => null
+        'deleted_at' => null,
     ]);
 });

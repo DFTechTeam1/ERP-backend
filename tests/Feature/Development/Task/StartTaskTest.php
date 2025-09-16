@@ -1,11 +1,10 @@
 <?php
 
+use App\Actions\Development\DefineTaskAction;
+use App\Enums\Development\Project\Task\TaskStatus;
 use Modules\Development\Models\DevelopmentProject;
 use Modules\Development\Models\DevelopmentProjectTask;
-use Modules\Development\Models\DevelopmentProjectTaskPicWorkstate;
 use Modules\Hrd\Models\Employee;
-use App\Enums\Development\Project\Task\TaskStatus;
-use App\Actions\Development\DefineTaskAction;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser();
@@ -14,12 +13,12 @@ beforeEach(function () {
 });
 
 it('Start task after hold', function () {
-     // fake action
+    // fake action
     DefineTaskAction::mock()
         ->shouldReceive('handle')
         ->withAnyArgs()
         ->andReturn([]);
-        
+
     $project = DevelopmentProject::factory()
         ->withBoards()
         ->withPics()
@@ -27,12 +26,12 @@ it('Start task after hold', function () {
 
     $worker = Employee::factory()
         ->create([
-            'user_id' => $this->user->id
+            'user_id' => $this->user->id,
         ]);
 
     // update users employee_id
     \App\Models\User::where('id', $this->user->id)->update([
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     $task = DevelopmentProjectTask::factory()
@@ -42,12 +41,12 @@ it('Start task after hold', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => null,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $this->assertDatabaseHas('development_project_tasks', [
         'status' => TaskStatus::OnHold->value,
-        'id' => $task->id
+        'id' => $task->id,
     ]);
 
     // start the task
@@ -57,17 +56,17 @@ it('Start task after hold', function () {
 
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
-        'status' => TaskStatus::InProgress->value
+        'status' => TaskStatus::InProgress->value,
     ]);
 
     $this->assertDatabaseMissing('dev_project_task_pic_holdstates', [
         'task_id' => $task->id,
         'employee_id' => $worker->id,
-        'unholded_at' => null
+        'unholded_at' => null,
     ]);
 
     $this->assertDatabaseHas('dev_project_task_pic_holdstates', [
         'task_id' => $task->id,
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 });

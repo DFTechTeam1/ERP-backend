@@ -2,7 +2,8 @@
 
 namespace App\Enums\Transaction;
 
-enum InvoiceStatus: int {
+enum InvoiceStatus: int
+{
     case Unpaid = 1;
     case Paid = 2;
     case WaitingChangesApproval = 3;

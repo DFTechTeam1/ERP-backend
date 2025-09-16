@@ -204,7 +204,7 @@ class DevelopmentProjectService
             }
 
             // apply date filter
-            if (request('date') && !empty(request('date'))) {
+            if (request('date') && ! empty(request('date'))) {
                 $splitDate = explode(' - ', request('date'));
                 $startDate = $splitDate[0];
                 $endDate = isset($splitDate[1]) ? $splitDate[1] : null;
@@ -248,7 +248,7 @@ class DevelopmentProjectService
                     'actions' => [
                         'can_delete' => $project->status != ProjectStatus::Completed ? true : false,
                         'can_edit' => $project->status != ProjectStatus::Completed ? true : false,
-                    ]
+                    ],
                 ];
             });
 
@@ -1402,15 +1402,14 @@ class DevelopmentProjectService
 
     /**
      * Main function to submit task proofs.
-     * 
+     *
      * @param  array  $payload  With these following structure:
      *                          - string $nas_path
      *                          - array $images                              With these following structure:
      *                          - File $image
-     * @param  DevelopmentProjectTask|Collection  $task
      * @param  bool  $forceComplete  If true, the task will be marked as complete without assigning to the boss.
-     *                              This is useful for admin or superadmin to directly complete the task.
-     * @return void
+     *                               This is useful for admin or superadmin to directly complete the task.
+     *
      * @throws \Exception
      */
     protected function mainSubmitTask(
@@ -1430,12 +1429,12 @@ class DevelopmentProjectService
                     compressValue: 0,
                     image: $image['image']
                 );
-    
+
                 if (! $media) {
                     // return error
                     throw new \Exception(__('notification.errorUploadTaskImage'));
                 }
-    
+
                 $this->taskTmpProofFiles[] = $media;
             }
         }
@@ -1494,7 +1493,7 @@ class DevelopmentProjectService
         }
 
         // assign to boss
-        if (!$forceComplete) {
+        if (! $forceComplete) {
             foreach ($bossIds as $bossId) {
                 $task->pics()->create([
                     'employee_id' => $bossId,
@@ -1507,13 +1506,11 @@ class DevelopmentProjectService
 
     /**
      * Submit task proofs.
-     * 
+     *
      * @param  array  $payload  With these following structure:
      *                          - string $nas_path
      *                          - array $images                              With these following structure:
      *                          - File $image
-     * @param $taskUid
-     * @return array
      */
     public function submitTaskProofs(array $payload, string $taskUid): array
     {
@@ -1957,9 +1954,6 @@ class DevelopmentProjectService
 
     /**
      * Complete a project and all its related tasks.
-     *
-     * @param  string  $projectUid
-     * @return array
      */
     public function completeProject(string $projectUid): array
     {
@@ -1976,8 +1970,8 @@ class DevelopmentProjectService
                 whereHas: [
                     [
                         'relation' => 'tasks',
-                        'query' => "status = " . TaskStatus::InProgress->value . " or status = " . TaskStatus::WaitingApproval->value . " or status = " . TaskStatus::CheckByPm->value . " or status = " . TaskStatus::OnHold->value . " or status = " . TaskStatus::Revise->value,
-                    ]
+                        'query' => 'status = '.TaskStatus::InProgress->value.' or status = '.TaskStatus::WaitingApproval->value.' or status = '.TaskStatus::CheckByPm->value.' or status = '.TaskStatus::OnHold->value.' or status = '.TaskStatus::Revise->value,
+                    ],
                 ]
             );
             if ($project->tasks->count() > 5) {
@@ -1994,11 +1988,11 @@ class DevelopmentProjectService
                         'images' => [
                             [
                                 // get static image from public folder
-                                'image' => 'default-complete.jpg'
-                            ]
-                        ]
+                                'image' => 'default-complete.jpg',
+                            ],
+                        ],
                     ];
-                    
+
                     $this->mainSubmitTask(payload: $payloadTask, task: $task, forceComplete: true);
                 }
             }
@@ -2031,6 +2025,7 @@ class DevelopmentProjectService
             }
 
             DB::rollBack();
+
             return errorResponse($th);
         }
     }

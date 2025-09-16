@@ -345,5 +345,5 @@ return [
     'unpaid' => 'Belum Dibayar',
     'partial' => 'Dibayar Sebagian',
     'final' => 'Final',
-    'temporary' => 'Sementara'
+    'temporary' => 'Sementara',
 ];

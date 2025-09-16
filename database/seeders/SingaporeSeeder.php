@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Modules\Company\Models\City;
 use Modules\Company\Models\Country;
@@ -23,9 +22,9 @@ class SingaporeSeeder extends Seeder
                     'iso3' => 'SGP',
                     'phone_code' => '65',
                     'currency' => 'SGD',
-                ]
+                ],
             ],
-            
+
             'states' => [
                 // Singapore is divided into 5 regions (treated as states here)
                 [
@@ -54,7 +53,7 @@ class SingaporeSeeder extends Seeder
                         ['name' => 'Straits View'],
                         ['name' => 'Tanglin'],
                         ['name' => 'Toa Payoh'],
-                    ]
+                    ],
                 ],
                 [
                     'name' => 'East Region',
@@ -66,7 +65,7 @@ class SingaporeSeeder extends Seeder
                         ['name' => 'Pasir Ris'],
                         ['name' => 'Paya Lebar'],
                         ['name' => 'Tampines'],
-                    ]
+                    ],
                 ],
                 [
                     'name' => 'North Region',
@@ -80,7 +79,7 @@ class SingaporeSeeder extends Seeder
                         ['name' => 'Sungei Kadut'],
                         ['name' => 'Woodlands'],
                         ['name' => 'Yishun'],
-                    ]
+                    ],
                 ],
                 [
                     'name' => 'North-East Region',
@@ -93,7 +92,7 @@ class SingaporeSeeder extends Seeder
                         ['name' => 'Seletar'],
                         ['name' => 'Sengkang'],
                         ['name' => 'Serangoon'],
-                    ]
+                    ],
                 ],
                 [
                     'name' => 'West Region',
@@ -110,9 +109,9 @@ class SingaporeSeeder extends Seeder
                         ['name' => 'Tengah'],
                         ['name' => 'Tuas'],
                         ['name' => 'Western Islands'],
-                        ['name' => 'Western Water Catchment']
-                    ]
-                ]
+                        ['name' => 'Western Water Catchment'],
+                    ],
+                ],
             ],
         ];
 

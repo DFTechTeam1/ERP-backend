@@ -1,16 +1,15 @@
 <?php
 
-use Modules\Development\Models\DevelopmentProject;
-use Modules\Development\Models\DevelopmentProjectTask;
-use Modules\Development\Models\DevelopmentTaskProof;
-use Modules\Development\Models\DevelopmentProjectTaskPicWorkstate;
-use Modules\Hrd\Models\Employee;
-use App\Enums\Development\Project\Task\TaskStatus;
 use App\Actions\Development\DefineTaskAction;
+use App\Enums\Development\Project\Task\TaskStatus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Modules\Development\Jobs\SubmitProofsJob;
+use Modules\Development\Models\DevelopmentProject;
+use Modules\Development\Models\DevelopmentProjectTask;
+use Modules\Development\Models\DevelopmentTaskProof;
+use Modules\Hrd\Models\Employee;
 
 beforeEach(function () {
     $this->user = initAuthenticateUser();
@@ -28,7 +27,7 @@ it('Submit approve task proofs', function () {
         ->shouldReceive('handle')
         ->withAnyArgs()
         ->andReturn([]);
-        
+
     $project = DevelopmentProject::factory()
         ->withBoards()
         ->withPics()
@@ -39,12 +38,12 @@ it('Submit approve task proofs', function () {
     $worker = Employee::factory()
         ->create([
             'user_id' => $this->user->id,
-            'boss_id' => $boss->id
+            'boss_id' => $boss->id,
         ]);
 
     // update users employee_id
     \App\Models\User::where('id', $this->user->id)->update([
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     $deadline = now()->addDays(7)->format('Y-m-d H:i');
@@ -55,7 +54,7 @@ it('Submit approve task proofs', function () {
             'development_project_id' => $project->id,
             'development_project_board_id' => $project->boards->first()->id,
             'deadline' => $deadline,
-            'status' => TaskStatus::InProgress->value
+            'status' => TaskStatus::InProgress->value,
         ]);
 
     $file = UploadedFile::fake()->image('test.jpg');
@@ -63,20 +62,20 @@ it('Submit approve task proofs', function () {
         'nas_path' => 'https://google.com',
         'images' => [
             [
-                'image' => $file
-            ]
-        ]
+                'image' => $file,
+            ],
+        ],
     ];
 
     $response = $this->postJson(route('api.development.projects.tasks.proof.store', $task->uid), $payload);
-    
+
     $response->assertStatus(201);
 
     // check task status
     $this->assertDatabaseHas('development_project_tasks', [
         'id' => $task->id,
         'status' => TaskStatus::CheckByPm->value,
-        'current_pic_id' => $worker->id
+        'current_pic_id' => $worker->id,
     ]);
 
     // get current proof file
@@ -99,18 +98,18 @@ it('Submit approve task proofs', function () {
     $this->assertDatabaseMissing('development_project_task_deadlines', [
         'task_id' => $task->id,
         'actual_end_time' => null,
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
     $this->assertDatabaseHas('development_project_task_deadlines', [
         'task_id' => $task->id,
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
 
     // check finished_at in the workstates table
     $this->assertDatabaseMissing('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
         'employee_id' => $worker->id,
-        'finished_at' => null
+        'finished_at' => null,
     ]);
     $this->assertDatabaseHas('dev_project_task_pic_workstates', [
         'task_id' => $task->id,
@@ -120,11 +119,11 @@ it('Submit approve task proofs', function () {
     // task pics should filled with worker boss id
     $this->assertDatabaseMissing('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $worker->id
+        'employee_id' => $worker->id,
     ]);
     $this->assertDatabaseHas('development_project_task_pics', [
         'task_id' => $task->id,
-        'employee_id' => $boss->id
+        'employee_id' => $boss->id,
     ]);
 
     Bus::assertDispatched(SubmitProofsJob::class);

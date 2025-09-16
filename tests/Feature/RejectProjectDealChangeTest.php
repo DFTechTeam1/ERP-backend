@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\Production\ProjectDealChangeStatus;
-use App\Enums\Production\ProjectDealStatus;
 use App\Models\User;
 use App\Services\GeneralService;
 use Illuminate\Support\Facades\Bus;
@@ -13,17 +12,17 @@ use Modules\Production\Models\ProjectDealChange;
 
 use function Pest\Laravel\getJson;
 
-it ("Reject changes return success", function () {
+it('Reject changes return success', function () {
     Bus::fake();
     $permissions = [
-        'approve_project_deal_change'
+        'approve_project_deal_change',
     ];
     $user = initAuthenticateUser(permissions: $permissions);
 
     $this->actingAs($user);
 
     $requested = Employee::factory()->create([
-        'user_id' => User::factory()
+        'user_id' => User::factory(),
     ]);
 
     $change = ProjectDealChange::factory()
@@ -37,27 +36,27 @@ it ("Reject changes return success", function () {
         projectDetailChangesUid: Crypt::encryptString($change->id),
         payload: []
     );
-    
+
     expect($response['error'])->toBeFalse();
 
     $this->assertDatabaseHas('project_deal_changes', [
         'project_deal_id' => $change->project_deal_id,
-        'status' => ProjectDealChangeStatus::Rejected->value
+        'status' => ProjectDealChangeStatus::Rejected->value,
     ]);
 
     $this->assertDatabaseMissing('project_deal_changes', [
         'project_deal_id' => $change->project_deal_id,
         'rejected_at' => null,
-        'rejected_by' => null
+        'rejected_by' => null,
     ]);
     Bus::assertDispatched(NotifyApprovalProjectDealChangeJob::class);
 });
 
-it("Reject changes from email", function () {
+it('Reject changes from email', function () {
     Bus::fake();
 
     $requested = Employee::factory()->create([
-        'user_id' => User::factory()
+        'user_id' => User::factory(),
     ]);
 
     $approvalEmployee = Employee::factory()
@@ -82,13 +81,13 @@ it("Reject changes from email", function () {
     $this->assertDatabaseHas('project_deal_changes', [
         'id' => $change->id,
         'status' => ProjectDealChangeStatus::Rejected->value,
-        'rejected_by' => $employee->user->id
+        'rejected_by' => $employee->user->id,
     ]);
 
     $this->assertDatabaseMissing('project_deal_changes', [
         'id' => $change->id,
         'rejected_at' => null,
-        'rejected_by' => null
+        'rejected_by' => null,
     ]);
 
     Bus::assertDispatched(NotifyApprovalProjectDealChangeJob::class);

@@ -3,10 +3,9 @@
 namespace Modules\Finance\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\ProjectDeal;
 
@@ -15,12 +14,19 @@ class NotifyRequestPriceChangesNotification extends Notification
     use Queueable;
 
     protected Employee $director;
+
     protected Employee|Collection $actor;
+
     protected ProjectDeal $project;
+
     protected string $approvalUrl;
+
     protected string $rejectionUrl;
+
     protected string $reason;
+
     protected string $oldPrice;
+
     protected string $newPrice;
 
     /**
@@ -35,8 +41,7 @@ class NotifyRequestPriceChangesNotification extends Notification
         string $reason,
         string $oldPrice,
         string $newPrice,
-    )
-    {
+    ) {
         $this->director = $director;
         $this->project = $project;
         $this->approvalUrl = $approvalUrl;
@@ -61,8 +66,9 @@ class NotifyRequestPriceChangesNotification extends Notification
     public function toMail($notifiable): MailMessage
     {
         setEmailConfiguration();
+
         // make standard email content to notify the director if this project price changes needs approval
-        // do not render language, 
+        // do not render language,
         // just natural language text
         return (new MailMessage)
             ->subject('Project Price Change Request')
