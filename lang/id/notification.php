@@ -129,4 +129,8 @@ return [
     'successApprovePriceChanges' => 'Perubahan harga berhasil disetujui',
     'successRejectPriceChanges' => 'Perubahan harga berhasil ditolak',
     'waitingForApproval' => 'Menunggu persetujuan',
+    'successAddInteractiveRequestAndWaitingApproval' => 'Permintaan interaktif telah berhasil ditambahkan dan menunggu persetujuan dari Direktur.',
+    'eventAlreadyHaveInteractiveRequest' => 'Event sudah mempunyai permintaan interaktif',
+    'successApproveInteractiveRequest' => 'Permintaan interaktif telah berhasil disetujui',
+    'successRejectInteractiveRequest' => 'Permintaan interaktif telah berhasil ditolak',
 ];

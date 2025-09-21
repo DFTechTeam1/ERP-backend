@@ -12,7 +12,7 @@ class CopyDealToProject
 {
     use AsAction;
 
-    public function handle(object $projectDeal, GeneralService $generalService, bool $isHaveInteractiveElement = false)
+    public function handle(object $projectDeal, GeneralService $generalService)
     {
         $geocoding = new Geocoding;
         if ($projectDeal->city && $projectDeal->state) {

@@ -3,18 +3,35 @@
 namespace Modules\Production\Services;
 
 use App\Enums\Production\ProjectStatus;
+use App\Services\GeneralService;
+use Modules\Company\Models\PositionBackup;
+use Modules\Company\Repository\PositionRepository;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Repository\InteractiveProjectRepository;
 
 class InteractiveProjectService
 {
     private InteractiveProjectRepository $repo;
 
+    private GeneralService $generalService;
+
+    private PositionRepository $positionRepository;
+
+    private EmployeeRepository $employeeRepository;
+
     /**
      * Construction Data
      */
-    public function __construct(InteractiveProjectRepository $repo)
-    {
+    public function __construct(
+        InteractiveProjectRepository $repo,
+        GeneralService $generalService,
+        PositionRepository $positionRepository,
+        EmployeeRepository $employeeRepository
+    ) {
         $this->repo = $repo;
+        $this->generalService = $generalService;
+        $this->positionRepository = $positionRepository;
+        $this->employeeRepository = $employeeRepository;
     }
 
     /**
@@ -184,6 +201,35 @@ class InteractiveProjectService
             return generalResponse(
                 'success',
                 false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get team list
+     */
+    public function getTeamList(): array
+    {
+        try {
+            $teams = $this->generalService->getSettingByKey('interactive_team_positions');
+            $teams = ! empty($teams) ? json_decode($teams, true) : [];
+
+            // get posision id. Convert that uid to id
+            $teams = collect($teams)->map(function ($team) {
+                return $this->generalService->getIdFromUid($team, new PositionBackup);
+            });
+
+            $employees = $this->employeeRepository->list(
+                select: 'id as value,name as text,email',
+                where: 'position_id IN ('.implode(',', $teams->toArray()).')'
+            );
+
+            return generalResponse(
+                'success',
+                false,
+                $employees->toArray()
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
