@@ -40,6 +40,7 @@ class NotifyApprovalProjectDealChangeJob implements ShouldQueue
             'approval.employee:id,name',
             'rejecter:id,employee_id',
             'rejecter.employee:id,name',
+            'reason:id,name',
         ]);
 
         $approvalName = $this->type == 'approved' ? $change->approval->employee->name : $change->rejecter->employee->name;

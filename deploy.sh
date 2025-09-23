@@ -12,6 +12,7 @@ php8.2 artisan optimize:clear
 # Run necessary commands
 php8.2 artisan app:migrate-invoice-uid
 php8.2 artisan db:seed --class=RolePermissionSetting --force
+php8.2 artisan db:seed --class=UpdatePriceGuideSetting --force
 php8.2 artisan config:cache
 php8.2 artisan route:cache
 php8.2 artisan view:cache

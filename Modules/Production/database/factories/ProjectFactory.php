@@ -54,6 +54,7 @@ class ProjectFactory extends Factory
             'project_class_id' => ProjectClass::factory(),
             'longitude' => '106.8277658',
             'latitude' => '-6.1875613',
+            'project_deal_id' => null,
         ];
     }
 }
