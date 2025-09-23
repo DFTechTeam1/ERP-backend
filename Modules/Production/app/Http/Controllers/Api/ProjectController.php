@@ -926,6 +926,9 @@ class ProjectController extends Controller
                 'unpaidInvoices:id,number,parent_number,project_deal_id,amount',
                 'activeProjectDealChange:id,project_deal_id',
                 'activeProjectDealPriceChange:id,project_deal_id,new_price',
+                'lastInteractiveRequest',
+                'project:id,project_deal_id',
+                'project.interactiveProject:id,parent_project'
             ]
         ));
     }

@@ -346,4 +346,9 @@ return [
     'partial' => 'Dibayar Sebagian',
     'final' => 'Final',
     'temporary' => 'Sementara',
+    'pending' => 'Menunggu',
+    'approved' => 'Disetujui',
+    'rejected' => 'Ditolak',
+    'notAvailable' => 'Tidak Tersedia',
+    'available' => 'Tersedia',
 ];

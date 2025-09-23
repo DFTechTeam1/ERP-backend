@@ -11,9 +11,9 @@ enum InteractiveRequestStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending => __('fleet.pending'),
-            self::Approved => __('fleet.approved'),
-            self::Rejected => __('fleet.rejected'),
+            self::Pending => __('global.pending'),
+            self::Approved => __('global.approved'),
+            self::Rejected => __('global.rejected'),
         };
     }
 }

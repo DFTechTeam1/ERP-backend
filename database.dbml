@@ -1452,9 +1452,6 @@ Table "interactive_projects" {
   "city_name" varchar(255) [default: NULL]
   "project_class_id" int [default: NULL]
   "classification" varchar(255) [default: NULL]
-  "showreels_status" tinyint [default: NULL]
-  "longitude" varchar(150) [default: NULL]
-  "latitude" varchar(150) [default: NULL]
   "feedback" text
 
   "project_deal_id" bigint [ref: > project_deals.id]

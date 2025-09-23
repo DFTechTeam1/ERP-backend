@@ -239,6 +239,22 @@ class ProjectDealService
                     $newPrice = 'Rp'.number_format(num: $newPrice, decimal_separator: ',');
                 }
 
+                // interactive status
+                $interactiveStatus = __('global.notAvailable');
+                $interactiveStatusColor = 'light';
+                if ($item->lastInteractiveRequest) {
+                    if ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Approved) {
+                        $interactiveStatus = __('global.available');
+                        $interactiveStatusColor = 'blue-accent-2';
+                    } else if ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Pending) {
+                        $interactiveStatus = __('global.waitingApproval');
+                        $intearctiveStatusColor = 'blue-grey-lighten-1';
+                    } else if ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Rejected) {
+                        $interactiveStatus = __('global.rejected');
+                        $intearctiveStatusColor = 'deep-orange-lighten-2';
+                    }
+                }
+
                 return [
                     'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
                     'latest_quotation_id' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id),
@@ -297,6 +313,9 @@ class ProjectDealService
                     'can_reject_price_changes' => $isHaveRequestPriceChanges ? true : false,
                     'changes_id' => $isHaveActiveRequestChanges ? Crypt::encryptString($item->activeProjectDealChange->id) : null,
                     'price_changes_id' => $isHaveRequestPriceChanges ? Crypt::encryptString($item->activeProjectDealPriceChange->id) : null,
+                    'interactive_status' => $interactiveStatus,
+                    'interactive_status_color' => $interactiveStatusColor,
+                    'interactive_area' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_area : null,
                 ];
             });
 

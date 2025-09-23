@@ -119,6 +119,12 @@ class ProjectDeal extends Model
         return $this->hasMany(InteractiveRequest::class, 'project_deal_id');
     }
 
+    public function lastInteractiveRequest(): HasOne
+    {
+        return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
+            ->latestOfMany();
+    }
+
     public function ProjectDealPriceChanges(): HasMany
     {
         return $this->hasMany(ProjectDealPriceChange::class, 'project_deal_id');
