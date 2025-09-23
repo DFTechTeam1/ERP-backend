@@ -11,12 +11,18 @@ RUN apt-get update && apt-get install -y \
     libsodium-dev \
     libjpeg-dev \
     libfreetype6-dev \
+    libmagickwand-dev \
+    imagemagick \
     zip \
     unzip
+    
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd zip sodium
+
+# Install Imagick extension ← Add this section
+RUN pecl install imagick && docker-php-ext-enable imagick
 
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
