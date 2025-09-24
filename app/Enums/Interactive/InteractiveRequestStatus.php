@@ -16,4 +16,13 @@ enum InteractiveRequestStatus: string
             self::Rejected => __('global.rejected'),
         };
     }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::Pending => 'warning',
+            self::Approved => 'success',
+            self::Rejected => 'danger',
+        };
+    }
 }

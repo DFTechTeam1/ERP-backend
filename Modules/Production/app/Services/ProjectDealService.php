@@ -316,6 +316,9 @@ class ProjectDealService
                     'interactive_status' => $interactiveStatus,
                     'interactive_status_color' => $interactiveStatusColor,
                     'interactive_area' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_area : null,
+                    'interactive_fee' => $item->activeInteractiveRequest ? $item->activeInteractiveRequest->interactive_fee : null,
+                    'interactive_detail' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_detail : null,
+                    'interactive_note' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_note : null,
                 ];
             });
 
@@ -651,6 +654,7 @@ class ProjectDealService
                     'customer:id,name,phone,email',
                     'city:id,name',
                     'class:id,name',
+                    'activeInteractiveRequest:id,project_deal_id,interactive_fee,interactive_area',
                     'invoices' => function ($queryInvoice) {
                         $queryInvoice->where('is_main', 0)
                             ->with([
@@ -776,6 +780,14 @@ class ProjectDealService
                     'product' => 'Equipment',
                     'description' => '',
                     'amount' => $data->latestQuotation->equipment_fee,
+                ];
+            }
+
+            if ($data->activeInteractiveRequest) {
+                $products[] = [
+                    'product' => 'Interactive',
+                    'description' => $data->activeInteractiveRequest->interactive_area.' m<sup>2</sup>',
+                    'amount' => $data->activeInteractiveRequest->interactive_fee
                 ];
             }
 
@@ -1527,10 +1539,12 @@ class ProjectDealService
      * Adding interactive to project deal
      * Here we update interactive detail in the project_deals table and price in the project_quotations table
      */
-    public function approveInteractiveRequest(int $requestId): array
+    public function approveInteractiveRequest(string $requestId): array
     {
         DB::beginTransaction();
         try {
+            $requestId = Crypt::decryptString($requestId);
+
             $request = $this->interactiveRequestRepo->show(
                 uid: $requestId,
                 select: 'id,project_deal_id,interactive_detail,interactive_area,interactive_note,interactive_fee,fix_price,status',
@@ -1575,12 +1589,13 @@ class ProjectDealService
                 $currentTransactions = collect($rawData['transactions'])->map(function ($trx) {
                     return str_replace(['Rp', '.', ',00', ','], '', $trx['payment']);
                 });
+
                 $remainingPayment = $fixPrice - (! empty($currentTransactions) ? $currentTransactions->sum() : 0);
 
-                $fixPrice = 'Rp'.number_format($fixPrice, 0, '.', ',');
+                $fixPriceFormatted = 'Rp'.number_format($fixPrice, 0, '.', ',');
                 $remainingPayment = 'Rp'.number_format($remainingPayment, 0, '.', ',');
                 $rawData['remainingPayment'] = $remainingPayment;
-                $rawData['fixPrice'] = $fixPrice;
+                $rawData['fixPrice'] = $fixPriceFormatted;
 
                 // inject led interactive
                 $currentLed = $rawData['led'];
@@ -1607,7 +1622,7 @@ class ProjectDealService
             );
 
             // create interactive project
-            if ($request->projectDeal->status == ProjectDealStatus::Final) {
+            if ($request->projectDeal->status == ProjectDealStatus::Final && ($request->projectDeal) && ($request->projectDeal->project)) {
                 CreateInteractiveProject::run(projectId: $request->projectDeal->project->id, payload: [
                     'interactive_detail' => $request->interactive_detail,
                     'interactive_area' => $request->interactive_area,
@@ -1630,10 +1645,11 @@ class ProjectDealService
     /**
      * Reject interactive request
      */
-    public function rejectInteractiveRequest(int $requestId): array
+    public function rejectInteractiveRequest(string $requestId): array
     {
         DB::beginTransaction();
         try {
+            $requestId = Crypt::decryptString($requestId);
             $this->interactiveRequestRepo->update(
                 data: [
                     'status' => InteractiveRequestStatus::Rejected,
@@ -1651,6 +1667,69 @@ class ProjectDealService
         } catch (\Throwable $th) {
             DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get list of interactive requests
+     * 
+     * @return array
+     */
+    public function listInteractiveRequests(): array
+    {
+        try {
+            $user = Auth::user();
+
+            $itemsPerPage = request('itemsPerPage') ?? 10;
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+            $where = 'status = ' . InteractiveRequestStatus::Pending->value;
+
+            if (request('status')) {
+                $where = "status = " . request('status');
+            }
+            
+            $data = $this->interactiveRequestRepo->list(
+                select: 'id,project_deal_id,requester_id,status,interactive_detail,interactive_area,interactive_note,interactive_fee,fix_price',
+                where: $where,
+                relation: [
+                    'requester:id,employee_id',
+                    'requester.employee:id,user_id,name',
+                    'projectDeal:id,name,project_date'
+                ],
+                limit: $itemsPerPage,
+                page: $page,
+                orderBy: 'id desc'
+            );
+            $totalData = $this->interactiveRequestRepo->list(select: 'id', where: $where)->count();
+
+            $paginated = $data->map(function ($item) {
+                return [
+                    'id' => Crypt::encryptString($item->id),
+                    'project_deal_uid' => Crypt::encryptString($item->project_deal_id),
+                    'project_name' => $item->projectDeal->name,
+                    'project_date' => date('d F Y', strtotime($item->projectDeal->project_date)),
+                    'requester' => $item->requester->employee->name,
+                    'status' => $item->status->label(),
+                    'status_color' => $item->status->color(),
+                    'interactive_area' => $item->interactive_area . 'm<sup>2</sup>',
+                    'interactive_fee' => 'Rp'.number_format($item->interactive_fee, 0, ',', '.'),
+                    'fix_price' => 'Rp'.number_format($item->fix_price, 0, ',', '.'),
+                    'interactive_detail' => $item->interactive_detail,
+                ];
+            });
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'paginated' => $paginated,
+                    'totalData' => $totalData,
+                ],
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }

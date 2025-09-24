@@ -47,10 +47,8 @@ class InteractiveController extends Controller
     /**
      * Approve interactive request
      */
-    public function approveInteractive(): JsonResponse
+    public function approveInteractive($requestId): JsonResponse
     {
-        $requestId = request('requestId');
-
         return apiResponse($this->projectDealService->approveInteractiveRequest(requestId: $requestId));
     }
 

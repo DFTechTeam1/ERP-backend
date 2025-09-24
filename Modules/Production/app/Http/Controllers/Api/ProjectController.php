@@ -1044,4 +1044,14 @@ class ProjectController extends Controller
     {
         return apiResponse($this->projectDealService->requestChangesList());
     }
+
+    /**
+     * Get list of interactive requests
+     * 
+     * @return JsonResponse
+     */
+    public function listInteractiveRequests(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->listInteractiveRequests());
+    }
 }

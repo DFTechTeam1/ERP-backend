@@ -38,6 +38,7 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
         Route::post('project/deals', [ProjectController::class, 'storeProjectDeals'])->name('project-deal.store');
         Route::get('project/deals', [ProjectController::class, 'listProjectDeals'])->name('project-deal.list');
+        Route::get('project/interactive-requests', [ProjectController::class, 'listInteractiveRequests'])->name('interactive-request.list');
         Route::get('project/deals/price-changes', [ProjectController::class, 'requestChangesList'])->name('project-deal.requestChangesList');
         Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
@@ -68,8 +69,8 @@ Route::middleware(['auth:sanctum'])
 
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
-        Route::get('interactives/approve', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
-        Route::get('interactives/reject', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');
+        Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
+        Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');
         Route::get('interactives/{uid}', [InteractiveController::class, 'show'])->name('interactives.show');
 
         // songs

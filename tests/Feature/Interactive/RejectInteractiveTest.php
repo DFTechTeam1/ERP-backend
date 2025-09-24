@@ -2,6 +2,7 @@
 
 use App\Enums\Interactive\InteractiveRequestStatus;
 use App\Enums\Production\ProjectDealStatus;
+use Illuminate\Support\Facades\Crypt;
 use Modules\Production\Models\InteractiveRequest;
 use Modules\Production\Models\ProjectDeal;
 
@@ -47,8 +48,8 @@ it('Reject interactive request', function () {
     ]);
 
     $requestData = InteractiveRequest::where('project_deal_id', $project->id)->first();
-
-    $response = $this->getJson(route('api.production.interactives.reject').'?requestId='.$requestData->id);
+    $requestId = Crypt::encryptString($requestData->id);
+    $response = $this->getJson(route('api.production.interactives.reject', $requestId));
 
     $response->assertStatus(201);
 
