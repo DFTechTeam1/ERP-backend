@@ -248,10 +248,10 @@ class ProjectDealService
                         $interactiveStatus = __('global.available');
                         $interactiveStatusColor = 'blue-accent-2';
                         $canEditInteractive = true;
-                    } else if ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Pending) {
+                    } elseif ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Pending) {
                         $interactiveStatus = __('global.waitingApproval');
                         $intearctiveStatusColor = 'blue-grey-lighten-1';
-                    } else if ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Rejected) {
+                    } elseif ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Rejected) {
                         $interactiveStatus = __('global.rejected');
                         $intearctiveStatusColor = 'deep-orange-lighten-2';
                     }
@@ -322,7 +322,7 @@ class ProjectDealService
                     'interactive_fix_price' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->fix_price : null,
                     'interactive_detail' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_detail : null,
                     'interactive_note' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_note : null,
-                    'can_edit_interactive' => $canEditInteractive
+                    'can_edit_interactive' => $canEditInteractive,
                 ];
             });
 
@@ -791,7 +791,7 @@ class ProjectDealService
                 $products[] = [
                     'product' => 'Interactive',
                     'description' => $data->activeInteractiveRequest->interactive_area.' m<sup>2</sup>',
-                    'amount' => $data->activeInteractiveRequest->interactive_fee
+                    'amount' => $data->activeInteractiveRequest->interactive_fee,
                 ];
             }
 
@@ -1677,8 +1677,6 @@ class ProjectDealService
 
     /**
      * Get list of interactive requests
-     * 
-     * @return array
      */
     public function listInteractiveRequests(): array
     {
@@ -1690,19 +1688,19 @@ class ProjectDealService
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
-            $where = 'status = ' . InteractiveRequestStatus::Pending->value;
+            $where = 'status = '.InteractiveRequestStatus::Pending->value;
 
             if (request('status')) {
-                $where = "status = " . request('status');
+                $where = 'status = '.request('status');
             }
-            
+
             $data = $this->interactiveRequestRepo->list(
                 select: 'id,project_deal_id,requester_id,status,interactive_detail,interactive_area,interactive_note,interactive_fee,fix_price,approved_at,rejected_at',
                 where: $where,
                 relation: [
                     'requester:id,employee_id',
                     'requester.employee:id,user_id,name',
-                    'projectDeal:id,name,project_date'
+                    'projectDeal:id,name,project_date',
                 ],
                 limit: $itemsPerPage,
                 page: $page,
@@ -1719,7 +1717,7 @@ class ProjectDealService
                     'requester' => $item->requester->employee->name,
                     'status' => $item->status->label(),
                     'status_color' => $item->status->color(),
-                    'interactive_area' => $item->interactive_area . 'm<sup>2</sup>',
+                    'interactive_area' => $item->interactive_area.'m<sup>2</sup>',
                     'interactive_fee' => 'Rp'.number_format($item->interactive_fee, 0, ',', '.'),
                     'fix_price' => 'Rp'.number_format($item->fix_price, 0, ',', '.'),
                     'interactive_detail' => $item->interactive_detail,
@@ -1729,7 +1727,7 @@ class ProjectDealService
             });
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'paginated' => $paginated,
                     'totalData' => $totalData,

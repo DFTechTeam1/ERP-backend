@@ -928,7 +928,7 @@ class ProjectController extends Controller
                 'activeProjectDealPriceChange:id,project_deal_id,new_price',
                 'lastInteractiveRequest',
                 'project:id,project_deal_id',
-                'project.interactiveProject:id,parent_project'
+                'project.interactiveProject:id,parent_project',
             ]
         ));
     }
@@ -1047,8 +1047,6 @@ class ProjectController extends Controller
 
     /**
      * Get list of interactive requests
-     * 
-     * @return JsonResponse
      */
     public function listInteractiveRequests(): JsonResponse
     {
