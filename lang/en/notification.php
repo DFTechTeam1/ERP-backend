@@ -134,4 +134,5 @@ return [
     'eventAlreadyHaveInteractiveRequest' => 'Event already has an interactive request',
     'successApproveInteractiveRequest' => 'Interactive request has been approved successfully',
     'successRejectInteractiveRequest' => 'Interactive request has been rejected successfully',
+    'interactiveRequestAlreadyProcessed' => 'This interactive request has already been processed',
 ];

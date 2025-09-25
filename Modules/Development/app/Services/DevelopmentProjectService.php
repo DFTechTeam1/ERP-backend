@@ -1067,7 +1067,7 @@ class DevelopmentProjectService
     }
 
     /**
-     * Assign pictures to a task.
+     * Assign member to a task.
      */
     public function addTaskMember(array $payload, string $taskUid): array
     {

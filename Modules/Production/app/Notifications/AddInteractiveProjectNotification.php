@@ -7,6 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Crypt;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\InteractiveRequest;
 
@@ -20,14 +21,17 @@ class AddInteractiveProjectNotification extends Notification
 
     private Collection|InteractiveRequest $request;
 
+    private int $userId;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(string $message, Collection|Employee $employee, Collection|InteractiveRequest $request)
+    public function __construct(string $message, Collection|Employee $employee, Collection|InteractiveRequest $request, int $userId)
     {
         $this->message = $message;
         $this->employee = $employee;
         $this->request = $request;
+        $this->userId = $userId;
     }
 
     /**
@@ -51,11 +55,16 @@ class AddInteractiveProjectNotification extends Notification
      */
     public function toMail($notifiable): MailMessage
     {
+        setEmailConfiguration();
+        $requestId = Crypt::encryptString($this->request->id);
+
         return (new MailMessage)
             ->subject('New Interactive Project Request')
             ->markdown('mail.deals.interactiveRequest', [
                 'employee' => $this->employee,
                 'request' => $this->request,
+                'requestId' => $requestId,
+                'userId' => $this->userId,
             ]);
     }
 

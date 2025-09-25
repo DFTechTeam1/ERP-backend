@@ -242,18 +242,21 @@ class ProjectDealService
                 // interactive status
                 $interactiveStatus = __('global.notAvailable');
                 $canEditInteractive = false;
+                $canAddInteractive = true;
                 $interactiveStatusColor = 'light';
                 if ($item->lastInteractiveRequest) {
                     if ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Approved) {
                         $interactiveStatus = __('global.available');
                         $interactiveStatusColor = 'blue-accent-2';
                         $canEditInteractive = true;
+                        $canAddInteractive = false;
                     } elseif ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Pending) {
                         $interactiveStatus = __('global.waitingApproval');
-                        $intearctiveStatusColor = 'blue-grey-lighten-1';
+                        $interactiveStatusColor = 'blue-grey-lighten-1';
+                        $canAddInteractive = false;
                     } elseif ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Rejected) {
                         $interactiveStatus = __('global.rejected');
-                        $intearctiveStatusColor = 'deep-orange-lighten-2';
+                        $interactiveStatusColor = 'deep-orange-lighten-2';
                     }
                 }
 
@@ -317,12 +320,13 @@ class ProjectDealService
                     'price_changes_id' => $isHaveRequestPriceChanges ? Crypt::encryptString($item->activeProjectDealPriceChange->id) : null,
                     'interactive_status' => $interactiveStatus,
                     'interactive_status_color' => $interactiveStatusColor,
-                    'interactive_area' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_area : null,
-                    'interactive_fee' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_fee : null,
-                    'interactive_fix_price' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->fix_price : null,
-                    'interactive_detail' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_detail : null,
-                    'interactive_note' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_note : null,
+                    'interactive_area' => $item->lastInteractiveRequest && ! $canAddInteractive ? $item->lastInteractiveRequest->interactive_area : null,
+                    'interactive_fee' => $item->lastInteractiveRequest && ! $canAddInteractive ? $item->lastInteractiveRequest->interactive_fee : null,
+                    'interactive_fix_price' => $item->lastInteractiveRequest && ! $canAddInteractive ? (string) number_format($item->lastInteractiveRequest->fix_price, 0, '', '') : null,
+                    'interactive_detail' => $item->lastInteractiveRequest && ! $canAddInteractive ? $item->lastInteractiveRequest->interactive_detail : null,
+                    'interactive_note' => $item->lastInteractiveRequest && ! $canAddInteractive ? $item->lastInteractiveRequest->interactive_note : null,
                     'can_edit_interactive' => $canEditInteractive,
+                    'can_add_interactive' => $canAddInteractive,
                 ];
             });
 
@@ -1501,18 +1505,20 @@ class ProjectDealService
     {
         DB::beginTransaction();
         try {
+            $userId = Auth::id();
+
             $projectDealId = Crypt::decryptString($projectDealUid);
 
             $project = $this->repo->show(
                 uid: $projectDealId,
                 select: 'id,status',
                 relation: [
-                    'interactiveRequests:id,project_deal_id',
+                    'pendingInteractiveRequest:id,project_deal_id',
                 ]
             );
 
             // validate request, if already have interactive request, return error
-            if ($project->interactiveRequests->count() > 0) {
+            if ($project->pendingInteractiveRequest) {
                 return errorResponse(message: __('notification.eventAlreadyHaveInteractiveRequest'));
             }
 
@@ -1525,7 +1531,7 @@ class ProjectDealService
                 'fix_price' => $payload['fix_price'],
             ]);
 
-            AddInteractiveProjectJob::dispatch($projectDealId)->afterCommit();
+            AddInteractiveProjectJob::dispatch($projectDealId, $userId)->afterCommit();
 
             DB::commit();
 
@@ -1548,6 +1554,17 @@ class ProjectDealService
         DB::beginTransaction();
         try {
             $requestId = Crypt::decryptString($requestId);
+
+            $currentRequest = $this->interactiveRequestRepo->show(uid: $requestId, select: 'id,status');
+            if ($currentRequest->status != InteractiveRequestStatus::Pending) {
+                return errorResponse(message: __('notification.interactiveRequestAlreadyProcessed'), code: 500);
+            }
+
+            if (request('actorId')) {
+                $actorId = request('actorId');
+            } else {
+                $actorId = Auth::id();
+            }
 
             $request = $this->interactiveRequestRepo->show(
                 uid: $requestId,
@@ -1620,7 +1637,7 @@ class ProjectDealService
                 data: [
                     'status' => InteractiveRequestStatus::Approved,
                     'approved_at' => Carbon::now(),
-                    'approved_by' => Auth::id(),
+                    'approved_by' => $actorId,
                 ],
                 id: $requestId
             );
@@ -1642,7 +1659,7 @@ class ProjectDealService
         } catch (\Throwable $th) {
             DB::rollBack();
 
-            return errorResponse($th);
+            return errorResponse(message: $th, code: 400);
         }
     }
 
@@ -1653,7 +1670,14 @@ class ProjectDealService
     {
         DB::beginTransaction();
         try {
+            // check status first
             $requestId = Crypt::decryptString($requestId);
+
+            $currentRequest = $this->interactiveRequestRepo->show(uid: $requestId, select: 'id,status');
+            if ($currentRequest->status != InteractiveRequestStatus::Pending) {
+                return errorResponse(message: __('notification.interactiveRequestAlreadyProcessed'), code: 500);
+            }
+
             $this->interactiveRequestRepo->update(
                 data: [
                     'status' => InteractiveRequestStatus::Rejected,
@@ -1671,7 +1695,7 @@ class ProjectDealService
         } catch (\Throwable $th) {
             DB::rollBack();
 
-            return errorResponse($th);
+            return errorResponse(message: $th, code: 400);
         }
     }
 

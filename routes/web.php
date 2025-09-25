@@ -19,8 +19,6 @@ use Modules\Finance\Models\Invoice;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectTask;
-use Modules\Production\Notifications\AddInteractiveProjectNotification;
-use Modules\Production\Repository\InteractiveRequestRepository;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -185,18 +183,5 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $employee = Employee::whereNotNull('telegram_chat_id')->first();
-    $request = (new InteractiveRequestRepository)->show(
-        uid: 'id',
-        select: '*',
-        where: 'project_deal_id = 66',
-        relation: [
-            'projectDeal:id,name,project_date',
-            'projectDeal.latestQuotation',
-            'requester:id,employee_id',
-            'requester.employee:id,name,telegram_chat_id',
-        ]
-    );
-
-    return (new AddInteractiveProjectNotification(message: 'Message', employee: $employee, request: $request))->toMail('mail@gmail.com');
+    return view('errors.alreadyProcessed');
 });

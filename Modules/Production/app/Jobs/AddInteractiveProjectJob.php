@@ -18,12 +18,16 @@ class AddInteractiveProjectJob implements ShouldQueue
 
     private int $projectDealId;
 
+    private int $userId;
+
     /**
      * Create a new job instance.
      */
-    public function __construct(int $projectDealId)
+    public function __construct(int $projectDealId, int $userId)
     {
         $this->projectDealId = $projectDealId;
+
+        $this->userId = $userId;
     }
 
     /**
@@ -44,9 +48,9 @@ class AddInteractiveProjectJob implements ShouldQueue
         );
 
         // director
-        $persons = (new GeneralService)->getSettingByKey('person_to_approve_invoice_changes');
+        $persons = json_decode((new GeneralService)->getSettingByKey('person_to_approve_invoice_changes'), true);
 
-        if (! $persons) {
+        if ($persons) {
             $implodeString = "'".implode("','", $persons)."'";
             $employees = (new EmployeeRepository)->list(
                 select: 'id,name,email',
@@ -59,7 +63,7 @@ class AddInteractiveProjectJob implements ShouldQueue
                 $message .= "Please review and take the necessary actions.\n\n";
                 $message .= 'Thank you.';
 
-                $employee->notify(new AddInteractiveProjectNotification($message, $employee, $request));
+                $employee->notify(new AddInteractiveProjectNotification($message, $employee, $request, $this->userId));
             }
         }
     }

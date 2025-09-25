@@ -131,6 +131,12 @@ class ProjectDeal extends Model
             ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Approved);
     }
 
+    public function pendingInteractiveRequest(): HasOne
+    {
+        return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
+            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Pending);
+    }
+
     public function ProjectDealPriceChanges(): HasMany
     {
         return $this->hasMany(ProjectDealPriceChange::class, 'project_deal_id');

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Production\Http\Controllers\Api\InteractiveController;
 use Modules\Production\Http\Controllers\ProductionController;
 
 /*
@@ -16,4 +17,9 @@ use Modules\Production\Http\Controllers\ProductionController;
 
 Route::group([], function () {
     Route::resource('production', ProductionController::class)->names('production');
+});
+
+Route::prefix('production')->group(function () {
+    Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('email.production.interactives.approve');
+    Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('email.production.interactives.reject');
 });

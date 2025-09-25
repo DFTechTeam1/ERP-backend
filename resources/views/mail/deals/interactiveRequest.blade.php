@@ -23,10 +23,10 @@ Interactive Details:
 {{-- button approval and reject --}}
 {{-- display in flex --}}
 <div style="display: flex; gap: 12px;">
-    <x-mail::button :url="url('/production/interactive-requests/'.$request->id)" color="rgb(93, 135, 255)">
+    <x-mail::button :url="url('/production/interactives/approve/'.$requestId . '?actorId=' . $userId)" color="rgb(93, 135, 255)">
     Approve
     </x-mail::button>
-    <x-mail::button :url="url('/production/interactive-requests/'.$request->id)" color="red">
+    <x-mail::button :url="url('/production/interactives/reject/'.$requestId . '?actorId=' . $userId)" color="red">
     Reject
     </x-mail::button>
 </div>

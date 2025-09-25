@@ -133,4 +133,5 @@ return [
     'eventAlreadyHaveInteractiveRequest' => 'Event sudah mempunyai permintaan interaktif',
     'successApproveInteractiveRequest' => 'Permintaan interaktif telah berhasil disetujui',
     'successRejectInteractiveRequest' => 'Permintaan interaktif telah berhasil ditolak',
+    'interactiveRequestAlreadyProcessed' => 'Permintaan interaktif ini sudah diproses',
 ];

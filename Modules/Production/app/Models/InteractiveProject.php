@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Production\Database\Factories\InteractiveProjectFactory;
 
 // use Modules\Production\Database\Factories\InteractiveProjectFactory;
 
@@ -46,10 +47,10 @@ class InteractiveProject extends Model
         ];
     }
 
-    // protected static function newFactory(): InteractiveProjectFactory
-    // {
-    //     // return InteractiveProjectFactory::new();
-    // }
+    protected static function newFactory(): InteractiveProjectFactory
+    {
+        return InteractiveProjectFactory::new();
+    }
 
     public function ledDetail(): Attribute
     {
@@ -67,5 +68,15 @@ class InteractiveProject extends Model
     public function boards(): HasMany
     {
         return $this->hasMany(InteractiveProjectBoard::class, 'project_id', 'id');
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(InteractiveProjectTask::class, 'intr_project_id', 'id');
+    }
+
+    public function pics(): HasMany
+    {
+        return $this->hasMany(InteractiveProjectPic::class, 'intr_project_id', 'id');
     }
 }

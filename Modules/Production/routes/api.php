@@ -69,6 +69,12 @@ Route::middleware(['auth:sanctum'])
 
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
+        Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])->name('interactives.storeTask');
+        Route::post('interactives/tasks/{taskUid}/members', [InteractiveController::class, 'addTaskMember'])->name('interactives.tasks.members.store');
+        Route::get('interactives/tasks/{taskUid}/approved', [InteractiveController::class, 'approveTask'])->name('interactives.tasks.approved');
+        Route::post('interactives/tasks/{taskUid}/proof', [InteractiveController::class, 'submitTaskProofs'])->name('interactives.tasks.proof.store');
+        Route::get('interactives/tasks/{taskUid}/completeTask', [InteractiveController::class, 'completeTask'])->name('interactives.tasks.completed');
+        Route::post('interactives/tasks/{taskUid}/reviseTask', [InteractiveController::class, 'reviseTask'])->name('interactives.tasks.revised');
         Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
         Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');
         Route::get('interactives/{uid}', [InteractiveController::class, 'show'])->name('interactives.show');
