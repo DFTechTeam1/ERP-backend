@@ -103,11 +103,12 @@ class InteractiveProjectService
             $output = [
                 'uid' => $data->uid,
                 'name' => $data->name,
-                'description' => $data->description,
+                'description' => $data->note,
                 'status_raw' => $data->status->value,
                 'status_text' => $data->status->label(),
                 'status_color' => $data->status->color(),
                 'project_date' => date('d F Y', strtotime($data->project_date)),
+                'led_detail' => $data->led_detail,
                 'pic_names' => '-',
                 'teams' => [],
                 'references' => [],

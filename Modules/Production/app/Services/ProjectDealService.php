@@ -241,11 +241,13 @@ class ProjectDealService
 
                 // interactive status
                 $interactiveStatus = __('global.notAvailable');
+                $canEditInteractive = false;
                 $interactiveStatusColor = 'light';
                 if ($item->lastInteractiveRequest) {
                     if ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Approved) {
                         $interactiveStatus = __('global.available');
                         $interactiveStatusColor = 'blue-accent-2';
+                        $canEditInteractive = true;
                     } else if ($item->lastInteractiveRequest->status == InteractiveRequestStatus::Pending) {
                         $interactiveStatus = __('global.waitingApproval');
                         $intearctiveStatusColor = 'blue-grey-lighten-1';
@@ -316,9 +318,11 @@ class ProjectDealService
                     'interactive_status' => $interactiveStatus,
                     'interactive_status_color' => $interactiveStatusColor,
                     'interactive_area' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_area : null,
-                    'interactive_fee' => $item->activeInteractiveRequest ? $item->activeInteractiveRequest->interactive_fee : null,
+                    'interactive_fee' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_fee : null,
+                    'interactive_fix_price' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->fix_price : null,
                     'interactive_detail' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_detail : null,
                     'interactive_note' => $item->lastInteractiveRequest ? $item->lastInteractiveRequest->interactive_note : null,
+                    'can_edit_interactive' => $canEditInteractive
                 ];
             });
 
@@ -1693,7 +1697,7 @@ class ProjectDealService
             }
             
             $data = $this->interactiveRequestRepo->list(
-                select: 'id,project_deal_id,requester_id,status,interactive_detail,interactive_area,interactive_note,interactive_fee,fix_price',
+                select: 'id,project_deal_id,requester_id,status,interactive_detail,interactive_area,interactive_note,interactive_fee,fix_price,approved_at,rejected_at',
                 where: $where,
                 relation: [
                     'requester:id,employee_id',
@@ -1719,6 +1723,8 @@ class ProjectDealService
                     'interactive_fee' => 'Rp'.number_format($item->interactive_fee, 0, ',', '.'),
                     'fix_price' => 'Rp'.number_format($item->fix_price, 0, ',', '.'),
                     'interactive_detail' => $item->interactive_detail,
+                    'approved_at' => $item->approved_at ? date('d F Y', strtotime($item->approved_at)) : null,
+                    'rejected_at' => $item->rejected_at ? date('d F Y', strtotime($item->rejected_at)) : null,
                 ];
             });
 
