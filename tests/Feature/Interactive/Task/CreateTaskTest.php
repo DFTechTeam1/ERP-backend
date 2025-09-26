@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Interactive\DefineTaskAction;
 use App\Enums\Interactive\InteractiveProjectStatus;
 use App\Enums\Interactive\InteractiveTaskStatus;
 use App\Jobs\NotifyInteractiveTaskAssigneeJob;
@@ -25,6 +26,11 @@ it('Create project tasks with missing parameters', function () {
 });
 
 it('Create project with only basic information', function () {
+    DefineTaskAction::mock()
+        ->shouldReceive('handle')
+        ->withAnyArgs()
+        ->andReturn([]);
+
     $project = InteractiveProject::factory()->withBoards()->create([
         'status' => InteractiveProjectStatus::OnGoing->value,
     ]);
@@ -51,6 +57,11 @@ it('Create project with only basic information', function () {
 });
 
 it('Create task with deadline only without pic and references', function () {
+    DefineTaskAction::mock()
+        ->shouldReceive('handle')
+        ->withAnyArgs()
+        ->andReturn([]);
+
     $project = InteractiveProject::factory()->withBoards()->create([
         'status' => InteractiveProjectStatus::OnGoing->value,
     ]);
@@ -80,6 +91,11 @@ it('Create task with deadline only without pic and references', function () {
 });
 
 it('Create task with deadline and pic', function () {
+    DefineTaskAction::mock()
+        ->shouldReceive('handle')
+        ->withAnyArgs()
+        ->andReturn([]);
+
     Bus::fake();
     $project = InteractiveProject::factory()->withBoards()->create([
         'status' => InteractiveProjectStatus::OnGoing->value,
@@ -114,6 +130,7 @@ it('Create task with deadline and pic', function () {
         'description' => 'Task Description',
         'intr_project_id' => $project->id,
         'deadline' => $deadline,
+        'status' => InteractiveTaskStatus::WaitingApproval->value,
     ]);
 
     $this->assertDatabaseEmpty('intr_project_task_attachments');
@@ -134,6 +151,11 @@ it('Create task with deadline and pic', function () {
 });
 
 it('Create task only with pic and no deadline', function () {
+    DefineTaskAction::mock()
+        ->shouldReceive('handle')
+        ->withAnyArgs()
+        ->andReturn([]);
+
     Bus::fake();
 
     $project = InteractiveProject::factory()->withBoards()->create([

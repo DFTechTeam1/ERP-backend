@@ -2,10 +2,10 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\InteractiveProjectTaskDeadline;
-use Modules\Production\Repository\Interface\InteractiveProjectTaskDeadlineInterface;
+use Modules\Production\Models\InteractiveProjectReference;
+use Modules\Production\Repository\Interface\InteractiveProjectReferenceInterface;
 
-class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDeadlineInterface
+class InteractiveProjectReferenceRepository extends InteractiveProjectReferenceInterface
 {
     private $model;
 
@@ -13,7 +13,7 @@ class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDea
 
     public function __construct()
     {
-        $this->model = new InteractiveProjectTaskDeadline;
+        $this->model = new InteractiveProjectReference;
         $this->key = 'id';
     }
 
@@ -71,17 +71,13 @@ class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDea
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (! empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where('uid', $uid);
-        }
+        $query->where('uid', $uid);
 
         if ($relation) {
             $query->with($relation);
@@ -115,7 +111,7 @@ class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDea
         if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('id', $id);
+            $query->where('uid', $id);
         }
 
         $query->update($data);
@@ -129,19 +125,10 @@ class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDea
      * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-
-        if (! empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where('id', $id);
-        }
-
-        $query->delete();
-
-        return $query;
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**

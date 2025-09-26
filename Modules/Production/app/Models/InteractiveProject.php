@@ -79,4 +79,9 @@ class InteractiveProject extends Model
     {
         return $this->hasMany(InteractiveProjectPic::class, 'intr_project_id', 'id');
     }
+
+    public function references(): HasMany
+    {
+        return $this->hasMany(InteractiveProjectReference::class, 'project_id', 'id');
+    }
 }

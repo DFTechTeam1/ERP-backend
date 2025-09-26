@@ -11,6 +11,11 @@ Enum "development_project_references_type_enum" {
   "link"
 }
 
+Enum "interactive_project_references_type_enum" {
+  "media"
+  "link"
+}
+
 Enum "development_project_tasks_status_enum" {
   "1"
   "2"
@@ -863,6 +868,18 @@ Table "interactive_projects" {
   "project_class_id" bigint [not null]
   "created_by" int [default: NULL]
   "updated_by" int [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "interactive_project_references" {
+  "id" bigint [pk, not null]
+  "uid" char(36) [not null]
+  "project_id" bigint [not null]
+  "type" interactive_project_references_type_enum [not null]
+  "media_path" varchar(255) [default: NULL]
+  "link" varchar(255) [default: NULL]
+  "link_name" varchar(255) [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

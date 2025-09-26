@@ -37,4 +37,9 @@ class InteractiveProjectTaskPicWorkstate extends Model
     {
         return $this->belongsTo(InteractiveProjectTask::class, 'task_id');
     }
+
+    public function holdStates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(InteractiveProjectTaskPicHoldstate::class, 'work_state_id');
+    }
 }

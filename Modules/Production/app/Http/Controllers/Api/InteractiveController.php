@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Deals\AddInteractive;
+use Modules\Production\Http\Requests\Interactive\StoreReference;
 use Modules\Production\Http\Requests\Interactive\Task\AssignMember;
 use Modules\Production\Http\Requests\Interactive\Task\ReviseTask;
+use Modules\Production\Http\Requests\Interactive\Task\StoreDescription;
 use Modules\Production\Http\Requests\Interactive\Task\StoreTask;
 use Modules\Production\Http\Requests\Interactive\Task\SubmitProof;
+use Modules\Production\Http\Requests\Interactive\Task\UpdateTaskDeadline;
 use Modules\Production\Services\InteractiveProjectService;
 use Modules\Production\Services\ProjectDealService;
 
@@ -191,5 +194,73 @@ class InteractiveController extends Controller
     public function reviseTask(ReviseTask $request, string $taskUid): JsonResponse
     {
         return apiResponse($this->service->reviseTask($request->validated(), $taskUid));
+    }
+
+    /**
+     * Delete a task.
+     */
+    public function deleteTask(string $taskUid): JsonResponse
+    {
+        return apiResponse($this->service->deleteTask(taskUid: $taskUid));
+    }
+
+    public function downloadAttachment(string $taskUid, string $attachmentId)
+    {
+        return $this->service->downloadAttachment($taskUid, $attachmentId);
+    }
+
+    /**
+     * Delete selected attachments
+     */
+    public function deleteTaskAttachment(string $interactiveUid, string $taskUid, string $imageId): JsonResponse
+    {
+        return apiResponse($this->service->deleteTaskAttachment(interactiveUid: $interactiveUid, taskUid: $taskUid, imageId: $imageId));
+    }
+
+    /**
+     * Update task deadline
+     */
+    public function updateTaskDeadline(UpdateTaskDeadline $request, string $taskUid): JsonResponse
+    {
+        return apiResponse($this->service->updateTaskDeadline($request->validated(), $taskUid));
+    }
+
+    /**
+     * Hold a task.
+     */
+    public function holdTask(string $taskUid): JsonResponse
+    {
+        return apiResponse($this->service->holdTask(taskUid: $taskUid));
+    }
+
+    /**
+     * Start a task after it has been put on hold.
+     */
+    public function startTaskAfterHold(string $taskUid): JsonResponse
+    {
+        return apiResponse($this->service->startTaskAfterHold(taskUid: $taskUid));
+    }
+
+    /**
+     * Store project references.
+     */
+    public function storeReferences(StoreReference $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->service->storeReferences($request->validated(), $projectUid));
+    }
+
+    /**
+     * Delete a project reference.
+     *
+     * @param  string  $taskUid
+     */
+    public function deleteReference(string $projectUid, string $referenceId): JsonResponse
+    {
+        return apiResponse($this->service->deleteReference($projectUid, $referenceId));
+    }
+
+    public function storeDescription(StoreDescription $request, string $taskUid): JsonResponse
+    {
+        return apiResponse($this->service->storeDescription($request->validated(), $taskUid));
     }
 }

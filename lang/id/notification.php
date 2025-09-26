@@ -134,4 +134,8 @@ return [
     'successApproveInteractiveRequest' => 'Permintaan interaktif telah berhasil disetujui',
     'successRejectInteractiveRequest' => 'Permintaan interaktif telah berhasil ditolak',
     'interactiveRequestAlreadyProcessed' => 'Permintaan interaktif ini sudah diproses',
+    'successUpdateDescription' => 'Deskripsi berhasil diperbarui',
+    'taskAlreadyApproved' => 'Tugas sudah disetujui',
+    'taskCannotBeApproved' => 'Tugas belum bisa disetujui',
+    'youAreNotAllowedToApproveThisTask' => 'Kamu tidak diizinkan untuk menyetujui tugas ini',
 ];

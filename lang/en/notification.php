@@ -135,4 +135,8 @@ return [
     'successApproveInteractiveRequest' => 'Interactive request has been approved successfully',
     'successRejectInteractiveRequest' => 'Interactive request has been rejected successfully',
     'interactiveRequestAlreadyProcessed' => 'This interactive request has already been processed',
+    'successUpdateDescription' => 'Description has been updated successfully',
+    'taskAlreadyApproved' => 'Task is already approved',
+    'taskCannotBeApproved' => 'Task cannot be approved yet',
+    'youAreNotAllowedToApproveThisTask' => 'You are not allowed to approve this task',
 ];

@@ -87,4 +87,9 @@ class InteractiveProjectTask extends Model
     {
         return $this->hasMany(InteractiveProjectTaskPicWorkstate::class, 'task_id');
     }
+
+    public function holdStates(): HasMany
+    {
+        return $this->hasMany(InteractiveProjectTaskPicHoldstate::class, 'task_id');
+    }
 }

@@ -75,3 +75,95 @@ it('Approve task return success', function () {
         'data',
     ]);
 });
+
+it('Approve task when task status is Check By Pm', function () {
+    // fake action
+    DefineTaskAction::mock()
+        ->shouldReceive('handle')
+        ->withAnyArgs()
+        ->andReturn([]);
+
+    $project = InteractiveProject::factory()
+        ->withBoards()
+        ->withPics()
+        ->create();
+
+    $deadline = now()->addDays(7)->format('Y-m-d H:i');
+
+    $worker = Employee::factory()
+        ->create([
+            'user_id' => $this->user->id,
+        ]);
+
+    // update users employee_id
+    \App\Models\User::where('id', $this->user->id)->update([
+        'employee_id' => $worker->id,
+    ]);
+
+    $task = InteractiveProjectTask::factory()
+        ->withPic(employee: $worker)
+        ->create([
+            'intr_project_id' => $project->id,
+            'intr_project_board_id' => $project->boards->first()->id,
+            'deadline' => $deadline,
+            'status' => InteractiveTaskStatus::CheckByPm->value,
+        ]);
+
+    // approve task
+    $response = $this->get(route('api.production.interactives.tasks.approved', $task->uid));
+
+    $response->assertStatus(400);
+
+    $this->assertDatabaseHas('intr_project_tasks', [
+        'id' => $task->id,
+        'status' => InteractiveTaskStatus::CheckByPm->value,
+    ]);
+
+    expect($response->json('message'))->toBe(__('notification.taskCannotBeApproved'));
+});
+
+it('Approve task when task already In Progress', function () {
+    // fake action
+    DefineTaskAction::mock()
+        ->shouldReceive('handle')
+        ->withAnyArgs()
+        ->andReturn([]);
+
+    $project = InteractiveProject::factory()
+        ->withBoards()
+        ->withPics()
+        ->create();
+
+    $deadline = now()->addDays(7)->format('Y-m-d H:i');
+
+    $worker = Employee::factory()
+        ->create([
+            'user_id' => $this->user->id,
+        ]);
+
+    // update users employee_id
+    \App\Models\User::where('id', $this->user->id)->update([
+        'employee_id' => $worker->id,
+    ]);
+
+    $task = InteractiveProjectTask::factory()
+        ->withPic(employee: $worker)
+        ->create([
+            'intr_project_id' => $project->id,
+            'intr_project_board_id' => $project->boards->first()->id,
+            'deadline' => $deadline,
+            'status' => InteractiveTaskStatus::InProgress->value,
+        ]);
+
+    // approve task
+    $response = $this->get(route('api.production.interactives.tasks.approved', $task->uid));
+
+    $response->assertStatus(400);
+
+    $this->assertDatabaseHas('intr_project_tasks', [
+        'id' => $task->id,
+        'status' => InteractiveTaskStatus::InProgress->value,
+    ]);
+
+    expect($response->json('message'))->toBe(__('notification.taskAlreadyApproved'));
+});

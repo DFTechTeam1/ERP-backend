@@ -22,4 +22,5 @@ Route::group([], function () {
 Route::prefix('production')->group(function () {
     Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('email.production.interactives.approve');
     Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('email.production.interactives.reject');
+    Route::get('interactives/project/{taskUid}/downloadAttachment/{attachmentId}', [InteractiveController::class, 'downloadAttachment'])->name('interactives.project.downloadAttachment');
 });

@@ -2,10 +2,10 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\InteractiveProjectTaskDeadline;
-use Modules\Production\Repository\Interface\InteractiveProjectTaskDeadlineInterface;
+use Modules\Production\Models\InteractiveProjectTaskAttachment;
+use Modules\Production\Repository\Interface\InteractiveProjectTaskAttachmentInterface;
 
-class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDeadlineInterface
+class InteractiveProjectTaskAttachmentRepository extends InteractiveProjectTaskAttachmentInterface
 {
     private $model;
 
@@ -13,7 +13,7 @@ class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDea
 
     public function __construct()
     {
-        $this->model = new InteractiveProjectTaskDeadline;
+        $this->model = new InteractiveProjectTaskAttachment;
         $this->key = 'id';
     }
 
@@ -115,7 +115,7 @@ class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDea
         if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('id', $id);
+            $query->where('uid', $id);
         }
 
         $query->update($data);
@@ -129,19 +129,10 @@ class InteractiveProjectTaskDeadlineRepository extends InteractiveProjectTaskDea
      * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-
-        if (! empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where('id', $id);
-        }
-
-        $query->delete();
-
-        return $query;
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**

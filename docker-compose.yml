@@ -24,6 +24,10 @@ services:
     # Set the working directory inside the container
     # Commands run in the container will start from this directory
     working_dir: /var/www/html
+
+    environment:
+      - PHP_UPLOAD_MAX_FILESIZE=100M
+      - PHP_POST_MAX_SIZE=100M
     
     # Dependency management - ensures these services start first
     depends_on:

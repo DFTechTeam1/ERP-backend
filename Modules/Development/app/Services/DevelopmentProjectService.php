@@ -1743,6 +1743,12 @@ class DevelopmentProjectService
 
     /**
      * Store project references.
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - array $references                          With these following structure:
+     *                          - File $file
+     *                          - string $type
+     *                          - string $description
      */
     public function storeReferences(array $payload, string $projectUid): array
     {

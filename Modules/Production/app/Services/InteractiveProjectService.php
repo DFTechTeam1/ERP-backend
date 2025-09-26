@@ -3,8 +3,10 @@
 namespace Modules\Production\Services;
 
 use App\Actions\Interactive\DefineTaskAction;
+use App\Enums\Development\Project\ReferenceType;
 use App\Enums\Interactive\InteractiveTaskStatus;
 use App\Enums\Production\ProjectStatus;
+use App\Enums\System\BaseRole;
 use App\Jobs\NotifyInteractiveTaskAssigneeJob;
 use App\Services\GeneralService;
 use Carbon\Carbon;
@@ -19,9 +21,13 @@ use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Jobs\InteractiveTaskHasBeenCompleteJob;
 use Modules\Production\Jobs\SubmitInteractiveTaskJob;
+use Modules\Production\Jobs\UpdateInteractiveTaskDeadline;
+use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Models\InteractiveProjectTask;
 use Modules\Production\Repository\InteractiveProjectBoardRepository;
+use Modules\Production\Repository\InteractiveProjectReferenceRepository;
 use Modules\Production\Repository\InteractiveProjectRepository;
+use Modules\Production\Repository\InteractiveProjectTaskAttachmentRepository;
 use Modules\Production\Repository\InteractiveProjectTaskDeadlineRepository;
 use Modules\Production\Repository\InteractiveProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\InteractiveProjectTaskPicHoldstateRepository;
@@ -55,6 +61,12 @@ class InteractiveProjectService
 
     private EmployeeRepository $employeeRepo;
 
+    private InteractiveProjectTaskAttachmentRepository $projectTaskAttachmentRepo;
+
+    private InteractiveProjectReferenceRepository $projectReferenceRepo;
+
+    private const MEDIAPATH = 'interactives/projects/references';
+
     private const MEDIATASKPATH = 'interactives/projects/tasks';
 
     private const PROOFPATH = 'interactives/projects/tasks/proofs';
@@ -78,7 +90,9 @@ class InteractiveProjectService
         InteractiveProjectTaskPicHistoryRepository $projectTaskPicHistoryRepo,
         InteractiveProjectTaskPicHoldstateRepository $projectTaskHoldStateRepo,
         InteractiveProjectBoardRepository $projectBoardRepo,
-        EmployeeRepository $employeeRepo
+        EmployeeRepository $employeeRepo,
+        InteractiveProjectTaskAttachmentRepository $projectTaskAttachmentRepo,
+        InteractiveProjectReferenceRepository $projectReferenceRepo
     ) {
         $this->repo = $repo;
         $this->generalService = $generalService;
@@ -92,6 +106,8 @@ class InteractiveProjectService
         $this->projectTaskHoldStateRepo = $projectTaskHoldStateRepo;
         $this->projectBoardRepo = $projectBoardRepo;
         $this->employeeRepo = $employeeRepo;
+        $this->projectTaskAttachmentRepo = $projectTaskAttachmentRepo;
+        $this->projectReferenceRepo = $projectReferenceRepo;
     }
 
     /**
@@ -145,6 +161,85 @@ class InteractiveProjectService
         }
     }
 
+    /**
+     * Get tasks for a specific project board.
+     */
+    public function getProjectBoardTasks(int $boardId): Collection
+    {
+        $tasks = $this->projectTaskRepo->list(
+            select: 'id,uid,name,intr_project_id,intr_project_board_id,description,status,deadline,created_at',
+            where: "intr_project_board_id = {$boardId}",
+            relation: [
+                'attachments:uid,intr_project_task_id,file_path,created_at',
+                'pics:id,task_id,employee_id',
+                'pics.employee:id,uid,nickname,avatar_color,name',
+                'taskProofs:id,task_id,nas_path,created_at',
+                'taskProofs.images:id,intr_task_proof_id,image_path',
+                'revises.images',
+            ]
+        );
+
+        return $tasks->map(function ($task) {
+            return [
+                'uid' => $task->uid,
+                'name' => $task->name,
+                'description' => $task->description,
+                'start_date' => date('d F Y H:i', strtotime($task->created_at)),
+                'end_date' => $task->deadline ? date('d M Y, H:i', strtotime($task->deadline)) : null,
+                'status' => $task->status,
+                'status_text' => $task->status->label(),
+                'status_color' => $task->status->color(),
+                'board_id' => $task->intr_project_board_id,
+                'revises' => $task->revises->map(function ($revise) {
+                    return [
+                        'revise_at' => date('d F Y H:i', strtotime($revise->created_at)),
+                        'images' => $revise->images,
+                        'id' => $revise->id,
+                        'reason' => $revise->reason,
+                    ];
+                }),
+                'proof_of_works' => $task->taskProofs->map(function ($proof) {
+                    $items = $proof->images->map(function ($image) {
+                        return $image->real_image_path;
+                    });
+
+                    return [
+                        'images' => $items,
+                        'id' => $proof->id,
+                        'nas_path' => $proof->nas_path,
+                        'created_at' => Carbon::parse($proof->created_at)->format('d F Y H:i'),
+                    ];
+                })->groupBy('created_at'),
+                'medias' => $task->attachments->map(function ($attachment) {
+                    // get extenstion type
+                    $extension = pathinfo($attachment->real_file_path, PATHINFO_EXTENSION);
+
+                    return [
+                        'id' => $attachment->uid,
+                        'media_type' => 'media',
+                        'media_link' => $attachment->real_file_path,
+                        'ext' => $extension,
+                        'update_timing' => date('d F Y H:i', strtotime($attachment->created_at)),
+                    ];
+                }),
+                'pics' => $task->pics->map(function ($pic) {
+                    // set initial name based on name value
+                    $initial = substr($pic->employee->name, 0, 1);
+
+                    return [
+                        'uid' => $pic->employee->uid,
+                        'name' => $pic->employee->name,
+                        'avatar_color' => $pic->employee->avatar_color,
+                        'initial' => $initial,
+                    ];
+                }),
+                'can_delete_attachment' => true,
+                'can_add_description' => true,
+                'action_list' => DefineTaskAction::run($task),
+            ];
+        });
+    }
+
     public function getProjectBoards(int $projectId): Collection
     {
         $data = $this->projectBoardRepo->list(
@@ -165,66 +260,7 @@ class InteractiveProjectService
             return [
                 'id' => $board->id,
                 'name' => $board->name,
-                'tasks' => $board->tasks->map(function ($task) use ($board) {
-                    $task['proofOfWorks'] = collect([]);
-
-                    return [
-                        'uid' => $task->uid,
-                        'name' => $task->name,
-                        'description' => $task->description,
-                        'start_date' => date('d F Y H:i', strtotime($task->created_at)),
-                        'end_date' => $task->deadline ? date('d M Y, H:i', strtotime($task->deadline)) : null,
-                        'status' => $task->status,
-                        'status_text' => $task->status->label(),
-                        'status_color' => $task->status->color(),
-                        'board_id' => $board->id,
-                        'revises' => $task->revises->map(function ($revise) {
-                            return [
-                                'revise_at' => date('d F Y H:i', strtotime($revise->created_at)),
-                                'images' => $revise->images,
-                                'id' => $revise->id,
-                                'reason' => $revise->reason,
-                            ];
-                        }),
-                        'proof_of_works' => $task->taskProofs->map(function ($proof) {
-                            $items = $proof->images->map(function ($image) {
-                                return $image->real_image_path;
-                            });
-
-                            return [
-                                'images' => $items,
-                                'id' => $proof->id,
-                                'nas_path' => $proof->nas_path,
-                                'created_at' => Carbon::parse($proof->created_at)->format('d F Y H:i'),
-                            ];
-                        })->groupBy('created_at'),
-                        'medias' => $task->attachments->map(function ($attachment) {
-                            // get extenstion type
-                            $extension = pathinfo($attachment->real_file_path, PATHINFO_EXTENSION);
-
-                            return [
-                                'id' => $attachment->uid,
-                                'media_type' => 'media',
-                                'media_link' => $attachment->real_file_path,
-                                'ext' => $extension,
-                                'update_timing' => date('d F Y H:i', strtotime($attachment->created_at)),
-                            ];
-                        }),
-                        'pics' => $task->pics->map(function ($pic) {
-                            // set initial name based on name value
-                            $initial = substr($pic->employee->name, 0, 1);
-
-                            return [
-                                'uid' => $pic->employee->uid,
-                                'name' => $pic->employee->name,
-                                'avatar_color' => $pic->employee->avatar_color,
-                                'initial' => $initial,
-                            ];
-                        }),
-                        'can_delete_attachment' => true,
-                        'action_list' => DefineTaskAction::run($task),
-                    ];
-                }),
+                'tasks' => $this->getProjectBoardTasks($board->id),
             ];
         })->values();
     }
@@ -254,13 +290,13 @@ class InteractiveProjectService
                 'project_date' => date('d F Y', strtotime($data->project_date)),
                 'led_detail' => $data->led_detail,
                 'pic_names' => '-',
-                'teams' => [],
-                'references' => [],
+                'teams' => $this->getTeamList()['data'],
+                'references' => $this->getProjectReferences($data->id),
                 'boards' => $data->boards->map(function ($board) {
                     return [
                         'id' => $board->id,
                         'name' => $board->name,
-                        'tasks' => [],
+                        'tasks' => $this->getProjectBoardTasks($board->id),
                     ];
                 }),
                 'project_is_complete' => $data->status === ProjectStatus::Completed ? true : false,
@@ -358,23 +394,35 @@ class InteractiveProjectService
     public function getTeamList(): array
     {
         try {
-            $teams = $this->generalService->getSettingByKey('interactive_team_positions');
-            $teams = ! empty($teams) ? json_decode($teams, true) : [];
+            $definedPosition = json_decode($this->generalService->getSettingByKey('position_in_interactive_task'), true);
 
-            // get posision id. Convert that uid to id
-            $teams = collect($teams)->map(function ($team) {
-                return $this->generalService->getIdFromUid($team, new PositionBackup);
-            });
+            $output = [];
 
-            $employees = $this->employeeRepository->list(
-                select: 'id as value,name as text,email',
-                where: 'position_id IN ('.implode(',', $teams->toArray()).')'
-            );
+            // get position id. Convert that uid to id
+            if ($definedPosition) {
+                $teams = collect($definedPosition)->map(function ($team) {
+                    return $this->generalService->getIdFromUid($team, new PositionBackup);
+                });
+
+                $output = $this->employeeRepository->list(
+                    select: 'uid,name,email,position_id',
+                    where: 'position_id IN ('.implode(',', $teams->toArray()).')',
+                    relation: [
+                        'position:id,name',
+                    ]
+                );
+
+                $output = $output->map(function ($item) {
+                    $item['total_task'] = 0;
+
+                    return $item;
+                })->toArray();
+            }
 
             return generalResponse(
                 'success',
                 false,
-                $employees->toArray()
+                $output
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -401,7 +449,7 @@ class InteractiveProjectService
         $tmpFiles = [];
         try {
             $project = $this->repo->show(uid: $projectUid, select: 'id');
-            $payload['status'] = (isset($payload['pics'])) && (! empty($payload['pics'])) ? InteractiveTaskStatus::Pending->value : InteractiveTaskStatus::Draft->value;
+            $payload['status'] = (isset($payload['pics'])) && (! empty($payload['pics'])) ? InteractiveTaskStatus::WaitingApproval->value : InteractiveTaskStatus::Draft->value;
 
             $task = $project->tasks()->create([
                 'intr_project_board_id' => $payload['board_id'],
@@ -454,10 +502,16 @@ class InteractiveProjectService
                 )->afterCommit();
             }
 
+            // refresh the board
+            $boards = $this->getProjectBoards(projectId: $project->id);
+
             DB::commit();
 
             return generalResponse(
                 message: __('notification.successCreateTask'),
+                data: [
+                    'boards' => $boards,
+                ]
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -694,10 +748,52 @@ class InteractiveProjectService
     {
         DB::beginTransaction();
         try {
+            $user = Auth::user();
+            $user = \App\Models\User::select('id', 'email')->find($user->id);
+
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,intr_project_id', relation: [
                 'deadlines',
                 'pics',
+                'interactiveProject:id',
+                'interactiveProject.pics',
             ]);
+
+            $isMyTask = in_array($user->employee_id, $task->pics->pluck('employee_id')->toArray()) ? true : false;
+
+            $isMyProject = in_array($user->employee_id, $task->interactiveProject->pics->pluck('employee_id')->toArray()) ? true : false;
+
+            // return with proper message if task already approved
+            if ($task->status == InteractiveTaskStatus::InProgress) {
+                return errorResponse(
+                    message: __('notification.taskAlreadyApproved'),
+                );
+            }
+
+            $disallowedStatusesToChange = [
+                InteractiveTaskStatus::Completed,
+                InteractiveTaskStatus::OnHold,
+                InteractiveTaskStatus::CheckByPm,
+            ];
+
+            if (in_array($task->status, $disallowedStatusesToChange)) {
+                return errorResponse(
+                    message: __('notification.taskCannotBeApproved'),
+                );
+            }
+
+            // only user with root role, director role,
+            // project pic for task project, pic for the task can approved this task
+            if (
+                ! $isMyTask &&
+                (
+                    ! $user->hasRole(BaseRole::Root->value) ||
+                    ! $user->hasRole(BaseRole::Director->value)
+                )
+            ) {
+                return errorResponse(
+                    message: __('notification.youAreNotAllowedToApproveThisTask'),
+                );
+            }
 
             $this->projectTaskRepo->update(
                 data: [
@@ -1061,6 +1157,442 @@ class InteractiveProjectService
                 }
             }
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete a task and all its related resources.
+     */
+    public function deleteTask(string $taskUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $task = $this->projectTaskRepo->show(uid: $taskUid, relation: [
+                'pics',
+                'attachments',
+                'deadlines',
+            ]);
+
+            $currentProjectId = $task->intr_project_id;
+
+            // delete all pics
+            $task->pics()->delete();
+
+            $task->picHistories()->delete();
+
+            // delete all attachment in the storage first
+            $task->attachments->each(function ($attachment) {
+                if (Storage::disk('public')->exists(self::MEDIATASKPATH.'/'.$attachment->file_path)) {
+                    Storage::delete(self::MEDIATASKPATH.'/'.$attachment->file_path);
+                }
+            });
+
+            // delete all attachments
+            $task->attachments()->delete();
+
+            // delete all deadlines
+            $task->deadlines()->delete();
+
+            $task->delete();
+
+            // get boards
+            $boards = $this->getProjectBoards(projectId: $currentProjectId);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successDeleteTask'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function downloadAttachment(string $taskId, string $attachmentId)
+    {
+        try {
+            $data = $this->projectTaskAttachmentRepo->show(uid: 'dummy', select: 'id,file_path', where: "uid = '{$attachmentId}'");
+
+            return \Illuminate\Support\Facades\Storage::download('interactives/projects/tasks/'.$data->file_path);
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete selected attachments
+     */
+    public function deleteTaskAttachment(string $interactiveUid, string $taskUid, string $imageId): array
+    {
+        try {
+            $image = $this->projectTaskAttachmentRepo->show(uid: $imageId);
+
+            if (Storage::disk('public')->exists(self::MEDIATASKPATH.'/'.$image->file_path)) {
+                Storage::disk('public')->delete(self::MEDIATASKPATH.'/'.$image->file_path);
+            }
+
+            $image->delete();
+
+            // get detail of project board
+            $projectId = $this->generalService->getIdFromUid($interactiveUid, new InteractiveProject);
+            $boards = $this->getProjectBoards(projectId: $projectId);
+
+            return generalResponse(
+                message: __('notification.attachmentHasBeenDeleted'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update the deadline for a specific task.
+     *
+     * @param  array  $payload  Required structure:
+     *                          - end_date: string (format: Y-m-d H:i:s)
+     */
+    public function updateTaskDeadline(array $payload, string $taskUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,intr_project_id,name', relation: [
+                'deadlines',
+                'pics:id,task_id,employee_id',
+                'pics.employee:id,name,email,telegram_chat_id',
+                'interactiveProject:id,name',
+            ]);
+            // Update deadlines for each PIC if actual_end_time is null
+            // task have pics, and actual_end_time in deadline model have null value then update the value based on task id and each pic.employee_id
+            if ($task->pics->isNotEmpty()) {
+                foreach ($task->pics as $pic) {
+                    $targetDeadline = $this->projectTaskDeadlineRepo->show(uid: 'id', select: 'id', where: "task_id = {$task->id} and employee_id = {$pic->employee_id} and actual_end_time IS NULL");
+
+                    // create if not exists and update if exists
+                    if ($targetDeadline) {
+                        $this->projectTaskDeadlineRepo->update(
+                            data: [
+                                'deadline' => Carbon::parse($payload['end_date'])->format('Y-m-d H:i:s'),
+                            ],
+                            id: $targetDeadline->id
+                        );
+                    } else {
+                        $this->projectTaskDeadlineRepo->store([
+                            'task_id' => $task->id,
+                            'employee_id' => $pic->employee_id,
+                            'deadline' => Carbon::parse($payload['end_date'])->format('Y-m-d H:i:s'),
+                        ]);
+                    }
+                }
+            }
+
+            // update deadline in the task repo
+            $this->projectTaskRepo->update(
+                data: [
+                    'deadline' => Carbon::parse($payload['end_date'])->format('Y-m-d H:i:s'),
+                ],
+                id: $taskUid
+            );
+
+            $boards = $this->getProjectBoards(projectId: $task->intr_project_id);
+
+            // notify all pics if exists
+            if ($task->pics->isNotEmpty()) {
+                UpdateInteractiveTaskDeadline::dispatch($task, $payload)->afterCommit();
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successUpdateDeadline'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Hold a task and update its hold states.
+     */
+    public function holdTask(string $taskUid): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,intr_project_id', relation: [
+                'pics:id,task_id,employee_id',
+            ]);
+
+            // update task status
+            $this->projectTaskRepo->update(
+                data: [
+                    'status' => InteractiveTaskStatus::OnHold->value,
+                ],
+                id: $taskUid
+            );
+
+            // record for hold states
+            $this->recordHoldState(task: $task);
+
+            // refresh boards
+            $boards = $this->getProjectBoards(projectId: $task->intr_project_id);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.taskHasBeenHold'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Record the hold state of a task.
+     */
+    public function recordHoldState(InteractiveProjectTask|Collection $task): void
+    {
+        foreach ($task->pics as $pic) {
+            $workState = $this->projectTaskWorkStateRepo->show(
+                uid: 'uid',
+                select: 'id',
+                where: "employee_id = {$pic->employee_id} and task_id = {$task->id}"
+            );
+
+            $workState->holdStates()->create([
+                'employee_id' => $pic->employee_id,
+                'task_id' => $task->id,
+                'holded_at' => Carbon::now(),
+            ]);
+        }
+    }
+
+    /**
+     * Start the task after tas has been hold
+     */
+    public function startTaskAfterHold(string $taskUid): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,intr_project_id', relation: [
+                'pics:id,task_id,employee_id',
+            ]);
+
+            // update task status
+            $this->projectTaskRepo->update(
+                data: [
+                    'status' => InteractiveTaskStatus::InProgress->value,
+                ],
+                id: $taskUid
+            );
+
+            // end the hold state
+            $this->stopHoldState(task: $task);
+
+            // refresh the boards
+            $boards = $this->getProjectBoards(projectId: $task->intr_project_id);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.taskHasBeenStartedAgain'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function stopHoldState(InteractiveProjectTask|Collection $task): void
+    {
+        foreach ($task->pics as $pic) {
+            // get current work state in each pic
+            $currentWorkState = $this->projectTaskWorkStateRepo->show(
+                uid: 'uid',
+                select: 'id',
+                where: "employee_id = {$pic->employee_id} and task_id = {$task->id}"
+            );
+
+            // stop the hold state
+            $this->projectTaskHoldStateRepo->update(
+                data: [
+                    'unholded_at' => Carbon::now(),
+                ],
+                where: "work_state_id = {$currentWorkState->id}"
+            );
+        }
+    }
+
+    /**
+     * Store project references.
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - array $references                          With these following structure:
+     *                          - File $file
+     *                          - string $type
+     *                          - string $description
+     */
+    public function storeReferences(array $payload, string $projectUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $project = $this->repo->show(uid: $projectUid, select: 'id');
+
+            $this->uploadProjectReferences($project, $payload['references']);
+
+            $references = $this->getProjectReferences(projectId: $project->id);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successAddReference'),
+                data: $references->toArray()
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    protected function getProjectReferences(int $projectId)
+    {
+        $data = $this->projectReferenceRepo->list(
+            select: 'id,uid,type,media_path,link,link_name',
+            where: "project_id = {$projectId}"
+        );
+
+        // format first
+        $data = $data->map(function ($reference) {
+            // get extension if reference type is media
+            // define type
+            // if reference type is media, variable $type will be 'files'
+            // if reference type is media and have extension .docx, .doc, .pdf then $type will be 'pdf'
+            $type = 'link';
+            $extension = null;
+            if ($reference->type == \App\Enums\Development\Project\ReferenceType::Media->value) {
+                $extension = pathinfo(storage_path('app/public/'.$reference->full_path), PATHINFO_EXTENSION);
+
+                if (in_array($extension, ['docx', 'doc', 'pdf'])) {
+                    $type = 'pdf';
+                }
+                if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    $type = 'files';
+                }
+            }
+
+            return [
+                'uid' => $reference->uid,
+                'type' => $type,
+                'extension' => $extension,
+                'media_path' => $reference->real_media_path,
+                'link' => $reference->link,
+                'link_name' => $reference->link_name,
+                'image_name' => $reference->media_path,
+            ];
+        });
+
+        // group by types
+        $groups = $data->groupBy('type');
+
+        return $groups;
+    }
+
+    protected function uploadProjectReferences(Collection|InteractiveProject $project, array $references): void
+    {
+        // upload image if type = media
+        foreach ($references as $reference) {
+            if ($reference['type'] != 'remove') {
+                $payloadReferences[] = [
+                    'type' => $reference['type'],
+                ];
+            }
+
+            if ($reference['type'] === ReferenceType::Media->value) {
+                // handle media upload
+                $media = $this->generalService->uploadImageandCompress(
+                    path: self::MEDIAPATH,
+                    compressValue: 0,
+                    image: $reference['image']
+                );
+                $payloadReferences[count($payloadReferences) - 1]['media_path'] = $media;
+            } elseif ($reference['type'] === ReferenceType::Link->value) {
+                $payloadReferences[count($payloadReferences) - 1]['link'] = $reference['link'];
+                $payloadReferences[count($payloadReferences) - 1]['link_name'] = $reference['link_name'];
+            }
+        }
+
+        $project->references()->createMany($payloadReferences);
+    }
+
+    /**
+     * Delete a project reference.
+     *
+     * @param  string  $taskUid
+     */
+    public function deleteReference(string $projectUid, string $referenceId): array
+    {
+        try {
+            $project = $this->repo->show(uid: $projectUid, select: 'id');
+
+            $reference = $this->projectReferenceRepo->show(uid: $referenceId, select: 'id,media_path,type');
+
+            if (Storage::disk('public')->exists(self::MEDIAPATH.'/'.$reference->media_path)) {
+                Storage::disk('public')->delete(self::MEDIAPATH.'/'.$reference->media_path);
+            }
+
+            $reference->delete();
+
+            $references = $this->getProjectReferences(projectId: $project->id);
+
+            return generalResponse(
+                message: __('notification.referenceHasBeenDeleted'),
+                data: $references->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Store or update task description.
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - string $description
+     * @return array
+     */
+    public function storeDescription(array $payload, string $taskUid)
+    {
+        try {
+            $this->projectTaskRepo->update(
+                data: [
+                    'description' => $payload['description'],
+                ],
+                id: $taskUid
+            );
+
+            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,intr_project_id');
+
+            $boards = $this->getProjectBoards(projectId: $task->intr_project_id);
+
+            return generalResponse(
+                message: __('notification.successUpdateDescription'),
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }

@@ -174,6 +174,9 @@ class DevelopmentProjectController extends Controller
         return apiResponse($this->developmentProjectService->moveBoardId(taskUid: $taskUid, boardId: $boardId));
     }
 
+    /**
+     * Store project references.
+     */
     public function storeReferences(StoreReference $request, string $projectUid): JsonResponse
     {
         return apiResponse($this->developmentProjectService->storeReferences($request->validated(), $projectUid));

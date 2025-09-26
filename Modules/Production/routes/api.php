@@ -74,7 +74,15 @@ Route::middleware(['auth:sanctum'])
         Route::get('interactives/tasks/{taskUid}/approved', [InteractiveController::class, 'approveTask'])->name('interactives.tasks.approved');
         Route::post('interactives/tasks/{taskUid}/proof', [InteractiveController::class, 'submitTaskProofs'])->name('interactives.tasks.proof.store');
         Route::get('interactives/tasks/{taskUid}/completeTask', [InteractiveController::class, 'completeTask'])->name('interactives.tasks.completed');
+        Route::delete('interactives/tasks/{taskUid}', [InteractiveController::class, 'deleteTask'])->name('interactives.tasks.destroy');
         Route::post('interactives/tasks/{taskUid}/reviseTask', [InteractiveController::class, 'reviseTask'])->name('interactives.tasks.revised');
+        Route::post('interactives/tasks/{taskUid}/description', [InteractiveController::class, 'storeDescription'])->name('interactives.tasks.description.store');
+        Route::get('interactives/tasks/{taskUid}/holded', [InteractiveController::class, 'holdTask'])->name('interactives.tasks.holded');
+        Route::get('interactives/tasks/{taskUid}/start', [InteractiveController::class, 'startTaskAfterHold'])->name('interactives.tasks.start');
+        Route::post('interactives/tasks/{projectUid}/references', [InteractiveController::class, 'storeReferences'])->name('interactives.tasks.references.store');
+        Route::delete('interactives/{projectUid}/references/{referenceId}', [InteractiveController::class, 'deleteReference'])->name('interactives.references.destroy');
+        Route::post('interactives/tasks/{taskUid}/deadline', [InteractiveController::class, 'updateTaskDeadline'])->name('interactives.tasks.deadline.update');
+        Route::delete('interactives/{interactiveUid}/tasks/{taskUid}/attachments/{imageId}', [InteractiveController::class, 'deleteTaskAttachment'])->name('interactives.tasks.attachments.destroy');
         Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
         Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');
         Route::get('interactives/{uid}', [InteractiveController::class, 'show'])->name('interactives.show');
