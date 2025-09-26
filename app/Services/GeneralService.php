@@ -70,6 +70,11 @@ class GeneralService
         storeCache($key, $value, $ttl, $isForever);
     }
 
+    public function uploadFile(string $path, $file)
+    {
+        return uploadFile($path, $file);
+    }
+
     public function uploadImageandCompress(
         string $path,
         int $compressValue,
@@ -604,5 +609,10 @@ class GeneralService
     public function deleteImage(string $path)
     {
         return deleteImage(path: $path);
+    }
+
+    public function mainProcessToGetPicScheduler(string $projectUid, ?string $startDate = null, ?string $endDate = null)
+    {
+        return mainProcessToGetPicScheduler($projectUid, $startDate, $endDate);
     }
 }

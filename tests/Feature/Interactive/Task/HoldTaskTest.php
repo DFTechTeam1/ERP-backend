@@ -63,7 +63,9 @@ it('Hold existing task', function () {
     ]);
 
     // hold the task
-    $response = $this->getJson(route('api.production.interactives.tasks.holded', $task->uid));
+    $response = $this->postJson(route('api.production.interactives.tasks.holded', $task->uid), [
+        'reason' => 'batal',
+    ]);
     logging('HOLD TASK RESPONSE: ', $response->json());
 
     $response->assertStatus(201);
@@ -86,6 +88,7 @@ it('Hold existing task', function () {
         'task_id' => $task->id,
         'employee_id' => $worker->id,
         'work_state_id' => $workState->id,
+        'reason' => 'batal',
     ]);
     $this->assertDatabaseMissing('intr_project_task_pic_holdstates', [
         'task_id' => $task->id,

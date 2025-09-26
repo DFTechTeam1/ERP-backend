@@ -17,6 +17,7 @@ class InteractiveProjectTaskPicHoldstate extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'reason',
         'holded_at',
         'unholded_at',
         'task_id',

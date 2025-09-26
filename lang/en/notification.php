@@ -139,4 +139,7 @@ return [
     'taskAlreadyApproved' => 'Task is already approved',
     'taskCannotBeApproved' => 'Task cannot be approved yet',
     'youAreNotAllowedToApproveThisTask' => 'You are not allowed to approve this task',
+    'cannotApproveTaskWithoutPic' => 'Cannot approve task without PIC',
+    'successSubtitutePicToProject' => 'Successfully substituted PIC to project',
+    'successAssignPicToProject' => 'Successfully assigned PIC to project',
 ];

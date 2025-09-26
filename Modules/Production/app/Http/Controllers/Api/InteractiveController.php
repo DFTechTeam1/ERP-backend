@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Deals\AddInteractive;
+use Modules\Production\Http\Requests\Interactive\AssignPic;
 use Modules\Production\Http\Requests\Interactive\StoreReference;
+use Modules\Production\Http\Requests\Interactive\SubstitutePic;
 use Modules\Production\Http\Requests\Interactive\Task\AssignMember;
+use Modules\Production\Http\Requests\Interactive\Task\HoldTask;
 use Modules\Production\Http\Requests\Interactive\Task\ReviseTask;
 use Modules\Production\Http\Requests\Interactive\Task\StoreDescription;
 use Modules\Production\Http\Requests\Interactive\Task\StoreTask;
@@ -35,7 +38,12 @@ class InteractiveController extends Controller
      */
     public function index()
     {
-        return apiResponse($this->service->list());
+        return apiResponse($this->service->list(
+            relation: [
+                'pics:id,intr_project_id,employee_id',
+                'pics.employee:id,name,email,nickname',
+            ]
+        ));
     }
 
     /**
@@ -228,9 +236,9 @@ class InteractiveController extends Controller
     /**
      * Hold a task.
      */
-    public function holdTask(string $taskUid): JsonResponse
+    public function holdTask(HoldTask $request, string $taskUid): JsonResponse
     {
-        return apiResponse($this->service->holdTask(taskUid: $taskUid));
+        return apiResponse($this->service->holdTask(payload: $request->validated(), taskUid: $taskUid));
     }
 
     /**
@@ -262,5 +270,32 @@ class InteractiveController extends Controller
     public function storeDescription(StoreDescription $request, string $taskUid): JsonResponse
     {
         return apiResponse($this->service->storeDescription($request->validated(), $taskUid));
+    }
+
+    /**
+     * Assign PIC to a project.
+     */
+    public function assignPicToProject(AssignPic $request, string $interactiveUid): JsonResponse
+    {
+        return apiResponse($this->service->assignPicToProject($request->validated(), $interactiveUid));
+    }
+
+    /**
+     * Substitute current project PIC
+     */
+    public function substitutePicInProject(SubstitutePic $request, string $interactiveUid): JsonResponse
+    {
+        return apiResponse($this->service->substitutePicInProject($request->validated(), $interactiveUid));
+    }
+
+    /**
+     * Get list of PIC
+     *
+     *
+     * @return JsonResponse
+     */
+    public function getPicScheduler(string $interactiveUid)
+    {
+        return apiResponse($this->service->getPicScheduler($interactiveUid));
     }
 }

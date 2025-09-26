@@ -30,7 +30,7 @@ RUN pecl install redis && docker-php-ext-enable redis
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN echo 'memory_limit = 512M' >> /usr/local/etc/php/conf.d/docker-php-memory-limit.ini
+RUN echo 'memory_limit = 900M' >> /usr/local/etc/php/conf.d/docker-php-memory-limit.ini
 
 # Set working directory
 WORKDIR /var/www/html
@@ -40,6 +40,9 @@ COPY . .
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
+
+# Change current user to www-data
+USER www-data
 
 # Expose port 9000
 EXPOSE 9000

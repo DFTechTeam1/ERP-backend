@@ -19,12 +19,14 @@ use Modules\Company\Models\PositionBackup;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Production\Jobs\AssignInteractiveProjectPicJob;
 use Modules\Production\Jobs\InteractiveTaskHasBeenCompleteJob;
 use Modules\Production\Jobs\SubmitInteractiveTaskJob;
 use Modules\Production\Jobs\UpdateInteractiveTaskDeadline;
 use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Models\InteractiveProjectTask;
 use Modules\Production\Repository\InteractiveProjectBoardRepository;
+use Modules\Production\Repository\InteractiveProjectPicRepository;
 use Modules\Production\Repository\InteractiveProjectReferenceRepository;
 use Modules\Production\Repository\InteractiveProjectRepository;
 use Modules\Production\Repository\InteractiveProjectTaskAttachmentRepository;
@@ -65,6 +67,8 @@ class InteractiveProjectService
 
     private InteractiveProjectReferenceRepository $projectReferenceRepo;
 
+    private InteractiveProjectPicRepository $projectPicRepo;
+
     private const MEDIAPATH = 'interactives/projects/references';
 
     private const MEDIATASKPATH = 'interactives/projects/tasks';
@@ -92,7 +96,8 @@ class InteractiveProjectService
         InteractiveProjectBoardRepository $projectBoardRepo,
         EmployeeRepository $employeeRepo,
         InteractiveProjectTaskAttachmentRepository $projectTaskAttachmentRepo,
-        InteractiveProjectReferenceRepository $projectReferenceRepo
+        InteractiveProjectReferenceRepository $projectReferenceRepo,
+        InteractiveProjectPicRepository $projectPicRepo
     ) {
         $this->repo = $repo;
         $this->generalService = $generalService;
@@ -108,6 +113,7 @@ class InteractiveProjectService
         $this->employeeRepo = $employeeRepo;
         $this->projectTaskAttachmentRepo = $projectTaskAttachmentRepo;
         $this->projectReferenceRepo = $projectReferenceRepo;
+        $this->projectPicRepo = $projectPicRepo;
     }
 
     /**
@@ -141,7 +147,11 @@ class InteractiveProjectService
                 $item['project_date_text'] = date('d F Y', strtotime($item->project_date));
                 $item['status_text'] = $item->status->label();
                 $item['status_color'] = $item->status->color();
-                $item['pic_name'] = '-';
+                $item['pic_name'] = $item->pics->isEmpty() ? '-' : $item->pics->pluck('employee.nickname')->implode(',');
+                $item['actions'] = [
+                    'can_assign_pic' => $item->pics->isEmpty() ? true : false,
+                    'can_substitute_pic' => $item->pics->isEmpty() ? false : true,
+                ];
 
                 return $item;
             });
@@ -783,15 +793,23 @@ class InteractiveProjectService
 
             // only user with root role, director role,
             // project pic for task project, pic for the task can approved this task
+            $doNotHavePic = $task->pics->isEmpty() ? true : false;
             if (
                 ! $isMyTask &&
                 (
-                    ! $user->hasRole(BaseRole::Root->value) ||
+                    ! $user->hasRole(BaseRole::Root->value) &&
                     ! $user->hasRole(BaseRole::Director->value)
-                )
+                ) &&
+                ! $isMyProject
             ) {
                 return errorResponse(
                     message: __('notification.youAreNotAllowedToApproveThisTask'),
+                );
+            }
+
+            if ($doNotHavePic) {
+                return errorResponse(
+                    message: __('notification.cannotApproveTaskWithoutPic'),
                 );
             }
 
@@ -1321,7 +1339,7 @@ class InteractiveProjectService
     /**
      * Hold a task and update its hold states.
      */
-    public function holdTask(string $taskUid): array
+    public function holdTask(array $payload, string $taskUid): array
     {
         DB::beginTransaction();
 
@@ -1339,7 +1357,7 @@ class InteractiveProjectService
             );
 
             // record for hold states
-            $this->recordHoldState(task: $task);
+            $this->recordHoldState(task: $task, payload: $payload);
 
             // refresh boards
             $boards = $this->getProjectBoards(projectId: $task->intr_project_id);
@@ -1360,7 +1378,7 @@ class InteractiveProjectService
     /**
      * Record the hold state of a task.
      */
-    public function recordHoldState(InteractiveProjectTask|Collection $task): void
+    public function recordHoldState(InteractiveProjectTask|Collection $task, array $payload): void
     {
         foreach ($task->pics as $pic) {
             $workState = $this->projectTaskWorkStateRepo->show(
@@ -1373,6 +1391,7 @@ class InteractiveProjectService
                 'employee_id' => $pic->employee_id,
                 'task_id' => $task->id,
                 'holded_at' => Carbon::now(),
+                'reason' => $payload['reason'],
             ]);
         }
     }
@@ -1532,6 +1551,10 @@ class InteractiveProjectService
             } elseif ($reference['type'] === ReferenceType::Link->value) {
                 $payloadReferences[count($payloadReferences) - 1]['link'] = $reference['link'];
                 $payloadReferences[count($payloadReferences) - 1]['link_name'] = $reference['link_name'];
+            } elseif ($reference['type'] === ReferenceType::Document->value) {
+                // upload document
+                $document = $this->generalService->uploadFile(path: self::MEDIAPATH, file: $reference['image']);
+                $payloadReferences[count($payloadReferences) - 1]['media_path'] = $document;
             }
         }
 
@@ -1591,6 +1614,119 @@ class InteractiveProjectService
             return generalResponse(
                 message: __('notification.successUpdateDescription'),
                 data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function mainAssignPicProject(InteractiveProject|Collection $project, array $payload)
+    {
+        $employeeIds = collect($payload['pics'])->map(function ($item) use ($project) {
+            return [
+                'employee_id' => $this->generalService->getIdFromUid($item['employee_uid'], new Employee),
+                'intr_project_id' => $project->id,
+            ];
+        })->toArray();
+
+        // upsert data, update or create if not exists
+        $this->projectPicRepo->upsert(
+            payload: $employeeIds,
+            uniqueBy: ['employee_id', 'intr_project_id'],
+            updateValue: ['employee_id'],
+        );
+
+        AssignInteractiveProjectPicJob::dispatch($project, $employeeIds)->afterCommit();
+    }
+
+    /**
+     * Assign PIC to a project.
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - array $pics                          With these following structure:
+     *                          - string $employee_uid
+     * @return array
+     */
+    public function assignPicToProject(array $payload, string $interactiveUid)
+    {
+        DB::beginTransaction();
+        try {
+            $project = $this->repo->show(uid: $interactiveUid, select: 'id,name,project_date', relation: [
+                'pics',
+            ]);
+
+            $this->mainAssignPicProject(project: $project, payload: $payload);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successAssignPicToProject'),
+                data: []
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Subtitute PIC in a project. Remove and assign pic
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - array $pics                          With these following structure:
+     *                          - string $employee_uid
+     *                          - array $remove                        With these following structure:
+     *                          - string $employee_uid
+     * @return array
+     */
+    public function substitutePicInProject(array $payload, string $interactiveUid)
+    {
+        DB::beginTransaction();
+        try {
+            $project = $this->repo->show(uid: $interactiveUid, select: 'id,name,project_date', relation: [
+                'pics',
+            ]);
+
+            if (isset($payload['remove'])) {
+                $removeIds = collect($payload['remove'])->map(function ($removeItem) {
+                    return $this->generalService->getIdFromUid($removeItem['employee_uid'], new Employee);
+                })->implode(',');
+
+                $this->projectPicRepo->delete(id: 0, where: 'employee_id IN ('.$removeIds.") and intr_project_id = {$project->id}");
+            }
+
+            if (isset($payload['pics'])) {
+                $this->mainAssignPicProject(project: $project, payload: $payload);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successSubtitutePicToProject'),
+                data: []
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function getPicScheduler(string $interactiveUid)
+    {
+        try {
+            $project = $this->repo->show(uid: $interactiveUid, select: 'id,name,project_date,parent_project', relation: [
+                'parentProject:id,name,project_date',
+            ]);
+            $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->parentProject->project_date)));
+            $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->parentProject->project_date)));
+
+            $pics = $this->generalService->mainProcessToGetPicScheduler($project->parent_project, $startDate, $endDate);
+
+            return generalResponse(
+                message: 'Success',
+                data: $pics
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

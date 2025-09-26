@@ -138,4 +138,7 @@ return [
     'taskAlreadyApproved' => 'Tugas sudah disetujui',
     'taskCannotBeApproved' => 'Tugas belum bisa disetujui',
     'youAreNotAllowedToApproveThisTask' => 'Kamu tidak diizinkan untuk menyetujui tugas ini',
+    'cannotApproveTaskWithoutPic' => 'Tidak dapat menyetujui tugas tanpa PIC',
+    'successSubtitutePicToProject' => 'Penanggung jawab berhasil dirubah',
+    'successAssignPicToProject' => 'Berhasil menetapkan PIC ke proyek',
 ];

@@ -152,7 +152,7 @@ class DefineTaskAction
         // check if the user is a PIC of the project
         $isPic = false;
         $project = InteractiveProject::where('id', $projectId)
-            ->with('pics')
+            ->with(['pics'])
             ->first();
 
         if ($project) {

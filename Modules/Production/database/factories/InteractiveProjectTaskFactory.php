@@ -111,6 +111,7 @@ class InteractiveProjectTaskFactory extends Factory
                     'employee_id' => $pic->employee_id,
                     'holded_at' => Carbon::now(),
                     'work_state_id' => $workState ? $workState->id : null,
+                    'reason' => 'holding on',
                 ]);
 
                 if ($task->status == InteractiveTaskStatus::InProgress) {

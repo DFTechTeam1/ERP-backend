@@ -70,6 +70,9 @@ Route::middleware(['auth:sanctum'])
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
         Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])->name('interactives.storeTask');
+        Route::get('interactives/picScheduler/{interactiveUid}', [InteractiveController::class, 'getPicScheduler'])->name('interactives.getPicScheduler');
+        Route::post('interactives/assignPic/{interactiveUid}', [InteractiveController::class, 'assignPicToProject'])->name('interactives.assignPic');
+        Route::post('interactives/substitute/{interactiveUid}', [InteractiveController::class, 'substitutePicInProject'])->name('interactives.substitutePic');
         Route::post('interactives/tasks/{taskUid}/members', [InteractiveController::class, 'addTaskMember'])->name('interactives.tasks.members.store');
         Route::get('interactives/tasks/{taskUid}/approved', [InteractiveController::class, 'approveTask'])->name('interactives.tasks.approved');
         Route::post('interactives/tasks/{taskUid}/proof', [InteractiveController::class, 'submitTaskProofs'])->name('interactives.tasks.proof.store');
@@ -77,7 +80,7 @@ Route::middleware(['auth:sanctum'])
         Route::delete('interactives/tasks/{taskUid}', [InteractiveController::class, 'deleteTask'])->name('interactives.tasks.destroy');
         Route::post('interactives/tasks/{taskUid}/reviseTask', [InteractiveController::class, 'reviseTask'])->name('interactives.tasks.revised');
         Route::post('interactives/tasks/{taskUid}/description', [InteractiveController::class, 'storeDescription'])->name('interactives.tasks.description.store');
-        Route::get('interactives/tasks/{taskUid}/holded', [InteractiveController::class, 'holdTask'])->name('interactives.tasks.holded');
+        Route::post('interactives/tasks/{taskUid}/holded', [InteractiveController::class, 'holdTask'])->name('interactives.tasks.holded');
         Route::get('interactives/tasks/{taskUid}/start', [InteractiveController::class, 'startTaskAfterHold'])->name('interactives.tasks.start');
         Route::post('interactives/tasks/{projectUid}/references', [InteractiveController::class, 'storeReferences'])->name('interactives.tasks.references.store');
         Route::delete('interactives/{projectUid}/references/{referenceId}', [InteractiveController::class, 'deleteReference'])->name('interactives.references.destroy');
