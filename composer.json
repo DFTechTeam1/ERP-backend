@@ -15,7 +15,6 @@
         "kodepandai/laravel-indonesia": "^2.0",
         "laravel/framework": "^11.0",
         "laravel/sanctum": "^4.0",
-        "laravel/telescope": "^5.2",
         "laravel/tinker": "^2.9",
         "lorisleiva/laravel-actions": "^2.8",
         "maatwebsite/excel": "^3.1",
@@ -37,6 +36,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "laradumps/laradumps": "^4.5",
         "larastan/larastan": "^2.0",
         "laravel/boost": "^1.0",
         "laravel/pint": "^1.22",
@@ -79,11 +79,14 @@
             "@php artisan key:generate --ansi",
             "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
             "@php artisan migrate --graceful --ansi"
-        ]
+        ],
+        "lint": "pint"
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "laravel/telescope"
+            ]
         },
         "merge-plugin": {
             "include": [

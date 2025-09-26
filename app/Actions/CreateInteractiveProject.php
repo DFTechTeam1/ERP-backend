@@ -4,12 +4,13 @@ namespace App\Actions;
 
 use App\Enums\Production\ProjectStatus;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Production\Jobs\NotifyNewInteractiveProject;
 
 class CreateInteractiveProject
 {
     use AsAction;
 
-    public function handle(int $projectId)
+    public function handle(int $projectId, array $payload)
     {
         $project = (new \Modules\Production\Repository\ProjectRepository)
             ->show(uid: 'id', select: '*', where: "id = {$projectId}");
@@ -26,9 +27,9 @@ class CreateInteractiveProject
                 'marketing_id' => $project->marketing_id,
                 'collaboration' => $project->collaboration,
                 'status' => ProjectStatus::Draft->value,
-                'note' => $project->note,
-                'led_area' => $project->led_area,
-                'led_detail' => $project->led_detail,
+                'note' => $payload['interactive_note'] ?? $project->note,
+                'led_area' => $payload['interactive_area'] ?? $project->led_area,
+                'led_detail' => $payload['interactive_detail'] ?? $project->led_detail,
                 'project_class_id' => $project->project_class_id,
             ]);
 
@@ -47,5 +48,7 @@ class CreateInteractiveProject
                 'sort' => '3',
             ],
         ]);
+
+        // NotifyNewInteractiveProject::dispatch($interactive);
     }
 }

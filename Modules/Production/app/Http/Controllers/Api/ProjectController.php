@@ -926,6 +926,9 @@ class ProjectController extends Controller
                 'unpaidInvoices:id,number,parent_number,project_deal_id,amount',
                 'activeProjectDealChange:id,project_deal_id',
                 'activeProjectDealPriceChange:id,project_deal_id,new_price',
+                'lastInteractiveRequest',
+                'project:id,project_deal_id',
+                'project.interactiveProject:id,parent_project',
             ]
         ));
     }
@@ -1040,5 +1043,13 @@ class ProjectController extends Controller
     public function requestChangesList(): JsonResponse
     {
         return apiResponse($this->projectDealService->requestChangesList());
+    }
+
+    /**
+     * Get list of interactive requests
+     */
+    public function listInteractiveRequests(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->listInteractiveRequests());
     }
 }

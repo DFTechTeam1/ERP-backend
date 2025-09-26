@@ -182,3 +182,6 @@ Route::get('project/deal/change/price/reject', [FinanceController::class, 'rejec
 Route::get('trying', function () {
     abort(400);
 });
+Route::get('test', function () {
+    return view('errors.alreadyProcessed');
+});

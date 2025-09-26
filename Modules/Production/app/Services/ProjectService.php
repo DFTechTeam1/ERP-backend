@@ -6049,7 +6049,11 @@ class ProjectService
     public function getPicScheduler(string $projectUid)
     {
         try {
-            $output = $this->mainProcessToGetPicScheduler($projectUid);
+            $project = $this->repo->show($projectUid, 'id,name,project_date');
+            $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
+            $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
+
+            $output = $this->generalService->mainProcessToGetPicScheduler($projectUid, $startDate, $endDate);
 
             return generalResponse(
                 'success',
@@ -6064,15 +6068,8 @@ class ProjectService
     /**
      * Function to get PIC Scheduler, This is composeable function
      */
-    protected function mainProcessToGetPicScheduler(string $projectUid): array
+    protected function mainProcessToGetPicScheduler(string $projectUid, ?string $startDate = null, ?string $endDate = null): array
     {
-        $project = $this->repo->show(
-            uid: $projectUid,
-            select: 'id,name,project_date'
-        );
-        $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
-        $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
-
         $userPics = \App\Models\User::role('project manager')->get();
         $userPicsAdmin = \App\Models\User::role('project manager admin')->get();
         $assistant = \App\Models\User::role('assistant manager')->get();
@@ -6095,7 +6092,7 @@ class ProjectService
                         'name' => $employee->name,
                         'email' => $employee->email,
                         'employee_id' => $employee->employee_id,
-                        'projects' => $this->getPicWorkload($employee, $projectUid),
+                        'projects' => $this->getPicWorkload(pic: $employee, projectUid: $projectUid, startDate: $startDate, endDate: $endDate),
                         'is_recommended' => false,
                     ];
                 }
@@ -6108,15 +6105,10 @@ class ProjectService
     /**
      * Get each PM workload (This data used in assign PIC dialog)
      *
-     * @param  object  $pic
      * @param  string  $projectUId
      */
-    protected function getPicWorkload($pic, $projectUid): array
+    protected function getPicWorkload(object $pic, string $projectUid, ?string $startDate = null, ?string $endDate = null): array
     {
-        $project = $this->repo->show($projectUid, 'id,name,project_date');
-        $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
-        $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
-
         $surabaya = \Modules\Company\Models\City::selectRaw('id')
             ->whereRaw("lower(name) like 'kota surabaya' or lower(name) like 'surabaya'")
             ->get();
@@ -6316,7 +6308,12 @@ class ProjectService
         try {
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
-            $pics = $this->mainProcessToGetPicScheduler($projectUid);
+            $project = $this->repo->show($projectUid, 'id,name,project_date');
+            $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
+            $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
+
+            $pics = $this->generalService->mainProcessToGetPicScheduler($projectUid, $startDate, $endDate);
+
             $selectedPic = $this->projectPicRepository->list(
                 'id,project_id,pic_id',
                 "project_id = {$projectId}",
@@ -6331,14 +6328,14 @@ class ProjectService
             })->values();
 
             // make selected pic format same as available pic
-            $selectedPic = collect($selectedPic)->map(function ($item) use ($projectUid) {
+            $selectedPic = collect((object) $selectedPic)->map(function ($item) use ($projectUid, $startDate, $endDate) {
                 return [
                     'id' => $item->employee->uid,
                     'current_id' => $item->id, // additional key for frontend use
                     'name' => $item->employee->name,
                     'email' => $item->employee->email,
                     'employee_id' => $item->employee->employee_id,
-                    'projects' => $this->getPicWorkload($item->employee, $projectUid),
+                    'projects' => $this->getPicWorkload($item->employee, $projectUid, $startDate, $endDate),
                     'is_recommended' => false,
                 ];
             })->toArray();
@@ -8367,11 +8364,11 @@ class ProjectService
                 //     'identifier_number' => $this->generalService->setProjectIdentifier()
                 // ], id: $project->id);
 
-                $realProject = \App\Actions\CopyDealToProject::run($project, $this->generalService, $payload['is_have_interactive_element']);
+                $realProject = \App\Actions\CopyDealToProject::run($project, $this->generalService);
 
                 // create interactive project if needed
-                if ($payload['is_have_interactive_element']) {
-                    CreateInteractiveProject::run($realProject->id);
+                if (isset($payload['interactive_area'])) {
+                    CreateInteractiveProject::run($realProject->id, $payload);
                 }
 
                 // gerenrate invoice master

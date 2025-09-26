@@ -24,10 +24,14 @@ services:
     # Set the working directory inside the container
     # Commands run in the container will start from this directory
     working_dir: /var/www/html
+
+    environment:
+      - PHP_UPLOAD_MAX_FILESIZE=100M
+      - PHP_POST_MAX_SIZE=100M
     
     # Dependency management - ensures these services start first
     depends_on:
-      - db    # Database should be ready before app
+      - db   # Database should be ready before app
       - redis # Redis should be ready before app
     
     # Network connections - which networks this container joins
@@ -64,10 +68,11 @@ services:
   # MySQL Database
   db:
     image: mysql:8.0  # Use MySQL version 8.0
+
     container_name: erp-backend-db
     
     # Restart policy: automatically restart unless manually stopped
-    restart: unless-stopped
+    restart: always
     
     # Environment variables for MySQL configuration
     environment:
@@ -87,6 +92,11 @@ services:
     
     networks:
       - erp-backend-network
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      timeout: 20s
+      retries: 10
 
   # Redis for Caching
   redis:

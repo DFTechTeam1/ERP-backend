@@ -38,6 +38,7 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
         Route::post('project/deals', [ProjectController::class, 'storeProjectDeals'])->name('project-deal.store');
         Route::get('project/deals', [ProjectController::class, 'listProjectDeals'])->name('project-deal.list');
+        Route::get('project/interactive-requests', [ProjectController::class, 'listInteractiveRequests'])->name('interactive-request.list');
         Route::get('project/deals/price-changes', [ProjectController::class, 'requestChangesList'])->name('project-deal.requestChangesList');
         Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
@@ -45,6 +46,7 @@ Route::middleware(['auth:sanctum'])
         Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
         Route::post('project/deals/{projectDealUid}/update', [ProjectController::class, 'updateFinalDeal'])->name('project-deal.updateFinal');
+        Route::post('project/deals/{projectDealUid}/interactives', [InteractiveController::class, 'store'])->name('project-deal.addInteractive');
         Route::delete('project/deals/{projectDealUid}', [ProjectController::class, 'deleteProjectDeal']);
         Route::get('project/deals/publish/{projectDealUid}/{type}', [ProjectController::class, 'publishProjectDeal']);
         Route::get('project/getAllBoard', [ProjectController::class, 'getAllBoards']);
@@ -67,6 +69,25 @@ Route::middleware(['auth:sanctum'])
 
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
+        Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])->name('interactives.storeTask');
+        Route::get('interactives/picScheduler/{interactiveUid}', [InteractiveController::class, 'getPicScheduler'])->name('interactives.getPicScheduler');
+        Route::post('interactives/assignPic/{interactiveUid}', [InteractiveController::class, 'assignPicToProject'])->name('interactives.assignPic');
+        Route::post('interactives/substitute/{interactiveUid}', [InteractiveController::class, 'substitutePicInProject'])->name('interactives.substitutePic');
+        Route::post('interactives/tasks/{taskUid}/members', [InteractiveController::class, 'addTaskMember'])->name('interactives.tasks.members.store');
+        Route::get('interactives/tasks/{taskUid}/approved', [InteractiveController::class, 'approveTask'])->name('interactives.tasks.approved');
+        Route::post('interactives/tasks/{taskUid}/proof', [InteractiveController::class, 'submitTaskProofs'])->name('interactives.tasks.proof.store');
+        Route::get('interactives/tasks/{taskUid}/completeTask', [InteractiveController::class, 'completeTask'])->name('interactives.tasks.completed');
+        Route::delete('interactives/tasks/{taskUid}', [InteractiveController::class, 'deleteTask'])->name('interactives.tasks.destroy');
+        Route::post('interactives/tasks/{taskUid}/reviseTask', [InteractiveController::class, 'reviseTask'])->name('interactives.tasks.revised');
+        Route::post('interactives/tasks/{taskUid}/description', [InteractiveController::class, 'storeDescription'])->name('interactives.tasks.description.store');
+        Route::post('interactives/tasks/{taskUid}/holded', [InteractiveController::class, 'holdTask'])->name('interactives.tasks.holded');
+        Route::get('interactives/tasks/{taskUid}/start', [InteractiveController::class, 'startTaskAfterHold'])->name('interactives.tasks.start');
+        Route::post('interactives/tasks/{projectUid}/references', [InteractiveController::class, 'storeReferences'])->name('interactives.tasks.references.store');
+        Route::delete('interactives/{projectUid}/references/{referenceId}', [InteractiveController::class, 'deleteReference'])->name('interactives.references.destroy');
+        Route::post('interactives/tasks/{taskUid}/deadline', [InteractiveController::class, 'updateTaskDeadline'])->name('interactives.tasks.deadline.update');
+        Route::delete('interactives/{interactiveUid}/tasks/{taskUid}/attachments/{imageId}', [InteractiveController::class, 'deleteTaskAttachment'])->name('interactives.tasks.attachments.destroy');
+        Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
+        Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');
         Route::get('interactives/{uid}', [InteractiveController::class, 'show'])->name('interactives.show');
 
         // songs

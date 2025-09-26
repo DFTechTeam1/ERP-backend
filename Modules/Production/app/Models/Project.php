@@ -98,6 +98,11 @@ class Project extends Model
         return ProjectFactory::new();
     }
 
+    public function interactiveProject(): HasOne
+    {
+        return $this->hasOne(InteractiveProject::class, 'parent_project', 'id');
+    }
+
     /**
      * Get all of the personInCharges for the Project
      */

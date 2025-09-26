@@ -67,7 +67,6 @@ it('Approve changes from system return success', function () {
         'projectDealUid' => Crypt::encryptString($projectDeal->id),
         'changeId' => $changeId,
     ]));
-    logging('APPROVE 1', $response->json());
 
     $response->assertStatus(201);
 
@@ -83,7 +82,7 @@ it('Approve changes from system return success', function () {
     ]);
 
     // check invoice raw data
-    $formattedNewPrice = 'Rp'.number_format($newPrice, 0);
+    $formattedNewPrice = 'Rp'.number_format($newPrice, 0, ',', '.');
     $invoice = Invoice::select('id', 'raw_data')
         ->where('project_deal_id', $projectDeal->id)
         ->first();
@@ -136,7 +135,7 @@ it('Approve changes from email and return success', function () {
     ]);
 
     // check invoice raw data
-    $formattedNewPrice = 'Rp'.number_format($newPrice, 0);
+    $formattedNewPrice = 'Rp'.number_format($newPrice, 0, ',', '.');
     $invoice = Invoice::select('id', 'raw_data')
         ->where('project_deal_id', $projectDeal->id)
         ->first();

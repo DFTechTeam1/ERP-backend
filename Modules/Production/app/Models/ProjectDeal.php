@@ -38,6 +38,9 @@ class ProjectDeal extends Model
         'note',
         'led_area',
         'led_detail',
+        'interactive_area',
+        'interactive_detail',
+        'interactive_note',
         'country_id',
         'state_id',
         'city_id',
@@ -101,6 +104,37 @@ class ProjectDeal extends Model
             get: fn ($value) => $value ? json_decode($value, true) : null,
             set: fn ($value) => $value ? json_encode($value) : null
         );
+    }
+
+    public function interactiveDetail(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? json_decode($value, true) : null,
+            set: fn ($value) => $value ? json_encode($value) : null
+        );
+    }
+
+    public function interactiveRequests(): HasMany
+    {
+        return $this->hasMany(InteractiveRequest::class, 'project_deal_id');
+    }
+
+    public function lastInteractiveRequest(): HasOne
+    {
+        return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
+            ->latestOfMany();
+    }
+
+    public function activeInteractiveRequest(): HasOne
+    {
+        return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
+            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Approved);
+    }
+
+    public function pendingInteractiveRequest(): HasOne
+    {
+        return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
+            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Pending);
     }
 
     public function ProjectDealPriceChanges(): HasMany
