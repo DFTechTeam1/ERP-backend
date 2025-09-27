@@ -128,7 +128,8 @@ class ProjectDeal extends Model
     public function activeInteractiveRequest(): HasOne
     {
         return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
-            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Approved);
+            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Approved)
+            ->latestOfMany();
     }
 
     public function pendingInteractiveRequest(): HasOne
