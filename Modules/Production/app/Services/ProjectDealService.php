@@ -668,7 +668,7 @@ class ProjectDealService
                     'customer:id,name,phone,email',
                     'city:id,name',
                     'class:id,name',
-                    'activeInteractiveRequest:id,project_deal_id,interactive_fee,interactive_area',
+                    'activeInteractiveRequest',
                     'invoices' => function ($queryInvoice) {
                         $queryInvoice->where('is_main', 0)
                             ->with([
