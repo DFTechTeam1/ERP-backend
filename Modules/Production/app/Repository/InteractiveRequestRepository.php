@@ -97,7 +97,7 @@ class InteractiveRequestRepository extends InteractiveRequestInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string|int $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string|int $uid, string $select = '*', array $relation = [], string $where = '', bool $isLast = false)
     {
         $query = $this->model->query();
 
@@ -113,7 +113,12 @@ class InteractiveRequestRepository extends InteractiveRequestInterface
             $query->with($relation);
         }
 
-        $data = $query->first();
+        if ($isLast) {
+            $data = $query->latest();
+        } else {
+            $data = $query->first();
+        }
+
 
         return $data;
     }
