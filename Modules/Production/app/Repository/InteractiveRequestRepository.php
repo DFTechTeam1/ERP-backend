@@ -114,7 +114,7 @@ class InteractiveRequestRepository extends InteractiveRequestInterface
         }
 
         if ($isLast) {
-            $data = $query->latest();
+            $data = $query->latest()->first();
         } else {
             $data = $query->first();
         }
