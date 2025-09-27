@@ -374,7 +374,8 @@ function createProjectDealService(
     $invoiceRepo = null,
     $priceChangeReasonRepo = null,
     $employeeRepo = null,
-    $interactiveRequestRepo = null
+    $interactiveRequestRepo = null,
+    $interactiveProjectRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
@@ -388,7 +389,8 @@ function createProjectDealService(
         $invoiceRepo ? $invoiceRepo : new InvoiceRepository,
         $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository,
         $employeeRepo ? $employeeRepo : new EmployeeRepository,
-        $interactiveRequestRepo ? $interactiveRequestRepo : new \Modules\Production\Repository\InteractiveRequestRepository
+        $interactiveRequestRepo ? $interactiveRequestRepo : new \Modules\Production\Repository\InteractiveRequestRepository,
+        $interactiveProjectRepo ? $interactiveProjectRepo : new \Modules\Production\Repository\InteractiveProjectRepository
     );
 }
 
