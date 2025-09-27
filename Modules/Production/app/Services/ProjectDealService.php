@@ -31,6 +31,7 @@ use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
+use Modules\Production\Repository\InteractiveProjectRepository;
 use Modules\Production\Repository\InteractiveRequestRepository;
 use Modules\Production\Repository\ProjectDealChangeRepository;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
@@ -64,6 +65,8 @@ class ProjectDealService
 
     private InteractiveRequestRepository $interactiveRequestRepo;
 
+    private InteractiveProjectRepository $interactiveProjectRepo;
+
     /**
      * Construction Data
      */
@@ -80,6 +83,7 @@ class ProjectDealService
         PriceChangeReasonRepository $priceChangeReasonRepo,
         EmployeeRepository $employeeRepo,
         InteractiveRequestRepository $interactiveRequestRepo,
+        InteractiveProjectRepository $interactiveProjectRepo,
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
 
@@ -104,6 +108,8 @@ class ProjectDealService
         $this->employeeRepo = $employeeRepo;
 
         $this->interactiveRequestRepo = $interactiveRequestRepo;
+
+        $this->interactiveProjectRepo = $interactiveProjectRepo;
     }
 
     /**
@@ -1643,7 +1649,11 @@ class ProjectDealService
             );
 
             // create interactive project
-            if ($request->projectDeal->status == ProjectDealStatus::Final && ($request->projectDeal) && ($request->projectDeal->project)) {
+            $currentInteractive = $this->interactiveProjectRepo->show(
+                uid: 'uid',
+                where: "name = '{$request->projectDeal->name}' and project_date = '{$request->projectDeal->project_date}'"
+            );
+            if ($request->projectDeal->status == ProjectDealStatus::Final && ($request->projectDeal) && ($request->projectDeal->project) && !$currentInteractive) {
                 CreateInteractiveProject::run(projectId: $request->projectDeal->project->id, payload: [
                     'interactive_detail' => $request->interactive_detail,
                     'interactive_area' => $request->interactive_area,
