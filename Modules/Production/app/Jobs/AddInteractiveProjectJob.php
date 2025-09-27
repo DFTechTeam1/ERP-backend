@@ -44,7 +44,8 @@ class AddInteractiveProjectJob implements ShouldQueue
                 'projectDeal.latestQuotation',
                 'requester:id,employee_id',
                 'requester.employee:id,name,telegram_chat_id',
-            ]
+            ],
+            isLast: true
         );
 
         // director
