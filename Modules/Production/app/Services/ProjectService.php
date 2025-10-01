@@ -8480,4 +8480,33 @@ class ProjectService
             ]
         );
     }
+
+    public function migrateTaskDuration()
+    {
+        $raw = \Modules\Production\Models\ProjectTaskPicLog::select('*')
+            ->where('time_added', '>=', '2025-01-01 00:00:00')
+            ->limit(300)
+            ->orderBy('time_added')
+            ->with([
+                'task:id,start_working_at,name'
+            ])
+            ->get();
+
+        $raw = $raw->map(function ($item) {
+            $item->task->makeHidden(['proof_of_works_detail', 'proof_of_works', 'revises', 'task_type_text', 'task_type_color', 'start_date_text']);
+
+            return $item;
+        });
+
+        $grouped = $raw->groupBy('project_task_id');
+
+        return apiResponse(
+            generalResponse(
+                message: "Success",
+                data: [
+                    'grouped' => $grouped,
+                ]
+            )
+        );
+    }
 }

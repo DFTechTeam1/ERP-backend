@@ -185,3 +185,9 @@ Route::get('trying', function () {
 Route::get('test', function () {
     return view('errors.alreadyProcessed');
 });
+
+Route::get('migrate-duration', function () {
+    $service = app(\Modules\Production\Services\ProjectService::class);
+
+    return $service->migrateTaskDuration();
+});
