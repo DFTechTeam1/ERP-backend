@@ -1653,7 +1653,7 @@ class ProjectDealService
                 uid: 'uid',
                 where: "name = '{$request->projectDeal->name}' and project_date = '{$request->projectDeal->project_date}'"
             );
-            if ($request->projectDeal->status == ProjectDealStatus::Final && ($request->projectDeal) && ($request->projectDeal->project) && !$currentInteractive) {
+            if ($request->projectDeal->status == ProjectDealStatus::Final && ($request->projectDeal) && ($request->projectDeal->project) && ! $currentInteractive) {
                 CreateInteractiveProject::run(projectId: $request->projectDeal->project->id, payload: [
                     'interactive_detail' => $request->interactive_detail,
                     'interactive_area' => $request->interactive_area,

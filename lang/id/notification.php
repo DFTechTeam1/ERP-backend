@@ -141,4 +141,6 @@ return [
     'cannotApproveTaskWithoutPic' => 'Tidak dapat menyetujui tugas tanpa PIC',
     'successSubtitutePicToProject' => 'Penanggung jawab berhasil dirubah',
     'successAssignPicToProject' => 'Berhasil menetapkan PIC ke proyek',
+    'projectHasBeenCanceled' => 'Proyek telah berhasil dibatalkan',
+    'successChangeProjectStatus' => 'Status proyek telah berhasil diubah',
 ];

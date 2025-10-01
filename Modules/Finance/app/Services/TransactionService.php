@@ -177,7 +177,7 @@ class TransactionService
                     if (! $imageName) {
                         DB::rollBack();
 
-                        return errorMessage(message: 'Failed to process transaction');
+                        return errorResponse(message: 'Failed to process transaction');
                     }
 
                     $tmp[] = $imageName;

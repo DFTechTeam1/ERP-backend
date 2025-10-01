@@ -70,6 +70,8 @@ Route::middleware(['auth:sanctum'])
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
         Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])->name('interactives.storeTask');
+        Route::post('interactives/status/{interactiveUid}', [InteractiveController::class, 'changeStatus'])->name('interactives.changeStatus');
+        Route::get('interactives/cancel/{interactiveUid}', [InteractiveController::class, 'cancelProject'])->name('interactives.cancel');
         Route::get('interactives/picScheduler/{interactiveUid}', [InteractiveController::class, 'getPicScheduler'])->name('interactives.getPicScheduler');
         Route::post('interactives/assignPic/{interactiveUid}', [InteractiveController::class, 'assignPicToProject'])->name('interactives.assignPic');
         Route::post('interactives/substitute/{interactiveUid}', [InteractiveController::class, 'substitutePicInProject'])->name('interactives.substitutePic');
