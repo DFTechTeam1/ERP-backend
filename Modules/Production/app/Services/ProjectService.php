@@ -8514,9 +8514,11 @@ class ProjectService
                     'project_id' => $item->task->project_id,
                     'employee' => $item->employee->nickname,
                     'project_id' => $item->task->project->id,
-                    'pic_id' => $item->task->project->personInCharges->first()['pic_id']
+                    'pic_id' => $item->task->project->personInCharges->isEmpty() ? null : $item->task->project->personInCharges->first()['pic_id']
                     // 'project_pics' => $item->task->project->personInCharges
                 ];
+            })->filter(function ($filterData) {
+                return $filterData['pic_id'];
             })->groupBy('employee_id');
             // if ($a < 300) {
             // }
