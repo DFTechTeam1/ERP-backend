@@ -8480,4 +8480,125 @@ class ProjectService
             ]
         );
     }
+
+    public function migrateTaskDuration()
+    {
+        $raw = \Modules\Production\Models\ProjectTaskPicLog::select('*')
+            ->where('time_added', '>=', '2025-01-01 00:00:00')
+            ->orderBy('time_added')
+            ->with([
+                'task:id,start_working_at,name,project_id',
+                'task.project:id',
+                'task.project.personInCharges',
+                'employee:id,nickname'
+            ])
+            ->get();
+
+        $raw = $raw->map(function ($item) {
+            $item->task->makeHidden(['proof_of_works_detail', 'proof_of_works', 'revises', 'task_type_text', 'task_type_color', 'start_date_text', 'performance_recap', 'task_status', 'task_status_color']);
+
+            return $item;
+        });
+
+        $grouped = $raw->groupBy('project_task_id');
+
+        $output = [];
+        $a = 0;
+        foreach ($grouped as $taskId => $value) {
+            $output[$taskId] = collect($value)->map(function($item) {
+                return [
+                    'task_id' => $item->project_task_id,
+                    'time_added' => $item->time_added,
+                    'work_type' => $item->work_type,
+                    'employee_id' => $item->employee_id,
+                    'project_id' => $item->task->project_id,
+                    'employee' => $item->employee->nickname,
+                    'project_id' => $item->task->project->id,
+                    'pic_id' => $item->task->project->personInCharges->first()['pic_id']
+                    // 'project_pics' => $item->task->project->personInCharges
+                ];
+            })->groupBy('employee_id');
+            // if ($a < 300) {
+            // }
+
+            $a++;
+        }
+
+        $duration = [];
+        $a = 0;
+        foreach ($output as $taskId => $value) {
+            foreach ($value as $employeeId => $item) {
+                // if in item contain work_type == 'check_by_pm' then it categorize as pic
+                $isPic = in_array('check_by_pm', collect($item)->pluck('work_type')->toArray()) ? true : false;
+
+                // duration will be the different between first item and last item in the $item variable
+                if ($isPic) {
+                    $startApproval = Carbon::parse($item->first()['time_added']);
+                    $endApproval = Carbon::parse($item->last()['time_added']);
+                    $durationApproval = $startApproval->diffInSeconds($endApproval);
+                } else {
+                    $start = Carbon::parse($item->first()['time_added']);
+                    $end = Carbon::parse($item->last()['time_added']);
+                    $durationActual = $start->diffInSeconds($end);
+                }
+
+                // total duration is durationApproval + durationActual
+                $totalDuration = ($durationApproval ?? 0) + ($durationActual ?? 0);
+
+                $durationFormula = [
+                    'task_id' => $taskId,
+                    'project_id' => $item->first()['project_id'],
+                    'pic_id' => $item->first()['pic_id'],
+                    'employee_id' => $employeeId,
+                    'name' => $item->first()['employee'],
+                    'task_full_duration' => $totalDuration,
+                    'task_holded_duration' => 0,
+                    'task_revised_duration' => 0,
+                    'task_actual_duration' => $durationActual ?? 0,
+                    'task_approval_duration' => $durationApproval ?? 0,
+                    'total_task_holded' => 0,
+                    'total_task_revised' => 0,
+                    'is_pic' => $isPic,
+                ];
+
+                if ($isPic) {
+                    $durationFormula['approval_detail'] = [
+                        'start' => $startApproval->format('d F Y H:i'),
+                        'end' => $endApproval->format('d F Y H:i')
+                    ];
+                } else {
+                    $durationFormula['actual_time'] = [
+                        'start' => $start->format('d F Y H:i'),
+                        'end' => $end->format('d F Y H:i')
+                    ];
+                }
+
+                $duration[] = $durationFormula;
+            }
+
+            $a++;
+        }
+
+        $duration = collect($duration)->filter(function ($filter){
+            return !$filter['is_pic'];
+        })->map(function ($mapping) {
+            unset($mapping['name']);
+            unset($mapping['is_pic']);
+            unset($mapping['actual_time']);
+
+            return $mapping;
+        })->values();
+
+        \Modules\Production\Models\ProjectTaskDurationHistory::where('id', '>', 0)->delete();
+        \Modules\Production\Models\ProjectTaskDurationHistory::insert($duration->toArray());
+
+        return apiResponse(
+            generalResponse(
+                message: "Success",
+                data: [
+                    'grouped' => $duration[0],
+                ]
+            )
+        );
+    }
 }

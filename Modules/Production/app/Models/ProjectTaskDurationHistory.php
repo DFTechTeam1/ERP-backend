@@ -27,7 +27,6 @@ class ProjectTaskDurationHistory extends Model
         'task_id',
         'pic_id',
         'employee_id',
-        'task_type',
         'task_full_duration',
         'task_holded_duration',
         'task_revised_duration',
