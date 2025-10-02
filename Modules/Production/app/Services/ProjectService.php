@@ -8534,6 +8534,7 @@ class ProjectService
                 $isPic = in_array('check_by_pm', collect($item)->pluck('work_type')->toArray()) ? true : false;
 
                 // duration will be the different between first item and last item in the $item variable
+                $durationApproval = 0;
                 if ($isPic) {
                     $startApproval = Carbon::parse($item->first()['time_added']);
                     $endApproval = Carbon::parse($item->last()['time_added']);
@@ -8557,7 +8558,7 @@ class ProjectService
                     'task_holded_duration' => 0,
                     'task_revised_duration' => 0,
                     'task_actual_duration' => $durationActual ?? 0,
-                    'task_approval_duration' => $durationApproval ?? 0,
+                    'task_approval_duration' => $durationApproval,
                     'total_task_holded' => 0,
                     'total_task_revised' => 0,
                     'is_pic' => $isPic,
@@ -8580,6 +8581,23 @@ class ProjectService
 
             $a++;
         }
+
+        // make task_approval_duration is the same in the same task_id. Take from $duration variable
+        $durationGroup = collect($duration)->groupBy('task_id');
+        $result = $durationGroup->flatMap(function ($group) {
+            // Find the PIC's approval duration
+            $picDuration = $group->where('is_pic', true)->first()['task_approval_duration'] ?? 0;
+            
+            // Update all items in this group
+            return $group->map(function ($item) use ($picDuration) {
+                if (!$item['is_pic']) {
+                    $item['task_approval_duration'] = $picDuration;
+                }
+                return $item;
+            });
+        });
+
+        $duration = $result->values()->all();
 
         $duration = collect($duration)->filter(function ($filter){
             return !$filter['is_pic'];
