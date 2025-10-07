@@ -31,6 +31,7 @@ class InteractiveProject extends Model
         'marketing_id',
         'collaboration',
         'status',
+        'canceled_by',
         'classification',
         'note',
         'led_area',
@@ -83,5 +84,10 @@ class InteractiveProject extends Model
     public function references(): HasMany
     {
         return $this->hasMany(InteractiveProjectReference::class, 'project_id', 'id');
+    }
+
+    public function canceledBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'canceled_by', 'id');
     }
 }
