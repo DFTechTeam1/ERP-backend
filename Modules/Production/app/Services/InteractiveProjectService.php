@@ -131,8 +131,34 @@ class InteractiveProjectService
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (! empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+            if (request('status')) {
+                $status = request('status');
+
+                if (empty($where)) {
+                    $where = "status IN (" . implode(',', $status) . ")";
+                } else {
+                    $where .= " AND status IN (" . implode(',', $status) . ")";
+                }
+            }
+
+            if (request('name')) {
+                $name = request('name');
+                if (empty($where)) {
+                    $where = "name LIKE '%{$name}%'";
+                } else {
+                    $where .= " AND name LIKE '%{$name}%'";
+                }
+            }
+
+            if (request('date')) {
+                $date = request('date');
+                [$startDate, $endDate] = explode(' - ', $date);
+
+                if (empty($where)) {
+                    $where = "project_date BETWEEN '{$startDate}' AND '{$endDate}'";
+                } else {
+                    $where .= " AND project_date BETWEEN '{$startDate}' AND '{$endDate}'";
+                }
             }
 
             $paginated = $this->repo->pagination(
@@ -1673,12 +1699,12 @@ class InteractiveProjectService
     /**
      * Subtitute PIC in a project. Remove and assign pic
      *
-     * @param  array  $payload  With these following structure:
+     * @param  array<mixed>  $payload  With these following structure:
      *                          - array $pics                          With these following structure:
      *                          - string $employee_uid
      *                          - array $remove                        With these following structure:
      *                          - string $employee_uid
-     * @return array
+     * @return array<mixed>
      */
     public function substitutePicInProject(array $payload, string $interactiveUid)
     {
