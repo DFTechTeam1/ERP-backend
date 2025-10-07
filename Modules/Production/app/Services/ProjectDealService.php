@@ -1651,14 +1651,25 @@ class ProjectDealService
             // create interactive project
             $currentInteractive = $this->interactiveProjectRepo->show(
                 uid: 'uid',
+                select: 'id,uid',
                 where: "name = '{$request->projectDeal->name}' and project_date = '{$request->projectDeal->project_date}'"
             );
-            if ($request->projectDeal->status == ProjectDealStatus::Final && ($request->projectDeal) && ($request->projectDeal->project) && !$currentInteractive) {
+            if ($request->projectDeal->status == ProjectDealStatus::Final && ($request->projectDeal) && ($request->projectDeal->project) && ! $currentInteractive) {
                 CreateInteractiveProject::run(projectId: $request->projectDeal->project->id, payload: [
                     'interactive_detail' => $request->interactive_detail,
                     'interactive_area' => $request->interactive_area,
                     'interactive_note' => $request->interactive_note,
                 ]);
+            }
+            if ($currentInteractive) {
+                $this->interactiveProjectRepo->update(
+                    data: [
+                        'led_detail' => $request->interactive_detail,
+                        'led_area' => $request->interactive_area,
+                        'note' => $request->interactive_note,
+                    ],
+                    id: $currentInteractive->uid
+                );
             }
 
             DB::commit();

@@ -129,15 +129,14 @@ class InteractiveProjectService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
 
             if (request('status')) {
                 $status = request('status');
 
                 if (empty($where)) {
-                    $where = "status IN (" . implode(',', $status) . ")";
+                    $where = 'status IN ('.implode(',', $status).')';
                 } else {
-                    $where .= " AND status IN (" . implode(',', $status) . ")";
+                    $where .= ' AND status IN ('.implode(',', $status).')';
                 }
             }
 
@@ -1700,10 +1699,10 @@ class InteractiveProjectService
      * Subtitute PIC in a project. Remove and assign pic
      *
      * @param  array<mixed>  $payload  With these following structure:
-     *                          - array $pics                          With these following structure:
-     *                          - string $employee_uid
-     *                          - array $remove                        With these following structure:
-     *                          - string $employee_uid
+     *                                 - array $pics                          With these following structure:
+     *                                 - string $employee_uid
+     *                                 - array $remove                        With these following structure:
+     *                                 - string $employee_uid
      * @return array<mixed>
      */
     public function substitutePicInProject(array $payload, string $interactiveUid)

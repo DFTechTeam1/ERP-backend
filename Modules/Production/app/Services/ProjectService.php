@@ -8485,30 +8485,30 @@ class ProjectService
     {
         $workPeriods = [];
         $currentOnProgress = null;
-        
+
         foreach ($taskLogs as $log) {
             $workType = $log['work_type'];
             $timeAdded = $log['time_added'];
-            
+
             // When we find 'on_progress', store it as the start time
             if ($workType === 'on_progress') {
                 $currentOnProgress = $timeAdded;
             }
-            
+
             // When we find 'finish', calculate the duration if we have a start time
             if ($workType === 'finish' && $currentOnProgress !== null) {
                 try {
                     $startTime = Carbon::parse($currentOnProgress);
                     $endTime = Carbon::parse($timeAdded);
-                    
+
                     $durationInSeconds = $startTime->diffInSeconds($endTime);
-                    
+
                     $workPeriods[] = [
                         'start_time' => $currentOnProgress,
                         'end_time' => $timeAdded,
                         'duration_seconds' => $durationInSeconds,
                     ];
-                    
+
                     // Reset current on_progress after pairing
                     $currentOnProgress = null;
                 } catch (\Exception $e) {
@@ -8517,7 +8517,7 @@ class ProjectService
                 }
             }
         }
-        
+
         return $workPeriods;
     }
 
@@ -8525,38 +8525,38 @@ class ProjectService
     {
         $checkByPmTime = null;
         $foundFirst = false;
-        
+
         foreach ($taskLogs as $log) {
             $workType = $log['work_type'];
             $timeAdded = $log['time_added'];
-            
+
             // Find FIRST check_by_pm only
-            if ($workType === 'check_by_pm' && !$foundFirst) {
+            if ($workType === 'check_by_pm' && ! $foundFirst) {
                 $checkByPmTime = $timeAdded;
                 $foundFirst = true;
             }
-            
+
             // Find finish after the first check_by_pm
             if ($workType === 'finish' && $checkByPmTime !== null) {
                 $startTime = Carbon::parse($checkByPmTime);
                 $endTime = Carbon::parse($timeAdded);
-                
+
                 return $startTime->diffInSeconds($endTime);
             }
         }
-        
+
         return 0;
     }
 
     protected function processTaskSummary(array $groupedData)
     {
         $result = [];
-    
+
         foreach ($groupedData as $taskId => $employees) {
             $pmId = null;
             $taskApprovalDuration = 0;
             $workers = [];
-            
+
             // First pass: identify PM and calculate approval duration
             foreach ($employees as $employeeId => $logs) {
                 foreach ($logs as $log) {
@@ -8567,15 +8567,15 @@ class ProjectService
                     }
                 }
             }
-            
+
             // Second pass: calculate work duration for each worker
             foreach ($employees as $employeeId => $logs) {
                 $workPeriods = $this->calculateWorkTime($logs->toArray());
-                
+
                 // If this employee has work progress, they are a worker
-                if (!empty($workPeriods)) {
+                if (! empty($workPeriods)) {
                     $taskActualDuration = array_sum(array_column($workPeriods, 'duration_seconds'));
-                    
+
                     $workers[] = [
                         'task_id' => $taskId,
                         'project_id' => $logs->first()['project_id'],
@@ -8592,11 +8592,11 @@ class ProjectService
                     ];
                 }
             }
-            
+
             // Add all workers to result
             $result = array_merge($result, $workers);
         }
-        
+
         return $result;
     }
 
@@ -8609,7 +8609,7 @@ class ProjectService
                 'task:id,start_working_at,name,project_id',
                 'task.project:id',
                 'task.project.personInCharges',
-                'employee:id,nickname'
+                'employee:id,nickname',
             ])
             ->get();
 
@@ -8624,7 +8624,7 @@ class ProjectService
         $output = [];
         $a = 0;
         foreach ($grouped as $taskId => $value) {
-            $output[$taskId] = collect($value)->map(function($item) {
+            $output[$taskId] = collect($value)->map(function ($item) {
                 return [
                     'task_id' => $item->project_task_id,
                     'time_added' => date('Y-m-d H:i', strtotime($item->time_added)),
@@ -8633,7 +8633,7 @@ class ProjectService
                     'project_id' => $item->task->project_id,
                     'employee' => $item->employee->nickname,
                     'project_id' => $item->task->project->id,
-                    'pic_id' => $item->task->project->personInCharges->isEmpty() ? null : $item->task->project->personInCharges->first()['pic_id']
+                    'pic_id' => $item->task->project->personInCharges->isEmpty() ? null : $item->task->project->personInCharges->first()['pic_id'],
                     // 'project_pics' => $item->task->project->personInCharges
                 ];
             })->filter(function ($filterData) {
@@ -8708,7 +8708,7 @@ class ProjectService
         // $result = $durationGroup->flatMap(function ($group) {
         //     // Find the PIC's approval duration
         //     $picDuration = $group->where('is_pic', true)->first()['task_approval_duration'] ?? 0;
-            
+
         //     // Update all items in this group
         //     return $group->map(function ($item) use ($picDuration) {
         //         if (!$item['is_pic']) {
@@ -8735,10 +8735,10 @@ class ProjectService
 
         return apiResponse(
             generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     // 'grouped' => $result,
-                    'output' => $duration[0]
+                    'output' => $duration[0],
                 ]
             )
         );
