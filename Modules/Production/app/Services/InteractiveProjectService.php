@@ -20,6 +20,7 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Jobs\AssignInteractiveProjectPicJob;
+use Modules\Production\Jobs\InteractiveProjectHasBeenCanceledJob;
 use Modules\Production\Jobs\InteractiveTaskHasBeenCompleteJob;
 use Modules\Production\Jobs\SubmitInteractiveTaskJob;
 use Modules\Production\Jobs\UpdateInteractiveTaskDeadline;
@@ -129,15 +130,14 @@ class InteractiveProjectService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
 
             if (request('status')) {
                 $status = request('status');
 
                 if (empty($where)) {
-                    $where = "status IN (" . implode(',', $status) . ")";
+                    $where = 'status IN ('.implode(',', $status).')';
                 } else {
-                    $where .= " AND status IN (" . implode(',', $status) . ")";
+                    $where .= ' AND status IN ('.implode(',', $status).')';
                 }
             }
 
@@ -1044,6 +1044,30 @@ class InteractiveProjectService
     }
 
     /**
+     * Change project status
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - int $status
+     */
+    public function changeStatus(array $payload, string $interactiveUid): array
+    {
+        try {
+            $this->repo->update(
+                data: [
+                    'status' => $payload['status'],
+                ],
+                id: $interactiveUid
+            );
+
+            return generalResponse(
+                message: __('notification.successChangeProjectStatus'),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Complete a task
      */
     public function completeTask(string $taskUid): array
@@ -1700,10 +1724,10 @@ class InteractiveProjectService
      * Subtitute PIC in a project. Remove and assign pic
      *
      * @param  array<mixed>  $payload  With these following structure:
-     *                          - array $pics                          With these following structure:
-     *                          - string $employee_uid
-     *                          - array $remove                        With these following structure:
-     *                          - string $employee_uid
+     *                                 - array $pics                          With these following structure:
+     *                                 - string $employee_uid
+     *                                 - array $remove                        With these following structure:
+     *                                 - string $employee_uid
      * @return array<mixed>
      */
     public function substitutePicInProject(array $payload, string $interactiveUid)
@@ -1755,6 +1779,36 @@ class InteractiveProjectService
                 data: $pics
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Cancel a interactive project
+     */
+    public function cancelProject(string $interactiveUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = Auth::user();
+            $this->repo->update(
+                data: [
+                    'status' => ProjectStatus::Canceled->value,
+                    'canceled_by' => $user->id,
+                ],
+                id: $interactiveUid
+            );
+
+            InteractiveProjectHasBeenCanceledJob::dispatch(user: $user, interactiveUid: $interactiveUid)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.projectHasBeenCanceled'),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }

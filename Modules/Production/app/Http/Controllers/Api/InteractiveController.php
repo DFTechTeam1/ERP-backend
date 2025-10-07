@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Deals\AddInteractive;
 use Modules\Production\Http\Requests\Interactive\AssignPic;
+use Modules\Production\Http\Requests\Interactive\ChangeStatus;
 use Modules\Production\Http\Requests\Interactive\StoreReference;
 use Modules\Production\Http\Requests\Interactive\SubstitutePic;
 use Modules\Production\Http\Requests\Interactive\Task\AssignMember;
@@ -297,5 +298,23 @@ class InteractiveController extends Controller
     public function getPicScheduler(string $interactiveUid)
     {
         return apiResponse($this->service->getPicScheduler($interactiveUid));
+    }
+
+    /**
+     * Cancel an interactive project
+     */
+    public function cancelProject(string $interactiveUid): JsonResponse
+    {
+        return apiResponse($this->service->cancelProject(interactiveUid: $interactiveUid));
+    }
+
+    /**
+     * Change status of an interactive project
+     *
+     * @param  Request  $request
+     */
+    public function changeStatus(ChangeStatus $request, string $interactiveUid): JsonResponse
+    {
+        return apiResponse($this->service->changeStatus($request->validated(), $interactiveUid));
     }
 }

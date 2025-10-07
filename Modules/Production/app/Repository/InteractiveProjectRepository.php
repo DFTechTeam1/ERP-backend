@@ -80,7 +80,7 @@ class InteractiveProjectRepository extends InteractiveProjectInterface
         if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-        $query->where('uid', $uid);
+            $query->where('uid', $uid);
         }
 
         if ($relation) {

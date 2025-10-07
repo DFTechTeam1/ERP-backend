@@ -142,4 +142,6 @@ return [
     'cannotApproveTaskWithoutPic' => 'Cannot approve task without PIC',
     'successSubtitutePicToProject' => 'Successfully substituted PIC to project',
     'successAssignPicToProject' => 'Successfully assigned PIC to project',
+    'projectHasBeenCanceled' => 'Project has been canceled successfully',
+    'successChangeProjectStatus' => 'Project status has been changed successfully',
 ];

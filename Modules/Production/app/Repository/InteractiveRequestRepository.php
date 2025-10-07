@@ -119,7 +119,6 @@ class InteractiveRequestRepository extends InteractiveRequestInterface
             $data = $query->first();
         }
 
-
         return $data;
     }
 
