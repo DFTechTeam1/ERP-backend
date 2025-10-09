@@ -105,12 +105,7 @@ it('Submit approve task proofs', function () {
         'employee_id' => $worker->id,
     ]);
 
-    // check finished_at in the workstates table
-    $this->assertDatabaseMissing('intr_project_task_pic_workstates', [
-        'task_id' => $task->id,
-        'employee_id' => $worker->id,
-        'finished_at' => null,
-    ]);
+    // check first_finish_at in the workstates table
     $this->assertDatabaseHas('intr_project_task_pic_workstates', [
         'task_id' => $task->id,
         'employee_id' => $worker->id,
@@ -124,6 +119,10 @@ it('Submit approve task proofs', function () {
     $this->assertDatabaseHas('intr_project_task_pics', [
         'task_id' => $task->id,
         'employee_id' => $boss->id,
+    ]);
+    $this->assertDatabaseHas('intr_project_task_approval_states', [
+        'pic_id' => $project->pics->first()->employee_id,
+        'task_id' => $task->id,
     ]);
 
     Bus::assertDispatched(SubmitInteractiveTaskJob::class);

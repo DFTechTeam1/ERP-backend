@@ -39,7 +39,7 @@ describe('Publish Quotation', function () {
         Bus::fake();
 
         $currentDeal = createDeal($customer, $projectClass, $employee, $quotationItem);
-        logging('CURRENT DEAL', $currentDeal->toArray());
+
         // mock geocoding
         $geo = Mockery::mock(Geocoding::class);
         $geo->shouldReceive('getCoordinate')

@@ -25,6 +25,7 @@ class InteractiveProjectTaskFactory extends Factory
     public function definition(): array
     {
         $project = InteractiveProject::factory()
+            ->withPics()
             ->withBoards()
             ->create();
 
@@ -38,7 +39,10 @@ class InteractiveProjectTaskFactory extends Factory
         ];
     }
 
-    public function withPic(?string $deadline = null, bool $withWorkState = false, ?object $employee = null)
+    public function withPic(
+        ?string $deadline = null,
+        bool $withWorkState = false,
+        ?object $employee = null)
     {
         return $this->afterCreating(function (InteractiveProjectTask $task) use ($deadline, $withWorkState, $employee) {
             if (! $employee) {
@@ -94,6 +98,28 @@ class InteractiveProjectTaskFactory extends Factory
                     'employee_id' => $employee->id,
                     'started_at' => Carbon::now(),
                 ]);
+            }
+        });
+    }
+
+    public function withApprovalState()
+    {
+        return $this->afterCreating(function (InteractiveProjectTask $task) {
+            $task->load(['interactiveProject.pics', 'workStates']);
+
+            $workState = $task->workStates->firstWhere('complete_at', null);
+            $haveWorkstate = $workState ? true : false;
+
+            if ($task->interactiveProject->pics->isNotEmpty() && $haveWorkstate) {
+                foreach ($task->interactiveProject->pics as $pic) {
+                    $task->approvalStates()->create([
+                        'pic_id' => $pic->employee_id,
+                        'project_id' => $task->intr_project_id,
+                        'task_id' => $task->id,
+                        'started_at' => Carbon::now(),
+                        'work_state_id' => $workState->id,
+                    ]);
+                }
             }
         });
     }

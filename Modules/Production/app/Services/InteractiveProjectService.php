@@ -3,6 +3,7 @@
 namespace Modules\Production\Services;
 
 use App\Actions\Interactive\DefineTaskAction;
+use App\Actions\Interactve\SummarizeTaskTimeline;
 use App\Enums\Development\Project\ReferenceType;
 use App\Enums\Interactive\InteractiveTaskStatus;
 use App\Enums\Production\ProjectStatus;
@@ -30,6 +31,7 @@ use Modules\Production\Repository\InteractiveProjectBoardRepository;
 use Modules\Production\Repository\InteractiveProjectPicRepository;
 use Modules\Production\Repository\InteractiveProjectReferenceRepository;
 use Modules\Production\Repository\InteractiveProjectRepository;
+use Modules\Production\Repository\InteractiveProjectTaskApprovalStateRepository;
 use Modules\Production\Repository\InteractiveProjectTaskAttachmentRepository;
 use Modules\Production\Repository\InteractiveProjectTaskDeadlineRepository;
 use Modules\Production\Repository\InteractiveProjectTaskPicHistoryRepository;
@@ -37,6 +39,8 @@ use Modules\Production\Repository\InteractiveProjectTaskPicHoldstateRepository;
 use Modules\Production\Repository\InteractiveProjectTaskPicRepository;
 use Modules\Production\Repository\InteractiveProjectTaskPicWorkstateRepository;
 use Modules\Production\Repository\InteractiveProjectTaskRepository;
+use Modules\Production\Repository\InteractiveProjectTaskRevisestateRepository;
+use Modules\Production\Repository\ProjectTaskDurationHistoryRepository;
 
 class InteractiveProjectService
 {
@@ -70,6 +74,12 @@ class InteractiveProjectService
 
     private InteractiveProjectPicRepository $projectPicRepo;
 
+    private InteractiveProjectTaskRevisestateRepository $projectTaskRevisestateRepo;
+
+    private InteractiveProjectTaskApprovalStateRepository $projectTaskApprovalStateRepo;
+
+    private ProjectTaskDurationHistoryRepository $projectTaskDurationHistoryRepo;
+
     private const MEDIAPATH = 'interactives/projects/references';
 
     private const MEDIATASKPATH = 'interactives/projects/tasks';
@@ -98,7 +108,10 @@ class InteractiveProjectService
         EmployeeRepository $employeeRepo,
         InteractiveProjectTaskAttachmentRepository $projectTaskAttachmentRepo,
         InteractiveProjectReferenceRepository $projectReferenceRepo,
-        InteractiveProjectPicRepository $projectPicRepo
+        InteractiveProjectPicRepository $projectPicRepo,
+        InteractiveProjectTaskRevisestateRepository $projectTaskRevisestateRepo,
+        InteractiveProjectTaskApprovalStateRepository $projectTaskApprovalStateRepo,
+        ProjectTaskDurationHistoryRepository $projectTaskDurationHistoryRepo,
     ) {
         $this->repo = $repo;
         $this->generalService = $generalService;
@@ -115,6 +128,9 @@ class InteractiveProjectService
         $this->projectTaskAttachmentRepo = $projectTaskAttachmentRepo;
         $this->projectReferenceRepo = $projectReferenceRepo;
         $this->projectPicRepo = $projectPicRepo;
+        $this->projectTaskRevisestateRepo = $projectTaskRevisestateRepo;
+        $this->projectTaskApprovalStateRepo = $projectTaskApprovalStateRepo;
+        $this->projectTaskDurationHistoryRepo = $projectTaskDurationHistoryRepo;
     }
 
     /**
@@ -126,7 +142,7 @@ class InteractiveProjectService
         array $relation = []
     ): array {
         try {
-            $itemsPerPage = request('itemsPerPage') ?? 2;
+            $itemsPerPage = request('itemsPerPage') ?? 50;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
@@ -271,6 +287,7 @@ class InteractiveProjectService
                 }),
                 'can_delete_attachment' => true,
                 'can_add_description' => true,
+                'can_edit_description' => true,
                 'action_list' => DefineTaskAction::run($task),
             ];
         });
@@ -314,6 +331,8 @@ class InteractiveProjectService
         try {
             $data = $this->repo->show($uid, '*', [
                 'boards',
+                'pics:id,intr_project_id,employee_id',
+                'pics.employee:id,nickname',
             ]);
 
             $output = [
@@ -325,7 +344,8 @@ class InteractiveProjectService
                 'status_color' => $data->status->color(),
                 'project_date' => date('d F Y', strtotime($data->project_date)),
                 'led_detail' => $data->led_detail,
-                'pic_names' => '-',
+                'pic_names' => $data->pics->isNotEmpty() ? $data->pics->pluck('employee.nickname')->implode(', ') : '-',
+                'is_have_pic' => $data->pics->isNotEmpty() ? true : false,
                 'teams' => $this->getTeamList()['data'],
                 'references' => $this->getProjectReferences($data->id),
                 'boards' => $data->boards->map(function ($board) {
@@ -567,6 +587,14 @@ class InteractiveProjectService
 
     /**
      * Assign PIC to task
+     * Expected speps will implement in this function
+     * 1. Check 'pics' in payload. Pics will have structure like this: [pics => [['employee_uid' => 'uid1'], ['employee_uid' => 'uid2']]]
+     * 2. Looping pics and get employee id from employee uid
+     * 3. Insert to table development_project_task_pics if combination of task_id and employee_id not exists
+     * 4. Insert to table development_project_task_pic_histories if combination of task_id and employee_id not exists
+     * 5. If task already have a deadline and give picId is not associated with this task deadline, we need to add this pic to table development_project_task_deadlines
+     * 6. If task status is InProgress, insert new pic to workstate table
+     * 7. Return success message
      *
      * @param  int  $projectId
      */
@@ -762,7 +790,7 @@ class InteractiveProjectService
             $this->projectTaskPicRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId}");
 
             // remove from workstates
-            $this->projectTaskWorkStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and finished_at is null");
+            $this->projectTaskWorkStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and first_finish_at is null");
 
             // remove from holdstates
             $this->projectTaskHoldStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and unholded_at is null");
@@ -779,6 +807,17 @@ class InteractiveProjectService
 
     /**
      * Approve a task and update its deadlines.
+     * Expected steps:
+     * 1. Check if the task is already approved. If so, return an error message.
+     * 2. Check if the user has the necessary permissions to approve the task.
+     *    Only users with root role, director role, project PIC for the task's project,
+     *    or PIC for the task itself can approve the task.
+     * 3. If the task has no PICs assigned, return an error message.
+     * 4. Update the task status to "In Progress".
+     * 5. Update the start time for all deadlines associated with the task.
+     * 6. Record the work state for each PIC assigned to the task.
+     * 7. Retrieve and return the updated project boards for the task's project.
+     * 8. Handle any exceptions that may occur during the process and roll back the transaction if necessary.
      */
     public function approveTask(string $taskUid): array
     {
@@ -879,13 +918,15 @@ class InteractiveProjectService
 
     /**
      * Record the work state of a task.
+     * This function will create record in the intr_project_task_pic_workstates table
      */
     public function recordWorkState(InteractiveProjectTask|Collection $task): void
     {
         foreach ($task->pics as $pic) {
             $this->projectTaskWorkStateRepo->store([
                 'started_at' => Carbon::now(),
-                'finished_at' => null,
+                'first_finish_at' => null,
+                'complete_at' => null,
                 'task_id' => $task->id,
                 'employee_id' => $pic->employee_id,
             ]);
@@ -893,7 +934,64 @@ class InteractiveProjectService
     }
 
     /**
+     * Record approval state for Project Manager
+     * Expected steps:
+     * 1. Looping all project PICs or Project Managers
+     * 2. Get current workstate for the task
+     * 3. Insert record to intr_task_approval_states table
+     */
+    protected function recordApprovalState(InteractiveProjectTask|Collection $task): void
+    {
+        logging('RECORD APPROVAL STATE', [
+            'task' => $task->toArray(),
+            'project' => $task->interactiveProject->toArray(),
+        ]);
+        foreach ($task->interactiveProject->pics as $pic) {
+            $currentWorkState = $this->projectTaskWorkStateRepo->show(
+                uid: 'uid',
+                select: 'id',
+                where: "task_id = {$task->id} AND complete_at IS NULL"
+            );
+            $this->projectTaskApprovalStateRepo->store(
+                data: [
+                    'pic_id' => $pic->employee_id,
+                    'task_id' => $task->id,
+                    'project_id' => $task->intr_project_id,
+                    'started_at' => Carbon::now(),
+                    'work_state_id' => $currentWorkState->id,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Mark current approval task state as complete
+     */
+    protected function recordApprovalAsFinish(InteractiveProjectTask|Collection $task): void
+    {
+        $currentState = $this->projectTaskApprovalStateRepo->show(
+            uid: 'uid',
+            select: 'id',
+            where: "task_id = {$task->id} AND approved_at IS NULL"
+        );
+        $this->projectTaskApprovalStateRepo->update(
+            data: [
+                'approved_at' => Carbon::now(),
+            ],
+            id: $currentState->id
+        );
+    }
+
+    /**
      * Submit task proofs.
+     * Expected steps:
+     * 1. Upload proof of works to storage.
+     * 2. Insert record to intr_task_proofs and intr_task_proof_images tables
+     * 3. Update task status to CheckByPm and assign to project PICs
+     * 4. Update first_finish_at in workstates table when first_finish_at is null
+     * 5. If there is revise state, update the finish_at column
+     * 6. Return the updated project boards for the task's project.
+     * 7. Handle any exceptions that may occur during the process and roll back the transaction
      *
      * @param  array  $payload  With these following structure:
      *                          - string $nas_path
@@ -906,12 +1004,17 @@ class InteractiveProjectService
 
         DB::beginTransaction();
         try {
-            $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'uid,id,status,intr_project_id,name', relation: [
-                'pics:id,task_id,employee_id',
-                'workStates',
-                'deadlines:id,task_id',
-                'interactiveProject:id,name',
-            ]);
+            $task = $this->projectTaskRepo->show(
+                uid: $taskUid,
+                select: 'uid,id,status,intr_project_id,name',
+                relation: [
+                    'pics:id,task_id,employee_id',
+                    'workStates',
+                    'deadlines:id,task_id',
+                    'interactiveProject:id,name',
+                    'interactiveProject.pics:id,intr_project_id,employee_id',
+                ],
+            );
 
             $this->mainSubmitTask(payload: $payload, task: $task);
 
@@ -941,6 +1044,15 @@ class InteractiveProjectService
 
     /**
      * Main function to submit task proofs.
+     * Expected steps:
+     * 1. Upload proof of works to storage.
+     * 2. Insert record to intr_task_proofs and intr_task_proof_images tables
+     * 3. Update task status to CheckByPm and assign to project PICs
+     * 4. Update first_finish_at in workstates table when first_finish_at is null
+     * 5. If there is revise state, update the finish_at column
+     * 6. Record approval state for project managers
+     * 7. Return the updated project boards for the task's project.
+     * 8. Handle any exceptions that may occur during the process and roll back the transaction
      *
      * @param  array  $payload  With these following structure:
      *                          - string $nas_path
@@ -1011,13 +1123,21 @@ class InteractiveProjectService
         // remove all current pics
         $task->pics()->delete();
 
-        // update finished_at in workstate stable
+        // update first_finish_at in workstates table when first_finish_at is null
         foreach ($task->workStates as $state) {
             $this->projectTaskWorkStateRepo->update(
                 data: [
-                    'finished_at' => Carbon::now(),
+                    'first_finish_at' => Carbon::now(),
                 ],
-                id: $state->id
+                where: "id = {$state->id} AND complete_at IS NULL AND first_finish_at IS NULL"
+            );
+
+            // check revise state, if exists the update the finish_at column
+            $this->projectTaskRevisestateRepo->update(
+                data: [
+                    'finish_at' => Carbon::now(),
+                ],
+                where: "work_state_id = {$state->id} AND assign_at IS NOT NULL AND start_at IS NOT NULL and finish_at IS NULL"
             );
         }
 
@@ -1041,6 +1161,9 @@ class InteractiveProjectService
 
             SubmitInteractiveTaskJob::dispatch($task, $bossIds, $user)->afterCommit();
         }
+
+        // record approval state
+        $this->recordApprovalState(task: $task);
     }
 
     /**
@@ -1101,7 +1224,19 @@ class InteractiveProjectService
                 id: $taskUid
             );
 
-            // TODO: Calculate duration of work
+            // TODO: Complete workstate in each pic
+            $this->projectTaskWorkStateRepo->update(
+                data: [
+                    'complete_at' => Carbon::now(),
+                ],
+                where: "task_id = {$task->id} AND employee_id IN ({$task->current_pic_id}) AND complete_at IS NULL"
+            );
+
+            // mark current approval state as complete
+            $this->recordApprovalAsFinish(task: $task);
+
+            // Summarize task timeline
+            SummarizeTaskTimeline::run($taskUid);
 
             // detach all pics from this task and put to pic histories table
             $task->pics()->delete();
@@ -1177,6 +1312,9 @@ class InteractiveProjectService
                 }
             }
 
+            // mark current approval state to complete
+            $this->recordApprovalAsFinish(task: $task);
+
             // detach current pics, which is pm
             $task->pics()->delete();
 
@@ -1202,6 +1340,25 @@ class InteractiveProjectService
                 $task->pics()->create([
                     'employee_id' => $currentPicId,
                 ]);
+
+                // get active workstate
+                $activeWorkstate = $this->projectTaskWorkStateRepo->show(
+                    uid: 'id',
+                    select: 'id',
+                    where: "complete_at is null and task_id = {$task->id} and employee_id = {$currentPicId}"
+                );
+
+                // record revise state
+                if ($activeWorkstate) {
+                    $this->projectTaskRevisestateRepo->store(data: [
+                        'task_id' => $task->id,
+                        'work_state_id' => $activeWorkstate->id,
+                        'employee_id' => $currentPicId,
+                        'assign_at' => Carbon::now(),
+                        'start_at' => Carbon::now(),
+                        'finish_at' => null,
+                    ]);
+                }
             }
 
             // refresh boards
@@ -1231,6 +1388,8 @@ class InteractiveProjectService
 
     /**
      * Delete a task and all its related resources.
+     *
+     * @return array<string, mixed>
      */
     public function deleteTask(string $taskUid): array
     {
@@ -1261,6 +1420,9 @@ class InteractiveProjectService
 
             // delete all deadlines
             $task->deadlines()->delete();
+
+            // delete durations
+            $this->projectTaskDurationHistoryRepo->delete(id: 0, where: "task_id = {$task->id}");
 
             $task->delete();
 
@@ -1388,6 +1550,13 @@ class InteractiveProjectService
 
     /**
      * Hold a task and update its hold states.
+     * Expected steps:
+     * 1. Begin a database transaction.
+     * 2. Retrieve the task by its UID.
+     * 3. Update the task's status to "On Hold".
+     * 4. Record the hold state for each PIC assigned to the task.
+     * 5. Commit the transaction.
+     * 6. Return a success response with the updated project boards.
      */
     public function holdTask(array $payload, string $taskUid): array
     {
@@ -1448,6 +1617,13 @@ class InteractiveProjectService
 
     /**
      * Start the task after tas has been hold
+     * Expected steps:
+     * 1. Begin a database transaction.
+     * 2. Retrieve the task by its UID.
+     * 3. Update the task's status to "In Progress".
+     * 4. End the hold state for each PIC assigned to the task.
+     * 5. Commit the transaction.
+     * 6. Return a success response with the updated project boards.
      */
     public function startTaskAfterHold(string $taskUid): array
     {

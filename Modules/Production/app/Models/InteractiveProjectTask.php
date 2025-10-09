@@ -92,4 +92,14 @@ class InteractiveProjectTask extends Model
     {
         return $this->hasMany(InteractiveProjectTaskPicHoldstate::class, 'task_id');
     }
+
+    public function reviseStates(): HasMany
+    {
+        return $this->hasMany(InteractiveProjectTaskRevisestate::class, 'task_id');
+    }
+
+    public function approvalStates(): HasMany
+    {
+        return $this->hasMany(InteractiveProjectTaskApprovalState::class, 'task_id');
+    }
 }

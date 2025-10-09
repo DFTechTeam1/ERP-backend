@@ -9,6 +9,8 @@ use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Models\InteractiveProjectTask;
 use Modules\Production\Models\InteractiveProjectTaskPic;
 
+use function Pest\Laravel\assertDatabaseHas;
+
 beforeEach(function () {
     $this->user = initAuthenticateUser();
 
@@ -40,7 +42,8 @@ it('Revise task', function () {
         ]);
 
     $task = InteractiveProjectTask::factory()
-        ->withPic(employee: $worker)
+        ->withPic(employee: $worker, withWorkState: true)
+        ->withApprovalState()
         ->create([
             'intr_project_id' => $project->id,
             'intr_project_board_id' => $project->boards->first()->id,
@@ -68,6 +71,8 @@ it('Revise task', function () {
         ],
     ]);
 
+    logging('REVISE TASK INTERACTIVE', $response->json());
+
     $response->assertStatus(201);
 
     $this->assertDatabaseMissing('intr_project_task_pics', [
@@ -88,5 +93,19 @@ it('Revise task', function () {
     $this->assertDatabaseHas('intr_project_task_revises', [
         'task_id' => $task->id,
         'reason' => 'revisi',
+    ]);
+
+    // check revisestates
+    assertDatabaseHas('interactive_project_task_revisestates', [
+        'task_id' => $task->id,
+        'employee_id' => $worker->id,
+        'finish_at' => null,
+    ]);
+
+    // check approval state
+    assertDatabaseHas('intr_project_task_approval_states', [
+        'pic_id' => $project->pics->first()->employee_id,
+        'task_id' => $task->id,
+        'project_id' => $project->id,
     ]);
 });

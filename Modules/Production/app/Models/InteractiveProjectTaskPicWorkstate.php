@@ -18,7 +18,8 @@ class InteractiveProjectTaskPicWorkstate extends Model
      */
     protected $fillable = [
         'started_at',
-        'finished_at',
+        'first_finish_at',
+        'complete_at',
         'task_id',
         'employee_id',
     ];
