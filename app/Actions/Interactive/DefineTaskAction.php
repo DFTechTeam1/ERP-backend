@@ -400,7 +400,7 @@ class DefineTaskAction
     {
         $start = null;
 
-        if (($this->hasSuperPower() || $this->isMyTask) && $task->status == InteractiveTaskStatus::OnHold->value) {
+        if (($this->hasSuperPower() || $this->isMyTask) && $task->status == InteractiveTaskStatus::OnHold) {
             $start = $this->buildOutput($key, false, $detail);
         }
 

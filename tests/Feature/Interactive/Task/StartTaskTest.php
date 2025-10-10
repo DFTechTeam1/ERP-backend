@@ -69,4 +69,12 @@ it('Start task after hold', function () {
         'task_id' => $task->id,
         'employee_id' => $worker->id,
     ]);
+
+    // check workstates
+    $this->assertDatabaseHas('intr_project_task_pic_workstates', [
+        'task_id' => $task->id,
+        'employee_id' => $worker->id,
+        'first_finish_at' => null,
+        'complete_at' => null,
+    ]);
 });

@@ -248,8 +248,6 @@ describe('Create Project Deal', function () {
 
         $response = postJson(route('api.production.project-deal.store'), $requestData);
 
-        logging('RESPONSE INTERACTIVE ELEMENT', $response->json());
-
         $response->assertStatus(201);
         $this->assertDatabaseCount('project_deals', 1);
         $this->assertDatabaseHas('project_deals', [

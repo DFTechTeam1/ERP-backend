@@ -960,15 +960,28 @@ Table "intr_project_task_pic_holdstates" {
   "employee_id" bigint [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
-  "work_state_id" bigint [default: NULL]
+  "work_state_id" bigint [default: NULL, ref: > intr_project_task_pic_workstates.id]
 }
 
 Table "intr_project_task_pic_workstates" {
   "id" bigint [pk, not null]
   "started_at" timestamp [default: NULL]
-  "finished_at" timestamp [default: NULL]
+  // "finished_at" timestamp [default: NULL] // deleted
+  "first_finish_at" timestamp [default: NULL]
+  "complete_at" timestamp [default: NULL, note: "When task is being approved by PM, this column should be filled"]
   "task_id" bigint [default: NULL]
   "employee_id" bigint [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "intr_project_task_approval_states" {
+  "id" bigint [pk, not null]
+  "pic_id" bigint [not null, ref: > employees.id]
+  "task_id" bigint [not null, ref: > intr_project_tasks.id]
+  "project_id" bigint [not null, ref: > interactive_projects.id]
+  "started_at" timestamp [default: NULL]
+  "approved_at" timestamp [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -986,6 +999,18 @@ Table "intr_project_task_revise_images" {
   "id" bigint [pk, not null]
   "revise_id" bigint [not null]
   "image_path" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "intr_project_task_revisestates" {
+  "id" bigint [pk, not null]
+  "task_id" bigint [not null, ref: > intr_project_tasks.id]
+  "work_state_id" bigint [not null, ref: > intr_project_task_pic_workstates.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "assign_at" timestamp [not null]
+  "start_at" timestamp [default: NULL]
+  "finish_at" timestamp [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -1630,9 +1655,9 @@ Table "project_task_duration_histories" {
   "id" bigint [pk, not null]
   "project_id" bigint [not null]
   "task_id" bigint [not null]
+  "task_type" varchar [not null] // additional
   "pic_id" bigint [not null]
   "employee_id" bigint [not null]
-  "task_type" project_task_duration_histories_task_type_enum [not null]
   "task_full_duration" bigint [not null, default: '0']
   "task_holded_duration" bigint [not null, default: '0']
   "task_revised_duration" bigint [not null, default: '0']
@@ -1640,6 +1665,7 @@ Table "project_task_duration_histories" {
   "task_approval_duration" bigint [not null, default: '0']
   "total_task_holded" bigint [not null, default: '0']
   "total_task_revised" bigint [not null, default: '0']
+  "is_interactive" bool [default: false] // additional
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

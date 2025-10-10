@@ -8,6 +8,8 @@ use Modules\Production\Jobs\InteractiveTaskHasBeenCompleteJob;
 use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Models\InteractiveProjectTask;
 
+use function Pest\Laravel\assertDatabaseHas;
+
 beforeEach(function () {
     $this->user = initAuthenticateUser();
 
@@ -41,7 +43,8 @@ it('Complete task', function () {
     ]);
 
     $task = InteractiveProjectTask::factory()
-        ->withPic(employee: $worker)
+        ->withPic(employee: $worker, withWorkState: true)
+        ->withApprovalState()
         ->create([
             'intr_project_id' => $project->id,
             'intr_project_board_id' => $project->boards->first()->id,
@@ -74,5 +77,40 @@ it('Complete task', function () {
         'is_until_finish' => 1,
     ]);
 
+    assertDatabaseHas('project_task_duration_histories', [
+        'task_id' => $task->id,
+        'employee_id' => $worker->id,
+        'pic_id' => $project->pics->first()->employee_id,
+        'is_interactive' => 1,
+        'task_type' => 'interactive',
+    ]);
+
     Bus::assertDispatched(InteractiveTaskHasBeenCompleteJob::class);
 });
+
+// it('Complete task and check duration summary', function () {
+//     Bus::fake();
+
+//     // fake action
+//     DefineTaskAction::mock()
+//         ->shouldReceive('handle')
+//         ->withAnyArgs()
+//         ->andReturn([]);
+
+//     $project = InteractiveProject::factory()
+//         ->withBoards()
+//         ->withPics()
+//         ->create();
+
+//     $deadline = now()->addDays(7)->format('Y-m-d H:i');
+
+//     $worker = Employee::factory()
+//         ->create([
+//             'user_id' => $this->user->id,
+//         ]);
+
+//     // update users employee_id
+//     \App\Models\User::where('id', $this->user->id)->update([
+//         'employee_id' => $worker->id,
+//     ]);
+// });

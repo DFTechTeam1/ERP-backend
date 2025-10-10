@@ -19,6 +19,7 @@ use Modules\Finance\Models\Invoice;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Repository\InteractiveProjectTaskRepository;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -183,26 +184,19 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $project = (new \Modules\Production\Repository\InteractiveProjectRepository)->show(
-        uid: 'c6284083-711b-4799-b363-998fcaed6a30',
-        select: 'id,parent_project,project_date,name',
+    $task = (new InteractiveProjectTaskRepository)->show(
+        uid: 'afd4e13b-ed4c-480c-bfaf-4928c5399507',
+        select: 'id,intr_project_id',
         relation: [
-            'canceledBy:id,employee_id',
-            'canceledBy.employee:id,nickname',
-            'parentProject:id,name',
-            'tasks:intr_project_id,id',
-            'tasks.pics:id,task_id,employee_id',
-            'tasks.pics.employee:id,nickname,email,telegram_chat_id',
+            'pics:id,task_id,employee_id',
+            'holdStates:id,task_id,holded_at,unholded_at',
+            'workStates:id,task_id,started_at,first_finish_at',
+            'reviseStates:id,task_id,start_at,finish_at',
+            'interactiveProject:id',
+            'interactiveProject.pics:id,intr_project_id,employee_id',
+            'approvalStates:id,task_id,started_at,approved_at',
         ]
     );
-
-    foreach ($project->tasks as $task) {
-        foreach ($task->pics as $pic) {
-            if ($pic->employee) {
-                $pic->employee->notify(new \Modules\Production\Notifications\InteractiveProjectHasBeenCanceledNotification($pic->employee, 'test message'));
-            }
-        }
-    }
 });
 
 Route::get('migrate-duration', function () {

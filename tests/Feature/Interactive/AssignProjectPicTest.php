@@ -29,8 +29,6 @@ it('Assign PIC to existing project', function () {
         ],
     ]);
 
-    logging('RESPONSE ASSIGN INTERACTIVE PIC', $response->json());
-
     $response->assertStatus(201);
 
     expect($response->json()['message'])->toBe(__('notification.successAssignPicToProject'));

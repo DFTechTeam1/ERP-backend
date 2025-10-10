@@ -299,6 +299,8 @@ it('Remove user from task when already have workstate', function () {
 
     $response = $this->postJson(route('api.production.interactives.tasks.members.store', $task->uid), $payload);
 
+    logging('REMOVE PIC WITH WORKSTATE', $response->json());
+
     $response->assertStatus(201);
 
     $this->assertDatabaseMissing('intr_project_task_pics', [

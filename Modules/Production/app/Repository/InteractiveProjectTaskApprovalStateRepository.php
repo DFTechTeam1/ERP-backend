@@ -2,10 +2,10 @@
 
 namespace Modules\Production\Repository;
 
-use Modules\Production\Models\ProjectTaskDurationHistory;
-use Modules\Production\Repository\Interface\ProjectTaskDurationHistoryInterface;
+use Modules\Production\Models\InteractiveProjectTaskApprovalState;
+use Modules\Production\Repository\Interface\InteractiveProjectTaskApprovalStateInterface;
 
-class ProjectTaskDurationHistoryRepository extends ProjectTaskDurationHistoryInterface
+class InteractiveProjectTaskApprovalStateRepository extends InteractiveProjectTaskApprovalStateInterface
 {
     private $model;
 
@@ -13,7 +13,7 @@ class ProjectTaskDurationHistoryRepository extends ProjectTaskDurationHistoryInt
 
     public function __construct()
     {
-        $this->model = new ProjectTaskDurationHistory;
+        $this->model = new InteractiveProjectTaskApprovalState;
         $this->key = 'id';
     }
 
@@ -71,13 +71,17 @@ class ProjectTaskDurationHistoryRepository extends ProjectTaskDurationHistoryInt
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where('uid', $uid);
+        if (empty($where)) {
+            $query->where('id', $uid);
+        } else {
+            $query->whereRaw($where);
+        }
 
         if ($relation) {
             $query->with($relation);
@@ -111,7 +115,7 @@ class ProjectTaskDurationHistoryRepository extends ProjectTaskDurationHistoryInt
         if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('uid', $id);
+            $query->where('id', $id);
         }
 
         $query->update($data);
@@ -125,17 +129,10 @@ class ProjectTaskDurationHistoryRepository extends ProjectTaskDurationHistoryInt
      * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id, string $where = '')
+    public function delete(int $id)
     {
-        $query = $this->model->query();
-
-        if (! empty($where)) {
-            $query->whereRaw($where);
-        } else {
-            $query->where('id', $id);
-        }
-
-        return $query->delete();
+        return $this->model->whereIn('id', $id)
+            ->delete();
     }
 
     /**

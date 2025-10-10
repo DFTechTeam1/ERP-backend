@@ -22,7 +22,7 @@
             "childs": [
                 { "path": "/admin/master/projectClass", "slug": "projectClass", "lang_id": "Event Class", "lang_en": "Event class", "icon": "menus/class.png", "permission": "list_division" },
                 { "path": "/admin/production/projects", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "menus/projects.png", "permission": "list_project" },
-                { "path": "/admin/production/interactives", "slug": "interactiveProject", "lang_id": "Interactive Event", "lang_en": "Interactive Event", "icon": "menus/screen.png", "permission": "list_project" },
+                { "path": "/admin/production/interactives", "slug": "interactiveProject", "lang_id": "Interactive Event", "lang_en": "Interactive Event", "icon": "menus/screen.png", "permission": "list_interactive_project" },
                 { "path": "/admin/deals", "slug": "projectDeals", "lang_id": "Deals", "lang_en": "Deals", "icon": "menus/deals.png", "permission": "list_deals" },
                 { "path": "/admin/deals/price-changes", "slug": "projectDealPriceChanges", "lang_id": "Perubahan Harga", "lang_en": "Price Changes", "icon": "menus/money.png", "permission": "list_deal_price_changes" },
                 { "path": "/admin/deals/interactive-requests", "slug": "interactiveRequest", "lang_id": "Permintaan Interaktif", "lang_en": "Interactive Request", "icon": "menus/requestinteractive.png", "permission": "list_interactive_requests" },
