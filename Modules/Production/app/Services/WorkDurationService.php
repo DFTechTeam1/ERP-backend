@@ -9,26 +9,33 @@ class WorkDurationService
 {
     /**
      * Set hold duration
-     * 
-     * @param int $holdDuratoin
-     * @param Collection $holdStates
+     *
+     * @param  int  $holdDuration
+     * @param  int  $totalHold
+     * @param  Collection  $holdStates
      * @return void
      */
-    public function setHoldstateDuration(int &$holdDuratoin, Collection $holdStates): void
+    public function setHoldStateDuration(int &$holdDuration, int &$totalHold, Collection $holdStates): void
     {
-        foreach ($holdStates as $holdState) {
-            $holdDuratoin += Carbon::parse($holdState->started_at)->diffInSeconds(Carbon::parse($holdState->ended_at) ?? now());
+        // group by employees, and only calculate from 1 employee
+        $holdStatesByEmployee = $holdStates->groupBy('employee_id')->map(function ($group) {
+            return $group->first();
+        });
+        foreach ($holdStatesByEmployee as $holdState) {
+            $holdDuration += Carbon::parse($holdState->holded_at)->diffInSeconds(Carbon::parse($holdState->unholded_at) ?? now());
+            $totalHold++;
         }
     }
 
     /**
      * Set revise duration
      * 
-     * @param int $revisedDuration
-     * @param Collection $reviseStates
+     * @param  int  $revisedDuration
+     * @param  int  $totalRevise
+     * @param  Collection  $reviseStates
      * @return void
      */
-    public function setReviseDuration(int &$revisedDuration, Collection $reviseStates): void
+    public function setReviseDuration(int &$revisedDuration, int &$totalRevise, Collection $reviseStates): void
     {
         // group by employees, and only calculate from 1 employee
         $reviseStatesByEmployee = $reviseStates->groupBy('employee_id')->map(function ($group) {
@@ -36,6 +43,112 @@ class WorkDurationService
         });
         foreach ($reviseStatesByEmployee as $reviseState) {
             $revisedDuration += Carbon::parse($reviseState->start_at)->diffInSeconds(Carbon::parse($reviseState->finish_at) ?? now());
+            $totalRevise++;
         }
+    }
+
+    /**
+     * Set work state duration
+     * 
+     * @param  int  $workStateDuration
+     * @param  Collection  $workStates
+     * @return void
+     */
+    public function setWorkStateDuration(int &$workStateDuration, Collection $workStates): void
+    {
+        // group by employees, and only calculate from 1 employee
+        $workStatesByEmployee = $workStates->groupBy('employee_id')->map(function ($group) {
+            return $group->first();
+        });
+        foreach ($workStatesByEmployee as $workState) {
+            $workStateDuration += Carbon::parse($workState->started_at)->diffInSeconds(Carbon::parse($workState->first_finish_at) ?? now());
+        }
+    }
+
+    /**
+     * Set approval state duration
+     * 
+     * @param  int  $approvalStateDuration
+     * @param  Collection  $approvalStates
+     * @return void
+     */
+    public function setApprovalStateDuration(int &$approvalStateDuration, Collection $approvalStates): void
+    {
+        foreach ($approvalStates as $approvalState) {
+            $approvalStateDuration += Carbon::parse($approvalState->started_at)->diffInSeconds(Carbon::parse($approvalState->approved_at) ?? now());
+        }
+    }
+
+    /**
+     * Calculate actual duration
+     * 
+     * @param int  $workStateDuration
+     * @param int  $holdDuration
+     * @param int  $reviseDuration
+     * @return int
+     */
+    public function calculateActualDuration(int $workStateDuration, int $holdDuration, int $reviseDuration): int
+    {
+        return ($workStateDuration + $reviseDuration) - $holdDuration;
+    }
+
+    /**
+     * Calculate full duration
+     * @param int  $actualDuration
+     * @param int  $approvalStateDuration
+     * @return int
+     */
+    public function calculateFullDuration(int $actualDuration, int $approvalStateDuration): int
+    {
+        return $actualDuration + $approvalStateDuration;
+    }
+
+    /**
+     * Build task duration summary
+     *
+     * @param  mixed  $task  This $task variable should contain relations:
+     *                       - holdStates
+     *                       - reviseStates
+     *                       - workStates
+     *                       - approvalStates
+     * @return array<int, int> [
+     *                       0 => holdDuration,
+     *                       1 => reviseDuration,
+     *                       2 => workStateDuration,
+     *                       3 => actualDuration,
+     *                       4 => approvalStateDuration,
+     *                       5 => fullDuration,
+     *                       6 => totalHold,
+     *                       7 => totalRevise,
+     *                       ]
+     */
+    public function buildTaskDuration(mixed $task): array
+    {
+        $holdDuration = 0;
+        $reviseDuration = 0;
+        $actualDuration = 0;
+        $workStateDuration = 0;
+        $approvalStateDuration = 0;
+        $fullDuration = 0;
+        $totalHold = 0;
+        $totalRevise = 0;
+
+        $this->setHoldStateDuration(holdDuration: $holdDuration, totalHold: $totalHold, holdStates: $task->holdStates);
+        $this->setReviseDuration(revisedDuration: $reviseDuration, totalRevise: $totalRevise, reviseStates: $task->reviseStates);
+        $this->setWorkStateDuration(workStateDuration: $workStateDuration, workStates: $task->workStates);
+        $this->setApprovalStateDuration(approvalStateDuration: $approvalStateDuration, approvalStates: $task->approvalStates);
+        $actualDuration = $this->calculateActualDuration(workStateDuration: $workStateDuration, holdDuration: $holdDuration, reviseDuration: $reviseDuration);
+        $fullDuration = $this->calculateFullDuration(actualDuration: $actualDuration, approvalStateDuration: $approvalStateDuration);
+
+        return [
+            $holdDuration,
+            $reviseDuration,
+            $workStateDuration,
+            $actualDuration,
+            $approvalStateDuration,
+            $fullDuration,
+            $totalHold,
+            $totalRevise,
+        ];
     }
 }

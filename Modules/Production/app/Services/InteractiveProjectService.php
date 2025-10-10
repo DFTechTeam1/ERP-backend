@@ -967,18 +967,14 @@ class InteractiveProjectService
     /**
      * Mark current approval task state as complete
      */
-    protected function recordApprovalAsFinish(InteractiveProjectTask|Collection $task): void
+    protected function recordApprovalAsFinish(InteractiveProjectTask|Collection $task, ?string $completeTime = null): void
     {
-        $currentState = $this->projectTaskApprovalStateRepo->show(
-            uid: 'uid',
-            select: 'id',
-            where: "task_id = {$task->id} AND approved_at IS NULL"
-        );
         $this->projectTaskApprovalStateRepo->update(
             data: [
-                'approved_at' => Carbon::now(),
+                'approved_at' => $completeTime ? Carbon::parse($completeTime) : Carbon::now(),
             ],
-            id: $currentState->id
+            id: 'id',
+            where: "task_id = {$task->id} AND approved_at IS NULL"
         );
     }
 
@@ -1225,15 +1221,16 @@ class InteractiveProjectService
             );
 
             // TODO: Complete workstate in each pic
+            $completeTime = '2025-10-10 16:02:10';
             $this->projectTaskWorkStateRepo->update(
                 data: [
-                    'complete_at' => Carbon::now(),
+                    'complete_at' => Carbon::parse($completeTime),
                 ],
                 where: "task_id = {$task->id} AND employee_id IN ({$task->current_pic_id}) AND complete_at IS NULL"
             );
 
             // mark current approval state as complete
-            $this->recordApprovalAsFinish(task: $task);
+            $this->recordApprovalAsFinish(task: $task, completeTime: $completeTime);
 
             // Summarize task timeline
             SummarizeTaskTimeline::run($taskUid);
