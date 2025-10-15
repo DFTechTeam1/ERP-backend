@@ -2,21 +2,18 @@
 
 namespace Modules\Production\Http\Requests\Interactive;
 
-use App\Enums\Interactive\InteractiveProjectStatus;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ChangeStatus extends FormRequest
+class SearchTask extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
     {
-        $status = InteractiveProjectStatus::cases();
-        $statusValue = array_map(fn ($s) => $s->value, $status);
-
         return [
-            'status' => 'required|integer|in:'.implode(',', $statusValue),
+            'my_task' => 'nullable|boolean',
+            'search' => 'nullable|string',
         ];
     }
 

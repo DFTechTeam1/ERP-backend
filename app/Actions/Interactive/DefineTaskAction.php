@@ -149,17 +149,11 @@ class DefineTaskAction
 
     protected function isProjectPic(int $projectId, int $employeeId): bool
     {
-        // check if the user is a PIC of the project
-        $isPic = false;
         $project = InteractiveProject::where('id', $projectId)
             ->with(['pics'])
             ->first();
 
-        if ($project) {
-            $isPic = $project->pics->where('employee_id', $employeeId)->count() > 0 ? true : false;
-        }
-
-        return $isPic;
+        return $project->pics->isEmpty() ? false :  ($project->pics->contains('employee_id', $employeeId) ? true : false);
     }
 
     /**

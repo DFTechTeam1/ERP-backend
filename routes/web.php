@@ -184,19 +184,14 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $task = (new InteractiveProjectTaskRepository)->show(
-        uid: 'afd4e13b-ed4c-480c-bfaf-4928c5399507',
-        select: 'id,intr_project_id',
-        relation: [
-            'pics:id,task_id,employee_id',
-            'holdStates:id,task_id,holded_at,unholded_at',
-            'workStates:id,task_id,started_at,first_finish_at',
-            'reviseStates:id,task_id,start_at,finish_at',
-            'interactiveProject:id',
-            'interactiveProject.pics:id,intr_project_id,employee_id',
-            'approvalStates:id,task_id,started_at,approved_at',
-        ]
-    );
+    $uid = 'b63a09ec-87c4-4e12-8d49-e56840630c01';
+    $data = (new Modules\Production\Repository\InteractiveProjectRepository)->show($uid, '*', [
+        'boards',
+        'pics:id,intr_project_id,employee_id',
+        'pics.employee:id,nickname',
+    ]);
+
+    return get_class($data);
 });
 
 Route::get('migrate-duration', function () {

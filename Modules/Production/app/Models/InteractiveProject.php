@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Models;
 
+use App\Enums\Interactive\InteractiveProjectStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -44,7 +45,7 @@ class InteractiveProject extends Model
     protected function casts()
     {
         return [
-            'status' => ProjectStatus::class,
+            'status' => InteractiveProjectStatus::class,
         ];
     }
 
