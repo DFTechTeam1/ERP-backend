@@ -1330,16 +1330,15 @@ class InteractiveProjectService
             );
 
             // TODO: Complete workstate in each pic
-            $completeTime = '2025-10-10 16:02:10';
             $this->projectTaskWorkStateRepo->update(
                 data: [
-                    'complete_at' => Carbon::parse($completeTime),
+                    'complete_at' => Carbon::now(),
                 ],
                 where: "task_id = {$task->id} AND employee_id IN ({$task->current_pic_id}) AND complete_at IS NULL"
             );
 
             // mark current approval state as complete
-            $this->recordApprovalAsFinish(task: $task, completeTime: $completeTime);
+            $this->recordApprovalAsFinish(task: $task);
 
             // Summarize task timeline
             SummarizeTaskTimeline::run($taskUid);
