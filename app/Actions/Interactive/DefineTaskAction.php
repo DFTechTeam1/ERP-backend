@@ -232,7 +232,12 @@ class DefineTaskAction
         $members = null;
 
         if ($this->hasSuperPower() || $this->showForLeadModeler) {
-            $members = $this->buildOutput($key, false, $detail);
+            $disabled = $task->status == InteractiveTaskStatus::CheckByPm ? true : false;
+            $members = $this->buildOutput(
+                key: $key,
+                disabled: $disabled,
+                detail: $detail
+            );
         }
 
         return $members;

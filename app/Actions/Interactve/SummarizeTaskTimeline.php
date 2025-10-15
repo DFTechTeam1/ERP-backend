@@ -21,12 +21,12 @@ class SummarizeTaskTimeline
             select: 'id,intr_project_id,current_pic_id',
             relation: [
                 'pics:id,task_id,employee_id',
-                'holdStates:id,task_id,holded_at,unholded_at',
-                'workStates:id,task_id,started_at,first_finish_at',
-                'reviseStates:id,task_id,start_at,finish_at',
+                'holdStates:id,task_id,holded_at,unholded_at,work_state_id',
+                'workStates:id,task_id,started_at,first_finish_at,employee_id',
+                'reviseStates:id,task_id,start_at,finish_at,work_state_id',
                 'interactiveProject:id',
                 'interactiveProject.pics:id,intr_project_id,employee_id',
-                'approvalStates:id,task_id,started_at,approved_at',
+                'approvalStates:id,task_id,started_at,approved_at,work_state_id',
             ]
         );
 

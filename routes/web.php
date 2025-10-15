@@ -7,6 +7,7 @@ use App\Imports\SummaryInventoryReport;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Notifications\DummyNotification;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
@@ -184,14 +185,22 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $uid = 'b63a09ec-87c4-4e12-8d49-e56840630c01';
-    $data = (new Modules\Production\Repository\InteractiveProjectRepository)->show($uid, '*', [
-        'boards',
-        'pics:id,intr_project_id,employee_id',
-        'pics.employee:id,nickname',
-    ]);
-
-    return get_class($data);
+    $task = (new InteractiveProjectTaskRepository)->show(
+        uid: 'a7b1489c-6a69-40e9-a516-8e1445de8832',
+        select: 'id,intr_project_id,current_pic_id',
+        relation: [
+            'pics:id,task_id,employee_id',
+            'holdStates:id,task_id,holded_at,unholded_at,work_state_id,employee_id',
+            'workStates:id,task_id,started_at,first_finish_at,employee_id',
+            'reviseStates:id,task_id,start_at,finish_at,work_state_id',
+            'interactiveProject:id',
+            'interactiveProject.pics:id,intr_project_id,employee_id',
+            'approvalStates:id,task_id,started_at,approved_at,work_state_id',
+        ]
+    );
+    // $holdStates = $task->holdStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
+    // return $task->workStates->last();
+    return Carbon::parse('2025-10-15 14:07:34')->diffInSeconds(Carbon::parse('2025-10-15 14:18:43')) + 360 - 141;
 });
 
 Route::get('migrate-duration', function () {
