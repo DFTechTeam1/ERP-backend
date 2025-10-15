@@ -744,11 +744,25 @@ class InteractiveProjectService
                     }
 
                     // if task status is InProgress, insert new pic to workstate table
-                    if ($task->status === InteractiveTaskStatus::InProgress) {
+                    // // only insert new pic if combination of task_id and employee_id not exists
+                    $checkWorkState = $this->projectTaskWorkStateRepo->show(
+                        uid: 'id',
+                        select: 'id',
+                        where: "task_id = {$task->id} AND employee_id = {$picId} AND complete_at IS NULL"
+                    );
+                    if (! $checkWorkState && $task->status === InteractiveTaskStatus::InProgress) {
+                        // get current workstate time based on task_id and complete at is null, return now time if not exists
+                        $currentWorkStateData = $this->projectTaskWorkStateRepo->show(
+                            uid: 'id',
+                            select: 'id,started_at',
+                            where: "task_id = {$task->id} AND complete_at IS NULL"
+                        );
+                        $startTime = $currentWorkStateData ? $currentWorkStateData->started_at : Carbon::now();
+
                         $this->projectTaskWorkStateRepo->store([
                             'employee_id' => $picId,
                             'task_id' => $task->id,
-                            'started_at' => Carbon::now(),
+                            'started_at' => $startTime,
                         ]);
                     }
                 }
@@ -1035,25 +1049,22 @@ class InteractiveProjectService
      */
     protected function recordApprovalState(InteractiveProjectTask|Collection $task): void
     {
-        logging('RECORD APPROVAL STATE', [
-            'task' => $task->toArray(),
-            'project' => $task->interactiveProject->toArray(),
-        ]);
         foreach ($task->interactiveProject->pics as $pic) {
-            $currentWorkState = $this->projectTaskWorkStateRepo->show(
-                uid: 'uid',
+            $currentWorkState = $this->projectTaskWorkStateRepo->list(
                 select: 'id',
                 where: "task_id = {$task->id} AND complete_at IS NULL"
             );
-            $this->projectTaskApprovalStateRepo->store(
-                data: [
-                    'pic_id' => $pic->employee_id,
-                    'task_id' => $task->id,
-                    'project_id' => $task->intr_project_id,
-                    'started_at' => Carbon::now(),
-                    'work_state_id' => $currentWorkState->id,
-                ]
-            );
+            foreach ($currentWorkState as $state) {
+                $this->projectTaskApprovalStateRepo->store(
+                    data: [
+                        'pic_id' => $pic->employee_id,
+                        'task_id' => $task->id,
+                        'project_id' => $task->intr_project_id,
+                        'started_at' => Carbon::now(),
+                        'work_state_id' => $state->id,
+                    ]
+                );
+            }
         }
     }
 

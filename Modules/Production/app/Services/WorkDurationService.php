@@ -4,6 +4,7 @@ namespace Modules\Production\Services;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Modules\Production\Models\InteractiveProjectTaskPicWorkstate;
 
 class WorkDurationService
 {
@@ -17,11 +18,7 @@ class WorkDurationService
      */
     public function setHoldStateDuration(int &$holdDuration, int &$totalHold, Collection $holdStates): void
     {
-        // group by employees, and only calculate from 1 employee
-        $holdStatesByEmployee = $holdStates->groupBy('employee_id')->map(function ($group) {
-            return $group->first();
-        });
-        foreach ($holdStatesByEmployee as $holdState) {
+        foreach ($holdStates as $holdState) {
             $holdDuration += Carbon::parse($holdState->holded_at)->diffInSeconds(Carbon::parse($holdState->unholded_at) ?? now());
             $totalHold++;
         }
@@ -37,11 +34,7 @@ class WorkDurationService
      */
     public function setReviseDuration(int &$revisedDuration, int &$totalRevise, Collection $reviseStates): void
     {
-        // group by employees, and only calculate from 1 employee
-        $reviseStatesByEmployee = $reviseStates->groupBy('employee_id')->map(function ($group) {
-            return $group->first();
-        });
-        foreach ($reviseStatesByEmployee as $reviseState) {
+        foreach ($reviseStates as $reviseState) {
             $revisedDuration += Carbon::parse($reviseState->start_at)->diffInSeconds(Carbon::parse($reviseState->finish_at) ?? now());
             $totalRevise++;
         }
@@ -51,18 +44,12 @@ class WorkDurationService
      * Set work state duration
      * 
      * @param  int  $workStateDuration
-     * @param  Collection  $workStates
+     * @param  InteractiveProjectTaskPicWorkstate  $workStates
      * @return void
      */
-    public function setWorkStateDuration(int &$workStateDuration, Collection $workStates): void
+    public function setWorkStateDuration(int &$workStateDuration, InteractiveProjectTaskPicWorkstate $workStates): void
     {
-        // group by employees, and only calculate from 1 employee
-        $workStatesByEmployee = $workStates->groupBy('employee_id')->map(function ($group) {
-            return $group->first();
-        });
-        foreach ($workStatesByEmployee as $workState) {
-            $workStateDuration += Carbon::parse($workState->started_at)->diffInSeconds(Carbon::parse($workState->first_finish_at) ?? now());
-        }
+        $workStateDuration += Carbon::parse($workStates->started_at)->diffInSeconds(Carbon::parse($workStates->complete_at) ?? now());
     }
 
     /**
@@ -133,10 +120,14 @@ class WorkDurationService
         $totalHold = 0;
         $totalRevise = 0;
 
-        $this->setHoldStateDuration(holdDuration: $holdDuration, totalHold: $totalHold, holdStates: $task->holdStates);
-        $this->setReviseDuration(revisedDuration: $reviseDuration, totalRevise: $totalRevise, reviseStates: $task->reviseStates);
-        $this->setWorkStateDuration(workStateDuration: $workStateDuration, workStates: $task->workStates);
-        $this->setApprovalStateDuration(approvalStateDuration: $approvalStateDuration, approvalStates: $task->approvalStates);
+        $approvalStates = $task->approvalStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
+        $holdStates = $task->holdStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
+        $reviseStates = $task->reviseStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
+
+        $this->setHoldStateDuration(holdDuration: $holdDuration, totalHold: $totalHold, holdStates: $holdStates);
+        $this->setReviseDuration(revisedDuration: $reviseDuration, totalRevise: $totalRevise, reviseStates: $reviseStates);
+        $this->setWorkStateDuration(workStateDuration: $workStateDuration, workStates: $task->workStates->last());
+        $this->setApprovalStateDuration(approvalStateDuration: $approvalStateDuration, approvalStates: $approvalStates);
         $actualDuration = $this->calculateActualDuration(workStateDuration: $workStateDuration, holdDuration: $holdDuration, reviseDuration: $reviseDuration);
         $fullDuration = $this->calculateFullDuration(actualDuration: $actualDuration, approvalStateDuration: $approvalStateDuration);
 

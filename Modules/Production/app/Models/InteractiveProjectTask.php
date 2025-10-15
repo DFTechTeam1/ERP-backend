@@ -93,6 +93,12 @@ class InteractiveProjectTask extends Model
         return $this->hasMany(InteractiveProjectTaskPicWorkstate::class, 'task_id');
     }
 
+    public function onGoingWorkStates(): HasMany
+    {
+        return $this->hasMany(InteractiveProjectTaskPicWorkstate::class, 'task_id')
+            ->whereNull('complete_at');
+    }
+
     public function holdStates(): HasMany
     {
         return $this->hasMany(InteractiveProjectTaskPicHoldstate::class, 'task_id');
