@@ -144,4 +144,5 @@ return [
     'successAssignPicToProject' => 'Successfully assigned PIC to project',
     'projectHasBeenCanceled' => 'Project has been canceled successfully',
     'successChangeProjectStatus' => 'Project status has been changed successfully',
+    'cannotChangeProjectStatusTaskNotCompleted' => 'Cannot change project status because there are still incomplete tasks',
 ];

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\PermissionCheck;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\DeadlineChangeReasonController;
 use Modules\Production\Http\Controllers\Api\InteractiveController;
@@ -69,28 +70,66 @@ Route::middleware(['auth:sanctum'])
 
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
-        Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])->name('interactives.storeTask');
-        Route::post('interactives/status/{interactiveUid}', [InteractiveController::class, 'changeStatus'])->name('interactives.changeStatus');
+        Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])
+            ->middleware(PermissionCheck::class.':create_interactive_task')
+            ->name('interactives.storeTask');
+        Route::post('interactives/status/{interactiveUid}', [InteractiveController::class, 'changeStatus'])
+            ->middleware(PermissionCheck::class.':change_interactive_status')
+            ->name('interactives.changeStatus');
         Route::get('interactives/cancel/{interactiveUid}', [InteractiveController::class, 'cancelProject'])->name('interactives.cancel');
-        Route::get('interactives/picScheduler/{interactiveUid}', [InteractiveController::class, 'getPicScheduler'])->name('interactives.getPicScheduler');
-        Route::post('interactives/assignPic/{interactiveUid}', [InteractiveController::class, 'assignPicToProject'])->name('interactives.assignPic');
-        Route::post('interactives/substitute/{interactiveUid}', [InteractiveController::class, 'substitutePicInProject'])->name('interactives.substitutePic');
-        Route::post('interactives/tasks/{taskUid}/members', [InteractiveController::class, 'addTaskMember'])->name('interactives.tasks.members.store');
-        Route::get('interactives/tasks/{taskUid}/approved', [InteractiveController::class, 'approveTask'])->name('interactives.tasks.approved');
-        Route::post('interactives/tasks/{taskUid}/proof', [InteractiveController::class, 'submitTaskProofs'])->name('interactives.tasks.proof.store');
-        Route::get('interactives/tasks/{taskUid}/completeTask', [InteractiveController::class, 'completeTask'])->name('interactives.tasks.completed');
-        Route::delete('interactives/tasks/{taskUid}', [InteractiveController::class, 'deleteTask'])->name('interactives.tasks.destroy');
-        Route::post('interactives/tasks/{taskUid}/reviseTask', [InteractiveController::class, 'reviseTask'])->name('interactives.tasks.revised');
-        Route::post('interactives/tasks/{taskUid}/description', [InteractiveController::class, 'storeDescription'])->name('interactives.tasks.description.store');
-        Route::post('interactives/tasks/{taskUid}/holded', [InteractiveController::class, 'holdTask'])->name('interactives.tasks.holded');
-        Route::get('interactives/tasks/{taskUid}/start', [InteractiveController::class, 'startTaskAfterHold'])->name('interactives.tasks.start');
-        Route::post('interactives/tasks/{projectUid}/references', [InteractiveController::class, 'storeReferences'])->name('interactives.tasks.references.store');
-        Route::delete('interactives/{projectUid}/references/{referenceId}', [InteractiveController::class, 'deleteReference'])->name('interactives.references.destroy');
-        Route::post('interactives/tasks/{taskUid}/deadline', [InteractiveController::class, 'updateTaskDeadline'])->name('interactives.tasks.deadline.update');
-        Route::delete('interactives/{interactiveUid}/tasks/{taskUid}/attachments/{imageId}', [InteractiveController::class, 'deleteTaskAttachment'])->name('interactives.tasks.attachments.destroy');
+        Route::get('interactives/picScheduler/{interactiveUid}', [InteractiveController::class, 'getPicScheduler'])
+            ->middleware(PermissionCheck::class.':assign_interactive_pic')
+            ->name('interactives.getPicScheduler');
+        Route::post('interactives/assignPic/{interactiveUid}', [InteractiveController::class, 'assignPicToProject'])
+            ->middleware(PermissionCheck::class.':assign_interactive_pic')
+            ->name('interactives.assignPic');
+        Route::post('interactives/substitute/{interactiveUid}', [InteractiveController::class, 'substitutePicInProject'])
+            ->middleware(PermissionCheck::class.':assign_interactive_pic')
+            ->name('interactives.substitutePic');
+        Route::post('interactives/tasks/{taskUid}/members', [InteractiveController::class, 'addTaskMember'])
+            ->middleware(PermissionCheck::class.':assign_interactive_task_member')
+            ->name('interactives.tasks.members.store');
+        Route::get('interactives/tasks/{taskUid}/approved', [InteractiveController::class, 'approveTask'])
+            ->middleware(PermissionCheck::class.':approve_interactive_task')
+            ->name('interactives.tasks.approved');
+        Route::post('interactives/tasks/{taskUid}/proof', [InteractiveController::class, 'submitTaskProofs'])
+            ->middleware(PermissionCheck::class.':submit_interactive_task')
+            ->name('interactives.tasks.proof.store');
+        Route::get('interactives/tasks/{taskUid}/completeTask', [InteractiveController::class, 'completeTask'])
+            ->middleware(PermissionCheck::class.':complete_interactive_task')
+            ->name('interactives.tasks.completed');
+        Route::delete('interactives/tasks/{taskUid}', [InteractiveController::class, 'deleteTask'])
+            ->middleware(PermissionCheck::class.':delete_interactive_task')
+            ->name('interactives.tasks.destroy');
+        Route::post('interactives/tasks/{taskUid}/reviseTask', [InteractiveController::class, 'reviseTask'])
+            ->middleware(PermissionCheck::class.':revise_interactive_task')
+            ->name('interactives.tasks.revised');
+        Route::post('interactives/tasks/{taskUid}/description', [InteractiveController::class, 'storeDescription'])
+            ->middleware(PermissionCheck::class.':update_description_interactive_task')
+            ->name('interactives.tasks.description.store');
+        Route::post('interactives/tasks/{taskUid}/holded', [InteractiveController::class, 'holdTask'])
+            ->middleware(PermissionCheck::class.':hold_interactive_task')
+            ->name('interactives.tasks.holded');
+        Route::get('interactives/tasks/{taskUid}/start', [InteractiveController::class, 'startTaskAfterHold'])
+            ->middleware(PermissionCheck::class.':hold_interactive_task')
+            ->name('interactives.tasks.start');
+        Route::post('interactives/tasks/{projectUid}/references', [InteractiveController::class, 'storeReferences'])
+            ->middleware(PermissionCheck::class.':create_interactive_task_attachment')
+            ->name('interactives.tasks.references.store');
+        Route::delete('interactives/{projectUid}/references/{referenceId}', [InteractiveController::class, 'deleteReference'])
+            ->middleware(PermissionCheck::class.':delete_interactive_reference')
+            ->name('interactives.references.destroy');
+        Route::post('interactives/tasks/{taskUid}/deadline', [InteractiveController::class, 'updateTaskDeadline'])
+            ->middleware(PermissionCheck::class.':update_deadline_interactive_task')
+            ->name('interactives.tasks.deadline.update');
+        Route::post('interactives/{interactiveUid}/tasks/filter', [InteractiveController::class, 'filterTasks'])->name('interactives.tasks.filter');
+        Route::delete('interactives/{interactiveUid}/tasks/{taskUid}/attachments/{imageId}', [InteractiveController::class, 'deleteTaskAttachment'])
+            ->middleware(PermissionCheck::class.':delete_interactive_task_attachment')
+            ->name('interactives.tasks.attachments.destroy');
         Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
         Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');
         Route::get('interactives/{uid}', [InteractiveController::class, 'show'])->name('interactives.show');
+
 
         // songs
         Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');

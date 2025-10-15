@@ -2,13 +2,16 @@
 
 namespace Modules\Production\Services;
 
+use App\Actions\Interactive\DefineProjectAction;
 use App\Actions\Interactive\DefineTaskAction;
 use App\Actions\Interactve\SummarizeTaskTimeline;
 use App\Enums\Development\Project\ReferenceType;
+use App\Enums\Interactive\InteractiveProjectStatus;
 use App\Enums\Interactive\InteractiveTaskStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\System\BaseRole;
 use App\Jobs\NotifyInteractiveTaskAssigneeJob;
+use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use Carbon\Carbon;
 use Exception;
@@ -134,6 +137,34 @@ class InteractiveProjectService
     }
 
     /**
+     * Here we list all available status for interactive project based on current status. Refer to \App\Enums\Interactive\InteractiveProjectStatus
+     * 1. Draft -> OnGoing, Canceled
+     * 2. OnGoing => Completed, ReadyToGo, Canceled
+     * 3. Complete => -- none --
+     * 4. ReadyToGo => Completed, Canceled
+     * 5. Canceled => -- none --
+     * 
+     * @return array<int,array<int,array<string,int|string>>>
+     */
+    protected function getAvailableStatus(): array
+    {
+        return [
+            InteractiveProjectStatus::Draft->value => [
+                ['value' => InteractiveProjectStatus::OnGoing->value, 'title' => InteractiveProjectStatus::OnGoing->label()],
+            ],
+            InteractiveProjectStatus::OnGoing->value => [
+                ['value' => InteractiveProjectStatus::Completed->value, 'title' => InteractiveProjectStatus::Completed->label()],
+                ['value' => InteractiveProjectStatus::ReadyToGo->value, 'title' => InteractiveProjectStatus::ReadyToGo->label()],
+            ],
+            InteractiveProjectStatus::Completed->value => [],
+            InteractiveProjectStatus::ReadyToGo->value => [
+                ['value' => InteractiveProjectStatus::Completed->value, 'title' => InteractiveProjectStatus::Completed->label()],
+            ],
+            InteractiveProjectStatus::Canceled->value => [],
+        ];
+    }
+
+    /**
      * Get list of data
      */
     public function list(
@@ -146,6 +177,9 @@ class InteractiveProjectService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+            $authenticatedUser = Auth::user();
+            $user = (new UserRepository)->detail($authenticatedUser->id);
 
             if (request('status')) {
                 $status = request('status');
@@ -177,22 +211,68 @@ class InteractiveProjectService
                 }
             }
 
+            if ($user->hasRole(BaseRole::Production->value)) {
+                // search based on employee_id in intr_project_task_pics table
+                $employeeId = $user->employee_id;
+                $tasks = $this->projectTaskPicRepo->list(
+                    select: 'id,task_id,employee_id',
+                    where: "employee_id = {$employeeId}",
+                    relation: [
+                        'task:id,intr_project_id',
+                    ]
+                );
+                // get the intr_project_id
+                $projectIds = $tasks->pluck('task.intr_project_id')->unique()->toArray();
+
+                if (empty($where)) {
+                    $where = 'id IN ('.implode(',', $projectIds).')';
+                } else {
+                    $where .= ' AND id IN ('.implode(',', $projectIds).')';
+                }
+            }
+
+            $whereHas = [];
+            if ($user->hasRole(BaseRole::ProjectManager->value) || $user->hasRole(BaseRole::AssistantProjectManger->value)) {
+                $whereHas[] = [
+                    'relation' => 'pics',
+                    'query' => "employee_id = {$user->employee_id}"
+                ];
+            }
+
             $paginated = $this->repo->pagination(
                 $select,
                 $where,
                 $relation,
                 $itemsPerPage,
-                $page
+                $page,
+                $whereHas
             );
 
-            $paginated = $paginated->map(function ($item) {
+            // define action to assign interactive pic
+            $canAssignInteractivePic = false;
+            $canCancelProject = false;
+            $canChangeStatus = false;
+            if ($user->can('assign_interactive_pic')) {
+                $canAssignInteractivePic = true;
+            }
+            if ($user->can('cancel_interactive_project')) {
+                $canCancelProject = true;
+            }
+            if  ($user->can('change_interactive_status')) {
+                $canChangeStatus = true;
+            }
+
+            $paginated = $paginated->map(function ($item) use ($canAssignInteractivePic, $canCancelProject, $canChangeStatus) {
                 $item['project_date_text'] = date('d F Y', strtotime($item->project_date));
                 $item['status_text'] = $item->status->label();
                 $item['status_color'] = $item->status->color();
                 $item['pic_name'] = $item->pics->isEmpty() ? '-' : $item->pics->pluck('employee.nickname')->implode(',');
+                $item['available_status'] = $this->getAvailableStatus()[$item->status->value];
                 $item['actions'] = [
-                    'can_assign_pic' => $item->pics->isEmpty() ? true : false,
-                    'can_substitute_pic' => $item->pics->isEmpty() ? false : true,
+                    'can_assign_pic' => $item->pics->isEmpty() && $canAssignInteractivePic ? true : false,
+                    'can_substitute_pic' => $item->pics->isNotEmpty() && $canAssignInteractivePic ? true : false,
+                    'can_cancel_project' => $canCancelProject ? true : false,
+                    'can_change_status' => $canChangeStatus ? true : false,
                 ];
 
                 return $item;
@@ -214,13 +294,82 @@ class InteractiveProjectService
     }
 
     /**
+     * Format task response
+     * 
+     * @param InteractiveProjectTask $task
+     * @return array
+     */
+    protected function formatTaskResponse(InteractiveProjectTask $task): array
+    {
+        return [
+            'uid' => $task->uid,
+            'name' => $task->name,
+            'description' => $task->description,
+            'start_date' => date('d F Y H:i', strtotime($task->created_at)),
+            'end_date' => $task->deadline ? date('d M Y, H:i', strtotime($task->deadline)) : null,
+            'status' => $task->status,
+            'status_text' => $task->status->label(),
+            'status_color' => $task->status->color(),
+            'board_id' => $task->intr_project_board_id,
+            'revises' => $task->revises->map(function ($revise) {
+                return [
+                    'revise_at' => date('d F Y H:i', strtotime($revise->created_at)),
+                    'images' => $revise->images,
+                    'id' => $revise->id,
+                    'reason' => $revise->reason,
+                ];
+            }),
+            'proof_of_works' => $task->taskProofs->map(function ($proof) {
+                $items = $proof->images->map(function ($image) {
+                    return $image->real_image_path;
+                });
+
+                return [
+                    'images' => $items,
+                    'id' => $proof->id,
+                    'nas_path' => $proof->nas_path,
+                    'created_at' => Carbon::parse($proof->created_at)->format('d F Y H:i'),
+                ];
+            })->groupBy('created_at'),
+            'medias' => $task->attachments->map(function ($attachment) {
+                // get extenstion type
+                $extension = pathinfo($attachment->real_file_path, PATHINFO_EXTENSION);
+
+                return [
+                    'id' => $attachment->uid,
+                    'media_type' => 'media',
+                    'media_link' => $attachment->real_file_path,
+                    'ext' => $extension,
+                    'update_timing' => date('d F Y H:i', strtotime($attachment->created_at)),
+                ];
+            }),
+            'pics' => $task->pics->map(function ($pic) {
+                // set initial name based on name value
+                $initial = substr($pic->employee->name, 0, 1);
+
+                return [
+                    'uid' => $pic->employee->uid,
+                    'name' => $pic->employee->name,
+                    'avatar_color' => $pic->employee->avatar_color,
+                    'initial' => $initial,
+                ];
+            }),
+            'can_delete_attachment' => true,
+            'can_add_description' => true,
+            'can_edit_description' => true,
+            'action_list' => DefineTaskAction::run($task),
+        ];
+    }
+
+    /**
      * Get tasks for a specific project board.
      */
-    public function getProjectBoardTasks(int $boardId): Collection
+    public function getProjectBoardTasks(string $where = '', array $whereHas = []): Collection
     {
         $tasks = $this->projectTaskRepo->list(
             select: 'id,uid,name,intr_project_id,intr_project_board_id,description,status,deadline,created_at',
-            where: "intr_project_board_id = {$boardId}",
+            where: $where,
+            whereHas: $whereHas,
             relation: [
                 'attachments:uid,intr_project_task_id,file_path,created_at',
                 'pics:id,task_id,employee_id',
@@ -232,64 +381,7 @@ class InteractiveProjectService
         );
 
         return $tasks->map(function ($task) {
-            return [
-                'uid' => $task->uid,
-                'name' => $task->name,
-                'description' => $task->description,
-                'start_date' => date('d F Y H:i', strtotime($task->created_at)),
-                'end_date' => $task->deadline ? date('d M Y, H:i', strtotime($task->deadline)) : null,
-                'status' => $task->status,
-                'status_text' => $task->status->label(),
-                'status_color' => $task->status->color(),
-                'board_id' => $task->intr_project_board_id,
-                'revises' => $task->revises->map(function ($revise) {
-                    return [
-                        'revise_at' => date('d F Y H:i', strtotime($revise->created_at)),
-                        'images' => $revise->images,
-                        'id' => $revise->id,
-                        'reason' => $revise->reason,
-                    ];
-                }),
-                'proof_of_works' => $task->taskProofs->map(function ($proof) {
-                    $items = $proof->images->map(function ($image) {
-                        return $image->real_image_path;
-                    });
-
-                    return [
-                        'images' => $items,
-                        'id' => $proof->id,
-                        'nas_path' => $proof->nas_path,
-                        'created_at' => Carbon::parse($proof->created_at)->format('d F Y H:i'),
-                    ];
-                })->groupBy('created_at'),
-                'medias' => $task->attachments->map(function ($attachment) {
-                    // get extenstion type
-                    $extension = pathinfo($attachment->real_file_path, PATHINFO_EXTENSION);
-
-                    return [
-                        'id' => $attachment->uid,
-                        'media_type' => 'media',
-                        'media_link' => $attachment->real_file_path,
-                        'ext' => $extension,
-                        'update_timing' => date('d F Y H:i', strtotime($attachment->created_at)),
-                    ];
-                }),
-                'pics' => $task->pics->map(function ($pic) {
-                    // set initial name based on name value
-                    $initial = substr($pic->employee->name, 0, 1);
-
-                    return [
-                        'uid' => $pic->employee->uid,
-                        'name' => $pic->employee->name,
-                        'avatar_color' => $pic->employee->avatar_color,
-                        'initial' => $initial,
-                    ];
-                }),
-                'can_delete_attachment' => true,
-                'can_add_description' => true,
-                'can_edit_description' => true,
-                'action_list' => DefineTaskAction::run($task),
-            ];
+            return $this->formatTaskResponse($task);
         });
     }
 
@@ -313,7 +405,7 @@ class InteractiveProjectService
             return [
                 'id' => $board->id,
                 'name' => $board->name,
-                'tasks' => $this->getProjectBoardTasks($board->id),
+                'tasks' => $this->getProjectBoardTasks("intr_project_board_id = {$board->id}"),
             ];
         })->values();
     }
@@ -329,6 +421,9 @@ class InteractiveProjectService
     public function show(string $uid): array
     {
         try {
+            $authenticatedUser = Auth::user();
+            $user = (new UserRepository)->detail(id: $authenticatedUser->id);
+
             $data = $this->repo->show($uid, '*', [
                 'boards',
                 'pics:id,intr_project_id,employee_id',
@@ -352,13 +447,11 @@ class InteractiveProjectService
                     return [
                         'id' => $board->id,
                         'name' => $board->name,
-                        'tasks' => $this->getProjectBoardTasks($board->id),
+                        'tasks' => $this->getProjectBoardTasks("intr_project_board_id = {$board->id}"),
                     ];
                 }),
                 'project_is_complete' => $data->status === ProjectStatus::Completed ? true : false,
-                'permission_list' => [
-                    'add_task' => true,
-                ],
+                'permission_list' => DefineProjectAction::run($user, $data),
             ];
 
             return generalResponse(
@@ -1167,10 +1260,26 @@ class InteractiveProjectService
      *
      * @param  array  $payload  With these following structure:
      *                          - int $status
+     * @return array<string, mixed>
      */
     public function changeStatus(array $payload, string $interactiveUid): array
     {
         try {
+            // validate task status before changing status in some status
+            if ($payload['status'] == InteractiveProjectStatus::Completed->value || $payload['status'] == InteractiveProjectStatus::ReadyToGo->value) {
+                // check task status with status != \App\Enums\Interactive\InteractiveTaskStatus::Completed
+                $notCompletedTask = $this->projectTaskRepo->show(
+                    uid: 'id',
+                    select: 'id',
+                    where: "intr_project_id = (SELECT id FROM interactive_projects WHERE uid = '{$interactiveUid}') AND status != ".InteractiveTaskStatus::Completed->value
+                );
+                if ($notCompletedTask) {
+                    return errorResponse(
+                        message: __('notification.cannotChangeProjectStatusTaskNotCompleted'),
+                    );
+                }
+            }
+
             $this->repo->update(
                 data: [
                     'status' => $payload['status'],
@@ -1982,6 +2091,70 @@ class InteractiveProjectService
         } catch (\Throwable $th) {
             DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Filter tasks based on criteria.
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - boolean|null $my_task
+     *                          - string|null $search
+     * @param string $interactiveUid
+     * @return array
+     */
+    public function filterTasks(array $payload, string $interactiveUid): array
+    {
+        try {
+            $user = Auth::user();
+
+            $whereHas = [];
+
+            $where = "";
+
+            if (isset($payload['my_task']) && $payload['my_task']) {
+                $whereHas[] = [
+                    'relation' => 'pics',
+                    'query' => "employee_id = {$user->employee->id}"
+                ];
+            }
+
+            if (isset($payload['search']) && $payload['search']) {
+                if (empty($where)) {
+                    $where = "name LIKE '%{$payload['search']}%'";
+                } else {
+                    $where .= " AND name LIKE '%{$payload['search']}%'";
+                }
+            }
+
+            $interactiveProjectId = $this->generalService->getIdFromUid($interactiveUid, new InteractiveProject());
+
+            // get project board ids
+            $projectBoards = $this->projectBoardRepo->list(
+                select: 'id,name',
+                where: "project_id = {$interactiveProjectId}"
+            );
+
+            $boards = $projectBoards->map(function ($board) use ($where, $whereHas) {
+                if (empty($where)) {
+                    $where = "intr_project_board_id = {$board->id}";
+                } else {
+                    $where .= " AND intr_project_board_id = {$board->id}";
+                }
+
+                return [
+                    'id' => $board->id,
+                    'name' => $board->name,
+                    'tasks' => $this->getProjectBoardTasks(where: $where, whereHas: $whereHas),
+                ];
+            });
+
+            return generalResponse(
+                message: 'Success',
+                data: $boards->toArray()
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }

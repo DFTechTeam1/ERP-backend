@@ -143,4 +143,5 @@ return [
     'successAssignPicToProject' => 'Berhasil menetapkan PIC ke proyek',
     'projectHasBeenCanceled' => 'Proyek telah berhasil dibatalkan',
     'successChangeProjectStatus' => 'Status proyek telah berhasil diubah',
+    'cannotChangeProjectStatusTaskNotCompleted' => 'Tidak dapat mengubah status proyek karena masih ada tugas yang belum selesai',
 ];

@@ -779,13 +779,73 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function interactivePermission()
+    {
+        // interactive will be like this
+        /**
+         * 1. list_interactive_project
+         * 2. cancel_interactive_project
+         * 3. delete_interactive_project
+         * 4. create_interactive_project
+         * 5. edit_interactive_project
+         * 6. create_interactive_reference
+         * 7. delete_interactive_reference
+         * 8. create_interactive_task
+         * 9. update_deadline_interactive_task
+         * 10. update_description_interactive_task
+         * 11. assign_interactive_task_member
+         * 12. create_interactive_task_attachment
+         * 13. approve_interactive_task
+         * 14. delete_interactive_task
+         * 15. hold_interactive_task
+         * 16. submit_interactive_task
+         * 17. approve_interactive_task
+         * 18. revise_interactive_task
+         * 19. assign_interactive_pic
+         * 20. change_interactive_status
+         * 21. complete_interactive_task
+         * 22. delete_interactive_task_attachment
+         */
+        $lists = [
+            'list_interactive_project',
+            'cancel_interactive_project',
+            'delete_interactive_project',
+            'create_interactive_project',
+            'edit_interactive_project',
+            'create_interactive_reference',
+            'delete_interactive_reference',
+            'create_interactive_task',
+            'update_deadline_interactive_task',
+            'update_description_interactive_task',
+            'assign_interactive_task_member',
+            'create_interactive_task_attachment',
+            'approve_interactive_task',
+            'delete_interactive_task',
+            'hold_interactive_task',
+            'submit_interactive_task',
+            'revise_interactive_task',
+            'assign_interactive_pic',
+            'change_interactive_status',
+            'complete_interactive_task',
+            'delete_interactive_task_attachment'
+        ];
+
+        $output = [];
+        foreach ($lists as $list) {
+            $output[] = [
+                'name' => $list, 'group' => 'interactive', 'used' => [
+                    $this->getRootRole(),
+                    $this->getDirectorRole(),
+                ]
+            ];
+        }
+
+        return $output;
+    }
+
     protected function projectPermission()
     {
         return [
-            ['name' => 'list_interactive_project', 'group' => 'production', 'used' => [
-                $this->getRootRole(),
-                $this->getDirectorRole(),
-            ]],
             ['name' => 'list_interactive_requests', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
@@ -1105,6 +1165,7 @@ class RolePermissionSetting extends Seeder
             ->merge($this->taskPermission())
             ->merge($this->financePermission())
             ->merge($this->projectPermission())
+            ->merge($this->interactivePermission())
             ->merge($this->developmentPermission());
 
         return $permissions;

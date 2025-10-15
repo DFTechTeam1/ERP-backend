@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\Deals\AddInteractive;
 use Modules\Production\Http\Requests\Interactive\AssignPic;
 use Modules\Production\Http\Requests\Interactive\ChangeStatus;
+use Modules\Production\Http\Requests\Interactive\SearchTask;
 use Modules\Production\Http\Requests\Interactive\StoreReference;
 use Modules\Production\Http\Requests\Interactive\SubstitutePic;
 use Modules\Production\Http\Requests\Interactive\Task\AssignMember;
@@ -316,5 +317,17 @@ class InteractiveController extends Controller
     public function changeStatus(ChangeStatus $request, string $interactiveUid): JsonResponse
     {
         return apiResponse($this->service->changeStatus($request->validated(), $interactiveUid));
+    }
+
+    /**
+     * Filter tasks in an interactive project
+     * 
+     * @param SearchTask $request
+     * @param string $interactiveUid
+     * @return JsonResponse
+     */
+    public function filterTasks(SearchTask $request, string $interactiveUid): JsonResponse
+    {
+        return apiResponse($this->service->filterTasks(payload: $request->validated(), interactiveUid: $interactiveUid));
     }
 }

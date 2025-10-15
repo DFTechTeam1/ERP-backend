@@ -43,6 +43,11 @@ class InteractiveProjectTask extends Model
         return InteractiveProjectTaskFactory::new();
     }
 
+    public function board(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(InteractiveProjectBoard::class, 'intr_project_board_id');
+    }
+
     public function interactiveProject()
     {
         return $this->belongsTo(InteractiveProject::class, 'intr_project_id');

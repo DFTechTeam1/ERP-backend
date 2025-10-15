@@ -49,7 +49,8 @@ class InteractiveProjectRepository extends InteractiveProjectInterface
         string $where,
         array $relation,
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $whereHas = []
     ) {
         $query = $this->model->query();
 
@@ -57,6 +58,20 @@ class InteractiveProjectRepository extends InteractiveProjectInterface
 
         if (! empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
         }
 
         if ($relation) {
@@ -69,7 +84,7 @@ class InteractiveProjectRepository extends InteractiveProjectInterface
     /**
      * Get Detail Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return InteractiveProject
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
