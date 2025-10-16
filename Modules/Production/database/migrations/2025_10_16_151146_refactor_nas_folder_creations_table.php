@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('root_path', 255);
             $table->string('base_path', 255);
             $table->enum('status', ['queue', 'completed', 'failed'])->default('queue');
-            $table->enum('type', ['create', 'rename', 'delete'])->default('create');
+            $table->enum('type', ['create', 'update', 'delete'])->default('create');
             $table->string('current_parent_dir_path')->nullable()
                 ->comment('Current parent directory path');
             $table->string('target_parent_dir_path')->nullable()
