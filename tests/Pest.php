@@ -7,6 +7,7 @@ use App\Enums\System\BaseRole;
 use App\Repository\UserRepository;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
+use App\Services\NasFolderCreationService;
 use App\Services\UserRoleManagement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Company\Models\City;
@@ -136,7 +137,8 @@ function createProjectService(
     $settingRepo = null,
     $projectQuotationRepo = null,
     $projectDealRepo = null,
-    $projectDealMarketingRepo = null
+    $projectDealMarketingRepo = null,
+    $nasFolderCreationService = null
 ) {
     return new ProjectService(
         $userRoleManagement ? $userRoleManagement : new UserRoleManagement,
@@ -178,7 +180,8 @@ function createProjectService(
         $settingRepo ? $settingRepo : new SettingRepository,
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
-        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository
+        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
+        $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService)
     );
 }
 
@@ -375,7 +378,8 @@ function createProjectDealService(
     $priceChangeReasonRepo = null,
     $employeeRepo = null,
     $interactiveRequestRepo = null,
-    $interactiveProjectRepo = null
+    $interactiveProjectRepo = null,
+    $nasFolderCreationService = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
@@ -390,7 +394,8 @@ function createProjectDealService(
         $priceChangeReasonRepo ? $priceChangeReasonRepo : new \Modules\Finance\Repository\PriceChangeReasonRepository,
         $employeeRepo ? $employeeRepo : new EmployeeRepository,
         $interactiveRequestRepo ? $interactiveRequestRepo : new \Modules\Production\Repository\InteractiveRequestRepository,
-        $interactiveProjectRepo ? $interactiveProjectRepo : new \Modules\Production\Repository\InteractiveProjectRepository
+        $interactiveProjectRepo ? $interactiveProjectRepo : new \Modules\Production\Repository\InteractiveProjectRepository,
+        $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService)
     );
 }
 

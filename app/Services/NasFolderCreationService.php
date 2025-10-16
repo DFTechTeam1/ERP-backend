@@ -14,8 +14,8 @@ class NasFolderCreationService
     )
     {
         // get current host and shared folder
-        $this->ip = $this->generalService->getSettingByKey(param: 'nas_current_ip');
-        $this->sharedFolder = $this->generalService->getSettingByKey(param: 'nas_current_root');
+        $this->ip = config('app.env') == 'testing' ? 'ip' : $this->generalService->getSettingByKey(param: 'nas_current_ip');
+        $this->sharedFolder = config('app.env') == 'testing' ? 'shared_folder' : $this->generalService->getSettingByKey(param: 'nas_current_root');
     }
 
     /**
