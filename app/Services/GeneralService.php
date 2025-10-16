@@ -401,22 +401,18 @@ class GeneralService
 
     public function authorizeReportingAccess(string $email): string
     {
-        if (config('app.env') != 'local') {
-            $response = \Illuminate\Support\Facades\Http::post(
-                url: config('app.python_endpoint').'/auth/access-token',
-                data: [
-                    'email' => $email,
-                ]
-            );
-    
-            if ($response->status() != 200) {
-                throw new \App\Exceptions\UserNotFound(message: 'Failed to generate token');
-            }
-    
-            $token = $response->json()['data']['access_token'];
-        } else {
-            $token = 'token';
+        $response = \Illuminate\Support\Facades\Http::post(
+            url: config('app.python_endpoint').'/auth/access-token',
+            data: [
+                'email' => $email,
+            ]
+        );
+
+        if ($response->status() != 200) {
+            throw new \App\Exceptions\UserNotFound(message: 'Failed to generate token');
         }
+
+        $token = $response->json()['data']['access_token'];
 
         return $token;
     }

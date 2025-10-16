@@ -435,7 +435,7 @@
                         <ul style="line-height: 1.5; font-size: 13px; list-style: circle; margin-left: -25px;">
                             <li>Pelunasan dilakukan maksimal H-3 sebelum event dilangsungkan.</li>
                             <li>Pembayaran melalui transfer ke rekening BCA 188 060 1225 a.n Wesley Wiyadi / Edwin Chandra Wijaya.</li>
-                            <li>Biaya diatas hanya biaya layanan dan tidak termasuk biaya transportasi & akomodasi bila dibutuhkan.</li>
+                            {{-- <li>Biaya diatas hanya biaya layanan dan tidak termasuk biaya transportasi & akomodasi bila dibutuhkan.</li> --}}
                             <li>Biaya diatas tidak termasuk sistem multimedia, apabila dibutuhkan akan dikenakan biaya tambahan.</li>
                         </ul>
                     </td>
