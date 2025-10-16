@@ -60,10 +60,6 @@ class ProjectDealService
 
     private EmployeeRepository $employeeRepo;
 
-    private InteractiveRequestRepository $interactiveRequestRepo;
-
-    private InteractiveProjectRepository $interactiveProjectRepo;
-
     private NasFolderCreationService $nasFolderCreationService;
     /**
      * Construction Data
@@ -80,8 +76,6 @@ class ProjectDealService
         InvoiceRepository $invoiceRepo,
         PriceChangeReasonRepository $priceChangeReasonRepo,
         EmployeeRepository $employeeRepo,
-        InteractiveRequestRepository $interactiveRequestRepo,
-        InteractiveProjectRepository $interactiveProjectRepo,
         NasFolderCreationService $nasFolderCreationService,
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
@@ -105,10 +99,6 @@ class ProjectDealService
         $this->invoiceRepo = $invoiceRepo;
 
         $this->employeeRepo = $employeeRepo;
-
-        $this->interactiveRequestRepo = $interactiveRequestRepo;
-
-        $this->interactiveProjectRepo = $interactiveProjectRepo;
 
         $this->nasFolderCreationService = $nasFolderCreationService;
     }
