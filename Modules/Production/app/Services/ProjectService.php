@@ -174,6 +174,8 @@ class ProjectService
 
     private $projectDealMarketingRepo;
 
+    private $nasFolderCreationService;
+
     /**
      * Construction Data
      */
@@ -217,7 +219,8 @@ class ProjectService
         \Modules\Company\Repository\SettingRepository $settingRepo,
         \Modules\Production\Repository\ProjectQuotationRepository $projectQuotationRepo,
         \Modules\Production\Repository\ProjectDealRepository $projectDealRepo,
-        \Modules\Production\Repository\ProjectDealMarketingRepository $projectDealMarketingRepo
+        \Modules\Production\Repository\ProjectDealMarketingRepository $projectDealMarketingRepo,
+        \App\Services\NasFolderCreationService $nasFolderCreationService,
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -298,6 +301,8 @@ class ProjectService
         $this->projectDealRepo = $projectDealRepo;
 
         $this->projectDealMarketingRepo = $projectDealMarketingRepo;
+
+        $this->nasFolderCreationService = $nasFolderCreationService;
     }
 
     /**
@@ -8373,6 +8378,19 @@ class ProjectService
 
                 // gerenrate invoice master
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $project->id);
+
+                // call NAS service
+                $queueNasCreated = $this->nasFolderCreationService->sendRequest(
+                    payload: [
+                        "project_id" => $realProject->id,
+                        "project_name" => $realProject->name,
+                        "project_date" => $realProject->project_date,
+                    ]
+                );
+                if (! $queueNasCreated) {
+                    // throw an error
+                    throw new \Exception('Failed to create NAS folder');
+                }
 
                 ProjectHasBeenFinal::dispatch($project->id)->afterCommit();
             }
