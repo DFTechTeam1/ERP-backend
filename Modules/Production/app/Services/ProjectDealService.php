@@ -13,6 +13,7 @@ use App\Enums\Transaction\TransactionType;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
+use App\Services\NasFolderCreationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -59,6 +60,11 @@ class ProjectDealService
 
     private EmployeeRepository $employeeRepo;
 
+    private InteractiveRequestRepository $interactiveRequestRepo;
+
+    private InteractiveProjectRepository $interactiveProjectRepo;
+
+    private NasFolderCreationService $nasFolderCreationService;
     /**
      * Construction Data
      */
@@ -73,7 +79,10 @@ class ProjectDealService
         ProjectDealPriceChangeRepository $projectDealPriceChangeRepo,
         InvoiceRepository $invoiceRepo,
         PriceChangeReasonRepository $priceChangeReasonRepo,
-        EmployeeRepository $employeeRepo
+        EmployeeRepository $employeeRepo,
+        InteractiveRequestRepository $interactiveRequestRepo,
+        InteractiveProjectRepository $interactiveProjectRepo,
+        NasFolderCreationService $nasFolderCreationService,
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
 
@@ -96,6 +105,12 @@ class ProjectDealService
         $this->invoiceRepo = $invoiceRepo;
 
         $this->employeeRepo = $employeeRepo;
+
+        $this->interactiveRequestRepo = $interactiveRequestRepo;
+
+        $this->interactiveProjectRepo = $interactiveProjectRepo;
+
+        $this->nasFolderCreationService = $nasFolderCreationService;
     }
 
     /**
@@ -372,7 +387,8 @@ class ProjectDealService
             $detail = $this->repo->show(uid: (string) \Illuminate\Support\Facades\Crypt::decryptString($id), select: 'id,name,status', relation: [
                 'marketings',
                 'quotations',
-                'quotations.items'
+                'quotations.items',
+                'project:id,project_deal_id'
             ]);
 
             // only not finalized project that can be deleted
@@ -384,6 +400,16 @@ class ProjectDealService
 
             $detail->quotations()->delete();
             $detail->marketings()->delete();
+
+            if ($detail->project) {
+                // create nas delete request
+                $this->nasFolderCreationService->sendRequest(
+                    payload: [
+                        "project_id" => $detail->project->id,
+                    ],
+                    type: 'delete'
+                );
+            }
 
             $this->repo->delete(id: $detail->id);
 
@@ -540,6 +566,19 @@ class ProjectDealService
 
                 // generate master invoice
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
+
+                // call NAS service
+                $queueNasCreated = $this->nasFolderCreationService->sendRequest(
+                    payload: [
+                        "project_id" => $project->id,
+                        "project_name" => $project->name,
+                        "project_date" => $project->project_date,
+                    ]
+                );
+                if (! $queueNasCreated) {
+                    // throw an error
+                    throw new \Exception('Failed to create NAS folder');
+                }
 
                 ProjectHasBeenFinal::dispatch($projectDealId)->afterCommit();
             }

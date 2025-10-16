@@ -13,9 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Production\Database\Factories\ProjectFactory;
-use Modules\Production\Observers\NasFolderObserver;
 
-#[ObservedBy([NasFolderObserver::class])]
 class Project extends Model
 {
     use HasFactory, ModelObserver;
