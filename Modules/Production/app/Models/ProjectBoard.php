@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Production\Database\Factories\ProjectBoardFactory;
 
 class ProjectBoard extends Model
 {
@@ -20,6 +21,11 @@ class ProjectBoard extends Model
         'sort',
         'based_board_id',
     ];
+
+    protected static function newFactory(): ProjectBoardFactory
+    {
+        return ProjectBoardFactory::new();
+    }
 
     public function tasks(): HasMany
     {

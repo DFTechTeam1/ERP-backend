@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
+use Illuminate\Support\Facades\Auth;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\Employee;
 
@@ -148,9 +149,9 @@ class DefineTaskAction
     /**
      * This action will define which button should be appear in the selected task
      */
-    public function handle(object $task): array
+    public function handle(\Modules\Production\Models\ProjectTask $task): array
     {
-        $this->user = auth()->user();
+        $this->user = Auth::user();
         $this->isProjectPic = isProjectPIC((int) $task->project_id, $this->user->employee_id);
         $this->isDirector = isDirector();
         $this->defineMyTask($task);

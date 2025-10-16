@@ -136,7 +136,8 @@ function createProjectService(
     $settingRepo = null,
     $projectQuotationRepo = null,
     $projectDealRepo = null,
-    $projectDealMarketingRepo = null
+    $projectDealMarketingRepo = null,
+    $projectTaskPicWorkstateRepo = null
 ) {
     return new ProjectService(
         $userRoleManagement ? $userRoleManagement : new UserRoleManagement,
@@ -178,7 +179,8 @@ function createProjectService(
         $settingRepo ? $settingRepo : new SettingRepository,
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
-        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository
+        $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
+        $projectTaskPicWorkstateRepo ? $projectTaskPicWorkstateRepo : new \Modules\Production\Repository\ProjectTaskPicWorkstateRepository
     );
 }
 

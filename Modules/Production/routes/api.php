@@ -199,7 +199,7 @@ Route::middleware(['auth:sanctum'])
         Route::post('project/{projectId}/searchTask/{taskUid}', [ProjectController::class, 'searchTask']);
         Route::get('project/{projectId}/getRelatedTask/{taskUid}', [ProjectController::class, 'getRelatedTask']);
         Route::post('project/{projectId}/uploadTaskAttachment/{taskId}', [ProjectController::class, 'uploadTaskAttachment']);
-        Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask']);
+        Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask'])->name('production.task.approve');
         Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
         Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask']);
         Route::post('project/{projectUid}/task/{taskUid}/distribute', [ProjectController::class, 'distributeModellerTask']);

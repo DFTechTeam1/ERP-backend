@@ -12,7 +12,9 @@ use Modules\Production\Models\InteractiveProjectTask;
 use Modules\Production\Models\InteractiveProjectTaskProof;
 
 beforeEach(function () {
-    $this->user = initAuthenticateUser();
+    $this->user = initAuthenticateUser(
+        permissions: ['submit_interactive_task']
+    );
 
     $this->actingAs($this->user);
 });

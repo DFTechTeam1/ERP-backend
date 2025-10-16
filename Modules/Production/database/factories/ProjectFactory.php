@@ -57,4 +57,15 @@ class ProjectFactory extends Factory
             'project_deal_id' => null,
         ];
     }
+
+    public function withBoards()
+    {
+        return $this->afterCreating(function (\Modules\Production\Models\Project $project) {
+            \Modules\Production\Models\ProjectBoard::factory()
+                ->count(4)
+                ->create([
+                    'project_id' => $project->id,
+                ]);
+        });
+    }
 }

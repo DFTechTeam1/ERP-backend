@@ -5,7 +5,9 @@ use Modules\Production\Models\InteractiveProjectTask;
 use Modules\Production\Models\InteractiveProjectTaskPic;
 
 beforeEach(function () {
-    $user = initAuthenticateUser();
+    $user = initAuthenticateUser(
+        permissions: ['update_deadline_interactive_task']
+    );
 
     $this->actingAs($user);
 });

@@ -11,7 +11,9 @@ use Modules\Production\Models\InteractiveProjectTask;
 use function Pest\Laravel\assertDatabaseHas;
 
 beforeEach(function () {
-    $this->user = initAuthenticateUser();
+    $this->user = initAuthenticateUser(
+        permissions: ['complete_interactive_task']
+    );
 
     $this->actingAs($this->user);
 });

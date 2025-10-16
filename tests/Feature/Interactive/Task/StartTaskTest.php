@@ -7,7 +7,9 @@ use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Models\InteractiveProjectTask;
 
 beforeEach(function () {
-    $this->user = initAuthenticateUser();
+    $this->user = initAuthenticateUser(
+        permissions: ['hold_interactive_task']
+    );
 
     $this->actingAs($this->user);
 });

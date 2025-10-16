@@ -5,7 +5,9 @@ use Modules\Production\Jobs\AssignInteractiveProjectPicJob;
 use Modules\Production\Models\InteractiveProject;
 
 beforeEach(function () {
-    $this->user = initAuthenticateUser();
+    $this->user = initAuthenticateUser(
+        permissions: ['assign_interactive_pic']
+    );
 
     $this->actingAs($this->user);
 });

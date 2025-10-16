@@ -99,7 +99,7 @@ class ProjectTaskRepository extends ProjectTaskInterface
     /**
      * Get Detail Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return \Modules\Production\Models\ProjectTask
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {

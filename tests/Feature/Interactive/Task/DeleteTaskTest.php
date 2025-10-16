@@ -6,7 +6,9 @@ use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Models\InteractiveProjectTask;
 
 beforeEach(function () {
-    $user = initAuthenticateUser();
+    $user = initAuthenticateUser(
+        permissions: ['delete_interactive_task']
+    );
 
     $this->actingAs($user);
 });

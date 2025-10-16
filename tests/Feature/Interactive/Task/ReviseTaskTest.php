@@ -12,7 +12,9 @@ use Modules\Production\Models\InteractiveProjectTaskPic;
 use function Pest\Laravel\assertDatabaseHas;
 
 beforeEach(function () {
-    $this->user = initAuthenticateUser();
+    $this->user = initAuthenticateUser(
+        permissions: ['revise_interactive_task']
+    );
 
     $this->actingAs($this->user);
 });
@@ -70,8 +72,6 @@ it('Revise task', function () {
             ],
         ],
     ]);
-
-    logging('REVISE TASK INTERACTIVE', $response->json());
 
     $response->assertStatus(201);
 
