@@ -38,6 +38,7 @@ class NasFolderCreationService
      */
     public function sendRequest(array $payload, string $type = 'create'): bool
     {
+        $method = $type === 'delete' ? 'delete' : 'post';
         if ($type === 'create') {
             $payload['host'] = $this->ip;
             $payload['shared_folder'] = "/{$this->sharedFolder}";
@@ -45,16 +46,17 @@ class NasFolderCreationService
 
         $url = "/listener/nas/queue/{$type}";
         $fullUrl = $this->getUrl() . $url;
+
         
         try {
             $response = Http::withBody(
                 json_encode($payload, JSON_UNESCAPED_SLASHES),
                 'application/json'
-            )->post($fullUrl);
+            )->$method($fullUrl);
             
             $logData = [
                 'timestamp' => now()->toDateTimeString(),
-                'method' => 'POST',
+                'method' => $method,
                 'endpoint' => $fullUrl,
                 'payload' => $payload,
                 'status_code' => $response->status(),
@@ -72,7 +74,7 @@ class NasFolderCreationService
         } catch (\Exception $e) {
             $logData = [
                 'timestamp' => now()->toDateTimeString(),
-                'method' => 'POST',
+                'method' => $method,
                 'endpoint' => $fullUrl,
                 'payload' => $payload,
                 'status' => 'EXCEPTION',
