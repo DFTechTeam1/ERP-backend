@@ -6,6 +6,18 @@ Enum "development_projects_status_enum" {
   "4"
 }
 
+Enum "NasFolderCreationsStatusEnum" {
+  queue
+  completed
+  failed
+}
+
+Enum "NasFolderCreationTypeEnum" {
+  create
+  update
+  delete
+}
+
 Enum "development_project_references_type_enum" {
   "media"
   "link"
@@ -1255,20 +1267,28 @@ Table "model_has_roles" {
   }
 }
 
+
 Table "nas_folder_creations" {
-  "id" bigint [pk, not null]
+  "id" bigint [pk, increment, note: 'Primary key']
+  "project_id" bigint [not null, note: 'Related project ID']
   "project_name" varchar(255) [not null]
-  "project_id" int [not null]
-  "folder_path" longtext [not null]
-  "status" tinyint(1) [not null, default: '1']
-  "created_at" timestamp [default: NULL]
-  "updated_at" timestamp [default: NULL]
-  "type" nas_folder_creations_type_enum [not null, default: 'create']
-  "last_folder_name" longtext [not null]
-  "current_folder_name" varchar(255) [default: NULL]
-  "server_response" longtext
-  "failed_reason" varchar(255) [default: NULL]
-  "current_path" longtext
+  "project_date" date [not null]
+  "host" varchar(255) [not null]
+  "shared_folder" varchar(255) [not null]
+  "root_path" varchar(255) [not null]
+  "base_path" varchar(255) [not null]
+  "status" enum('queue', 'processing', 'success', 'failed') [default: 'queue', not null, note: 'NasFolderCreationsStatusEnum']
+  "type" enum('create', 'rename', 'delete') [default: 'create', not null, note: 'NasFolderCreationTypeEnum']
+  "current_parent_dir_path" varchar(255) [note: 'Current parent directory path']
+  "target_parent_dir_path" varchar(255) [not null, note: 'Target parent directory path']
+  "current_child_dir_paths" json [note: 'List of current child directories']
+  "target_child_dir_paths" json [not null, note: 'List of target child directories']
+  "response_code" bigint [not null]
+  "failed_reason" json [note: 'Failure details or error info']
+  "created_at" datetime [note: 'Record creation time']
+  "updated_at" datetime [note: 'Record last update time']
+
+  Note: 'Stores NAS folder creation and modification logs'
 }
 
 Table "notifications" {
