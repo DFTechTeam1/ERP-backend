@@ -401,7 +401,7 @@ class ProjectDealService
             $detail->quotations()->delete();
             $detail->marketings()->delete();
 
-            if ($detail->project) {
+            if ($detail->project && config('app.env') !== 'testing') {
                 // create nas delete request
                 $this->nasFolderCreationService->sendRequest(
                     payload: [
@@ -573,13 +573,15 @@ class ProjectDealService
             DB::commit();
 
             // call NAS service
-            $this->nasFolderCreationService->sendRequest(
-                payload: [
-                    "project_id" => $project->id,
-                    "project_name" => $project->name,
-                    "project_date" => $project->project_date,
-                ]
-            );
+            if (config('app.env') !== 'testing') {
+                $this->nasFolderCreationService->sendRequest(
+                    payload: [
+                        "project_id" => $project->id,
+                        "project_name" => $project->name,
+                        "project_date" => $project->project_date,
+                    ]
+                );
+            }
 
             return generalResponse(
                 message: __('notification.successPublishProjectDeal'),

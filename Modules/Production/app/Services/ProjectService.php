@@ -322,6 +322,7 @@ class ProjectService
                 $this->deleteProjectEquipmentRequest($projectId);
                 $this->deleteProjectPic($projectId);
                 $this->deleteProjectBoard($projectId);
+                $this->deleteProjectDeal($projectId);
             }
 
             $this->repo->bulkDelete($ids, 'uid');
@@ -336,6 +337,24 @@ class ProjectService
             DB::rollBack();
 
             return errorResponse($th);
+        }
+    }
+
+    protected function deleteProjectDeal(int $projectId): void
+    {
+        $project = $this->repo->show(uid: 'id', select: 'id,project_deal_id', where: 'id = '.$projectId);
+
+        if (($project) && ($project->project_deal_id) && config('app.env') !== 'testing') {
+            // call nas creation to delete the folder
+            $this->nasFolderCreationService->sendRequest(
+                payload: [
+                    "project_id" => $projectId,
+                ],
+                type: 'delete'
+            );
+
+            // delete project deal
+            $this->projectDealRepo->delete(id: $project->project_deal_id);
         }
     }
 
@@ -8376,6 +8395,12 @@ class ProjectService
                 // gerenrate invoice master
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $project->id);
 
+                ProjectHasBeenFinal::dispatch($project->id)->afterCommit();
+            }
+
+            DB::commit();
+
+            if ($payload['status'] == ProjectDealStatus::Final->value && config('app.env') != 'testing') {
                 // call NAS service
                 $queueNasCreated = $this->nasFolderCreationService->sendRequest(
                     payload: [
@@ -8388,11 +8413,7 @@ class ProjectService
                     // throw an error
                     throw new \Exception('Failed to create NAS folder');
                 }
-
-                ProjectHasBeenFinal::dispatch($project->id)->afterCommit();
             }
-            
-            DB::commit();
 
             return generalResponse(
                 message: __('notification.successCreateProjectDeals'),
