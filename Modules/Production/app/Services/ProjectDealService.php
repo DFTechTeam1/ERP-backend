@@ -1066,7 +1066,7 @@ class ProjectDealService
 
             // get detail project deal
             $change = $this->projectDealChangeRepo->show(uid: $projectDetailChangesId, relation: [
-                'projectDeal:id,name,project_date',
+                'projectDeal:id,name,project_date,status',
                 'projectDeal.project:id,uid,project_deal_id',
                 'requester:id,email,employee_id',
                 'requester.employee:id,name'
@@ -1105,6 +1105,7 @@ class ProjectDealService
             $mainPayload = [];
             $needUpdateQuotationNote = false;
             $payloadQuotation = [];
+            $haveNameChanges = false;
             foreach ($changes as $key => $changeData) {
                 switch ($changeData['label']) {
                     case 'Name':
@@ -1140,6 +1141,7 @@ class ProjectDealService
                         break;
                 }
 
+
                 if ($field) {
                     if ($field == 'quotation_note') {
                         $needUpdateQuotationNote = true;
@@ -1147,6 +1149,10 @@ class ProjectDealService
                     } else {
                         $payloadUpdate[$field] = $changeData['new_value'];
                         $mainPayload[$field] = $changeData['new_value'];
+
+                        if ($field === 'name') {
+                            $haveNameChanges = true;
+                        }
                     }
 
                 }
@@ -1179,7 +1185,21 @@ class ProjectDealService
             NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'approved')->afterCommit();
 
             DB::commit();
-            
+
+            // only if changes contain name, and environment is on local, staging or production and current project deal have final status
+            if ($haveNameChanges && config('app.env') != 'testing' && $change->projectDeal->status == ProjectDealStatus::Final) {
+                // create nas delete request
+                $currentProject = $this->projectRepo->show(uid: 'uid', select: 'id,uid,name,project_date', where: "project_deal_id = {$change->project_deal_id}");
+                $this->nasFolderCreationService->sendRequest(
+                    payload: [
+                        "project_id" => $currentProject->id,
+                        "changed_project_name_to" => $currentProject->name,
+                        "changed_project_date_to" => $currentProject->project_date
+                    ],
+                    type: 'update'
+                );
+            }
+
             return generalResponse(
                 message: "Success"
             );
