@@ -16,7 +16,7 @@ return new class extends Migration
 
         Schema::create('nas_folder_creations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('project_id')->constrained('projects')->onDelete('cascade');
+            $table->bigInteger('project_id');
             $table->string('project_name', 255);
             $table->date('project_date');
             $table->string('host', 255);
@@ -47,7 +47,9 @@ return new class extends Migration
     {
         // drop foreign
         Schema::table('nas_folder_creations', function (Blueprint $table) {
-            $table->dropForeign(['project_id']);
+            if (checkForeignKey(tableName: 'nas_folder_creations', columnName: 'project_id')) {
+                $table->dropForeign(['project_id']);
+            }
         });
 
         Schema::dropIfExists('nas_folder_creations');

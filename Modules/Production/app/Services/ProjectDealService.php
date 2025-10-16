@@ -567,23 +567,19 @@ class ProjectDealService
                 // generate master invoice
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
 
-                // call NAS service
-                $queueNasCreated = $this->nasFolderCreationService->sendRequest(
-                    payload: [
-                        "project_id" => $project->id,
-                        "project_name" => $project->name,
-                        "project_date" => $project->project_date,
-                    ]
-                );
-                if (! $queueNasCreated) {
-                    // throw an error
-                    throw new \Exception('Failed to create NAS folder');
-                }
-
                 ProjectHasBeenFinal::dispatch($projectDealId)->afterCommit();
             }
 
             DB::commit();
+
+            // call NAS service
+            $this->nasFolderCreationService->sendRequest(
+                payload: [
+                    "project_id" => $project->id,
+                    "project_name" => $project->name,
+                    "project_date" => $project->project_date,
+                ]
+            );
 
             return generalResponse(
                 message: __('notification.successPublishProjectDeal'),
