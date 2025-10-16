@@ -38,7 +38,7 @@ class NasFolderCreationService
      */
     public function sendRequest(array $payload, string $type = 'create'): bool
     {
-        $method = $type === 'delete' ? 'patch' : 'post';
+        $method = $type === 'delete' || $type === 'update' ? 'patch' : 'post';
         if ($type === 'create') {
             $payload['host'] = $this->ip;
             $payload['shared_folder'] = "/{$this->sharedFolder}";
