@@ -177,6 +177,12 @@ class ProjectService
 
     private \Modules\Production\Repository\ProjectTaskPicWorkstateRepository $projectTaskWorkStateRepo;
 
+    private \Modules\Production\Repository\ProjectTaskPicHoldstateRepository $projectTaskPicHoldstateRepo;
+
+    private \Modules\Production\Repository\ProjectTaskPicRevisestateRepository $projectTaskReviseStateRepo;
+
+    private \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo;
+
     /**
      * Construction Data
      */
@@ -223,6 +229,8 @@ class ProjectService
         \Modules\Production\Repository\ProjectDealMarketingRepository $projectDealMarketingRepo,
         \Modules\Production\Repository\ProjectTaskPicWorkstateRepository $projectTaskWorkStateRepo,
         \Modules\Production\Repository\ProjectTaskPicRevisestateRepository $projectTaskReviseStateRepo,
+        \Modules\Production\Repository\ProjectTaskPicHoldstateRepository $projectTaskPicHoldstateRepo,
+        \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo,
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -305,6 +313,10 @@ class ProjectService
         $this->projectDealMarketingRepo = $projectDealMarketingRepo;
 
         $this->projectTaskWorkStateRepo = $projectTaskWorkStateRepo;
+
+        $this->projectTaskPicHoldstateRepo = $projectTaskPicHoldstateRepo;
+
+        $this->projectTaskPicApprovalstateRepo = $projectTaskPicApprovalstateRepo;
     }
 
     /**
@@ -2660,7 +2672,7 @@ class ProjectService
             ]);
 
             // TODO: CHECK AGAIN ACTION WHEN ASSIGN TO PROJECT MANAGER
-            if ($currentData['status_raw'] != \App\Enums\Production\ProjectStatus::Draft->value) {
+            if ((isset($currentData['status_raw'])) && ($currentData['status_raw'] != \App\Enums\Production\ProjectStatus::Draft->value)) {
                 // override notification when task is revise
                 if ($isRevise) {
                     \Modules\Production\Jobs\ReviseTaskJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
@@ -2816,7 +2828,7 @@ class ProjectService
         // validate pic
         $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
         $specialPosition = $this->generalService->getSettingByKey('special_production_position');
-        $specialPosition = $this->generalService->getIdFromUid($specialPosition, new PositionBackup);
+        $specialPosition = $specialPosition ? $this->generalService->getIdFromUid($specialPosition, new PositionBackup) : null;
 
         if ((isset($payloadUser)) && (! empty($payloadUser)) && ($leadModeller && count($payloadUser) > 1)) {
             $selectedModeller = collect($payloadUser)->filter(function ($filter) use ($leadModeller) {
@@ -2901,7 +2913,7 @@ class ProjectService
 
             // assign pic and record work timing if needed
             if (! empty($data['pic'])) {
-                $this->assignMemberToTask(
+                $assignPic = $this->assignMemberToTask(
                     data: [
                         'users' => $data['pic'],
                         'removed' => [],
@@ -2909,7 +2921,6 @@ class ProjectService
                     taskUid: $task->uid,
                     needChangeTaskStatus: $isForLeadModeller ? false : true
                 );
-
                 // send notification if needed
 
             }
@@ -3834,12 +3845,17 @@ class ProjectService
     protected function mainProofOfWork(array $data, string $projectUid, string $taskUid, bool $useDefaultImage = false)
     {
         try {
-            $taskId = getIdFromUid($taskUid, new \Modules\Production\Models\ProjectTask);
+            $user = Auth::user();
+
+            $task = $this->taskRepo->show(uid: $taskUid, select: 'id,status,project_id', relation: [
+                'workStates:id,task_id',
+                'project:id',
+                'project.personInCharges:id,project_id,pic_id'
+            ]);
+            $taskId = $task->id;
 
             if ($data['nas_link'] && (isset($data['preview']) || $useDefaultImage)) {
                 $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
-                $selectedProjectId = $projectId;
-                $selectedTaskId = $taskId;
 
                 if ($useDefaultImage) {
                     $image[] = $this->taskRepo->modelClass()::DEFAULTIMAGEPROOF;
@@ -3859,32 +3875,10 @@ class ProjectService
                     'project_id' => $projectId,
                     'nas_link' => $data['nas_link'],
                     'preview_image' => json_encode($image),
-                    'created_by' => auth()->id(),
+                    'created_by' => $user->id,
                     'created_year' => date('Y', strtotime(Carbon::now())),
                     'created_month' => date('m', strtotime(Carbon::now())),
                 ]);
-
-                // $boardId = $data['board_id'];
-                // $sourceBoardId = $data['source_board_id'];
-
-                // if ($data['manual_approve']) {
-                //     $taskDetail = $this->taskRepo->show($taskUid, 'id,project_board_id');
-                //     $sourceBoardId = $taskDetail->project_board_id;
-
-                //     // get next board
-                //     $boardList = $this->boardRepo->list('id,name', 'project_id = ' . $projectId);
-                //     foreach ($boardList as $keyBoard => $boardData) {
-                //         if ($boardData->id == $sourceBoardId) {
-                //             if (isset($boardList[$keyBoard + 1])) {
-                //                 $boardId = $boardList[$keyBoard + 1]->id;
-                //                 break;
-                //             } else {
-                //                 $boardId = $sourceBoardId;
-                //                 break;
-                //             }
-                //         }
-                //     }
-                // }
 
                 // set current pic
                 $currentPics = $this->taskPicRepo->list(
@@ -3913,6 +3907,26 @@ class ProjectService
                     $taskUid,
                     $projectId
                 );
+
+                // update first_finish_at in workstates table when first_finish_at is null
+                foreach ($task->workStates as $state) {
+                    $this->projectTaskWorkStateRepo->update(
+                        data: [
+                            'first_finish_at' => Carbon::now(),
+                        ],
+                        where: "id = {$state->id} AND complete_at IS NULL AND first_finish_at IS NULL"
+                    );
+
+                    // check revise state, if exists the update the finish_at column
+                    $this->projectTaskReviseStateRepo->update(
+                        data: [
+                            'finish_at' => Carbon::now(),
+                        ],
+                        where: "work_state_id = {$state->id} AND assign_at IS NOT NULL AND start_at IS NOT NULL and finish_at IS NULL"
+                    );
+                }
+
+                $this->recordApprovalState(task: $task);
             }
         } catch (\Throwable $th) {
             throw new Exception(errorMessage($th));
@@ -3922,8 +3936,11 @@ class ProjectService
     /**
      * Function to upload proof of work, and change task to next task and assign PM to check employee work
      *
+     * @param array<string, mixed> $data
+     * @param string $projectUid
+     * @param string $taskUid
      * @param  bool  $useDefaultImage  -> this parameter will be TRUE IF PM / ROOT / DIRECTOR force complete the task before completing the project
-     * @return array
+     * @return array<string, mixed>
      */
     public function proofOfWork(array $data, string $projectUid, string $taskUid, bool $useDefaultImage = false)
     {
@@ -4206,9 +4223,11 @@ class ProjectService
      */
     public function loggingTask($payload, string $type)
     {
-        $type .= 'Log';
-
-        return $this->{$type}($payload);
+        if (config('app.env') != 'testing') {
+            $type .= 'Log';
+    
+            return $this->{$type}($payload);
+        }
     }
 
     protected function startTaskLog($payload)
@@ -4998,29 +5017,47 @@ class ProjectService
         }
     }
 
-    public function startTask(string $projectUid, string $taskUid)
+    /**
+     * Start task after being hold
+     * 
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return array<string, mixed>
+     */
+    public function startTask(string $projectUid, string $taskUid): array
     {
         DB::beginTransaction();
         try {
             $user = Auth::user();
             $taskId = getIdFromUid($taskUid, new ProjectTask);
-            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
-            $employee = $this->employeeRepo->show('id', 'id,nickname', [], 'id = '.$user->employee_id);
             $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnProgress->value);
 
             $this->taskRepo->update([
                 'status' => TaskStatus::OnProgress->value,
             ], $taskUid);
 
-            // update end_at in the project_task_holds table
-            $this->projectTaskHoldRepo->update([
-                'end_at' => Carbon::now(),
-            ], 'dummy', 'project_task_id = '.$taskId.' and end_at is null');
+            $currentWorkStates = $this->projectTaskWorkStateRepo->list(
+                select: 'id,employee_id',
+                where: "task_id = {$taskId} AND complete_at IS NULL",
+                relation: [
+                    'employee:id,nickname'
+                ]
+            );
 
-            $this->loggingTask([
-                'task_id' => $taskId,
-                'actor' => $employee->nickname,
-            ], 'startTask');
+            // update hold states
+            foreach ($currentWorkStates as $workState) {
+                $this->projectTaskPicHoldstateRepo->update(
+                    data: [
+                        'unholded_at' => Carbon::now(),
+                    ],
+                    where: "work_state_id = {$workState->id} AND employee_id = {$workState->employee_id} AND unholded_at IS NULL"
+                );
+
+                $this->loggingTask([
+                    'task_id' => $taskId,
+                    'actor' => $workState->employee->nickname,
+                ], 'startTask');
+            }
 
             // update cache and finishing process
             $task = $this->formattedDetailTask($taskUid);
@@ -5044,37 +5081,52 @@ class ProjectService
         }
     }
 
+    /**
+     * Hold the task
+     * @param string $projectUid
+     * @param string $taskUid
+     * @param array<string, string> $payload
+     * @return array<string, mixed>
+     */
     public function holdTask(string $projectUid, string $taskUid, array $payload = []): array
     {
         DB::beginTransaction();
         try {
             $user = Auth::user();
             $taskId = getIdFromUid($taskUid, new ProjectTask);
-            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
-            $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnHold->value);
-            $employee = $this->employeeRepo->show('id', 'id,nickname', [], 'id = '.$user->employee_id);
+            $this->setTaskWorkingTime($taskId, $user->employEe_id, \App\Enums\Production\WorkType::OnHold->value);
 
-            // get current task pic
-            $currentTaskPics = $this->taskPicRepo->list('employee_id', 'project_task_id = '.$taskId, ['employee:id,uid']);
-
+            // update tasks tatus
             $this->taskRepo->update([
                 'status' => TaskStatus::OnHold->value,
             ], $taskUid);
 
-            foreach ($currentTaskPics as $currentPic) {
-                $this->projectTaskHoldRepo->store([
-                    'project_task_id' => $taskId,
-                    'reason' => $payload['reason'],
-                    'hold_at' => Carbon::now(),
-                    'hold_by' => Auth::user()->employee_id ?? auth()->id(),
-                    'employee_id' => $currentPic->employee_id,
-                ]);
-            }
+            // get current workstate
+            $currentWorkStates = $this->projectTaskWorkStateRepo->list(
+                select: 'id,employee_id',
+                where: "task_id = {$taskId} AND complete_at IS NULL",
+                relation: [
+                    'employee:id,nickname'
+                ]
+            );
 
-            $this->loggingTask([
-                'task_id' => $taskId,
-                'actor' => $employee->nickname,
-            ], 'holdTask');
+            // create hold state
+            foreach ($currentWorkStates as $workState) {
+                $this->projectTaskPicHoldstateRepo->store(
+                    data: [
+                        'reason' => $payload['reason'],
+                        'task_id' => $taskId,
+                        'work_state_id' => $workState->id,
+                        'holded_at' => Carbon::now(),
+                        'employee_id' => $workState->employee_id
+                    ]
+                );
+
+                $this->loggingTask([
+                    'task_id' => $taskId,
+                    'actor' => $workState->employee->nickname,
+                ], 'holdTask');
+            }
 
             // update cache and finishing process
             $task = $this->formattedDetailTask($taskUid);
@@ -5207,6 +5259,11 @@ class ProjectService
      * Project task status will be complete (refer to \App\Enums\Production\TaskStatus.php)
      * Set working time to finish (refer to \App\Enums\Production\WorkType.php)
      * Detach ALL PIC
+     * 
+     * @param string $projectUid
+     * @param string $taskUid
+     * @param ?object $employee
+     * @return array<string, mixed>
      */
     public function markAsCompleted(string $projectUid, string $taskUid, ?object $employee = null): array
     {
@@ -8777,6 +8834,9 @@ class ProjectService
     /**
      * Record the work state of a task.
      * This function will create record in the intr_project_task_pic_workstates table
+     * 
+     * @param \Modules\Production\Models\ProjectTask $task
+     * @return void
      */
     public function recordWorkState(\Modules\Production\Models\ProjectTask $task): void
     {
@@ -8788,6 +8848,34 @@ class ProjectService
                 'task_id' => $task->id,
                 'employee_id' => $pic->employee_id,
             ]);
+        }
+    }
+
+    /**
+     * Record approval state for Project Manager
+     * Expected steps:
+     * 1. Looping all project PICs or Project Managers
+     * 2. Get current workstate for the task
+     * 3. Insert record to intr_task_approval_states table
+     */
+    protected function recordApprovalState(ProjectTask $task): void
+    {
+        foreach ($task->project->personInCharges as $pic) {
+            $currentWorkState = $this->projectTaskWorkStateRepo->list(
+                select: 'id',
+                where: "task_id = {$task->id} AND complete_at IS NULL"
+            );
+            foreach ($currentWorkState as $state) {
+                $this->projectTaskPicApprovalstateRepo->store(
+                    data: [
+                        'pic_id' => $pic->pic_id,
+                        'task_id' => $task->id,
+                        'project_id' => $task->project_id,
+                        'started_at' => Carbon::now(),
+                        'work_state_id' => $state->id,
+                    ]
+                );
+            }
         }
     }
 }

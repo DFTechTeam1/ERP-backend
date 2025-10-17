@@ -44,9 +44,9 @@ class ProjectTaskFactory extends Factory
         ];
     }
 
-    public function withPics(?Employee $employee = null)
+    public function withPics(?Employee $employee = null, bool $withWorkState = false, bool $withHoldState = false)
     {
-        return $this->afterCreating(function (\Modules\Production\Models\ProjectTask $task) use ($employee) {
+        return $this->afterCreating(function (\Modules\Production\Models\ProjectTask $task) use ($employee, $withWorkState, $withHoldState) {
             if (!$employee) {
                 $employee = Employee::factory()->create();
                 $employeeId = $employee->id;
@@ -61,6 +61,28 @@ class ProjectTaskFactory extends Factory
                     'assigned_at' => now(),
                     'status' => \App\Enums\Production\TaskPicStatus::Approved->value
                 ]);
+
+            if ($withWorkState) {
+                $workState = \Modules\Production\Models\ProjectTaskPicWorkstate::create([
+                    'started_at' => now(),
+                    'first_finish_at' => null,
+                    'complete_at' => null,
+                    'task_id' => $task->id,
+                    'employee_id' => $employeeId,
+                ]);
+
+                // only run holdstate when workstate and holdstate is true
+                if ($withHoldState) {
+                    \Modules\Production\Models\ProjectTaskPicHoldstate::create([
+                        'holded_at' => now(),
+                        'unholded_at' => null,
+                        'task_id' => $task->id,
+                        'employee_id' => $employeeId,
+                        'work_state_id' => $workState->id,
+                        'reason' => 'Need to clarify requirement',
+                    ]);
+                }
+            }
         });
     }
 }

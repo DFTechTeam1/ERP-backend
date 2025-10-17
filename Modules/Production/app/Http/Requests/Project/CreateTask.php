@@ -15,7 +15,8 @@ class CreateTask extends FormRequest
             'name' => 'required',
             'task_type' => 'nullable',
             'end_date' => 'nullable',
-            'pic' => 'nullable',
+            'pic' => 'nullable|array',
+            'pic.*' => 'string',
             'media' => 'nullable|array',
         ];
     }

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,8 +29,14 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // CACHING ALL SETTING
-        if (Schema::hasTable('cache')) { // avoid falling down when start in the first time
+        try {
+            if (Schema::hasTable('cache')) {
+                cachingSetting();
+            }
+        } catch (\Exception $e) {
             cachingSetting();
+            // Database not available yet, skip
+            // Log::warning('Cache table check failed: ' . $e->getMessage());
         }
     }
 }

@@ -147,7 +147,7 @@ return [
 
     'staging_url' => env('STAGING_URL', null),
 
-    'python_endpoint' => env('PYTHON_ENDPOINT', null),
+    'python_endpoint' => env('PYTHON_ENDPOINT_STAGING', null),
 
     'salt_key_encryption' => env('SALT_KEY'),
 ];

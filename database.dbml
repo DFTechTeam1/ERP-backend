@@ -1705,6 +1705,18 @@ Table "project_task_pic_revisestates" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "project_task_pic_holdstates" {
+  "id" bigint [pk, not null]
+  "holded_at" timestamp [default: NULL]
+  "unholded_at" timestamp [default: NULL]
+  "task_id" bigint [default: NULL]
+  "employee_id" bigint [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "work_state_id" bigint [default: NULL, ref: > intr_project_task_pic_workstates.id]
+}
+
+// ---- LEGACY ----
 Table "project_task_holds" {
   "id" bigint [pk, not null]
   "uid" char(36) [not null]
@@ -1720,6 +1732,7 @@ Table "project_task_holds" {
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
+// ---- LEGACY ----
 
 Table "project_task_logs" {
   "id" bigint [pk, not null]

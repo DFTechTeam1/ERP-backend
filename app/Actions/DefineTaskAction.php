@@ -158,7 +158,7 @@ class DefineTaskAction
         $this->defineMyCurrentTask($task);
 
         $leadModelerUid = getSettingByKey('lead_3d_modeller');
-        $this->leadModelerUid = getIdFromUid($leadModelerUid, new Employee);
+        $this->leadModelerUid = $leadModelerUid ? getIdFromUid($leadModelerUid, new Employee) : null;
 
         $this->showForLeadModeler = false;
         if ($task->is_modeler_task && $this->user->employee_id == $this->leadModelerUid) {
@@ -395,7 +395,7 @@ class DefineTaskAction
         $distribute = null;
 
         $leadModeller = getSettingByKey('lead_3d_modeller');
-        $leadModeller = getIdFromUid($leadModeller, new Employee);
+        $leadModeller = $leadModeller ? getIdFromUid($leadModeller, new Employee) : null;
         $taskPics = collect($task->pics)->pluck('employee_id')->toArray();
 
         if (

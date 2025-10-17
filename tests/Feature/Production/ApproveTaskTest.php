@@ -39,7 +39,7 @@ it ('Approved task return success', function () {
         ->withAnyArgs()
         ->andReturn($task);
 
-    $response = $this->getJson(route('api.production.production.task.approve', [
+    $response = $this->getJson(route('api.production.task.approve', [
         'projectUid' => $project->uid,
         'taskUid' => $task->uid,
     ]));
