@@ -13,6 +13,7 @@ class AddInteractive extends FormRequest
     {
         return [
             'interactive_detail' => 'required|array',
+            'interactive_detail.*.name' => 'required|string|min:8',
             'interactive_area' => 'required',
             'interactive_note' => 'nullable|string',
             'interactive_fee' => 'required|numeric',

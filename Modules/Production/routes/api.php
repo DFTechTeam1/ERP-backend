@@ -73,6 +73,7 @@ Route::middleware(['auth:sanctum'])
         Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])
             ->middleware(PermissionCheck::class.':create_interactive_task')
             ->name('interactives.storeTask');
+
         Route::post('interactives/status/{interactiveUid}', [InteractiveController::class, 'changeStatus'])
             ->middleware(PermissionCheck::class.':change_interactive_status')
             ->name('interactives.changeStatus');
@@ -180,7 +181,7 @@ Route::middleware(['auth:sanctum'])
         Route::post('project/{taskId}/manualMoveBoard', [ProjectController::class, 'manualMoveBoard']);
         Route::post('project/{taskId}/returnEquipment', [ProjectController::class, 'returnEquipment']);
         Route::post('project/{projectId}/manualChangeTaskBoard', [ProjectController::class, 'manualChangeTaskBoard']);
-        Route::post('project/{projectId}/proofOfWork/{taskId}', [ProjectController::class, 'proofOfWork']);
+        Route::post('project/{projectId}/proofOfWork/{taskId}', [ProjectController::class, 'proofOfWork'])->name('task.proof.store');
         Route::delete('project/{taskUid}/task', [ProjectController::class, 'deleteTask']);
         Route::put('project/basic/{projectId}', [ProjectController::class, 'updateBasic']);
         Route::put('project/moreDetail/{id}', [ProjectController::class, 'updateMoreDetail']);
@@ -199,12 +200,12 @@ Route::middleware(['auth:sanctum'])
         Route::post('project/{projectId}/searchTask/{taskUid}', [ProjectController::class, 'searchTask']);
         Route::get('project/{projectId}/getRelatedTask/{taskUid}', [ProjectController::class, 'getRelatedTask']);
         Route::post('project/{projectId}/uploadTaskAttachment/{taskId}', [ProjectController::class, 'uploadTaskAttachment']);
-        Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask']);
-        Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
-        Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask']);
+        Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask'])->name('task.approve');
+        Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted'])->name('tasks.completed');
+        Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask'])->name('task.revise');
         Route::post('project/{projectUid}/task/{taskUid}/distribute', [ProjectController::class, 'distributeModellerTask']);
-        Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask']);
-        Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask']);
+        Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask'])->name('task.hold');
+        Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask'])->name('task.state');
         Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
         Route::delete('project/{projectUid}/task/{taskUid}/deletAettachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 

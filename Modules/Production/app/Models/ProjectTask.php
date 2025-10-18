@@ -59,6 +59,31 @@ class ProjectTask extends Model
         return $this->belongsTo(ProjectBoard::class, 'project_board_id');
     }
 
+    public function projectDurations(): HasMany
+    {
+        return $this->hasMany(ProjectTaskDurationHistory::class, 'task_id');
+    }
+
+    public function workStates(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicWorkstate::class, 'task_id');
+    }
+
+    public function holdStates(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicHoldstate::class, 'task_id');
+    }
+
+    public function approvalStates(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicApprovalstate::class, 'task_id');
+    }
+
+    public function reviseStates(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicRevisestate::class, 'task_id');
+    }
+
     public function pics(): HasMany
     {
         return $this->hasMany(ProjectTaskPic::class, 'project_task_id');

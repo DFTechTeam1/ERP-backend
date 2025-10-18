@@ -7,7 +7,9 @@ use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Models\InteractiveProjectTask;
 
 beforeEach(function () {
-    $user = initAuthenticateUser();
+    $user = initAuthenticateUser(
+        permissions: ['assign_interactive_task_member']
+    );
 
     $this->actingAs($user);
 });
@@ -298,8 +300,6 @@ it('Remove user from task when already have workstate', function () {
     ];
 
     $response = $this->postJson(route('api.production.interactives.tasks.members.store', $task->uid), $payload);
-
-    logging('REMOVE PIC WITH WORKSTATE', $response->json());
 
     $response->assertStatus(201);
 

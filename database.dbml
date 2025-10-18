@@ -1690,18 +1690,69 @@ Table "project_task_duration_histories" {
   "updated_at" timestamp [default: NULL]
 }
 
-Table "project_task_holds" {
+Table "project_task_pic_workstates" {
   "id" bigint [pk, not null]
-  "uid" char(36) [not null]
-  "project_task_id" bigint [not null]
-  "reason" varchar(255) [not null]
-  "hold_at" timestamp [default: NULL]
-  "end_at" timestamp [default: NULL]
-  "hold_by" int [not null]
-  "employee_id" bigint [default: NULL]
+  "started_at" timestamp [default: NULL]
+  "first_finish_at" timestamp [default: NULL]
+  "complete_at" timestamp [default: NULL, note: "When task is being approved by PM, this column should be filled"]
+  "task_id" bigint [default: NULL, ref: > project_tasks.id]
+  "employee_id" bigint [default: NULL, ref: > employees.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
+
+Table "project_task_pic_approvalstates" {
+  "id" bigint [pk, not null]
+  "pic_id" bigint [not null, ref: > employees.id]
+  "task_id" bigint [not null, ref: > project_tasks.id]
+  "project_id" bigint [not null, ref: > projects.id]
+  "work_state_id" bigint [not null, ref: > project_task_pic_workstates.id]
+  "started_at" timestamp [default: NULL]
+  "approved_at" timestamp [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "project_task_pic_revisestates" {
+  "id" bigint [pk, not null]
+  "task_id" bigint [not null, ref: > project_tasks.id]
+  "work_state_id" bigint [not null, ref: > project_task_pic_workstates.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "assign_at" timestamp [not null]
+  "start_at" timestamp [default: NULL]
+  "finish_at" timestamp [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "project_task_pic_holdstates" {
+  "id" bigint [pk, not null]
+  "holded_at" timestamp [default: NULL]
+  "unholded_at" timestamp [default: NULL]
+  "task_id" bigint [default: NULL]
+  "employee_id" bigint [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "work_state_id" bigint [default: NULL, ref: > intr_project_task_pic_workstates.id]
+}
+
+// ---- LEGACY ----
+Table "project_task_holds" {
+  "id" bigint [pk, not null]
+  "uid" char(36) [not null]
+  "task_id" bigint [not null, ref: > project_tasks.id]
+  "reason" varchar(255) [not null]
+  // "hold_at" timestamp [default: NULL] to be deleted
+  // "end_at" timestamp [default: NULL] to be deleted
+  "holded_at" timestamp [default: NULL]
+  "unholded_at" timestamp [default: NULL]
+  "hold_by" int [not null]
+  "employee_id" bigint [default: NULL]
+  "work_state_id" bigint [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+// ---- LEGACY ----
 
 Table "project_task_logs" {
   "id" bigint [pk, not null]

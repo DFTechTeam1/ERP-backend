@@ -8,7 +8,9 @@ use Modules\Production\Models\InteractiveProjectTask;
 use Modules\Production\Models\InteractiveProjectTaskPicWorkstate;
 
 beforeEach(function () {
-    $this->user = initAuthenticateUser();
+    $this->user = initAuthenticateUser(
+        permissions: ['hold_interactive_task']
+    );
 
     $this->actingAs($this->user);
 });
@@ -66,7 +68,6 @@ it('Hold existing task', function () {
     $response = $this->postJson(route('api.production.interactives.tasks.holded', $task->uid), [
         'reason' => 'batal',
     ]);
-    logging('HOLD TASK RESPONSE: ', $response->json());
 
     $response->assertStatus(201);
     $response->assertJsonStructure([

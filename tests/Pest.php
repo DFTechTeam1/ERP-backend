@@ -138,6 +138,10 @@ function createProjectService(
     $projectQuotationRepo = null,
     $projectDealRepo = null,
     $projectDealMarketingRepo = null,
+    $projectTaskPicWorkstateRepo = null,
+    $projectTaskPicReviseRepo = null,
+    $projectTaskPicHoldstateRepo = null,
+    $projectTaskPicApprovalstateRepo = null,
     $nasFolderCreationService = null
 ) {
     return new ProjectService(
@@ -181,6 +185,10 @@ function createProjectService(
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
         $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
+        $projectTaskPicWorkstateRepo ? $projectTaskPicWorkstateRepo : new \Modules\Production\Repository\ProjectTaskPicWorkstateRepository,
+        $projectTaskPicReviseRepo ? $projectTaskPicReviseRepo : new \Modules\Production\Repository\ProjectTaskPicRevisestateRepository,
+        $projectTaskPicHoldstateRepo ? $projectTaskPicHoldstateRepo : new \Modules\Production\Repository\ProjectTaskPicHoldstateRepository,
+        $projectTaskPicApprovalstateRepo ? $projectTaskPicApprovalstateRepo : new \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository,
         $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService)
     );
 }

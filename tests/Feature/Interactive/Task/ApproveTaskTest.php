@@ -8,7 +8,9 @@ use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Models\InteractiveProjectTask;
 
 beforeEach(function () {
-    $this->user = initAuthenticateUser();
+    $this->user = initAuthenticateUser(
+        permissions: ['approve_interactive_task']
+    );
 
     $this->actingAs($this->user);
 });
@@ -216,7 +218,7 @@ it('Approve task when user is not allowed', function () {
         'status' => InteractiveTaskStatus::WaitingApproval->value,
     ]);
 
-    expect($response->json('message'))->toBe(__('notification.youAreNotAllowedToApproveThisTask'));
+    expect($response->json('message'))->toBe("You don't have permission to access this resource.");
 });
 
 it('Approve task when task do not have pic', function () {
