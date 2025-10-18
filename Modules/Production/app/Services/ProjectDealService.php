@@ -14,6 +14,7 @@ use App\Enums\Transaction\InvoiceStatus;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
+use App\Services\NasFolderCreationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -67,6 +68,8 @@ class ProjectDealService
 
     private InteractiveProjectRepository $interactiveProjectRepo;
 
+    private NasFolderCreationService $nasFolderCreationService;
+
     /**
      * Construction Data
      */
@@ -84,6 +87,7 @@ class ProjectDealService
         EmployeeRepository $employeeRepo,
         InteractiveRequestRepository $interactiveRequestRepo,
         InteractiveProjectRepository $interactiveProjectRepo,
+        NasFolderCreationService $nasFolderCreationService,
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
 
@@ -110,6 +114,8 @@ class ProjectDealService
         $this->interactiveRequestRepo = $interactiveRequestRepo;
 
         $this->interactiveProjectRepo = $interactiveProjectRepo;
+
+        $this->nasFolderCreationService = $nasFolderCreationService;
     }
 
     /**
@@ -420,6 +426,7 @@ class ProjectDealService
                 'marketings',
                 'quotations',
                 'quotations.items',
+                'project:id,project_deal_id'
             ]);
 
             // only not finalized project that can be deleted
@@ -433,6 +440,16 @@ class ProjectDealService
 
             $detail->quotations()->delete();
             $detail->marketings()->delete();
+
+            if ($detail->project && config('app.env') !== 'testing') {
+                // create nas delete request
+                $this->nasFolderCreationService->sendRequest(
+                    payload: [
+                        "project_id" => $detail->project->id,
+                    ],
+                    type: 'delete'
+                );
+            }
 
             $this->repo->delete(id: $detail->id);
 
@@ -593,6 +610,17 @@ class ProjectDealService
             }
 
             DB::commit();
+
+            // call NAS service
+            if (config('app.env') !== 'testing') {
+                $this->nasFolderCreationService->sendRequest(
+                    payload: [
+                        "project_id" => $project->id,
+                        "project_name" => $project->name,
+                        "project_date" => $project->project_date,
+                    ]
+                );
+            }
 
             return generalResponse(
                 message: __('notification.successPublishProjectDeal'),
@@ -1071,7 +1099,7 @@ class ProjectDealService
 
             // get detail project deal
             $change = $this->projectDealChangeRepo->show(uid: $projectDetailChangesId, relation: [
-                'projectDeal:id,name,project_date',
+                'projectDeal:id,name,project_date,status',
                 'projectDeal.project:id,uid,project_deal_id',
                 'requester:id,email,employee_id',
                 'requester.employee:id,name',
@@ -1110,6 +1138,7 @@ class ProjectDealService
             $mainPayload = [];
             $needUpdateQuotationNote = false;
             $payloadQuotation = [];
+            $haveNameChanges = false;
             foreach ($changes as $key => $changeData) {
                 switch ($changeData['label']) {
                     case 'Name':
@@ -1145,6 +1174,7 @@ class ProjectDealService
                         break;
                 }
 
+
                 if ($field) {
                     if ($field == 'quotation_note') {
                         $needUpdateQuotationNote = true;
@@ -1152,6 +1182,10 @@ class ProjectDealService
                     } else {
                         $payloadUpdate[$field] = $changeData['new_value'];
                         $mainPayload[$field] = $changeData['new_value'];
+
+                        if ($field === 'name') {
+                            $haveNameChanges = true;
+                        }
                     }
 
                 }
@@ -1184,6 +1218,20 @@ class ProjectDealService
             NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'approved')->afterCommit();
 
             DB::commit();
+
+            // only if changes contain name, and environment is on local, staging or production and current project deal have final status
+            if ($haveNameChanges && config('app.env') != 'testing' && $change->projectDeal->status == ProjectDealStatus::Final) {
+                // create nas delete request
+                $currentProject = $this->projectRepo->show(uid: 'uid', select: 'id,uid,name,project_date', where: "project_deal_id = {$change->project_deal_id}");
+                $this->nasFolderCreationService->sendRequest(
+                    payload: [
+                        "project_id" => $currentProject->id,
+                        "changed_project_name_to" => $currentProject->name,
+                        "changed_project_date_to" => $currentProject->project_date
+                    ],
+                    type: 'update'
+                );
+            }
 
             return generalResponse(
                 message: 'Success'

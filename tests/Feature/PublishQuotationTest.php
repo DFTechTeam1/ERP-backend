@@ -2,6 +2,7 @@
 
 use App\Services\GeneralService;
 use App\Services\Geocoding;
+use App\Services\NasFolderCreationService;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Crypt;
 use Modules\Company\Models\ProjectClass;
@@ -58,8 +59,13 @@ describe('Publish Quotation', function () {
             ->withAnyArgs()
             ->andReturn('google');
 
+        // $nasService = Mockery::mock(NasFolderCreationService::class);
+        // $nasService->shouldReceive('sendRequest')
+        //     ->withAnyArgs()
+        //     ->andReturn(true);
+
         $service = createProjectDealService(
-            generalService: $generalService
+            generalService: $generalService,
         );
 
         $response = $service->publishProjectDeal(

@@ -3,6 +3,7 @@
 use App\Actions\GenerateQuotationNumber;
 use App\Enums\Production\ProjectDealStatus;
 use App\Services\Geocoding;
+use App\Services\NasFolderCreationService;
 use Illuminate\Support\Facades\Bus;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Production\Models\Customer;
@@ -61,6 +62,11 @@ describe('Create Project Deal', function () {
     it('Create final project deal directly', function (Customer $customer) {
         Bus::fake();
 
+        // $nasService = Mockery::mock(NasFolderCreationService::class);
+        // $nasService->shouldReceive('sendRequest')
+        //     ->withAnyArgs()
+        //     ->andReturn(true);
+
         $requestData = getProjectDealPayload($customer);
         $requestData = prepareProjectDeal($requestData);
 
@@ -82,7 +88,7 @@ describe('Create Project Deal', function () {
             ]);
 
         $service = createProjectService(
-            geoCoding: $geoMockup
+            geoCoding: $geoMockup,
         );
 
         $response = $service->storeProjectDeals(payload: $requestData);
@@ -122,6 +128,11 @@ describe('Create Project Deal', function () {
                 'quotation_id' => 'DF01100',
             ],
         ]);
+
+        // $nasService = Mockery::mock(NasFolderCreationService::class);
+        // $nasService->shouldReceive('sendRequest')
+        //     ->withAnyArgs()
+        //     ->andReturn(true);
 
         $mock = Mockery::mock(ProjectQuotationRepository::class);
         $mock->shouldReceive('list')
@@ -193,6 +204,11 @@ describe('Create Project Deal', function () {
 
         $requestData = getProjectDealPayload($customer);
         $requestData = prepareProjectDeal($requestData);
+
+        // $nasService = Mockery::mock(NasFolderCreationService::class);
+        // $nasService->shouldReceive('sendRequest')
+        //     ->withAnyArgs()
+        //     ->andReturn(true);
 
         // change name
         $requestData['name'] = 'Project with Interactive Element';
