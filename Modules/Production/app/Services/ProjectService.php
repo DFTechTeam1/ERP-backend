@@ -8,6 +8,7 @@ use App\Actions\DefineTaskAction;
 use App\Actions\GenerateQuotationNumber;
 use App\Actions\Hrd\PointRecord;
 use App\Actions\PartialTaskPermissionCheck;
+use App\Actions\Production\SummarizeTaskTimeline;
 use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
 use App\Actions\Project\Entertainment\DistributeSong;
@@ -317,6 +318,8 @@ class ProjectService
         $this->projectTaskPicHoldstateRepo = $projectTaskPicHoldstateRepo;
 
         $this->projectTaskPicApprovalstateRepo = $projectTaskPicApprovalstateRepo;
+
+        $this->projectTaskReviseStateRepo = $projectTaskReviseStateRepo;
     }
 
     /**
@@ -2578,9 +2581,12 @@ class ProjectService
                     $payload = [
                         'employee_id' => $employeeId,
                         'project_task_id' => $taskId,
-                        'status' => ! $isForProjectManager ? \App\Enums\Production\TaskPicStatus::WaitingApproval->value : \App\Enums\Production\TaskPicStatus::Approved->value,
                         'assigned_at' => Carbon::now(),
                     ];
+
+                    if ($isForProjectManager) {
+                        $payload['status'] = \App\Enums\Production\TaskPicStatus::Approved->value;
+                    }
 
                     if ($isRevise) {
                         $payload['status'] = \App\Enums\Production\TaskPicStatus::Revise->value;
@@ -2606,25 +2612,27 @@ class ProjectService
 
                     // if task status is InProgress, insert new pic to workstate table
                     // // only insert new pic if combination of task_id and employee_id not exists
-                    $checkWorkState = $this->projectTaskWorkStateRepo->show(
-                        uid: 'id',
-                        select: 'id',
-                        where: "task_id = {$taskId} AND employee_id = {$employeeId} AND complete_at IS NULL"
-                    );
-                    if (! $checkWorkState && $currentTask->status === TaskStatus::OnProgress->value) {
-                        // get current workstate time based on task_id and complete at is null, return now time if not exists
-                        $currentWorkStateData = $this->projectTaskWorkStateRepo->show(
+                    if (!$isForProjectManager) {
+                        $checkWorkState = $this->projectTaskWorkStateRepo->show(
                             uid: 'id',
-                            select: 'id,started_at',
-                            where: "task_id = {$currentTask->id} AND complete_at IS NULL"
+                            select: 'id',
+                            where: "task_id = {$taskId} AND employee_id = {$employeeId} AND complete_at IS NULL AND started_at IS NULL"
                         );
-                        $startTime = $currentWorkStateData ? $currentWorkStateData->started_at : Carbon::now();
-
-                        $this->projectTaskWorkStateRepo->store([
-                            'employee_id' => $employeeId,
-                            'task_id' => $currentTask->id,
-                            'started_at' => $startTime,
-                        ]);
+                        if (! $checkWorkState && $currentTask->status === TaskStatus::OnProgress->value) {
+                            // get current workstate time based on task_id and complete at is null, return now time if not exists
+                            $currentWorkStateData = $this->projectTaskWorkStateRepo->show(
+                                uid: 'id',
+                                select: 'id,started_at',
+                                where: "task_id = {$currentTask->id} AND complete_at IS NULL"
+                            );
+                            $startTime = $currentWorkStateData ? $currentWorkStateData->started_at : Carbon::now();
+    
+                            $this->projectTaskWorkStateRepo->store([
+                                'employee_id' => $employeeId,
+                                'task_id' => $currentTask->id,
+                                'started_at' => $startTime,
+                            ]);
+                        }
                     }
 
                     $this->loggingTask([
@@ -2643,9 +2651,7 @@ class ProjectService
 
             // change task status
             if (! $isRevise && $needChangeTaskStatus) { // see PHPDOC
-                $payloadStatus = [
-                    'status' => ! $isForProjectManager ? \App\Enums\Production\TaskStatus::WaitingApproval->value : \App\Enums\Production\TaskStatus::CheckByPm->value,
-                ];
+                $payloadStatus = [];
                 if ($isForLeadModeller) { // change to distribute is it for lead modeller
                     $payloadStatus['status'] = TaskStatus::WaitingDistribute->value;
                 }
@@ -2657,7 +2663,20 @@ class ProjectService
                 if ($lastPic->count() == 0) {
                     $payloadStatus['status'] = null;
                 }
-                $this->taskRepo->update($payloadStatus, $taskUid);
+
+                // if currentTask status is null, than now we have pic, than change to waiting approval
+                if ((!$currentTask->status && $lastPic->count() > 0) || $currentTask->status == TaskStatus::Completed->value) {
+                    $payloadStatus['status'] = TaskStatus::WaitingApproval->value;
+                }
+
+                // if for manager, change to check by pm
+                if ($isForProjectManager) {
+                    $payloadStatus['status'] = TaskStatus::CheckByPm->value;
+                }
+
+                if (!empty($payloadStatus)) {
+                    $this->taskRepo->update($payloadStatus, $taskUid);
+                }
             }
 
             // notify removed user
@@ -2725,7 +2744,8 @@ class ProjectService
         bool $isEmployeeUid = true,
         bool $removeFromHistory = false,
         string $message = '',
-        bool $doLogging = true // sometime we don't need to log the action
+        bool $doLogging = true, // sometime we don't need to log the action
+        bool $removeWorkState = true
     ) {
         foreach ($ids as $removedUser) {
             if ($isEmployeeUid) {
@@ -2746,7 +2766,9 @@ class ProjectService
             $employee = $this->employeeRepo->show('id', 'id,name,nickname', [], 'id = '.$removedEmployeeId);
 
             // remove workstate
-            $this->projectTaskWorkStateRepo->delete(id: 0, where: "task_id = {$taskId} AND employee_id = {$removedEmployeeId}");
+            if ($removeWorkState) {
+                $this->projectTaskWorkStateRepo->delete(id: 0, where: "task_id = {$taskId} AND employee_id = {$removedEmployeeId} and complete_at IS NULL");
+            }
 
             $logMessage = __('global.removedMemberLogText', [
                 'removedUser' => $employee->nickname,
@@ -2775,6 +2797,7 @@ class ProjectService
         try {
             $task = $this->taskRepo->show($taskUid, 'id,project_id', [
                 'project:id,uid',
+                'workStates'
             ]);
 
             $projectUid = $task->project->uid;
@@ -2782,6 +2805,9 @@ class ProjectService
 
             // delete pic history if exists
             $this->taskPicHistory->deleteWithCondition('project_id = '.$task->project_id.' and project_task_id = '.$task->id);
+
+            // delete project durations
+            $task->projectDurations()->delete();
 
             $this->taskRepo->bulkDelete([$taskUid], 'uid');
 
@@ -3857,6 +3883,7 @@ class ProjectService
             if ($data['nas_link'] && (isset($data['preview']) || $useDefaultImage)) {
                 $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
+                // update image
                 if ($useDefaultImage) {
                     $image[] = $this->taskRepo->modelClass()::DEFAULTIMAGEPROOF;
                 } else {
@@ -3870,6 +3897,7 @@ class ProjectService
                     }
                 }
 
+                // store proof of work data
                 $this->proofOfWorkRepo->store([
                     'project_task_id' => $taskId,
                     'project_id' => $projectId,
@@ -3880,7 +3908,7 @@ class ProjectService
                     'created_month' => date('m', strtotime(Carbon::now())),
                 ]);
 
-                // set current pic
+                // set current pic to current task
                 $currentPics = $this->taskPicRepo->list(
                     select: 'employee_id',
                     where: 'project_task_id = '.$taskId
@@ -4008,28 +4036,37 @@ class ProjectService
         $taskPics = $this->taskPicRepo->list('id,employee_id', 'project_task_id = '.$taskId, ['employee:id,uid']);
         $taskPicUids = collect($taskPics)->pluck('employee.uid')->toArray();
 
-        $this->detachTaskPic($taskPicUids, $taskId);
+        $this->detachTaskPic(
+            ids: $taskPicUids,
+            taskId: $taskId,
+            removeWorkState: false
+        );
 
         // attach project manager to selected task
         $this->assignMemberToTask(
-            [
+            data: [
                 'users' => $projectPicUids,
                 'removed' => [],
             ],
-            $taskUid,
-            true
+            taskUid: $taskUid,
+            isForProjectManager: true
         );
     }
 
-    protected function changeTaskBoardProcess(array $data, string $projectUid, string $nextTaskStatus = '', bool $setCurrentPic = false)
+    /**
+     * Change task board
+     * @param array $data
+     * @param string $projectUid
+     * @param string $nextTaskStatus
+     * @param bool $setCurrentPic
+     * @return void
+     */
+    protected function changeTaskBoardProcess(array $data, string $projectUid, string $nextTaskStatus = '', bool $setCurrentPic = false): void
     {
         $taskId = getIdFromUid($data['task_id'], new \Modules\Production\Models\ProjectTask);
 
         $boardIds = [$data['board_id'], $data['board_source_id']];
         $boards = $this->boardRepo->list('id,name,based_board_id', 'id IN ('.implode(',', $boardIds).')');
-        $boardData = collect((object) $boards)->filter(function ($filter) use ($data) {
-            return $filter->id == $data['board_id'];
-        })->values();
 
         $payloadUpdate = [
             'project_board_id' => $data['board_id'],
@@ -4914,11 +4951,14 @@ class ProjectService
 
         // define special employee
         $specialPosition = $this->generalService->getSettingByKey('special_production_position');
-        $specialPosition = $this->generalService->getIdFromUid($specialPosition, new PositionBackup);
-        $specialEmployees = $this->employeeRepo->list(
-            select: 'id,uid',
-            where: "position_id = {$specialPosition}"
-        );
+        $specialPosition = $specialPosition ? $this->generalService->getIdFromUid($specialPosition, new PositionBackup) : null;
+        $specialEmployees = [];
+        if ($specialPosition) {
+            $specialEmployees = $this->employeeRepo->list(
+                select: 'id,uid',
+                where: "position_id = {$specialPosition}"
+            );
+        }
 
         DB::beginTransaction();
         try {
@@ -4933,6 +4973,7 @@ class ProjectService
                 }
             }
 
+            // create revise history
             $this->taskReviseHistoryRepo->store([
                 'project_task_id' => $taskId,
                 'project_id' => $projectId,
@@ -4950,6 +4991,7 @@ class ProjectService
                 $currentPicUids[] = $employee->uid;
             }
 
+            // get current project manager that worked in this task (check the task with CheckByPm status)
             $currentTaskPics = $this->taskPicRepo->list('employee_id', 'project_task_id = '.$taskId, ['employee:id,uid']);
 
             $this->taskRepo->update([
@@ -4966,19 +5008,20 @@ class ProjectService
 
             // detach project manager
             $this->detachTaskPic(
-                collect($currentTaskPics)->pluck('employee.uid')->toArray(),
-                $taskId
+                ids: collect($currentTaskPics)->pluck('employee.uid')->toArray(),
+                taskId: $taskId,
+                removeWorkState: false
             );
 
             // assign current employee pic to task
             $this->assignMemberToTask(
-                [
+                data: [
                     'users' => $currentPicUids,
                     'removed' => [],
                 ],
-                $taskUid,
-                false,
-                true,
+                taskUid: $taskUid,
+                isForProjectManager: false,
+                isRevise: true,
             );
 
             // update worktime for employee
@@ -4988,6 +5031,31 @@ class ProjectService
 
             // update cache and finishing process
             $task = $this->formattedDetailTask($taskUid);
+
+            // mark current approval state as complete
+            $this->recordApprovalAsFinish(task: $task);
+
+            // reassign current worker
+            foreach ($currentPics as $currentPicId) {
+                // get active workstate
+                $activeWorkstate = $this->projectTaskWorkStateRepo->show(
+                    uid: 'id',
+                    select: 'id',
+                    where: "complete_at is null and task_id = {$task->id} and employee_id = {$currentPicId}"
+                );
+
+                // record revise state
+                if ($activeWorkstate) {
+                    $this->projectTaskReviseStateRepo->store(data: [
+                        'task_id' => $task->id,
+                        'work_state_id' => $activeWorkstate->id,
+                        'employee_id' => $currentPicId,
+                        'assign_at' => Carbon::now(),
+                        'start_at' => Carbon::now(),
+                        'finish_at' => null,
+                    ]);
+                }
+            }
 
             $currentData = $this->detailCacheAction->handle($projectUid, [
                 'boards' => FormatBoards::run($projectUid),
@@ -5094,7 +5162,7 @@ class ProjectService
         try {
             $user = Auth::user();
             $taskId = getIdFromUid($taskUid, new ProjectTask);
-            $this->setTaskWorkingTime($taskId, $user->employEe_id, \App\Enums\Production\WorkType::OnHold->value);
+            $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnHold->value);
 
             // update tasks tatus
             $this->taskRepo->update([
@@ -5152,6 +5220,15 @@ class ProjectService
         }
     }
 
+    /**
+     * Complete the task
+     * 
+     * @param string $projectUid
+     * @param string $taskUid
+     * @param ?object $employee
+     * @param bool $sendNotification
+     * @return array<mixed>
+     */
     protected function mainMarkAsCompleted(string $projectUid, string $taskUid, ?object $employee = null, bool $sendNotification = true)
     {
         if ($employee) {
@@ -5163,8 +5240,8 @@ class ProjectService
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
         // this variable is to alert current pics which is the worker
-        $currentTaskData = $this->taskRepo->show($taskUid, 'current_pics,current_board,project_board_id');
-        $currentPics = json_decode($currentTaskData->current_pics, true);
+        $currentTaskData = $this->taskRepo->show($taskUid, 'id,current_pics,current_board,project_board_id');
+        $currentPics = json_decode($currentTaskData->current_pics, true) ?? [];
         $currentPicIds = [];
         foreach ($currentPics as $currentPic) {
             $employee = $this->employeeRepo->show('dummy', 'id,uid', [], 'id = '.$currentPic);
@@ -5197,21 +5274,23 @@ class ProjectService
         }
 
         $setCurrentPic = true;
+        // change task board
         $this->changeTaskBoardProcess(
-            [
+            data: [
                 'board_id' => $boardId,
                 'task_id' => $taskUid,
                 'board_source_id' => $sourceBoardId,
             ],
-            $projectUid,
-            \App\Enums\Production\TaskStatus::CheckByPm->value,
-            $setCurrentPic
+            projectUid: $projectUid,
+            nextTaskStatus: \App\Enums\Production\TaskStatus::CheckByPm->value,
+            setCurrentPic: $setCurrentPic
         );
 
         // detach current pic which is project manager
         $this->detachTaskPic(
-            collect($currentPic)->pluck('employee.uid')->toArray(),
-            $taskId,
+            ids: collect($currentPic)->pluck('employee.uid')->toArray(),
+            taskId: $taskId,
+            removeWorkState: false
         );
 
         // update task status
@@ -5226,13 +5305,6 @@ class ProjectService
         } else {
             $task = $this->formattedDetailTask($taskUid);
 
-            // $currentData = getCache('detailProject' . $projectId);
-
-            // $boards = $this->formattedBoards($task->project->uid);
-            // $currentData['boards'] = $boards;
-
-            // $currentData = $this->formatTasksPermission($currentData, $projectId);
-
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $projectUid,
                 forceUpdateAll: true,
@@ -5243,6 +5315,20 @@ class ProjectService
                 'full_detail' => $currentData,
             ];
         }
+
+        // complete work state
+        $this->projectTaskWorkStateRepo->update(
+            data: [
+                'complete_at' => Carbon::now(),
+            ],
+            where: "task_id = {$task->id} AND employee_id IN (". implode(',', $currentPics) .") AND complete_at IS NULL"
+        );
+
+        // mark current approval state as complete
+        $this->recordApprovalAsFinish(task: $task);
+
+        // Summarize task timeline
+        SummarizeTaskTimeline::run($taskUid, $currentPics);
 
         // save task state
         SaveTaskState::run($currentPicIds, $taskUid);
@@ -5883,9 +5969,6 @@ class ProjectService
             $this->projectEquipmentRepo->update([
                 'status' => \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn->value,
             ], 'dummy', 'project_id = '.$projectId);
-
-            // update project status cache
-            $project = $this->repo->show($projectUid, 'id,status');
 
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $projectUid,
@@ -8877,5 +8960,19 @@ class ProjectService
                 );
             }
         }
+    }
+
+    /**
+     * Mark current approval task state as complete
+     */
+    protected function recordApprovalAsFinish(ProjectTask $task, ?string $completeTime = null): void
+    {
+        $this->projectTaskPicApprovalstateRepo->update(
+            data: [
+                'approved_at' => $completeTime ? Carbon::parse($completeTime) : Carbon::now(),
+            ],
+            id: 'id',
+            where: "task_id = {$task->id} AND approved_at IS NULL"
+        );
     }
 }

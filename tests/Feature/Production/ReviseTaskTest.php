@@ -1,9 +1,7 @@
 <?php
 
 use App\Actions\Project\DetailCache;
-use App\Enums\Production\TaskStatus;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Modules\Production\Models\Project;
 
 beforeEach(function () {
@@ -30,9 +28,7 @@ beforeEach(function () {
         ->create();
 });
 
-it ('Submit task proof of work return success', function () {
-    Storage::fake('public');
-
+it ('Revise task return success', function () {
     DetailCache::mock()
         ->shouldReceive('handle')
         ->withAnyArgs()
@@ -40,6 +36,7 @@ it ('Submit task proof of work return success', function () {
 
     $employee = \Modules\Hrd\Models\Employee::find($this->user->employee_id);
     
+    // create task
     $task = \Modules\Production\Models\ProjectTask::factory()
         ->for($this->project, 'project')
         ->for($this->project->boards->first(), 'board')
@@ -48,7 +45,7 @@ it ('Submit task proof of work return success', function () {
             'status' => \App\Enums\Production\TaskStatus::OnProgress->value,
         ]);
 
-    $response = $this->postJson(route('api.production.task.proof.store', [
+    $responseSubmit = $this->postJson(route('api.production.task.proof.store', [
         'projectId' => $this->project->uid,
         'taskId' => $task->uid,
     ]), [
@@ -58,40 +55,38 @@ it ('Submit task proof of work return success', function () {
         ]
     ]);
 
+    $responseSubmit->assertStatus(201);
+
+    $response = $this->postJson(route('api.production.task.revise', [
+        'projectUid' => $this->project->uid,
+        'taskUid' => $task->uid,
+    ]), [
+        'reason' => 'Need to revise the work',
+    ]);
+
     $response->assertStatus(201);
 
-    $this->assertDatabaseHas('project_task_proof_of_works', [
-        'project_task_id' => $task->id,
+    $this->assertDatabaseMissing('project_task_pic_approvalstates', [
+        'task_id' => $task->id,
+        'pic_id' => $this->projectPic->id,
         'project_id' => $this->project->id,
-        'nas_link' => 'http://123123',
+        'started_at' => null,
+        'approved_at' => null,
     ]);
 
     $this->assertDatabaseHas('project_tasks', [
         'id' => $task->id,
-        'status' => TaskStatus::CheckByPm->value
+        'status' => \App\Enums\Production\TaskStatus::Revise->value,
     ]);
 
-    $this->assertDatabaseHas('project_task_pic_workstates', [
-        'task_id' => $task->id,
-        'employee_id' => $employee->id
+    $this->assertDatabaseHas('project_task_pics', [
+        'project_task_id' => $task->id,
+        'employee_id' => $employee->id,
     ]);
 
-    $this->assertDatabaseMissing('project_task_pic_workstates', [
+    $this->assertDatabaseHas('project_task_pic_revisestates', [
         'task_id' => $task->id,
         'employee_id' => $employee->id,
-        'first_finish_at' => null,
+        'finish_at' => null,
     ]);
-
-    $this->assertDatabaseCount('project_task_pic_workstates', 1);
-
-    $this->assertDatabaseHas('project_task_pic_approvalstates', [
-        'task_id' => $task->id,
-        'pic_id' => $this->projectPic->id,
-        'project_id' => $this->project->id,
-        'work_state_id' => $task->workStates->first()->id,
-    ]);
-
-    $this->assertDatabaseCount('project_task_pic_approvalstates', 1);
 });
-
-

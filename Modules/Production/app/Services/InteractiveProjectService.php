@@ -897,7 +897,7 @@ class InteractiveProjectService
             $this->projectTaskPicRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId}");
 
             // remove from workstates
-            $this->projectTaskWorkStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and first_finish_at is null");
+            $this->projectTaskWorkStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and complete_at is null");
 
             // remove from holdstates
             $this->projectTaskHoldStateRepo->delete(id: 0, where: "employee_id = {$memberId} and task_id = {$taskId} and unholded_at is null");
@@ -1340,7 +1340,7 @@ class InteractiveProjectService
                 id: $taskUid
             );
 
-            // TODO: Complete workstate in each pic
+            // complete work state
             $this->projectTaskWorkStateRepo->update(
                 data: [
                     'complete_at' => Carbon::now(),
@@ -1436,22 +1436,7 @@ class InteractiveProjectService
 
             // reassign current worker
             $currentPicIds = explode(',', $task->current_pic_id);
-            // $currentPicUids = collect($currentPicIds)->map(function ($item) {
-            //     $employee = $this->employeeRepo->show(uid: 'uid', select: 'id,uid', where: "id = {$item}");
-
-            //     return [
-            //         'employee_uid' => $employee->uid
-            //     ];
-            // })->toArray();
-
-            // // add new pics
-            // $this->assignPicToTask(
-            //     payload: [
-            //         'pics' => $currentPicUids
-            //     ],
-            //     taskUid: $taskUid,
-            //     useTransaction: false
-            // );
+            
             foreach ($currentPicIds as $currentPicId) {
                 $task->pics()->create([
                     'employee_id' => $currentPicId,

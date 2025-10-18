@@ -3,6 +3,7 @@
 namespace Modules\Production\Database\Factories;
 
 use App\Enums\Development\Project\Task\TaskStatus;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
@@ -82,6 +83,28 @@ class ProjectTaskFactory extends Factory
                         'reason' => 'Need to clarify requirement',
                     ]);
                 }
+            }
+        });
+    }
+
+    public function withApprovalState()
+    {
+        return $this->afterCreating(function (\Modules\Production\Models\ProjectTask $task) {
+            $task->load(['project.personInCharges', 'workStates']);
+
+            $workState = $task->workStates->firstWhere('complete_at', null);
+            $haveWorkstate = $workState ? true : false;
+
+            if ($task->project->personInCharges->isNotEmpty() && $haveWorkstate) {
+                foreach ($task->project->personInCharges as $pic) {
+                    $task->approvalStates()->create([
+                        'pic_id' => $pic->pic_id,
+                        'project_id' => $task->project_id,
+                        'task_id' => $task->id,
+                        'started_at' => Carbon::now(),
+                        'work_state_id' => $workState->id,
+                    ]);
+                } 
             }
         });
     }

@@ -13,8 +13,8 @@ class UploadProofOfWork extends FormRequest
     {
         return [
             'nas_link' => 'required|string',
-            'preview' => 'required',
-            'board_id' => 'required',
+            'preview' => 'required|array',
+            'board_id' => 'nullable',
             'source_board_id' => 'nullable',
             'manual_approve' => 'nullable',
         ];

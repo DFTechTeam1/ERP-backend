@@ -139,7 +139,8 @@ function createProjectService(
     $projectDealMarketingRepo = null,
     $projectTaskPicWorkstateRepo = null,
     $projectTaskPicReviseRepo = null,
-    $projectTaskPicHoldstateRepo = null
+    $projectTaskPicHoldstateRepo = null,
+    $projectTaskPicApprovalstateRepo = null
 ) {
     return new ProjectService(
         $userRoleManagement ? $userRoleManagement : new UserRoleManagement,
@@ -184,7 +185,8 @@ function createProjectService(
         $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
         $projectTaskPicWorkstateRepo ? $projectTaskPicWorkstateRepo : new \Modules\Production\Repository\ProjectTaskPicWorkstateRepository,
         $projectTaskPicReviseRepo ? $projectTaskPicReviseRepo : new \Modules\Production\Repository\ProjectTaskPicRevisestateRepository,
-        $projectTaskPicHoldstateRepo ? $projectTaskPicHoldstateRepo : new \Modules\Production\Repository\ProjectTaskPicHoldstateRepository
+        $projectTaskPicHoldstateRepo ? $projectTaskPicHoldstateRepo : new \Modules\Production\Repository\ProjectTaskPicHoldstateRepository,
+        $projectTaskPicApprovalstateRepo ? $projectTaskPicApprovalstateRepo : new \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository
     );
 }
 

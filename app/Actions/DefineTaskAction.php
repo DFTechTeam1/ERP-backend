@@ -222,7 +222,11 @@ class DefineTaskAction
         $members = null;
 
         if ($this->hasSuperPower() || $this->showForLeadModeler) {
-            $members = $this->buildOutput($key, false, $detail);
+            $members = $this->buildOutput(
+                key:$key,
+                disabled: $task->status == \App\Enums\Production\TaskStatus::CheckByPm->value ? true : false,
+                detail: $detail
+            );
         }
 
         return $members;

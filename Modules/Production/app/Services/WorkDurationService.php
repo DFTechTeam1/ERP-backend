@@ -5,6 +5,7 @@ namespace Modules\Production\Services;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Modules\Production\Models\InteractiveProjectTaskPicWorkstate;
+use Modules\Production\Models\ProjectTaskPicWorkstate;
 
 class WorkDurationService
 {
@@ -44,10 +45,10 @@ class WorkDurationService
      * Set work state duration
      * 
      * @param  int  $workStateDuration
-     * @param  InteractiveProjectTaskPicWorkstate  $workStates
+     * @param  InteractiveProjectTaskPicWorkstate|ProjectTaskPicWorkstate  $workStates
      * @return void
      */
-    public function setWorkStateDuration(int &$workStateDuration, InteractiveProjectTaskPicWorkstate $workStates): void
+    public function setWorkStateDuration(int &$workStateDuration, InteractiveProjectTaskPicWorkstate|ProjectTaskPicWorkstate $workStates): void
     {
         $workStateDuration += Carbon::parse($workStates->started_at)->diffInSeconds(Carbon::parse($workStates->complete_at) ?? now());
     }

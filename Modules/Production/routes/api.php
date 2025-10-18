@@ -73,6 +73,7 @@ Route::middleware(['auth:sanctum'])
         Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])
             ->middleware(PermissionCheck::class.':create_interactive_task')
             ->name('interactives.storeTask');
+
         Route::post('interactives/status/{interactiveUid}', [InteractiveController::class, 'changeStatus'])
             ->middleware(PermissionCheck::class.':change_interactive_status')
             ->name('interactives.changeStatus');
@@ -200,8 +201,8 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/{projectId}/getRelatedTask/{taskUid}', [ProjectController::class, 'getRelatedTask']);
         Route::post('project/{projectId}/uploadTaskAttachment/{taskId}', [ProjectController::class, 'uploadTaskAttachment']);
         Route::get('project/{projectUid}/task/{taskUid}/approve', [ProjectController::class, 'approveTask'])->name('task.approve');
-        Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted']);
-        Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask']);
+        Route::get('project/{projectUid}/task/{taskUid}/completed', [ProjectController::class, 'markAsCompleted'])->name('tasks.completed');
+        Route::post('project/{projectUid}/task/{taskUid}/revise', [ProjectController::class, 'reviseTask'])->name('task.revise');
         Route::post('project/{projectUid}/task/{taskUid}/distribute', [ProjectController::class, 'distributeModellerTask']);
         Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask'])->name('task.hold');
         Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask'])->name('task.state');
