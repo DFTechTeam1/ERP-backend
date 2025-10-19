@@ -69,7 +69,7 @@ class ProjectController extends Controller
     {
         return apiResponse($this->testingService->list(
             'id,uid,name,project_date,venue,event_type,collaboration,note,marketing_id,status,classification,led_area,led_detail,project_class_id,project_deal_id',
-            '',
+            ' 1 = 1',
             [
                 'marketing:id,name,employee_id',
                 'personInCharges:id,pic_id,project_id',
