@@ -138,6 +138,7 @@ class ProjectDealService
             $user = Auth::user();
 
             $itemsPerPage = request('itemsPerPage') ?? 10;
+            $itemsPerPage = $itemsPerPage == -1 ? 999999 : $itemsPerPage;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
@@ -145,8 +146,8 @@ class ProjectDealService
             $where = 'deleted_at is null';
             $whereHas = [];
 
-            if (request('event')) {
-                $name = request('event');
+            if (request('name')) {
+                $name = request('name');
                 $where .= " AND name like '%{$name}%'";
             }
 
@@ -161,7 +162,7 @@ class ProjectDealService
 
             if (request('status')) {
                 $status = request('status');
-                $statusIds = collect($status)->pluck('id')->implode(',');
+                $statusIds = collect($status)->implode(',');
                 $where .= " AND status IN ({$statusIds})";
             } else {
                 $where .= ' AND status != '.ProjectDealStatus::Canceled->value;
@@ -188,7 +189,7 @@ class ProjectDealService
                 $marketing = request('marketing') ?? [];
 
                 $marketingIds = collect($marketing)->map(function ($itemMarketing) {
-                    $id = $this->generalService->getIdFromUid($itemMarketing['uid'], new \Modules\Hrd\Models\Employee);
+                    $id = $this->generalService->getIdFromUid($itemMarketing, new \Modules\Hrd\Models\Employee);
 
                     return $id;
                 })->toArray();

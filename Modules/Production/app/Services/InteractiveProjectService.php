@@ -203,7 +203,6 @@ class InteractiveProjectService
             if (request('date')) {
                 $date = request('date');
                 [$startDate, $endDate] = explode(' - ', $date);
-
                 if (empty($where)) {
                     $where = "project_date BETWEEN '{$startDate}' AND '{$endDate}'";
                 } else {

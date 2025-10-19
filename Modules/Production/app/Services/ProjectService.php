@@ -1062,13 +1062,15 @@ class ProjectService
      */
     public function getClassList()
     {
-        $data = \App\Enums\Production\Classification::cases();
+        $data = $this->projectClassRepo->list(
+            select: 'id,name',
+        );
 
         $out = [];
         foreach ($data as $d) {
             $out[] = [
-                'value' => $d->value,
-                'title' => $d->label(),
+                'value' => $d->id,
+                'title' => $d->name,
             ];
         }
 
