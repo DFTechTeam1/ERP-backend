@@ -44,6 +44,7 @@ use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Repository\ProjectTaskAttachmentRepository;
+use Modules\Production\Repository\ProjectTaskDeadlineRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectTaskLogRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
@@ -142,7 +143,8 @@ function createProjectService(
     $projectTaskPicReviseRepo = null,
     $projectTaskPicHoldstateRepo = null,
     $projectTaskPicApprovalstateRepo = null,
-    $nasFolderCreationService = null
+    $nasFolderCreationService = null,
+    $projectTaskDeadlineRepo = null
 ) {
     return new ProjectService(
         $userRoleManagement ? $userRoleManagement : new UserRoleManagement,
@@ -189,7 +191,8 @@ function createProjectService(
         $projectTaskPicReviseRepo ? $projectTaskPicReviseRepo : new \Modules\Production\Repository\ProjectTaskPicRevisestateRepository,
         $projectTaskPicHoldstateRepo ? $projectTaskPicHoldstateRepo : new \Modules\Production\Repository\ProjectTaskPicHoldstateRepository,
         $projectTaskPicApprovalstateRepo ? $projectTaskPicApprovalstateRepo : new \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository,
-        $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService)
+        $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService),
+        $projectTaskDeadlineRepo ? $projectTaskDeadlineRepo: new ProjectTaskDeadlineRepository
     );
 }
 
