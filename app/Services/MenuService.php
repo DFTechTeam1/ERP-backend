@@ -136,7 +136,7 @@ class MenuService
             }
 
             $item['children'] = $child;
-            $item['icon'] = asset($item['icon']);
+            $item['icon'] = $item['icon'];
 
             return $item;
         })->filter(function ($filter) {
