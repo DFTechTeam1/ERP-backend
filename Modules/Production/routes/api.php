@@ -189,11 +189,11 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/{projectId}/equipment', [ProjectController::class, 'listEquipment']);
         Route::post('project/{projectId}/cancelEquipment', [ProjectController::class, 'cancelRequestEquipment']);
         Route::post('project/{projectUid}/cancelProject', [ProjectController::class, 'cancelProject']);
-        Route::post('project/{projectId}/updateDeadline', [ProjectController::class, 'updateDeadline']);
         Route::put('project/{projectId}/equipment', [ProjectController::class, 'updateEquipment']);
-        Route::post('project/{taskId}/task/assignMember', [ProjectController::class, 'assignMemberToTask']);
+        Route::post('project/{taskId}/task/assignMember', [ProjectController::class, 'assignMemberToTask'])->name('task.assign-member');
         Route::post('project/{id}/references/delete', [ProjectController::class, 'deleteReference']);
         Route::get('project/{projectId}/moveToBoards/{boardId}', [ProjectController::class, 'moveToBoards']);
+        Route::post('project/{projectUid}/updateDeadline/{taskUid}', [ProjectController::class, 'updateDeadline'])->name('task.update-deadline');
         Route::get('project/{projectUid}/getPicTeams/{picUid}', [ProjectController::class, 'getPicTeams']);
         Route::get('project/{projectId}/getProjectMembers/{taskId}', [ProjectController::class, 'getProjectMembers']);
         Route::post('project/{projectUid}/updateTaskName/{taskId}', [ProjectController::class, 'updateTaskName']);

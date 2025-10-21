@@ -80,13 +80,17 @@ class ProjectTaskDeadlineRepository extends ProjectTaskDeadlineInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
+        if (empty($where)) {
+            $query->where("id", $uid);
+        } else {
+            $query->whereRaw($where);
+        }
         
         if ($relation) {
             $query->with($relation);
@@ -136,10 +140,17 @@ class ProjectTaskDeadlineRepository extends ProjectTaskDeadlineInterface {
      * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(int $id, string $where = '')
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
+        $query = $this->model->query();
+
+        if (empty($where)) {
+            $query->where('id', $id);
+        } else {
+            $query->whereRaw($where);
+        }
+
+        return $query->delete();
     }
 
     /**

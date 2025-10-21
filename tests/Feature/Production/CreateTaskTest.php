@@ -96,6 +96,14 @@ it ('Create task with pic', function () {
 
     $task = \Modules\Production\Models\ProjectTask::where('name', 'New Task with PIC')->first();
 
+    $this->assertDatabaseHas('project_task_deadlines', [
+        'project_task_id' => $task->id,
+        'employee_id' => $employee->id,
+        'actual_finish_time' => null,
+        'due_reason' => null,
+        'custom_reason' => null,
+    ]);
+
     $this->assertDatabaseHas('project_task_pics', [
         'project_task_id' => $task->id,
         'employee_id' => $employee->id,

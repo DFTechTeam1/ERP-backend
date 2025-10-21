@@ -350,9 +350,9 @@ class ProjectController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function updateDeadline(UpdateDeadline $request, string $projectId)
+    public function updateDeadline(UpdateDeadline $request, string $projectUid, string $taskUid)
     {
-        return apiResponse($this->service->updateDeadline($request->validated(), $projectId));
+        return apiResponse($this->service->updateDeadline($request->validated(), $projectUid, $taskUid));
     }
 
     public function uploadTaskAttachment(\Modules\Production\Http\Requests\Project\TaskAttachment $request, string $projectId, string $taskId)
