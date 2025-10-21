@@ -12,9 +12,10 @@ class UpdateDeadline extends FormRequest
     public function rules(): array
     {
         return [
-            'task_id' => 'nullable',
-            'start_date' => 'nullable',
-            'end_date' => 'nullable',
+            'end_date' => 'required',
+            'type' => 'required|in:add,update',
+            'reason_id' => 'required_if:type,update',
+            'custom_reason' => 'string|required_if:reason_id,0'
         ];
     }
 

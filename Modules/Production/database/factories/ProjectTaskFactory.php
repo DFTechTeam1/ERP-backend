@@ -108,4 +108,29 @@ class ProjectTaskFactory extends Factory
             }
         });
     }
+
+    public function withDeadlines(int $userId, ?string $deadline = null)
+    {
+        return $this->afterCreating(function (\Modules\Production\Models\ProjectTask $task) use($deadline, $userId) {
+            if (!$task->relationLoaded('pics')) {
+                $task->load(['pics']);
+            }
+
+            foreach ($task->pics as $pic) {
+                if (!$deadline) {
+                    $deadline = Carbon::now()->addDays(7)->format('Y-m-d H:i:s');
+                }
+
+                $task->deadlines()->create(
+                    [
+                        'employee_id' => $pic->employee_id,
+                        'is_first_deadline' => true,
+                        'deadline' => $deadline,
+                        'actual_finish_time' => null,
+                        'updated_by' => $userId,
+                    ]
+                );
+            }
+        });
+    }
 }
