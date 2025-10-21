@@ -60,6 +60,8 @@ it ('Create task without pic', function () {
 
     $task = \Modules\Production\Models\ProjectTask::where('name', 'New Task')->first();
 
+    $this->assertDatabaseCount('project_task_deadlines', 0);
+
     $this->assertDatabaseMissing('project_task_pics', [
         'project_task_id' => $task->id,
     ]);

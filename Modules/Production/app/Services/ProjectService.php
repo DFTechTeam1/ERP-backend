@@ -80,6 +80,7 @@ use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Repository\ProjectTaskAttachmentRepository;
+use Modules\Production\Repository\ProjectTaskDeadlineRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectTaskLogRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
@@ -184,6 +185,8 @@ class ProjectService
 
     private \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo;
 
+    private ProjectTaskDeadlineRepository $projectTaskDeadlineRepo;
+
     private $nasFolderCreationService;
 
     /**
@@ -235,6 +238,7 @@ class ProjectService
         \Modules\Production\Repository\ProjectTaskPicHoldstateRepository $projectTaskPicHoldstateRepo,
         \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo,
         \App\Services\NasFolderCreationService $nasFolderCreationService,
+        ProjectTaskDeadlineRepository $projectTaskDeadlineRepo
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -325,6 +329,8 @@ class ProjectService
         $this->projectTaskReviseStateRepo = $projectTaskReviseStateRepo;
 
         $this->nasFolderCreationService = $nasFolderCreationService;
+
+        $this->projectTaskDeadlineRepo = $projectTaskDeadlineRepo;
     }
 
     /**
@@ -2917,6 +2923,27 @@ class ProjectService
     }
 
     /**
+     * Create new record for project task deadline
+     * @param ProjectTask $task
+     * @param string $deadline
+     * @return void
+     */
+    public function storeTaskDeadline(ProjectTask $task, string $deadline): void
+    {
+        foreach ($task->pics as $pic) {
+            $checkDeadline = $this->projectTaskDeadlineRepo->show(uid: 'uid', select: 'id', where: "employee_id = {$pic->employee_id} AND project_task_id = {$task->id} AND actual_finish_time IS NULL");
+            if (!$checkDeadline) {
+                $task->deadlines()->create([
+                    'employee_id' => $pic->employee_id,
+                    'deadline' => $deadline,
+                    'is_first_deadline' => true,
+                    'updated_by' => Auth::id()
+                ]);
+            }
+        }
+    }
+
+    /**
      * Store task on selected board
      *
      * $data variable will have
@@ -2954,23 +2981,21 @@ class ProjectService
 
             $taskStore = $this->taskRepo->store(collect($data)->except(['pic', 'media'])->toArray());
 
-            $task = $this->formattedDetailTask($taskStore->uid);
-
             // task log
             $this->loggingTask([
                 'board_id' => $boardId,
                 'board' => $board,
-                'task' => $task,
+                'task' => $taskStore,
             ], 'addNewTask');
 
             // assign pic and record work timing if needed
             if (! empty($data['pic'])) {
-                $assignPic = $this->assignMemberToTask(
+                $this->assignMemberToTask(
                     data: [
                         'users' => $data['pic'],
                         'removed' => [],
                     ],
-                    taskUid: $task->uid,
+                    taskUid: $taskStore->uid,
                     needChangeTaskStatus: $isForLeadModeller ? false : true
                 );
                 // send notification if needed
@@ -2983,11 +3008,23 @@ class ProjectService
                     [
                         'media' => $data['media'],
                     ],
-                    $task->id,
+                    $taskStore->id,
                     $board->project_id,
                     $board->project->uid,
-                    $task->uid
+                    $taskStore->uid
                 );
+            }
+
+            $task = $this->formattedDetailTask($taskStore->uid);
+
+            // only record a task deadline when user add end date and assign pic on it
+            if (
+                (isset($data['end_date'])) &&
+                ($data['end_date']) &&
+                (isset($data['pic'])) &&
+                (!empty($data['pic']))
+            ) {
+                $this->storeTaskDeadline(task: $task, deadline: $data['end_date']);
             }
 
             $currentData = $this->detailCacheAction->handle(
