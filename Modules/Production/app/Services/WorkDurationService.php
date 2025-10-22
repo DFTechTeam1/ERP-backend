@@ -121,16 +121,18 @@ class WorkDurationService
         $totalHold = 0;
         $totalRevise = 0;
 
-        $approvalStates = $task->approvalStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
-        $holdStates = $task->holdStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
-        $reviseStates = $task->reviseStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
-
-        $this->setHoldStateDuration(holdDuration: $holdDuration, totalHold: $totalHold, holdStates: $holdStates);
-        $this->setReviseDuration(revisedDuration: $reviseDuration, totalRevise: $totalRevise, reviseStates: $reviseStates);
-        $this->setWorkStateDuration(workStateDuration: $workStateDuration, workStates: $task->workStates->last());
-        $this->setApprovalStateDuration(approvalStateDuration: $approvalStateDuration, approvalStates: $approvalStates);
-        $actualDuration = $this->calculateActualDuration(workStateDuration: $workStateDuration, holdDuration: $holdDuration, reviseDuration: $reviseDuration);
-        $fullDuration = $this->calculateFullDuration(actualDuration: $actualDuration, approvalStateDuration: $approvalStateDuration);
+        if ($task->workStates->isNotEmpty()) { // adding fallback when task do not have any workstates
+            $approvalStates = $task->approvalStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
+            $holdStates = $task->holdStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
+            $reviseStates = $task->reviseStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
+    
+            $this->setHoldStateDuration(holdDuration: $holdDuration, totalHold: $totalHold, holdStates: $holdStates);
+            $this->setReviseDuration(revisedDuration: $reviseDuration, totalRevise: $totalRevise, reviseStates: $reviseStates);
+            $this->setWorkStateDuration(workStateDuration: $workStateDuration, workStates: $task->workStates->last());
+            $this->setApprovalStateDuration(approvalStateDuration: $approvalStateDuration, approvalStates: $approvalStates);
+            $actualDuration = $this->calculateActualDuration(workStateDuration: $workStateDuration, holdDuration: $holdDuration, reviseDuration: $reviseDuration);
+            $fullDuration = $this->calculateFullDuration(actualDuration: $actualDuration, approvalStateDuration: $approvalStateDuration);
+        }
 
         return [
             $holdDuration,
