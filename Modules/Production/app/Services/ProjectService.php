@@ -3072,14 +3072,14 @@ class ProjectService
             $task = $this->formattedDetailTask($taskStore->uid);
 
             // only record a task deadline when user add end date and assign pic on it
-            if (
-                (isset($data['end_date'])) &&
-                ($data['end_date']) &&
-                (isset($data['pic'])) &&
-                (!empty($data['pic']))
-            ) {
-                $this->storeTaskDeadline(task: $task, payload: collect($data)->only(['end_date'])->toArray());
-            }
+            // if (
+            //     (isset($data['end_date'])) &&
+            //     ($data['end_date']) &&
+            //     (isset($data['pic'])) &&
+            //     (!empty($data['pic']))
+            // ) {
+            //     $this->storeTaskDeadline(task: $task, payload: collect($data)->only(['end_date'])->toArray());
+            // }
 
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $board->project->uid,
