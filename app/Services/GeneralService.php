@@ -432,7 +432,7 @@ class GeneralService
      *          - hrd
      *          - production
      */
-    public function getEncryptedPayloadData(array $tokenizer): array
+    public function getEncryptedPayloadData(array $tokenizer): string
     {
         $allRoles = \App\Enums\System\BaseRole::cases();
         $allRoles = collect($allRoles)->map(function ($roleData) {
@@ -443,7 +443,7 @@ class GeneralService
         $exp = date('Y-m-d H:i:s', strtotime($tokenizer['token']->accessToken->expires_at));
         $userIdEncode = Hashids::encode($user->id);
 
-        return [
+        $output =  [
             'exp' => $exp,
             'user' => $tokenizer['user'],
             'role' => $tokenizer['role'],
@@ -458,6 +458,8 @@ class GeneralService
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
             ],
         ];
+
+        return (new EncryptionService)->encrypt(string: json_encode($output), key: config('app.salt_key_encryption'));
     }
 
     /**
@@ -481,7 +483,6 @@ class GeneralService
         $menus = (new \App\Services\MenuService)->getNewFormattedMenu($user->getAllPermissions()->toArray(), $roles->toArray());
 
         $encryptionService = new \App\services\EncryptionService;
-        $encryptedPayload = $encryptionService->encrypt(string: json_encode($encryptedPayload), key: config('app.salt_key_encryption'));
         $permissionsEncrypted = $encryptionService->encrypt(string: json_encode([
             'permissions' => $permissions,
         ]), key: config('app.salt_key_encryption'));

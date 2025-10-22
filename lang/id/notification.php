@@ -144,4 +144,6 @@ return [
     'projectHasBeenCanceled' => 'Proyek telah berhasil dibatalkan',
     'successChangeProjectStatus' => 'Status proyek telah berhasil diubah',
     'cannotChangeProjectStatusTaskNotCompleted' => 'Tidak dapat mengubah status proyek karena masih ada tugas yang belum selesai',
+    'successUpdateProfile' => 'Profil telah berhasil diperbarui',
+    'fileNotFound' => 'Berkas tidak ditemukan',
 ];

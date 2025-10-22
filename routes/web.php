@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
@@ -185,22 +186,7 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $task = (new InteractiveProjectTaskRepository)->show(
-        uid: 'a7b1489c-6a69-40e9-a516-8e1445de8832',
-        select: 'id,intr_project_id,current_pic_id',
-        relation: [
-            'pics:id,task_id,employee_id',
-            'holdStates:id,task_id,holded_at,unholded_at,work_state_id,employee_id',
-            'workStates:id,task_id,started_at,first_finish_at,employee_id',
-            'reviseStates:id,task_id,start_at,finish_at,work_state_id',
-            'interactiveProject:id',
-            'interactiveProject.pics:id,intr_project_id,employee_id',
-            'approvalStates:id,task_id,started_at,approved_at,work_state_id',
-        ]
-    );
-    // $holdStates = $task->holdStates->where('work_state_id', $task->workStates->last()?->id ?? 0)->values();
-    // return $task->workStates->last();
-    return Carbon::parse('2025-10-15 14:07:34')->diffInSeconds(Carbon::parse('2025-10-15 14:18:43')) + 360 - 141;
+    return Storage::disk('local')->exists('tmp/profiles/image_17611094676.webp');
 });
 
 Route::get('migrate-duration', function () {
