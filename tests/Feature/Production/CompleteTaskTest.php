@@ -65,6 +65,7 @@ it('Complete task', function () {
         ->create([
             'status' => TaskStatus::OnProgress->value,
             'current_pics' => json_encode([$worker->id]),
+            'end_date' => $deadline
         ]);
 
     $response = $this->getJson(route('api.production.tasks.completed', [
@@ -87,6 +88,7 @@ it('Complete task', function () {
         'id' => $task->id,
         'status' => TaskStatus::Completed->value,
         'project_board_id' => $boardId,
+        'end_date' => null
     ]);
 
     $this->assertDatabaseHas('project_task_duration_histories', [

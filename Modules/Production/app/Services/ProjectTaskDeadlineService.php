@@ -2,41 +2,43 @@
 
 namespace Modules\Production\Services;
 
-use App\Repository\UserRepository;
-use Illuminate\Support\Facades\Auth;
-use Modules\Production\Repository\DeadlineChangeReasonRepository;
+use App\Enums\ErrorCode\Code;
+use Modules\Production\Repository\ProjectTaskDeadlineRepository;
 
-class DeadlineChangeReasonService
-{
+class ProjectTaskDeadlineService {
     private $repo;
 
     /**
      * Construction Data
      */
-    public function __construct(DeadlineChangeReasonRepository $repo)
+    public function __construct()
     {
-        $this->repo = $repo;
+        $this->repo = new ProjectTaskDeadlineRepository;
     }
 
     /**
      * Get list of data
+     *
+     * @param string $select
+     * @param string $where
+     * @param array $relation
+     * 
+     * @return array
      */
     public function list(
         string $select = '*',
         string $where = '',
         array $relation = []
-    ): array {
+    ): array
+    {
         try {
-            $userId = Auth::id();
-            $user = (new UserRepository)->detail(id: $userId);
-
-            $itemsPerPage = request('itemsPerPage') ?? 50;
+            $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            if (! empty($search)) {
+            if (!empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
@@ -48,15 +50,6 @@ class DeadlineChangeReasonService
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
-
-            // define actions
-            $paginated = collect($paginated)->map(function ($item) use ($user) {
-                $item['can_edit'] = (bool) $user->can('edit_deadline_reasons');
-                $item['can_create'] = (bool) $user->can('create_deadline_reasons');
-                $item['can_delete'] = (bool) $user->can('delete_deadline_reasons');
-
-                return $item;
-            })->values();
 
             return generalResponse(
                 'Success',
@@ -78,6 +71,9 @@ class DeadlineChangeReasonService
 
     /**
      * Get detail data
+     *
+     * @param string $uid
+     * @return array
      */
     public function show(string $uid): array
     {
@@ -94,23 +90,12 @@ class DeadlineChangeReasonService
         }
     }
 
-    public function getAll(): array
-    {
-        try {
-            $data = $this->repo->list('id,name');
-
-            return generalResponse(
-                'success',
-                false,
-                $data->toArray(),
-            );
-        } catch (\Throwable $th) {
-            return errorResponse($th);
-        }
-    }
-
     /**
      * Store data
+     *
+     * @param array $data
+     * 
+     * @return array
      */
     public function store(array $data): array
     {
@@ -118,7 +103,7 @@ class DeadlineChangeReasonService
             $this->repo->store($data);
 
             return generalResponse(
-                __('notification.successCreateDueReason'),
+                'success',
                 false,
             );
         } catch (\Throwable $th) {
@@ -128,35 +113,45 @@ class DeadlineChangeReasonService
 
     /**
      * Update selected data
+     *
+     * @param array $data
+     * @param string $id
+     * @param string $where
+     * 
+     * @return array
      */
     public function update(
         array $data,
         string $id,
         string $where = ''
-    ): array {
+    ): array
+    {
         try {
             $this->repo->update($data, $id);
 
             return generalResponse(
-                __('notification.successUpdateDueReason'),
+                'success',
                 false,
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
-    }
+    }   
 
     /**
      * Delete selected data
+     *
+     * @param integer $id
+     * 
+     * @return void
      */
     public function delete(int $id): array
     {
         try {
-            $this->repo->delete($id);
-
             return generalResponse(
-                __('notification.successDeleteDueReason'),
+                'Success',
                 false,
+                $this->repo->delete($id)->toArray(),
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -165,6 +160,10 @@ class DeadlineChangeReasonService
 
     /**
      * Delete bulk data
+     *
+     * @param array $ids
+     * 
+     * @return array
      */
     public function bulkDelete(array $ids): array
     {

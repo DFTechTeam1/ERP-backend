@@ -59,6 +59,11 @@ class ProjectTask extends Model
         return $this->belongsTo(ProjectBoard::class, 'project_board_id');
     }
 
+    public function deadlines(): HasMany
+    {
+        return $this->hasMany(ProjectTaskDeadline::class, 'project_task_id');
+    }
+
     public function projectDurations(): HasMany
     {
         return $this->hasMany(ProjectTaskDurationHistory::class, 'task_id');

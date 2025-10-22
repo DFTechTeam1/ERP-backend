@@ -24,6 +24,7 @@
             "icon": "mdiPlain:mdi-database-outline",
             "childs": [
                 { "path": "/admin/master/projectClass", "slug": "projectClass", "lang_id": "Event Class", "lang_en": "Event class", "icon": "mdiPlain:mdi-bulletin-board", "permission": "list_division" },
+                { "path": "/admin/master/notification-management", "slug": "notificationManagement", "lang_id": "Manajemen Notifikasi", "lang_en": "Notification Management", "icon": "mdiPlain:mdi-bell", "permission": "list_division" },
                 { "path": "/admin/master/deadline-change-reason", "slug": "deadline-change-reason", "lang_id": "Kelola Alasan Deadline", "lang_en": "Manage Deadline Reason", "icon": "mdiPlain:mdi-timer-sand", "permission": "list_deadline_reasons" },
                 { "path": "/admin/master/quotation-items", "slug": "manage-quotation-items", "lang_id": "Kelola Quotation Item", "lang_en": "Manage Quotation Item", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_quotation_items" }
             ]

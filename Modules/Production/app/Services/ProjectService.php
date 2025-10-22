@@ -80,6 +80,7 @@ use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Repository\ProjectTaskAttachmentRepository;
+use Modules\Production\Repository\ProjectTaskDeadlineRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectTaskLogRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
@@ -184,6 +185,8 @@ class ProjectService
 
     private \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo;
 
+    private ProjectTaskDeadlineRepository $projectTaskDeadlineRepo;
+
     private $nasFolderCreationService;
 
     /**
@@ -235,6 +238,7 @@ class ProjectService
         \Modules\Production\Repository\ProjectTaskPicHoldstateRepository $projectTaskPicHoldstateRepo,
         \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo,
         \App\Services\NasFolderCreationService $nasFolderCreationService,
+        ProjectTaskDeadlineRepository $projectTaskDeadlineRepo
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -325,6 +329,8 @@ class ProjectService
         $this->projectTaskReviseStateRepo = $projectTaskReviseStateRepo;
 
         $this->nasFolderCreationService = $nasFolderCreationService;
+
+        $this->projectTaskDeadlineRepo = $projectTaskDeadlineRepo;
     }
 
     /**
@@ -2712,6 +2718,10 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskUid);
 
+            if (!$isForProjectManager) {
+                $this->assignPicToCurrentTaskDeadline(task: $task);
+            }
+
             $currentData = $this->detailCacheAction->handle($task->project->uid, [
                 'boards' => FormatBoards::run($task->project->uid),
             ]);
@@ -2917,6 +2927,79 @@ class ProjectService
     }
 
     /**
+     * Create new record for project task deadline
+     * @param ProjectTask $task
+     * @param array<string, string> $payload
+     * @return void
+     */
+    public function storeTaskDeadline(ProjectTask $task, array $payload): void
+    {
+        foreach ($task->pics as $pic) {
+            $checkDeadline = $this->projectTaskDeadlineRepo->show(uid: 'uid', select: 'id', where: "employee_id = {$pic->employee_id} AND project_task_id = {$task->id} AND actual_finish_time IS NULL");
+            if ($checkDeadline) {
+                // update actual finish time in current deadline, and then create a new record with new deadline
+                $this->projectTaskDeadlineRepo->update(
+                    data: [
+                        'actual_finish_time' => Carbon::now(),
+                    ],
+                    where: "project_task_id = {$task->id} and employee_id = {$pic->employee_id} and actual_finish_time is null"
+                );
+            }
+
+            $deadline = $payload['end_date'];
+
+            $task->deadlines()->create([
+                'employee_id' => $pic->employee_id,
+                'deadline' => $deadline,
+                'is_first_deadline' => $checkDeadline ? false : true,
+                'due_reason' => $checkDeadline && isset($payload['reason_id']) ? $payload['reason_id'] : null,
+                'custom_reason' => $checkDeadline && 
+                                            (
+                                                (isset($payload['custom_reason'])) && 
+                                                (!empty($payload['custom_reason']))
+                                            ) 
+                                    ? $payload['custom_reason'] 
+                                    : null,
+                'updated_by' => Auth::id()
+            ]);
+        }
+    }
+
+    /**
+     * Assign or remove pic from project task deadline
+     * @param ProjectTask $task
+     * @return void
+     */
+    public function assignPicToCurrentTaskDeadline(ProjectTask $task)
+    {
+        // get current deadlines
+        $deadlines = $this->projectTaskDeadlineRepo->list(
+            select: 'id,employee_id,deadline,actual_finish_time',
+            where: "project_task_id = {$task->id} AND actual_finish_time IS NULL"
+        );
+
+        $currentPicIds = collect($task->pics)->pluck('employee_id')->toArray();
+        $deadlinePicIds = collect($deadlines)->pluck('employee_id')->toArray();
+
+        // assign deadline to new pic
+        $newPicIds = array_diff($currentPicIds, $deadlinePicIds);
+        foreach ($newPicIds as $newPicId) {
+            $task->deadlines()->create([
+                'employee_id' => $newPicId,
+                'deadline' => $task->end_date, // deadline will be the same as task end_date
+                'is_first_deadline' => true,
+                'updated_by' => Auth::id()
+            ]);
+        }
+
+        // remove deadline from removed pic
+        $removedPicIds = array_diff($deadlinePicIds, $currentPicIds);
+        foreach ($removedPicIds as $removedPicId) {
+            $this->projectTaskDeadlineRepo->delete(where: "project_task_id = {$task->id} AND employee_id = {$removedPicId} AND actual_finish_time IS NULL", id: 0);
+        }
+    }
+
+    /**
      * Store task on selected board
      *
      * $data variable will have
@@ -2954,23 +3037,21 @@ class ProjectService
 
             $taskStore = $this->taskRepo->store(collect($data)->except(['pic', 'media'])->toArray());
 
-            $task = $this->formattedDetailTask($taskStore->uid);
-
             // task log
             $this->loggingTask([
                 'board_id' => $boardId,
                 'board' => $board,
-                'task' => $task,
+                'task' => $taskStore,
             ], 'addNewTask');
 
             // assign pic and record work timing if needed
             if (! empty($data['pic'])) {
-                $assignPic = $this->assignMemberToTask(
+                $this->assignMemberToTask(
                     data: [
                         'users' => $data['pic'],
                         'removed' => [],
                     ],
-                    taskUid: $task->uid,
+                    taskUid: $taskStore->uid,
                     needChangeTaskStatus: $isForLeadModeller ? false : true
                 );
                 // send notification if needed
@@ -2983,12 +3064,24 @@ class ProjectService
                     [
                         'media' => $data['media'],
                     ],
-                    $task->id,
+                    $taskStore->id,
                     $board->project_id,
                     $board->project->uid,
-                    $task->uid
+                    $taskStore->uid
                 );
             }
+
+            $task = $this->formattedDetailTask($taskStore->uid);
+
+            // only record a task deadline when user add end date and assign pic on it
+            // if (
+            //     (isset($data['end_date'])) &&
+            //     ($data['end_date']) &&
+            //     (isset($data['pic'])) &&
+            //     (!empty($data['pic']))
+            // ) {
+            //     $this->storeTaskDeadline(task: $task, payload: collect($data)->only(['end_date'])->toArray());
+            // }
 
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $board->project->uid,
@@ -3600,23 +3693,33 @@ class ProjectService
         ];
     }
 
-    public function updateDeadline(array $data, string $projectUid)
+    /**
+     * Update current task deadline
+     * 
+     * @param array $data
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return array
+     */
+    public function updateDeadline(array $data, string $projectUid, string $taskUid): array
     {
         DB::beginTransaction();
         try {
             $this->taskRepo->update(
-                [
-                    'start_date' => empty($data['start_date']) ? null : date('Y-m-d', strtotime($data['start_date'])),
-                    'end_date' => empty($data['end_date']) ? null : date('Y-m-d', strtotime($data['end_date'])),
+                data: [
+                    'end_date' => empty($data['end_date']) ? null : date('Y-m-d H:i:s', strtotime($data['end_date'])),
                 ],
-                $data['task_id']
+                id: $taskUid
             );
 
             $this->loggingTask([
-                'task_uid' => $data['task_id'],
+                'task_uid' => $taskUid,
             ], 'updateDeadline');
 
-            $task = $this->formattedDetailTask($data['task_id']);
+            $task = $this->formattedDetailTask($taskUid);
+
+            // update or create project task deadlines
+            $this->storeTaskDeadline(task: $task, payload: $data);
 
             $currentData = $this->detailCacheAction->handle($projectUid, [
                 'boards' => FormatBoards::run($projectUid),
@@ -3954,6 +4057,9 @@ class ProjectService
                         $this->setTaskWorkingTime($taskId, $pic->employee_id, \App\Enums\Production\WorkType::Finish->value);
                     }
                 }
+
+                // record actual finish time in the project task deadlines table
+                $this->recordDeadlineAsFinish(task: $task);
 
                 // detach all pics and attach pic to PM
                 $this->detachPicAndAssignProjectManager(
@@ -5322,6 +5428,7 @@ class ProjectService
         // update task status
         $this->taskRepo->update([
             'status' => \App\Enums\Production\TaskStatus::Completed->value,
+            'end_date' => null // reset end date data
         ], $taskUid);
 
         $payloadOutput = [];
@@ -9014,6 +9121,22 @@ class ProjectService
             ],
             id: 'id',
             where: "task_id = {$task->id} AND approved_at IS NULL"
+        );
+    }
+
+    /**
+     * Mark deadline as complete
+     * 
+     * @param ProjectTask $task
+     * @return void
+     */
+    protected function recordDeadlineAsFinish(ProjectTask $task): void
+    {
+        $this->projectTaskDeadlineRepo->update(
+            data: [
+                'actual_finish_time' => Carbon::now()
+            ],
+            where: "project_task_id = {$task->id} AND actual_finish_time IS NULL"
         );
     }
 }
