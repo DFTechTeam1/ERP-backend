@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Repository\UserRepository;
 use Illuminate\Support\Facades\Auth;
 use Modules\Production\Repository\DeadlineChangeReasonRepository;
 
@@ -26,7 +27,8 @@ class DeadlineChangeReasonService
         array $relation = []
     ): array {
         try {
-            $user = Auth::user();
+            $userId = Auth::id();
+            $user = (new UserRepository)->detail(id: $userId);
 
             $itemsPerPage = request('itemsPerPage') ?? 50;
             $page = request('page') ?? 1;
@@ -81,6 +83,21 @@ class DeadlineChangeReasonService
     {
         try {
             $data = $this->repo->show($uid, 'name,uid,id');
+
+            return generalResponse(
+                'success',
+                false,
+                $data->toArray(),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function getAll(): array
+    {
+        try {
+            $data = $this->repo->list('id,name');
 
             return generalResponse(
                 'success',

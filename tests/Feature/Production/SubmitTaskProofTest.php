@@ -39,13 +39,16 @@ it ('Submit task proof of work return success', function () {
         ->andReturn($this->project->toArray());
 
     $employee = \Modules\Hrd\Models\Employee::find($this->user->employee_id);
+    $deadline = now()->addDays(3)->format('Y-m-d H:i:s');
     
     $task = \Modules\Production\Models\ProjectTask::factory()
         ->for($this->project, 'project')
         ->for($this->project->boards->first(), 'board')
         ->withPics(employee: $employee, withWorkState: true)
+        ->withDeadlines(userId: $this->user->id, deadline: $deadline)
         ->create([
             'status' => \App\Enums\Production\TaskStatus::OnProgress->value,
+            'end_date' => $deadline
         ]);
 
     $response = $this->postJson(route('api.production.task.proof.store', [
@@ -59,6 +62,18 @@ it ('Submit task proof of work return success', function () {
     ]);
 
     $response->assertStatus(201);
+
+    $this->assertDatabaseCount('project_task_deadlines', 1);
+    $this->assertDatabaseHas('project_task_deadlines', [
+        'project_task_id' => $task->id,
+        'employee_id' => $employee->id,
+        'deadline' => $deadline,
+    ]);
+    $this->assertDatabaseMissing('project_task_deadlines', [
+        'project_task_id' => $task->id,
+        'employee_id' => $employee->id,
+        'actual_finish_time' => null,
+    ]);
 
     $this->assertDatabaseHas('project_task_proof_of_works', [
         'project_task_id' => $task->id,

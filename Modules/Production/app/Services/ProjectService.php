@@ -2718,7 +2718,9 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskUid);
 
-            $this->assignPicToCurrentTaskDeadline(task: $task);
+            if (!$isForProjectManager) {
+                $this->assignPicToCurrentTaskDeadline(task: $task);
+            }
 
             $currentData = $this->detailCacheAction->handle($task->project->uid, [
                 'boards' => FormatBoards::run($task->project->uid),
@@ -4055,6 +4057,9 @@ class ProjectService
                         $this->setTaskWorkingTime($taskId, $pic->employee_id, \App\Enums\Production\WorkType::Finish->value);
                     }
                 }
+
+                // record actual finish time in the project task deadlines table
+                $this->recordDeadlineAsFinish(task: $task);
 
                 // detach all pics and attach pic to PM
                 $this->detachPicAndAssignProjectManager(
@@ -5423,6 +5428,7 @@ class ProjectService
         // update task status
         $this->taskRepo->update([
             'status' => \App\Enums\Production\TaskStatus::Completed->value,
+            'end_date' => null // reset end date data
         ], $taskUid);
 
         $payloadOutput = [];
@@ -9115,6 +9121,22 @@ class ProjectService
             ],
             id: 'id',
             where: "task_id = {$task->id} AND approved_at IS NULL"
+        );
+    }
+
+    /**
+     * Mark deadline as complete
+     * 
+     * @param ProjectTask $task
+     * @return void
+     */
+    protected function recordDeadlineAsFinish(ProjectTask $task): void
+    {
+        $this->projectTaskDeadlineRepo->update(
+            data: [
+                'actual_finish_time' => Carbon::now()
+            ],
+            where: "project_task_id = {$task->id} AND actual_finish_time IS NULL"
         );
     }
 }

@@ -26,6 +26,15 @@ class DeadlineChangeReasonController extends Controller
     }
 
     /**
+     * Get all deadline change reasons
+     * @return JsonResponse
+     */
+    public function getAll(): JsonResponse
+    {
+        return apiResponse($this->service->getAll());
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Create $request): JsonResponse

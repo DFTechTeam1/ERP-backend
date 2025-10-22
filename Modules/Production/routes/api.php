@@ -28,6 +28,7 @@ Route::middleware(['auth:sanctum'])
         Route::get('classList', [ProjectController::class, 'getClassList']);
         Route::get('status', [ProjectController::class, 'getProjectStatus']);
 
+        Route::get('deadlineReason/getAll', [DeadlineChangeReasonController::class, 'getAll']);
         Route::resource('deadlineReason', DeadlineChangeReasonController::class);
 
         Route::get('tasks', [ProjectController::class, 'getAllTasks']);
