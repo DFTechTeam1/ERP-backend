@@ -462,6 +462,22 @@ class RolePermissionSetting extends Seeder
                 $this->getRootRole(),
                 $this->getDirectorRole(),
             ]],
+            ['name' => 'notification_template_list', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_notification_template', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'edit_notification_template', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_notification_template', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
         ];
     }
 

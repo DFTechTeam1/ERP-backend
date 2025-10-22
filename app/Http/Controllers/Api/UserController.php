@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\Create;
 use App\Http\Requests\User\Update;
+use App\Http\Requests\User\UpdateProfile;
 use App\Services\UserService;
 use Illuminate\Http\Request;
 
@@ -65,5 +66,15 @@ class UserController extends Controller
     public function bulkDelete(Request $request)
     {
         return apiResponse($this->service->bulkDelete($request->uids));
+    }
+
+    public function uploadProfileTemp(Request $request)
+    {
+        return apiResponse($this->service->uploadProfileTemp($request->file('profile_image')));
+    }
+
+    public function updateProfile(UpdateProfile $request, int $userId)
+    {
+        return apiResponse($this->service->updateProfile($request->validated(), $userId));
     }
 }

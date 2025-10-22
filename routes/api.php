@@ -42,6 +42,9 @@ Route::get('testing', function () {
 
 Route::get('telegram-login', [\Modules\Telegram\Http\Controllers\TelegramAuthorizationController::class, 'index']);
 
+Route::post('upload-profile-temp', [UserController::class, 'uploadProfileTemp']);
+Route::post('users/profile/update/{userId}', [UserController::class, 'updateProfile'])->middleware('auth:sanctum');
+
 Route::get('line-flex', function () {});
 
 Route::post('{token}/telegram-webhook', function (Request $request, string $token) {

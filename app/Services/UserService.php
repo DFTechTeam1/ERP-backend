@@ -11,8 +11,10 @@ use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -113,7 +115,7 @@ class UserService
             $is_editable = true;
 
             // if user see himself on the list, then user cannot delete the data
-            if ($item->id == auth()->id()) {
+            if ($item->id == Auth::id()) {
                 $is_deleteable = false;
             }
 
@@ -454,10 +456,10 @@ class UserService
             // get user and validate the payload
             $user = $this->repo->detail(
                 id: 'id',
-                select: 'id,email,employee_id,email_verified_at,password',
+                select: 'id,email,employee_id,email_verified_at,password,image',
                 where: "email = '".$payload['email']."' and user_status = 1",
                 relation: [
-                    'employee:id,name,email,user_id,position_id,uid',
+                    'employee:id,name,email,user_id,position_id,uid,nickname',
                     'employee.position:id,name',
                 ]
             );
@@ -714,5 +716,121 @@ class UserService
         $token = $response->json()['data']['access_token'];
 
         return $token;
+    }
+
+    public function uploadProfileTemp($file)
+    {
+        try {
+            // upload file to storage
+            $imageName = $this->generalService->uploadImageandCompress(
+                path: 'tmp/profiles',
+                image: $file,
+                compressValue: 1
+            );
+
+            if (! $imageName) {
+                return errorResponse('Failed to upload image');
+            }
+
+            return generalResponse(
+                message: 'success',
+                data: [
+                    'file_path' => 'tmp/profiles/'.$imageName,
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update user profile
+     * @param  array<string, string> $data
+     * @return array<string, mixed>
+     */
+    public function updateProfile(array $data, int $userId): array
+    {
+        $removedImage = [];
+        DB::beginTransaction();
+        try {
+            $currentUser = $this->repo->detail(
+                select: 'id,image,employee_id',
+                id: $userId,
+            );
+
+            if ((isset($data['profile_image'])) && ($data['profile_image'])) {
+                // get current image from tmp file
+                if (!Storage::disk('public')->exists($data['profile_image'])) {
+                    return errorResponse(__('notification.fileNotFound'));
+                }
+    
+                // move image to permanent folder
+                $newImagePath = 'profiles/'.basename($data['profile_image']);
+                Storage::disk('public')->move($data['profile_image'], $newImagePath);
+    
+                $completePath = asset('storage/' . $newImagePath);
+
+                $removedImage[] = $currentUser->image;
+    
+                $this->repo->update(
+                    data: [
+                        'image' => $completePath
+                    ],
+                    key: 'id',
+                    value: $userId
+                );
+            }
+
+            $payloadUpdateEmployee = [
+                'nickname' => $data['nickname'] ?? null,
+            ];
+
+            if (isset($completePath)) {
+                $payloadUpdateEmployee['avatar'] = $completePath;
+            }
+
+            // upate avatar column in employees table
+            $this->employeeRepo->update(
+                data: $payloadUpdateEmployee,
+                uid: 'uid',
+                where: "id = {$currentUser->employee_id}"
+            );
+
+            $user = $this->repo->detail(
+                id: $userId,
+                select: 'id,email,employee_id,email_verified_at,password,image',
+                relation: [
+                    'employee:id,name,email,user_id,position_id,uid,nickname',
+                    'employee.position:id,name',
+                ]
+            );
+
+            // get encryption payload
+            $tokenizer = $this->generalService->generateAuthorizedUserToken(user: $user);
+            $encryptedPayload = $this->generalService->getEncryptedPayloadData(tokenizer: $tokenizer);
+
+            DB::commit();
+
+            // remove image from storage
+            foreach ($removedImage as $imagePath) {
+                // imagepath will be like: http://domain/storage/profiles/imagename.jpg
+                $parsedUrl = parse_url($imagePath);
+                $relativePath = ltrim($parsedUrl['path'], '/storage/');
+                if (Storage::disk('public')->exists($relativePath)) {
+                    Storage::disk('public')->delete($relativePath);
+                }
+            }
+
+            return generalResponse(
+                message: __('notification.successUpdateProfile'),
+                data: [
+                    'token' => $encryptedPayload
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
     }
 }
