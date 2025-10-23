@@ -923,7 +923,7 @@ class ProjectController extends Controller
                 'latestQuotation',
                 'finalQuotation',
                 'firstTransaction',
-                'unpaidInvoices:id,number,parent_number,project_deal_id,amount',
+                'unpaidInvoices:id,number,parent_number,project_deal_id,amount,uid',
                 'activeProjectDealChange:id,project_deal_id',
                 'activeProjectDealPriceChange:id,project_deal_id,new_price',
                 'lastInteractiveRequest',

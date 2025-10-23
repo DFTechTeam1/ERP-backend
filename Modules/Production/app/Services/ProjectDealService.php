@@ -319,6 +319,7 @@ class ProjectDealService
                     'unpaidInvoices' => $item->unpaidInvoices->map(function ($invoice) {
                         return [
                             'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                            'uid' => $invoice->uid,
                             'number' => $invoice->number,
                             'amount' => $invoice->amount,
                         ];
