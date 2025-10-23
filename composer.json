@@ -15,6 +15,7 @@
         "kodepandai/laravel-indonesia": "^2.0",
         "laravel/framework": "^11.0",
         "laravel/sanctum": "^4.0",
+        "laravel/slack-notification-channel": "^3.6",
         "laravel/tinker": "^2.9",
         "lorisleiva/laravel-actions": "^2.8",
         "maatwebsite/excel": "^3.1",

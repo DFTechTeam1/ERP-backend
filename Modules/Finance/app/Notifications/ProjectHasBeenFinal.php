@@ -5,31 +5,42 @@ namespace Modules\Finance\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Slack\BlockKit\Blocks\ContextBlock;
+use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
+use Illuminate\Notifications\Slack\SlackMessage;
 use Modules\Production\Models\ProjectDeal;
 
 class ProjectHasBeenFinal extends Notification
 {
     use Queueable;
 
-    private $projectDeal;
-
     /**
      * Create a new notification instance.
      */
-    public function __construct(ProjectDeal $projectDeal)
-    {
-        $this->projectDeal = $projectDeal;
-    }
+    public function __construct(
+        public readonly ProjectDeal $projectDeal,
+        public readonly ?string $publishedAt = null,
+        public readonly ?string $actorName = null,
+        public readonly ?string $finalPrice = null,
+        public readonly ?string $eventName = null,
+        public readonly ?string $eventDate = null,
+    ) {}
 
     /**
      * Get the notification's delivery channels.
      */
     public function via($notifiable): array
     {
-        return [
+        $output = [
             'mail',
             'database',
         ];
+
+        if ($this->publishedAt && $this->actorName && $this->finalPrice) {
+            $output[] = 'slack';
+        }
+
+        return $output;
     }
 
     /**
@@ -60,5 +71,19 @@ class ProjectHasBeenFinal extends Notification
             'button' => null,
             'href' => '/admin/deals/'.\Illuminate\Support\Facades\Crypt::encryptString($this->projectDeal->id),
         ];
+    }
+
+    public function toSlack(object $notifiable): SlackMessage
+    {
+        return (new SlackMessage)
+            ->text('There is an event that has just been published!')
+            ->headerBlock('Event Published')
+            ->contextBlock(function (ContextBlock $block) {
+                // write more proper notification about published event, i have information about publishedAt, actorName, finalPrice, event name, with interactive or not, led area total detail
+                $block->text("Event published at *{$this->publishedAt}* by *{$this->actorName}*")->markdown();
+            })
+            ->sectionBlock(function (SectionBlock $block) {
+                $block->text("Event published with dealing price *{$this->finalPrice}*\nEvent name: *{$this->eventName}*\nAt date *{$this->eventDate}*")->markdown();
+            });
     }
 }

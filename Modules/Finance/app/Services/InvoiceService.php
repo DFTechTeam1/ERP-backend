@@ -148,6 +148,8 @@ class InvoiceService
     public function store(array $data, string $projectDealUid): array
     {
         try {
+            $user = Auth::user();
+
             // generate invoice to bill to customer
             $paymentDate = $data['transaction_date'];
             $paymentDue = now()->parse($paymentDate)->addDays(7)->format('Y-m-d');
@@ -223,7 +225,7 @@ class InvoiceService
             );
 
             // running notifications
-            InvoiceHasBeenCreatedJob::dispatch($invoice->uid);
+            InvoiceHasBeenCreatedJob::dispatch($invoice->uid, $user);
 
             return generalResponse(
                 message: 'success',

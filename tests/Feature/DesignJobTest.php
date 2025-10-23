@@ -36,6 +36,9 @@ describe('Project count will be update when', function () {
     it('Project deal has been created', function (Customer $customer) {
         Bus::fake();
 
+        $user = initAuthenticateUser();
+        $this->actingAs($user);
+
         $requestData = getProjectDealPayload($customer);
         $requestData = prepareProjectDeal($requestData);
 
