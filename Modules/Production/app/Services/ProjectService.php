@@ -8640,11 +8640,20 @@ class ProjectService
     {
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
+            $user = Auth::user();
+
+            // define published_at and published_by
+            $projectDealPayload = collect($payload)
+                ->except(['marketing_id', 'quotation']);
+            if ($payload['status'] == ProjectDealStatus::Final->value) {
+                $projectDealPayload = $projectDealPayload->merge([
+                    'published_at' => Carbon::now(),
+                    'published_by' => $user->id
+                ]);
+            }
 
             $project = $this->projectDealRepo->store(
-                collect($payload)
-                    ->except(['marketing_id', 'quotation'])
-                    ->toArray()
+                $projectDealPayload->toArray()
             );
 
             // insert project details marketing

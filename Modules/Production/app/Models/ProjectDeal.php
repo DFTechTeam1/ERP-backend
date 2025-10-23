@@ -54,6 +54,8 @@ class ProjectDeal extends Model
         'cancel_reason',
         'include_tax',
         'cancel_at',
+        'published_at',
+        'published_by',
         'cancel_by',
         'identifier_number',
         'deleted_at',
@@ -112,6 +114,11 @@ class ProjectDeal extends Model
             get: fn ($value) => $value ? json_decode($value, true) : null,
             set: fn ($value) => $value ? json_encode($value) : null
         );
+    }
+
+    public function publishedBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'published_by');
     }
 
     public function interactiveRequests(): HasMany
