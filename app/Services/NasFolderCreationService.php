@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Modules\Company\Jobs\NasCreationSlackJob;
 
 class NasFolderCreationService
 {
@@ -71,6 +72,8 @@ class NasFolderCreationService
                 $logData['error_message'] = $response->body();
                 $this->writeLog($logData);
             }
+
+            NasCreationSlackJob::dispatch($logData);
         } catch (\Exception $e) {
             $logData = [
                 'timestamp' => now()->toDateTimeString(),
@@ -82,6 +85,7 @@ class NasFolderCreationService
                 'exception_trace' => $e->getTraceAsString(),
             ];
             $this->writeLog($logData);
+            NasCreationSlackJob::dispatch($logData);
         }
 
         // return success or not

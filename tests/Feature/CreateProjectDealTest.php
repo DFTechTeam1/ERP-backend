@@ -13,9 +13,9 @@ use Modules\Production\Repository\ProjectQuotationRepository;
 use function Pest\Laravel\postJson;
 
 beforeEach(function () {
-    $user = initAuthenticateUser();
+    $this->user = initAuthenticateUser();
 
-    $this->actingAs($user);
+    $this->actingAs($this->user);
 });
 
 describe('Create Project Deal', function () {
@@ -97,12 +97,16 @@ describe('Create Project Deal', function () {
         expect($response['error'])->toBeFalse();
         expect($response['data'])->toHaveKey('url');
 
-        $currentDeal = ProjectDeal::select('id')->where('name', $requestData['name'])->first();
+        $currentDeal = ProjectDeal::select('id', 'published_by', 'published_at')->where('name', $requestData['name'])->first();
 
         $this->assertDatabaseHas('project_deals', [
             'name' => 'Final Project',
             'identifier_number' => '0951',
         ]);
+
+        expect($currentDeal->published_by)->toBe($this->user->id);
+        expect($currentDeal->published_at)->not->toBeNull();
+
         $this->assertDatabaseHas('projects', [
             'name' => 'Final Project',
             'project_deal_id' => $currentDeal->id,

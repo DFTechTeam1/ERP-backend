@@ -22,6 +22,8 @@ class ProjectHasBeenFinal extends Notification
         public readonly ?string $publishedAt = null,
         public readonly ?string $actorName = null,
         public readonly ?string $finalPrice = null,
+        public readonly ?string $eventName = null,
+        public readonly ?string $eventDate = null,
     ) {}
 
     /**
@@ -34,7 +36,7 @@ class ProjectHasBeenFinal extends Notification
             'database',
         ];
 
-        if (!$this->publishedAt && !$this->actorName && !$this->finalPrice) {
+        if ($this->publishedAt && $this->actorName && $this->finalPrice) {
             $output[] = 'slack';
         }
 
@@ -81,7 +83,7 @@ class ProjectHasBeenFinal extends Notification
                 $block->text("Event published at *{$this->publishedAt}* by *{$this->actorName}*")->markdown();
             })
             ->sectionBlock(function (SectionBlock $block) {
-                $block->text("Event published with dealing price *{$this->finalPrice}*\nEvent name: *Sample Event*\nWith Interactive: *Yes*\nLED area total: 24<sup>2</sup>")->markdown();
+                $block->text("Event published with dealing price *{$this->finalPrice}*\nEvent name: *{$this->eventName}*\nAt date *{$this->eventDate}*")->markdown();
             });
     }
 }

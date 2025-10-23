@@ -564,6 +564,8 @@ class ProjectDealService
 
             $payload = [
                 'status' => $type === 'publish' ? \App\Enums\Production\ProjectDealStatus::Temporary->value : \App\Enums\Production\ProjectDealStatus::Final->value,
+                'published_at' => Carbon::now(),
+                'published_by' => Auth::user()->id,
                 // 'identifier_number' => $this->generalService->setProjectIdentifier()
             ];
 
