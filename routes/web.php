@@ -221,3 +221,26 @@ Route::get('project/deal/change/price/approve', [FinanceController::class, 'appr
 Route::get('project/deal/change/price/reject', [FinanceController::class, 'rejectPriceChanges'])
     ->name('project.deal.change.price.reject')
     ->middleware('signed');
+
+Route::get('trying', function () {
+    abort(400);
+});
+Route::get('test', function () {
+    $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
+
+    $logData = [
+        'timestamp' => now()->toDateTimeString(),
+        'method' => 'POST',
+        'endpoint' => 'endpoint_url',
+        'payload' => [
+            'project_name' => 'Test Project',
+        ],
+        'status' => 'FAILED',
+        'error_message' => 'error nih',
+        'exception_trace' => null,
+    ];
+
+    if ($developer) {
+        $developer->notify(new \Modules\Company\Notifications\NasCreationSlackNotification($logData));
+    }
+});

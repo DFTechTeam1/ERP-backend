@@ -19,7 +19,9 @@ return new class extends Migration
 
             // Add the published_by column if it doesn't exist
             if (!Schema::hasColumn('project_deals', 'published_by')) {
-                $table->string('published_by')->nullable()
+                $table->unsignedBigInteger('published_by')
+                    ->constrained('users')
+                    ->nullable()
                     ->comment('Published by')
                     ->after('published_at');
             }
@@ -32,6 +34,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('project_deals', function (Blueprint $table) {
+            // drop foreign key if exists
+            if (checkForeignKey(tableName: 'project_deals', columnName: 'published_by')) {
+                $table->dropForeign(['published_by']);
+            }
+
             // Drop the published_at column if it exists
             if (Schema::hasColumn('project_deals', 'published_at')) {
                 $table->dropColumn('published_at');
