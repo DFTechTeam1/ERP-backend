@@ -32,14 +32,16 @@ class ProjectHasBeenFinal implements ShouldQueue
     {
         $repo = new ProjectDealRepository();
 
-        $projectDeal = $repo->show(uid: $this->projectDealId, select: 'id,name,project_date');
+        $projectDeal = $repo->show(uid: $this->projectDealId, select: 'id,name,project_date,published_at,published_by');
 
         $users = \App\Models\User::role(['finance', 'root'])->get();
 
         $pusher = new PusherNotification();
 
         foreach ($users as $user) {
-            $user->notify(new NotificationsProjectHasBeenFinal(projectDeal: $projectDeal));
+            $user->notify(new NotificationsProjectHasBeenFinal(
+                projectDeal: $projectDeal,
+            ));
 
             // send pusher notification
             $pusher->send(channel: "my-channel-{$user->id}", event: "notification-event", payload: [
