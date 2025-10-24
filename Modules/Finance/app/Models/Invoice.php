@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Modules\Finance\Database\Factories\InvoiceFactory;
 use Modules\Production\Models\Customer;
 use Modules\Production\Models\ProjectDeal;
@@ -62,10 +63,14 @@ class Invoice extends Model
         );
     }
 
-    public function transaction(): HasOne
+    public function transaction(): MorphOne
     {
-        return $this->hasOne(Transaction::class, 'invoice_id');
+        return $this->morphOne(Transaction::class, 'sourceable');
     }
+    // public function transaction(): HasOne
+    // {
+    //     return $this->hasOne(Transaction::class, 'invoice_id');
+    // }
 
     public function projectDeal(): BelongsTo
     {

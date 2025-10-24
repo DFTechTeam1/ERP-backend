@@ -45,10 +45,19 @@
             "childs": [
                 { "path": "/admin/production/projects", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "mdiPlain:mdi-briefcase-account-outline", "permission": "list_project" },
                 { "path": "/admin/production/interactives", "slug": "interactiveProject", "lang_id": "Interactive Event", "lang_en": "Interactive Event", "icon": "mdiPlain:mdi-application-braces-outline", "permission": "list_interactive_project" },
-                { "path": "/admin/deals", "slug": "projectDeals", "lang_id": "Deals", "lang_en": "Deals", "icon": "mdiPlain:mdi-calendar-check", "permission": "list_deals" },
                 { "path": "/admin/production/files", "slug": "files", "lang_id": "Files", "lang_en": "Files", "icon": "mdiPlain:mdi-file-multiple-outline", "permission": "list_file_manager" },
                 { "path": "/admin/production/tasks", "slug": "task", "lang_id": "Tugas", "lang_en": "Tasks", "icon": "mdiPlain:mdi-format-list-checks", "permission": "list_task" },
                 { "path": "/admin/production/team-transfer", "slug": "team-transfer", "lang_id": "Team Transfer", "lang_en": "Team Transfer", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_team_transfer" }
+            ]
+        },
+        {
+            "name": "Finance",
+            "type": "regular",
+            "icon": "mdiPlain:mdi-calculator-variant-outline",
+            "childs": [
+                { "path": "/admin/finance/deals", "slug": "projectDeals", "lang_id": "Deals", "lang_en": "Deals", "icon": "mdiPlain:mdi-calendar-check", "permission": "list_deals" },
+                { "path": "/admin/finance/transactions", "slug": "transactions", "lang_id": "Transaksi", "lang_en": "Transactions", "icon": "mdiPlain:mdi-receipt-text", "permission": "list_project" },
+                { "path": "/admin/finance/refund", "slug": "refund", "lang_id": "Refund", "lang_en": "Refund", "icon": "mdiPlain:mdi-cash-refund", "permission": "list_project" }
             ]
         },
         {

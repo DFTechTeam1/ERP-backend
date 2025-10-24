@@ -147,4 +147,7 @@ return [
     'cannotChangeProjectStatusTaskNotCompleted' => 'Cannot change project status because there are still incomplete tasks',
     'successUpdateProfile' => 'Profile has been updated successfully',
     'fileNotFound' => 'File not found',
+    'successCreateProjectDealRefundRequest' => 'Refund request has been created successfully',
+    'successMakeRefundPayment' => 'Refund payment has been made successfully',
+    'successDeleteProjectDealRefundRequest' => 'Refund request has been deleted successfully',
 ];

@@ -256,6 +256,11 @@ class ProjectDeal extends Model
         return $this->belongsTo(\Modules\Company\Models\State::class, 'state_id');
     }
 
+    public function refund(): HasOne
+    {
+        return $this->hasOne(\Modules\Finance\Models\ProjectDealRefund::class, 'project_deal_id');
+    }
+
     public function activeProjectDealChange(): HasOne
     {
         return $this->hasOne(ProjectDealChange::class, 'project_deal_id')

@@ -146,4 +146,7 @@ return [
     'cannotChangeProjectStatusTaskNotCompleted' => 'Tidak dapat mengubah status proyek karena masih ada tugas yang belum selesai',
     'successUpdateProfile' => 'Profil telah berhasil diperbarui',
     'fileNotFound' => 'Berkas tidak ditemukan',
+    'successCreateProjectDealRefundRequest' => 'Permintaan pengembalian dana telah berhasil dibuat',
+    'successMakeRefundPayment' => 'Pembayaran pengembalian dana telah berhasil dilakukan',
+    'successDeleteProjectDealRefundRequest' => 'Permintaan pengembalian dana telah berhasil dihapus',
 ];

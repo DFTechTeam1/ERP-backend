@@ -6,6 +6,11 @@ Enum "development_projects_status_enum" {
   "4"
 }
 
+Enum "project_deal_refund_status_enum" {
+  "1" // pending
+  "2" // paid
+}
+
 Enum "NasFolderCreationsStatusEnum" {
   queue
   completed
@@ -1470,6 +1475,19 @@ Table "project_deals" {
   "deleted_at" timestamp [default: NULL]
   "cancel_at" timestamp [default: NULL]
   "cancel_by" bigint [default: NULL]
+}
+
+Table "project_deal_refunds" {
+  "id" bigint [pk, not null]
+  "project_deal_id" bigint [ref: > project_deals.id]
+  "refund_amount" decimal(24,2) [not null]
+  "refund_type" enum [note: "will be 'fixed' and 'percentage'"]
+  "refund_percentage" int [default: 0]
+  "refund_reason" varchar(255)
+  "status" project_deal_refund_status_enum
+  "created_by" bigint [ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "project_deal_changes" {

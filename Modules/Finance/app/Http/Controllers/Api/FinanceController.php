@@ -32,13 +32,11 @@ class FinanceController extends Controller
     }
 
     /**
-     * Display a listing of the resource.
+     * Get all transactions
      */
     public function index()
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->list());
     }
 
     /**

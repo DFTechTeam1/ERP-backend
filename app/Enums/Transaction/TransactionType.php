@@ -7,4 +7,5 @@ enum TransactionType: string
     case DownPayment = 'down_payment';
     case Credit = 'credit';
     case Repayment = 'repayment';
+    case Refund = 'refund';
 }

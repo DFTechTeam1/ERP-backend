@@ -35,6 +35,10 @@ Route::middleware(['auth:sanctum'])
         Route::get('tasks/status', [ProjectController::class, 'getTaskStatus']);
         Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
 
+        Route::get('refunds', [ProjectController::class, 'listRefunds'])->name('refund.list');
+        Route::get('refunds/{refundUid}', [ProjectController::class, 'detailRefund'])->name('refund.detail');
+        Route::delete('refunds/{refundUid}', [ProjectController::class, 'deleteRefund'])->name('refund.delete');
+        Route::post('refunds/{refundUid}/payment', [ProjectController::class, 'makeRefundPayment'])->name('refund.payment');
         Route::post('project', [ProjectController::class, 'store']);
         Route::get('project', [ProjectController::class, 'index'])->name('project-list');
         Route::get('project/getAll', [ProjectController::class, 'getAllProjects']);
@@ -42,10 +46,12 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/deals', [ProjectController::class, 'listProjectDeals'])->name('project-deal.list');
         Route::get('project/interactive-requests', [ProjectController::class, 'listInteractiveRequests'])->name('interactive-request.list');
         Route::get('project/deals/price-changes', [ProjectController::class, 'requestChangesList'])->name('project-deal.requestChangesList');
+        Route::get('project/deals/selection', [ProjectController::class, 'requestProjectDealSelectionList'])->name('project-deal.requestSelectionList');
         Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);
         Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
+        Route::post('project/deals/{projectDealUid}/refund', [ProjectController::class, 'storeRefund'])->name('project-deal.refund');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
         Route::post('project/deals/{projectDealUid}/update', [ProjectController::class, 'updateFinalDeal'])->name('project-deal.updateFinal');
         Route::post('project/deals/{projectDealUid}/interactives', [InteractiveController::class, 'store'])->name('project-deal.addInteractive');

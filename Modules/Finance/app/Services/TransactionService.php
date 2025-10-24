@@ -160,6 +160,8 @@ class TransactionService
             $payload['transaction_type'] = $type;
             $payload['invoice_id'] = $invoiceId;
             $payload['trx_id'] = "TRX - {$projectDeal->identifier_number} - ".now()->format('Y');
+            $payload['sourceable_type'] = Invoice::class;
+            $payload['sourceable_id'] = $invoiceId;
 
             $trx = $this->repo->store(
                 collect($payload)->except(['images'])->toArray()
@@ -334,8 +336,10 @@ class TransactionService
      */
     public function downloadInvoice(array $payload): array
     {
-        //
+        return [];
     }
 
-    protected function generateInvoice(int $id, array $payload, string $filepath, string $cacheKey): string {}
+    protected function generateInvoice(int $id, array $payload, string $filepath, string $cacheKey): string {
+        return '';
+    }
 }
