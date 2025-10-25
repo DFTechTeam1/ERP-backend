@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Auth;
 use Modules\Finance\Database\Factories\TransactionFactory;
 use Modules\Production\Models\Customer;
@@ -51,6 +52,9 @@ class Transaction extends Model
         'transaction_date',
         'transaction_type',
         'created_by',
+        'sourceable_type',
+        'sourceable_id',
+        'debit_credit'
     ];
 
     protected $appends = [
@@ -64,6 +68,11 @@ class Transaction extends Model
     protected static function newFactory(): TransactionFactory
     {
         return TransactionFactory::new();
+    }
+
+    public function sourceable(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     public function invoice(): BelongsTo

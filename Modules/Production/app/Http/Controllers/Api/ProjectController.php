@@ -5,6 +5,8 @@ namespace Modules\Production\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Finance\Http\Requests\Refund\CreateRefund;
+use Modules\Finance\Http\Requests\Refund\CreateTransaction;
 use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
@@ -914,11 +916,13 @@ class ProjectController extends Controller
     public function listProjectDeals(): JsonResponse
     {
         return apiResponse($this->projectDealService->list(
-            select: 'id,project_date,name,venue,city_id,collaboration,status,is_fully_paid',
+            select: 'id,project_date,name,venue,city_id,collaboration,status,is_fully_paid,customer_id',
             relation: [
                 'marketings',
                 'marketings.employee:id,nickname',
+                'refund:id,project_deal_id',
                 'city:id,name',
+                'customer:id,name',
                 'transactions:id,project_deal_id,payment_amount,created_at',
                 'latestQuotation',
                 'finalQuotation',
@@ -1051,5 +1055,65 @@ class ProjectController extends Controller
     public function listInteractiveRequests(): JsonResponse
     {
         return apiResponse($this->projectDealService->listInteractiveRequests());
+    }
+
+    /**
+     * Get project deal selection list
+     * @return JsonResponse
+     */
+    public function requestProjectDealSelectionList(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->requestProjectDealSelectionList());
+    }
+
+    /**
+     * Store refund for selected project deal
+     * @param CreateRefund  $request
+     * @param string  $projectDealUid
+     * @return JsonResponse
+     */
+    public function storeRefund(CreateRefund $request, string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->storeRefund($request->validated(), $projectDealUid));
+    }
+
+    /**
+     * List of refunds
+     * @return JsonResponse
+     */
+    public function listRefunds(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->listRefunds());
+    }
+
+    /**
+     * Detail of refund
+     * @param string  $refundUid
+     * @return JsonResponse
+     */
+    public function detailRefund(string $refundUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->detailRefund(refundUid: $refundUid));
+    }
+
+    /**
+     * Make refund payment
+     * @param CreateTransaction  $request
+     * @param string  $refundUid
+     * @return JsonResponse
+     */
+    public function makeRefundPayment(CreateTransaction $request, string $refundUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->makeRefundPayment($request->validated(), $refundUid));
+    }
+
+    /**
+     * Delete refund
+     * @param string  $refundUid
+     * @return JsonResponse
+     */
+    public function deleteRefund(string $refundUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->deleteRefund(refundUid: $refundUid));
     }
 }

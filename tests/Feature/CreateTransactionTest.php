@@ -8,6 +8,7 @@ use Modules\Company\Models\Country;
 use Modules\Company\Models\State;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
+use Modules\Finance\Models\ProjectDealRefund;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectQuotation;
 
@@ -166,5 +167,41 @@ describe('Create Transaction', function () {
         ]);
 
         Bus::assertDispatched(TransactionCreatedJob::class);
+    });
+
+    it ('Create refund transaction', function () {
+        $projectDeal = ProjectDeal::factory()
+            ->withQuotation(1000000)
+            ->create();
+
+        $refund = ProjectDealRefund::factory()
+            ->for($projectDeal)
+            ->create([
+                'refund_amount' => 500000,
+            ]);
+
+        $service = createProjectDealService();
+
+        $response = $service->makeRefundPayment(payload: [
+            'payment_amount' => 500000,
+            'payment_date' => now()->format('Y-m-d'),
+            'payment_notes' => 'Refund payment for order issue',
+            'payment_proof' => null,
+        ], refundUid: \Illuminate\Support\Facades\Crypt::encryptString($refund->id));
+
+        expect($response['error'])->toBeFalse();
+
+        $this->assertDatabaseHas('project_deal_refunds', [
+            'id' => $refund->id,
+            'status' => \App\Enums\Finance\RefundStatus::Paid->value,
+        ]);
+
+        $this->assertDatabaseHas('transactions', [
+            'sourceable_type' => ProjectDealRefund::class,
+            'sourceable_id' => $refund->id,
+            'payment_amount' => 500000,
+            'debit_credit' => 'credit',
+            'transaction_type' => \App\Enums\Transaction\TransactionType::Refund->value,
+        ]);
     });
 });

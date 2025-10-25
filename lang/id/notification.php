@@ -146,4 +146,11 @@ return [
     'cannotChangeProjectStatusTaskNotCompleted' => 'Tidak dapat mengubah status proyek karena masih ada tugas yang belum selesai',
     'successUpdateProfile' => 'Profil telah berhasil diperbarui',
     'fileNotFound' => 'Berkas tidak ditemukan',
+    'successCreateProjectDealRefundRequest' => 'Permintaan pengembalian dana telah berhasil dibuat',
+    'successMakeRefundPayment' => 'Pembayaran pengembalian dana telah berhasil dilakukan',
+    'successDeleteProjectDealRefundRequest' => 'Permintaan pengembalian dana telah berhasil dihapus',
+    'eventHasBeenAlreadyHaveRefund' => 'Event sudah mempunyai pengembalian dana',
+    'paymentAmountNotMatchWithRefundAmount' => 'Jumlah pembayaran tidak sesuai dengan jumlah pengembalian dana',
+    'cannotDeletePaidRefund' => 'Tidak dapat menghapus pengembalian dana dengan status sudah dibayar',
+    'refundDataNotFound' => 'Data pengembalian dana tidak ditemukan',
 ];

@@ -6,11 +6,13 @@ use App\Actions\CopyDealToProject;
 use App\Actions\CreateInteractiveProject;
 use App\Actions\CreateQuotation;
 use App\Enums\Cache\CacheKey;
+use App\Enums\Finance\RefundStatus;
 use App\Enums\Interactive\InteractiveRequestStatus;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Transaction\InvoiceStatus;
+use App\Enums\Transaction\TransactionType;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
@@ -20,13 +22,17 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesHasBeenApproved;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Finance\Models\ProjectDealRefund;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\PriceChangeReasonRepository;
 use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
+use Modules\Finance\Repository\ProjectDealRefundRepository;
+use Modules\Finance\Repository\TransactionRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
@@ -70,6 +76,10 @@ class ProjectDealService
 
     private NasFolderCreationService $nasFolderCreationService;
 
+    private ProjectDealRefundRepository $projectDealRefundRepo;
+
+    private TransactionRepository $transactionRepo;
+
     /**
      * Construction Data
      */
@@ -88,6 +98,8 @@ class ProjectDealService
         InteractiveRequestRepository $interactiveRequestRepo,
         InteractiveProjectRepository $interactiveProjectRepo,
         NasFolderCreationService $nasFolderCreationService,
+        ProjectDealRefundRepository $projectDealRefundRepo,
+        TransactionRepository $transactionRepo
     ) {
         $this->projectDealChangeRepo = $projectDealChangeRepo;
 
@@ -116,6 +128,10 @@ class ProjectDealService
         $this->interactiveProjectRepo = $interactiveProjectRepo;
 
         $this->nasFolderCreationService = $nasFolderCreationService;
+
+        $this->projectDealRefundRepo = $projectDealRefundRepo;
+
+        $this->transactionRepo = $transactionRepo;
     }
 
     /**
@@ -292,7 +308,9 @@ class ProjectDealService
                     'status_project_color' => $statusColor,
                     'fix_price' => $finalPrice,
                     'new_price' => $newPrice,
+                    'customer_name' => $item->customer ? $item->customer->name : '-',
                     'latest_price' => $item->getLatestPrice(formatPrice: true),
+                    'latest_price_raw' => $item->getLatestPrice(),
                     'is_fully_paid' => (bool) $item->is_fully_paid,
                     'status_payment' => $item->getStatusPayment(),
                     'status_payment_color' => $item->getStatusPaymentColor(),
@@ -698,6 +716,10 @@ class ProjectDealService
                     'latestQuotation',
                     'finalQuotation',
                     'customer:id,name,phone,email',
+                    'refund:id,project_deal_id,refund_amount,refund_type,status,refund_percentage,refund_reason,created_by,created_at',
+                    'refund.createdBy:id,employee_id',
+                    'refund.createdBy.employee:id,uid,name',
+                    'refund.transaction',
                     'city:id,name',
                     'class:id,name',
                     'activeInteractiveRequest',
@@ -837,7 +859,36 @@ class ProjectDealService
                 ];
             }
 
-            $transactions = $data->transactions->map(function ($trx) use ($data) {
+            $refunds = [];
+            if ($data->refund) {
+                // uid: '123',
+                // status: 'paid',
+                // status_text: 'Paid',
+                // status_color: 'green',
+                // refund_amount: 1000000,
+                // refund_type: 'percentage', // or 'fixed'
+                // refund_percentage: 10,
+                // refund_reason: 'Client cancellation',
+                // created_at: '2025-10-20',
+                // creator: 'John Doe',
+                // payment_date: '2025-10-22',
+                // paid_by: 'Finance Admin'
+                $refunds[] = [
+                    'uid' => Crypt::encryptString($data->refund->id),
+                    'status' => $data->refund->status->value,
+                    'status_text' => $data->refund->status->label(),
+                    'status_color' => $data->refund->status->color(),
+                    'refund_amount' => $data->refund->refund_amount,
+                    'refund_type' => $data->refund->refund_type,
+                    'refund_percentage' => $data->refund->refund_percentage,
+                    'refund_reason' => $data->refund->refund_reason,
+                    'created_at' => date('d F Y', strtotime($data->refund->created_at)),
+                    'creator' => $data->refund->createdBy->employee->name,
+                    'payment_date' => $data->refund->transaction ? date('d F Y', strtotime($data->refund->transaction->transaction_date)) : '-',
+                ];
+            }
+
+            $transactions = $data->transactions->where('transaction_type', '!=', \App\Enums\Transaction\TransactionType::Refund)->map(function ($trx) use ($data) {
                 $trx['description'] = 'Receiving invoice payment';
                 $trx['images'] = collect($trx->attachments)->pluck('real_path')->toArray();
                 $trx['customer'] = [
@@ -927,6 +978,7 @@ class ProjectDealService
                 'name' => $data->name,
                 'final_quotation' => $finalQuotation,
                 'transactions' => $transactions,
+                'refunds' => $refunds,
                 'quotations' => $quotations,
                 'remaining_payment_raw' => $data->getRemainingPayment(),
                 'latest_quotation_id' => $finalQuotation->count() > 0 ? $finalQuotation['quotation_id'] : Crypt::encryptString($data->latestQuotation->quotation_id),
@@ -1829,6 +1881,370 @@ class ProjectDealService
                     'paginated' => $paginated,
                     'totalData' => $totalData,
                 ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Request project deal selection list
+     * This function is used to get project deal list for selection purpose
+     * @return array<mixed>
+     */
+    public function requestProjectDealSelectionList(): array
+    {
+        $search = request('search');
+        $where = "1 = 1";
+        $itemsPerPage = request('per_page') ?? 10;
+        $itemsPerPage = $itemsPerPage == -1 ? 999999 : $itemsPerPage;
+        $page = request('page') ?? 1;
+        $page = $page == 1 ? 0 : $page;
+        $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+        if ($search) {
+            $where .= " and name like '%{$search}%'";
+        }
+
+        $paginated = $this->repo->pagination(
+            select: 'id,name,project_date,status,customer_id',
+            where: $where,
+            relation: [
+                'latestQuotation',
+                'customer:id,name',
+                'refund:id,project_deal_id'
+            ],
+            itemsPerPage: $itemsPerPage,
+            page: $page
+        );
+
+        $paginated = $paginated->map(function ($item) {
+            $item['uid'] = Crypt::encryptString($item->id);
+            $item['latest_price_raw'] = $item->latestQuotation ? $item->latestQuotation->fix_price : 'Rp0';
+            $item['customer_name'] = $item->customer ? $item->customer->name : '-';
+            $item['disabled'] = $item->refund ? true : false;
+
+            return $item;
+        });
+
+        return generalResponse(
+            message: "Success",
+            data: $paginated->toArray()
+        );
+    }
+
+    /**
+     * Store project deal refund request
+     *
+     * @param  array  $payload  With these following structure
+     *                          - string|int $refund_amount
+     *                          - string|int $refund_percentage
+     *                          - string $refund_type
+     *                          - string $refund_reason
+     * @param string $projectDealUid
+     * @return array<string, mixed>
+     */
+    public function storeRefund(array $payload, string $projectDealUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            // return error if project deal has already have refund data
+            $check = $this->projectDealRefundRepo->show(uid: 'id', select: 'id', where: "project_deal_id = {$projectDealId}");
+
+            if ($check) {
+                return errorResponse(__('notification.eventHasBeenAlreadyHaveRefund'));
+            }
+
+            $this->projectDealRefundRepo->store(data: [
+                'project_deal_id' => $projectDealId,
+                'refund_amount' => $payload['refund_amount'],
+                'refund_percentage' => $payload['refund_percentage'] ?? 0,
+                'refund_type' => $payload['refund_type'] ?? null,
+                'refund_reason' => $payload['refund_reason'] ?? null,
+                'status' => RefundStatus::Pending->value, // pending
+            ]);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successCreateProjectDealRefundRequest')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * List project deal refunds
+     *
+     * @return array<string, mixed>
+     */
+    public function listRefunds(): array
+    {
+        $itemsPerPage = request('itemsPerPage') ?? 10;
+        $itemsPerPage = $itemsPerPage == -1 ? 999999 : $itemsPerPage;
+        $page = request('page') ?? 1;
+        $page = $page == 1 ? 0 : $page;
+        $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+        $where = "1 = 1";
+        $whereHas = [];
+
+        if (request('name')) {
+            $whereHas[] = [
+                'relation' => 'projectDeal',
+                'query' => "name like '%".request('name')."%'",
+            ];
+        }
+
+        if (request('status')) {
+            $status = collect(request('status'))->implode(',');
+            $where .= " and status in ({$status})";
+        }
+
+        $sorts = '';
+        if (! empty(request('sortBy'))) {
+            foreach (request('sortBy') as $sort) {
+                if ($sort['key'] == 'task_name') {
+                    $sort['key'] = 'name';
+                }
+                if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
+                    $sorts .= $sort['key'].' '.$sort['order'].',';
+                }
+            }
+
+            $sorts = rtrim($sorts, ',');
+        } else {
+            $sorts .= 'created_at desc';
+        }
+
+        $paginated = $this->projectDealRefundRepo->pagination(
+            select: 'id,project_deal_id,refund_amount,status,refund_type,refund_percentage,created_by',
+            where: $where,
+            relation: [
+                'projectDeal:id,name,project_date',
+                'projectDeal.latestQuotation',
+                'createdBy:id,employee_id',
+                'createdBy.employee:id,nickname',
+            ],
+            itemsPerPage: $itemsPerPage,
+            page: $page,
+            whereHas: $whereHas,
+            orderBy: $sorts
+        );
+        $paginated = $paginated->map(function ($item) {
+            $item['uid'] = Crypt::encryptString($item->id);
+            $item['event_name'] = $item->projectDeal->name;
+            $item['project_deal_uid'] = Crypt::encryptString($item->project_deal_id);
+            $item['project_date'] = date('d F Y', strtotime($item->projectDeal->project_date));
+            $item['status_text'] = $item->status->label();
+            $item['status_color'] = $item->status->color();
+            $item['deal_price'] = $item->projectDeal->latestQuotation->fix_price ?? 0;
+            $item['creator'] = $item->createdBy->employee->nickname ?? '-';
+
+            return $item;
+        });
+
+        $totalData = $this->projectDealRefundRepo->list(select: 'id', where: $where, whereHas: $whereHas)->count();
+
+        return generalResponse(
+            'Success',
+            false,
+            [
+                'paginated' => $paginated,
+                'totalData' => $totalData,
+            ],
+        );
+    }
+
+    /**
+     * Detail project deal refund
+     *
+     * @param string $refundUid
+     * @return array<string, mixed>
+     */
+    public function detailRefund(string $refundUid): array
+    {
+        try {
+            $refundId = Crypt::decryptString($refundUid);
+            $detail = $this->projectDealRefundRepo->show(
+                uid: $refundId,
+                select: 'id,project_deal_id,refund_amount,refund_percentage,refund_type,refund_reason,status,created_at',
+                relation: [
+                    'projectDeal:id,name,project_date',
+                    'projectDeal.latestQuotation',
+                    'createdBy:id,employee_id',
+                    'createdBy.employee:id,name',
+                    'transaction',
+                    'transaction.attachments'
+                ]
+            );
+
+            $imageProof = null;
+            if (($detail->transaction) && ($detail->transaction->attachments->count() > 0)) {
+                $imageProof = asset('storage/transactions/refunds/' . $detail->transaction->attachments[0]->image);
+            }
+
+            $output = [
+                'uid' => $refundUid,
+                'event_name' => $detail->projectDeal->name,
+                'project_date' => date('d F Y', strtotime($detail->projectDeal->project_date)),
+                'deal_price' => $detail->projectDeal->latestQuotation->fix_price ?? 0,
+                'status' => $detail->status->value,
+                'status_text' => $detail->status->label(),
+                'status_color' => $detail->status->color(),
+                'refund_type' => $detail->refund_type,
+                'refund_percentage' => $detail->refund_percentage,
+                'refund_amount' => $detail->refund_amount,
+                'refund_reason' => $detail->refund_reason,
+                'creator' => $detail->createdBy->employee->name ?? '-',
+                'created_at' => date('d F Y, H:i', strtotime($detail->created_at)),
+
+                // 'payment_date' => null,
+                // 'paid_amount' => null,
+                // 'payment_method' => null,
+                // 'paid_by' => null,
+                // 'payment_proof' => null,
+                // 'payment_notes' => null,
+                'payment_date' => $detail->transaction ? date('d F Y, H:i', strtotime($detail->transaction->transaction_date)) : null,
+                'paid_amount' => $detail->transaction ? $detail->transaction->payment_amount : null,
+                'payment_method' => $detail->transaction ? $detail->transaction->payment_method : null,
+                'payment_proof' => $imageProof,
+                'payment_notes' => $detail->transaction ? $detail->transaction->note : '-',
+            ];
+            return generalResponse(
+                message: 'Success',
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Make refund payment
+     *
+     * @param  array  $payload  With these following structure
+     *                          - string|int $payment_amount
+     *                          - string $payment_date
+     *                          - string $payment_method
+     *                          - string|null $payment_notes
+     *                          - file|null $payment_proof
+     * @param string $refundUid
+     * @return array<string, mixed>
+     */
+    public function makeRefundPayment(array $payload, string $refundUid): array
+    {
+        $tmpImage = [];
+        DB::beginTransaction();
+        try {
+            $refundId = Crypt::decryptString($refundUid);
+            $refund = $this->projectDealRefundRepo->show(
+                uid: $refundId,
+                select: 'id,project_deal_id,refund_amount,status',
+                relation: [
+                    'projectDeal:id,customer_id,identifier_number',
+                ]
+            );
+
+            // validate payment_amount with refund_amount
+            if ($refund->refund_amount != $payload['payment_amount']) {
+                return errorResponse(__('notification.paymentAmountNotMatchWithRefundAmount'));
+            }
+
+            // update status
+            $this->projectDealRefundRepo->update(
+                data: [
+                    'status' => RefundStatus::Paid->value, // paid
+                ],
+                id: $refundId
+            );
+
+            $trx = $this->transactionRepo->store(data: [
+                'debit_credit' => 'credit',
+                'project_deal_id' => $refund->project_deal_id,
+                'customer_id' => $refund->projectDeal->customer_id,
+                'payment_amount' => $payload['payment_amount'],
+                'note' => $payload['payment_notes'] ?? null,
+                'trx_id' => "TRX - {$refund->projectDeal->identifier_number} - RFN -".now()->format('Y'),
+                'transaction_date' => date('Y-m-d H:i:s', strtotime($payload['payment_date'])),
+                'transaction_type' => TransactionType::Refund->value,
+                'sourceable_type' => ProjectDealRefund::class,
+                'sourceable_id' => $refund->id,
+            ]);
+
+            if ((isset($payload['payment_proof'])) && $payload['payment_proof'] != null) {
+                $imageName = $this->generalService->uploadImageandCompress(
+                    path: 'transactions/refunds',
+                    image: $payload['payment_proof'],
+                    compressValue: 1
+                );
+
+                if (! $imageName) {
+                    DB::rollBack();
+
+                    return errorResponse(message: 'Failed to process transaction');
+                }
+
+                $tmpImage[] = $imageName;
+                
+                $trx->attachments()->create([
+                    'image' => $imageName,
+                ]);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successMakeRefundPayment')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            // delete image
+            if (count($tmpImage) > 0) {
+                foreach ($tmpImage as $tmpFile) {
+                    if (Storage::exists('transactions/refunds/'.$tmpFile)) {
+                        Storage::delete('transactions/refunds/'.$tmpFile);
+                    }
+                }
+            }
+
+            
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete project deal refund
+     *
+     * @param string $refundUid
+     * @return array<string, mixed>
+     */
+    public function deleteRefund(string $refundUid): array
+    {
+        try {
+            $refundId = Crypt::decryptString($refundUid);
+
+            // cannot delete refund with status paid
+            $check = $this->projectDealRefundRepo->show(uid: $refundId, select: 'id,status');
+
+            if ($check && $check->status === RefundStatus::Paid) {
+                return errorResponse(__('notification.cannotDeletePaidRefund'));
+            }
+
+            if (!$check) {
+                return errorResponse(__('notification.refundDataNotFound'));
+            }
+
+            $this->projectDealRefundRepo->delete(id: $refundId);
+
+            return generalResponse(
+                message: __('notification.successDeleteProjectDealRefundRequest')
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
