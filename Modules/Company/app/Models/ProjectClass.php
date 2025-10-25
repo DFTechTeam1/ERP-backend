@@ -18,6 +18,11 @@ class ProjectClass extends Model
         'name',
         'maximal_point',
         'color',
+        'base_point',
+        'point_2_team',
+        'point_3_team',
+        'point_4_team',
+        'point_5_team',
     ];
 
     protected static function newFactory(): ProjectClassFactory

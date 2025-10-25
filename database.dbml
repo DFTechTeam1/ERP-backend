@@ -1422,6 +1422,18 @@ Table "projects" {
   "project_deal_id" bigint [default: NULL]
 }
 
+Table "project_feedbacks" {
+  "id" bigint [pk, not null]
+  "project_id" bigint [not null, ref: > projects.id]
+  "pic_id" bigint [not null, ref: > employees.id]
+  "feedback" text [not null]
+  "points" longtext
+  "submitted_at" timestamp [default: NULL]
+  "submitted_by" bigint [not null, ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "project_boards" {
   "id" bigint [pk, not null]
   "project_id" bigint [not null]
@@ -1436,6 +1448,11 @@ Table "project_classes" {
   "id" bigint [pk, not null]
   "name" varchar(255) [not null]
   "maximal_point" tinyint [not null]
+  "base_point" tinyint [not null, default: '0']
+  "point_2_team" tinyint [not null, default: '0']
+  "point_3_team" tinyint [not null, default: '0']
+  "point_4_team" tinyint [not null, default: '0']
+  "point_5_team" tinyint [not null, default: '0']
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "color" varchar(20) [default: NULL]

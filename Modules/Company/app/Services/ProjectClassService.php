@@ -35,7 +35,7 @@ class ProjectClassService
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
-            $select = 'id as uid,name,maximal_point,color';
+            $select = 'id as uid,name,maximal_point,color,base_point,point_2_team,point_3_team,point_4_team,point_5_team';
 
             $paginated = $this->repo->pagination(
                 $select,
@@ -45,7 +45,7 @@ class ProjectClassService
                 $page
             );
 
-            $paginated = collect($paginated)->map(function ($item) {
+            $paginated = $paginated->map(function ($item) {
                 $item['point'] = $item->maximal_point;
 
                 $item['maximal_point'] = $item->maximal_point.' '.__('global.point');

@@ -32,4 +32,9 @@ class EmployeeTaskState extends Model
     {
         return $this->belongsTo(ProjectTask::class, 'project_task_id');
     }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Hrd\Models\Employee::class,'employee_id');
+    }
 }
