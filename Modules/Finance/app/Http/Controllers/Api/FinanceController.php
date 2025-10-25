@@ -34,9 +34,18 @@ class FinanceController extends Controller
     /**
      * Get all transactions
      */
-    public function index()
+    public function index(): JsonResponse
     {
         return apiResponse($this->service->list());
+    }
+
+    /**
+     * Get transaction summary
+     * @return JsonResponse
+     */
+    public function getTransactionSummary(): JsonResponse
+    {
+        return apiResponse($this->service->getTransactionSummary());
     }
 
     /**
@@ -87,11 +96,9 @@ class FinanceController extends Controller
     /**
      * Show the specified resource.
      */
-    public function show($id)
+    public function show($uid)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->show($uid));
     }
 
     /**

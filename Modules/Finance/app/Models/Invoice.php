@@ -63,6 +63,11 @@ class Invoice extends Model
         );
     }
 
+    public function getSourceName(): string
+    {
+        return 'Invoice';
+    }
+
     public function transaction(): MorphOne
     {
         return $this->morphOne(Transaction::class, 'sourceable');

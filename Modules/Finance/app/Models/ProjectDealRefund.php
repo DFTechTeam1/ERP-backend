@@ -43,6 +43,11 @@ class ProjectDealRefund extends Model
         return ProjectDealRefundFactory::new();
     }
 
+    public function getSourceName(): string
+    {
+        return 'Refund';
+    }
+
     public function casts(): array
     {
         return [

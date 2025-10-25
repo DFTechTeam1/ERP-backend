@@ -150,4 +150,8 @@ return [
     'successCreateProjectDealRefundRequest' => 'Refund request has been created successfully',
     'successMakeRefundPayment' => 'Refund payment has been made successfully',
     'successDeleteProjectDealRefundRequest' => 'Refund request has been deleted successfully',
+    'eventHasBeenAlreadyHaveRefund' => 'Event has been already have refund',
+    'paymentAmountNotMatchWithRefundAmount' => 'Payment amount not match with refund amount',
+    'cannotDeletePaidRefund' => 'Cannot delete refund with status paid',
+    'refundDataNotFound' => 'Refund data not found',
 ];

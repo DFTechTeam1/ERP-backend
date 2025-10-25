@@ -24,7 +24,7 @@ class ProjectDealRefundRepository extends ProjectDealRefundInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = "", array $relation = [])
+    public function list(string $select = '*', string $where = "", array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -32,6 +32,20 @@ class ProjectDealRefundRepository extends ProjectDealRefundInterface {
 
         if (!empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
         }
 
         if ($relation) {
@@ -99,13 +113,17 @@ class ProjectDealRefundRepository extends ProjectDealRefundInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("id", $uid);
+        if (empty($where)) {
+            $query->where("id", $uid);
+        } else {
+            $query->whereRaw($where);
+        }
         
         if ($relation) {
             $query->with($relation);

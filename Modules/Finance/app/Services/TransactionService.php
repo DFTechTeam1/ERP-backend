@@ -66,14 +66,32 @@ class TransactionService
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
+            $whereHas = [];
+
             $paginated = $this->repo->pagination(
-                $select,
-                $where,
-                $relation,
-                $itemsPerPage,
-                $page
+                select: $select,
+                where: $where,
+                relation: $relation,
+                itemsPerPage: $itemsPerPage,
+                page: $page,
+                whereHas: $whereHas
             );
-            $totalData = $this->repo->list('id', $where)->count();
+            $paginated = $paginated->map(function ($item) {
+                return [
+                    'uid' => $item->uid,
+                    'transaction_date' => date('d F Y', strtotime($item->transaction_date)),
+                    'transaction_time' => '',
+                    'source_name' => $item->sourceable ? $item->sourceable->getSourceName() : '-',
+                    'source_type' => $item->sourceable_type == Invoice::class ? 'Invoice' : 'Refund',
+                    'transaction_type' => $item->transaction_type->categoryType(),
+                    'transaction_type_text' => $item->transaction_type->label(),
+                    'amount' => $item->payment_amount,
+                    'payment_method' => '',
+                    'payment_method_text' => '-',
+                    'debit_credit' => $item->debit_credit,
+                ];
+            });
+            $totalData = $this->repo->list(select: 'id', where: $where, whereHas: $whereHas)->count();
 
             return generalResponse(
                 'Success',
@@ -88,9 +106,61 @@ class TransactionService
         }
     }
 
+    /**
+     * Get transaction summary
+     * @return array<string, mixed>
+     */
+    public function getTransactionSummary(): array
+    {
+        try {
+            $totalIncomeInCurrentMonth = $this->repo->list(
+                select: 'SUM(payment_amount) as total_income',
+                where: "debit_credit = 'debit' AND MONTH(transaction_date) = MONTH(CURRENT_DATE()) AND YEAR(transaction_date) = YEAR(CURRENT_DATE())"
+            )->first()->total_income ?? 0;
+
+            $totalOutcomeInCurrentMonth = $this->repo->list(
+                select: 'SUM(payment_amount) as total_outcome',
+                where: "debit_credit = 'credit' AND MONTH(transaction_date) = MONTH(CURRENT_DATE()) AND YEAR(transaction_date) = YEAR(CURRENT_DATE())"
+            )->first()->total_outcome ?? 0;
+
+            $totalRefunds = $this->repo->list(
+                select: 'SUM(payment_amount) as total_refunds',
+                where: "transaction_type = '". TransactionType::Refund->value ."' AND MONTH(transaction_date) = MONTH(CURRENT_DATE()) AND YEAR(transaction_date) = YEAR(CURRENT_DATE())"
+            )->first()->total_refunds ?? 0;
+
+            $transactionCount = $this->repo->list(
+                select: 'id',
+                where: "MONTH(transaction_date) = MONTH(CURRENT_DATE()) AND YEAR(transaction_date) = YEAR(CURRENT_DATE())"
+            )->count();
+
+            $netAmount = $totalIncomeInCurrentMonth - $totalOutcomeInCurrentMonth - $totalRefunds;
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'total_income' => $totalIncomeInCurrentMonth,
+                    'total_outcome' => $totalOutcomeInCurrentMonth,
+                    'total_refunds' => $totalRefunds,
+                    'transaction_count' => $transactionCount,
+                    'net_amount' => $netAmount,
+                    'total_payments' => 0
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     public function datatable()
     {
-        //
+        try {
+            return generalResponse(
+                message: 'Success',
+                data: [],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 
     /**
@@ -99,12 +169,40 @@ class TransactionService
     public function show(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid, 'name,uid,id');
+            $data = $this->repo->show(uid: $uid, select: '*');
+            $attachment = null;
+            if ($data->attachments->isNotEmpty()) {
+                $attachment = $data->attachments->first()->image;
+                if ($data->transaction_type == TransactionType::Refund) {
+                    $attachment = asset('storage/refunds/'.$attachment);
+                } else {
+                    $attachment = asset('storage/transactions/'.$attachment);
+                }
+            }
+            $output = [
+                'uid' => $data->uid,
+                'transaction_code' => '',
+                'transaction_date' => date('d F Y', strtotime($data->transaction_date)),
+                'transaction_time' => '',
+                'transaction_type' => $data->transaction_type->categoryType(),
+                'transaction_type_text' => $data->transaction_type->label(),
+                'debit_credit' => $data->debit_credit,
+                'source_type' => $data->sourceable ? $data->sourceable->getSourceName() : '-',
+                'source_name' => $data->sourceable_type == Invoice::class ? 'Invoice' : 'Refund',
+                'source_id' => 'id',
+                'account_number' => '',
+                'reference_number' => $data->reference,
+                'notes' => $data->note,
+                'description' => '',
+                'created_by_name' => '',
+                'created_at' => date('d F Y H:i:s', strtotime($data->created_at)),
+                'proof_of_payment' => $attachment,
+            ];
 
             return generalResponse(
                 'success',
                 false,
-                $data->toArray(),
+                $output
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

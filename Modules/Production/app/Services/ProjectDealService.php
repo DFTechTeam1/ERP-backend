@@ -1950,6 +1950,13 @@ class ProjectDealService
         try {
             $projectDealId = Crypt::decryptString($projectDealUid);
 
+            // return error if project deal has already have refund data
+            $check = $this->projectDealRefundRepo->show(uid: 'id', select: 'id', where: "project_deal_id = {$projectDealId}");
+
+            if ($check) {
+                return errorResponse(__('notification.eventHasBeenAlreadyHaveRefund'));
+            }
+
             $this->projectDealRefundRepo->store(data: [
                 'project_deal_id' => $projectDealId,
                 'refund_amount' => $payload['refund_amount'],
@@ -1984,7 +1991,20 @@ class ProjectDealService
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
-        $where = "";
+        $where = "1 = 1";
+        $whereHas = [];
+
+        if (request('name')) {
+            $whereHas[] = [
+                'relation' => 'projectDeal',
+                'query' => "name like '%".request('name')."%'",
+            ];
+        }
+
+        if (request('status')) {
+            $status = collect(request('status'))->implode(',');
+            $where .= " and status in ({$status})";
+        }
 
         $sorts = '';
         if (! empty(request('sortBy'))) {
@@ -2013,7 +2033,7 @@ class ProjectDealService
             ],
             itemsPerPage: $itemsPerPage,
             page: $page,
-            whereHas: [],
+            whereHas: $whereHas,
             orderBy: $sorts
         );
         $paginated = $paginated->map(function ($item) {
@@ -2029,7 +2049,7 @@ class ProjectDealService
             return $item;
         });
 
-        $totalData = $this->projectDealRefundRepo->list(select: 'id', where: $where)->count();
+        $totalData = $this->projectDealRefundRepo->list(select: 'id', where: $where, whereHas: $whereHas)->count();
 
         return generalResponse(
             'Success',
@@ -2131,6 +2151,11 @@ class ProjectDealService
                 ]
             );
 
+            // validate payment_amount with refund_amount
+            if ($refund->refund_amount != $payload['payment_amount']) {
+                return errorResponse(__('notification.paymentAmountNotMatchWithRefundAmount'));
+            }
+
             // update status
             $this->projectDealRefundRepo->update(
                 data: [
@@ -2204,6 +2229,18 @@ class ProjectDealService
     {
         try {
             $refundId = Crypt::decryptString($refundUid);
+
+            // cannot delete refund with status paid
+            $check = $this->projectDealRefundRepo->show(uid: $refundId, select: 'id,status');
+
+            if ($check && $check->status === RefundStatus::Paid) {
+                return errorResponse(__('notification.cannotDeletePaidRefund'));
+            }
+
+            if (!$check) {
+                return errorResponse(__('notification.refundDataNotFound'));
+            }
+
             $this->projectDealRefundRepo->delete(id: $refundId);
 
             return generalResponse(
