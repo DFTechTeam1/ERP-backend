@@ -13,6 +13,7 @@ use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
+use App\Repository\UserRepository;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
@@ -152,6 +153,7 @@ class ProjectDealService
     ): array {
         try {
             $user = Auth::user();
+            $user = (new UserRepository)->detail(id: $user->id, select: 'id,employee_id,email');
 
             $itemsPerPage = request('itemsPerPage') ?? 10;
             $itemsPerPage = $itemsPerPage == -1 ? 999999 : $itemsPerPage;
@@ -268,6 +270,9 @@ class ProjectDealService
                     $newPrice = 'Rp'.number_format(num: $newPrice, decimal_separator: ',');
                 }
 
+                // define refund permission
+                $canAddRefund = !$item->refund && $user->hasPermissionTo('create_refund') ? true : false;
+
                 // interactive status
                 $interactiveStatus = __('global.notAvailable');
                 $canEditInteractive = false;
@@ -359,6 +364,7 @@ class ProjectDealService
                     'interactive_note' => $item->lastInteractiveRequest && ! $canAddInteractive ? $item->lastInteractiveRequest->interactive_note : null,
                     'can_edit_interactive' => $canEditInteractive,
                     'can_add_interactive' => $canAddInteractive,
+                    'can_add_refund' => $canAddRefund
                 ];
             });
 

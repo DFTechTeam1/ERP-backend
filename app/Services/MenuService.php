@@ -51,6 +51,11 @@ class MenuService
             }
         })->values()->all();
 
+        // remove old menu who do not have any childs
+        $old = collect($old)->filter(function ($filter) {
+            return count($filter['childs']) > 0;
+        })->values()->all();
+
         $new = collect($new)->map(function ($map) use ($permissionData) {
             $childs = collect($map['childs'])->filter(function ($child) use ($permissionData) {
                 return in_array($child['permission'], collect($permissionData)->pluck('name')->toArray());
