@@ -56,8 +56,8 @@
             "icon": "mdiPlain:mdi-calculator-variant-outline",
             "childs": [
                 { "path": "/admin/finance/deals", "slug": "projectDeals", "lang_id": "Deals", "lang_en": "Deals", "icon": "mdiPlain:mdi-calendar-check", "permission": "list_deals" },
-                { "path": "/admin/finance/transactions", "slug": "transactions", "lang_id": "Transaksi", "lang_en": "Transactions", "icon": "mdiPlain:mdi-receipt-text", "permission": "list_project" },
-                { "path": "/admin/finance/refund", "slug": "refund", "lang_id": "Refund", "lang_en": "Refund", "icon": "mdiPlain:mdi-cash-refund", "permission": "list_project" }
+                { "path": "/admin/finance/transactions", "slug": "transactions", "lang_id": "Transaksi", "lang_en": "Transactions", "icon": "mdiPlain:mdi-receipt-text", "permission": "list_transaction" },
+                { "path": "/admin/finance/refund", "slug": "refund", "lang_id": "Refund", "lang_en": "Refund", "icon": "mdiPlain:mdi-cash-refund", "permission": "list_refund" }
             ]
         },
         {

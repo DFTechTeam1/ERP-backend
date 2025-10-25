@@ -924,6 +924,7 @@ class ProjectController extends Controller
                 'city:id,name',
                 'customer:id,name',
                 'transactions:id,project_deal_id,payment_amount,created_at',
+                'refund:id,project_deal_id',
                 'latestQuotation',
                 'finalQuotation',
                 'firstTransaction',
