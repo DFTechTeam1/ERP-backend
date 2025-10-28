@@ -671,8 +671,10 @@ Table "employee_point_projects" {
   "id" bigint [pk, not null]
   "employee_point_id" bigint [not null]
   "project_id" bigint [not null]
-  "total_point" int [not null, note: 'point + additional point']
+  "total_point" int [not null, note: 'point/prorate_point + additional point']
   "additional_point" int [not null]
+  "prorate_point" int [not null, default: '0', note: 'When project reached maximum projects, this column will be filled']
+  "original_point" int [not null, default: '0', note: '1 task = 1 point']
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

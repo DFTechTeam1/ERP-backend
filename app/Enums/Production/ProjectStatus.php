@@ -12,6 +12,7 @@ enum ProjectStatus: int
     case Completed = 6;
     case ReadyToGo = 7;
     case Canceled = 8;
+    case PartialComplete = 9;
 
     public function label()
     {
@@ -24,6 +25,7 @@ enum ProjectStatus: int
             self::Completed => __('global.completed'),
             self::ReadyToGo => __('global.readyToGo'),
             self::Canceled => __('global.canceled'),
+            self::PartialComplete => __('global.partialComplete')
         };
     }
 
@@ -38,6 +40,7 @@ enum ProjectStatus: int
             self::Completed => 'green-lighten-2',
             self::ReadyToGo => 'success',
             self::Canceled => 'brown-darken-2',
+            self::PartialComplete => 'green-darken-1'
         };
     }
 }

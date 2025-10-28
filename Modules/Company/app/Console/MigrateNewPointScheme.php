@@ -36,6 +36,69 @@ class MigrateNewPointScheme extends Command
             ->where('point_4_team', 0)
             ->where('point_5_team', 0)
             ->get();
+
+        // B (Standard)
+        // S (Spesial)
+        // A (besar)
+        // C (Budget)
+        // D (Template)
+        // B+ (Standard Plus)
+        // A+ (Besar Plus)
+        $progressBar = $this->output->createProgressBar(7);
+        \Modules\Company\Models\ProjectClass::where('name', 'B (Standard)')
+            ->orWhere('name', 'C (Budget)')
+            ->orWhere('name', 'D (Template)')
+            ->update([
+                'base_point' => 25,
+                'point_2_team' => 30,
+                'point_3_team' => 36,
+                'point_4_team' => 40,
+                'point_5_team' => 45,
+            ]);
+        $progressBar->advance(3);
+
+        \Modules\Company\Models\ProjectClass::where('name', 'S (Spesial)')
+            ->update([
+                'base_point' => 60,
+                'point_2_team' => 72,
+                'point_3_team' => 84,
+                'point_4_team' => 96,
+                'point_5_team' => 110,
+            ]);
+        $progressBar->advance(4);
+
+        \Modules\Company\Models\ProjectClass::where('name', 'A+ (Besar Plus)')
+            ->update([
+                'base_point' => 50,
+                'point_2_team' => 60,
+                'point_3_team' => 69,
+                'point_4_team' => 80,
+                'point_5_team' => 90,
+            ]);
+        $progressBar->advance(5);
+
+        \Modules\Company\Models\ProjectClass::where('name', 'A (besar)')
+            ->update([
+                'base_point' => 40,
+                'point_2_team' => 48,
+                'point_3_team' => 57,
+                'point_4_team' => 64,
+                'point_5_team' => 70,
+            ]);
+        $progressBar->advance(6);
+
+        \Modules\Company\Models\ProjectClass::where('name', 'B+ (Standard Plus)')
+            ->update([
+                'base_point' => 35,
+                'point_2_team' => 42,
+                'point_3_team' => 48,
+                'point_4_team' => 56,
+                'point_5_team' => 65,
+            ]);
+        $progressBar->advance(7);
+
+        $progressBar->finish();
+        $this->info("\nMigration completed successfully!");
     }
 
     /**

@@ -15,8 +15,11 @@ class CompleteProject extends FormRequest
             'feedback' => 'required',
             'points' => 'nullable',
             'points.*.uid' => 'nullable',
-            'points.*.point' => 'nullable',
-            'points.*.additional_point' => 'nullable',
+            'points.*.point' => 'required|integer|min:0',
+            'points.*.additional_point' => 'integer|min:0',
+            'points.*.calculated_prorate_point' => 'required|integer|min:0',
+            'points.*.original_point' => 'required|integer|min:0',
+            'points.*.prorate_point' => 'required|integer|min:0',
             'points.*.tasks' => 'nullable|array',
         ];
     }

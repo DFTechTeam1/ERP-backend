@@ -6066,8 +6066,8 @@ class ProjectService
             $proratePerTask = number_format($maxCollaborationPoint / $totalTaskPoint, 1);
             // update 'prorate_point' in the output
             $output = collect($output)->map(function ($team) use ($proratePerTask) {
-                $team['prorate_point'] = $team['total_task'] * $proratePerTask;
-                $team['point'] = $team['total_task'] * $proratePerTask;
+                $team['prorate_point'] = number_format($team['total_task'] * $proratePerTask, 1);
+                $team['point'] = number_format($team['total_task'] * $proratePerTask, 1);
                 $team['prorate_point_raw'] = $proratePerTask;
 
                 return $team;
@@ -6158,16 +6158,25 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
+            $user = Auth::user();
+
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
+            $payloadProject = [
+                'status' => \App\Enums\Production\ProjectStatus::PartialComplete->value
+            ];
             if (! empty($data['points'])) {
                 PointRecord::run($data, $projectUid, 'production');
+
+                // record project feedback
+                $isAllRecorded = \App\Actions\Production\RecordProjectFeedback::run(payload: $data, projectUid: $projectUid, user: $user);
+                if ($isAllRecorded) {
+                    $payloadProject['status'] = \App\Enums\Production\ProjectStatus::Completed->value;
+                }
+
             }
 
-            $this->repo->update([
-                'feedback' => $data['feedback'],
-                'status' => \App\Enums\Production\ProjectStatus::Completed->value,
-            ], $projectUid);
+            $this->repo->update($payloadProject, $projectUid);
 
             // update project equipment
             $this->projectEquipmentRepo->update([
@@ -8397,6 +8406,9 @@ class ProjectService
         }
     }
 
+    /**
+     * Get unfinished tasks
+     */
     protected function getUnfinishedTasks(int $projectId): array
     {
         $notAllowed = [

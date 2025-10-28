@@ -57,6 +57,9 @@ class PointRecord
                         'project_id' => $projectId,
                         'total_point' => $data['point'],
                         'additional_point' => $data['additional_point'],
+                        'prorate_point' => $data['prorate_point'],
+                        'original_point' => $data['original_point'],
+                        'calculated_prorate_point' => $data['calculated_prorate_point'],
                     ]);
                 }
 

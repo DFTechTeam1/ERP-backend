@@ -28,7 +28,7 @@ class GetProjectStatistic
             $employeePoint = EmployeePoint::selectRaw('id,employee_id')
                 ->with([
                     'projects' => function ($query) use ($projectId) {
-                        $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point')
+                        $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point,calculated_prorate_point')
                             ->with(['project:id,name,project_date', 'details:id,point_id'])
                             ->whereHas('project', function ($queryProject) use ($projectId) {
                                 $queryProject->where('id', $projectId);
@@ -45,6 +45,7 @@ class GetProjectStatistic
                     'employee_id' => $employeePoint->employee_id,
                     'total_point' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->total_point : 0,
                     'additional_point' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->additional_point : 0,
+                    'prorate_point' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->calculated_prorate_point : 0,
                     'total_task' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->details->count() : 0,
                 ];
             }

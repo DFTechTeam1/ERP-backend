@@ -107,7 +107,7 @@ class EmployeePointService
                 ];
             }
             $details = $this->pointProjectRepo->list(
-                select: 'id,employee_point_id,project_id,total_point AS total_point_per_project,additional_point',
+                select: 'id,employee_point_id,project_id,total_point AS total_point_per_project,additional_point,calculated_prorate_point,prorate_point,original_point',
                 where: "employee_point_id = {$data->id}",
                 relation: $relation,
                 whereHas: [
