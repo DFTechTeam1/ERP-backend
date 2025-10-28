@@ -92,8 +92,8 @@ class MigrateProjectTaskDurationHistory extends Command
                                 'task_id' => $dataGroup[0]['project_task_id'],
                                 'pic_id' => $pm[0],
                                 'employee_id' => $employeeId,
-                                'task_duration' => $duration,
-                                'pm_approval_duration' => null,
+                                'task_full_duration' => $duration,
+                                'task_approval_duration' => 0,
                                 'task_type' => 'production',
                                 'created_at' => Carbon::now(),
                             ];

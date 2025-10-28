@@ -6058,8 +6058,8 @@ class ProjectService
         }
         $maxCollaborationPoint = $project->projectClass ? $project->projectClass->$variablePoint : 0;
         $totalTaskPoint = collect($output)->pluck('total_task')->sum();
+        // dd($totalTaskPoint);
         $maxPointReached = $totalTaskPoint > $maxCollaborationPoint ? true : false;
-        // $maxPointReached = true;
 
         if ($maxPointReached) {
             // calculate prorate
@@ -6166,7 +6166,36 @@ class ProjectService
                 'status' => \App\Enums\Production\ProjectStatus::PartialComplete->value
             ];
             if (! empty($data['points'])) {
-                PointRecord::run($data, $projectUid, 'production');
+                // Separate special and regular employees
+                $specialEmployees = [];
+                $regularEmployees = [];
+                
+                foreach ($data['points'] as $point) {
+                    if (isset($point['is_special_employee']) && $point['is_special_employee'] == 1) {
+                        $specialEmployees[] = $point;
+                    } else {
+                        $regularEmployees[] = $point;
+                    }
+                }
+                
+                // Handle special employees (with accumulation)
+                if (!empty($specialEmployees)) {
+                    PointRecord::run(
+                        ['points' => $specialEmployees],
+                        $projectUid,
+                        'production',
+                        false
+                    );
+                }
+                
+                // Handle regular employees (normal flow)
+                if (!empty($regularEmployees)) {
+                    PointRecord::run(
+                        ['points' => $regularEmployees],
+                        $projectUid,
+                        'production'
+                    );
+                }
 
                 // record project feedback
                 $isAllRecorded = \App\Actions\Production\RecordProjectFeedback::run(payload: $data, projectUid: $projectUid, user: $user);

@@ -15,11 +15,12 @@ class CompleteProject extends FormRequest
             'feedback' => 'required',
             'points' => 'nullable',
             'points.*.uid' => 'nullable',
-            'points.*.point' => 'required|integer|min:0',
-            'points.*.additional_point' => 'integer|min:0',
-            'points.*.calculated_prorate_point' => 'required|integer|min:0',
-            'points.*.original_point' => 'required|integer|min:0',
-            'points.*.prorate_point' => 'required|integer|min:0',
+            'points.*.point' => 'required',
+            'points.*.additional_point' => 'required',
+            'points.*.calculated_prorate_point' => 'required',
+            'points.*.original_point' => 'required',
+            'points.*.prorate_point' => 'required',
+            'points.*.is_special_employee' => 'required|boolean',
             'points.*.tasks' => 'nullable|array',
         ];
     }
