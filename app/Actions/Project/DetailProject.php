@@ -158,6 +158,7 @@ class DetailProject
                 'client_portal' => $data->client_portal,
                 'status' => $data->status_text,
                 'status_color' => $data->status_color,
+                'status_icon' => $data->status_icon,
                 'status_raw' => $data->status,
                 'references' => FormatReferenceFile::run($data->references, $data->id),
                 'boards' => $boardsData,

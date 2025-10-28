@@ -89,7 +89,7 @@ class Project extends Model
         'project_deal_id',
     ];
 
-    protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
+    protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path', 'status_icon'];
 
     protected static function newFactory(): ProjectFactory
     {
@@ -209,6 +209,24 @@ class Project extends Model
             foreach ($statuses as $status) {
                 if ($status->value == $this->status) {
                     $output = $status->label();
+                }
+            }
+        }
+
+        return Attribute::make(
+            get: fn () => $output,
+        );
+    }
+
+    public function statusIcon(): Attribute
+    {
+        $output = 'help-circle';
+
+        if ($this->status) {
+            $statuses = \App\Enums\Production\ProjectStatus::cases();
+            foreach ($statuses as $status) {
+                if ($status->value == $this->status) {
+                    $output = $status->icon();
                 }
             }
         }

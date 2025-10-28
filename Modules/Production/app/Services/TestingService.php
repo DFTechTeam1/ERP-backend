@@ -173,11 +173,13 @@ class TestingService
 
             $status = '-';
             $statusColor = '';
+            $statusIcon = '';
             if ($item->status) {
                 foreach ($statusses as $statusData) {
                     if ($statusData->value == $item->status) {
                         $status = $statusData->label();
                         $statusColor = $statusData->color();
+                        $statusIcon = $statusData->icon();
                     }
                 }
             } else {
@@ -230,6 +232,7 @@ class TestingService
                 'event_class_color' => $item->projectClass->color,
                 'status' => $status,
                 'status_color' => $statusColor,
+                'status_icon' => $statusIcon,
                 'status_raw' => $item->status,
                 'project_is_complete' => $item->status == \App\Enums\production\ProjectStatus::Completed->value,
                 'vj' => $vj,
@@ -502,11 +505,13 @@ class TestingService
 
                 $status = '-';
                 $statusColor = '';
+                $statusIcon = '';
                 if ($item->status) {
                     foreach ($statusses as $statusData) {
                         if ($statusData->value == $item->status) {
                             $status = $statusData->label();
                             $statusColor = $statusData->color();
+                            $statusIcon = $statusData->icon();
                         }
                     }
                 } else {
@@ -574,6 +579,7 @@ class TestingService
                     'status' => $status,
                     'status_color' => $statusColor,
                     'status_raw' => $item->status,
+                    'status_icon' => $statusIcon,
                     'project_is_complete' => $projectIsComplete,
                     'vj' => $vj,
                     'have_vj' => $haveVj,

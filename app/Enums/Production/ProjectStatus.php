@@ -32,15 +32,39 @@ enum ProjectStatus: int
     public function color()
     {
         return match ($this) {
-            self::OnGoing => 'deep-purple-lighten-3',
-            self::Draft => 'gray-lighten-3',
-            self::Revise => 'deep-orange-lighten-2',
-            self::WaitingApprovalClient => 'teal-lighten-3',
-            self::ApprovedByClient => 'cyan-lighten-3',
-            self::Completed => 'green-lighten-2',
-            self::ReadyToGo => 'success',
-            self::Canceled => 'brown-darken-2',
-            self::PartialComplete => 'green-darken-1'
+            self::OnGoing => 'blue',
+            self::Draft => 'grey',
+            self::Revise => 'orange',
+            self::WaitingApprovalClient => 'amber',
+            self::ApprovedByClient => 'light-green',
+            self::Completed => 'green',
+            self::ReadyToGo => 'teal',
+            self::Canceled => 'red',
+            self::PartialComplete => 'cyan'
+            // self::OnGoing => 'deep-purple-lighten-3',
+            // self::Draft => 'gray-lighten-3',
+            // self::Revise => 'deep-orange-lighten-2',
+            // self::WaitingApprovalClient => 'teal-lighten-3',
+            // self::ApprovedByClient => 'cyan-lighten-3',
+            // self::Completed => 'green-lighten-2',
+            // self::ReadyToGo => 'success',
+            // self::Canceled => 'brown-darken-2',
+            // self::PartialComplete => 'green-darken-1'
+        };
+    }
+
+    public function icon()
+    {
+        return match ($this) {
+            self::OnGoing => 'mdiPlain:mdi-progress-clock',
+            self::Draft => 'mdiPlain:mdi-file-document-outline',
+            self::Revise => 'mdiPlain:mdi-pencil-circle',
+            self::WaitingApprovalClient => 'mdiPlain:mdi-timer-sand',
+            self::ApprovedByClient => 'mdiPlain:mdi-check-circle-outline',
+            self::Completed => 'mdiPlain:mdi-flag-checkered',
+            self::ReadyToGo => 'mdiPlain:mdi-rocket-launch',
+            self::Canceled => 'mdiPlain:mdi-cancel',
+            self::PartialComplete => 'mdiPlain:mdi-checkbox-multiple-marked-circle-outline'
         };
     }
 }
