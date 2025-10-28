@@ -350,4 +350,5 @@ return [
     'rejected' => 'Rejected',
     'notAvailable' => 'Not Available',
     'available' => 'Available',
+    'partialComplete' => 'Partial Complete'
 ];

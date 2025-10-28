@@ -124,6 +124,11 @@ class ProjectTask extends Model
             ->orderBy('created_at', 'ASC');
     }
 
+    public function employeeTaskStates(): HasMany
+    {
+        return $this->hasMany(\Modules\Hrd\Models\EmployeeTaskState::class, 'project_task_id');
+    }
+
     public function holds(): HasMany
     {
         return $this->hasMany(ProjectTaskHold::class, 'project_task_id');

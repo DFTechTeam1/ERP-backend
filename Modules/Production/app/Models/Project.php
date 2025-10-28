@@ -101,6 +101,11 @@ class Project extends Model
         return $this->hasOne(InteractiveProject::class, 'parent_project', 'id');
     }
 
+    public function feedbacks(): HasMany
+    {
+        return $this->hasMany(ProjectFeedback::class, 'project_id');
+    }
+
     /**
      * Get all of the personInCharges for the Project
      */

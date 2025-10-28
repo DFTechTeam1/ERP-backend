@@ -3,7 +3,7 @@
 
 Kami telah menerima permintaan ubah password Anda. Untuk melanjutkan, klik tombol di bawah ini:
 
-<x-mail::button :url="$url" color="primary">
+<x-mail::button :url="$url" color="#000000">
     Ubah Password
 </x-mail::button>
 

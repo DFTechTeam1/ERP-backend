@@ -1187,11 +1187,12 @@ class ProjectService
                 $isLeadModeller = true;
             }
 
-            $specialEmployee = $this->employeeRepo->list('id,uid,name,nickname,email,position_id', $whereSpecial, ['position:id,name'])->toArray();
+            $specialEmployee = $this->employeeRepo->list('id,uid,name,nickname,email,position_id,avatar,boss_id', $whereSpecial, ['position:id,name'])->toArray();
 
             $specialEmployee = collect($specialEmployee)->map(function ($employee) use ($isLeadModeller) {
                 $employee['loan'] = false;
-                $employee['image'] = asset('images/user.png');
+                $employee['is_special_employee'] = true;
+                $employee['image'] = $employee['avatar'] ? $employee['avatar'] : asset('images/user.png');
                 $employee['is_lead_modeller'] = $isLeadModeller;
 
                 return $employee;
@@ -1199,10 +1200,6 @@ class ProjectService
 
             $specialIds = collect($specialEmployee)->pluck('id')->toArray();
         }
-
-        logging('SPECIAL EMPLOYEE', $specialEmployee);
-        logging('WHERE SPECIAL', [$whereSpecial]);
-        logging('LEAD MODELER', [$leadModeller]);
 
         // get another teams from approved transfer team
         $user = Auth::user();
@@ -1229,7 +1226,7 @@ class ProjectService
             $employeeCondition .= " and id NOT IN ($specialId)";
         }
 
-        $transfers = $this->transferTeamRepo->list('id,employee_id', $transferCondition, ['employee:id,name,nickname,uid,email,employee_id,position_id', 'employee.position:id,name']);
+        $transfers = $this->transferTeamRepo->list('id,employee_id', $transferCondition, ['employee:id,name,nickname,uid,email,employee_id,position_id,avatar,boss_id', 'employee.position:id,name']);
 
         $transfers = collect((object) $transfers)->map(function ($transfer) {
             return [
@@ -1237,12 +1234,14 @@ class ProjectService
                 'uid' => $transfer->employee->uid,
                 'email' => $transfer->employee->email,
                 'nickname' => $transfer->employee->nickname,
+                'boss_id' => $transfer->employee->boss_id,
                 'name' => $transfer->employee->name,
                 'position' => $transfer->employee->position,
                 'loan' => true,
+                'is_special_employee' => false,
                 'last_update' => '-',
                 'current_task' => '-',
-                'image' => asset('images/user.png'),
+                'image' => $transfer->employee->avatar ? $transfer->employee->avatar : asset('images/user.png'),
             ];
         })->toArray();
 
@@ -1261,7 +1260,7 @@ class ProjectService
         }
 
         $teams = $this->employeeRepo->list(
-            'id,uid,name,email,nickname,position_id',
+            'id,uid,name,email,nickname,position_id,avatar,boss_id',
             $employeeCondition,
             ['position:id,name'],
             '',
@@ -1279,11 +1278,12 @@ class ProjectService
         );
 
         if (count($teams) > 0) {
-            $teams = collect($teams)->map(function ($team) {
+            $teams = $teams->map(function ($team) {
                 $team['last_update'] = '-';
                 $team['current_task'] = '-';
                 $team['loan'] = false;
-                $team['image'] = asset('images/user.png');
+                $team['is_special_employee'] = false;
+                $team['image'] = $team->avatar ? $team->avatar : asset('images/user.png');
 
                 return $team;
             })->toArray();
@@ -1312,7 +1312,7 @@ class ProjectService
         $entertain = $this->transferTeamRepo->list(
             'id,employee_id,requested_by,alternative_employee_id',
             'project_id = '.$project->id.' and is_entertainment = 1 and employee_id is not null',
-            ['employee:id,uid,name,email,position_id', 'employee.position:id,name']
+            ['employee:id,uid,name,email,position_id,avatar', 'employee.position:id,name']
         );
 
         $outputEntertain = collect((object) $entertain)->map(function ($item) {
@@ -2844,6 +2844,9 @@ class ProjectService
 
             // delete project durations
             $task->projectDurations()->delete();
+
+            // delete task state
+            $task->employeeTaskStates()->delete();
 
             $this->taskRepo->bulkDelete([$taskUid], 'uid');
 
@@ -5976,17 +5979,35 @@ class ProjectService
         }
     }
 
+    /**
+     * Get team who worked on selected project.
+     * Just return teams based on authenticated user
+     * @param string $projectUid
+     * @return array<string, mixed>
+     */
     public function getTaskTeamForReview(string $projectUid): array
     {
+        $user = (new UserRepository)->detail(id: Auth::id(), select: 'id,email,employee_id');
+        $isSuperPower = $user->hasRole(\App\Enums\System\BaseRole::Root->value) || $user->hasRole(\App\Enums\System\BaseRole::Director->value);
+        $bossId = $user->employee_id;
+
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
-        $project = $this->repo->show($projectUid, 'id,uid,event_type,classification,name,project_date');
+        $project = $this->repo->show(
+            uid: $projectUid,
+            select: 'id,uid,event_type,classification,name,project_date,project_class_id',
+            relation: [
+                'projectClass:id,maximal_point,base_point,point_2_team,point_3_team,point_4_team,point_5_team',
+                'personInCharges:id,project_id,pic_id'
+            ]
+        );
 
         $projectTeams = $this->getProjectTeams(
             project: $project,
             forceGetSpecialTeam: true
         );
         $teams = $projectTeams['teams'];
+
         $pics = $projectTeams['picUids'];
 
         // format with task details
@@ -5997,83 +6018,133 @@ class ProjectService
                 where: "employee_id = {$team['id']} AND project_id = {$projectId}",
                 relation: [
                     'task:id,name',
+                ],
+                whereHas: [
+                    [
+                        'relation' => 'task',
+                        'query' => '',
+                        'type' => 'plain'
+                    ]
                 ]
             );
 
             $output[] = [
                 'uid' => $team['uid'],
                 'name' => $team['name'],
+                'image' => $team['image'] ?? asset('images/user.png'),
+                'boss_id' => $team['boss_id'],
+                'loan' => $team['loan'],
+                'is_special_employee' => $team['is_special_employee'],
+                // 'total_task' => 10,
                 'total_task' => $tasks->count(),
+                'prorate_point' => 0,
                 'point' => $tasks->count(),
+                // 'point' => 60,
                 'additional_point' => 0,
                 'can_decrease_point' => false,
                 'can_increase_point' => true,
                 'tasks' => collect($tasks)->pluck('project_task_id')->values()->toArray(),
+                'member_count' => 0,
             ];
         }
+
+        // validate total point based on point configuration on each class
+        $numberOfPic = $project->personInCharges->count();
+        $numberOfPic = $numberOfPic > 5 ? 5 : $numberOfPic;
+        if ($numberOfPic == 1) {
+            $variablePoint = 'base_point';
+        } else {
+            $variablePoint = "point_{$numberOfPic}_team";
+        }
+        $maxCollaborationPoint = $project->projectClass ? $project->projectClass->$variablePoint : 0;
+        $totalTaskPoint = collect($output)->pluck('total_task')->sum();
+        // dd($totalTaskPoint);
+        $maxPointReached = $totalTaskPoint > $maxCollaborationPoint ? true : false;
+
+        if ($maxPointReached) {
+            // calculate prorate
+            $proratePerTask = number_format($maxCollaborationPoint / $totalTaskPoint, 1);
+            // update 'prorate_point' in the output
+            $output = collect($output)->map(function ($team) use ($proratePerTask) {
+                $team['prorate_point'] = number_format($team['total_task'] * $proratePerTask, 1);
+                $team['point'] = number_format($team['total_task'] * $proratePerTask, 1);
+                $team['prorate_point_raw'] = $proratePerTask;
+
+                return $team;
+            });
+        }
+
+        // filter based on boss id. Keep loan employee and sepcial employee
+        $output = collect($output)->filter(function ($team) use ($bossId, $isSuperPower) {
+            return $team['boss_id'] == $bossId || $isSuperPower || ($team['loan'] || $team['is_special_employee']);
+        })->values();
 
         return generalResponse(
-            'success',
-            false,
-            $output
+            message: 'success',
+            data: [
+                'data' => $output,
+                'max_point_reached' => $maxPointReached,
+                'maximum_collaboration_point' => $maxCollaborationPoint,
+            ]
+            
         );
 
-        $histories = $this->taskPicHistory->list('DISTINCT project_id,project_task_id,employee_id', 'project_id = '.$projectId, ['employee:id,name,employee_id,uid,nickname']);
+        // $histories = $this->taskPicHistory->list('DISTINCT project_id,project_task_id,employee_id', 'project_id = '.$projectId, ['employee:id,name,employee_id,uid,nickname']);
 
-        $data = collect((object) $histories)->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'employee' => $item->employee->name.' ('.$item->employee->employee_id.')',
-                'employee_uid' => $item->employee->uid,
-                'project_id' => $item->project_id,
-                'project_task_id' => $item->project_task_id,
-                'employee_id' => $item->employee_id,
-            ];
-        })
-            ->groupBy('employee_id')
-            ->toArray();
+        // $data = collect((object) $histories)->map(function ($item) {
+        //     return [
+        //         'id' => $item->id,
+        //         'employee' => $item->employee->name.' ('.$item->employee->employee_id.')',
+        //         'employee_uid' => $item->employee->uid,
+        //         'project_id' => $item->project_id,
+        //         'project_task_id' => $item->project_task_id,
+        //         'employee_id' => $item->employee_id,
+        //     ];
+        // })
+        //     ->groupBy('employee_id')
+        //     ->toArray();
 
-        $output = [];
-        foreach ($data as $employeeId => $employee) {
-            $output[$employeeId] = [
-                'uid' => $employee[0]['employee_uid'],
-                'name' => $employee[0]['employee'],
-                'total_task' => count($employee),
-                'point' => count($employee),
-                'additional_point' => 0,
-                'can_decrease_point' => false,
-                'can_increase_point' => true,
-                'tasks' => collect($employee)->pluck('project_task_id')->toArray(),
-            ];
-        }
+        // $output = [];
+        // foreach ($data as $employeeId => $employee) {
+        //     $output[$employeeId] = [
+        //         'uid' => $employee[0]['employee_uid'],
+        //         'name' => $employee[0]['employee'],
+        //         'total_task' => count($employee),
+        //         'point' => count($employee),
+        //         'additional_point' => 0,
+        //         'can_decrease_point' => false,
+        //         'can_increase_point' => true,
+        //         'tasks' => collect($employee)->pluck('project_task_id')->toArray(),
+        //     ];
+        // }
 
-        $rawData = collect($output)->values()->pluck('uid')->toArray();
+        // $rawData = collect($output)->values()->pluck('uid')->toArray();
 
-        foreach ($teams as $team) {
-            if (! in_array($team['uid'], $rawData)) {
-                array_push($output, [
-                    'uid' => $team['uid'],
-                    'name' => $team['name'],
-                    'total_task' => 0,
-                    'point' => 0,
-                    'additional_point' => 0,
-                    'can_decrease_point' => false,
-                    'can_increase_point' => true,
-                    'tasks' => [],
-                ]);
-            }
-        }
+        // foreach ($teams as $team) {
+        //     if (! in_array($team['uid'], $rawData)) {
+        //         array_push($output, [
+        //             'uid' => $team['uid'],
+        //             'name' => $team['name'],
+        //             'total_task' => 0,
+        //             'point' => 0,
+        //             'additional_point' => 0,
+        //             'can_decrease_point' => false,
+        //             'can_increase_point' => true,
+        //             'tasks' => [],
+        //         ]);
+        //     }
+        // }
 
-        // remove pic in list
-        $output = collect($output)->filter(function ($filter) use ($pics) {
-            return ! in_array($filter['uid'], $pics);
-        })->values()->toArray();
+        // // remove pic in list
+        // $output = collect($output)->filter(function ($filter) use ($pics) {
+        //     return ! in_array($filter['uid'], $pics);
+        // })->values()->toArray();
 
-        return generalResponse(
-            'success',
-            false,
-            $output
-        );
+        // return generalResponse(
+        //     'success',
+        //     false,
+        //     $output
+        // );
     }
 
     /**
@@ -6087,16 +6158,54 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
+            $user = Auth::user();
+
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
+            $payloadProject = [
+                'status' => \App\Enums\Production\ProjectStatus::PartialComplete->value
+            ];
             if (! empty($data['points'])) {
-                PointRecord::run($data, $projectUid, 'production');
+                // Separate special and regular employees
+                $specialEmployees = [];
+                $regularEmployees = [];
+                
+                foreach ($data['points'] as $point) {
+                    if (isset($point['is_special_employee']) && $point['is_special_employee'] == 1) {
+                        $specialEmployees[] = $point;
+                    } else {
+                        $regularEmployees[] = $point;
+                    }
+                }
+                
+                // Handle special employees (with accumulation)
+                if (!empty($specialEmployees)) {
+                    PointRecord::run(
+                        ['points' => $specialEmployees],
+                        $projectUid,
+                        'production',
+                        false
+                    );
+                }
+                
+                // Handle regular employees (normal flow)
+                if (!empty($regularEmployees)) {
+                    PointRecord::run(
+                        ['points' => $regularEmployees],
+                        $projectUid,
+                        'production'
+                    );
+                }
+
+                // record project feedback
+                $isAllRecorded = \App\Actions\Production\RecordProjectFeedback::run(payload: $data, projectUid: $projectUid, user: $user);
+                if ($isAllRecorded) {
+                    $payloadProject['status'] = \App\Enums\Production\ProjectStatus::Completed->value;
+                }
+
             }
 
-            $this->repo->update([
-                'feedback' => $data['feedback'],
-                'status' => \App\Enums\Production\ProjectStatus::Completed->value,
-            ], $projectUid);
+            $this->repo->update($payloadProject, $projectUid);
 
             // update project equipment
             $this->projectEquipmentRepo->update([
@@ -8326,6 +8435,9 @@ class ProjectService
         }
     }
 
+    /**
+     * Get unfinished tasks
+     */
     protected function getUnfinishedTasks(int $projectId): array
     {
         $notAllowed = [

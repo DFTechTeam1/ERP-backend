@@ -7,7 +7,9 @@ use Modules\Production\Models\ProjectDeal;
 use function Pest\Laravel\getJson;
 
 beforeEach(function () {
-    $user = initAuthenticateUser();
+    $user = initAuthenticateUser(permissions: [
+        'create_refund'
+    ]);
 
     $this->actingAs($user);
 });

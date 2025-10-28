@@ -1,53 +1,37 @@
 <?php
 
-namespace Modules\Hrd\Repository;
+namespace Modules\Production\Repository;
 
-use Modules\Hrd\Models\EmployeeTaskState;
-use Modules\Hrd\Repository\Interface\EmployeeTaskStateInterface;
+use Modules\Production\Models\ProjectFeedback;
+use Modules\Production\Repository\Interface\ProjectFeedbackInterface;
 
-class EmployeeTaskStateRepository extends EmployeeTaskStateInterface
-{
+class ProjectFeedbackRepository extends ProjectFeedbackInterface {
     private $model;
 
     private $key;
 
     public function __construct()
     {
-        $this->model = new EmployeeTaskState;
+        $this->model = new ProjectFeedback();
         $this->key = 'id';
     }
 
     /**
      * Get All Data
      *
+     * @param string $select
+     * @param string $where
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [])
+    public function list(string $select = '*', string $where = "", array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
-        }
-
-        if (count($whereHas) > 0) {
-            foreach ($whereHas as $queryItem) {
-                if (! isset($queryItem['type'])) {
-                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                        $qd->whereRaw($queryItem['query']);
-                    });
-                } else {
-                    if ($queryItem['type'] == 'plain') {
-                        $query->whereHas($queryItem['relation']);
-                    } else {
-                        $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
-                            $qd->whereRaw($queryItem['query']);
-                        });
-                    }
-                }
-            }
         }
 
         if ($relation) {
@@ -60,47 +44,50 @@ class EmployeeTaskStateRepository extends EmployeeTaskStateInterface
     /**
      * Paginated data for datatable
      *
+     * @param string $select
+     * @param string $where
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function pagination(
-        string $select,
-        string $where,
-        array $relation,
+        string $select = '*',
+        string $where = "",
+        array $relation = [],
         int $itemsPerPage,
         int $page
-    ) {
+    )
+    {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
         }
 
         if ($relation) {
             $query->with($relation);
         }
-
+        
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
     /**
      * Get Detail Data
      *
+     * @param string $uid
+     * @param string $select
+     * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
+    public function show(string $uid, string $select = '*', array $relation = [])
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        if (empty($where)) {
-            $query->where('id', $uid);
-        } else {
-            $query->whereRaw($where);
-        }
-
+        $query->where("uid", $uid);
+        
         if ($relation) {
             $query->with($relation);
         }
@@ -113,6 +100,7 @@ class EmployeeTaskStateRepository extends EmployeeTaskStateInterface
     /**
      * Store Data
      *
+     * @param array $data
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function store(array $data)
@@ -120,24 +108,18 @@ class EmployeeTaskStateRepository extends EmployeeTaskStateInterface
         return $this->model->create($data);
     }
 
-    public function updateOrInsert(array $key, array $updatedValue)
-    {
-        $query = $this->model->query();
-
-        return $query->updateOrCreate($key, $updatedValue);
-    }
-
     /**
      * Update Data
      *
-     * @param  int|string  $id
+     * @param array $data
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
         $query = $this->model->query();
 
-        if (! empty($where)) {
+        if (!empty($where)) {
             $query->whereRaw($where);
         } else {
             $query->where('uid', $id);
@@ -151,7 +133,7 @@ class EmployeeTaskStateRepository extends EmployeeTaskStateInterface
     /**
      * Delete Data
      *
-     * @param  int|string  $id
+     * @param integer|string $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function delete(int $id)
@@ -163,6 +145,7 @@ class EmployeeTaskStateRepository extends EmployeeTaskStateInterface
     /**
      * Bulk Delete Data
      *
+     * @param array $ids
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function bulkDelete(array $ids, string $key = '')

@@ -351,4 +351,5 @@ return [
     'rejected' => 'Ditolak',
     'notAvailable' => 'Tidak Tersedia',
     'available' => 'Tersedia',
+    'partialComplete' => 'Sebagian Selesai'
 ];
