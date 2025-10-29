@@ -259,9 +259,11 @@ class ProjectDealService
                 if ($isHaveRequestPriceChanges) {
                     $status = __('notification.waitingForApproval');
                     $statusColor = 'grey-darken-2';
+                    $statusIcon = '';
                 } else {
                     $status = $item->status->label();
                     $statusColor = $item->status->color();
+                    $statusIcon = $item->status->icon();
                 }
 
                 $finalPrice = $item->getFinalPrice(formatPrice: true);
@@ -302,8 +304,9 @@ class ProjectDealService
                     'project_date' => $item->formatted_project_date,
                     'city' => $item->city ? $item->city->name : '-',
                     'collaboration' => $item->collboration ?? '-',
-                    'status' => $item->status_text,
-                    'status_color' => $item->status_color,
+                    'status' => $item->status->value,
+                    'status_color' => $item->status->color(),
+                    'status_icon' => $item->status->icon(),
                     'marketing' => $marketing,
                     'down_payment' => $item->getDownPaymentAmount(formatPrice: true),
                     'remaining_payment' => $item->getRemainingPayment(formatPrice: true),
@@ -311,6 +314,7 @@ class ProjectDealService
                     'status' => true,
                     'status_project' => $status,
                     'status_project_color' => $statusColor,
+                    'status_project_icon' => $statusIcon,
                     'fix_price' => $finalPrice,
                     'new_price' => $newPrice,
                     'customer_name' => $item->customer ? $item->customer->name : '-',
@@ -319,6 +323,7 @@ class ProjectDealService
                     'is_fully_paid' => (bool) $item->is_fully_paid,
                     'status_payment' => $item->getStatusPayment(),
                     'status_payment_color' => $item->getStatusPaymentColor(),
+                    'status_payment_icon' => $item->getStatusPaymentIcon(),
                     'can_make_payment' => $item->canMakePayment() && ! $isCancel,
                     'can_publish_project' => $item->canPublishProject() && ! $isCancel,
                     'can_make_final' => $item->canMakeFinal() && ! $isCancel,

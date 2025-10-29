@@ -153,4 +153,13 @@ return [
     'paymentAmountNotMatchWithRefundAmount' => 'Jumlah pembayaran tidak sesuai dengan jumlah pengembalian dana',
     'cannotDeletePaidRefund' => 'Tidak dapat menghapus pengembalian dana dengan status sudah dibayar',
     'refundDataNotFound' => 'Data pengembalian dana tidak ditemukan',
+    'successCreateCountry' => 'Negara telah berhasil dibuat',
+    'successUpdateCountry' => 'Negara telah berhasil diperbarui',
+    'successDeleteCountry' => 'Negara telah berhasil dihapus',
+    'cannotDeleteCountryBcsRelation' => 'Tidak dapat menghapus negara karena memiliki hubungan dengan [provinsi/kota]',
+    'dataNotFound' => 'Data tidak ditemukan',
+    'successCreateCity' => 'Kota telah berhasil dibuat',
+    'successUpdateCity' => 'Kota telah berhasil diperbarui',
+    'successDeleteCity' => 'Kota telah berhasil dihapus',
+    'cannotDeleteCityBcsRelation' => 'Tidak dapat menghapus kota karena memiliki hubungan dengan [kecamatan/event]',
 ];

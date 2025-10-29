@@ -33,4 +33,14 @@ class State extends Model
     {
         return $this->hasMany(City::class, 'state_id');
     }
+
+    public function projectDeals(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectDeal::class, 'state_id');
+    }
+
+    public function lastProjectDeal()
+    {
+        return $this->hasOne(\Modules\Production\Models\ProjectDeal::class, 'state_id')->latestOfMany();
+    }
 }

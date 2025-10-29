@@ -5,6 +5,8 @@ namespace Modules\Company\Models;
 use Database\Factories\CityFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class City extends Model
 {
@@ -28,4 +30,14 @@ class City extends Model
         'name',
         'country_code',
     ];
+
+    public function projectDeals(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectDeal::class, 'city_id');
+    }
+
+    public function lastProjectDeal(): HasOne
+    {
+        return $this->hasOne(\Modules\Production\Models\ProjectDeal::class, 'city_id')->latestOfMany();
+    }
 }

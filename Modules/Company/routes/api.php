@@ -60,7 +60,19 @@ Route::post('setting/{code}', [\Modules\Company\Http\Controllers\Api\SettingCont
 Route::get('setting/{code}/{key}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getSettingByKeyAndCode']);
 
 Route::get('world/countries', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getCountries']);
+Route::get('world/countries/pagination', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'paginationCountries']);
+Route::post('world/countries', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'storeCountry'])->name('storeCountry');
+Route::put('world/countries/{countryId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'updateCountry'])->name('updateCountry');
+Route::delete('world/countries/{countryId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'deleteCountry'])->name('deleteCountry');
+Route::get('world/states/pagination', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'paginationStates']);
 Route::get('world/states', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getStates']);
+Route::post('world/states', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'storeState'])->name('storeState');
+Route::put('world/states/{stateId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'updateState'])->name('updateState');
+Route::delete('world/states/{stateId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'deleteState'])->name('deleteState');
+Route::post('world/cities', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'storeCity'])->name('storeCity');
+Route::put('world/cities/{cityId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'updateCity'])->name('updateCity');
+Route::delete('world/cities/{cityId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'deleteCity'])->name('deleteCity');
+Route::get('world/cities/pagination', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'paginationCities']);
 Route::get('world/cities', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getCities']);
 
 // project class

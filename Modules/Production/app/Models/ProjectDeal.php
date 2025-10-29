@@ -414,6 +414,26 @@ class ProjectDeal extends Model
     }
 
     /**
+     * Get icon status of payment in each project deals
+     */
+    public function getStatusPaymentIcon(): string
+    {
+        $output = '';
+
+        if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid'])) {
+            if ($this->attributes['is_fully_paid']) {
+                $output = 'mdiPlain:mdi-check-circle';
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
+                $output = 'mdiPlain:mdi-clock-outline';
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
+                $output = 'mdiPlain:mdi-cancel';
+            }
+        }
+
+        return $output;
+    }
+
+    /**
      * Get color status of payment in each project deals
      */
     public function getStatusPaymentColor(): string
