@@ -96,6 +96,11 @@ class Project extends Model
         return ProjectFactory::new();
     }
 
+    public function nasFolderCreation(): HasOne
+    {
+        return $this->hasOne(NasFolderCreation::class, 'project_id');
+    }
+
     public function interactiveProject(): HasOne
     {
         return $this->hasOne(InteractiveProject::class, 'parent_project', 'id');

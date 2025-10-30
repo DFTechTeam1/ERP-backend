@@ -11,6 +11,7 @@ use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Production\Console\ClearAllCache;
 use Modules\Production\Console\PaymentDueReminderCommand;
+use Modules\Production\Console\ResyncNasFolderCreation;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -30,6 +31,8 @@ Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 \Illuminate\Support\Facades\Schedule::command(\App\Console\Commands\pruneInteractiveAsset::class)->everyMinute();
 
 \Illuminate\Support\Facades\Schedule::command(UpdateEmployeeActivePerMonth::class)->lastDayOfMonth('23:00');
+
+\Illuminate\Support\Facades\Schedule::command(ResyncNasFolderCreation::class)->twiceDailyAt('09:00', '16:00');
 
 // Schedule::command('telescope:prune --hours=72')->daily();
 
