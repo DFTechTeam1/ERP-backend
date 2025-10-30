@@ -39,18 +39,22 @@ class StateService {
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
-            $countryId = request('country_id');
+            $country = request('country');
+            $name = request('name');
+
+            $where = '1 = 1';
 
             if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+                $where = "and lower(name) LIKE '%{$search}%'";
             }
 
-            if (!empty($countryId)) {
-                if (empty($where)) {
-                    $where = "country_id = {$countryId}";
-                } else {
-                    $where .= " AND country_id = {$countryId}";
-                }
+            if (!empty($name)) {
+                $where .= " and lower(name) LIKE '%" . strtolower($name) . "%'";
+            }
+
+            if (!empty($country)) {
+                $countryId = collect($country)->implode(',');
+                $where .= " and country_id IN ({$countryId})";
             }
 
             $paginated = $this->repo->pagination(
@@ -61,6 +65,13 @@ class StateService {
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
+
+            $paginated = $paginated->map(function ($state) {
+                $state['country_name'] = $state->country?->name;
+                $state['uid'] = $state->id;
+
+                return $state;
+            });
 
             return generalResponse(
                 'Success',

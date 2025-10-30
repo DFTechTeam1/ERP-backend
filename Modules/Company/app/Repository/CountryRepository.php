@@ -65,7 +65,7 @@ class CountryRepository extends CountryInterface {
             $query->whereRaw($where);
         }
 
-        if ($relation) {
+        if (!empty($relation)) {
             $query->with($relation);
         }
         

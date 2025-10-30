@@ -77,6 +77,15 @@ class RegionController extends Controller
     }
 
     /**
+     * Get countries selection list
+     * @return JsonResponse
+     */
+    public function requestCountriesSelectionList(): JsonResponse
+    {
+        return apiResponse($this->countryService->requestCountriesSelectionList());
+    }
+
+    /**
      * Get all countries
      * @return JsonResponse
      */
@@ -132,7 +141,12 @@ class RegionController extends Controller
      */
     public function paginationStates(): JsonResponse
     {
-        return apiResponse($this->stateService->list());
+        return apiResponse($this->stateService->list(
+            select: '*',
+            relation: [
+                'country:id,name'
+            ]
+        ));
     }
 
     public function getStates()

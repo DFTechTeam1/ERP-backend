@@ -3,6 +3,8 @@
 namespace Modules\Company\Services;
 
 use App\Enums\ErrorCode\Code;
+use App\Repository\UserRepository;
+use Illuminate\Support\Facades\Auth;
 use Modules\Company\Repository\CountryRepository;
 
 class CountryService {
@@ -32,6 +34,9 @@ class CountryService {
     ): array
     {
         try {
+            $user = Auth::user();
+            $user = (new UserRepository)->detail(id: $user->id);
+
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
@@ -50,6 +55,14 @@ class CountryService {
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
+
+            $paginated = $paginated->map(function ($item) use ($user) {
+                $item['uid'] = $item->id;
+                $item['can_edit'] = $user->hasPermissionTo('create_country');
+                $item['can_delete'] = $user->hasPermissionTo('delete_country');
+
+                return $item;
+            });
 
             return generalResponse(
                 'Success',
@@ -150,7 +163,7 @@ class CountryService {
         try {
             // validate relation
             $data = $this->repo->show(uid: $id, select: 'id', relation: ['lastProjectDeal']);
-
+            
             if (!$data) {
                 return errorResponse(
                     __('notification.dataNotFound'),
@@ -193,5 +206,44 @@ class CountryService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Request project deal selection list
+     * This function is used to get project deal list for selection purpose
+     * @return array<mixed>
+     */
+    public function requestCountriesSelectionList(): array
+    {
+        $search = request('search');
+        $where = "1 = 1";
+        $itemsPerPage = request('per_page') ?? 10;
+        $itemsPerPage = $itemsPerPage == -1 ? 999999 : $itemsPerPage;
+        $page = request('page') ?? 1;
+        $page = $page == 1 ? 0 : $page;
+        $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+        if ($search) {
+            $where .= " and name like '%{$search}%'";
+        }
+
+        $paginated = $this->repo->pagination(
+            select: 'id,name,iso3,iso2,phone_code,currency',
+            where: $where,
+            relation: [],
+            itemsPerPage: $itemsPerPage,
+            page: $page
+        );
+
+        $paginated = $paginated->map(function ($item) {
+            $item['uid'] = $item->id;
+
+            return $item;
+        });
+
+        return generalResponse(
+            message: "Success",
+            data: $paginated->toArray()
+        );
     }
 }

@@ -60,6 +60,7 @@ Route::post('setting/{code}', [\Modules\Company\Http\Controllers\Api\SettingCont
 Route::get('setting/{code}/{key}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getSettingByKeyAndCode']);
 
 Route::get('world/countries', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getCountries']);
+Route::get('world/countries/selection', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'requestCountriesSelectionList']);
 Route::get('world/countries/pagination', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'paginationCountries']);
 Route::post('world/countries', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'storeCountry'])->name('storeCountry');
 Route::put('world/countries/{countryId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'updateCountry'])->name('updateCountry');
