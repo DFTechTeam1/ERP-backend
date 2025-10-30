@@ -86,6 +86,15 @@ class RegionController extends Controller
     }
 
     /**
+     * Get states selection list
+     * @return JsonResponse
+     */
+    public function requestStatesSelectionList(): JsonResponse
+    {
+        return apiResponse($this->stateService->requestStatesSelectionList());
+    }
+
+    /**
      * Get all countries
      * @return JsonResponse
      */
@@ -144,7 +153,7 @@ class RegionController extends Controller
         return apiResponse($this->stateService->list(
             select: '*',
             relation: [
-                'country:id,name'
+                'country:id,name,iso3',
             ]
         ));
     }
@@ -204,7 +213,13 @@ class RegionController extends Controller
      */
     public function paginationCities(): JsonResponse
     {
-        return apiResponse($this->cityService->list());
+        return apiResponse($this->cityService->list(
+            select: '*',
+            relation: [
+                'state:id,name,country_id',
+                'state.country:id,name,iso3',
+            ]
+        ));
     }
 
     public function getCities()

@@ -3,6 +3,7 @@
 namespace Modules\Company\Services;
 
 use App\Enums\ErrorCode\Code;
+use Illuminate\Support\Facades\Auth;
 use Modules\Company\Repository\CountryRepository;
 use Modules\Company\Repository\StateRepository;
 
@@ -34,6 +35,9 @@ class StateService {
     ): array
     {
         try {
+            $user = Auth::user();
+            $user = (new \App\Repository\UserRepository)->detail(id: $user->id, select: 'id');
+
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
@@ -66,9 +70,11 @@ class StateService {
             );
             $totalData = $this->repo->list('id', $where)->count();
 
-            $paginated = $paginated->map(function ($state) {
+            $paginated = $paginated->map(function ($state) use ($user) {
                 $state['country_name'] = $state->country?->name;
                 $state['uid'] = $state->id;
+                $state['can_edit'] = $user->hasPermissionTo('create_state');
+                $state['can_delete'] = $user->hasPermissionTo('delete_state');
 
                 return $state;
             });
@@ -222,5 +228,48 @@ class StateService {
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Request states selection list
+     * This function is used to get states list for selection purpose
+     * @return array<mixed>
+     */
+    public function requestStatesSelectionList(): array
+    {
+        $search = request('search');
+        $where = "1 = 1";
+        $itemsPerPage = request('per_page') ?? 10;
+        $itemsPerPage = $itemsPerPage == -1 ? 999999 : $itemsPerPage;
+        $page = request('page') ?? 1;
+        $page = $page == 1 ? 0 : $page;
+        $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+        if ($search) {
+            $where .= " and name like '%{$search}%'";
+        }
+
+        if (request('country_id')) {
+            $where .= " and country_id = " . request('country_id');
+        }
+
+        $paginated = $this->repo->pagination(
+            select: 'id,name,country_id',
+            where: $where,
+            relation: [],
+            itemsPerPage: $itemsPerPage,
+            page: $page
+        );
+
+        $paginated = $paginated->map(function ($item) {
+            $item['uid'] = $item->id;
+
+            return $item;
+        });
+
+        return generalResponse(
+            message: "Success",
+            data: $paginated->toArray()
+        );
     }
 }

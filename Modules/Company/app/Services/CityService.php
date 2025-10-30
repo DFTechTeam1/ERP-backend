@@ -34,24 +34,30 @@ class CityService {
     ): array
     {
         try {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $user = (new \App\Repository\UserRepository)->detail(id: $user->id, select: 'id');
+
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
+            $search = request('name');
 
-            $stateId = request('state_id');
+            $state = request('state');
+            $countryId = request('country');
+            $where = '1 = 1';
 
             if (!empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+                $where .= " and lower(name) LIKE '%{$search}%'";
             }
 
-            if ($stateId) {
-                if (empty($where)) {
-                    $where = "state_id = {$stateId}";
-                } else {
-                    $where .= " AND state_id = {$stateId}";
-                }
+            if ($state) {
+                $stateId = collect($state)->implode(',');
+                $where .= " AND state_id IN ({$stateId})";
+            }
+
+            if ($countryId) {
+                $where .= " AND country_id = {$countryId}";
             }
 
             $paginated = $this->repo->pagination(
@@ -62,6 +68,15 @@ class CityService {
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
+            $paginated = $paginated->map(function ($city) use ($user) {
+                $city['country_name'] = $city->state ? $city->state->country?->name : null;
+                $city['state_name'] = $city->state?->name;
+                $city['uid'] = $city->id;
+                $city['can_edit'] = $user->hasPermissionTo('create_city');
+                $city['can_delete'] = $user->hasPermissionTo('delete_city');
+
+                return $city;
+            });
 
             return generalResponse(
                 'Success',

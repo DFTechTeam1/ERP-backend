@@ -65,6 +65,7 @@ Route::get('world/countries/pagination', [\Modules\Company\Http\Controllers\Api\
 Route::post('world/countries', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'storeCountry'])->name('storeCountry');
 Route::put('world/countries/{countryId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'updateCountry'])->name('updateCountry');
 Route::delete('world/countries/{countryId}', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'deleteCountry'])->name('deleteCountry');
+Route::get('world/states/selection', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'requestStatesSelectionList']);
 Route::get('world/states/pagination', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'paginationStates']);
 Route::get('world/states', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'getStates']);
 Route::post('world/states', [\Modules\Company\Http\Controllers\Api\RegionController::class, 'storeState'])->name('storeState');
