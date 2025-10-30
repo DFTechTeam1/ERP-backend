@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Company\Jobs\SlackNotificationJob;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
 use Modules\Finance\Models\Invoice;
@@ -186,23 +188,7 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
-
-    $logData = [
-        'timestamp' => now()->toDateTimeString(),
-        'method' => 'POST',
-        'endpoint' => 'endpoint_url',
-        'payload' => [
-            'project_name' => 'Test Project',
-        ],
-        'status' => 'FAILED',
-        'error_message' => 'error nih',
-        'exception_trace' => null,
-    ];
-
-    if ($developer) {
-        $developer->notify(new \Modules\Company\Notifications\NasCreationSlackNotification($logData));
-    }
+    //
 });
 
 Route::get('migrate-duration', function () {
