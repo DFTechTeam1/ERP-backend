@@ -8814,7 +8814,6 @@ class ProjectService
                 );
                 if (! $queueNasCreated) {
                     // throw an error
-                    throw new \Exception('Failed to create NAS folder');
                 }
             }
 

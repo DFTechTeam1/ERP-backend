@@ -426,6 +426,42 @@ class RolePermissionSetting extends Seeder
     protected function masterPermission()
     {
         return [
+            ['name' => 'list_country', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_country', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_country', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'list_state', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_state', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_state', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'list_city', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_city', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_city', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'list_branch', 'group' => 'master', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),

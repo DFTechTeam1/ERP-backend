@@ -26,7 +26,10 @@
                 { "path": "/admin/master/projectClass", "slug": "projectClass", "lang_id": "Event Class", "lang_en": "Event class", "icon": "mdiPlain:mdi-bulletin-board", "permission": "list_division" },
                 { "path": "/admin/master/notification-management", "slug": "notificationManagement", "lang_id": "Manajemen Notifikasi", "lang_en": "Notification Management", "icon": "mdiPlain:mdi-bell", "permission": "notification_template_list" },
                 { "path": "/admin/master/deadline-change-reason", "slug": "deadline-change-reason", "lang_id": "Kelola Alasan Deadline", "lang_en": "Manage Deadline Reason", "icon": "mdiPlain:mdi-timer-sand", "permission": "list_deadline_reasons" },
-                { "path": "/admin/master/quotation-items", "slug": "manage-quotation-items", "lang_id": "Kelola Quotation Item", "lang_en": "Manage Quotation Item", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_quotation_items" }
+                { "path": "/admin/master/quotation-items", "slug": "manage-quotation-items", "lang_id": "Kelola Quotation Item", "lang_en": "Manage Quotation Item", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_quotation_items" },
+                { "path": "/admin/master/countries", "slug": "manage-countries", "lang_id": "Kelola Negara", "lang_en": "Manage Countries", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_country" },
+                { "path": "/admin/master/states", "slug": "manage-states", "lang_id": "Kelola Provinsi", "lang_en": "Manage States", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_state" },
+                { "path": "/admin/master/cities", "slug": "manage-cities", "lang_id": "Kelola Kota", "lang_en": "Manage Cities", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_city" }
             ]
         },
         {

@@ -6,6 +6,7 @@ use Database\Factories\CountryFactory as FactoriesCountryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Country extends Model
 {
@@ -34,5 +35,15 @@ class Country extends Model
     public function states(): HasMany
     {
         return $this->hasMany(State::class, 'country_id');
+    }
+
+    public function projectDeals(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectDeal::class, 'country_id');
+    }
+
+    public function lastProjectDeal(): HasOne
+    {
+        return $this->hasOne(\Modules\Production\Models\ProjectDeal::class, 'country_id')->latestOfMany();
     }
 }
