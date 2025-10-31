@@ -13,7 +13,13 @@ class AddInteractive extends FormRequest
     {
         return [
             'interactive_detail' => 'required|array',
-            'interactive_detail.*.name' => 'required|string|min:8',
+            'interactive_detail.*.name' => 'required|string',
+            'interactive_detail.*.textDetail' => 'required|string',
+            'interactive_detail.*.total' => 'required|string',
+            'interactive_detail.*.totalRaw' => 'required|string',
+            'interactive_detail.*.led' => 'required|array',
+            'interactive_detail.*.led.*.height' => 'required|string',
+            'interactive_detail.*.led.*.width' => 'required|string',
             'interactive_area' => 'required',
             'interactive_note' => 'nullable|string',
             'interactive_fee' => 'required|numeric',

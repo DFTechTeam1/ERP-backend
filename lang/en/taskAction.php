@@ -8,7 +8,7 @@ return [
     'attachments' => 'Attachments',
     'proofOfWorks' => 'Proof Of Works',
     'showLogs' => 'Show Logs',
-    'showTimeTracker' => 'Show Time Tracker',
+    'showTimeTracker' => 'Time Tracker',
     'move' => 'Move',
     'approveTask' => 'Approve Task',
     'holdTask' => 'Hold',
