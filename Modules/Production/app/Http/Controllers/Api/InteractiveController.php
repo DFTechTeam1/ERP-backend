@@ -330,4 +330,14 @@ class InteractiveController extends Controller
     {
         return apiResponse($this->service->filterTasks(payload: $request->validated(), interactiveUid: $interactiveUid));
     }
+
+    /**
+     * Get PIC list for substitute
+     * @param string $interactiveUid
+     * @return JsonResponse
+     */
+    public function getPicForSubtitute(string $interactiveUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->getPicForSubtitute($interactiveUid));
+    }
 }

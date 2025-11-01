@@ -6729,7 +6729,7 @@ class ProjectService
             $selectedPic = $this->projectPicRepository->list(
                 'id,project_id,pic_id',
                 "project_id = {$projectId}",
-                ['employee:id,uid,name,email,employee_id'],
+                ['employee:id,uid,name,email,employee_id,avatar'],
             );
 
             $pics = collect($pics)->filter(function ($filter) use ($selectedPic) {
@@ -6747,6 +6747,7 @@ class ProjectService
                     'name' => $item->employee->name,
                     'email' => $item->employee->email,
                     'employee_id' => $item->employee->employee_id,
+                    'avatar' => $item->employee->avatar,
                     'projects' => $this->getPicWorkload($item->employee, $projectUid, $startDate, $endDate),
                     'is_recommended' => false,
                 ];

@@ -81,6 +81,7 @@ Route::middleware(['auth:sanctum'])
             ->middleware(PermissionCheck::class.':create_interactive_task')
             ->name('interactives.storeTask');
 
+        Route::get('interactives/{interactiveUid}/getPicForSubtitute', [InteractiveController::class, 'getPicForSubtitute']);
         Route::post('interactives/status/{interactiveUid}', [InteractiveController::class, 'changeStatus'])
             ->middleware(PermissionCheck::class.':change_interactive_status')
             ->name('interactives.changeStatus');

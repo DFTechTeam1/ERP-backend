@@ -11,6 +11,7 @@ use App\Enums\Interactive\InteractiveRequestStatus;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\Production\ProjectStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
 use App\Repository\UserRepository;
@@ -39,6 +40,7 @@ use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
+use Modules\Production\Repository\InteractiveProjectPicRepository;
 use Modules\Production\Repository\InteractiveProjectRepository;
 use Modules\Production\Repository\InteractiveRequestRepository;
 use Modules\Production\Repository\ProjectDealChangeRepository;
@@ -81,6 +83,8 @@ class ProjectDealService
 
     private TransactionRepository $transactionRepo;
 
+    private InteractiveProjectPicRepository $interactiveProjectPicRepo;
+
     /**
      * Construction Data
      */
@@ -100,8 +104,11 @@ class ProjectDealService
         InteractiveProjectRepository $interactiveProjectRepo,
         NasFolderCreationService $nasFolderCreationService,
         ProjectDealRefundRepository $projectDealRefundRepo,
-        TransactionRepository $transactionRepo
+        TransactionRepository $transactionRepo,
+        InteractiveProjectPicRepository $interactiveProjectPicRepo
     ) {
+        $this->interactiveProjectPicRepo = $interactiveProjectPicRepo;
+
         $this->projectDealChangeRepo = $projectDealChangeRepo;
 
         $this->projectDealPriceChangeRepo = $projectDealPriceChangeRepo;
@@ -232,7 +239,7 @@ class ProjectDealService
 
                 $sorts = rtrim($sorts, ',');
             } else {
-                $sorts .= 'created_at desc';
+                $sorts .= 'project_date desc';
             }
 
             $paginated = $this->repo->pagination(
@@ -296,6 +303,22 @@ class ProjectDealService
                     }
                 }
 
+                $canEditProjectDeal = (bool) ! $isCancel && ! $isHaveActiveRequestChanges ? true : false;
+
+                // if project already complete / ready to go or if project_date already passed, cannot edit or add interactive
+                $projectDate = Carbon::parse($item->project_date);
+                if (
+                    ($item->project) &&
+                    (in_array($item->project->status, [ProjectStatus::ReadyToGo->value, ProjectStatus::Completed->value])) ||
+                    ($projectDate->isPast())
+                ) {
+                    $canEditInteractive = false;
+                    $canAddInteractive = false;
+
+                    $canEditProjectDeal = false;
+                    $canRequestPriceChanges = false;
+                }
+
                 return [
                     'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
                     'latest_quotation_id' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id),
@@ -327,7 +350,7 @@ class ProjectDealService
                     'can_make_payment' => $item->canMakePayment() && ! $isCancel,
                     'can_publish_project' => $item->canPublishProject() && ! $isCancel,
                     'can_make_final' => $item->canMakeFinal() && ! $isCancel,
-                    'can_edit' => (bool) ! $isCancel && ! $isHaveActiveRequestChanges,
+                    'can_edit' => $canEditProjectDeal,
                     'can_delete' => (bool) ! $item->isFinal() && ! $isCancel,
                     'can_cancel' => $item->status == ProjectDealStatus::Temporary ? true : false,
                     'can_approve_event_changes' => $isHaveActiveRequestChanges && $user->hasPermissionTo('approve_project_deal_change') ? true : false,
@@ -705,7 +728,7 @@ class ProjectDealService
     public function detailProjectDeal(string $projectDealUid): array
     {
         try {
-            $user = Auth::user();
+            $user = (new UserRepository)->detail(id: Auth::id());
             $projectDealUidRaw = Crypt::decryptString($projectDealUid);
             $isEdit = request('edit');
 
@@ -1180,7 +1203,7 @@ class ProjectDealService
             if (! empty($payload)) { // this request came from email
                 $userId = $payload['approval_id'];
             } else { // this request came from website
-                $user = Auth::user();
+                $user = (new UserRepository)->detail(id: Auth::id());
                 $userId = $user->id;
 
                 // validate permission
@@ -1854,6 +1877,8 @@ class ProjectDealService
                 $where = 'status = '.request('status');
             }
 
+            $orderBy = "id desc";
+
             $data = $this->interactiveRequestRepo->list(
                 select: 'id,project_deal_id,requester_id,status,interactive_detail,interactive_area,interactive_note,interactive_fee,fix_price,approved_at,rejected_at',
                 where: $where,
@@ -1864,7 +1889,7 @@ class ProjectDealService
                 ],
                 limit: $itemsPerPage,
                 page: $page,
-                orderBy: 'id desc'
+                orderBy: $orderBy
             );
             $totalData = $this->interactiveRequestRepo->list(select: 'id', where: $where)->count();
 
@@ -2259,6 +2284,62 @@ class ProjectDealService
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get all available PIC and current PIC to show in dialog Subtitute PIC
+     *
+     * @param  string  $projectUId
+     */
+    public function getPicForSubtitute(string $interactiveUid): array
+    {
+        try {
+            $projectId = getIdFromUid($interactiveUid, new \Modules\Production\Models\InteractiveProject());
+
+            $project = $this->interactiveProjectRepo->show($interactiveUid, 'id,name,project_date');
+            $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
+            $endDate = date('Y-m-d', strtotime('+7 days', strtotime($project->project_date)));
+
+            $pics = $this->generalService->mainProcessToGetPicScheduler($interactiveUid, $startDate, $endDate);
+
+            $selectedPic = $this->interactiveProjectPicRepo->list(
+                'id,intr_project_id,employee_id',
+                "intr_project_id = {$projectId}", 
+                ['employee:id,uid,name,email,employee_id,avatar'],
+            );
+
+            $pics = collect($pics)->filter(function ($filter) use ($selectedPic) {
+                return ! in_array(
+                    $filter['id'],
+                    collect($selectedPic)->pluck('employee.uid')->toArray()
+                );
+            })->values();
+
+            // make selected pic format same as available pic
+            $selectedPic = collect((object) $selectedPic)->map(function ($item) use ($interactiveUid, $startDate, $endDate) {
+                return [
+                    'id' => $item->employee->uid,
+                    'current_id' => $item->id, // additional key for frontend use
+                    'name' => $item->employee->name,
+                    'email' => $item->employee->email,
+                    'avatar' => $item->employee->avatar,
+                    'employee_id' => $item->employee->employee_id,
+                    'projects' => getPicWorkload($item->employee, $interactiveUid, $startDate, $endDate),
+                    'is_recommended' => false,
+                ];
+            })->toArray();
+
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'current_pic' => $selectedPic,
+                    'available_pic' => $pics,
+                ],
+            );
+        } catch (\Throwable $e) {
+            return errorResponse($e);
         }
     }
 }
