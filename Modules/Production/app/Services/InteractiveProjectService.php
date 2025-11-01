@@ -930,7 +930,7 @@ class InteractiveProjectService
         DB::beginTransaction();
         try {
             $user = Auth::user();
-            $user = \App\Models\User::select('id', 'email')->find($user->id);
+            $user = \App\Models\User::select('id', 'email', 'employee_id')->find($user->id);
 
             $task = $this->projectTaskRepo->show(uid: $taskUid, select: 'id,status,intr_project_id', relation: [
                 'deadlines',
@@ -940,7 +940,7 @@ class InteractiveProjectService
             ]);
 
             $isMyTask = in_array($user->employee_id, $task->pics->pluck('employee_id')->toArray()) ? true : false;
-
+            
             $isMyProject = in_array($user->employee_id, $task->interactiveProject->pics->pluck('employee_id')->toArray()) ? true : false;
 
             // return with proper message if task already approved
@@ -2019,10 +2019,12 @@ class InteractiveProjectService
                     return $this->generalService->getIdFromUid($removeItem['employee_uid'], new Employee);
                 })->implode(',');
 
-                $this->projectPicRepo->delete(id: 0, where: 'employee_id IN ('.$removeIds.") and intr_project_id = {$project->id}");
+                if (count($payload['remove']) > 0) {
+                    $this->projectPicRepo->delete(id: 0, where: 'employee_id IN ('.$removeIds.") and intr_project_id = {$project->id}");
+                }
             }
 
-            if (isset($payload['pics'])) {
+            if ((isset($payload['pics'])) && (count($payload['pics']) > 0)) {
                 $this->mainAssignPicProject(project: $project, payload: $payload);
             }
 

@@ -932,7 +932,7 @@ class ProjectController extends Controller
                 'activeProjectDealChange:id,project_deal_id',
                 'activeProjectDealPriceChange:id,project_deal_id,new_price',
                 'lastInteractiveRequest',
-                'project:id,project_deal_id',
+                'project:id,project_deal_id,status',
                 'project.interactiveProject:id,parent_project',
             ]
         ));

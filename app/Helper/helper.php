@@ -1207,7 +1207,7 @@ if (! function_exists('mainProcessToGetPicScheduler')) {
             if ($pic['employee_id']) {
                 $employee = (new EmployeeRepository)->show(
                     uid: 'dummy',
-                    select: 'id,uid,name,email,employee_id',
+                    select: 'id,uid,name,email,employee_id,avatar',
                     where: 'id = '.$pic['employee_id'].' and status != '.\App\Enums\Employee\Status::Inactive->value.' and status != '.\App\Enums\Employee\Status::Deleted->value
                 );
 
@@ -1217,6 +1217,7 @@ if (! function_exists('mainProcessToGetPicScheduler')) {
                         'name' => $employee->name,
                         'email' => $employee->email,
                         'employee_id' => $employee->employee_id,
+                        'avatar' => $employee->avatar,
                         'projects' => getPicWorkload(pic: $employee, projectUid: $projectUid, startDate: $startDate, endDate: $endDate),
                         'is_recommended' => false,
                     ];
