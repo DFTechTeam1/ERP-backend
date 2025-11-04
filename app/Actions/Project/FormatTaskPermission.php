@@ -331,6 +331,13 @@ class FormatTaskPermission
 
         $project['permission_list'] = DefineDetailProjectPermission::run();
 
+        // check if authenticated user have feedback or not
+        $isMyFeedbackExists = \Modules\Production\Models\Project::selectRaw('id')->find($project['id'])->isMyFeedbackExists($this->user->employee_id);
+        if ($project['is_super_user'] || $project['is_director']) {
+            $isMyFeedbackExists = true;
+        }
+        $project['is_my_feedback_exists'] = $isMyFeedbackExists;
+
         storeCache('detailProject'.$projectId, $project);
 
         return $project;

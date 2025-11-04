@@ -7,7 +7,8 @@
             "childs": [
                 { "path": "/admin/dashboard", "slug": "dashboard", "lang_id": "Dashboard", "lang_en": "Dashboard", "icon": "mdiPlain:mdi-chart-bar", "permission": "dashboard_access" },
                 { "path": "/admin/dashboard/report", "slug": "dashboardReport", "lang_id": "Report", "lang_en": "Report", "icon": "mdiPlain:mdi-chart-box", "permission": "dashboard_report_access" },
-                { "path": "/admin/setting", "slug": "setting", "lang_id": "Pengaturan", "lang_en": "Settings", "icon": "mdiPlain:mdi-cog", "permission": "list_setting" }
+                { "path": "/admin/setting", "slug": "setting", "lang_id": "Pengaturan", "lang_en": "Settings", "icon": "mdiPlain:mdi-cog", "permission": "list_setting" },
+                { "path": "/admin/setting/logs", "slug": "systemLogs", "lang_id": "Log Sistem", "lang_en": "System Logs", "icon": "mdiPlain:mdi-file-document", "permission": "list_setting" }
             ]
         },
         {

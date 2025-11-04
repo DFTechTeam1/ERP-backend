@@ -87,4 +87,9 @@ class SettingController extends Controller
     {
         return apiResponse($this->service->getPriceCalculation());
     }
+
+    public function getLogs(): \Illuminate\Http\JsonResponse
+    {
+        return apiResponse($this->service->getLogs());
+    }
 }

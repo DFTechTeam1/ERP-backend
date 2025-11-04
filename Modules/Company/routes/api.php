@@ -54,6 +54,8 @@ Route::controller(\Modules\Company\Http\Controllers\Api\DivisionController::clas
         Route::post('divisions/bulk', 'bulkDelete');
     });
 
+Route::get('company/logs', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getLogs']);
+
 Route::get('setting/calculation', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getPriceCalculation']);
 Route::get('setting/{code?}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'getSetting']);
 Route::post('setting/{code}', [\Modules\Company\Http\Controllers\Api\SettingController::class, 'storeSetting']);

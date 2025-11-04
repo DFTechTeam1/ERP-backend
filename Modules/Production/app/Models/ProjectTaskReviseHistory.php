@@ -71,4 +71,9 @@ class ProjectTaskReviseHistory extends Model
             get: fn () => $out,
         );
     }
+
+    public function reviseBy(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'revise_by');
+    }
 }

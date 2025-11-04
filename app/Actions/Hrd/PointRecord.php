@@ -146,7 +146,7 @@ class PointRecord
                     $newAdditionalPoint = $oldAdditionalPoint + $data['additional_point'];
                     
                     // Recalculate total point (base point + accumulated additional points)
-                    $basePoint = $data['point'];
+                    $basePoint = $data['original_point'];
                     $newTotalPoint = $basePoint + $newAdditionalPoint;
                     
                     $existingRecord->update([
@@ -205,7 +205,7 @@ class PointRecord
                 $pointProject = EmployeePointProject::create([
                     'employee_point_id' => $currentPoint->id,
                     'project_id' => $projectId,
-                    'total_point' => $data['point'] + $data['additional_point'],
+                    'total_point' => $data['point'],
                     'additional_point' => $data['additional_point'],
                     'prorate_point' => $data['prorate_point'],
                     'original_point' => $data['original_point'],
@@ -229,9 +229,9 @@ class PointRecord
                     'employee_id' => $employeeId,
                     'project_id' => $projectId,
                     'point_project_id' => $pointProject->id,
-                    'base_point' => $data['point'],
+                    'base_point' => $data['original_point'],
                     'additional_point' => $data['additional_point'],
-                    'total_point' => $data['point'] + $data['additional_point'],
+                    'total_point' => $data['point'],
                 ]);
             }
 

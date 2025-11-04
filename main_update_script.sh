@@ -35,3 +35,6 @@ $PHP_CMD artisan app:migrate-sourceable-transaction
 
 # echo "Logging out all users ..."
 $PHP_CMD artisan app:clear-all-authenticated-sesssion
+
+# update interactive price
+$PHP_CMD artisan db:seed --class=UpdatePriceGuideSetting

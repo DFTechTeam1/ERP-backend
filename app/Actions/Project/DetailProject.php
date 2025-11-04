@@ -173,7 +173,8 @@ class DetailProject
                 'vjs' => $data->vjs,
                 'permission_list' => DefineDetailProjectPermission::run(),
                 'is_entertainment' => $isEntertainment,
-                'feedbacks' => $data->feedbacks
+                'feedbacks' => $data->feedbacks,
+                'is_my_feedback_exists' => $data->isMyFeedbackExists($user->employee_id)
             ];
 
             storeCache('detailProject'.$data->id, $output);

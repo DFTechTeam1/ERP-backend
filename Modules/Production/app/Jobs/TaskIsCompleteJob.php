@@ -36,7 +36,30 @@ class TaskIsCompleteJob implements ShouldQueue
         foreach ($this->employeeIds as $employeeId) {
             $employee = \Modules\Hrd\Models\Employee::find($employeeId);
 
-            \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\TaskIsCompleteNotification($employee, $task));
+            // \App\Services\NotificationService::send(
+            //     recipients: $manager->employee,
+            //     action: 'task_has_been_hold_by_user',
+            //     data: [
+            //         'parameter1' => $manager->employee->nickname,
+            //         'parameter2' => $task->name,
+            //         'parameter3' => $task->project->name,
+            //         'parameter4' => $taskPic->nickname,
+            //     ],
+            //     channels: ['database'],
+            //     options: [
+            //         'url' => '/admin/production/project/' . $task->project->uid,
+            //         'database_type' => 'production'
+            //     ]
+            // );
+
+            // send pusher
+            // (new \App\Services\PusherNotification)->send(
+            //     channel: 'my-channel-' . $manager->employee->user_id,
+            //     event: 'new-db-notification',
+            //     payload: [
+            //         'update' => true
+            //     ],
+            // );
         }
     }
 }

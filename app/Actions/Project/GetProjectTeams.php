@@ -12,7 +12,7 @@ class GetProjectTeams
 {
     use AsAction;
 
-    public function handle(object $project)
+    public function handle(object $project, bool $allSpecialPosition = false)
     {
         $employeeRepo = new EmployeeRepository;
         $transferTeamRepo = new TransferTeamMemberRepository;
@@ -61,7 +61,7 @@ class GetProjectTeams
             $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\PositionBackup);
             $whereSpecial = "position_id = {$specialPosition}";
             $isLeadModeller = false;
-            if ($leadModeller != null && $leadModeller != '' && $leadModeller != 'null') {
+            if ($leadModeller != null && $leadModeller != '' && $leadModeller != 'null' && !$allSpecialPosition) {
                 $leadModeller = getIdFromUid($leadModeller, new Employee);
                 $whereSpecial = "id = {$leadModeller}";
                 $isLeadModeller = true;
