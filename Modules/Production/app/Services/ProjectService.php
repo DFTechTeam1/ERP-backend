@@ -6068,18 +6068,18 @@ class ProjectService
         // dd($totalTaskPoint);
         $maxPointReached = $totalTaskPoint > $maxCollaborationPoint ? true : false;
 
-        if ($maxPointReached) {
-            // calculate prorate
-            $proratePerTask = number_format($maxCollaborationPoint / $totalTaskPoint, 1);
-            // update 'prorate_point' in the output
-            $output = collect($output)->map(function ($team) use ($proratePerTask) {
-                $team['prorate_point'] = number_format($team['total_task'] * $proratePerTask, 1);
-                $team['point'] = number_format($team['total_task'] * $proratePerTask, 1);
-                $team['prorate_point_raw'] = $proratePerTask;
+        // if ($maxPointReached) {
+        //     // calculate prorate
+        //     $proratePerTask = number_format($maxCollaborationPoint / $totalTaskPoint, 1);
+        //     // update 'prorate_point' in the output
+        //     $output = collect($output)->map(function ($team) use ($proratePerTask) {
+        //         $team['prorate_point'] = number_format($team['total_task'] * $proratePerTask, 1);
+        //         $team['point'] = number_format($team['total_task'] * $proratePerTask, 1);
+        //         $team['prorate_point_raw'] = $proratePerTask;
 
-                return $team;
-            });
-        }
+        //         return $team;
+        //     });
+        // }
 
         // filter based on boss id. Keep loan employee and sepcial employee
         $output = collect($output)->filter(function ($team) use ($bossId, $isSuperPower) {
@@ -6090,7 +6090,7 @@ class ProjectService
             message: 'success',
             data: [
                 'data' => $output,
-                'max_point_reached' => $maxPointReached,
+                'max_point_reached' => false,
                 'maximum_collaboration_point' => $maxCollaborationPoint,
             ]
             
@@ -9266,5 +9266,82 @@ class ProjectService
             ],
             where: "project_task_id = {$task->id} AND actual_finish_time IS NULL"
         );
+    }
+
+    /**
+     * Calculate prorate point based on project class and number of pic
+     * @param  array  $payload 
+     * @param  string  $projectUid
+     * @return array
+     */
+    public function calculateProratePoint(array $payload, string $projectUid): array
+    {
+        try {
+            $teams = $payload['teams'];
+
+            // get detail project
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: 'id,project_class_id',
+                relation: [
+                    'personInCharges:id,project_id,pic_id',
+                    'personInCharges.employee:id,name',
+                    'projectClass'
+                ]
+            );
+
+            $totalTask = collect($teams)->sum('total_task');
+            $totalAdditional = collect($teams)->sum('additional_point');
+            $totalTaskPoint = $totalTask + $totalAdditional;
+
+            $numberOfPic = $project->personInCharges->count();
+            $numberOfPic = $numberOfPic > 5 ? 5 : $numberOfPic;
+            if ($numberOfPic == 1) {
+                $variablePoint = 'base_point';
+            } else {
+                $variablePoint = "point_{$numberOfPic}_team";
+            }
+            $maxCollaborationPoint = $project->projectClass ? $project->projectClass->$variablePoint : 0;
+            // dd($totalTaskPoint);
+            $maxPointReached = $totalTaskPoint > $maxCollaborationPoint ? true : false;
+            logging('maxpoint', [
+                'maxpointreached' => $maxPointReached,
+                'totaltaskPoint' => $totalTaskPoint,
+                'payload' => $teams,
+            ]);
+            if ($maxPointReached) {
+                // calculate prorate
+                $proratePerTask = number_format($maxCollaborationPoint / $totalTaskPoint, 1);
+
+                // if proratePerTas 0.5 or 1.5 or 10.5 or 20.5 and up (can be dynamic), it will be 1. But if 0.5 or 1.5 or 10.5 or 20.5 and up (can be dynamic) and down it will be 0
+                $normalizeProratePerTask = (fmod($proratePerTask, 1) >= 0.5) ? ceil($proratePerTask) : floor($proratePerTask);
+
+                // update 'prorate_point' in the output
+                $teams = collect($teams)->map(function ($team) use ($proratePerTask, $normalizeProratePerTask) {
+                    $proratePoint = number_format($team['point'] * $normalizeProratePerTask, 1);
+
+                    $team['prorate_point'] = (fmod($proratePoint, 1) >= 0.5) ? ceil($proratePoint) : floor($proratePoint);
+                    $totalPoint = $team['total_task'] + $team['additional_point'];
+                    $team['total_point'] = $totalPoint;
+                    $point = number_format($totalPoint * $proratePerTask, 1);
+                    $rawTotalPoint = number_format($totalPoint * $proratePerTask, 1);
+
+                    $team['point'] = (fmod($point, 1) >= 0.5) ? ceil($point) : floor($point);
+                    $team['raw_total_point'] = (fmod($rawTotalPoint, 1) >= 0.5) ? ceil($rawTotalPoint) : floor($rawTotalPoint);
+
+                    $team['prorate_point_raw'] = $proratePerTask;
+                    $team['normalize_prorate_point'] = $normalizeProratePerTask;
+
+                    return $team;
+                })->toArray();
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: $teams
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }
