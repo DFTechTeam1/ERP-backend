@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Finance\Http\Requests\Refund\CreateRefund;
 use Modules\Finance\Http\Requests\Refund\CreateTransaction;
+use Modules\Production\Http\Requests\CalculateProratePoint;
 use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
@@ -1116,5 +1117,10 @@ class ProjectController extends Controller
     public function deleteRefund(string $refundUid): JsonResponse
     {
         return apiResponse($this->projectDealService->deleteRefund(refundUid: $refundUid));
+    }
+
+    public function calculateProratePoint(CalculateProratePoint $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->service->calculateProratePoint($request->validated(), $projectUid));
     }
 }
