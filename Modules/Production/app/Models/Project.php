@@ -308,6 +308,11 @@ class Project extends Model
         );
     }
 
+    public function isMyFeedbackExists(int $employeeId)
+    {
+        return $this->feedbacks()->where('pic_id', $employeeId)->exists();
+    }
+
     // protected static function newFactory(): ProjectFactory
     // {
     //     //return ProjectFactory::new();

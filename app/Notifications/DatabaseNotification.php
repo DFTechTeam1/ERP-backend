@@ -14,6 +14,7 @@ class DatabaseNotification extends Notification implements ShouldQueue
     private string $message;
     private array $data;
     private array $options;
+    private string $databaseType;
 
     /**
      * Create a new notification instance.
@@ -22,12 +23,14 @@ class DatabaseNotification extends Notification implements ShouldQueue
         string $action,
         string $message,
         array $data = [],
-        array $options = []
+        array $options = [],
+        string $databaseType = ''
     ) {
         $this->action = $action;
         $this->message = $message;
         $this->data = $data;
         $this->options = $options;
+        $this->databaseType = $databaseType;
     }
 
     /**
@@ -36,6 +39,11 @@ class DatabaseNotification extends Notification implements ShouldQueue
     public function via($notifiable): array
     {
         return ['database'];
+    }
+
+    public function databaseType(): string
+    {
+        return $this->databaseType == '' ? get_class($this) : $this->databaseType;
     }
 
     /**

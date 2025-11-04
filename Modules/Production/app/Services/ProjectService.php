@@ -2576,6 +2576,8 @@ class ProjectService
     ) {
         DB::beginTransaction();
         try {
+            $userId = Auth::id();
+
             // validate pic
             /**
              * Cannot combine lead modeler with other employee
@@ -2736,7 +2738,7 @@ class ProjectService
                         //                        \Modules\Production\Jobs\AssignCheckByPMJob::dispatch($notifiedNewTask, $taskId)->afterCommit();
                     } else {
                         if (isset($userData)) {
-                            \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId, $userData)->afterCommit();
+                            \Modules\Production\Jobs\AssignTaskJob::dispatch($notifiedNewTask, $taskId, $userData, $userId)->afterCommit();
                         }
                     }
                 }
@@ -3131,11 +3133,16 @@ class ProjectService
                 $payload['assign_to_me'] = 1;
             }
 
+            $payloadUpdateTask = [
+                'is_modeler_task' => true
+            ];
+
             if ($payload['assign_to_me'] == 1) { // auto change status to on progress
                 $this->taskRepo->update([
                     'status' => TaskStatus::OnProgress->value,
                 ], $taskUid);
             } else {
+                $payloadUpdateTask['status'] = TaskStatus::WaitingApproval->value;
                 $distribute = $this->assignMemberToTask(
                     data: $data,
                     taskUid: $taskUid
@@ -3149,9 +3156,7 @@ class ProjectService
             /**
              * Mark the task as modeler task
              */
-            $this->taskRepo->update([
-                'is_modeler_task' => true,
-            ], $taskUid);
+            $this->taskRepo->update($payloadUpdateTask, $taskUid);
 
             $task = $this->formattedDetailTask($taskUid);
             $currentData = $this->detailCacheAction->handle($projectUid, [
@@ -5295,7 +5300,7 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
-            $user = Auth::user();
+            $user = $this->userRepo->detail(id: Auth::id());
             $taskId = getIdFromUid($taskUid, new ProjectTask);
             $this->setTaskWorkingTime($taskId, $user->employee_id, \App\Enums\Production\WorkType::OnHold->value);
 
@@ -5337,6 +5342,8 @@ class ProjectService
             $currentData = $this->detailCacheAction->handle($projectUid, [
                 'boards' => FormatBoards::run($projectUid),
             ]);
+
+            \Modules\Production\Jobs\NotifyHoldTaskJob::dispatch($taskId, $user->employee_id)->afterCommit();
 
             DB::commit();
 

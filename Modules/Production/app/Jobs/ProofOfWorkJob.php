@@ -40,17 +40,17 @@ class ProofOfWorkJob implements ShouldQueue
     {
         // get project manager
         $pm = \Modules\Production\Models\ProjectPersonInCharge::selectRaw('id,project_id,pic_id')
+            ->with([
+                'employee:id,user_id,nickname,user_id',
+            ])
             ->where('project_id', $this->projectId)
             ->get();
-
-        // detail project
-        $project = \Modules\Production\Models\Project::find($this->projectId);
 
         // get task pic
         $taskPic = \Modules\Hrd\Models\Employee::where('user_id', $this->taskPic)->first();
 
         // get detail task
-        $task = \Modules\Production\Models\ProjectTask::selectRaw('id,name,uid')
+        $task = \Modules\Production\Models\ProjectTask::selectRaw('id,name,uid,project_id')
             ->with([
                 'project:id,name,uid',
                 'pics:id,project_task_id,employee_id',
@@ -59,12 +59,30 @@ class ProofOfWorkJob implements ShouldQueue
             ->find($this->taskId);
 
         foreach ($pm as $manager) {
-            $employee = \Modules\Hrd\Models\Employee::find($manager->pic_id);
-            $telegramChatId = $employee->telegram_chat_id;
+            \App\Services\NotificationService::send(
+                recipients: $manager->employee,
+                action: 'task_has_been_hold_by_user',
+                data: [
+                    'parameter1' => $manager->employee->nickname,
+                    'parameter2' => $task->name,
+                    'parameter3' => $task->project->name,
+                    'parameter4' => $taskPic->nickname,
+                ],
+                channels: ['database'],
+                options: [
+                    'url' => '/admin/production/project/' . $task->project->uid,
+                    'database_type' => 'production'
+                ]
+            );
 
-            if ($telegramChatId) {
-                \Illuminate\Support\Facades\Notification::send($employee, new \Modules\Production\Notifications\ProofOfWorkNotification($project, $taskPic, $task, [$telegramChatId]));
-            }
+            // send pusher
+            (new \App\Services\PusherNotification)->send(
+                channel: 'my-channel-' . $manager->employee->user_id,
+                event: 'new-db-notification',
+                payload: [
+                    'update' => true
+                ],
+            );
         }
     }
 }

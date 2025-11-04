@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\DB;
 use Exception;
+use Modules\Hrd\Models\Employee;
 
 /**
  * Unified Notification Service
@@ -74,7 +75,7 @@ class NotificationService
     /**
      * Send notification to a single recipient
      * 
-     * @param User $recipient
+     * @param User|Employee $recipient
      * @param string $action
      * @param array $data
      * @param array $channels
@@ -82,7 +83,7 @@ class NotificationService
      * @return array
      */
     private static function sendToRecipient(
-        User $recipient,
+        User|Employee $recipient,
         string $action,
         array $data,
         array $channels,
@@ -147,7 +148,7 @@ class NotificationService
      * Send notification to specific channel
      * 
      * @param string $channel
-     * @param User $recipient
+     * @param User|Employee $recipient
      * @param string $action
      * @param string $message
      * @param string $htmlMessage
@@ -157,7 +158,7 @@ class NotificationService
      */
     private static function sendToChannel(
         string $channel,
-        User $recipient,
+        User|Employee $recipient,
         string $action,
         string $message,
         string $htmlMessage,
@@ -185,7 +186,7 @@ class NotificationService
     /**
      * Send email notification using Laravel Notification
      * 
-     * @param User $recipient
+     * @param User|Employee $recipient
      * @param string $action
      * @param string $message
      * @param string $htmlMessage
@@ -194,7 +195,7 @@ class NotificationService
      * @return array
      */
     private static function sendEmail(
-        User $recipient,
+        User|Employee $recipient,
         string $action,
         string $message,
         string $htmlMessage,
@@ -241,7 +242,7 @@ class NotificationService
     /**
      * Send Slack notification using Laravel Notification
      * 
-     * @param User $recipient
+     * @param User|Employee $recipient
      * @param string $action
      * @param string $message
      * @param array $data
@@ -249,7 +250,7 @@ class NotificationService
      * @return array
      */
     private static function sendSlack(
-        User $recipient,
+        User|Employee $recipient,
         string $action,
         string $message,
         array $data,
@@ -321,7 +322,7 @@ class NotificationService
     /**
      * Send Telegram notification via microservice
      * 
-     * @param User $recipient
+     * @param User|Employee $recipient
      * @param string $action
      * @param string $message
      * @param array $data
@@ -329,7 +330,7 @@ class NotificationService
      * @return array
      */
     private static function sendTelegram(
-        User $recipient,
+        User|Employee $recipient,
         string $action,
         string $message,
         array $data,
@@ -424,7 +425,7 @@ class NotificationService
     /**
      * Send database notification using Laravel Notification
      * 
-     * @param User $recipient
+     * @param User|Employee $recipient
      * @param string $action
      * @param string $message
      * @param array $data
@@ -432,7 +433,7 @@ class NotificationService
      * @return array
      */
     private static function sendDatabase(
-        User $recipient,
+        User|Employee $recipient,
         string $action,
         string $message,
         array $data,
@@ -441,10 +442,11 @@ class NotificationService
         try {
             // Create database notification
             $notification = new \App\Notifications\DatabaseNotification(
-                $action,
-                $message,
-                $data,
-                $options
+                action: $action,
+                message: $message,
+                data: $data,
+                options: $options,
+                databaseType: $options['database_type'] ?? ''
             );
             
             $recipient->notify($notification);
@@ -453,6 +455,16 @@ class NotificationService
                 'recipient' => $recipient->id,
                 'action' => $action,
             ]);
+
+            // send to pusher
+            if (isset($options['pusher']) && $options['pusher'] === true) {
+                (new PusherNotification)->send(
+                    channel: 'my-channel-'.$recipient->id, 
+                    event: 'new-db-notification', 
+                    payload: [$options['pusher']['message']],
+                    compressedValue: false
+                );
+            }
             
             return [
                 'success' => true,

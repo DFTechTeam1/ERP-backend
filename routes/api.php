@@ -216,20 +216,38 @@ Route::middleware('auth:sanctum')
         // NOTIFICATION
         Route::get('user/notifications', function () {
             $user = Auth::user();
-
-            $notifications = $user->unreadNotifications;
+            $employee = \Modules\Hrd\Models\Employee::find($user->employee_id);
+            
+            $notifications = $employee->unreadNotifications;
             $notifications = $notifications->map(function ($item) {
                 $item['created_at_raw'] = date('d F Y H:i', strtotime($item->created_at));
 
-                return $item;
+                return [
+                    'message' => $item['data']['message'],
+                    'title' => $item['data']['title'],
+                    'icon' => $item['data']['icon'],
+                    'url' => $item['data']['url'],
+                    'type' => $item['type'],
+                    'created_at' => $item['created_at_raw'],
+                    'id' => $item['id'],
+                ];
             });
+
+            $output = [
+                'production' => $notifications->where('type', 'production'),
+                'finance' => $notifications->where('type', 'finance'),
+                'hrd' => $notifications->where('type', 'hrd'),
+                'general' => $notifications->where('type', 'general'),
+            ];
+
             $service = new EncryptionService;
-            $encrypt = $service->encrypt(json_encode($notifications), config('app.salt_key_encryption'));
+            $encrypt = $service->encrypt(json_encode($output), config('app.salt_key_encryption'));
 
             return apiResponse(
                 generalResponse(
                     message: 'success',
                     data: [
+                        'notifications' => $output,
                         'data' => $encrypt,
                     ]
                 )

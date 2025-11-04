@@ -6,6 +6,7 @@ use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Production\Models\Project;
+use Modules\Production\Repository\ProjectRepository;
 
 class GetProjectStatistic
 {
@@ -19,8 +20,15 @@ class GetProjectStatistic
      */
     public function getProjectReport(array $project)
     {
-        $teams = $project['teams'];
         $projectId = getIdFromUid($project['uid'], new Project);
+        $projectData = (new ProjectRepository)->show(
+            uid: $project['uid'],
+            select: 'id',
+            relation: [
+                'personInCharges:id,project_id,pic_id',
+            ]
+        );
+        $teams = GetProjectTeams::run($projectData, true)['teams'] ?? [];
 
         $output = [];
 
