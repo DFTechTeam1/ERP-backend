@@ -54,7 +54,7 @@ class ProjectDealRepository extends ProjectDealInterface
             $query->limit($limit);
         }
 
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 
@@ -77,7 +77,7 @@ class ProjectDealRepository extends ProjectDealInterface
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
-        string $orderBy = 'project_date asc'
+        string $orderBy = 'project_date desc'
     ) {
         $query = $this->model->query();
 
@@ -104,8 +104,7 @@ class ProjectDealRepository extends ProjectDealInterface
         if ($relation) {
             $query->with($relation);
         }
-
-        if (!empty($orderBy)) {
+        if (! empty($orderBy)) {
             $query->orderByRaw($orderBy);
         }
 

@@ -2,8 +2,8 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Production\Database\Factories\ProjectTaskDeadlineFactory;
 
 // use Modules\Production\Database\Factories\ProjectTaskDeadlineFactory;
@@ -23,7 +23,7 @@ class ProjectTaskDeadline extends Model
         'is_first_deadline',
         'due_reason',
         'custom_reason',
-        'updated_by'
+        'updated_by',
     ];
 
     protected static function newFactory(): ProjectTaskDeadlineFactory

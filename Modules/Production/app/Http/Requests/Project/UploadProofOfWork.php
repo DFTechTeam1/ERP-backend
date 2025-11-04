@@ -12,8 +12,8 @@ class UploadProofOfWork extends FormRequest
     public function rules(): array
     {
         return [
-            'nas_link' => 'nullable',
-            'preview' => 'nullable',
+            'nas_link' => 'required|string',
+            'preview' => 'required|array',
             'board_id' => 'nullable',
             'source_board_id' => 'nullable',
             'manual_approve' => 'nullable',

@@ -37,13 +37,13 @@ use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeResignRepository;
 use Modules\Hrd\Repository\EmployeeTimeoffRepository;
 use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectVjRepository;
-use Modules\Production\Models\ProjectPersonInCharge;
 
 class EmployeeService
 {
@@ -1191,16 +1191,16 @@ class EmployeeService
             ];
         }
 
+        $whereEmployee = 'status != '.\App\Enums\Employee\Status::Inactive->value.' and status != '.\App\Enums\Employee\Status::Deleted->value;
+
         $data = $this->repo->list(
-            'id, uid as value, name as title',
-            'status != '.\App\Enums\Employee\Status::Inactive->value,
-            $relation,
-            '',
-            '',
-            $whereHas
+            select: 'id, uid as value, name as title',
+            where: $whereEmployee,
+            relation: $relation,
+            whereHas: $whereHas
         );
 
-        $employees = collect($data)->map(function ($item) use ($date, $month, $maximumProjectPerPM) {
+        $employees = collect((object) $data)->map(function ($item) use ($date, $month, $maximumProjectPerPM) {
             $projects = collect($item->projects)->pluck('project.project_date')->values();
             $item['workload_on_date'] = 0;
             if (! empty($date)) {

@@ -233,10 +233,7 @@ class TelegramService
             'reply_markup' => empty($keyboard) ? (object) [] : $keyboard,
         ];
 
-        Log::debug('payload', $payload);
-
         $send = $this->sendRequest('post', $payload);
-        Log::debug('send button', $send);
 
         return $send;
     }

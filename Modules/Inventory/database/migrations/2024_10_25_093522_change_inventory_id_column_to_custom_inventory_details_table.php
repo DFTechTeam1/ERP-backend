@@ -13,7 +13,9 @@ return new class extends Migration
     {
         if (checkForeignKey('custom_inventory_details', 'inventory_id')) {
             Schema::table('custom_inventory_details', function (Blueprint $table) {
-                $table->dropForeign(['inventory_id']);
+                if (checkForeignKey('custom_inventory_details', 'inventory_id')) {
+                    $table->dropForeign(['inventory_id']);
+                }
             });
         }
     }

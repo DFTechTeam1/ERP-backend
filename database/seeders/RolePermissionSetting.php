@@ -232,6 +232,10 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
                 $this->getRootRole(),
             ]],
+            ['name' => 'dashboard_report_access', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dashboard_access', 'group' => 'dashboard', 'used' => [
                 $this->getProjectManagerEntertainmentRole(),
                 $this->getProjectManagerRole(),
@@ -368,6 +372,31 @@ class RolePermissionSetting extends Seeder
     protected function financePermission()
     {
         return [
+            ['name' => 'list_transaction', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'detail_transaction', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'list_refund', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'create_refund', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'payment_refund', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
             ['name' => 'list_deal_price_changes', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
@@ -397,6 +426,42 @@ class RolePermissionSetting extends Seeder
     protected function masterPermission()
     {
         return [
+            ['name' => 'list_country', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_country', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_country', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'list_state', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_state', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_state', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'list_city', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_city', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_city', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'list_branch', 'group' => 'master', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
@@ -455,6 +520,22 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
             ]],
             ['name' => 'delete_project_class', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'notification_template_list', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_notification_template', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'edit_notification_template', 'group' => 'master', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'delete_notification_template', 'group' => 'master', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
             ]],
@@ -775,9 +856,77 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function interactivePermission()
+    {
+        // interactive will be like this
+        /**
+         * 1. list_interactive_project
+         * 2. cancel_interactive_project
+         * 3. delete_interactive_project
+         * 4. create_interactive_project
+         * 5. edit_interactive_project
+         * 6. create_interactive_reference
+         * 7. delete_interactive_reference
+         * 8. create_interactive_task
+         * 9. update_deadline_interactive_task
+         * 10. update_description_interactive_task
+         * 11. assign_interactive_task_member
+         * 12. create_interactive_task_attachment
+         * 13. approve_interactive_task
+         * 14. delete_interactive_task
+         * 15. hold_interactive_task
+         * 16. submit_interactive_task
+         * 17. approve_interactive_task
+         * 18. revise_interactive_task
+         * 19. assign_interactive_pic
+         * 20. change_interactive_status
+         * 21. complete_interactive_task
+         * 22. delete_interactive_task_attachment
+         */
+        $lists = [
+            'list_interactive_project',
+            'cancel_interactive_project',
+            'delete_interactive_project',
+            'create_interactive_project',
+            'edit_interactive_project',
+            'create_interactive_reference',
+            'delete_interactive_reference',
+            'create_interactive_task',
+            'update_deadline_interactive_task',
+            'update_description_interactive_task',
+            'assign_interactive_task_member',
+            'create_interactive_task_attachment',
+            'approve_interactive_task',
+            'delete_interactive_task',
+            'hold_interactive_task',
+            'submit_interactive_task',
+            'revise_interactive_task',
+            'assign_interactive_pic',
+            'change_interactive_status',
+            'complete_interactive_task',
+            'delete_interactive_task_attachment'
+        ];
+
+        $output = [];
+        foreach ($lists as $list) {
+            $output[] = [
+                'name' => $list, 'group' => 'interactive', 'used' => [
+                    $this->getRootRole(),
+                    $this->getDirectorRole(),
+                ]
+            ];
+        }
+
+        return $output;
+    }
+
     protected function projectPermission()
     {
         return [
+            ['name' => 'list_interactive_requests', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'list_deadline_reasons', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
@@ -1092,7 +1241,9 @@ class RolePermissionSetting extends Seeder
             ->merge($this->settingPermission())
             ->merge($this->taskPermission())
             ->merge($this->financePermission())
-            ->merge($this->projectPermission());
+            ->merge($this->projectPermission())
+            ->merge($this->interactivePermission())
+            ->merge($this->developmentPermission());
 
         return $permissions;
     }

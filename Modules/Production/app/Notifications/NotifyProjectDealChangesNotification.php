@@ -3,9 +3,8 @@
 namespace Modules\Production\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class NotifyProjectDealChangesNotification extends Notification
 {
@@ -36,7 +35,7 @@ class NotifyProjectDealChangesNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            'mail'
+            'mail',
         ];
     }
 
@@ -48,7 +47,7 @@ class NotifyProjectDealChangesNotification extends Notification
         setEmailConfiguration();
 
         return (new MailMessage)
-            ->subject("Approval Required: Event Data Modification by " . $this->changes->requester->employee->nickname)
+            ->subject('Approval Required: Event Data Modification by '.$this->changes->requester->employee->nickname)
             ->markdown('mail.deals.changeRequest', [
                 'data' => $this->changes,
                 'director' => $this->employee,

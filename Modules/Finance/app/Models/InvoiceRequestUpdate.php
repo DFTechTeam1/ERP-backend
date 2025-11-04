@@ -4,9 +4,8 @@ namespace Modules\Finance\Models;
 
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Models\User;
-use App\Traits\ModelCreationObserver;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Modules\Finance\Database\Factories\InvoiceRequestUpdateFactory;
@@ -42,13 +41,13 @@ class InvoiceRequestUpdate extends Model
         'rejected_by',
         'reason',
         'approved_at',
-        'rejected_at'
+        'rejected_at',
     ];
-    
+
     protected function casts()
     {
         return [
-            'status' => InvoiceRequestUpdateStatus::class
+            'status' => InvoiceRequestUpdateStatus::class,
         ];
     }
 

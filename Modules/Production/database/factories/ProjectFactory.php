@@ -10,6 +10,7 @@ use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\ProjectClass;
 use Modules\Company\Models\Province;
 use Modules\Hrd\Models\Employee;
+use Modules\Production\Models\ProjectPersonInCharge;
 
 class ProjectFactory extends Factory
 {
@@ -47,13 +48,37 @@ class ProjectFactory extends Factory
             'led_detail' => '[{"name":"main","total":4,"totalRaw":4,"textDetail":"2 x 2 m","led":[{"width":"2","height":"2"}]},{"name":" prefunction","total":1,"totalRaw":1,"textDetail":"1 x 1 m","led":[{"width":"1","height":"1"}]}]',
             'created_by' => 1,
             'showreels' => null,
-            'country_id' => Province::factory()->create()->code,
-            'state_id' => IndonesiaCity::factory()->create()->code,
-            'city_id' => IndonesiaDistrict::factory()->create()->code,
+            // 'country_id' => Province::factory()->create()->code,
+            // 'state_id' => IndonesiaCity::factory()->create()->code,
+            // 'city_id' => IndonesiaDistrict::factory()->create()->code,
             'city_name' => 'Surabaya',
             'project_class_id' => ProjectClass::factory(),
             'longitude' => '106.8277658',
             'latitude' => '-6.1875613',
+            'project_deal_id' => null,
         ];
+    }
+
+    public function withPics(?Employee $employee = null)
+    {
+        return $this->afterCreating(function (\Modules\Production\Models\Project $project) use ($employee) {
+            $employeeId = $employee ? $employee->id : Employee::factory()->create()->id;
+
+            ProjectPersonInCharge::create([
+                'project_id' => $project->id,
+                'pic_id' => $employeeId,
+            ]);
+        });
+    }
+
+    public function withBoards()
+    {
+        return $this->afterCreating(function (\Modules\Production\Models\Project $project) {
+            \Modules\Production\Models\ProjectBoard::factory()
+                ->count(4)
+                ->create([
+                    'project_id' => $project->id,
+                ]);
+        });
     }
 }

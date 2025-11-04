@@ -2,11 +2,9 @@
 
 namespace Modules\Finance\Notifications;
 
-use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class RequestInvoiceChangesNotification extends Notification
 {
@@ -48,7 +46,7 @@ class RequestInvoiceChangesNotification extends Notification
         setEmailConfiguration();
 
         return (new MailMessage)
-            ->subject("Approval Required: Invoice Data Modification by " . $this->payloadData['actor']['employee']['name'])
+            ->subject('Approval Required: Invoice Data Modification by '.$this->payloadData['actor']['employee']['name'])
             ->markdown('mail.invoice.changeRequest', $this->payloadData);
     }
 
@@ -64,7 +62,7 @@ class RequestInvoiceChangesNotification extends Notification
     {
         return [
             'chatIds' => $this->telegramIds,
-            'message' => $this->telegramMessage
+            'message' => $this->telegramMessage,
         ];
     }
 }

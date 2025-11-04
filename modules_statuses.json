@@ -7,5 +7,6 @@
     "Addon": true,
     "LineMessaging": true,
     "Telegram": true,
-    "Finance": true
+    "Finance": true,
+    "Development": true
 }

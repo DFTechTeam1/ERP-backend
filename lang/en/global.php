@@ -345,4 +345,10 @@ return [
     'partial' => 'Partial',
     'final' => 'Final',
     'temporary' => 'Temporary',
+    'pending' => 'Pending',
+    'approved' => 'Approved',
+    'rejected' => 'Rejected',
+    'notAvailable' => 'Not Available',
+    'available' => 'Available',
+    'partialComplete' => 'Partial Complete'
 ];

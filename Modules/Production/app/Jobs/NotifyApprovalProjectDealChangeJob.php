@@ -2,13 +2,11 @@
 
 namespace Modules\Production\Jobs;
 
-use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Modules\Hrd\Models\Employee;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Modules\Production\Notifications\NotifyApprovalProjectDealChangeNotification;
 use Modules\Production\Repository\ProjectDealChangeRepository;
 
@@ -42,6 +40,7 @@ class NotifyApprovalProjectDealChangeJob implements ShouldQueue
             'approval.employee:id,name',
             'rejecter:id,employee_id',
             'rejecter.employee:id,name',
+            'reason:id,name',
         ]);
 
         $approvalName = $this->type == 'approved' ? $change->approval->employee->name : $change->rejecter->employee->name;

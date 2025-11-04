@@ -22,7 +22,7 @@ class EmployeeTaskStateRepository extends EmployeeTaskStateInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [])
     {
         $query = $this->model->query();
 
@@ -30,6 +30,24 @@ class EmployeeTaskStateRepository extends EmployeeTaskStateInterface
 
         if (! empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    if ($queryItem['type'] == 'plain') {
+                        $query->whereHas($queryItem['relation']);
+                    } else {
+                        $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                            $qd->whereRaw($queryItem['query']);
+                        });
+                    }
+                }
+            }
         }
 
         if ($relation) {

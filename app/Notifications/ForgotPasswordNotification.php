@@ -55,7 +55,7 @@ class ForgotPasswordNotification extends Notification
                 'reset_password_token_exp' => $exp,
             ]);
 
-        $this->url = config('app.frontend_url').'/auth/a/reset-password?d='.$encryptedPayload;
+        $this->url = config('app.frontend_url').'/reset-password?d='.$encryptedPayload;
 
         logging('mail', [
             'mailers' => config('mail.mailers.smtp'),

@@ -23,6 +23,9 @@ class EmployeePointProject extends Model
         'project_id',
         'total_point', // total point per project -> point + additional_point
         'additional_point',
+        'prorate_point',
+        'calculated_prorate_point',
+        'original_point',
     ];
 
     // protected static function newFactory(): EmployeePointProjectFactory

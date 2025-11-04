@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
+use Illuminate\Support\Facades\Auth;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\Employee;
 
@@ -148,16 +149,16 @@ class DefineTaskAction
     /**
      * This action will define which button should be appear in the selected task
      */
-    public function handle(object $task): array
+    public function handle(\Modules\Production\Models\ProjectTask $task): array
     {
-        $this->user = auth()->user();
+        $this->user = Auth::user();
         $this->isProjectPic = isProjectPIC((int) $task->project_id, $this->user->employee_id);
         $this->isDirector = isDirector();
         $this->defineMyTask($task);
         $this->defineMyCurrentTask($task);
 
         $leadModelerUid = getSettingByKey('lead_3d_modeller');
-        $this->leadModelerUid = getIdFromUid($leadModelerUid, new Employee);
+        $this->leadModelerUid = $leadModelerUid ? getIdFromUid($leadModelerUid, new Employee) : null;
 
         $this->showForLeadModeler = false;
         if ($task->is_modeler_task && $this->user->employee_id == $this->leadModelerUid) {
@@ -221,7 +222,11 @@ class DefineTaskAction
         $members = null;
 
         if ($this->hasSuperPower() || $this->showForLeadModeler) {
-            $members = $this->buildOutput($key, false, $detail);
+            $members = $this->buildOutput(
+                key:$key,
+                disabled: $task->status == \App\Enums\Production\TaskStatus::CheckByPm->value ? true : false,
+                detail: $detail
+            );
         }
 
         return $members;
@@ -394,7 +399,7 @@ class DefineTaskAction
         $distribute = null;
 
         $leadModeller = getSettingByKey('lead_3d_modeller');
-        $leadModeller = getIdFromUid($leadModeller, new Employee);
+        $leadModeller = $leadModeller ? getIdFromUid($leadModeller, new Employee) : null;
         $taskPics = collect($task->pics)->pluck('employee_id')->toArray();
 
         if (

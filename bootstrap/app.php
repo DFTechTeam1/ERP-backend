@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\BearerTokenMiddleware;
 use App\Http\Middleware\CustomSignedRouteMiddleware;
+use App\Http\Middleware\PermissionCheck;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->namespace('App\Http\Controllers\Api')
                 ->group(base_path('routes/api.php'));
 
-            Route::middleware('web')
+            Route::middleware(['web'])
                 ->group(base_path('routes/web.php'));
         },
         health: '/up',
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'BearerToken' => BearerTokenMiddleware::class,
             'customSignedMiddleware' => CustomSignedRouteMiddleware::class,
+            'permissionCheck' => PermissionCheck::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

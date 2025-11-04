@@ -3,9 +3,8 @@
 namespace Modules\Finance\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class RejectInvoiceChangesNotification extends Notification
 {
@@ -37,10 +36,10 @@ class RejectInvoiceChangesNotification extends Notification
         setEmailConfiguration();
 
         return (new MailMessage)
-            ->subject('Your invoice request #' . $this->invoice->invoice->parent_number . " has been rejected")
+            ->subject('Your invoice request #'.$this->invoice->invoice->parent_number.' has been rejected')
             ->markdown('mail.invoice.requestHasBeenRejected', [
                 'invoice' => $this->invoice,
-                'invoiceUrl' => ''
+                'invoiceUrl' => '',
             ]);
     }
 

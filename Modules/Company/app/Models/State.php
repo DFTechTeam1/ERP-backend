@@ -29,8 +29,23 @@ class State extends Model
         'country_code',
     ];
 
+    public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Country::class, 'country_id');
+    }
+
     public function cities(): HasMany
     {
         return $this->hasMany(City::class, 'state_id');
+    }
+
+    public function projectDeals(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectDeal::class, 'state_id');
+    }
+
+    public function lastProjectDeal()
+    {
+        return $this->hasOne(\Modules\Production\Models\ProjectDeal::class, 'state_id')->latestOfMany();
     }
 }

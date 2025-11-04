@@ -44,7 +44,7 @@ class FormatTaskPermission
 
         $project['songs'] = UpdateSongList::run($projectId);
 
-        $project['feedback_given'] = $project['feedback'] ? true : false;
+        $project['feedback_given'] = count($project['feedbacks']) > 0 ? true : false;
 
         $superUserRole = isSuperUserRole();
 
@@ -74,7 +74,8 @@ class FormatTaskPermission
             (
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::OnGoing->value ||
                 $project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value ||
-                $project['status_raw'] == \App\Enums\Production\ProjectStatus::ReadyToGo->value
+                $project['status_raw'] == \App\Enums\Production\ProjectStatus::ReadyToGo->value ||
+                $project['status_raw'] == \App\Enums\Production\ProjectStatus::PartialComplete->value
             ) &&
             $diff <= 7
         ) {
@@ -121,6 +122,36 @@ class FormatTaskPermission
 
         $project['progress'] = FormatProjectProgress::run($projectTasks, $projectId);
         $project['can_complete_project'] = (bool) $this->user->hasPermissionTo('complete_project');
+        
+        // define pic have been given their feedback or not
+        $project['feedback_data'] = [];
+        if (count($project['feedbacks']) > 0) {
+            $feedbacks = collect($project['feedbacks'])->map(function ($itemFeedback) {
+                return [
+                    'id' => $itemFeedback['id'],
+                    'pic_id' => $itemFeedback['pic_id'],
+                    'name' => $itemFeedback['pic']['name'],
+                    'avatar' => $itemFeedback['pic']['avatar'] ?? asset('images/user.png'),
+                    'feedback' => $itemFeedback['feedback'],
+                ];
+            });
+
+            // get user feedback
+            if (in_array($this->employeeId, collect($projectPics)->pluck('pic_id')->toArray())) {
+                $evaluators = collect($project['feedbacks'])->pluck('pic_id')->toArray();
+
+                if (in_array($this->user->employee_id, $evaluators)) {
+                    $project['can_complete_project'] = false;
+
+                    $feedbacks = $feedbacks->filter(function ($feedback) {
+                        return $feedback['pic_id'] == $this->user->employee_id;
+                    })->values();
+                }
+            }
+
+            $project['feedback_data'] = $feedbacks;
+        }
+
 
         foreach ($project['boards'] as $keyBoard => $board) {
             $output[$keyBoard] = $board;
@@ -299,6 +330,13 @@ class FormatTaskPermission
         $project['allowed_upload_showreels'] = $allowedUploadShowreels;
 
         $project['permission_list'] = DefineDetailProjectPermission::run();
+
+        // check if authenticated user have feedback or not
+        $isMyFeedbackExists = \Modules\Production\Models\Project::selectRaw('id')->find($project['id'])->isMyFeedbackExists($this->user->employee_id);
+        if ($project['is_super_user'] || $project['is_director']) {
+            $isMyFeedbackExists = true;
+        }
+        $project['is_my_feedback_exists'] = $isMyFeedbackExists;
 
         storeCache('detailProject'.$projectId, $project);
 

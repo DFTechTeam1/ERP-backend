@@ -22,10 +22,20 @@ enum ProjectDealStatus: int
     public function color()
     {
         return match ($this) {
-            self::Draft => 'grey-darken-2',
-            self::Final => 'green-lighten-1',
-            self::Temporary => 'blue-lighten-3',
-            self::Canceled => 'grey-darken-5',
+            self::Draft => 'amber-darken-2',
+            self::Final => 'green-darken-1',
+            self::Temporary => 'blue-darken-1',
+            self::Canceled => 'red-darken-1',
+        };
+    }
+
+    public function icon()
+    {
+        return match ($this) {
+            self::Draft => 'mdiPlain:mdi-pencil-outline',
+            self::Final => 'mdiPlain:mdi-check-circle',
+            self::Temporary => 'mdiPlain:mdi-clock-outline',
+            self::Canceled => 'mdiPlain:mdi-cancel',
         };
     }
 }

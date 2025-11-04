@@ -2,11 +2,10 @@
 
 namespace Modules\Production\Console;
 
-use App\Services\GeneralService;
 use Illuminate\Console\Command;
 use Modules\Production\Jobs\PaymentDueReminderJob;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class PaymentDueReminderCommand extends Command
 {

@@ -118,6 +118,8 @@ describe('Approve Invoice Changes', function () {
         $service = setInvoiceService();
         $response = $service->approveChanges(invoiceUid: $invoice->uid, pendingUpdateId: $change->id);
 
+        logging("RESPONSE APPROVE INVOICE", $response);
+
         expect($response['error'])->toBeTrue();
 
         expect($response['message'])->toBe(__('notification.noChangesToApprove'));

@@ -44,6 +44,7 @@ use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongListRepository;
 use Modules\Production\Repository\ProjectTaskAttachmentRepository;
+use Modules\Production\Repository\ProjectTaskDeadlineRepository;
 use Modules\Production\Repository\ProjectTaskHoldRepository;
 use Modules\Production\Repository\ProjectTaskLogRepository;
 use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
@@ -138,7 +139,12 @@ function createProjectService(
     $projectQuotationRepo = null,
     $projectDealRepo = null,
     $projectDealMarketingRepo = null,
-    $nasFolderCreationService = null
+    $projectTaskPicWorkstateRepo = null,
+    $projectTaskPicReviseRepo = null,
+    $projectTaskPicHoldstateRepo = null,
+    $projectTaskPicApprovalstateRepo = null,
+    $nasFolderCreationService = null,
+    $projectTaskDeadlineRepo = null
 ) {
     return new ProjectService(
         $userRoleManagement ? $userRoleManagement : new UserRoleManagement,
@@ -181,7 +187,12 @@ function createProjectService(
         $projectQuotationRepo ? $projectQuotationRepo : new ProjectQuotationRepository,
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
         $projectDealMarketingRepo ? $projectDealMarketingRepo : new ProjectDealMarketingRepository,
-        $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService)
+        $projectTaskPicWorkstateRepo ? $projectTaskPicWorkstateRepo : new \Modules\Production\Repository\ProjectTaskPicWorkstateRepository,
+        $projectTaskPicReviseRepo ? $projectTaskPicReviseRepo : new \Modules\Production\Repository\ProjectTaskPicRevisestateRepository,
+        $projectTaskPicHoldstateRepo ? $projectTaskPicHoldstateRepo : new \Modules\Production\Repository\ProjectTaskPicHoldstateRepository,
+        $projectTaskPicApprovalstateRepo ? $projectTaskPicApprovalstateRepo : new \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository,
+        $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService),
+        $projectTaskDeadlineRepo ? $projectTaskDeadlineRepo: new ProjectTaskDeadlineRepository
     );
 }
 
@@ -201,7 +212,7 @@ function initAuthenticateUser(array $permissions = [], bool $withEmployee = fals
     }
 
     $checkRoot = \Illuminate\Support\Facades\DB::table('roles')
-        ->where('name', \App\Enums\System\BaseRole::Root->value)
+        ->where('name', $roleName)
         ->first();
 
     if (! $checkRoot) {
@@ -255,7 +266,8 @@ function getProjectDealPayload(
     object $customer,
     ?object $projectClass = null,
     ?object $employee = null,
-    ?object $quotationItem = null
+    ?object $quotationItem = null,
+    bool $withInteractive = false
 ) {
     $country = Country::factory()
         ->has(
@@ -295,6 +307,46 @@ function getProjectDealPayload(
         'latitude' => fake()->latitude(),
         'equipment_type' => 'lasika',
         'is_high_season' => 1,
+        'interactive_area' => $withInteractive ? 92 : 0,
+        'interactive_detail' => $withInteractive ? [
+            [
+                'name' => 'main',
+                'led' => [
+                    [
+                        'height' => '10',
+                        'width' => '5',
+                    ],
+                    [
+                        'height' => '5',
+                        'width' => '4',
+                    ],
+                ],
+                'total' => '70 m<sup>2</sup>',
+                'totalRaw' => '70',
+                'textDetail' => '5 x 10 m , 4 x 5 m',
+            ],
+            [
+                'name' => 'prefunction',
+                'led' => [
+                    [
+                        'height' => '3',
+                        'width' => '3',
+                    ],
+                    [
+                        'height' => '3',
+                        'width' => '2',
+                    ],
+                    [
+                        'height' => '5',
+                        'width' => '4',
+                    ],
+                ],
+                'total' => '35 m<sup>2</sup>',
+                'totalRaw' => '35',
+                'textDetail' => '3 x 3 m , 2 x 3 m4 x 5 m',
+            ],
+        ] : null,
+        'interactive_note' => $withInteractive ? 'This is interactive note' : null,
         'client_portal' => 'wedding-anniversary',
         'marketing_id' => [
             $employee ? $employee->uid : 'f063164d-62ff-44cf-823d-7c456dad1f4b',
@@ -338,7 +390,10 @@ function createProjectDealService(
     $employeeRepo = null,
     $interactiveRequestRepo = null,
     $interactiveProjectRepo = null,
-    $nasFolderCreationService = null
+    $nasFolderCreationService = null,
+    $projectDealRefundRepo = null,
+    $transactionRepo = null,
+    $interactiveProjectPicRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
@@ -354,7 +409,10 @@ function createProjectDealService(
         $employeeRepo ? $employeeRepo : new EmployeeRepository,
         $interactiveRequestRepo ? $interactiveRequestRepo : new \Modules\Production\Repository\InteractiveRequestRepository,
         $interactiveProjectRepo ? $interactiveProjectRepo : new \Modules\Production\Repository\InteractiveProjectRepository,
-        $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService)
+        $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService),
+        $projectDealRefundRepo ? $projectDealRefundRepo : new \Modules\Finance\Repository\ProjectDealRefundRepository,
+        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository,
+        $interactiveProjectPicRepo ? $interactiveProjectPicRepo : new \Modules\Production\Repository\InteractiveProjectPicRepository
     );
 }
 

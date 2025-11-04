@@ -13,6 +13,12 @@ use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\QuotationItem;
 
+beforeEach(function () {
+    $this->user = initAuthenticateUser();
+
+    $this->actingAs($this->user);
+});
+
 function createDeal($customer, $projectClass, $employee, $quotationItem)
 {
     $payload = getProjectDealPayload($customer, $projectClass, $employee, $quotationItem, true);

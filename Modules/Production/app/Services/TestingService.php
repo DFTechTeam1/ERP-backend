@@ -269,11 +269,10 @@ class TestingService
     ): array {
         try {
             $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
-
+            $itemsPerPage = $itemsPerPage == -1 ? 999999 : $itemsPerPage;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
             $whereHas = [];
 
             $roles = $this->user->roles;
@@ -287,7 +286,7 @@ class TestingService
 
             // $filterResult = $this->buildFilterResult();
 
-            if (request('filter_month') == 'true') {
+            if (request('filter_month') == 'true' && !request('date')) {
                 $startMonth = date('Y-m').'-01';
                 $endDateOfMonth = Carbon::createFromDate(
                     (int) date('Y'),
@@ -304,7 +303,7 @@ class TestingService
                 }
             }
 
-            if (request('filter_year') == 'true') {
+            if (request('filter_year') == 'true' && !request('date')) {
                 $startMonth = date('Y').'-01-01';
                 $endMonth = date('Y').'-12-31';
 
@@ -315,7 +314,7 @@ class TestingService
                 }
             }
 
-            if (request('filter_today') == 'true') {
+            if (request('filter_today') == 'true' && !request('date')) {
                 $startDate = date('Y-m-d');
                 if (empty($where)) {
                     $where = "project_date = '{$startDate}'";
@@ -324,67 +323,45 @@ class TestingService
                 }
             }
 
-            if (
-                ($search) &&
-                (count($search) > 0)
-            ) {
-                if (! empty($search['name']) && empty($where)) {
-                    $name = strtolower($search['name']);
-                    $where = "lower(name) LIKE '%{$name}%'";
-                } elseif (! empty($search['name']) && ! empty($where)) {
-                    $name = $search['name'];
-                    $where .= " AND lower(name) LIKE '%{$name}%'";
-                }
+            if (request('name')) {
+                $name = strtolower(request('name'));
+                $where .= " AND lower(name) LIKE '%{$name}%'";
+            }
 
-                if (! empty($search['event_type']) && empty($where)) {
-                    $eventType = strtolower($search['event_type']);
-                    $where = "event_type = '{$eventType}'";
-                } elseif (! empty($search['event_type']) && ! empty($where)) {
-                    $eventType = $search['event_type'];
-                    $where .= " AND event_type = '{$eventType}'";
-                }
+            if (request('event_type')) {
+                $eventType = "'" . collect(request('event_type'))->implode("','") . "'";
+                $where .= " AND lower(event_type) IN ({$eventType})";
+            }
 
-                if (! empty($search['classification']) && empty($where)) {
-                    $classification = strtolower($search['classification']);
-                    $where = "classification = '{$classification}'";
-                } elseif (! empty($search['classification']) && ! empty($where)) {
-                    $classification = $search['classification'];
-                    $where .= " AND classification = '{$classification}'";
-                }
+            if (request('event_class')) {
+                $eventClass = collect(request('event_class'))->implode(",");
+                $where .= " AND project_class_id IN ({$eventClass})";
+            }
 
-                if (! empty($search['start_date']) && empty($where)) {
-                    $start = date('Y-m-d', strtotime($search['start_date']));
-                    $where = "project_date >= '{$start}'";
-                } elseif (! empty($search['start_date']) && ! empty($where)) {
-                    $start = date('Y-m-d', strtotime($search['start_date']));
-                    $where .= " AND project_date >= '{$start}'";
-                }
+            if (request('date')) {
+                $date = request('date');
+                [$startDate, $endDate] = explode(' - ', $date);
+                $where .= " AND project_date BETWEEN '{$startDate}' AND '{$endDate}'";
+            }
 
-                if (! empty($search['end_date']) && empty($where)) {
-                    $end = date('Y-m-d', strtotime($search['end_date']));
-                    $where = "project_date <= '{$end}'";
-                } elseif (! empty($search['end_date']) && ! empty($where)) {
-                    $end = date('Y-m-d', strtotime($search['end_date']));
-                    $where .= " AND project_date <= '{$end}'";
-                }
+            if (request('status')) {
+                $status = collect(request('status'))->implode(',');
+                $where .= " AND status IN ({$status})";
+            }
 
-                if (! empty($search['pic']) && empty($whereHas)) {
-                    $pics = $search['pic'];
-                    $pics = collect($pics)->map(function ($pic) {
-                        $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee);
+            if (request('pics')) {
+                $pics = collect(request('pics'))->map(function ($pic) {
+                    $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee);
 
-                        return $picId;
-                    })->toArray();
-                    $picData = implode(',', $pics);
-                    $whereHas = [
-                        [
-                            'relation' => 'personInCharges',
-                            'query' => "pic_id IN ({$picData})",
-                        ],
-                    ];
-                    // if ($isSuperAdmin) {
-                    // }
-                }
+                    return $picId;
+                })->toArray();
+                $picData = implode(',', $pics);
+                $whereHas = [
+                    [
+                        'relation' => 'personInCharges',
+                        'query' => "pic_id IN ({$picData})",
+                    ],
+                ];
             }
 
             // override logic when user is entertianment

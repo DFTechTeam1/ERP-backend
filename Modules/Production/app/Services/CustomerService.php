@@ -68,7 +68,7 @@ class CustomerService
     public function getAll(): array
     {
         $data = \Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::CustomerList->value);
-        if (!$data) {
+        if (! $data) {
             $data = \Illuminate\Support\Facades\Cache::rememberForever(\App\Enums\Cache\CacheKey::CustomerList->value, function () {
                 $customers = $this->repo->list(
                     select: 'id as value,email,name as title,phone'

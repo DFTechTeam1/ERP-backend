@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Production\Database\Factories\ProjectTaskFactory;
 
 class ProjectTask extends Model
 {
@@ -41,6 +42,11 @@ class ProjectTask extends Model
         'is_modeler_task',
     ];
 
+    protected static function newFactory(): ProjectTaskFactory
+    {
+        return ProjectTaskFactory::new();
+    }
+
     protected $appends = ['task_type_text', 'task_type_color', 'start_date_text', 'end_date_text', 'performance_recap', 'proof_of_works_detail', 'task_status', 'task_status_color', 'revise_detail'];
 
     public function project(): BelongsTo
@@ -51,6 +57,36 @@ class ProjectTask extends Model
     public function board(): BelongsTo
     {
         return $this->belongsTo(ProjectBoard::class, 'project_board_id');
+    }
+
+    public function deadlines(): HasMany
+    {
+        return $this->hasMany(ProjectTaskDeadline::class, 'project_task_id');
+    }
+
+    public function projectDurations(): HasMany
+    {
+        return $this->hasMany(ProjectTaskDurationHistory::class, 'task_id');
+    }
+
+    public function workStates(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicWorkstate::class, 'task_id');
+    }
+
+    public function holdStates(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicHoldstate::class, 'task_id');
+    }
+
+    public function approvalStates(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicApprovalstate::class, 'task_id');
+    }
+
+    public function reviseStates(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicRevisestate::class, 'task_id');
     }
 
     public function pics(): HasMany
@@ -86,6 +122,11 @@ class ProjectTask extends Model
     {
         return $this->hasMany(\Modules\Production\Models\ProjectTaskPicLog::class, 'project_task_id')
             ->orderBy('created_at', 'ASC');
+    }
+
+    public function employeeTaskStates(): HasMany
+    {
+        return $this->hasMany(\Modules\Hrd\Models\EmployeeTaskState::class, 'project_task_id');
     }
 
     public function holds(): HasMany

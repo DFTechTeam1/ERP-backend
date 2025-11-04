@@ -2,13 +2,13 @@
 
 namespace Modules\Finance\Models;
 
-use App\Services\GeneralService;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Auth;
 use Modules\Finance\Database\Factories\TransactionFactory;
 use Modules\Production\Models\Customer;
@@ -32,7 +32,7 @@ class Transaction extends Model
             \Modules\Finance\Models\Invoice::where('id', $invoiceId)
                 ->update([
                     'status' => \App\Enums\Transaction\InvoiceStatus::Paid,
-                    'paid_amount' => $transaction->payment_amount
+                    'paid_amount' => $transaction->payment_amount,
                 ]);
         });
     }
@@ -51,22 +51,30 @@ class Transaction extends Model
         'trx_id',
         'transaction_date',
         'transaction_type',
-        'created_by'
+        'created_by',
+        'sourceable_type',
+        'sourceable_id',
+        'debit_credit'
     ];
 
     protected $appends = [
-        'transaction_date_raw'
+        'transaction_date_raw',
     ];
 
     protected $casts = [
-        'transaction_type' => \App\Enums\Transaction\TransactionType::class
+        'transaction_type' => \App\Enums\Transaction\TransactionType::class,
     ];
 
     protected static function newFactory(): TransactionFactory
     {
         return TransactionFactory::new();
     }
-    
+
+    public function sourceable(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class, 'invoice_id');
@@ -94,8 +102,9 @@ class Transaction extends Model
         if (isset($this->attributes['transaction_date'])) {
             $output = date('d F Y', strtotime($this->attributes['transaction_date']));
         }
+
         return Attribute::make(
-            fn() => $output
+            fn () => $output
         );
     }
 }

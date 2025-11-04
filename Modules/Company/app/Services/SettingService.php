@@ -70,7 +70,7 @@ class SettingService
                     $item['value'] = json_decode($item['value'], true);
                 } elseif ($item['key'] == 'default_boards') {
                     $item['value'] = $this->formatKanbanSetting($item);
-                } elseif ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment' || $item['key'] == 'person_to_approve_invoice_changes') {
+                } elseif ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment' || $item['key'] == 'person_to_approve_invoice_changes' || $item['key'] == 'interactive_pic' || $item['key'] == 'position_in_interactive_task') {
                     $item['value'] = json_decode($item['value'], true);
                 }
 
@@ -700,6 +700,307 @@ class SettingService
             return generalResponse(
                 message: 'Success',
                 data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get application logs
+     * @return array
+     */
+    public function getLogs(): array
+    {
+        try {
+            $itemsPerPage = request('itemsPerPage', 100); // Default 100 logs per page
+            $page = request('page', 1); // Default page 1
+            $level = request('level'); // Filter by level if provided
+            $startDate = request('start_date');
+            $endDate = request('end_date');
+            
+            $logPath = storage_path('logs/laravel.log');
+            
+            if (!file_exists($logPath)) {
+                return generalResponse(
+                    'Log file not found',
+                    false,
+                    [
+                        'data' => [],
+                        'totalData' => 0,
+                        'currentPage' => $page,
+                        'itemsPerPage' => $itemsPerPage,
+                        'totalPages' => 0
+                    ]
+                );
+            }
+            
+            // Calculate offset
+            $offset = $page == 1 ? 0 : ($page - 1) * $itemsPerPage;
+            
+            $result = $this->parseLogFileWithPagination($logPath, $itemsPerPage, $offset, $level, $startDate, $endDate);
+            
+            return generalResponse(
+                'success',
+                false,
+                [
+                    'data' => $result['logs'],
+                    'totalData' => $result['totalCount'],
+                    'currentPage' => $page,
+                    'itemsPerPage' => $itemsPerPage,
+                    'totalPages' => ceil($result['totalCount'] / $itemsPerPage)
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Parse Laravel log file with pagination support
+     * @param string $filePath
+     * @param int $itemsPerPage
+     * @param int $offset
+     * @param string|null $levelFilter
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array
+     */
+    private function parseLogFileWithPagination($filePath, $itemsPerPage = 100, $offset = 0, $levelFilter = null, $startDate = null, $endDate = null)
+    {
+        $allLogs = [];
+        $handle = fopen($filePath, 'r');
+        
+        if (!$handle) {
+            return ['logs' => [], 'totalCount' => 0];
+        }
+        
+        $currentLog = '';
+        
+        // Read all lines
+        $lines = [];
+        while (($line = fgets($handle)) !== false) {
+            $lines[] = $line;
+        }
+        fclose($handle);
+        
+        // Process logs in reverse order (latest first)
+        $lines = array_reverse($lines);
+        
+        foreach ($lines as $line) {
+            // Check if line starts with timestamp pattern [YYYY-MM-DD HH:MM:SS]
+            if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+): (.+)/', $line, $matches)) {
+                // Process previous log if exists
+                if ($currentLog) {
+                    $parsedLog = $this->parseLogEntry($currentLog);
+                    if ($parsedLog && $this->matchesFilters($parsedLog, $levelFilter, $startDate, $endDate)) {
+                        $allLogs[] = $parsedLog;
+                    }
+                }
+                
+                // Start new log entry
+                $currentLog = $line;
+            } else {
+                // Continuation of current log (stacktrace, etc.)
+                $currentLog .= $line;
+            }
+        }
+        
+        // Process the last log entry
+        if ($currentLog) {
+            $parsedLog = $this->parseLogEntry($currentLog);
+            if ($parsedLog && $this->matchesFilters($parsedLog, $levelFilter, $startDate, $endDate)) {
+                $allLogs[] = $parsedLog;
+            }
+        }
+        
+        $totalCount = count($allLogs);
+        
+        // Apply pagination
+        $paginatedLogs = array_slice($allLogs, $offset, $itemsPerPage);
+        
+        return [
+            'logs' => $paginatedLogs,
+            'totalCount' => $totalCount
+        ];
+    }
+
+    /**
+     * Parse Laravel log file and return formatted logs (legacy method for backward compatibility)
+     * @param string $filePath
+     * @param int $limit
+     * @param string|null $levelFilter
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array
+     */
+    private function parseLogFile($filePath, $limit = 100, $levelFilter = null, $startDate = null, $endDate = null)
+    {
+        $logs = [];
+        $handle = fopen($filePath, 'r');
+        
+        if (!$handle) {
+            return [];
+        }
+        
+        $currentLog = '';
+        $logCount = 0;
+        
+        // Read file in reverse order to get latest logs first
+        $lines = [];
+        while (($line = fgets($handle)) !== false) {
+            $lines[] = $line;
+        }
+        fclose($handle);
+        
+        $lines = array_reverse($lines);
+        
+        foreach ($lines as $line) {
+            // Check if line starts with timestamp pattern [YYYY-MM-DD HH:MM:SS]
+            if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+): (.+)/', $line, $matches)) {
+                // Process previous log if exists
+                if ($currentLog) {
+                    $parsedLog = $this->parseLogEntry($currentLog);
+                    if ($parsedLog && $this->matchesFilters($parsedLog, $levelFilter, $startDate, $endDate)) {
+                        $logs[] = $parsedLog;
+                        $logCount++;
+                    }
+                    
+                    if ($logCount >= $limit) {
+                        break;
+                    }
+                }
+                
+                // Start new log entry
+                $currentLog = $line;
+            } else {
+                // Continuation of current log (stacktrace, etc.)
+                $currentLog .= $line;
+            }
+        }
+        
+        // Process the last log entry
+        if ($currentLog && $logCount < $limit) {
+            $parsedLog = $this->parseLogEntry($currentLog);
+            if ($parsedLog && $this->matchesFilters($parsedLog, $levelFilter, $startDate, $endDate)) {
+                $logs[] = $parsedLog;
+            }
+        }
+        
+        return $logs;
+    }
+
+    /**
+     * Parse individual log entry
+     * @param string $logEntry
+     * @return array|null
+     */
+    private function parseLogEntry($logEntry)
+    {
+        // Pattern: [timestamp] environment.level: message {"context"...}
+        if (!preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+): (.+)/', $logEntry, $matches)) {
+            return null;
+        }
+        
+        $timestamp = $matches[1];
+        $environment = $matches[2];
+        $level = strtolower($matches[3]);
+        $messageAndContext = $matches[4];
+        
+        // Extract context JSON if present
+        $context = null;
+        $message = $messageAndContext;
+        
+        // Look for JSON context at the end of the message
+        if (preg_match('/^(.+?) (\{.+\})\s*$/', $messageAndContext, $contextMatches)) {
+            $message = trim($contextMatches[1]);
+            try {
+                $context = json_decode($contextMatches[2], true);
+            } catch (\Exception $e) {
+                // If JSON decode fails, keep context as null
+            }
+        }
+        
+        // Extract file and line information from message or stacktrace
+        $file = null;
+        $line = null;
+        
+        // Look for file path and line in the message or exception
+        if (preg_match('/in (\/[^:]+):(\d+)/', $logEntry, $fileMatches)) {
+            $file = $fileMatches[1];
+            $line = (int) $fileMatches[2];
+        } elseif (preg_match('/at (\/[^:]+):(\d+)/', $logEntry, $fileMatches)) {
+            $file = $fileMatches[1];
+            $line = (int) $fileMatches[2];
+        }
+        
+        // Clean up message - remove quotes if they wrap the entire message
+        $message = trim($message, '"\'');
+        
+        // Handle special cases for different log levels
+        if ($level === 'error' && isset($context['exception'])) {
+            // For errors with exceptions, try to extract more meaningful message
+            if (preg_match('/^([^(]+)/', $message, $errorMatches)) {
+                $message = trim($errorMatches[1]);
+            }
+        }
+        
+        return [
+            'level' => $level,
+            'timestamp' => date('c', strtotime($timestamp)), // Convert to ISO 8601 format
+            'message' => $message,
+            'file' => $file,
+            'line' => $line,
+            'context' => $context,
+            'exception' => isset($context['exception']) ? $context['exception'] : null
+        ];
+    }
+
+    /**
+     * Check if log entry matches the provided filters
+     * @param array $log
+     * @param string|null $levelFilter
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return bool
+     */
+    private function matchesFilters($log, $levelFilter, $startDate, $endDate)
+    {
+        // Filter by level
+        if ($levelFilter && $log['level'] !== strtolower($levelFilter)) {
+            return false;
+        }
+        
+        // Filter by date range
+        $logTimestamp = strtotime($log['timestamp']);
+        
+        if ($startDate && $logTimestamp < strtotime($startDate)) {
+            return false;
+        }
+        
+        if ($endDate && $logTimestamp > strtotime($endDate . ' 23:59:59')) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Clear the log file
+     */
+    public function clearLogs(): array
+    {
+        try {
+            $logPath = storage_path('logs/laravel.log');
+
+            if (file_exists($logPath)) {
+                file_put_contents($logPath, '');
+            }
+
+            return generalResponse(
+                'Logs cleared successfully',
+                false,
+                []
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

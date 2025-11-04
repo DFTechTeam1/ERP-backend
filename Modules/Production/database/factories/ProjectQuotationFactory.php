@@ -19,16 +19,16 @@ class ProjectQuotationFactory extends Factory
     public function definition(): array
     {
         return [
-            'main_ballroom' => fake()->randomFloat(0,50000000, 200000000),
-            'prefunction' => fake()->randomFloat(0,50000000, 150000000),
-            'high_season_fee' => fake()->randomFloat(0,5000000, 7000000),
+            'main_ballroom' => fake()->randomFloat(0, 50000000, 200000000),
+            'prefunction' => fake()->randomFloat(0, 50000000, 150000000),
+            'high_season_fee' => fake()->randomFloat(0, 5000000, 7000000),
             'equipment_fee' => fake()->randomFloat(0, 2500000, 3000000),
-            'sub_total' => fake()->randomFloat(0,50000000, 200000000),
+            'sub_total' => fake()->randomFloat(0, 50000000, 200000000),
             'maximum_discount' => fake()->randomFloat(0, 5000000, 10000000),
-            'total' => fake()->randomFloat(0,50000000, 200000000),
-            'maximum_markup_price' => fake()->randomFloat(0,50000000, 200000000),
+            'total' => fake()->randomFloat(0, 50000000, 200000000),
+            'maximum_markup_price' => fake()->randomFloat(0, 50000000, 200000000),
             'event_location_guide' => fake()->randomElement(['jawa', 'luar_jawa', 'surabaya']),
-            'fix_price' => fake()->randomFloat(0,50000000, 200000000),
+            'fix_price' => fake()->randomFloat(0, 50000000, 200000000),
             'quotation_id' => fake()->firstName(),
             'is_final' => 0,
         ];
@@ -39,7 +39,7 @@ class ProjectQuotationFactory extends Factory
         return $this->afterCreating(function (ProjectQuotation $projectQuotation) use ($count, $name) {
             if ($count == 0) {
                 $items = QuotationItem::factory()->count(1)->create([
-                    'name' => $name ?: fake()->name()
+                    'name' => $name ?: fake()->name(),
                 ]);
             } else {
                 $items = QuotationItem::factory()->count(3)->create();
@@ -48,11 +48,10 @@ class ProjectQuotationFactory extends Factory
             $projectQuotation->items()->createMany(
                 collect($items)->map(function ($itemData) {
                     return [
-                        'item_id' => $itemData->id
+                        'item_id' => $itemData->id,
                     ];
                 })->toArray()
             );
         });
     }
 }
-

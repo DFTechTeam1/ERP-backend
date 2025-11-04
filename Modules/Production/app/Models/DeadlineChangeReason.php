@@ -2,8 +2,8 @@
 
 namespace Modules\Production\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Production\Database\Factories\DeadlineChangeReasonFactory;
 
@@ -17,7 +17,7 @@ class DeadlineChangeReason extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'name'
+        'name',
     ];
 
     protected static function newFactory(): DeadlineChangeReasonFactory

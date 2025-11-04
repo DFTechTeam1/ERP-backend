@@ -10,7 +10,6 @@ use Modules\Company\Models\IndonesiaCity;
 use Modules\Company\Models\IndonesiaDistrict;
 use Modules\Company\Models\ProjectClass;
 use Modules\Company\Models\Province;
-use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Customer;
 use Modules\Production\Models\ProjectDeal;
 
@@ -54,7 +53,7 @@ class ProjectDealFactory extends Factory
             'is_high_season' => false,
             'longitude' => fake()->longitude(),
             'latitude' => fake()->latitude(),
-            'status' => ProjectDealStatus::Draft->value
+            'status' => ProjectDealStatus::Draft->value,
         ];
     }
 
@@ -101,5 +100,14 @@ class ProjectDealFactory extends Factory
             }
         });
     }
-}
 
+    public function withProject()
+    {
+        return $this->afterCreating(function (ProjectDeal $projectDeal) {
+            \Modules\Production\Models\Project::factory()->create([
+                'project_deal_id' => $projectDeal->id,
+                'name' => $projectDeal->name,
+            ]);
+        });
+    }
+}

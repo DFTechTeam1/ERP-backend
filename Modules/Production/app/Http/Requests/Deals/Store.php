@@ -36,6 +36,10 @@ class Store extends FormRequest
             'marketing_id.*' => 'string',
             'status' => 'nullable',
 
+            'interactive_area' => 'nullable',
+            'interactive_detail' => 'nullable',
+            'interactive_note' => 'nullable',
+
             // quotation
             'quotation' => 'required|array',
             'quotation.main_ballroom' => 'required',

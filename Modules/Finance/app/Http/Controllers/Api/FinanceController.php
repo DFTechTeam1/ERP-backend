@@ -5,7 +5,6 @@ namespace Modules\Finance\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Modules\Finance\Http\Requests\ExportProjectDealSummary;
 use Modules\Finance\Http\Requests\ExportRequest;
 use Modules\Finance\Http\Requests\PriceChanges;
@@ -33,27 +32,34 @@ class FinanceController extends Controller
     }
 
     /**
-     * Display a listing of the resource.
+     * Get all transactions
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        //
+        return apiResponse($this->service->list());
+    }
 
-        return response()->json([]);
+    /**
+     * Get transaction summary
+     * @return JsonResponse
+     */
+    public function getTransactionSummary(): JsonResponse
+    {
+        return apiResponse($this->service->getTransactionSummary());
     }
 
     /**
      * Create customer transaction
-     * 
-     * @param Create $request       With this following structure
-     * - string|float $payment_amount
-     * - string $transaction_date
-     * - string $invoice_id
-     * - ?string $note
-     * - ?string $reference
-     * - array $images              With this following structure
-     *      - ?object|binary $image
-     * @param string $quotationId
+     *
+     * @param  Create  $request  With this following structure
+     *                           - string|float $payment_amount
+     *                           - string $transaction_date
+     *                           - string $invoice_id
+     *                           - ?string $note
+     *                           - ?string $reference
+     *                           - array $images              With this following structure
+     *                           - ?object|binary $image
+     * @param  string  $quotationId
      */
     public function createTransaction(Create $request, string $projectDealUid): JsonResponse
     {
@@ -62,25 +68,20 @@ class FinanceController extends Controller
 
     /**
      * Generated signed url invoice
-     * 
-     * @param array $payload            With this following structure:
-     * - string $uid
-     * - string $type (bill or current)
-     * - string $amount
-     * - string $date
-     * - string $output (stream or download)
-     * 
-     * @return JsonResponse
+     *
+     * @param  array  $payload  With this following structure:
+     *                          - string $uid
+     *                          - string $type (bill or current)
+     *                          - string $amount
+     *                          - string $date
+     *                          - string $output (stream or download)
      */
     public function downloadInvoice(Request $request): JsonResponse
     {
         return apiResponse($this->service->downloadInvoice(payload: $request->all()));
     }
 
-    public function export(ExportRequest $request)
-    {
-        
-    }
+    public function export(ExportRequest $request) {}
 
     /**
      * Store a newly created resource in storage.
@@ -95,11 +96,9 @@ class FinanceController extends Controller
     /**
      * Show the specified resource.
      */
-    public function show($id)
+    public function show($uid)
     {
-        //
-
-        return response()->json([]);
+        return apiResponse($this->service->show($uid));
     }
 
     /**
@@ -125,12 +124,11 @@ class FinanceController extends Controller
     /**
      * Here we'll export project deals summary based on user selection
      *
-     * @param ExportProjectDealSummary $request            With these following structure:
-     * - string $date_range
-     * - array $marketings
-     * - array $status
-     * - array $price
-     * @return JsonResponse
+     * @param  ExportProjectDealSummary  $request  With these following structure:
+     *                                             - string $date_range
+     *                                             - array $marketings
+     *                                             - array $status
+     *                                             - array $price
      */
     public function exportFinanceData(ExportProjectDealSummary $request): JsonResponse
     {

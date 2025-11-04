@@ -6,6 +6,7 @@ use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Production\Models\Project;
+use Modules\Production\Repository\ProjectRepository;
 
 class GetProjectStatistic
 {
@@ -19,8 +20,15 @@ class GetProjectStatistic
      */
     public function getProjectReport(array $project)
     {
-        $teams = $project['teams'];
         $projectId = getIdFromUid($project['uid'], new Project);
+        $projectData = (new ProjectRepository)->show(
+            uid: $project['uid'],
+            select: 'id',
+            relation: [
+                'personInCharges:id,project_id,pic_id',
+            ]
+        );
+        $teams = GetProjectTeams::run($projectData, true)['teams'] ?? [];
 
         $output = [];
 
@@ -28,7 +36,7 @@ class GetProjectStatistic
             $employeePoint = EmployeePoint::selectRaw('id,employee_id')
                 ->with([
                     'projects' => function ($query) use ($projectId) {
-                        $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point')
+                        $query->selectRaw('id,employee_point_id,project_id,total_point,additional_point,calculated_prorate_point')
                             ->with(['project:id,name,project_date', 'details:id,point_id'])
                             ->whereHas('project', function ($queryProject) use ($projectId) {
                                 $queryProject->where('id', $projectId);
@@ -45,6 +53,7 @@ class GetProjectStatistic
                     'employee_id' => $employeePoint->employee_id,
                     'total_point' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->total_point : 0,
                     'additional_point' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->additional_point : 0,
+                    'prorate_point' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->calculated_prorate_point : 0,
                     'total_task' => isset($employeePoint->projects[0]) ? $employeePoint->projects[0]->details->count() : 0,
                 ];
             }

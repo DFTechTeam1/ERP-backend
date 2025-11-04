@@ -1,8 +1,6 @@
 <?php
 
-use App\Enums\Finance\InvoiceRequestUpdateStatus;
-use App\Enums\Production\ProjectDealChangePriceStatus;
-use App\Enums\Production\ProjectDealChangeStatus;
+use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
@@ -10,24 +8,22 @@ use App\Imports\SummaryInventoryReport;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Notifications\DummyNotification;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Company\Jobs\SlackNotificationJob;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
-use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
-use Modules\Finance\Jobs\RequestInvoiceChangeJob;
 use Modules\Finance\Models\Invoice;
-use Modules\Finance\Models\InvoiceRequestUpdate;
-use Modules\Finance\Models\ProjectDealPriceChange;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\QuotationController;
-use Modules\Production\Jobs\NotifyProjectDealChangesJob;
-use Modules\Production\Models\ProjectDealChange;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Repository\InteractiveProjectTaskRepository;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -180,40 +176,6 @@ Route::get('i/r', function (Request $request) {
     return view('invoices.rejected', compact('title', 'message'));
 })->name('invoices.rejected');
 
-Route::get('send-pending-deal-changes', function () {
-    $deals = ProjectDealChange::where('status', ProjectDealChangeStatus::Pending)->get();
-
-    foreach ($deals as $deal) {
-        NotifyProjectDealChangesJob::dispatch($deal->id);
-    }
-
-    return $deals;
-});
-Route::get('send-pending-invoice-changes', function () {
-    $invoices = InvoiceRequestUpdate::where('status', InvoiceRequestUpdateStatus::Pending)->get();
-
-    foreach ($invoices as $invoice) {
-        RequestInvoiceChangeJob::dispatch($invoice);
-    }
-
-    return $invoices;
-});
-
-Route::get('send-pending-price-changes', function () {
-    $changes = ProjectDealPriceChange::where('status', ProjectDealChangePriceStatus::Pending)->get();
-
-    // notify the director to approve this changes. Send job
-    foreach ($changes as $change) {
-        NotifyRequestPriceChangesJob::dispatch(
-            projectDealChangeId: $change->id,
-            newPrice: $change->new_price,
-            reason: $change->real_reason
-        );
-    }
-
-    return $changes;
-});
-
 // define route to approve or reject project deal price changes
 Route::get('project/deal/change/price/approve', [FinanceController::class, 'approvePriceChanges'])
     ->name('project.deal.change.price.approve')
@@ -226,21 +188,17 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
-
-    $logData = [
-        'timestamp' => now()->toDateTimeString(),
-        'method' => 'POST',
-        'endpoint' => 'endpoint_url',
-        'payload' => [
-            'project_name' => 'Test Project',
+    (new \App\Services\PusherNotification)->send(
+        channel: 'my-channel-54',
+        event: 'new-db-notification',
+        payload: [
+            'update' => true
         ],
-        'status' => 'FAILED',
-        'error_message' => 'error nih',
-        'exception_trace' => null,
-    ];
+    );
+});
 
-    if ($developer) {
-        $developer->notify(new \Modules\Company\Notifications\NasCreationSlackNotification($logData));
-    }
+Route::get('migrate-duration', function () {
+    $service = app(\Modules\Production\Services\ProjectService::class);
+
+    return $service->migrateTaskDuration();
 });

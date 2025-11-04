@@ -7,7 +7,9 @@ use Modules\Production\Models\ProjectDeal;
 use function Pest\Laravel\getJson;
 
 beforeEach(function () {
-    $user = initAuthenticateUser();
+    $user = initAuthenticateUser(permissions: [
+        'create_refund'
+    ]);
 
     $this->actingAs($user);
 });
@@ -95,7 +97,7 @@ it('List deal with filter', function () {
             'status' => ProjectDealStatus::Final->value,
         ]);
 
-    $response = getJson(route('api.production.project-deal.list').'?itemPerPage=10&page=1&status[0][id]='.ProjectDealStatus::Final->value.'&status[0][name]='.ProjectDealStatus::Final->label());
+    $response = getJson(route('api.production.project-deal.list').'?itemPerPage=10&page=1&status[0]='.ProjectDealStatus::Final->value);
 
     $response->assertStatus(201);
     $response->assertJsonStructure([
@@ -130,7 +132,7 @@ it('List deal when have price request changes', function () {
         'project_deal_id' => $project->id,
     ]);
 
-    $response = getJson(route('api.production.project-deal.list').'?itemPerPage=10&page=1&status[0][id]='.ProjectDealStatus::Final->value.'&status[0][name]='.ProjectDealStatus::Final->label());
+    $response = getJson(route('api.production.project-deal.list').'?itemPerPage=10&page=1&status[0]='.ProjectDealStatus::Final->value);
 
     $response->assertStatus(201);
     $response->assertJsonStructure([

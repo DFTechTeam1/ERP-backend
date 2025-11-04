@@ -57,7 +57,7 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
                 // generate approval and rejection URLs
                 $approvalUrl = URL::temporarySignedRoute(
                     'project.deal.change.price.approve',
-                    now()->addDay(),
+                    now()->addMinutes(30),
                     [
                         'priceChangeId' => Crypt::encryptString($this->projectDealChangeId),
                         'approvalId' => $director->user_id,
@@ -66,7 +66,7 @@ class NotifyRequestPriceChangesJob implements ShouldQueue
 
                 $rejectionUrl = URL::temporarySignedRoute(
                     'project.deal.change.price.reject',
-                    now()->addDay(),
+                    now()->addMinutes(30),
                     [
                         'priceChangeId' => Crypt::encryptString($this->projectDealChangeId),
                         'approvalId' => $director->user_id,

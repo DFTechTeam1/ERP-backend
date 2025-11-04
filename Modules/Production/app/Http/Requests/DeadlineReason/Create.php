@@ -15,8 +15,8 @@ class Create extends FormRequest
         return [
             'name' => [
                 'required',
-                Rule::unique(table: 'deadline_change_reasons', column: 'name')
-            ]
+                Rule::unique(table: 'deadline_change_reasons', column: 'name'),
+            ],
         ];
     }
 

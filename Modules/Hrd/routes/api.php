@@ -34,6 +34,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/employmentChart', 'getEmploymentChart');
         Route::get('employees/dashboardElement', 'getDashboardElement');
         Route::post('employees/export', 'export');
+        Route::get('employees/highesEventNumber', 'getTheHighestEventNumberInPic');
         Route::get('employees/checkEmail', 'checkEmail');
         Route::get('employees/checkIdNumber', 'checkIdNumber');
         Route::get('employees/generateEmployeeId', 'generateEmployeeID');

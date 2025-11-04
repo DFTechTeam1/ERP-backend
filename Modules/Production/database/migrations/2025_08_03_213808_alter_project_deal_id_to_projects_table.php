@@ -26,7 +26,7 @@ return new class extends Migration
             ->where('status', ProjectDealStatus::Final)
             ->get();
 
-        foreach($finalProjects as $finalProject) {
+        foreach ($finalProjects as $finalProject) {
             $project = Project::selectRaw('id,name,project_date')
                 ->whereNull('project_deal_id')
                 ->where('name', $finalProject->name)
@@ -36,7 +36,7 @@ return new class extends Migration
             if ($project) {
                 Project::where('id', $project->id)
                     ->update([
-                        'project_deal_id' => $finalProject->id
+                        'project_deal_id' => $finalProject->id,
                     ]);
             }
         }
@@ -49,7 +49,7 @@ return new class extends Migration
     {
         Project::whereNotNull('project_deal_id')
             ->update([
-                'project_deal_id' => NULL
+                'project_deal_id' => null,
             ]);
 
         Schema::table('projects', function (Blueprint $table) {

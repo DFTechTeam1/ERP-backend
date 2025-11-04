@@ -5,11 +5,12 @@ namespace Modules\Finance\Models;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Modules\Finance\Database\Factories\InvoiceFactory;
 use Modules\Production\Models\Customer;
 use Modules\Production\Models\ProjectDeal;
@@ -33,7 +34,7 @@ class Invoice extends Model
         'customer_id',
         'status',
         'raw_data',
-        
+
         // numbering
         'parent_number',
         'number',
@@ -42,30 +43,39 @@ class Invoice extends Model
 
         'is_down_payment',
 
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [
-        'status' => \App\Enums\Transaction\InvoiceStatus::class
+        'status' => \App\Enums\Transaction\InvoiceStatus::class,
     ];
 
     protected static function newFactory(): InvoiceFactory
     {
         return InvoiceFactory::new();
-    } 
+    }
 
     protected function rawData(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => $value ? json_decode($value, true) : [],
-            set: fn($value) => $value ? json_encode($value) : null
+            get: fn ($value) => $value ? json_decode($value, true) : [],
+            set: fn ($value) => $value ? json_encode($value) : null
         );
     }
 
-    public function transaction(): HasOne
+    public function getSourceName(): string
     {
-        return $this->hasOne(Transaction::class, 'invoice_id');
+        return 'Invoice';
     }
+
+    public function transaction(): MorphOne
+    {
+        return $this->morphOne(Transaction::class, 'sourceable');
+    }
+    // public function transaction(): HasOne
+    // {
+    //     return $this->hasOne(Transaction::class, 'invoice_id');
+    // }
 
     public function projectDeal(): BelongsTo
     {
@@ -105,11 +115,10 @@ class Invoice extends Model
 
     public function getLastInvoice(string $select = '*')
     {
-        if (!$this->number) {
+        if (! $this->number) {
             return null;
         }
 
-        
         return Invoice::selectRaw($select)
             ->where('project_deal_id', $this->project_deal_id)
             ->orderBy('sequence', 'desc')

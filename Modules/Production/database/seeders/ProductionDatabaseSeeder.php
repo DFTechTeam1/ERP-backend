@@ -16,6 +16,7 @@ class ProductionDatabaseSeeder extends Seeder
             PriceSettingSeeder::class,
             QuotationSettingSeeder::class,
             QuotationItemSeeder::class,
+            DeadlineChangeReasonSeeder::class,
         ]);
     }
 }

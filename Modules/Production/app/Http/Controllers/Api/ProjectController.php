@@ -5,6 +5,9 @@ namespace Modules\Production\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Finance\Http\Requests\Refund\CreateRefund;
+use Modules\Finance\Http\Requests\Refund\CreateTransaction;
+use Modules\Production\Http\Requests\CalculateProratePoint;
 use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
@@ -69,7 +72,7 @@ class ProjectController extends Controller
     {
         return apiResponse($this->testingService->list(
             'id,uid,name,project_date,venue,event_type,collaboration,note,marketing_id,status,classification,led_area,led_detail,project_class_id,project_deal_id',
-            '',
+            ' 1 = 1',
             [
                 'marketing:id,name,employee_id',
                 'personInCharges:id,pic_id,project_id',
@@ -350,9 +353,9 @@ class ProjectController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function updateDeadline(UpdateDeadline $request, string $projectId)
+    public function updateDeadline(UpdateDeadline $request, string $projectUid, string $taskUid)
     {
-        return apiResponse($this->service->updateDeadline($request->validated(), $projectId));
+        return apiResponse($this->service->updateDeadline($request->validated(), $projectUid, $taskUid));
     }
 
     public function uploadTaskAttachment(\Modules\Production\Http\Requests\Project\TaskAttachment $request, string $projectId, string $taskId)
@@ -882,9 +885,8 @@ class ProjectController extends Controller
 
     /**
      * Create and create quotation for project deal
-     * 
-     * @param \Modules\Production\Http\Requests\Deals\Store $request
-     * 
+     *
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function storeProjectDeals(\Modules\Production\Http\Requests\Deals\Store $request)
@@ -897,9 +899,8 @@ class ProjectController extends Controller
 
     /**
      * Create and create quotation for project deal
-     * 
-     * @param \Modules\Production\Http\Requests\Deals\Store $request
-     * 
+     *
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateProjectDeal(\Modules\Production\Http\Requests\Deals\Store $request, string $projectDealUid)
@@ -912,40 +913,36 @@ class ProjectController extends Controller
 
     /**
      * Return list of project deals
-     * 
-     * @return JsonResponse
      */
     public function listProjectDeals(): JsonResponse
     {
         return apiResponse($this->projectDealService->list(
-            select: 'id,project_date,name,venue,city_id,collaboration,status,is_fully_paid',
+            select: 'id,project_date,name,venue,city_id,collaboration,status,is_fully_paid,customer_id',
             relation: [
                 'marketings',
                 'marketings.employee:id,nickname',
+                'refund:id,project_deal_id',
                 'city:id,name',
+                'customer:id,name',
                 'transactions:id,project_deal_id,payment_amount,created_at',
+                'refund:id,project_deal_id',
                 'latestQuotation',
                 'finalQuotation',
                 'firstTransaction',
-                'unpaidInvoices:id,number,parent_number,project_deal_id,amount',
+                'unpaidInvoices:id,number,parent_number,project_deal_id,amount,uid',
                 'activeProjectDealChange:id,project_deal_id',
                 'activeProjectDealPriceChange:id,project_deal_id,new_price',
+                'lastInteractiveRequest',
+                'project:id,project_deal_id,status',
+                'project.interactiveProject:id,parent_project',
             ]
         ));
     }
 
-    public function createNewQuotation(NewQuotation $request, string $projectDealId)
-    {
-        
-    }
+    public function createNewQuotation(NewQuotation $request, string $projectDealId) {}
 
     /**
      * Publish project deal
-     *
-     * @param string $projectDealId
-     * @param string $type
-     * 
-     * @return JsonResponse
      */
     public function publishProjectDeal(string $projectDealId, string $type): JsonResponse
     {
@@ -955,8 +952,6 @@ class ProjectController extends Controller
     /**
      * Get detail of project deals
      * Get all transactions and quotations
-     * 
-     * @return JsonResponse
      */
     public function detailProjectDeal(string $projectDealUid): JsonResponse
     {
@@ -966,7 +961,6 @@ class ProjectController extends Controller
     /**
      * Delete current project deal
      *
-     * @param string $projectDealUid
      * @return JsonReponse
      */
     public function deleteProjectDeal(string $projectDealUid): JsonResponse
@@ -977,9 +971,7 @@ class ProjectController extends Controller
     /**
      * Adding more quotation in the selected project deal
      *
-     * @param array $payload
-     * @param string $projectDealUid
-     * @return JsonResponse
+     * @param  array  $payload
      */
     public function addMoreQuotation(\Modules\Production\Http\Requests\Deals\MoreQuotation $request, string $projectDealUid): JsonResponse
     {
@@ -993,8 +985,6 @@ class ProjectController extends Controller
 
     /**
      * Get report summary
-     * 
-     * @return JsonResponse
      */
     public function getReportSummary(): JsonResponse
     {
@@ -1006,9 +996,6 @@ class ProjectController extends Controller
         return apiResponse($this->projectDealService->cancelProjectDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
     }
 
-    /**
-     * @return JsonResponse
-     */
     public function updateFinalDeal(\Modules\Production\Http\Requests\Deals\Update $request, string $projectDealUid): JsonResponse
     {
         return apiResponse($this->projectDealService->updateFinalDeal(payload: $request->validated(), projectDealUid: $projectDealUid));
@@ -1016,12 +1003,8 @@ class ProjectController extends Controller
 
     /**
      * This request can be from email action or web directly
-     * 
+     *
      * if request came from email, you will get 'aid' value from query parameter
-     * 
-     *  
-     * @param string $projectDetailChangesUid
-     * 
      */
     public function approveChangesProjectDeal(string $projectDetailChangesUid)
     {
@@ -1032,8 +1015,8 @@ class ProjectController extends Controller
 
         $response = $this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
-        if (!$response['error'] && request('aid')) {
-            return redirect(route('invoices.approved') . "?type=deal");
+        if (! $response['error'] && request('aid')) {
+            return redirect(route('invoices.approved').'?type=deal');
         }
 
         return apiResponse($response);
@@ -1041,12 +1024,8 @@ class ProjectController extends Controller
 
     /**
      * This request can be from email action or web directly
-     * 
+     *
      * if request came from email, you will get 'aid' value from query parameter
-     * 
-     *  
-     * @param string $projectDetailChangesUid
-     * 
      */
     public function rejectChangesProjectDeal(string $projectDetailChangesUid)
     {
@@ -1057,8 +1036,8 @@ class ProjectController extends Controller
 
         $response = $this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
-        if (!$response['error'] && request('aid')) {
-            return redirect(route('invoices.rejected') . "?type=deal");
+        if (! $response['error'] && request('aid')) {
+            return redirect(route('invoices.rejected').'?type=deal');
         }
 
         return apiResponse($response);
@@ -1070,5 +1049,78 @@ class ProjectController extends Controller
     public function requestChangesList(): JsonResponse
     {
         return apiResponse($this->projectDealService->requestChangesList());
+    }
+
+    /**
+     * Get list of interactive requests
+     */
+    public function listInteractiveRequests(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->listInteractiveRequests());
+    }
+
+    /**
+     * Get project deal selection list
+     * @return JsonResponse
+     */
+    public function requestProjectDealSelectionList(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->requestProjectDealSelectionList());
+    }
+
+    /**
+     * Store refund for selected project deal
+     * @param CreateRefund  $request
+     * @param string  $projectDealUid
+     * @return JsonResponse
+     */
+    public function storeRefund(CreateRefund $request, string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->storeRefund($request->validated(), $projectDealUid));
+    }
+
+    /**
+     * List of refunds
+     * @return JsonResponse
+     */
+    public function listRefunds(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->listRefunds());
+    }
+
+    /**
+     * Detail of refund
+     * @param string  $refundUid
+     * @return JsonResponse
+     */
+    public function detailRefund(string $refundUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->detailRefund(refundUid: $refundUid));
+    }
+
+    /**
+     * Make refund payment
+     * @param CreateTransaction  $request
+     * @param string  $refundUid
+     * @return JsonResponse
+     */
+    public function makeRefundPayment(CreateTransaction $request, string $refundUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->makeRefundPayment($request->validated(), $refundUid));
+    }
+
+    /**
+     * Delete refund
+     * @param string  $refundUid
+     * @return JsonResponse
+     */
+    public function deleteRefund(string $refundUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->deleteRefund(refundUid: $refundUid));
+    }
+
+    public function calculateProratePoint(CalculateProratePoint $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->service->calculateProratePoint($request->validated(), $projectUid));
     }
 }

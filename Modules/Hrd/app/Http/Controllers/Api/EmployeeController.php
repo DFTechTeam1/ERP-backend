@@ -5,6 +5,7 @@ namespace Modules\Hrd\Http\Controllers\Api;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Modules\Hrd\Http\Requests\Employee\AddAsUser;
@@ -448,5 +449,10 @@ class EmployeeController extends Controller
                 ]
             )
         );
+    }
+
+    public function getTheHighestEventNumberInPic(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getTheHighestEventNumberInPic());
     }
 }

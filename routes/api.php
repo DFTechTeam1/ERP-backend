@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use KodePandai\Indonesia\Models\District;
 use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
 
@@ -40,6 +41,9 @@ Route::get('testing', function () {
 });
 
 Route::get('telegram-login', [\Modules\Telegram\Http\Controllers\TelegramAuthorizationController::class, 'index']);
+
+Route::post('upload-profile-temp', [UserController::class, 'uploadProfileTemp']);
+Route::post('users/profile/update/{userId}', [UserController::class, 'updateProfile'])->middleware('auth:sanctum');
 
 Route::get('line-flex', function () {});
 
@@ -201,6 +205,10 @@ Route::middleware('auth:sanctum')
         Route::get('dashboard/getReport', [DashboardController::class, 'getReport']);
         Route::get('dashboard/getVjWorkload', [DashboardController::class, 'getVjWorkload']);
         Route::get('dashboard/getEntertainmentSongWorkload', [DashboardController::class, 'getEntertainmentSongWorkload']);
+        Route::get('dashboard/projectDifference', [DashboardController::class, 'getProjectDifference']);
+        Route::get('dashboard/eventSuccessRate', [DashboardController::class, 'getEventSuccessRate']);
+        Route::get('dashboard/getSalesPreview', [DashboardController::class, 'getSalesPreview']);
+        Route::get('dashboard/getEventClassDistribution', [DashboardController::class, 'getEventClassDistribution']);
 
         // Dashboard for human resources
         Route::get('dashboard/hr/{type}', [DashboardController::class, 'getHrReport']);
@@ -208,20 +216,38 @@ Route::middleware('auth:sanctum')
         // NOTIFICATION
         Route::get('user/notifications', function () {
             $user = Auth::user();
-
-            $notifications = $user->unreadNotifications;
+            $employee = \Modules\Hrd\Models\Employee::find($user->employee_id);
+            
+            $notifications = $employee->unreadNotifications;
             $notifications = $notifications->map(function ($item) {
                 $item['created_at_raw'] = date('d F Y H:i', strtotime($item->created_at));
 
-                return $item;
+                return [
+                    'message' => $item['data']['message'],
+                    'title' => $item['data']['title'],
+                    'icon' => $item['data']['icon'],
+                    'url' => $item['data']['url'],
+                    'type' => $item['type'],
+                    'created_at' => $item['created_at_raw'],
+                    'id' => $item['id'],
+                ];
             });
+
+            $output = [
+                'production' => $notifications->where('type', 'production'),
+                'finance' => $notifications->where('type', 'finance'),
+                'hrd' => $notifications->where('type', 'hrd'),
+                'general' => $notifications->where('type', 'general'),
+            ];
+
             $service = new EncryptionService;
-            $encrypt = $service->encrypt(json_encode($notifications), config('app.salt_key_encryption'));
+            $encrypt = $service->encrypt(json_encode($output), config('app.salt_key_encryption'));
 
             return apiResponse(
                 generalResponse(
                     message: 'success',
                     data: [
+                        'notifications' => $output,
                         'data' => $encrypt,
                     ]
                 )

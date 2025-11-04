@@ -4,6 +4,7 @@ namespace Modules\Finance\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Finance\Console\MigrateSourceableInTransaction;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -43,7 +44,9 @@ class FinanceServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+        $this->commands([
+            MigrateSourceableInTransaction::class,
+        ]);
     }
 
     /**
@@ -86,8 +89,8 @@ class FinanceServiceProvider extends ServiceProvider
 
             foreach ($iterator as $file) {
                 if ($file->isFile() && $file->getExtension() === 'php') {
-                    $relativePath = str_replace($configPath . DIRECTORY_SEPARATOR, '', $file->getPathname());
-                    $configKey = $this->nameLower . '.' . str_replace([DIRECTORY_SEPARATOR, '.php'], ['.', ''], $relativePath);
+                    $relativePath = str_replace($configPath.DIRECTORY_SEPARATOR, '', $file->getPathname());
+                    $configKey = $this->nameLower.'.'.str_replace([DIRECTORY_SEPARATOR, '.php'], ['.', ''], $relativePath);
                     $key = ($relativePath === 'config.php') ? $this->nameLower : $configKey;
 
                     $this->publishes([$file->getPathname() => config_path($relativePath)], $configPath);

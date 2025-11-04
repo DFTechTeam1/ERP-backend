@@ -38,6 +38,9 @@ class ProjectDeal extends Model
         'note',
         'led_area',
         'led_detail',
+        'interactive_area',
+        'interactive_detail',
+        'interactive_note',
         'country_id',
         'state_id',
         'city_id',
@@ -55,7 +58,8 @@ class ProjectDeal extends Model
         'published_by',
         'cancel_by',
         'identifier_number',
-        'deleted_at'
+        'deleted_at',
+        'is_have_interactive_element',
     ];
 
     protected static function booted(): void
@@ -93,7 +97,7 @@ class ProjectDeal extends Model
     protected $casts = [
         'event_type' => \App\Enums\Production\EventType::class,
         'equipment_type' => \App\Enums\Production\EquipmentType::class,
-        'status' => \App\Enums\Production\ProjectDealStatus::class
+        'status' => \App\Enums\Production\ProjectDealStatus::class,
     ];
 
     public function ledDetail(): Attribute
@@ -104,9 +108,41 @@ class ProjectDeal extends Model
         );
     }
 
+    public function interactiveDetail(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? json_decode($value, true) : null,
+            set: fn ($value) => $value ? json_encode($value) : null
+        );
+    }
+
     public function publishedBy(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'published_by');
+    }
+
+    public function interactiveRequests(): HasMany
+    {
+        return $this->hasMany(InteractiveRequest::class, 'project_deal_id');
+    }
+
+    public function lastInteractiveRequest(): HasOne
+    {
+        return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
+            ->latestOfMany();
+    }
+
+    public function activeInteractiveRequest(): HasOne
+    {
+        return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
+            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Approved)
+            ->latestOfMany();
+    }
+
+    public function pendingInteractiveRequest(): HasOne
+    {
+        return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
+            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Pending);
     }
 
     public function ProjectDealPriceChanges(): HasMany
@@ -220,6 +256,11 @@ class ProjectDeal extends Model
         return $this->belongsTo(\Modules\Company\Models\State::class, 'state_id');
     }
 
+    public function refund(): HasOne
+    {
+        return $this->hasOne(\Modules\Finance\Models\ProjectDealRefund::class, 'project_deal_id');
+    }
+
     public function activeProjectDealChange(): HasOne
     {
         return $this->hasOne(ProjectDealChange::class, 'project_deal_id')
@@ -293,10 +334,6 @@ class ProjectDeal extends Model
     // ###### CUSTOM FUNCTIONS
     /**
      * Get final price of project deals
-     * 
-     * @param bool $formatPrice
-     * 
-     * @return float|string
      */
     public function getFinalPrice(bool $formatPrice = false): float|string
     {
@@ -305,15 +342,11 @@ class ProjectDeal extends Model
             $output = $this->finalQuotation ? $this->finalQuotation->fix_price : 0;
         }
 
-        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
      * Get price of latest quotations
-     * 
-     * @param bool $formatPrice
-     * 
-     * @return float|string
      */
     public function getLatestPrice(bool $formatPrice = false): float|string
     {
@@ -323,15 +356,11 @@ class ProjectDeal extends Model
             $output = $this->latestQuotation->fix_price;
         }
 
-        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
      * Get down payment amount
-     * 
-     * @param bool $formatPrice
-     * 
-     * @return float|string
      */
     public function getDownPaymentAmount(bool $formatPrice = false): float|string
     {
@@ -341,22 +370,18 @@ class ProjectDeal extends Model
             $output = $this->firstTransaction ? $this->firstTransaction->payment_amount : 0;
         }
 
-        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
      * Get amount of remaining payment
-     * 
-     * @param bool $formatPrice
-     * 
-     * @return float|string
      */
     public function getRemainingPayment(bool $formatPrice = false, int $deductionAmount = 0): float|string
     {
         $output = 0;
 
         if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid']) && $this->getFinalPrice() > 0) {
-            if (!$this->attributes['is_fully_paid']) {
+            if (! $this->attributes['is_fully_paid']) {
                 $output = $this->getFinalPrice() - $this->transactions->pluck('payment_amount')->sum();
 
                 if ($deductionAmount > 0) {
@@ -365,13 +390,11 @@ class ProjectDeal extends Model
             }
         }
 
-        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
      * Get status of payment in each project deals
-     * 
-     * @return string
      */
     public function getStatusPayment(): string
     {
@@ -380,9 +403,9 @@ class ProjectDeal extends Model
         if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid'])) {
             if ($this->attributes['is_fully_paid']) {
                 $output = __('global.paid');
-            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
                 $output = __('global.partial');
-            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
                 $output = __('global.unpaid');
             }
         }
@@ -391,9 +414,27 @@ class ProjectDeal extends Model
     }
 
     /**
+     * Get icon status of payment in each project deals
+     */
+    public function getStatusPaymentIcon(): string
+    {
+        $output = '';
+
+        if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid'])) {
+            if ($this->attributes['is_fully_paid']) {
+                $output = 'mdiPlain:mdi-check-circle';
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
+                $output = 'mdiPlain:mdi-clock-outline';
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
+                $output = 'mdiPlain:mdi-cancel';
+            }
+        }
+
+        return $output;
+    }
+
+    /**
      * Get color status of payment in each project deals
-     * 
-     * @return string
      */
     public function getStatusPaymentColor(): string
     {
@@ -402,9 +443,9 @@ class ProjectDeal extends Model
         if ($this->relationLoaded('transactions') && isset($this->attributes['is_fully_paid'])) {
             if ($this->attributes['is_fully_paid']) {
                 $output = 'green-lighten-3';
-            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() > 0) {
                 $output = 'lime-darken-1';
-            } else if (!$this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
+            } elseif (! $this->attributes['is_fully_paid'] && $this->transactions->count() == 0) {
                 $output = 'red-darken-1';
             }
         }
@@ -420,7 +461,7 @@ class ProjectDeal extends Model
         }
 
         // if project deal has no final quotation, return false
-        if (!$this->relationLoaded('finalQuotation') || !$this->finalQuotation) {
+        if (! $this->relationLoaded('finalQuotation') || ! $this->finalQuotation) {
             return false;
         }
 
@@ -446,7 +487,7 @@ class ProjectDeal extends Model
     {
         $output = false;
 
-        if ($this->relationLoaded('finalQuotation') && !$this->finalQuotation && !$this->isDraft() && !$this->isFinal()) {
+        if ($this->relationLoaded('finalQuotation') && ! $this->finalQuotation && ! $this->isDraft() && ! $this->isFinal()) {
             // if project deal has latest quotation, return true
             $output = true;
         }

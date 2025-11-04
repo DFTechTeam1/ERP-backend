@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Modules\Production\Console\ClearAllCache;
 use Modules\Production\Console\InitProjectCount;
 use Modules\Production\Console\PaymentDueReminderCommand;
+use Modules\Production\Console\ResyncNasFolderCreation;
 use Modules\Production\Console\SynchronizeEventDealsWithProduction;
 use Modules\Production\Console\UpdateTaskIdentifier;
 use Modules\Production\Repository\ProjectBoardRepository;
@@ -57,7 +58,8 @@ class ProductionServiceProvider extends ServiceProvider
             UpdateTaskIdentifier::class,
             InitProjectCount::class,
             PaymentDueReminderCommand::class,
-            SynchronizeEventDealsWithProduction::class
+            SynchronizeEventDealsWithProduction::class,
+            ResyncNasFolderCreation::class
         ]);
     }
 

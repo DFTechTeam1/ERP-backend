@@ -27,14 +27,14 @@ class ProjectDealChangeFactory extends Factory
         $projectDeal = ProjectDeal::factory()
             ->create([
                 'status' => ProjectDealStatus::Final->value,
-                'name' => $name
+                'name' => $name,
             ]);
 
         Project::factory()
             ->create([
                 'name' => $name,
                 'project_deal_id' => $projectDeal->id,
-                'status' => ProjectStatus::Draft->value
+                'status' => ProjectStatus::Draft->value,
             ]);
 
         return [
@@ -43,13 +43,12 @@ class ProjectDealChangeFactory extends Factory
                 [
                     'label' => 'Name',
                     'old_value' => $name,
-                    'new_value' => $name . ' Update',
-                ]
+                    'new_value' => $name.' Update',
+                ],
             ],
             'status' => ProjectDealChangeStatus::Pending->value,
             'requested_at' => Carbon::now(),
-            'requested_by' => null
+            'requested_by' => null,
         ];
     }
 }
-

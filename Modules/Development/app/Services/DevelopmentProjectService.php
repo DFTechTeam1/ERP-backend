@@ -1067,7 +1067,7 @@ class DevelopmentProjectService
     }
 
     /**
-     * Assign pictures to a task.
+     * Assign member to a task.
      */
     public function addTaskMember(array $payload, string $taskUid): array
     {
@@ -1743,6 +1743,12 @@ class DevelopmentProjectService
 
     /**
      * Store project references.
+     *
+     * @param  array  $payload  With these following structure:
+     *                          - array $references                          With these following structure:
+     *                          - File $file
+     *                          - string $type
+     *                          - string $description
      */
     public function storeReferences(array $payload, string $projectUid): array
     {

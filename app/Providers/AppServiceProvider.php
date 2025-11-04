@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
@@ -11,13 +12,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
-        // if ($this->app->environment('local')) {
-        //     $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
-        //     $this->app->register(TelescopeServiceProvider::class);
-        // }
-    }
+    public function register(): void {}
 
     /**
      * Bootstrap any application services.
@@ -34,17 +29,14 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // CACHING ALL SETTING
-        if (\Illuminate\Support\Facades\DB::connection()->getDatabaseName() && Schema::hasTable('cache')) { // avoid failing down when start in the first time
+        try {
+            if (Schema::hasTable('cache')) {
+                cachingSetting();
+            }
+        } catch (\Exception $e) {
             cachingSetting();
-
-            // caching all data
-            // if (!\Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::InventoryList->value)) {
-            //     \App\Jobs\Cache\InventoriesCacheJob::dispatch();
-            // }
-
-            // if (!\Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::EmployeeList->value)) {
-            //     \App\Jobs\Cache\EmployeerCacheJob::dispatch();
-            // }
+            // Database not available yet, skip
+            // Log::warning('Cache table check failed: ' . $e->getMessage());
         }
     }
 }

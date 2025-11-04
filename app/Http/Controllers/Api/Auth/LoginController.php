@@ -12,6 +12,7 @@ use App\Services\EncryptionService;
 use App\Services\UserService;
 use DateTime;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Vinkla\Hashids\Facades\Hashids;
 
 class LoginController extends Controller
@@ -252,7 +253,7 @@ class LoginController extends Controller
     public function changePassword(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
-            $user = auth()->user();
+            $user = Auth::user();
 
             \App\Models\User::where('id', $user->id)
                 ->update(['password' => \Illuminate\Support\Facades\Hash::make($request->password)]);

@@ -72,6 +72,8 @@ class DetailProject
                 'projectClass:id,name,maximal_point',
                 'vjs:id,project_id,employee_id',
                 'vjs.employee:id,nickname',
+                'feedbacks:id,project_id,pic_id,feedback',
+                'feedbacks.pic:id,name,avatar'
             ]);
 
             $progress = FormatProjectProgress::run($data->tasks, $projectId);
@@ -171,6 +173,8 @@ class DetailProject
                 'vjs' => $data->vjs,
                 'permission_list' => DefineDetailProjectPermission::run(),
                 'is_entertainment' => $isEntertainment,
+                'feedbacks' => $data->feedbacks,
+                'is_my_feedback_exists' => $data->isMyFeedbackExists($user->employee_id)
             ];
 
             storeCache('detailProject'.$data->id, $output);

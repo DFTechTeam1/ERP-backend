@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\TalentaService;
+use Modules\Production\Repository\ProjectRepository;
 use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
 
@@ -220,9 +222,10 @@ if (! function_exists('uploadFile')) {
         try {
             $ext = $file->getClientOriginalExtension();
             $datetime = date('YmdHis');
-            $name = "uploaded_file_{$datetime}.{$ext}";
+            $random = rand(100, 900);
+            $name = "uploaded_file_{$datetime}{$random}.{$ext}";
 
-            Storage::putFileAs($path, $file, $name);
+            Storage::disk('public')->putFileAs($path, $file, $name);
 
             return $name;
         } catch (\Throwable $th) {
@@ -1183,5 +1186,98 @@ if (! function_exists('linkShortener')) {
         }
 
         return $code;
+    }
+}
+
+/**
+ * Function to get PIC Scheduler, This is composeable function
+ */
+if (! function_exists('mainProcessToGetPicScheduler')) {
+    function mainProcessToGetPicScheduler(string $projectUid, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $userPics = \App\Models\User::role('project manager')->get();
+        $userPicsAdmin = \App\Models\User::role('project manager admin')->get();
+        $assistant = \App\Models\User::role('assistant manager')->get();
+        $director = \App\Models\User::role('director')->get();
+        $pics = collect($userPics)->merge($director)->merge($assistant)->merge($userPicsAdmin)->toArray();
+
+        // get all workload in each pics
+        $output = [];
+        foreach ($pics as $key => $pic) {
+            if ($pic['employee_id']) {
+                $employee = (new EmployeeRepository)->show(
+                    uid: 'dummy',
+                    select: 'id,uid,name,email,employee_id,avatar',
+                    where: 'id = '.$pic['employee_id'].' and status != '.\App\Enums\Employee\Status::Inactive->value.' and status != '.\App\Enums\Employee\Status::Deleted->value
+                );
+
+                if ($employee) {
+                    $output[$key] = [
+                        'id' => $employee->uid,
+                        'name' => $employee->name,
+                        'email' => $employee->email,
+                        'employee_id' => $employee->employee_id,
+                        'avatar' => $employee->avatar,
+                        'projects' => getPicWorkload(pic: $employee, projectUid: $projectUid, startDate: $startDate, endDate: $endDate),
+                        'is_recommended' => false,
+                    ];
+                }
+            }
+        }
+
+        return array_values($output);
+    }
+}
+
+/**
+ * Get each PM workload (This data used in assign PIC dialog)
+ *
+ * @param  object  $pic
+ * @param  string  $projectUId
+ */
+if (! function_exists('getPicWorkload')) {
+    function getPicWorkload(object $pic, string $projectUid, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $surabaya = \Modules\Company\Models\City::selectRaw('id')
+            ->whereRaw("lower(name) like 'kota surabaya' or lower(name) like 'surabaya'")
+            ->get();
+
+        $projects = (new ProjectRepository)->list(
+            'id,name,project_date,city_id,classification',
+            "project_date between '{$startDate}' and '{$endDate}'",
+            [],
+            [
+                [
+                    'relation' => 'personInCharges',
+                    'query' => 'pic_id = '.$pic->id,
+                ],
+            ]
+        );
+
+        // group by some data like out of town, total project and event class
+        $eventClass = 0;
+        $totalOfProject = 0;
+        $totalOutOfTown = 0;
+
+        if (count($projects) > 0) {
+            $totalOfProject = count($projects);
+
+            // get total event class
+            $eventClass = collect((object) $projects)->pluck('classification')->filter(function ($itemClass) {
+                return strtolower($itemClass) == 's (spesial)' || strtolower($itemClass) == 's (special)';
+            })->count();
+
+            foreach ($projects as $project) {
+                if (! in_array($project->city_id, collect($surabaya)->pluck('id')->toArray())) {
+                    $totalOutOfTown++;
+                }
+            }
+        }
+
+        return [
+            'traveled' => __('global.timesTraveledInWeek', ['count' => $totalOutOfTown]),
+            'projects' => __('global.totalProjectInWeek', ['count' => $totalOfProject]),
+            'event_class' => __('global.projectClassInWeek', ['count' => $eventClass]),
+        ];
     }
 }

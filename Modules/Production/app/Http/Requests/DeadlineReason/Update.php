@@ -16,8 +16,8 @@ class Update extends FormRequest
             'name' => [
                 'required',
                 Rule::unique(table: 'deadline_change_reasons', column: 'name')
-                    ->ignore($this->route('deadlineReason'))
-            ]
+                    ->ignore($this->route('deadlineReason')),
+            ],
         ];
     }
 

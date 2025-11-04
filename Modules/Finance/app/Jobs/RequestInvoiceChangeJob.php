@@ -2,13 +2,12 @@
 
 namespace Modules\Finance\Jobs;
 
-use App\Models\User;
 use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Models\InvoiceRequestUpdate;
 use Modules\Finance\Notifications\RequestInvoiceChangesNotification;
@@ -52,7 +51,7 @@ class RequestInvoiceChangeJob implements ShouldQueue
                     parameters: [
                         'invoiceUid' => $data->invoice->uid,
                         'dir' => $employee->user->uid,
-                        'cid' => $data->id
+                        'cid' => $data->id,
                     ],
                     expiration: now()->addHours(5)
                 );
@@ -63,7 +62,7 @@ class RequestInvoiceChangeJob implements ShouldQueue
                     parameters: [
                         'invoiceUid' => $data->invoice->uid,
                         'dir' => $employee->user->uid,
-                        'cid' => $data->id
+                        'cid' => $data->id,
                     ],
                     expiration: now()->addHours(5)
                 );
@@ -72,7 +71,7 @@ class RequestInvoiceChangeJob implements ShouldQueue
                 $output['rejectionUrl'] = $rejectionUrl;
 
                 $telegramIds = $employee->telegram_chat_id ? [$employee->telegram_chat_id] : [];
-        
+
                 // define message for telegram
                 $mainMessage = "🔔Approval Required\n📋 Invoice: *[{$data->invoice->number} *]\n\n👤 Client: {$data->invoice->customer->name}\n";
                 foreach ($changes as $field => $change) {
@@ -89,14 +88,14 @@ class RequestInvoiceChangeJob implements ShouldQueue
                         'keyboard' => [
                             'inline_keyboard' => [
                                 [
-                                    ['text' => 'Approve Changes', 'callback_data' => "approve"],
-                                    ['text' => 'Reject Changes', 'callback_data' => "approve"],
+                                    ['text' => 'Approve Changes', 'callback_data' => 'approve'],
+                                    ['text' => 'Reject Changes', 'callback_data' => 'approve'],
                                 ],
                             ],
                         ],
                     ],
                 ];
-        
+
                 $employee->notify(new RequestInvoiceChangesNotification($output, $telegramIds, $message));
             }
         }

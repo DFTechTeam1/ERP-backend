@@ -174,4 +174,24 @@ class DashboardController extends Controller
     {
         return apiResponse($this->service->getEntertainmentSongWorkload());
     }
+
+    public function getProjectDifference(): JsonResponse
+    {
+        return apiResponse($this->service->getProjectDifference());
+    }
+
+    public function getEventSuccessRate(): JsonResponse
+    {
+        return apiResponse($this->service->getEventSuccessRate());
+    }
+
+    public function getSalesPreview(): JsonResponse
+    {
+        return apiResponse($this->service->getSalesPreview());
+    }
+
+    public function getEventClassDistribution(): JsonResponse
+    {
+        return apiResponse($this->service->getEventClassDistribution());
+    }
 }

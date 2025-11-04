@@ -19,45 +19,44 @@ class Project extends Model
     use HasFactory, ModelObserver;
 
     /**
-         * The "booted" method of the model.
-         */
-        protected static function booted(): void
-        {
-            static::created(function (Project $project) {
-                $generalService = new GeneralService();
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (Project $project) {
+            $generalService = new GeneralService;
 
-                $total = $generalService->getCache(cacheId: CacheKey::ProjectCount->value);
-                if (!$total) {
-                    $total = Project::select('id')->count() + 1;
-                } else {
-                    $total += 1;
-                }
+            $total = $generalService->getCache(cacheId: CacheKey::ProjectCount->value);
+            if (! $total) {
+                $total = Project::select('id')->count() + 1;
+            } else {
+                $total += 1;
+            }
 
-                $generalService->storeCache(
-                    key: CacheKey::ProjectCount->value,
-                    value: $total,
-                    isForever: true
-                );
-            });
+            $generalService->storeCache(
+                key: CacheKey::ProjectCount->value,
+                value: $total,
+                isForever: true
+            );
+        });
 
-            static::deleted(function (Project $project) {
-                $generalService = new GeneralService();
+        static::deleted(function (Project $project) {
+            $generalService = new GeneralService;
 
-                $total = $generalService->getCache(cacheId: CacheKey::ProjectCount->value);
-                if (!$total) {
-                    $total = Project::select('id')->count() + 1;
-                } else {
-                    $total -= 1;
-                }
+            $total = $generalService->getCache(cacheId: CacheKey::ProjectCount->value);
+            if (! $total) {
+                $total = Project::select('id')->count() + 1;
+            } else {
+                $total -= 1;
+            }
 
-                $generalService->storeCache(
-                    key: CacheKey::ProjectCount->value,
-                    value: $total,
-                    isForever: true
-                );
-            });
-        }
-
+            $generalService->storeCache(
+                key: CacheKey::ProjectCount->value,
+                value: $total,
+                isForever: true
+            );
+        });
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -87,7 +86,7 @@ class Project extends Model
         'showreels_status',
         'longitude',
         'latitude',
-        'project_deal_id'
+        'project_deal_id',
     ];
 
     protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
@@ -95,6 +94,21 @@ class Project extends Model
     protected static function newFactory(): ProjectFactory
     {
         return ProjectFactory::new();
+    }
+
+    public function nasFolderCreation(): HasOne
+    {
+        return $this->hasOne(NasFolderCreation::class, 'project_id');
+    }
+
+    public function interactiveProject(): HasOne
+    {
+        return $this->hasOne(InteractiveProject::class, 'parent_project', 'id');
+    }
+
+    public function feedbacks(): HasMany
+    {
+        return $this->hasMany(ProjectFeedback::class, 'project_id');
     }
 
     /**
@@ -292,6 +306,11 @@ class Project extends Model
         return Attribute::make(
             get: fn () => $output,
         );
+    }
+
+    public function isMyFeedbackExists(int $employeeId)
+    {
+        return $this->feedbacks()->where('pic_id', $employeeId)->exists();
     }
 
     // protected static function newFactory(): ProjectFactory

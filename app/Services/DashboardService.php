@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
+use Modules\Production\Repository\InteractiveProjectRepository;
 
 class DashboardService
 {
@@ -47,6 +48,8 @@ class DashboardService
 
     private $projectDealRepo;
 
+    private $interactiveProjectRepo;
+
     public function __construct(
         \Modules\Production\Repository\ProjectRepository $projectRepo,
         \Modules\Inventory\Repository\InventoryRepository $inventoryRepo,
@@ -58,7 +61,8 @@ class DashboardService
         GeneralService $generalService,
         UserRepository $userRepo,
         EntertainmentTaskSongRepository $entertainmentTaskRepo,
-        \Modules\Production\Repository\ProjectDealRepository $projectDealRepo
+        \Modules\Production\Repository\ProjectDealRepository $projectDealRepo,
+        InteractiveProjectRepository $interactiveProjectRepo
     ) {
         $this->projectDealRepo = $projectDealRepo;
 
@@ -81,6 +85,8 @@ class DashboardService
         $this->userRepo = $userRepo;
 
         $this->entertainmentTaskRepo = $entertainmentTaskRepo;
+
+        $this->interactiveProjectRepo = $interactiveProjectRepo;
     }
 
     public function getReport()
@@ -531,6 +537,8 @@ class DashboardService
         $firstDate = '01';
         $endDate = \Carbon\Carbon::create($year, $month, $firstDate)->endOfMonth()->toDateString();
         $startDate = \Carbon\Carbon::create($year, $month, $firstDate)->startOfMonth()->toDateString();
+        $where = "project_date BETWEEN '{$startDate}' AND '{$endDate}' AND status != ".ProjectDealStatus::Final->value;
+        $whereInterative = "project_date BETWEEN '{$startDate}' AND '{$endDate}'";
 
         $data = $this->projectDealRepo->list(
             select: 'id,name,project_date,status,venue',
@@ -556,7 +564,50 @@ class DashboardService
 
         $data = $this->formattingProjectsForCalendarObjects(projects: $data, fromProjectDeal: true);
 
-        $data = $data->merge($projects);
+        // interactive projects
+        $interactiveProjects = $this->interactiveProjectRepo->list(
+            select: 'id,uid,name,project_date',
+            where: $whereInterative,
+            relation: [
+                'pics:id,intr_project_id,employee_id',
+                'pics.employee:id,uid,name',
+            ],
+        );
+        $interactiveProjects = $interactiveProjects->map(function ($interactive) {
+            $formattedDate = date('d F Y', strtotime($interactive->project_date));
+            return [
+                'key' => $interactive->id,
+                'content' => $interactive->name,
+                'highlight' => [
+                    'fillMode' => 'light',
+                    'color' => 'indigo',
+                ],
+                'dates' => $formattedDate,
+                'dot' => [
+                    'style' => [
+                        'backgroundColor' => '#08773fff',
+                        'color' => '#ffffff',
+                    ],
+                ],
+                'popover' => [
+                    'label' => $interactive->name,
+                ],
+                'customData' => [
+                    'name' => $interactive->name.' (INTERACTIVE)',
+                    'color' => 'teal',
+                    'pic' => $pic ?? null,
+                    'venue' => $interactive->venue,
+                    'vj' => $vj ?? null,
+                    'marketing' => $marketing ?? null,
+                    'type' => 'project',
+                    'finalPrice' => 0,
+                    'userType' => 'financeManagement', // this to define who is access the data, to make it easier for the frontend when handle the detail of event
+                ],
+                'project_date' => $interactive->project_date,
+            ];
+        });
+
+        $data = $data->merge($projects)->merge($interactiveProjects);
         // grouping by date (for custom data)
         $grouping = collect($data)->groupBy('project_date')->all();
 
@@ -680,8 +731,35 @@ class DashboardService
             ];
         }
 
+        // interactive projects
+        $interactiveProjects = $this->interactiveProjectRepo->list(
+            select: 'id,uid,name,project_date',
+            where: $where,
+            relation: [
+                'pics:id,intr_project_id,employee_id',
+                'pics.employee:id,uid,name',
+            ],
+        );
+        $outputInteractive = [];
+        foreach ($interactiveProjects as $interactiveKey =>  $interactiveProject) {
+            $outputInteractive[] = [
+                'key' => $interactiveProject->uid,
+                'highlight' => 'orange',
+                'project_date' => $interactiveProject->project_date,
+                'dot' => false,
+                'popover' => [
+                    'label' => $interactiveProject->name . ' (INTERACTIVE)',
+                ],
+                'dates' => date('d F Y', strtotime($interactiveProject->project_date)),
+                'order' => $interactiveKey,
+                'customData' => $interactiveProject,
+            ];
+        }
+
+        $out = collect($out)->merge($outputInteractive);
+
         // grouping by date (for custom data)
-        $grouping = collect($out)->groupBy('project_date')->all();
+        $grouping = $out->groupBy('project_date')->all();
 
         return generalResponse(
             'success',
@@ -691,6 +769,7 @@ class DashboardService
                 'group' => $grouping,
                 'month' => $month,
                 'year' => $year,
+                'outputInteractive' => $outputInteractive
             ],
         );
     }

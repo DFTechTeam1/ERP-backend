@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Modules\Company\Jobs\NasCreationSlackJob;
+use Modules\Company\Jobs\SlackNotificationJob;
 
 class NasFolderCreationService
 {
@@ -121,6 +122,12 @@ class NasFolderCreationService
         }
         
         $logEntry .= str_repeat('-', 80) . "\n\n";
+
+        SlackNotificationJob::dispatch(
+            previewMessage: "NAS Service {$data['status']} - {$data['method']} {$data['endpoint']}",
+            message: $logEntry,
+            blockHeader: "NAS Service {$data['status']}",
+        );
         
         file_put_contents($logFile, $logEntry, FILE_APPEND);
     }

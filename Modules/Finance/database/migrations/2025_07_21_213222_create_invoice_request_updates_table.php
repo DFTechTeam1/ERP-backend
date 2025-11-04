@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         $statuses = InvoiceRequestUpdateStatus::cases();
-        $statuses = array_map(fn($status) => $status->value, $statuses);
+        $statuses = array_map(fn ($status) => $status->value, $statuses);
 
         Schema::create('invoice_request_updates', function (Blueprint $table) use ($statuses) {
             $table->id();

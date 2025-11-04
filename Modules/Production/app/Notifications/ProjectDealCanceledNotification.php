@@ -4,9 +4,8 @@ namespace Modules\Production\Notifications;
 
 use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class ProjectDealCanceledNotification extends Notification
 {
@@ -31,7 +30,7 @@ class ProjectDealCanceledNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            TelegramChannel::class
+            TelegramChannel::class,
         ];
     }
 

@@ -4,7 +4,6 @@ namespace Modules\Production\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Modules\Production\Http\Requests\DeadlineReason\Create;
 use Modules\Production\Http\Requests\DeadlineReason\Update;
 use Modules\Production\Services\DeadlineChangeReasonService;
@@ -27,9 +26,16 @@ class DeadlineChangeReasonController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
-     * 
+     * Get all deadline change reasons
      * @return JsonResponse
+     */
+    public function getAll(): JsonResponse
+    {
+        return apiResponse($this->service->getAll());
+    }
+
+    /**
+     * Store a newly created resource in storage.
      */
     public function store(Create $request): JsonResponse
     {
@@ -48,8 +54,6 @@ class DeadlineChangeReasonController extends Controller
 
     /**
      * Update the specified resource in storage.
-     * 
-     * @return JsonResponse
      */
     public function update(Update $request, $id): JsonResponse
     {

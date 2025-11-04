@@ -6,8 +6,8 @@ use App\Enums\Production\ProjectDealStatus;
 use Illuminate\Console\Command;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectDeal;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class SynchronizeEventDealsWithProduction extends Command
 {
@@ -39,7 +39,7 @@ class SynchronizeEventDealsWithProduction extends Command
             ->where('status', ProjectDealStatus::Final)
             ->get();
 
-        foreach($finalProjects as $finalProject) {
+        foreach ($finalProjects as $finalProject) {
             $project = Project::selectRaw('id,name,project_date')
                 ->whereNull('project_deal_id')
                 ->where('name', $finalProject->name)
@@ -49,7 +49,7 @@ class SynchronizeEventDealsWithProduction extends Command
             if ($project) {
                 Project::where('id', $project->id)
                     ->update([
-                        'project_deal_id' => $finalProject->id
+                        'project_deal_id' => $finalProject->id,
                     ]);
 
                 $this->info("{$project->name} has been synchronize with deal {$finalProject->name}");

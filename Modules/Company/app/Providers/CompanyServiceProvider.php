@@ -5,6 +5,7 @@ namespace Modules\Company\Providers;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Company\Console\JobLevelMigration;
+use Modules\Company\Console\MigrateNewPointScheme;
 use Modules\Company\Console\MigrateOldDivisionToNewDivision;
 
 class CompanyServiceProvider extends ServiceProvider
@@ -42,6 +43,7 @@ class CompanyServiceProvider extends ServiceProvider
         $this->commands([
             MigrateOldDivisionToNewDivision::class,
             JobLevelMigration::class,
+            MigrateNewPointScheme::class,
         ]);
     }
 

@@ -6,4 +6,5 @@ enum ReferenceType: string
 {
     case Media = 'media';
     case Link = 'link';
+    case Document = 'document';
 }

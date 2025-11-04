@@ -31,7 +31,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
         $employeeRepo = new EmployeeRepository;
         $pointProjectRepo = new EmployeePointProjectRepository;
         $projects = $pointProjectRepo->list(
-            select: 'id,employee_point_id,project_id,total_point,additional_point',
+            select: 'id,employee_point_id,project_id,total_point,additional_point,calculated_prorate_point,prorate_point,original_point',
             relation: [
                 'project:id,name,project_date',
                 'project.personInCharges:id,project_id,pic_id',
@@ -69,6 +69,9 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
                 'tasks' => implode(',', $tasks),
                 'point' => $project->total_point - $project->additional_point,
                 'additional_point' => $project->additional_point,
+                'calculated_prorate_point' => $project->calculated_prorate_point,
+                'prorate_point' => $project->prorate_point,
+                'original_point' => $project->original_point,
                 'total_point' => $project->total_point,
                 'project_name' => $project->project->name,
                 'employee_name' => $project->employeePoint->employee->name,
