@@ -9326,7 +9326,7 @@ class ProjectService
                     $point = number_format($totalPoint * $proratePerTask, 1);
                     $rawTotalPoint = number_format($totalPoint * $proratePerTask, 1);
 
-                    $team['point'] = (fmod($point, 1) >= 0.5) ? ceil($point) : floor($point);
+                    $team['point'] = ceil($point);
                     $team['raw_total_point'] = (fmod($rawTotalPoint, 1) >= 0.5) ? ceil($rawTotalPoint) : floor($rawTotalPoint);
 
                     $team['prorate_point_raw'] = $proratePerTask;
