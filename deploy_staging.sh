@@ -15,6 +15,12 @@ php82 artisan migrate --force
 php82 artisan optimize:clear
 # Run necessary commands
 php82 artisan app:migrate-invoice-uid
+php82 artisan app:migrate-employee-avatar
+php82 artisan app:migrate-task-hold
+php82 artisan hrd:migration-employee-point
+php82 artisan app:migrate-sourceable-transaction
+php82 artisan app:migrate-new-point-scheme
+php82 artisan app:migrate-project-task-duration-history
 php82 artisan db:seed --class=RolePermissionSetting --force
 php82 artisan db:seed --class=UpdatePriceGuideSetting --force
 php82 artisan config:cache
