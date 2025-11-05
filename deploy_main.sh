@@ -3,10 +3,10 @@
 
 # Steps: Run migration, Run necessary commands, Clear cache, Restart queue workers, change folder permissions
 # Change to the application directory
-cd /var/www/apps/backend.dfactory.pro
+cd /var/www/apps/data-center.dfactory.pro
 
 # pull latest code
-git pull origin staging
+git pull origin main
 
 # Run migrations
 php artisan migrate --force
