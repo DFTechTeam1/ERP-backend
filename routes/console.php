@@ -32,7 +32,7 @@ Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 
 \Illuminate\Support\Facades\Schedule::command(UpdateEmployeeActivePerMonth::class)->lastDayOfMonth('23:00');
 
-\Illuminate\Support\Facades\Schedule::command(ResyncNasFolderCreation::class)->twiceDailyAt('09:00', '16:00');
+\Illuminate\Support\Facades\Schedule::command(ResyncNasFolderCreation::class)->twiceDailyAt(9, 16);
 
 // Schedule::command('telescope:prune --hours=72')->daily();
 
