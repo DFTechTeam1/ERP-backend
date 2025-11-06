@@ -188,8 +188,8 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    (new \App\Services\PusherNotification)->send(
-        channel: 'my-channel-54',
+    return (new \App\Services\PusherNotification)->send(
+        channel: 'my-channel-42',
         event: 'new-db-notification',
         payload: [
             'update' => true
