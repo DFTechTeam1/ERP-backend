@@ -1832,17 +1832,29 @@ class ProjectDealService
             // check status first
             $requestId = Crypt::decryptString($requestId);
 
-            $currentRequest = $this->interactiveRequestRepo->show(uid: $requestId, select: 'id,status');
+            $currentRequest = $this->interactiveRequestRepo->show(uid: $requestId, select: 'id,status,project_deal_id', relation: ['projectDeal:id,name,project_date,status']);
             if ($currentRequest->status != InteractiveRequestStatus::Pending) {
                 return errorResponse(message: __('notification.interactiveRequestAlreadyProcessed'), code: 500);
             }
 
+            $currentInteractive = $this->interactiveProjectRepo->show(
+                uid: 'uid',
+                select: 'id',
+                where: "name = '{$currentRequest->projectDeal->name}' and project_date = '{$currentRequest->projectDeal->project_date}'"
+            );
+
+            $payloadUpdateRequest = [];
+
+            if ($currentInteractive) {
+                $payloadUpdateRequest['status'] = InteractiveRequestStatus::Approved;
+            } else {
+                $payloadUpdateRequest['status'] = InteractiveRequestStatus::Rejected;
+                $payloadUpdateRequest['rejected_at'] = Carbon::now();
+                $payloadUpdateRequest['rejected_by'] = Auth::id();
+            }
+
             $this->interactiveRequestRepo->update(
-                data: [
-                    'status' => InteractiveRequestStatus::Rejected,
-                    'rejected_at' => Carbon::now(),
-                    'rejected_by' => Auth::id(),
-                ],
+                data: $payloadUpdateRequest,
                 id: $requestId
             );
 
