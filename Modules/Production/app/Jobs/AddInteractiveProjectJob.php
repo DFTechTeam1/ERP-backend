@@ -49,7 +49,7 @@ class AddInteractiveProjectJob implements ShouldQueue
         );
 
         // director
-        $persons = json_decode((new GeneralService)->getSettingByKey('person_to_approve_invoice_changes'), true);
+        $persons = json_decode((new GeneralService)->getSettingByKey('person_to_approve_interactive_event'), true);
 
         if ($persons) {
             $implodeString = "'".implode("','", $persons)."'";
