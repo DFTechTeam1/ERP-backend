@@ -32,9 +32,9 @@ class AssignInteractiveProjectPicNotification extends Notification
     {
         $output = [];
 
-        if ($this->employee->telegram_chat_id) {
-            $output[] = new \App\Channels\TelegramChannel;
-        }
+        // if ($this->employee->telegram_chat_id) {
+        //     $output[] = new \App\Channels\TelegramChannel;
+        // }
 
         return $output;
     }
