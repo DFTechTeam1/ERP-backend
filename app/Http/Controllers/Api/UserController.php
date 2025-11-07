@@ -7,6 +7,7 @@ use App\Http\Requests\User\Create;
 use App\Http\Requests\User\Update;
 use App\Http\Requests\User\UpdateProfile;
 use App\Services\UserService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -24,6 +25,16 @@ class UserController extends Controller
     public function index()
     {
         return apiResponse($this->service->list());
+    }
+
+    /**
+     * Resend activation email to user
+     * @param  string  $userUid
+     * @return JsonResponse
+     */
+    public function resendActivationEmail(string $userUid): JsonResponse
+    {
+        return apiResponse($this->service->resendActivationEmail($userUid));
     }
 
     /**

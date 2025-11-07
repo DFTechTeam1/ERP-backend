@@ -111,12 +111,17 @@ class UserService
 
         $paginated = collect((object) $paginated)->map(function ($item) {
             $roles = $item->getRoleNames();
-            $is_deleteable = true;
-            $is_editable = true;
+            $isDeletable = true;
+            $isEditable = true;
+            $canResendActivation = false;
 
             // if user see himself on the list, then user cannot delete the data
             if ($item->id == Auth::id()) {
-                $is_deleteable = false;
+                $isDeletable = false;
+            }
+
+            if (!$item->email_verified_at) {
+                $canResendActivation = true;
             }
 
             return [
@@ -126,8 +131,9 @@ class UserService
                 'role_name' => count($roles) > 0 ? $roles[0] : null,
                 'status' => $item->status,
                 'status_color' => $item->status_color,
-                'is_deleteable' => $is_deleteable,
-                'is_editable' => $is_editable,
+                'is_deleteable' => $isDeletable,
+                'is_editable' => $isEditable,
+                'can_resend_activation' => $canResendActivation,
             ];
         })->toArray();
         $totalData = $this->repo->list('id', $where)->count();
@@ -826,6 +832,51 @@ class UserService
                 data: [
                     'token' => $encryptedPayload
                 ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Resend activation email to user
+     * @param  string  $userUid
+     * @return array<string, mixed>
+     */
+    public function resendActivationEmail(string $userUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = $this->repo->detail(
+                id: 'id',
+                select: 'id,email,email_verified_at,password',
+                where: "uid = '{$userUid}'"
+            );
+
+            if (! $user) {
+                return errorResponse(__('global.userNotFound'));
+            }
+
+            if ($user->email_verified_at) {
+                return errorResponse(__('global.accontAlreadyActive'));
+            }
+
+            // generate random password
+            $randomPassword = $this->generalService->generateRandomPassword(8);
+
+            // update user password
+            $this->repo->update([
+                'password' => Hash::make($randomPassword),
+            ], 'id', $user->id);
+
+            SendEmailActivationJob::dispatch($user, $randomPassword)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.successResendActivationEmail'),
             );
         } catch (\Throwable $th) {
             DB::rollBack();
