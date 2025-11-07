@@ -167,4 +167,5 @@ return [
     'successUpdateCity' => 'City has been updated successfully',
     'successDeleteCity' => 'City has been deleted successfully',
     'cannotDeleteCityBcsRelation' => 'Cannot delete city because it has relation to [district/event]',
+    'successResendActivationEmail' => 'Activation email has been resent successfully',
 ];
