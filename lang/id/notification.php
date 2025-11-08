@@ -163,4 +163,5 @@ return [
     'successDeleteCity' => 'Kota telah berhasil dihapus',
     'cannotDeleteCityBcsRelation' => 'Tidak dapat menghapus kota karena memiliki hubungan dengan [kecamatan/event]',
     'successResendActivationEmail' => 'Email aktivasi telah berhasil dikirim ulang',
+    'pleaseAddDeadlineBeforeContinue' => 'Harap tambahkan tenggat waktu sebelum melanjutkan'
 ];
