@@ -8,11 +8,11 @@ Enum "development_projects_status_enum" {
 
 Enum "ticket_type_enum" {
   "departure"
-  "arrival"
+  "return"
 }
 
 Enum "transportation_type_enum" {
-  "plane"
+  "air"
   "train"
   "car"
   "other"
@@ -1927,6 +1927,7 @@ Table "project_marcomm_afpat_attendances" {
   "id" bigint [pk, not null]
   "project_id" bigint [not null, ref: > projects.id]
   "employee_id" bigint [not null, ref: > employees.id]
+  "note" varchar(255)
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -1949,8 +1950,8 @@ Table "project_transportation_details" {
   "employee_id" bigint [not null, ref: > employees.id]
   "ticket_image" varchar(255) [note: "Ticket screenshot"]
   "type" ticket_type_enum
-  "departure_date" timestamp [default: NULL]
-  "arrival_date" timestamp [default: NULL]
+  "departure_datetime" timestamp [default: NULL]
+  "return_datetime" timestamp [default: NULL]
   "transportation_type" transportation_type_enum
   "amount" decimal(24,2) [default: '0']
   "issued_by" bigint [not null, ref: > employees.id]

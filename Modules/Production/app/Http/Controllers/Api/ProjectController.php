@@ -12,6 +12,7 @@ use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
+use Modules\Production\Http\Requests\Project\ChangeAfpatStatus;
 use Modules\Production\Http\Requests\Project\ChangeStatus;
 use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\CompleteProject;
@@ -37,6 +38,7 @@ use Modules\Production\Http\Requests\Project\UpdateSong;
 use Modules\Production\Http\Requests\Project\UploadProofOfWork;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Services\CustomerService;
+use Modules\Production\Services\InchargeService;
 use Modules\Production\Services\ProjectService;
 use Modules\Production\Services\TestingService;
 
@@ -54,7 +56,8 @@ class ProjectController extends Controller
         ProjectService $projectService,
         TestingService $testingService,
         CustomerService $customerService,
-        \Modules\Production\Services\ProjectDealService $projectDealService
+        \Modules\Production\Services\ProjectDealService $projectDealService,
+        private readonly InchargeService $inchargeService
     ) {
         $this->service = $projectService;
 
@@ -1122,5 +1125,25 @@ class ProjectController extends Controller
     public function calculateProratePoint(CalculateProratePoint $request, string $projectUid): JsonResponse
     {
         return apiResponse($this->service->calculateProratePoint($request->validated(), $projectUid));
+    }
+
+    /**
+     * Update after party status
+     * @param ChangeAfpatStatus  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function updateAfterPartyStatus(ChangeAfpatStatus $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->updateAfterPartyStatus($request->validated(), $projectUid));
+    }
+
+    /**
+     * Get incharge list
+     * @return JsonResponse
+     */
+    public function inchargeList(): JsonResponse
+    {
+        return apiResponse($this->inchargeService->list());
     }
 }

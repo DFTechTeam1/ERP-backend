@@ -189,6 +189,7 @@ Route::middleware(['auth:sanctum'])
         Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
         Route::post('project/{taskId}/manualMoveBoard', [ProjectController::class, 'manualMoveBoard']);
         Route::post('project/{taskId}/returnEquipment', [ProjectController::class, 'returnEquipment']);
+        Route::post('project/{taskId}/afpat-status', [ProjectController::class, 'updateAfterPartyStatus']);
         Route::post('project/{projectId}/manualChangeTaskBoard', [ProjectController::class, 'manualChangeTaskBoard']);
         Route::post('project/{projectId}/proofOfWork/{taskId}', [ProjectController::class, 'proofOfWork'])->name('task.proof.store');
         Route::delete('project/{taskUid}/task', [ProjectController::class, 'deleteTask']);
@@ -217,6 +218,9 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask'])->name('task.state');
         Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
         Route::delete('project/{projectUid}/task/{taskUid}/deletAettachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
+
+        // incharges
+        Route::get('incharges', [ProjectController::class, 'inchargeList']);
 
         // Quotations
         Route::get('quotations', [QuotationController::class, 'index']);
