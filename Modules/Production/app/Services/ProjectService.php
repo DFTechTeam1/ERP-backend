@@ -2591,7 +2591,15 @@ class ProjectService
                 return errorResponse(message: __('notification.cannotCombineModeller'));
             }
 
-            $currentTask = $this->taskRepo->show(uid: $taskUid, select: 'id,status');
+            $currentTask = $this->taskRepo->show(uid: $taskUid, select: 'id,status,project_id,end_date');
+            if (
+                (isset($data['users'])) &&
+                (count($data['users']) > 0) &&
+                !$currentTask->end_date
+            ) {
+                return errorResponse(message: __('notification.pleaseAddDeadlineBeforeContinue'));
+            }
+            
             $taskId = $currentTask->id;
 
             $notifiedNewTask = [];
@@ -2607,7 +2615,7 @@ class ProjectService
 
                     // add to pic history
                     $this->taskPicHistory->store([
-                        'project_id' => $taskDetail->project_id,
+                        'project_id' => $currentTask->project_id,
                         'project_task_id' => $taskId,
                         'employee_id' => $employeeId,
                     ]);
@@ -3033,7 +3041,7 @@ class ProjectService
             $data['project_id'] = $board->project_id;
             $data['project_board_id'] = $boardId;
             $data['start_date'] = date('Y-m-d');
-            $data['end_date'] = ! empty($data['end_date']) ? date('Y-m-d', strtotime($data['end_date'])) : null;
+            $data['end_date'] = ! empty($data['end_date']) ? date('Y-m-d H:i:s', strtotime($data['end_date'])) : null;
 
             // set as waiting employee approval
             if (! empty($data['pic'])) {
