@@ -2,12 +2,15 @@
 
 namespace Modules\Production\Services;
 
+use Illuminate\Support\Facades\DB;
+use Modules\Production\Repository\ProjectMarcommAttendanceRepository;
 use Modules\Production\Repository\ProjectRepository;
 
 class InchargeService
 {
     public function __construct(
         private readonly ProjectRepository $projectRepo,
+        private readonly ProjectMarcommAttendanceRepository $projectMarcommAttendanceRepo,
     )
     {
         //
@@ -116,6 +119,64 @@ class InchargeService
                 data: []
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Assign Marcomm to Project
+     *
+     * @param  array  $payload
+     * @param  string  $projectUid
+     * @return array
+     */
+    public function assignMarcommToProject(array $payload, string $projectUid): array
+    {
+        DB::beginTransaction();
+        
+        try {
+            $project = $this->projectRepo->show(
+                uid: $projectUid,
+                select: 'id',
+                relation: [
+                    'marcommAttendances',
+                    'marcommAttendances.employee:id,uid'
+                ]
+            );
+
+            // remove if needed
+            if (isset($payload['remove_ids']) && count($payload['remove_ids']) > 0) {
+                foreach ($payload['remove_ids'] as $remove) {
+                    $this->projectMarcommAttendanceRepo->delete(
+                        id: 'id',
+                        where: "project_id = {$project->id} AND employee_id = (SELECT id FROM employees WHERE uid = '{$remove['employee_uid']}')"
+                    );
+                }
+            }
+
+            // assign new marcomm if not exists
+            $newMarcommIds = [];
+            foreach ($payload['marcomm_ids'] as $marcomm) {
+                $exists = $project->marcommAttendances->where('employee.uid', $marcomm['employee_uid'])->first();
+                if (! $exists) {
+                    $this->projectMarcommAttendanceRepo->store([
+                        'project_id' => $project->id,
+                        'employee_id' => $this->projectMarcommAttendanceRepo->getEmployeeIdByUid($marcomm['employee_uid']),
+                    ]);
+
+                    $newMarcommIds[] = $marcomm['employee_uid'];
+                }
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.marcommAssignedToProject'),
+                data: []
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            
             return errorResponse($th);
         }
     }

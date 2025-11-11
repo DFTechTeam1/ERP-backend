@@ -164,4 +164,5 @@ return [
     'cannotDeleteCityBcsRelation' => 'Tidak dapat menghapus kota karena memiliki hubungan dengan [kecamatan/event]',
     'successResendActivationEmail' => 'Email aktivasi telah berhasil dikirim ulang',
     'afterPartyStatusUpdated' => 'Status after party telah berhasil diperbarui',
+    'marcommAssignedToProject' => 'Marcomm telah ditugaskan ke event :project',
 ];

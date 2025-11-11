@@ -10,6 +10,7 @@ use Modules\Finance\Http\Requests\Refund\CreateTransaction;
 use Modules\Production\Http\Requests\CalculateProratePoint;
 use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
+use Modules\Production\Http\Requests\Project\AssignMarcommToProject;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
 use Modules\Production\Http\Requests\Project\ChangeAfpatStatus;
@@ -1145,5 +1146,10 @@ class ProjectController extends Controller
     public function inchargeList(): JsonResponse
     {
         return apiResponse($this->inchargeService->list());
+    }
+
+    public function assignMarcommToProject(AssignMarcommToProject $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignMarcommToProject($request->validated(), $projectUid));
     }
 }
