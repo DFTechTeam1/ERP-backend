@@ -2572,7 +2572,8 @@ class ProjectService
         string $taskUid,
         bool $isForProjectManager = false,
         bool $isRevise = false,
-        bool $needChangeTaskStatus = true
+        bool $needChangeTaskStatus = true,
+        bool $skipTimeValidation = false
     ) {
         DB::beginTransaction();
         try {
@@ -2595,7 +2596,8 @@ class ProjectService
             if (
                 (isset($data['users'])) &&
                 (count($data['users']) > 0) &&
-                !$currentTask->end_date
+                !$currentTask->end_date &&
+                !$skipTimeValidation
             ) {
                 return errorResponse(message: __('notification.pleaseAddDeadlineBeforeContinue'));
             }
@@ -4197,7 +4199,8 @@ class ProjectService
                 'removed' => [],
             ],
             taskUid: $taskUid,
-            isForProjectManager: true
+            isForProjectManager: true,
+            skipTimeValidation: true
         );
     }
 
@@ -5170,6 +5173,7 @@ class ProjectService
                 taskUid: $taskUid,
                 isForProjectManager: false,
                 isRevise: true,
+                skipTimeValidation: true
             );
 
             // update worktime for employee
