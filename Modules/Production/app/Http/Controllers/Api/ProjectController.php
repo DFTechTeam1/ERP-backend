@@ -1152,4 +1152,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->inchargeService->assignMarcommToProject($request->validated(), $projectUid));
     }
+
+    public function assignOnDutyEntertainment(Request $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignOnDutyEntertainment($request->all(), $projectUid));
+    }
 }

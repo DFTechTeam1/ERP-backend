@@ -180,4 +180,31 @@ class InchargeService
             return errorResponse($th);
         }
     }
+
+    public function assignOnDutyEntertainment(array $payload, string $projectUid): array
+    {
+        DB::beginTransaction();
+        
+        try {
+            $project = $this->projectRepo->show(
+                uid: $projectUid,
+                select: 'id',
+                relation: [
+                    'vjAfpatAttendances',
+                    'vjAfpatAttendances.employee:id,uid'
+                ]
+            );
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.entertainmentAssignedToProject'),
+                data: []
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            
+            return errorResponse($th);
+        }
+    }
 }

@@ -107,9 +107,15 @@ Route::get('ilham', function () {
     UpcomingDeadlineTaskJob::dispatch($outputData);
 });
 
-Route::get('login', function () {
-    return view('auth.login');
-})->name('login');
+Route::get('login', [LandingPageController::class, 'showLoginForm'])
+    ->name('login');
+
+Route::post('login', [LandingPageController::class, 'login'])
+    ->name('documentation.login.submit');
+
+Route::post('logout', [LandingPageController::class, 'logout'])
+    ->name('documentation.logout')
+    ->middleware('auth');
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
 

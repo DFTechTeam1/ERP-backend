@@ -221,6 +221,7 @@ Route::middleware(['auth:sanctum'])
 
         // incharges
         Route::get('incharges', [ProjectController::class, 'inchargeList']);
+        Route::post('incharges/assign-vj/{projectUid}', [ProjectController::class, 'assignOnDutyEntertainment'])->name('incharges.assignVJ');
 
         // Quotations
         Route::get('quotations', [QuotationController::class, 'index']);
