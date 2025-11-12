@@ -38,7 +38,7 @@ class ResyncNasFolderCreation extends Command
             ->where('status', ProjectDealStatus::Final)
             ->with([
                 'project' => function ($query) {
-                    $query->selectRaw('id,project_deal_id,project_date')
+                    $query->selectRaw('id,project_deal_id,project_date,name')
                     ->whereDoesntHave('nasFolderCreation');
                 }
             ])
