@@ -5663,6 +5663,7 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
+            $actorId = Auth::id();
             $this->repo->update(['status' => $data['status']], $projectUid);
 
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
@@ -5679,7 +5680,12 @@ class ProjectService
                     foreach ($employeeIds as $employeeId) {
                         $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
 
-                        \Modules\Production\Jobs\AssignTaskJob::dispatch($employeeIds, $task->id, $userData);
+                        \Modules\Production\Jobs\AssignTaskJob::dispatch(
+                            $employeeIds,
+                            $task->id,
+                            $userData,
+                            $actorId
+                        );
                     }
                 }
             }
