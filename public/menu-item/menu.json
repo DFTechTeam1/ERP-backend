@@ -78,7 +78,7 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-package-variant",
             "childs": [
-                { "path": "/module", "slug": "inventory-detail", "lang_id": "Inventory", "lang_en": "Inventory", "icon": "", "permission": "list_performance_report" }
+                { "path": "/module", "slug": "inventory-detail", "lang_id": "Inventory", "lang_en": "Inventory", "icon": "", "permission": "list_supplier" }
             ]
         }
     ],
