@@ -170,4 +170,6 @@ return [
     'successResendActivationEmail' => 'Activation email has been resent successfully',
     'afterPartyStatusUpdated' => 'After party status has been updated successfully',
     'marcommAssignedToProject' => 'Marcomm has been assigned to event :project',
+    'entertainmentAssignedToProject' => 'Entertainment team has been assigned to event :project',
+    'marcommAssignedToProject' => 'Marcomm has been assigned to event',
 ];

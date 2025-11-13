@@ -10,6 +10,8 @@ use Modules\Finance\Http\Requests\Refund\CreateTransaction;
 use Modules\Production\Http\Requests\CalculateProratePoint;
 use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
+use Modules\Production\Http\Requests\Incharge\AssignEntertainmentRequest;
+use Modules\Production\Http\Requests\Incharge\AssignMarcommRequest;
 use Modules\Production\Http\Requests\Project\AssignMarcommToProject;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
@@ -1148,13 +1150,25 @@ class ProjectController extends Controller
         return apiResponse($this->inchargeService->list());
     }
 
-    public function assignMarcommToProject(AssignMarcommToProject $request, string $projectUid): JsonResponse
+    /**
+     * Assign on duty entertainment
+     * @param AssignEntertainmentRequest  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function assignOnDutyEntertainment(AssignEntertainmentRequest $request, string $projectUid): JsonResponse
     {
-        return apiResponse($this->inchargeService->assignMarcommToProject($request->validated(), $projectUid));
+        return apiResponse($this->inchargeService->assignOnDutyEntertainment($request->validated(), $projectUid));
     }
-
-    public function assignOnDutyEntertainment(Request $request, string $projectUid): JsonResponse
+    
+    /**
+     * Assign on duty marcomm
+     * @param AssignMarcommRequest  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function assignOnDutyMarcomm(AssignMarcommRequest $request, string $projectUid): JsonResponse
     {
-        return apiResponse($this->inchargeService->assignOnDutyEntertainment($request->all(), $projectUid));
+        return apiResponse($this->inchargeService->assignOnDutyMarcomm($request->validated(), $projectUid));
     }
 }

@@ -2,15 +2,24 @@
 
 namespace Modules\Production\Services;
 
+use App\Services\GeneralService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Modules\Production\Repository\ProjectMarcommAttendanceRepository;
 use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Repository\ProjectVjAfpatAttendanceRepository;
+use Modules\Production\Repository\ProjectVjRepository;
+use Modules\Production\Repository\ProjectMarcommAfpatAttendanceRepository;
 
 class InchargeService
 {
     public function __construct(
         private readonly ProjectRepository $projectRepo,
         private readonly ProjectMarcommAttendanceRepository $projectMarcommAttendanceRepo,
+        private readonly GeneralService $generalService,
+        private readonly ProjectVjRepository $projectVjRepo,
+        private readonly ProjectVjAfpatAttendanceRepository $projectVjAfpatAttendanceRepo,
+        private readonly ProjectMarcommAfpatAttendanceRepository $projectMarcommAfpatAttendanceRepo,
     )
     {
         //
@@ -33,15 +42,15 @@ class InchargeService
                 where: $where,
                 relation: [
                     'vjs:id,project_id,employee_id',
-                    'vjs.employee:id,nickname',
+                    'vjs.employee:id,name,nickname,uid',
                     'personInCharges:id,project_id,pic_id',
                     'personInCharges.employee:id,nickname,avatar',
                     'vjAfpatAttendances:id,project_id,employee_id',
-                    'vjAfpatAttendances.employee:id,nickname',
+                    'vjAfpatAttendances.employee:id,uid,name,nickname',
                     'marcommAttendances:id,project_id,employee_id',
-                    'marcommAttendances.employee:id,nickname',
+                    'marcommAttendances.employee:id,nickname,uid,name',
                     'marcommAfpatAttendances:id,project_id,employee_id',
-                    'marcommAfpatAttendances.employee:id,nickname',
+                    'marcommAfpatAttendances.employee:id,nickname,uid,name',
                     'transportation:id,project_id',
                     'country:id,name',
                     'state:id,name',
@@ -72,13 +81,37 @@ class InchargeService
                     
                     // entertainment division
                     'entertainment_vj' => $item->vjs->isNotEmpty() ? $item->vjs->pluck('employee.nickname')->implode(',') : '-',
-                    'entertainment_after_party' => null,
-                    'entertainment_note' => null,
+                    'entertainment_after_party' => $item->vjAfpatAttendances->isNotEmpty() ? $item->vjAfpatAttendances->pluck('employee.nickname')->implode(',') : '-',
+                    'entertainment_note' => $item->vjs->isNotEmpty() ? $item->vjs->first()->note : '-',
+                    'entertainment_vj_employees' => $item->vjs->map(function ($vj) {
+                        return [
+                            'uid' => $vj->employee->uid,
+                            'nickname' => $vj->employee->name,
+                        ];
+                    }),
+                    'entertainment_afpat_employees' => $item->vjAfpatAttendances->map(function ($afpat) {
+                        return [
+                            'uid' => $afpat->employee->uid,
+                            'nickname' => $afpat->employee->name,
+                        ];
+                    }),
     
                     // marcomm division
-                    'marcomm_vj' => null,
-                    'marcomm_after_party' => null,
-                    'marcomm_note' => null,
+                    'marcomm_vj' => $item->marcommAttendances->isNotEmpty() ? $item->marcommAttendances->pluck('employee.nickname')->implode(',') : '-',
+                    'marcomm_after_party' => $item->marcommAfpatAttendances->isNotEmpty() ? $item->marcommAfpatAttendances->pluck('employee.nickname')->implode(',') : '-',
+                    'marcomm_note' => $item->marcommAttendances->isNotEmpty() ? $item->marcommAttendances->first()->note : '-',
+                    'marcomm_employees' => $item->marcommAttendances->map(function ($marcomm) {
+                        return [
+                            'uid' => $marcomm->employee->uid,
+                            'nickname' => $marcomm->employee->name,
+                        ];
+                    }),
+                    'marcomm_afpat_employees' => $item->marcommAfpatAttendances->map(function ($afpat) {
+                        return [
+                            'uid' => $afpat->employee->uid,
+                            'nickname' => $afpat->employee->name,
+                        ];
+                    }),
     
                     // interactive division
                     'interactive_vj' => null,
@@ -124,54 +157,81 @@ class InchargeService
     }
 
     /**
-     * Assign Marcomm to Project
+     * Assign On Duty Entertainment to Project. 
+     * This action will assume if project do not has any VJ assigned yet.
      *
      * @param  array  $payload
      * @param  string  $projectUid
      * @return array
      */
-    public function assignMarcommToProject(array $payload, string $projectUid): array
+    public function assignOnDutyEntertainment(array $payload, string $projectUid): array
     {
         DB::beginTransaction();
         
         try {
-            $project = $this->projectRepo->show(
-                uid: $projectUid,
-                select: 'id',
-                relation: [
-                    'marcommAttendances',
-                    'marcommAttendances.employee:id,uid'
-                ]
-            );
+            $projectId = $this->generalService->getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
-            // remove if needed
-            if (isset($payload['remove_ids']) && count($payload['remove_ids']) > 0) {
-                foreach ($payload['remove_ids'] as $remove) {
-                    $this->projectMarcommAttendanceRepo->delete(
+            // remove_main_event_uids -> remove current list
+            if (!empty($payload['remove_main_event_uids'])) {
+                foreach ($payload['remove_main_event_uids'] as $removeUid) {
+                    $this->projectVjRepo->delete(
                         id: 'id',
-                        where: "project_id = {$project->id} AND employee_id = (SELECT id FROM employees WHERE uid = '{$remove['employee_uid']}')"
+                        where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$removeUid}')"
                     );
                 }
             }
 
-            // assign new marcomm if not exists
-            $newMarcommIds = [];
-            foreach ($payload['marcomm_ids'] as $marcomm) {
-                $exists = $project->marcommAttendances->where('employee.uid', $marcomm['employee_uid'])->first();
-                if (! $exists) {
-                    $this->projectMarcommAttendanceRepo->store([
-                        'project_id' => $project->id,
-                        'employee_id' => $this->projectMarcommAttendanceRepo->getEmployeeIdByUid($marcomm['employee_uid']),
-                    ]);
-
-                    $newMarcommIds[] = $marcomm['employee_uid'];
+            // remove_after_party_uids -> remove current list
+            if (!empty($payload['remove_after_party_uids'])) {
+                foreach ($payload['remove_after_party_uids'] as $removeUid) {
+                    $this->projectVjRepo->delete(
+                        id: 'id',
+                        where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$removeUid}')"
+                    );
                 }
             }
 
+            // assign_main_event_uids -> add new list if not exists
+            if (!empty($payload['assign_main_event_uids'])) {
+                foreach ($payload['assign_main_event_uids'] as $assignUid) {
+                    $exists = $this->projectVjRepo->list(
+                        select: 'id',
+                        where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$assignUid}')"
+                    )->first();
+
+                    if (! $exists) {
+                        $this->projectVjRepo->store([
+                            'project_id' => $projectId,
+                            'employee_id' => $this->generalService->getIdFromUid($assignUid, new \Modules\Hrd\Models\Employee),
+                            'created_by' => Auth::id(),
+                            'note' => $payload['main_event_note'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // assign_after_party_uids -> add new list
+            if (!empty($payload['assign_after_party_uids'])) {
+                foreach ($payload['assign_after_party_uids'] as $assignUid) {
+                    $exists = $this->projectVjAfpatAttendanceRepo->list(
+                        select: 'id',
+                        where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$assignUid}')"
+                    )->first();
+
+                    if (! $exists) {
+                        $this->projectVjAfpatAttendanceRepo->store([
+                            'project_id' => $projectId,
+                            'employee_id' => $this->generalService->getIdFromUid($assignUid, new \Modules\Hrd\Models\Employee),
+                            'note' => $payload['after_party_note'] ?? null,
+                        ]);
+                    }
+                }
+            }
+            
             DB::commit();
 
             return generalResponse(
-                message: __('notification.marcommAssignedToProject'),
+                message: __('notification.entertainmentAssignedToProject'),
                 data: []
             );
         } catch (\Throwable $th) {
@@ -181,24 +241,82 @@ class InchargeService
         }
     }
 
-    public function assignOnDutyEntertainment(array $payload, string $projectUid): array
+    /**
+     * Assign On Duty Marcomm to Project. 
+     * This action will assume if project do not has any VJ assigned yet.
+     *
+     * @param  array  $payload
+     * @param  string  $projectUid
+     * @return array
+     */
+    public function assignOnDutyMarcomm(array $payload, string $projectUid): array
     {
         DB::beginTransaction();
         
         try {
-            $project = $this->projectRepo->show(
-                uid: $projectUid,
-                select: 'id',
-                relation: [
-                    'vjAfpatAttendances',
-                    'vjAfpatAttendances.employee:id,uid'
-                ]
-            );
+            $projectId = $this->generalService->getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
+            // remove_main_event_uids -> remove current list
+            if (!empty($payload['remove_main_event_uids'])) {
+                foreach ($payload['remove_main_event_uids'] as $removeUid) {
+                    $this->projectMarcommAttendanceRepo->delete(
+                        id: 'id',
+                        where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$removeUid}')"
+                    );
+                }
+            }
+
+            // remove_after_party_uids -> remove current list
+            if (!empty($payload['remove_after_party_uids'])) {
+                foreach ($payload['remove_after_party_uids'] as $removeUid) {
+                    $this->projectMarcommAfpatAttendanceRepo->delete(
+                        id: 'id',
+                        where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$removeUid}')"
+                    );
+                }
+            }
+
+            // assign_main_event_uids -> add new list if not exists
+            if (!empty($payload['assign_main_event_uids'])) {
+                foreach ($payload['assign_main_event_uids'] as $assignUid) {
+                    $exists = $this->projectMarcommAttendanceRepo->list(
+                        select: 'id',
+                        where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$assignUid}')"
+                    )->first();
+
+                    if (! $exists) {
+                        $this->projectMarcommAttendanceRepo->store([
+                            'project_id' => $projectId,
+                            'employee_id' => $this->generalService->getIdFromUid($assignUid, new \Modules\Hrd\Models\Employee),
+                            'created_by' => Auth::id(),
+                            'note' => $payload['main_event_note'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // assign_after_party_uids -> add new list
+            if (!empty($payload['assign_after_party_uids'])) {
+                foreach ($payload['assign_after_party_uids'] as $assignUid) {
+                    $exists = $this->projectMarcommAfpatAttendanceRepo->list(
+                        select: 'id',
+                        where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$assignUid}')"
+                    )->first();
+
+                    if (! $exists) {
+                        $this->projectMarcommAfpatAttendanceRepo->store([
+                            'project_id' => $projectId,
+                            'employee_id' => $this->generalService->getIdFromUid($assignUid, new \Modules\Hrd\Models\Employee),
+                            'note' => $payload['after_party_note'] ?? null,
+                        ]);
+                    }
+                }
+            }
+            
             DB::commit();
 
             return generalResponse(
-                message: __('notification.entertainmentAssignedToProject'),
+                message: __('notification.marcommAssignedToProject'),
                 data: []
             );
         } catch (\Throwable $th) {

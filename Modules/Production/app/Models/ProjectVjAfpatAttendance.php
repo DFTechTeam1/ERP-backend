@@ -13,10 +13,19 @@ class ProjectVjAfpatAttendance extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = [];
+    protected $fillable = [
+        'project_id',
+        'employee_id',
+        'note',
+    ];
 
     // protected static function newFactory(): ProjectVjAfpatAttendanceFactory
     // {
     //     // return ProjectVjAfpatAttendanceFactory::new();
     // }
+
+    public function employee(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'employee_id', 'id');
+    }
 }
