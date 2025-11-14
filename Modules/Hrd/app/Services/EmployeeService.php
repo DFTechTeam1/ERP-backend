@@ -444,7 +444,7 @@ class EmployeeService
         );
     }
 
-    public function getVJ(string $projectUid)
+    public function getVJ(string $projectUid): array
     {
         $positionAsVJ = json_decode(getSettingByKey('position_as_visual_jokey'), true);
 

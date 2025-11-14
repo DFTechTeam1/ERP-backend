@@ -16,6 +16,7 @@ class ProjectVj extends Model
     protected $fillable = [
         'project_id',
         'employee_id',
+        'note',
         'created_by',
     ];
 

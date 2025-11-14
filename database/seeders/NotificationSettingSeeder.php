@@ -88,6 +88,14 @@ class NotificationSettingSeeder extends Seeder
                 'action' => 'task_has_been_hold_by_user',
                 'created_at' => '2025-10-30 15:32:31',
                 'updated_at' => null
+            ],
+            [
+                'id' => 10,
+                'template' => 'Hi <parameter1>, ingat untuk menugaskan tim Marcomm untuk event-event yang akan datang.<bubble>Berikut adalah daftar event yang perlu penugasan Marcomm:<bubble><parameter2>',
+                'template_html' => '<p>Hi &lt;parameter1&gt;, ingat untuk menugaskan tim Marcomm untuk event-event yang akan datang.</p><p>Berikut adalah daftar event yang perlu penugasan Marcomm:</p><p>&lt;parameter2&gt;</p>',
+                'action' => 'remind_assignment_marcomm',
+                'created_at' => '2025-10-30 15:32:31',
+                'updated_at' => null
             ]
         ];
     }

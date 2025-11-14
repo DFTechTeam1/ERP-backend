@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -22,8 +23,11 @@ use Modules\Finance\Http\Controllers\FinanceController;
 use Modules\Finance\Models\Invoice;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Jobs\RemindAssignmentMarcomm;
+use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\InteractiveProjectTaskRepository;
+use Modules\Production\Repository\ProjectRepository;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -107,9 +111,15 @@ Route::get('ilham', function () {
     UpcomingDeadlineTaskJob::dispatch($outputData);
 });
 
-Route::get('login', function () {
-    return view('auth.login');
-})->name('login');
+Route::get('login', [LandingPageController::class, 'showLoginForm'])
+    ->name('login');
+
+Route::post('login', [LandingPageController::class, 'login'])
+    ->name('documentation.login.submit');
+
+Route::post('logout', [LandingPageController::class, 'logout'])
+    ->name('documentation.logout')
+    ->middleware('auth');
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
 
@@ -188,13 +198,19 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    return (new \App\Services\PusherNotification)->send(
-        channel: 'my-channel-42',
-        event: 'new-db-notification',
-        payload: [
-            'update' => true
-        ],
+    $projects = (new ProjectRepository)->list(
+        select: 'id,name,uid,project_date,venue,country_id,state_id,city_id',
+        where: "DATE(project_date) > DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND DATE(project_date) < DATE_ADD(CURDATE(), INTERVAL 14 DAY) AND NOT EXISTS (SELECT 1 FROM project_marcomm_attendances WHERE project_marcomm_attendances.project_id = projects.id) AND NOT EXISTS (SELECT 1 FROM project_marcomm_afpat_attendances WHERE project_marcomm_afpat_attendances.project_id = projects.id)",
+        relation: [
+            'country:id,name',
+            'state:id,name',
+            'city:id,name',
+            'personInCharges',
+            'personInCharges.employee:id,nickname,email,telegram_chat_id',
+        ]
     );
+
+    return $projects;
 });
 
 Route::get('migrate-duration', function () {

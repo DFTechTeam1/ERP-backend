@@ -1611,8 +1611,8 @@ class ProjectDealService
             $output = $data->map(function ($item) {
                 return [
                     'uid' => Crypt::encryptString($item->id),
-                    'event_name' => $item->projectDeal->name,
-                    'project_date' => date('d F Y', strtotime($item->projectDeal->project_date)),
+                    'event_name' => $item->projectDeal?->name ?? '-',
+                    'project_date' => $item->projectDeal ? date('d F Y', strtotime($item->projectDeal->project_date)) : '-',
                     'request_by' => $item->requesterBy->employee->name,
                     'old_price' => 'Rp'.number_format($item->old_price, 0, ',', '.'),
                     'new_price' => 'Rp'.number_format($item->new_price, 0, ',', '.'),

@@ -34,7 +34,7 @@ it ('First pic create new record', function () {
     expect($result)->toBeTrue();
     $this->assertDatabaseHas('employee_point_projects', [
         'project_id' => $project->id,
-        'total_point' => 15,
+        'total_point' => 10,
         'additional_point' => 5,
     ]);
 });

@@ -21,6 +21,9 @@ use Modules\Production\Http\Controllers\Api\TeamTransferController;
 
 Route::get('production/project/{projectUid}/downloadReferences', [ProjectController::class, 'downloadReferences']);
 
+Route::get('production/incharges/marcomm-assignment-list/{employeeUid}/{type}', [ProjectController::class, 'marcommAssignmentList']);
+Route::post('production/incharges/marcomm-assignment-list/{employeeUid}/{type}', [ProjectController::class, 'assignOnDutyFromWidget'])->name('production.incharges.assignMarcommFromWidget');
+
 Route::middleware(['auth:sanctum'])
     ->name('production.')
     ->prefix('production')->group(function () {
@@ -189,6 +192,7 @@ Route::middleware(['auth:sanctum'])
         Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
         Route::post('project/{taskId}/manualMoveBoard', [ProjectController::class, 'manualMoveBoard']);
         Route::post('project/{taskId}/returnEquipment', [ProjectController::class, 'returnEquipment']);
+        Route::post('project/{projectUid}/afpat-status', [ProjectController::class, 'updateAfterPartyStatus'])->name('project.afpat.status');
         Route::post('project/{projectId}/manualChangeTaskBoard', [ProjectController::class, 'manualChangeTaskBoard']);
         Route::post('project/{projectId}/proofOfWork/{taskId}', [ProjectController::class, 'proofOfWork'])->name('task.proof.store');
         Route::delete('project/{taskUid}/task', [ProjectController::class, 'deleteTask']);
@@ -217,6 +221,11 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask'])->name('task.state');
         Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
         Route::delete('project/{projectUid}/task/{taskUid}/deletAettachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
+
+        // incharges
+        Route::get('incharges', [ProjectController::class, 'inchargeList']);
+        Route::post('incharges/assign-vj/{projectUid}', [ProjectController::class, 'assignOnDutyEntertainment'])->name('incharges.assignVJ');
+        Route::post('incharges/assign-marcomm/{projectUid}', [ProjectController::class, 'assignOnDutyMarcomm'])->name('incharges.assignMarcomm');
 
         // Quotations
         Route::get('quotations', [QuotationController::class, 'index']);

@@ -392,7 +392,8 @@ function createProjectDealService(
     $interactiveProjectRepo = null,
     $nasFolderCreationService = null,
     $projectDealRefundRepo = null,
-    $transactionRepo = null
+    $transactionRepo = null,
+    $interactiveProjectPicRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
@@ -410,7 +411,8 @@ function createProjectDealService(
         $interactiveProjectRepo ? $interactiveProjectRepo : new \Modules\Production\Repository\InteractiveProjectRepository,
         $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService),
         $projectDealRefundRepo ? $projectDealRefundRepo : new \Modules\Finance\Repository\ProjectDealRefundRepository,
-        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository
+        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository,
+        $interactiveProjectPicRepo ? $interactiveProjectPicRepo : new \Modules\Production\Repository\InteractiveProjectPicRepository
     );
 }
 

@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Repository\ProjectDealRepository;
+use Modules\Production\Repository\ProjectRepository;
 use Vinkla\Hashids\Facades\Hashids;
 
 class GeneralService
@@ -615,5 +616,20 @@ class GeneralService
     public function mainProcessToGetPicScheduler(string $projectUid, ?string $startDate = null, ?string $endDate = null)
     {
         return mainProcessToGetPicScheduler($projectUid, $startDate, $endDate);
+    }
+
+    public function getRemindIncomingProjects(): Collection
+    {
+        $projects = (new ProjectRepository)->list(
+            select: 'id,name,uid,project_date,venue,country_id,state_id,city_id',
+            where: "DATE(project_date) > DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND DATE(project_date) < DATE_ADD(CURDATE(), INTERVAL 14 DAY) AND NOT EXISTS (SELECT 1 FROM project_marcomm_attendances WHERE project_marcomm_attendances.project_id = projects.id) AND NOT EXISTS (SELECT 1 FROM project_marcomm_afpat_attendances WHERE project_marcomm_afpat_attendances.project_id = projects.id) AND marcomm_attendance_check = 0",
+            relation: [
+                'country:id,name',
+                'state:id,name',
+                'city:id,name',
+            ]
+        );
+
+        return $projects;
     }
 }
