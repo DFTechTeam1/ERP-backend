@@ -12,6 +12,7 @@ use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
 use Modules\Production\Http\Requests\Incharge\AssignEntertainmentRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommRequest;
+use Modules\Production\Http\Requests\Incharge\AssignMarcommWidget;
 use Modules\Production\Http\Requests\Project\AssignMarcommToProject;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
@@ -1170,5 +1171,27 @@ class ProjectController extends Controller
     public function assignOnDutyMarcomm(AssignMarcommRequest $request, string $projectUid): JsonResponse
     {
         return apiResponse($this->inchargeService->assignOnDutyMarcomm($request->validated(), $projectUid));
+    }
+
+    /**
+     * Get marcomm assignment list
+     * @param string  $employeeUid
+     * @return JsonResponse
+     */
+    public function marcommAssignmentList(string $employeeUid, string $type): JsonResponse
+    {
+        return apiResponse($this->inchargeService->marcommAssignmentList($employeeUid));
+    }
+
+    /**
+     * Assign on duty from widget
+     * @param AssignMarcommWidget  $request
+     * @param string  $employeeUid
+     * @param string $type
+     * @return JsonResponse
+     */
+    public function assignOnDutyFromWidget(AssignMarcommWidget $request, string $employeeUid, string $type): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignOnDutyFromWidget($request->validated(), $employeeUid, $type));
     }
 }

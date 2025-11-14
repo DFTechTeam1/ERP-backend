@@ -5,6 +5,8 @@ namespace Modules\Production\Services;
 use App\Services\GeneralService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Repository\ProjectMarcommAttendanceRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectVjAfpatAttendanceRepository;
@@ -20,6 +22,7 @@ class InchargeService
         private readonly ProjectVjRepository $projectVjRepo,
         private readonly ProjectVjAfpatAttendanceRepository $projectVjAfpatAttendanceRepo,
         private readonly ProjectMarcommAfpatAttendanceRepository $projectMarcommAfpatAttendanceRepo,
+        private readonly EmployeeRepository $employeeRepo,
     )
     {
         //
@@ -245,9 +248,9 @@ class InchargeService
      * Assign On Duty Marcomm to Project. 
      * This action will assume if project do not has any VJ assigned yet.
      *
-     * @param  array  $payload
+     * @param  array<string, mixed>  $payload
      * @param  string  $projectUid
-     * @return array
+     * @return array<string, mixed>
      */
     public function assignOnDutyMarcomm(array $payload, string $projectUid): array
     {
@@ -322,6 +325,137 @@ class InchargeService
         } catch (\Throwable $th) {
             DB::rollBack();
             
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get marcomm assignment list
+     * Get Projects, Available Employees based on type
+     * @param string  $employeeUid
+     * @return array
+     */
+    public function marcommAssignmentList(string $employeeUid): array
+    {
+        try {
+            switch (request('type')) {
+                case 'mcm': // marcomm
+                    // get marcomm employees
+                    $positionUids = (new GeneralService)->getSettingByKey(param: 'position_as_marcomm');
+                    if ($positionUids) {
+                        $positionUids = is_array($positionUids) ? $positionUids : json_decode($positionUids, true);
+                        $employees = (new EmployeeRepository)->list(
+                            select: 'id,name,position_id,uid',
+                            relation: [
+                                'position'
+                            ],
+                            whereHas: [
+                                [
+                                    'relation' => 'position',
+                                    'query' => "uid IN ('" . implode("','", $positionUids) . "')"
+                                ]
+                            ]
+                        );
+                        $employees = $employees->map(function ($item) {
+                            return [
+                                'id' => $item->uid,
+                                'name' => $item->name,
+                                'position' => $item->position->name,
+                            ];
+                        });
+                    } else {
+                        $employees = collect([]);
+                    }
+                    break;
+                case 'entt': // entertainment
+
+                    break;
+                default:
+                    // default to main event
+                    $employees = collect([]);
+                    break;
+            }
+
+            $projects = (new GeneralService)->getRemindIncomingProjects();
+
+            $projects = $projects->map(function ($item) {
+                return [
+                    'id' => $item->uid,
+                    'name' => $item->name,
+                    'startDate' => $item->project_date,
+                    'venue' => $item->venue,
+                    'location' => $item->country->name . ($item->state ? ', ' . $item->state->name : '') . ($item->city ? ', ' . $item->city->name : ''),
+                    'assignments' => [],
+                ];
+            });
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'employees' => $employees,
+                    'projects' => $projects,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Assign On Duty Marcomm to Project from Widget.
+     * This action will validate employee password first.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  string  $employeeUid
+     * @param  string  $type
+     * @return array<string, mixed>
+     */
+    public function assignOnDutyFromWidget(array $payload, string $employeeUid, string $type): array
+    {
+        try {
+            // validate password
+            $employee = $this->employeeRepo->show(
+                uid: $employeeUid,
+                select: 'id,email,user_id',
+                relation: [
+                    'user:id,password'
+                ]
+            );
+            if (!Hash::check($payload['password'], $employee->user->password)) {
+                return errorResponse(message: __('notification.invalidPassword'));
+            }
+
+            foreach ($payload['assignments'] as $assignment) {
+                if ($type == 'mcm') {
+
+                    // only proceed if there is at least one member to assign
+                    if (!empty($assignment['member_ids']) || !empty($assignment['after_party_member_ids'])) {
+                        $this->assignOnDutyMarcomm(
+                            payload: [
+                                'remove_main_event_uids' => [],
+                                'remove_after_party_uids' => [],
+                                'assign_main_event_uids' => $assignment['member_ids'] ?? [],
+                                'assign_after_party_uids' => $assignment['after_party_member_ids'] ?? [],
+                            ],
+                            projectUid: $assignment['project_id']
+                        );
+                    }
+
+                    // update project repository
+                    $this->projectRepo->update(
+                        data: [
+                            'marcomm_attendance_check' => 1
+                        ],
+                        id: $assignment['project_id']
+                    );
+                }
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: []
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }

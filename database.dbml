@@ -1435,6 +1435,7 @@ Table "projects" {
   "latitude" varchar(150) [default: NULL]
   "feedback" text
   "project_deal_id" bigint [default: NULL]
+  "marcomm_attendance_check" tinyint(1) [note: "this column will be true when marcomm already take action about project attendance"] // new column (14-11-2025)
   "with_after_party" tinyint(1) [default: '0'] // new column (11-08-2025)
 }
 

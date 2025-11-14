@@ -21,6 +21,9 @@ use Modules\Production\Http\Controllers\Api\TeamTransferController;
 
 Route::get('production/project/{projectUid}/downloadReferences', [ProjectController::class, 'downloadReferences']);
 
+Route::get('production/incharges/marcomm-assignment-list/{employeeUid}/{type}', [ProjectController::class, 'marcommAssignmentList']);
+Route::post('production/incharges/marcomm-assignment-list/{employeeUid}/{type}', [ProjectController::class, 'assignOnDutyFromWidget'])->name('production.incharges.assignMarcommFromWidget');
+
 Route::middleware(['auth:sanctum'])
     ->name('production.')
     ->prefix('production')->group(function () {

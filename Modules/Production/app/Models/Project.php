@@ -87,6 +87,7 @@ class Project extends Model
         'longitude',
         'latitude',
         'project_deal_id',
+        'marcomm_attendance_check',
         'with_after_party'
     ];
 

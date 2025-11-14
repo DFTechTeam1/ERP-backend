@@ -172,4 +172,5 @@ return [
     'marcommAssignedToProject' => 'Marcomm has been assigned to event :project',
     'entertainmentAssignedToProject' => 'Entertainment team has been assigned to event :project',
     'marcommAssignedToProject' => 'Marcomm has been assigned to event',
+    'invalidPassword' => 'Invalid password',
 ];
