@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use Illuminate\Support\Facades\Crypt;
 use Modules\Production\Repository\CustomerRepository;
 
 class CustomerService
@@ -25,6 +26,10 @@ class CustomerService
         array $relation = []
     ): array {
         try {
+            logging('customer parameters', [
+                'page' => request('page'),
+                'itemsPerPage' => request('itemsPerPage'),
+            ]);
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
@@ -43,6 +48,21 @@ class CustomerService
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
+
+            $paginated = $paginated->map(function ($item) {
+                $invoices = $item->invoices;
+                $numberOfInvoices = $invoices->count();
+                $totalInvoiceAmount = $invoices->sum('amount');
+
+                return [
+                    'uid' => Crypt::encryptString($item->id),
+                    'name' => $item->name,
+                    'email' => $item->email,
+                    'phone' => $item->phone,
+                    'number_of_invoices' => $numberOfInvoices,
+                    'total_invoice_amount' => $totalInvoiceAmount,
+                ];
+            });
 
             return generalResponse(
                 'Success',
@@ -111,7 +131,7 @@ class CustomerService
             $this->repo->store($data);
 
             return generalResponse(
-                'Customer created successfully',
+                __('notification.successCreateCustomer'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -128,10 +148,10 @@ class CustomerService
         string $where = ''
     ): array {
         try {
-            $this->repo->update($data, $id);
+            $this->repo->update($data, Crypt::decryptString($id));
 
             return generalResponse(
-                'success',
+                __('notification.successUpdateCustomer'),
                 false,
             );
         } catch (\Throwable $th) {
@@ -143,15 +163,29 @@ class CustomerService
      * Delete selected data
      *
      *
-     * @return void
+     * @return array
      */
-    public function delete(int $id): array
+    public function delete(string $id): array
     {
         try {
+            // check validation
+            $customer = $this->repo->show(
+                uid: Crypt::decryptString($id),
+                select: 'id',
+                relation: ['invoices']
+            );
+
+            if ($customer->invoices->count() > 0) {
+                return errorResponse(
+                    __('notification.cannotDeleteCustomerBcsRelation')
+                );
+            }
+
+            $this->repo->delete(Crypt::decryptString($id));
+
             return generalResponse(
-                'Success',
+                __('notification.successDeleteCustomer'),
                 false,
-                $this->repo->delete($id)->toArray(),
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

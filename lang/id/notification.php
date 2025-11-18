@@ -163,5 +163,9 @@ return [
     'successDeleteCity' => 'Kota telah berhasil dihapus',
     'cannotDeleteCityBcsRelation' => 'Tidak dapat menghapus kota karena memiliki hubungan dengan [kecamatan/event]',
     'successResendActivationEmail' => 'Email aktivasi telah berhasil dikirim ulang',
-    'pleaseAddDeadlineBeforeContinue' => 'Harap tambahkan tenggat waktu sebelum melanjutkan'
+    'pleaseAddDeadlineBeforeContinue' => 'Harap tambahkan tenggat waktu sebelum melanjutkan',
+    'successCreateCustomer' => 'Data customer telah berhasil dibuat',
+    'successUpdateCustomer' => 'Data customer telah berhasil diperbarui',
+    'successDeleteCustomer' => 'Data customer telah berhasil dihapus',
+    'cannotDeleteCustomerBcsRelation' => 'Tidak dapat menghapus customer karena memiliki hubungan dengan [project deal/invoice]',
 ];

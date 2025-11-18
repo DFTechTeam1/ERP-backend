@@ -168,5 +168,9 @@ return [
     'successDeleteCity' => 'City has been deleted successfully',
     'cannotDeleteCityBcsRelation' => 'Cannot delete city because it has relation to [district/event]',
     'successResendActivationEmail' => 'Activation email has been resent successfully',
-    'pleaseAddDeadlineBeforeContinue' => 'Please add deadline before continue'
+    'pleaseAddDeadlineBeforeContinue' => 'Please add deadline before continue',
+    'successCreateCustomer' => 'Customer has been created successfully',
+    'successUpdateCustomer' => 'Customer has been updated successfully',
+    'successDeleteCustomer' => 'Customer has been deleted successfully',
+    'cannotDeleteCustomerBcsRelation' => 'Cannot delete customer because it has relation to [project deal/invoice]',
 ];

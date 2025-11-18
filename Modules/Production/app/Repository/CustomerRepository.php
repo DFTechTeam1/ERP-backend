@@ -77,7 +77,7 @@ class CustomerRepository extends CustomerInterface
 
         $query->selectRaw($select);
 
-        $query->where('uid', $uid);
+        $query->where('id', $uid);
 
         if ($relation) {
             $query->with($relation);
@@ -111,7 +111,7 @@ class CustomerRepository extends CustomerInterface
         if (! empty($where)) {
             $query->whereRaw($where);
         } else {
-            $query->where('uid', $id);
+            $query->where('id', $id);
         }
 
         $query->update($data);
@@ -127,7 +127,7 @@ class CustomerRepository extends CustomerInterface
      */
     public function delete(int $id)
     {
-        return $this->model->whereIn('id', $id)
+        return $this->model->where('id', $id)
             ->delete();
     }
 
