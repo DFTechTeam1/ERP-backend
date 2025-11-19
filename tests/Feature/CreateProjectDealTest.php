@@ -6,10 +6,14 @@ use App\Services\Geocoding;
 use App\Services\NasFolderCreationService;
 use Illuminate\Support\Facades\Bus;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Models\Customer;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Repository\ProjectQuotationRepository;
 
+use function Pest\Laravel\assertDatabaseCount;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\postJson;
 
 beforeEach(function () {
@@ -43,18 +47,18 @@ describe('Create Project Deal', function () {
         $response = postJson('/api/production/project/deals', $requestData);
 
         $response->assertStatus(201);
-        $this->assertDatabaseCount('project_deals', 1);
-        $this->assertDatabaseHas('project_deals', [
+        assertDatabaseCount('project_deals', 1);
+        assertDatabaseHas('project_deals', [
             'name' => 'Draft project',
             'identifier_number' => '0951',
             'include_tax' => 1,
         ]);
-        $this->assertDatabaseMissing('projects', [
+        assertDatabaseMissing('projects', [
             'name' => 'Draft project',
         ]);
-        $this->assertDatabaseCount('project_quotations', 1);
-        $this->assertDatabaseCount('project_deal_marketings', 1);
-        $this->assertDatabaseCount('transactions', 0);
+        assertDatabaseCount('project_quotations', 1);
+        assertDatabaseCount('project_deal_marketings', 1);
+        assertDatabaseCount('transactions', 0);
     })->with([
         fn () => Customer::factory()->create(),
     ]);
@@ -99,7 +103,7 @@ describe('Create Project Deal', function () {
 
         $currentDeal = ProjectDeal::select('id', 'published_by', 'published_at')->where('name', $requestData['name'])->first();
 
-        $this->assertDatabaseHas('project_deals', [
+        assertDatabaseHas('project_deals', [
             'name' => 'Final Project',
             'identifier_number' => '0951',
         ]);
@@ -107,12 +111,12 @@ describe('Create Project Deal', function () {
         expect($currentDeal->published_by)->toBe($this->user->id);
         expect($currentDeal->published_at)->not->toBeNull();
 
-        $this->assertDatabaseHas('projects', [
+        assertDatabaseHas('projects', [
             'name' => 'Final Project',
             'project_deal_id' => $currentDeal->id,
         ]);
-        $this->assertDatabaseCount('invoices', 1);
-        $this->assertDatabaseHas('invoices', [
+        assertDatabaseCount('invoices', 1);
+        assertDatabaseHas('invoices', [
             'is_main' => 1,
             'parent_number' => null,
             'sequence' => 0,
@@ -178,24 +182,24 @@ describe('Create Project Deal', function () {
             ->where('name', $nameTwo)
             ->first();
 
-        $this->assertDatabaseCount('project_quotations', 2);
-        $this->assertDatabaseHas('project_deals', [
+        assertDatabaseCount('project_quotations', 2);
+        assertDatabaseHas('project_deals', [
             'name' => $nameOne,
             'id' => $dealOne->id,
         ]);
-        $this->assertDatabaseHas('project_deals', [
+        assertDatabaseHas('project_deals', [
             'name' => $nameTwo,
             'id' => $dealTwo->id,
         ]);
-        $this->assertDatabaseHas('project_quotations', [
+        assertDatabaseHas('project_quotations', [
             'project_deal_id' => $dealOne->id,
             'quotation_id' => $dealOne->latestQuotation->quotation_id,
         ]);
-        $this->assertDatabaseHas('project_quotations', [
+        assertDatabaseHas('project_quotations', [
             'project_deal_id' => $dealTwo->id,
             'quotation_id' => $dealTwo->latestQuotation->quotation_id,
         ]);
-        $this->assertDatabaseMissing('project_quotations', [
+        assertDatabaseMissing('project_quotations', [
             'project_deal_id' => $dealOne->id,
             'quotation_id' => $dealTwo->latestQuotation->quotation_id,
         ]);
@@ -269,25 +273,109 @@ describe('Create Project Deal', function () {
         $response = postJson(route('api.production.project-deal.store'), $requestData);
 
         $response->assertStatus(201);
-        $this->assertDatabaseCount('project_deals', 1);
-        $this->assertDatabaseHas('project_deals', [
+        assertDatabaseCount('project_deals', 1);
+        assertDatabaseHas('project_deals', [
             'name' => 'Project with Interactive Element',
         ]);
-        $this->assertDatabaseCount('projects', 1);
-        $this->assertDatabaseHas('projects', [
+        assertDatabaseCount('projects', 1);
+        assertDatabaseHas('projects', [
             'name' => 'Project with Interactive Element',
         ]);
-        $this->assertDatabaseCount('interactive_projects', 1);
-        $this->assertDatabaseHas('interactive_projects', [
+        assertDatabaseCount('interactive_projects', 1);
+        assertDatabaseHas('interactive_projects', [
             'name' => 'Project with Interactive Element',
             'note' => 'This is interactive note',
             'led_area' => $requestData['interactive_area'],
         ]);
-        $this->assertDatabaseCount('project_quotations', 1);
-        $this->assertDatabaseCount('project_deal_marketings', 1);
-        $this->assertDatabaseCount('interactive_project_boards', 3);
+        assertDatabaseCount('project_quotations', 1);
+        assertDatabaseCount('project_deal_marketings', 1);
+        assertDatabaseCount('interactive_project_boards', 3);
 
         Bus::assertDispatched(ProjectHasBeenFinal::class);
+    })->with([
+        fn () => Customer::factory()->create(),
+    ]);
+
+    it('Create temporary project deal with interactive element', function (Customer $customer) {
+        Bus::fake();
+
+        $requestData = getProjectDealPayload($customer);
+        $requestData = prepareProjectDeal($requestData);
+
+        // $nasService = Mockery::mock(NasFolderCreationService::class);
+        // $nasService->shouldReceive('sendRequest')
+        //     ->withAnyArgs()
+        //     ->andReturn(true);
+
+        // change name
+        $requestData['name'] = 'Project with Interactive Element';
+
+        // set to final
+        $requestData['status'] = ProjectDealStatus::Temporary->value;
+
+        // modify quotation id
+        $requestData['quotation']['quotation_id'] = 'DF0010';
+
+        // set interactive element
+        $requestData['interactive_area'] = 92;
+        $requestData['interactive_detail'] = [
+            [
+                'name' => 'main',
+                'led' => [
+                    [
+                        'height' => '10',
+                        'width' => '5',
+                    ],
+                    [
+                        'height' => '5',
+                        'width' => '4',
+                    ],
+                ],
+                'total' => '70 m<sup>2</sup>',
+                'totalRaw' => '70',
+                'textDetail' => '5 x 10 m , 4 x 5 m',
+            ],
+            [
+                'name' => 'prefunction',
+                'led' => [
+                    [
+                        'height' => '3',
+                        'width' => '3',
+                    ],
+                    [
+                        'height' => '3',
+                        'width' => '2',
+                    ],
+                    [
+                        'height' => '5',
+                        'width' => '4',
+                    ],
+                ],
+                'total' => '35 m<sup>2</sup>',
+                'totalRaw' => '35',
+                'textDetail' => '3 x 3 m , 2 x 3 m4 x 5 m',
+            ],
+        ];
+        $requestData['interactive_note'] = 'This is interactive note';
+        $requestData['interactive_fee'] = '50000000';
+
+        $response = postJson(route('api.production.project-deal.store'), $requestData);
+
+        $response->assertStatus(201);
+        assertDatabaseCount('project_deals', 1);
+        assertDatabaseHas('project_deals', [
+            'name' => 'Project with Interactive Element',
+        ]);
+        assertDatabaseCount('projects', 0);
+        assertDatabaseCount('interactive_projects', 0);
+        assertDatabaseHas('interactive_requests', [
+            'project_deal_id' => ProjectDeal::first()->id,
+        ]);
+        assertDatabaseCount('project_quotations', 1);
+        assertDatabaseCount('project_deal_marketings', 1);
+
+        Bus::assertNotDispatched(ProjectHasBeenFinal::class);
+        Bus::assertDispatched(AddInteractiveProjectJob::class);
     })->with([
         fn () => Customer::factory()->create(),
     ]);
