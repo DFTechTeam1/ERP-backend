@@ -364,6 +364,16 @@
                                             @endforeach
                                         </ul>
 
+                                        @if (count($interactiveLedDetail) > 0)
+                                            <div style=" margin-bottom: 10px;">
+                                                <p style="font-weight: bold; margin-top: 10px;">Interactive LED Content</p>
+    
+                                                @foreach ($interactiveLedDetail as $item)
+                                                   <p>{{ $item['name'] }} : {{ $item['size'] }}</p> 
+                                                @endforeach
+                                            </div>
+                                        @endif
+
                                         @if ($description)
                                             <div class="description">
                                                 {!! $description !!}

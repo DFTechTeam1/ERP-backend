@@ -4,6 +4,8 @@ use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectDealMarketing;
 use Modules\Production\Models\ProjectQuotation;
 
+use function Pest\Laravel\assertDatabaseCount;
+
 it('Delete project deal return success', function () {
     $projectDeal = ProjectDeal::factory()
         ->has(ProjectDealMarketing::factory()->count(2), 'marketings')
@@ -22,14 +24,12 @@ it('Delete project deal return success', function () {
 
     expect($response['error'])->toBeFalse();
 
-    $this->assertDatabaseCount('project_quotation_items', 0);
-    $this->assertDatabaseCount('project_quotations', 0);
-    $this->assertDatabaseCount('project_marketings', 0);
+    assertDatabaseCount('project_quotation_items', 0);
+    assertDatabaseCount('project_quotations', 0);
+    assertDatabaseCount('project_marketings', 0);
 
     // check softdeletes
-    $this->assertNotNull(
-        ProjectDeal::withTrashed()->find($projectDeal->id)->deleted_at
-    );
+    expect(ProjectDeal::withTrashed()->find($projectDeal->id)->deleted_at)->not()->toBeNull();
 });
 
 it('Delete final project deals', function () {
@@ -37,6 +37,26 @@ it('Delete final project deals', function () {
         ->has(ProjectDealMarketing::factory()->count(2), 'marketings')
         ->create([
             'status' => \App\Enums\Production\ProjectDealStatus::Final->value,
+        ]);
+
+    $service = createProjectDealService();
+
+    $response = $service->delete(id: \Illuminate\Support\Facades\Crypt::encryptString($projectDeal->id));
+
+    expect($response)->toHaveKey('error');
+
+    expect($response['error'])->toBeTrue();
+});
+
+it ("delete project deal that have a pending interactive request", function () {
+    $projectDeal = ProjectDeal::factory()
+        ->has(ProjectDealMarketing::factory()->count(2), 'marketings')
+        ->create();
+
+    $interactiveRequest = \Modules\Production\Models\InteractiveRequest::factory()
+        ->for($projectDeal, 'projectDeal')
+        ->create([
+            'status' => \App\Enums\Interactive\InteractiveRequestStatus::Pending->value,
         ]);
 
     $service = createProjectDealService();

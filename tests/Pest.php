@@ -347,6 +347,7 @@ function getProjectDealPayload(
             ],
         ] : null,
         'interactive_note' => $withInteractive ? 'This is interactive note' : null,
+        'interactive_fee' => $withInteractive ? '50000000' : null,
         'client_portal' => 'wedding-anniversary',
         'marketing_id' => [
             $employee ? $employee->uid : 'f063164d-62ff-44cf-823d-7c456dad1f4b',
@@ -392,7 +393,8 @@ function createProjectDealService(
     $interactiveProjectRepo = null,
     $nasFolderCreationService = null,
     $projectDealRefundRepo = null,
-    $transactionRepo = null
+    $transactionRepo = null,
+    $interactiveProjectPicRepo = null
 ) {
     return new \Modules\Production\Services\ProjectDealService(
         $projectDealRepo ? $projectDealRepo : new ProjectDealRepository,
@@ -410,7 +412,8 @@ function createProjectDealService(
         $interactiveProjectRepo ? $interactiveProjectRepo : new \Modules\Production\Repository\InteractiveProjectRepository,
         $nasFolderCreationService ? $nasFolderCreationService : new NasFolderCreationService(new GeneralService),
         $projectDealRefundRepo ? $projectDealRefundRepo : new \Modules\Finance\Repository\ProjectDealRefundRepository,
-        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository
+        $transactionRepo ? $transactionRepo : new \Modules\Finance\Repository\TransactionRepository,
+        $interactiveProjectPicRepo ? $interactiveProjectPicRepo : new \Modules\Production\Repository\InteractiveProjectPicRepository
     );
 }
 

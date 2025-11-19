@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * This job will be dispatched when user cancel the interactive project in the interactive project list
+ * This can be done by any user who have permission to access the interactive project list and permission to cancel the project
+ */
+
 namespace Modules\Production\Jobs;
 
 use App\Enums\System\BaseRole;

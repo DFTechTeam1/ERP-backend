@@ -7,6 +7,10 @@ use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectDealMarketing;
 use Modules\Production\Models\ProjectQuotation;
 
+use function Pest\Laravel\assertDatabaseCount;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+
 it('Update project deal with same marketing data', function (Customer $customer) {
     $projectDeal = ProjectDeal::factory()
         ->create([
@@ -44,13 +48,13 @@ it('Update project deal with same marketing data', function (Customer $customer)
     expect($response)->toHaveKey('error');
     expect($response['error'])->toBeFalse();
 
-    $this->assertDatabaseHas('project_deals', [
+    assertDatabaseHas('project_deals', [
         'name' => 'Update project',
     ]);
-    $this->assertDatabaseMissing('project_deals', [
+    assertDatabaseMissing('project_deals', [
         'name' => 'First project',
     ]);
-    $this->assertDatabaseCount('project_deal_marketings', 2);
+    assertDatabaseCount('project_deal_marketings', 2);
 
 })->with([
     fn () => Customer::factory()->create(),
