@@ -35,7 +35,7 @@ class InteractiveRequestFactory extends Factory
                     ]
                 ]
             ],
-            'interactive_area' => $this->faker->word(),
+            'interactive_area' => '20',
             'interactive_note' => $this->faker->text(),
             'interactive_fee' => $this->faker->randomFloat(2, 0, 1000),
             'fix_price' => $this->faker->randomFloat(2, 0, 1000),
