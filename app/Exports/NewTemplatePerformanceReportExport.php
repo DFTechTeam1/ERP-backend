@@ -25,11 +25,14 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
 
     protected $userId;
 
-    public function __construct(string $startDate = '', string $endDate = '', int $userId)
+    protected $filepath;
+
+    public function __construct(string $startDate = '', string $endDate = '', int $userId, string $filepath)
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
         $this->userId = $userId;
+        $this->filepath = $filepath;
     }
 
     /**
@@ -128,8 +131,8 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
 
                 // notify user
                 (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
-                    'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
-                    'message' => '<p>Click <a href="'.$this->filepath.'" target="__blank">here</a> to download your finance report</p>',
+                    'description' => 'Your performance report file is ready. Please check your inbox to download the file.',
+                    'message' => '<p>Click <a href="'.$this->filepath.'" target="__blank">here</a> to download your performance report</p>',
                     'area' => 'finance',
                     'user_id' => $this->userId,
                 ]);
