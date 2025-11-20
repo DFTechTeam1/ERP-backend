@@ -29,7 +29,7 @@ class ProjectDealSummaryJob implements ShouldQueue
     public function handle(): void
     {
         $users = User::role(['finance', 'root'])->get();
-        logging('USERS SUMMARY DEAL', $users->toArray());
+        
         foreach ($users as $user) {
             $user->notify(new ProjectDealSummaryNotification);
         }

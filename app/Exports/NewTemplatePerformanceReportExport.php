@@ -6,10 +6,14 @@ use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
+class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, WithEvents
 {
     use Exportable;
 
@@ -28,6 +32,10 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
      */
     public function view(): View
     {
+        ini_set('memory_limit', '512M');
+        logging('PHP Memory Limit: ', [ini_get('memory_limit')]);
+        logging('PHP Memory Usage: ', [memory_get_usage(true)]);
+        logging('Max Execution Time: ', [ini_get('max_execution_time')]);
         $employeeRepo = new EmployeeRepository;
         $pointProjectRepo = new EmployeePointProjectRepository;
         $projects = $pointProjectRepo->list(
@@ -86,5 +94,37 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
         logging('output', [count($output)]);
 
         return view('hrd::new-export-performance-report', ['points' => $output]);
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $event->sheet->getDelegate()->setAutoFilter('A1:Q1');
+
+                // set background
+                $event->sheet->getDelegate()->getStyle('A1:Q1')->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'color' => ['rgb' => '000000'],
+                    ],
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['rgb' => 'ffffff'],
+                    ],
+                ]);
+
+                // set borders
+                $lastRow = $event->sheet->getDelegate()->getHighestRow();
+                $event->sheet->getDelegate()->getStyle("A1:Q{$lastRow}")->applyFromArray([
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000'],
+                        ],
+                    ],
+                ]);
+            },
+        ];
     }
 }
