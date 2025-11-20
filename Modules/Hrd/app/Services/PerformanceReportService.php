@@ -439,8 +439,15 @@ class PerformanceReportService
             }
 
             $filename = "hrd/performance_report_{$startDate}_{$endDate}.xlsx";
+            $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+                name: 'hrd.download.export.performanceReport',
+                parameters: [
+                    'fp' => $filename,
+                ],
+                expiration: now()->addHours(5)
+            );
             // Excel::store(new NewTemplatePerformanceReportExport($startDate, $endDate), $filename, 'public');
-            (new NewTemplatePerformanceReportExport($startDate, $endDate, Auth::id(), $filename))->queue($filename, 'public');
+            (new NewTemplatePerformanceReportExport($startDate, $endDate, Auth::id(), $downloadPath))->queue($filename, 'public');
 
             return generalResponse(
                 message: "Your data is being processed. You'll receive a notification when the process is complete. You can check your inbox periodically to see the results",
