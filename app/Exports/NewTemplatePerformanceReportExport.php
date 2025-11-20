@@ -2,6 +2,8 @@
 
 namespace App\Exports;
 
+use App\Services\ExportImportService;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromView;
@@ -13,7 +15,7 @@ use Modules\Hrd\Repository\EmployeeRepository;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, WithEvents
+class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, WithEvents, ShouldQueue
 {
     use Exportable;
 
@@ -21,10 +23,13 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
 
     protected $endDate;
 
-    public function __construct(string $startDate = '', string $endDate = '')
+    protected $userId;
+
+    public function __construct(string $startDate = '', string $endDate = '', int $userId)
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
+        $this->userId = $userId;
     }
 
     /**
@@ -100,23 +105,12 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                $event->sheet->getDelegate()->setAutoFilter('A1:Q1');
-
-                // set background
-                $event->sheet->getDelegate()->getStyle('A1:Q1')->applyFromArray([
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'color' => ['rgb' => '000000'],
-                    ],
-                    'font' => [
-                        'bold' => true,
-                        'color' => ['rgb' => 'ffffff'],
-                    ],
-                ]);
+                // set filter
+                $event->sheet->getDelegate()->setAutoFilter('A1:I1');
 
                 // set borders
                 $lastRow = $event->sheet->getDelegate()->getHighestRow();
-                $event->sheet->getDelegate()->getStyle("A1:Q{$lastRow}")->applyFromArray([
+                $event->sheet->getDelegate()->getStyle("A1:I{$lastRow}")->applyFromArray([
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
@@ -124,7 +118,32 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
                         ],
                     ],
                 ]);
+
+                // set header to bold
+                $event->sheet->getDelegate()->getStyle('A1:I2')->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                    ],
+                ]);
+
+                // notify user
+                (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
+                    'description' => 'Your finance summary file is ready. Please check your inbox to download the file.',
+                    'message' => '<p>Click <a href="'.$this->filepath.'" target="__blank">here</a> to download your finance report</p>',
+                    'area' => 'finance',
+                    'user_id' => $this->userId,
+                ]);
             },
         ];
+    }
+
+    public function failed(\Throwable $exception)
+    {
+        (new ExportImportService)->handleErrorProcessing(payload: [
+            'description' => 'Failed to export finance report',
+            'message' => $exception->getMessage(),
+            'area' => 'finance',
+            'user_id' => $this->userId,
+        ]);
     }
 }
