@@ -121,4 +121,11 @@ class PerformanceReportController extends Controller
 
         return response()->json([]);
     }
+
+    public function downloadExport()
+    {
+        $filepath = request()->get('fp');
+
+        return \Illuminate\Support\Facades\Storage::download($filepath);
+    }
 }
