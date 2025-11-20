@@ -52,7 +52,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     });
 
-    Route::post('report/global', [ApiFinanceController::class, 'exportFinanceData']);
+    Route::post('finance/report/global', [ApiFinanceController::class, 'exportFinanceData']);
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])

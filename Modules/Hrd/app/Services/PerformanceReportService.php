@@ -438,10 +438,11 @@ class PerformanceReportService
             }
 
             $filename = "hrd/performance_report_{$startDate}_{$endDate}.xlsx";
-            Excel::store(new NewTemplatePerformanceReportExport($startDate, $endDate), $filename, 'public');
+            // Excel::store(new NewTemplatePerformanceReportExport($startDate, $endDate), $filename, 'public');
+            (new NewTemplatePerformanceReportExport($startDate, $endDate))->queue($filename, 'public');
 
             return generalResponse(
-                message: 'Success',
+                message: "Your data is being processed. You'll receive a notification when the process is complete. You can check your inbox periodically to see the results",
                 data: [
                     'path' => asset("storage/{$filename}"),
                 ]
