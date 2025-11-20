@@ -6201,21 +6201,29 @@ class ProjectService
                 
                 // Handle special employees (with accumulation)
                 if (!empty($specialEmployees)) {
-                    PointRecord::run(
+                    $recordPoint = PointRecord::run(
                         ['points' => $specialEmployees],
                         $projectUid,
                         'production',
                         false
                     );
+
+                    if (!$recordPoint) {
+                        return errorResponse('Failed to record points');
+                    }
                 }
                 
                 // Handle regular employees (normal flow)
                 if (!empty($regularEmployees)) {
-                    PointRecord::run(
+                    $recordPoint = PointRecord::run(
                         ['points' => $regularEmployees],
                         $projectUid,
                         'production'
                     );
+
+                    if (!$recordPoint) {
+                        return errorResponse('Failed to record points');
+                    }
                 }
 
                 // record project feedback
