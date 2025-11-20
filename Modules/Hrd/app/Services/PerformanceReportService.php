@@ -7,6 +7,7 @@ use App\Exports\NewTemplatePerformanceReportExport;
 use App\Services\GeneralService;
 use Carbon\Carbon;
 use DateTime;
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeePointRepository;
@@ -439,7 +440,7 @@ class PerformanceReportService
 
             $filename = "hrd/performance_report_{$startDate}_{$endDate}.xlsx";
             // Excel::store(new NewTemplatePerformanceReportExport($startDate, $endDate), $filename, 'public');
-            (new NewTemplatePerformanceReportExport($startDate, $endDate))->queue($filename, 'public');
+            (new NewTemplatePerformanceReportExport($startDate, $endDate, Auth::id()))->queue($filename, 'public');
 
             return generalResponse(
                 message: "Your data is being processed. You'll receive a notification when the process is complete. You can check your inbox periodically to see the results",
