@@ -33,9 +33,13 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
         $projects = $pointProjectRepo->list(
             select: 'id,employee_point_id,project_id,total_point,additional_point,calculated_prorate_point,prorate_point,original_point',
             relation: [
-                'project:id,name,project_date',
-                'project.personInCharges:id,project_id,pic_id',
-                'project.personInCharges.employee:id,name',
+                'project' => function ($queryProject) {
+                    $queryProject->selectRaw('id,name,project_date')
+                        ->with([
+                            'personInCharges:id,project_id,pic_id',
+                            'personInCharges.employee:id,name',
+                        ]);
+                },
                 'details:id,point_id,task_id',
                 'employeePoint:id,type,employee_id',
                 'employeePoint.employee:id,name,position_id',
@@ -79,6 +83,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
                 'position' => $project->employeePoint->employee->position ? $project->employeePoint->employee->position->name : '-',
             ];
         }
+        logging('output', [count($output)]);
 
         return view('hrd::new-export-performance-report', ['points' => $output]);
     }
