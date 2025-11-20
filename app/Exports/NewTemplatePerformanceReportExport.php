@@ -28,6 +28,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
      */
     public function view(): View
     {
+        ini_set('memory_limit', '512M');
         logging('PHP Memory Limit: ', [ini_get('memory_limit')]);
         logging('PHP Memory Usage: ', [memory_get_usage(true)]);
         logging('Max Execution Time: ', [ini_get('max_execution_time')]);
