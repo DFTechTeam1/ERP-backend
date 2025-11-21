@@ -159,10 +159,17 @@ class InteractiveRequestRepository extends InteractiveRequestInterface
      * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(int $id, string $where = '')
     {
-        return $this->model->whereIn('id', $id)
-            ->delete();
+        $query = $this->model->query();
+
+        if (! empty($where)) {
+            $query->whereRaw($where);
+        } else {
+            $query->where('id', $id);
+        }
+
+        return $query->delete();
     }
 
     /**

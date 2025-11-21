@@ -39,6 +39,7 @@ use Exception;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -238,7 +239,7 @@ class ProjectService
         \Modules\Production\Repository\ProjectTaskPicHoldstateRepository $projectTaskPicHoldstateRepo,
         \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo,
         \App\Services\NasFolderCreationService $nasFolderCreationService,
-        ProjectTaskDeadlineRepository $projectTaskDeadlineRepo
+        ProjectTaskDeadlineRepository $projectTaskDeadlineRepo,
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -1020,8 +1021,6 @@ class ProjectService
             [],
             $whereHas
         );
-
-        logging('WHERE HAS', $whereHas);
 
         $data = collect((object) $data)->map(function ($project) {
             return [
@@ -5162,7 +5161,7 @@ class ProjectService
             );
 
             // assign current employee pic to task
-            $this->assignMemberToTask(
+            $assign = $this->assignMemberToTask(
                 data: [
                     'users' => $currentPicUids,
                     'removed' => [],
@@ -8784,6 +8783,8 @@ class ProjectService
         try {
             $user = Auth::user();
 
+            $haveInteractive = (isset($payload['interactive_area'])) && (!empty($payload['interactive_area'])) ? true : false;
+
             // define published_at and published_by
             $projectDealPayload = collect($payload)
                 ->except(['marketing_id', 'quotation']);
@@ -8821,7 +8822,7 @@ class ProjectService
                 $realProject = \App\Actions\CopyDealToProject::run($project, $this->generalService);
 
                 // create interactive project if needed
-                if (isset($payload['interactive_area'])) {
+                if ($haveInteractive) {
                     CreateInteractiveProject::run($realProject->id, $payload);
                 }
 
@@ -8829,6 +8830,26 @@ class ProjectService
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $project->id);
 
                 ProjectHasBeenFinal::dispatch($project->id)->afterCommit();
+            } else {
+                if ($haveInteractive) {
+                    // create request inventory
+                    $interactiveRequest = $this->generalService->addInteractive(
+                        projectDealUid: Crypt::encryptString($project->id),
+                        payload: [
+                            'interactive_area' => $payload['interactive_area'],
+                            'interactive_detail' => $payload['interactive_detail'],
+                            'interactive_note' => $payload['interactive_note'],
+                            'interactive_fee' => $payload['interactive_fee'],
+                            'fix_price' => $payload['quotation']['fix_price'],
+                        ],
+                        withDatabaseTransaction: false
+                    );
+
+                    if ($interactiveRequest['error']) {
+                        DB::rollBack();
+                        return errorResponse($interactiveRequest['message']);
+                    }
+                }
             }
 
             DB::commit();
@@ -8880,7 +8901,7 @@ class ProjectService
 
             $this->projectDealRepo->update(
                 data: collect($payload)
-                    ->except(['marketing_id', 'quotation', 'status', 'request_type'])
+                    ->except(['marketing_id', 'quotation', 'status', 'request_type', 'interactive_area', 'interactive_detail', 'interactive_note', 'interactive_fee'])
                     ->toArray(),
                 id: $projectDealUid
             );
@@ -9326,11 +9347,7 @@ class ProjectService
             $maxCollaborationPoint = $project->projectClass ? $project->projectClass->$variablePoint : 0;
             // dd($totalTaskPoint);
             $maxPointReached = $totalTaskPoint > $maxCollaborationPoint ? true : false;
-            logging('maxpoint', [
-                'maxpointreached' => $maxPointReached,
-                'totaltaskPoint' => $totalTaskPoint,
-                'payload' => $teams,
-            ]);
+
             if ($maxPointReached) {
                 // calculate prorate
                 $proratePerTask = number_format($maxCollaborationPoint / $totalTaskPoint, 1);
