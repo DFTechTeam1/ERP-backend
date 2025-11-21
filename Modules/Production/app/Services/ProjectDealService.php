@@ -1906,7 +1906,16 @@ class ProjectDealService
                 relation: [
                     'requester:id,employee_id',
                     'requester.employee:id,user_id,name',
-                    'projectDeal:id,name,project_date',
+                    'projectDeal' => function ($queryDeal) {
+                        $queryDeal->selectRaw('id,name,project_date')
+                            ->where('deleted_at', null);
+                    },
+                ],
+                whereHas: [
+                    [
+                        'relation' => 'projectDeal',
+                        'query' => "deleted_at IS NULL"
+                    ]
                 ],
                 limit: $itemsPerPage,
                 page: $page,
@@ -1918,8 +1927,8 @@ class ProjectDealService
                 return [
                     'id' => Crypt::encryptString($item->id),
                     'project_deal_uid' => Crypt::encryptString($item->project_deal_id),
-                    'project_name' => $item->projectDeal->name,
-                    'project_date' => date('d F Y', strtotime($item->projectDeal->project_date)),
+                    'project_name' => $item?->projectDeal?->name,
+                    'project_date' => $item?->projectDeal ? date('d F Y', strtotime($item->projectDeal->project_date)) : null,
                     'requester' => $item->requester->employee->name,
                     'status' => $item->status->label(),
                     'status_color' => $item->status->color(),
