@@ -219,6 +219,26 @@ class ProjectQuotationService
             }
         }
 
+        // if project deal status is Final, then check the interactive project. Replace interactiveLedDetail with this interactive projects led detail
+        if ($data->deal->status == \App\Enums\Production\ProjectDealStatus::Final) {
+            $interactiveProject = $this->projectDealRepo->show(
+                uid: $data->deal->id,
+                select: 'id',
+                relation: [
+                    'project.interactiveProject'
+                ],
+            );
+
+            if ($interactiveProject?->project?->interactiveProject) {
+                $interactiveLedDetail = collect($interactiveProject->project->interactiveProject->led_detail)->map(function ($item) {
+                    return [
+                        'name' => $item['name'] == 'main' ? 'Main Stage' : 'Prefunction',
+                        'size' => $item['textDetail'],
+                    ];
+                })->toArray();
+            }
+        }
+
         $output = [
             'include_tax' => $data->deal->include_tax,
             'rules' => $this->generalService->getSettingByKey('quotation_rules'),
