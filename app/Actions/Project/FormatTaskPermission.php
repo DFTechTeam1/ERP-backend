@@ -4,8 +4,10 @@ namespace App\Actions\Project;
 
 use App\Actions\DefineDetailProjectPermission;
 use App\Actions\DefineTaskAction;
+use App\Enums\System\BaseRole;
 use Carbon\Carbon;
 use DateTime;
+use Illuminate\Support\Facades\Auth;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -30,7 +32,7 @@ class FormatTaskPermission
         $taskRepo = new ProjectTaskRepository;
         $repo = new ProjectRepository;
 
-        $this->user = auth()->user();
+        $this->user = Auth::user();
         $this->employeeId = $this->user->employee_id;
         $this->isProjectPic = isProjectPIC((int) $projectId, $this->employeeId);
         $this->isDirector = isDirector();
@@ -333,7 +335,7 @@ class FormatTaskPermission
 
         // check if authenticated user have feedback or not
         $isMyFeedbackExists = \Modules\Production\Models\Project::selectRaw('id')->find($project['id'])->isMyFeedbackExists($this->user->employee_id);
-        if ($project['is_super_user'] || $project['is_director']) {
+        if ($project['is_super_user'] || $project['is_director'] || $this->user->hasRole(BaseRole::Hrd->value) || $this->user->hasRole(BaseRole::Finance->value)) {
             $isMyFeedbackExists = true;
         }
         $project['is_my_feedback_exists'] = $isMyFeedbackExists;
