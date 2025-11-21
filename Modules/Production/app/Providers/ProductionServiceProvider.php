@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Production\Console\ClearAllCache;
 use Modules\Production\Console\InitProjectCount;
+use Modules\Production\Console\MigrateCurrentProjectFeedback;
 use Modules\Production\Console\PaymentDueReminderCommand;
 use Modules\Production\Console\ResyncNasFolderCreation;
 use Modules\Production\Console\SynchronizeEventDealsWithProduction;
@@ -59,7 +60,8 @@ class ProductionServiceProvider extends ServiceProvider
             InitProjectCount::class,
             PaymentDueReminderCommand::class,
             SynchronizeEventDealsWithProduction::class,
-            ResyncNasFolderCreation::class
+            ResyncNasFolderCreation::class,
+            MigrateCurrentProjectFeedback::class
         ]);
     }
 
