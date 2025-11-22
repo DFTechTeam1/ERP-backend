@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
@@ -54,6 +55,11 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
                         ->with([
                             'personInCharges:id,project_id,pic_id',
                             'personInCharges.employee:id,name',
+                            'entertainmentTaskSong.song:id,name',
+                            'entertainmentTaskSong.employee:id,name,position_id',
+                            'entertainmentTaskSong.employee.position:id,name',
+                            'feedbacks:id,project_id,pic_id,feedback',
+                            'feedbacks.pic:id,nickname'
                         ]);
                 },
                 'details:id,point_id,task_id',
@@ -70,6 +76,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
         );
 
         $output = [];
+        $entertainmentList = [];
         foreach ($projects as $project) {
             $type = $project->employeePoint->type;
 
@@ -85,8 +92,32 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
                 $pics = collect($project->project->personInCharges)->pluck('employee.name')->toArray();
             }
 
+            if ($project->project->entertainmentTaskSong->count() > 0) {
+                $entertainmentList[$project->project->name] = $project->project->entertainmentTaskSong->groupBy('employee_id')
+                    ->map(function ($item) use ($pics) {
+                        return [
+                            'tasks' => $item->pluck('song.name')->implode(','),
+                            'total_tasks' => $item->count(),
+                            'point' => 1,
+                            'additional_point' => 0,
+                            'calculated_prorate_point' => 0,
+                            'prorate_point' => 0,
+                            'original_point' => 0,
+                            'total_point' => 0,
+                            'project_name' => $item->first()->project->name,
+                            'employee_name' => $item->first()->employee->name,
+                            'pics' => implode(',', $pics),
+                            'position' => $item->first()->employee->position ? $item->first()->employee->position->name : '-',
+                            'feedbacks' => $item->first()->project->feedbacks->map(function ($feedback) {
+                                return $feedback->pic->nickname . ': ' . $feedback->feedback;
+                            }),
+                        ];
+                    })->toArray();
+            }
+
             $output[$project->project->name][] = [
                 'tasks' => implode(',', $tasks),
+                'total_tasks' => count($tasks),
                 'point' => $project->total_point - $project->additional_point,
                 'additional_point' => $project->additional_point,
                 'calculated_prorate_point' => $project->calculated_prorate_point,
@@ -97,9 +128,23 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
                 'employee_name' => $project->employeePoint->employee->name,
                 'pics' => implode(',', $pics),
                 'position' => $project->employeePoint->employee->position ? $project->employeePoint->employee->position->name : '-',
+                'feedbacks' => $project->project->feedbacks->map(function ($feedback) {
+                    return $feedback->pic->nickname . ': ' . $feedback->feedback;
+                }),
             ];
         }
-        logging('output', [count($output)]);
+
+        // merge $output and $entertainmentList based on project_name
+        foreach ($entertainmentList as $projectName => $entertainmentItems) {
+            if (isset($output[$projectName])) {
+                $output[$projectName] = array_merge($output[$projectName], $entertainmentItems);
+            } else {
+                $output[$projectName] = $entertainmentItems;
+            }
+        }
+
+        logging('output', $entertainmentList);
+        logging('project output', $output);
 
         return view('hrd::new-export-performance-report', ['points' => $output]);
     }
@@ -108,12 +153,15 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
+                // freeze first column
+                $event->sheet->getDelegate()->freezePane('C1');
+
                 // set filter
-                $event->sheet->getDelegate()->setAutoFilter('A1:I1');
+                $event->sheet->getDelegate()->setAutoFilter('A1:J1');
 
                 // set borders
                 $lastRow = $event->sheet->getDelegate()->getHighestRow();
-                $event->sheet->getDelegate()->getStyle("A1:I{$lastRow}")->applyFromArray([
+                $event->sheet->getDelegate()->getStyle("A1:J{$lastRow}")->applyFromArray([
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
@@ -123,9 +171,23 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
                 ]);
 
                 // set header to bold
-                $event->sheet->getDelegate()->getStyle('A1:I2')->applyFromArray([
+                $event->sheet->getDelegate()->getStyle('A1:J2')->applyFromArray([
                     'font' => [
                         'bold' => true,
+                    ],
+                ]);
+
+                // set column A vertical alignment to center
+                $event->sheet->getDelegate()->getStyle("A1:B{$lastRow}")->applyFromArray([
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                    ],
+                ]);
+
+                // set column J vertical alignment to center
+                $event->sheet->getDelegate()->getStyle("J1:J{$lastRow}")->applyFromArray([
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_CENTER,
                     ],
                 ]);
 
