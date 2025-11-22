@@ -738,7 +738,7 @@ class ProjectDealService
                 'latestQuotation',
                 'latestQuotation.items:id,quotation_id,item_id',
                 'latestQuotation.items.item:id,name',
-                'latestInteractiveRequest'
+                'lastInteractiveRequest'
             ]
         );
 
