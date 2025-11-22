@@ -188,13 +188,49 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    return (new \App\Services\PusherNotification)->send(
-        channel: 'my-channel-42',
-        event: 'new-db-notification',
-        payload: [
-            'update' => true
-        ],
-    );
+    $data = \Modules\Production\Models\EntertainmentTaskSong::with([
+        'employee:id,nickname',
+        'employee.points:id,employee_id',
+        'project:id,name,project_date',
+    ])->whereHas('project', function ($query) {
+        $query->whereBetween('project_date', ['2025-10-23', '2025-11-22']);
+    })->get();
+
+    // group by project_id, then group by employee_id
+    $data = $data->groupBy('project_id')->map(function ($projectGroup) {
+        return $projectGroup->groupBy('employee_id');
+    });
+
+    $employeePointProjectPayload = [];
+    foreach ($data as $projectId => $projectGroup) {
+        foreach ($projectGroup as $employeeId => $employeeGroup) {
+            $totalPoint = 1;
+
+            $employeePointProjectPayload[] = [
+                'employee_id' => $employeeId,
+                'project_id' => $projectId,
+                'total_point' => $totalPoint,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ];
+        }
+    }
+
+    $project = \Modules\Production\Models\Project::with([
+        'entertainmentTaskSong.song:id,name'
+    ])->find(372);
+
+    $entertainmentTaskList = $project->entertainmentTaskSong->groupBy('employee_id')
+        ->map(function ($item) {
+            return [
+                'employee' => $item->first()->employee->nickname,
+                'songs' => $item->map(function ($task) {
+                    return $task->song->name;
+                })->toArray(),
+            ];
+        })->values()->toArray();
+
+    return $entertainmentTaskList;
 });
 
 Route::get('migrate-duration', function () {
