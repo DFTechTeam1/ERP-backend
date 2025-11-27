@@ -179,7 +179,7 @@ class ProjectQuotationService
         $quotationId = Crypt::decryptString($quotationId);
         $data = $this->repo->show(
             uid: 'uid',
-            select: 'id,project_deal_id,fix_price,quotation_id,description,design_job',
+            select: 'id,project_deal_id,fix_price,quotation_id,description,design_job,is_include_accomodation',
             relation: [
                 'deal:id,name,project_date,customer_id,event_type,venue,collaboration,led_detail,country_id,state_id,city_id,project_class_id,include_tax,status',
                 'deal.city:id,name',
@@ -242,6 +242,7 @@ class ProjectQuotationService
         $output = [
             'include_tax' => $data->deal->include_tax,
             'rules' => $this->generalService->getSettingByKey('quotation_rules'),
+            'is_include_accomodation' => $data->is_include_accomodation,
             'company' => [
                 'address' => $this->generalService->getSettingByKey('company_address'),
                 'email' => $this->generalService->getSettingByKey('company_email'),

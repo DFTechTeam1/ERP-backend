@@ -1629,6 +1629,7 @@ Table "project_quotations" {
   "equipment_type" project_quotations_equipment_type_enum [not null]
   "is_high_season" tinyint(1) [not null, default: '0']
   "description" text
+  "is_include_accomodation" bool [default: false] // new column at 27-11-2025
   "design_job" varchar(100) [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
