@@ -33,6 +33,7 @@ class ProjectQuotation extends Model
         'fix_price',
         'quotation_id',
         'is_final',
+        'is_include_accomodation',
         'description',
         'design_job',
     ];
@@ -40,6 +41,16 @@ class ProjectQuotation extends Model
     protected static function newFactory(): ProjectQuotationFactory
     {
         return ProjectQuotationFactory::new();
+    }
+
+    /*
+    * The attributes that should be cast.
+    */
+    protected function casts(): array
+    {
+        return [
+            'is_include_accomodation' => 'boolean',
+        ];
     }
 
     public function deal(): BelongsTo
