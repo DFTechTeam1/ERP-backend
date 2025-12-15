@@ -187,8 +187,8 @@ class InchargeService
             // remove_after_party_uids -> remove current list
             if (!empty($payload['remove_after_party_uids'])) {
                 foreach ($payload['remove_after_party_uids'] as $removeUid) {
-                    $this->projectVjRepo->delete(
-                        id: 'id',
+                    $this->projectVjAfpatAttendanceRepo->delete(
+                        id: 0,
                         where: "project_id = {$projectId} AND employee_id = (SELECT id FROM employees WHERE uid = '{$removeUid}')"
                     );
                 }

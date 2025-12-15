@@ -409,7 +409,7 @@ class GeneralService
             ]
         );
 
-        if ($response->status() != 200) {
+        if ($response->status() > 300) {
             throw new \App\Exceptions\UserNotFound(message: 'Failed to generate token');
         }
 
