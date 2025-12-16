@@ -545,6 +545,47 @@ class RolePermissionSetting extends Seeder
     protected function inventoriesPermission()
     {
         return [
+            ['name' => 'create_submission', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'fetch_submission', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'add_new_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'delete_requested_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'approve_requested_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'approve_update_requested_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'edit_requested_equipment_status', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'edit_requested_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+
             ['name' => 'manage_nas', 'group' => 'inventories', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
