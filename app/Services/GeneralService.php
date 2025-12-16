@@ -400,6 +400,37 @@ class GeneralService
         ];
     }
 
+    /**
+     * Generate access token for express app
+     * Here we use static password since the express app will not store any user data
+     * So the password is only used to validate the request
+     * @param string $email
+     * @return string
+     */
+    public function authorizeExpressAccess(string $email): string
+    {
+        $response = \Illuminate\Support\Facades\Http::post(
+            url: config('app.express_endpoint').'/hrd/auth/login',
+            data: [
+                'email' => $email,
+                'password' => 'password'
+            ]
+        );
+
+        if ($response->status() > 300) {
+            throw new \App\Exceptions\UserNotFound(message: 'Failed to generate express token');
+        }
+
+        $token = $response->json()['data']['token'];
+
+        return $token;
+    }
+
+    /**
+     * Generate access token for reporting app
+     * @param string $email
+     * @return string
+     */
     public function authorizeReportingAccess(string $email): string
     {
         $response = \Illuminate\Support\Facades\Http::post(
@@ -476,8 +507,11 @@ class GeneralService
 
         $encryptedPayload = $this->getEncryptedPayloadData(tokenizer: $tokenizer);
 
-        // generate reporting token
+        // Generate reporting token
         $reportingToken = $this->authorizeReportingAccess(email: $user->email);
+
+        // Generate express token
+        $expressToken = $this->authorizeExpressAccess(email: $user->email);
 
         $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
@@ -498,6 +532,7 @@ class GeneralService
             'mEnc' => $menusEncrypted,
             'mainToken' => $token->plainTextToken,
             'menus' => $menus,
+            'expressToken' => $expressToken
         ];
     }
 
