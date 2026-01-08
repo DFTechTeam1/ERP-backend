@@ -8901,7 +8901,7 @@ class ProjectService
 
             $this->projectDealRepo->update(
                 data: collect($payload)
-                    ->except(['marketing_id', 'quotation', 'status', 'request_type', 'interactive_area', 'interactive_detail', 'interactive_note', 'interactive_fee'])
+                    ->except(['marketing_id', 'quotation', 'status', 'request_type', 'interactive_area', 'interactive_detail', 'interactive_note', 'interactive_fee', 'with_accommodation'])
                     ->toArray(),
                 id: $projectDealUid
             );
@@ -8922,6 +8922,7 @@ class ProjectService
             $this->projectQuotationRepo->update(
                 data: collect($payload['quotation'])
                     ->except(['status', 'items', 'quotation_id'])
+                    ->merge(['is_include_accomodation' => $payload['with_accommodation']])
                     ->toArray(),
                 id: $project->latestQuotation->id
             );

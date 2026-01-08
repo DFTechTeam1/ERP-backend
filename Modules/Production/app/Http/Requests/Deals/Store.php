@@ -64,6 +64,7 @@ class Store extends FormRequest
             'quotation.items.*' => 'required',
 
             'include_tax' => 'required|boolean',
+            'with_accommodation' => 'required|boolean',
 
             'request_type' => 'nullable', // this will be save,draft or save_and_download
         ];
