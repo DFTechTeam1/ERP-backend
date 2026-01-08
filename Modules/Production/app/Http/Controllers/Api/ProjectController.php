@@ -613,7 +613,7 @@ class ProjectController extends Controller
 
     public function subtitutePic(\Modules\Production\Http\Requests\Project\SubtitutePic $request, string $projectUid)
     {
-        return $this->service->subtitutePic($projectUid, $request->validated());
+        return apiResponse($this->service->subtitutePic($projectUid, $request->validated()));
     }
 
     public function getPicForSubtitute(string $projectUid)
