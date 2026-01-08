@@ -1303,6 +1303,10 @@ class ProjectDealService
                         $field = 'include_tax';
                         break;
 
+                    case 'With Accommodation':
+                        $field = 'with_accommodation';
+                        break;
+
                     default:
                         $field = null;
                         break;
@@ -1313,6 +1317,9 @@ class ProjectDealService
                     if ($field == 'quotation_note') {
                         $needUpdateQuotationNote = true;
                         $payloadQuotation['description'] = $changeData['new_value'];
+                    } else if ($field == 'with_accommodation') {
+                        $needUpdateQuotationNote = true;
+                        $payloadQuotation['is_include_accomodation'] = $changeData['new_value'];
                     } else {
                         $payloadUpdate[$field] = $changeData['new_value'];
                         $mainPayload[$field] = $changeData['new_value'];
