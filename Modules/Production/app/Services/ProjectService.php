@@ -8787,7 +8787,7 @@ class ProjectService
 
             // define published_at and published_by
             $projectDealPayload = collect($payload)
-                ->except(['marketing_id', 'quotation']);
+                ->except(['marketing_id', 'quotation', 'with_accommodation']);
             if ($payload['status'] == ProjectDealStatus::Final->value) {
                 $projectDealPayload = $projectDealPayload->merge([
                     'published_at' => Carbon::now(),
@@ -8810,6 +8810,7 @@ class ProjectService
 
             // insert quotations
             $payload['quotation']['project_deal_id'] = $project->id;
+            $payload['quotation']['is_include_accomodation'] = $payload['with_accommodation'];
             $url = CreateQuotation::run($payload, $this->projectQuotationRepo);
 
             // handle when project deal have a final status
