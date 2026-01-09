@@ -69,6 +69,19 @@ return new class extends Migration
             ])->nullable();
             $table->integer('warranty_month')->nullable();
             $table->text('note')->nullable();
+            $table->integer('remaining_item');
+            $table->integer('resolved_item');
+            $table->boolean('is_paid')->default(false);
+            $table->foreignId('approved_by')
+                ->nullable()
+                ->constrained('users')
+                ->onUpdate('cascade')
+                ->onDelete('set null');
+            $table->foreignId('rejected_by')
+                ->nullable()
+                ->constrained('users')
+                ->onUpdate('cascade')
+                ->onDelete('set null');
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
         });
@@ -87,15 +100,17 @@ return new class extends Migration
         Schema::create('equipment_refund_logs', function (Blueprint $table) {
             $table->id();
             $table->timestamp('created_at');
+            $table->timestamp('updated_at');
             $table->char('uid', 36);
             $table->foreignId('equipment_id')
-                ->constrained('request_equipments')
-                ->onUpdate('cascade')
-                ->onDelete('cascade');
+            ->constrained('request_equipments')
+            ->onUpdate('cascade')
+            ->onDelete('cascade');
             $table->integer('quantity');
             $table->integer('total_refund');
             $table->text('note')->nullable();
             $table->boolean('is_paid')->default(false);
+            $table->timestamps();
         });
 
         Schema::create('equipment_return_logs', function (Blueprint $table) {
@@ -116,17 +131,47 @@ return new class extends Migration
                 ->constrained('request_equipments')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
-            $table->char('uid', 36);
+            $table->char('equipment_uid', 36);
+            $table->foreignId('master_id')
+                ->constrained('request_equipment_masters')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
             $table->json('previous');
             $table->json('incoming');
-            $table->bigInteger('approved_by')->nullable();
-            $table->bigInteger('rejected_by')->nullable();
+            $table->foreignId('approved_by')
+                ->nullable()
+                ->constrained('users')
+                ->onUpdate('cascade')
+                ->onDelete('set null');
+            $table->foreignId('rejected_by')
+                ->nullable()
+                ->constrained('users')
+                ->onUpdate('cascade')
+                ->onDelete('set null');
             $table->enum('status', [
                 'need_approval',
                 'approved',
                 'rejected'
             ]);
             $table->timestamps();
+        });
+
+        Schema::create('request_equipment_email_approvals', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
+            $table->foreignId('master_id')
+                ->nullable()
+                ->constrained('request_equipment_masters')
+                ->onUpdate('cascade')
+                ->onDelete('set null');
+            $table->foreignId('equipment_id')
+                ->nullable()
+                ->constrained('request_equipments')
+                ->onUpdate('cascade')
+                ->onDelete('set null');
+            $table->text('token');
+            $table->timestamp('expired_at');
+            $table->boolean('is_used')->default(false);
         });
     }
 
@@ -135,9 +180,17 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop request_equipment_email_approvals foreign
+        Schema::table('request_equipment_email_approvals', function (Blueprint $table) {
+            $table->dropForeign(['master_id']);
+            $table->dropForeign(['equipment_id']);
+        });
+
         // Drop request_equipment_updates foreign
         Schema::table('request_equipment_updates', function (Blueprint $table) {
             $table->dropForeign(['equipment_id']);
+            $table->dropForeign(['approved_by']);
+            $table->dropForeign(['rejected_by']);
         });
 
         // Drop foreign in equipment_return_logs
@@ -159,6 +212,8 @@ return new class extends Migration
         Schema::table('request_equipments', function (Blueprint $table) {
             $table->dropForeign(['master_id']);
             $table->dropForeign(['inventory_id']);
+            $table->dropForeign(['approved_by']);
+            $table->dropForeign(['rejected_by']);
         });
 
         Schema::dropIfExists('request_equipment_updates');
