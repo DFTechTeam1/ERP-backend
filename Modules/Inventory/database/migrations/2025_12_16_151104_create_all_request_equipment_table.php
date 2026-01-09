@@ -99,8 +99,6 @@ return new class extends Migration
 
         Schema::create('equipment_refund_logs', function (Blueprint $table) {
             $table->id();
-            $table->timestamp('created_at');
-            $table->timestamp('updated_at');
             $table->char('uid', 36);
             $table->foreignId('equipment_id')
             ->constrained('request_equipments')
