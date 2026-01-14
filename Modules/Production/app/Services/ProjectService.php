@@ -56,6 +56,7 @@ use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Production\Exceptions\FailedModifyWaitingApprovalSong;
 use Modules\Production\Exceptions\ProjectNotFound;
 use Modules\Production\Exceptions\SongNotFound;
+use Modules\Production\Jobs\ChangedSongJob;
 use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Jobs\DeleteSongJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
@@ -7435,6 +7436,8 @@ class ProjectService
                 throw new SongNotFound;
             }
 
+            $requesterId = auth()->id();
+
             if ($song->task) {
                 // request changes to entertainment first
                 $this->projectSongListRepo->update([
@@ -7444,7 +7447,6 @@ class ProjectService
                 ], $songUid);
 
                 // send notification to PM entertainment
-                $requesterId = auth()->id();
                 RequestEditSongJob::dispatch($payload, $projectUid, $songUid, $requesterId)->afterCommit();
 
                 // log this request
@@ -7465,6 +7467,9 @@ class ProjectService
 
             // do edit when available
             $this->doEditSong(payload: ['name' => $payload['song']], songUid: $songUid);
+
+            // Notify entertainment pic about the changes
+            ChangedSongJob::dispatch($payload, $projectUid, $songUid, $requesterId)->afterCommit();
 
             // log the changes
             StoreLogAction::run(

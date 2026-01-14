@@ -2,12 +2,12 @@
 
 namespace Modules\Production\Notifications;
 
-use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 
-class RequestSongNotification extends Notification
+class ChangedSongNotification extends Notification
 {
     use Queueable;
 
@@ -15,14 +15,16 @@ class RequestSongNotification extends Notification
 
     public $message;
 
+    public $projectUid;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $telegramChatIds, mixed $message)
+    public function __construct(array $telegramChatIds, mixed $message, string $projectUid)
     {
         $this->telegramChatIds = $telegramChatIds;
-
         $this->message = $message;
+        $this->projectUid = $projectUid;
     }
 
     /**
@@ -31,8 +33,7 @@ class RequestSongNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            'database',
-            // TelegramChannel::class,
+            'database'
         ];
     }
 
@@ -54,10 +55,10 @@ class RequestSongNotification extends Notification
     {
         return [
             'type' => 'production',
-            'title' => 'New Song Request Added',
+            'title' => 'Song Edit Request Added',
             'message' => $this->message,
             'button' => null,
-            'href' => '',
+            'href' => '/admin/production/project/' . $this->projectUid,
         ];
     }
 

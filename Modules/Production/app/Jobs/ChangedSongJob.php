@@ -3,16 +3,16 @@
 namespace Modules\Production\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
-use Modules\Production\Notifications\RequestEditSongNotification;
+use Modules\Production\Notifications\ChangedSongNotification;
 
-class RequestEditSongJob implements ShouldQueue
+class ChangedSongJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -64,9 +64,9 @@ class RequestEditSongJob implements ShouldQueue
                 ->where('user_id', $this->requesterId)
                 ->first();
 
-            $message = "Song in project {$project->name} has been requested changes from {$currentSong->name} to {$this->payload['song']} by {$requesterData->nickname}";
+            $message = "Song in project {$project->name} has been changed from {$currentSong->name} to {$this->payload['song']} by {$requesterData->nickname}";
 
-            $entertainmentPic->notify(new RequestEditSongNotification(
+            $entertainmentPic->notify(new ChangedSongNotification(
                 [$entertainmentPic->employee->telegram_chat_id],
                 $message,
                 $this->projectUid
@@ -77,8 +77,8 @@ class RequestEditSongJob implements ShouldQueue
             $pusher->send('my-channel-'.$entertainmentPic->id, 'new-db-notification', [
                 'update' => true,
                 'st' => true, // stand for stand for
-                'm' => 'You have new song edit request',
-                't' => 'New Song Edit Request',
+                'm' => 'You have new song change notification',
+                't' => 'Song Changed',
             ]);
         }
     }
