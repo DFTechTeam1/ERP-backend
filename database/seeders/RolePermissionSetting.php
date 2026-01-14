@@ -545,6 +545,11 @@ class RolePermissionSetting extends Seeder
     protected function inventoriesPermission()
     {
         return [
+            ['name' => 'delete_existing_submission', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
             ['name' => 'create_submission', 'group' => 'inventories', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
