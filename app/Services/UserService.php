@@ -11,6 +11,8 @@ use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -832,5 +834,107 @@ class UserService
 
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Resend activation email to user
+     * @param  string  $userUid
+     * @return array<string, mixed>
+     */
+    public function resendActivationEmail(string $userUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = $this->repo->detail(
+                id: 'id',
+                select: 'id,email,email_verified_at,password',
+                where: "uid = '{$userUid}'"
+            );
+
+            if (! $user) {
+                return errorResponse(__('global.userNotFound'));
+            }
+
+            if ($user->email_verified_at) {
+                return errorResponse(__('global.accontAlreadyActive'));
+            }
+
+            // generate random password
+            $randomPassword = $this->generalService->generateRandomPassword(8);
+
+            // update user password
+            $this->repo->update([
+                'password' => Hash::make($randomPassword),
+            ], 'id', $user->id);
+
+            SendEmailActivationJob::dispatch($user, $randomPassword)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.successResendActivationEmail'),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    private function formatOutputNotification(DatabaseNotificationCollection $notifications)
+    {
+        $notifications = $notifications->map(function ($item) {
+            $item['created_at_raw'] = date('d F Y H:i', strtotime($item->created_at));
+
+            return [
+                'message' => $item['data']['message'] ?? '',
+                'title' => $item['data']['title'] ?? '',
+                'icon' => $item['data']['icon'] ?? '',
+                'url' => $item['data']['url'] ?? '',
+                'type' => $item['data']['type'] ?? '',
+                'created_at' => $item['created_at_raw'],
+                'id' => $item['id'],
+            ];
+        })->filter(function ($item) {
+            return $item['type'] !== null && $item['type'] !== '';
+        })->values();
+
+        if ($notifications->count() == 0) {
+            return collect([]);
+        }
+
+        return $notifications;
+    }
+
+    private function getEmployeeNotification(int $userId)
+    {
+        $employee = \Modules\Hrd\Models\Employee::where('user_id', $userId)->first();
+
+        return $this->formatOutputNotification(notifications: $employee->unreadNotifications);
+    }
+
+    private function getUserNotification(int $userId)
+    {
+        $user = \App\Models\User::find($userId);
+
+        return $this->formatOutputNotification(notifications: $user->unreadNotifications);
+    }
+
+    public function getApplicationNotification()
+    {
+        $user = Auth::user();
+        $userId = $user->id;
+
+        $employeeNotifications = $this->getEmployeeNotification(userId: $userId);
+        $userNotifications = $this->getUserNotification(userId: $userId);
+
+        $merged = $employeeNotifications->merge($userNotifications);
+
+        return [
+            'production' => $merged->where('type', 'production'),
+            'finance' => $merged->where('type', 'finance'),
+            'hrd' => $merged->where('type', 'hrd'),
+            'general' => $merged->where('type', 'general'),
+        ];
     }
 }
