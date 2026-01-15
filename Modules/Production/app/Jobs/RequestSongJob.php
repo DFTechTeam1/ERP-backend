@@ -60,7 +60,8 @@ class RequestSongJob implements ShouldQueue
 
             $entertainmentPic->notify(new RequestSongNotification(
                 telegramChatIds: [$entertainmentPic->employee->telegram_chat_id],
-                message: $message
+                message: $message,
+                projectUid: $this->project->uid
             ));
 
             // Send to pusher notification
