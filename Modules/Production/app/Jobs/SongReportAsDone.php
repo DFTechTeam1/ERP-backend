@@ -20,6 +20,8 @@ class SongReportAsDone implements ShouldQueue
 
     private $worker;
 
+    private $pusher;
+
     /**
      * Create a new job instance.
      */
@@ -35,9 +37,13 @@ class SongReportAsDone implements ShouldQueue
      */
     public function handle(): void
     {
+        // Send to pusher notification
+        $this->pusher = new \App\Services\PusherNotification();
+
         $this->sendToWorker();
 
         $this->sendToPM();
+
     }
 
     protected function sendToPM()
@@ -46,28 +52,35 @@ class SongReportAsDone implements ShouldQueue
             ->with('employee:id,nickname,user_id,telegram_chat_id')
             ->first();
 
-        if (($entertainmentPic) && ($entertainmentPic->employee->telegram_chat_id)) {
-            $message = "Halo {$entertainmentPic->employee->nickname}\n";
-            $message .= "{$this->worker->nickname} sudah menyelesaikan tugas di musik {$this->task->song->name} untuk event {$this->task->project->name}.\n";
-            $message .= 'Kamu bisa mulai mengecek tugas tersebut';
+        if ($entertainmentPic) {
+            $message = "A new task has been submitted and is ready for your review";
 
-            $entertainmentPic->notify(new SongReportAsDoneNotification([$entertainmentPic->employee->telegram_chat_id], $message));
+            $entertainmentPic->notify(new SongReportAsDoneNotification($message, $this->task->project->uid));
+
+            $this->pusher->send('my-channel-'.$entertainmentPic->id, 'new-db-notification', [
+                'update' => true,
+                'st' => true, // stand for stand for
+                'm' => 'New Task to Review', // stand for message
+                't' => 'Task to Review', // stand for title
+            ]);
         }
     }
 
     protected function sendToWorker()
     {
-        // get employee
-        $employee = Employee::selectRaw('id,telegram_chat_id,nickname,name,email')
-            ->find($this->task->employee_id);
+        $user = \App\Models\User::where('employee_id', $this->task->employee_id)->first();
 
-        $this->worker = $employee;
+        if ($user) {
+            $message = "Your task has been uploaded and is now under review by Project Manager";
+    
+            $user->notify(new SongReportAsDoneNotification($message, $this->task->project->uid));
 
-        if ($employee->telegram_chat_id) {
-            $message = "Halo {$employee->nickname}\n";
-            $message .= "Tugas JB musik {$this->task->song->name} untuk event {$this->task->project->name} sudah selesai dan akan di cek oleh PM.";
-
-            $employee->notify(new SongReportAsDoneNotification([$employee->telegram_chat_id], $message));
+            $this->pusher->send('my-channel-'.$user->id, 'new-db-notification', [
+                'update' => true,
+                'st' => true, // stand for stand for
+                'm' => 'Task submitted. PM reviewing', // stand for message
+                't' => 'Task submitted', // stand for title
+            ]);
         }
     }
 }

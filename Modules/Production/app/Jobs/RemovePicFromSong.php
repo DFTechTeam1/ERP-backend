@@ -13,14 +13,15 @@ class RemovePicFromSong implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private $taskSong;
+    private $payload;
 
     /**
      * Create a new job instance.
+     * @param \Modules\Production\Dto\Song\RemovePicNotificationDto $payload
      */
-    public function __construct(object $taskSong)
+    public function __construct(\Modules\Production\Dto\Song\RemovePicNotificationDto $payload)
     {
-        $this->taskSong = $taskSong;
+        $this->payload = $payload;
     }
 
     /**
@@ -28,13 +29,14 @@ class RemovePicFromSong implements ShouldQueue
      */
     public function handle(): void
     {
-        $message = "You have been removed as PIC for the song '{$this->taskSong->song->name}' in project '{$this->taskSong->project->name}'.";
+        $message = "You have been removed as PIC for the song '{$this->payload->songName}' in project '{$this->payload->projectName}'.";
 
-        $this->taskSong->employee->notify(new RemovePicFromSongNotification($this->taskSong));
+        $user = \App\Models\User::find($this->payload->userId);
+        $user->notify(new RemovePicFromSongNotification($message, $this->payload->projectUid));
 
         // Send to pusher notification
         $pusher = new \App\Services\PusherNotification();
-        $pusher->send('my-channel-'.$this->taskSong->employee->user_id, 'new-db-notification', [
+        $pusher->send('my-channel-'.$this->payload->userId, 'new-db-notification', [
             'update' => true,
             'st' => true, // stand for stand for
             'm' => 'You have been removed as PIC from a song', // stand for message

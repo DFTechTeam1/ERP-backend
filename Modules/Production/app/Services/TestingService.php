@@ -159,8 +159,6 @@ class TestingService
             $sorts
         );
 
-        logging('PAGINATED', $paginated->toArray());
-
         $eventTypes = \App\Enums\Production\EventType::cases();
         $classes = \App\Enums\Production\Classification::cases();
         $statusses = \App\Enums\Production\ProjectStatus::cases();

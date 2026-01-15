@@ -60,6 +60,7 @@ use Modules\Production\Jobs\ChangedSongJob;
 use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Jobs\DeleteSongJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
+use Modules\Production\Jobs\RejectDeleteSongJob;
 use Modules\Production\Jobs\RemovePicFromSong;
 use Modules\Production\Jobs\RequestDeleteSongJob;
 use Modules\Production\Jobs\RequestEditSongJob;
@@ -7719,7 +7720,7 @@ class ProjectService
                 [
                     'task:id,project_song_list_id,employee_id',
                     'task.employee:id,name,nickname',
-                    'project:id,name',
+                    'project:id,name,uid',
                 ]
             );
 
@@ -7731,6 +7732,9 @@ class ProjectService
                 throw new FailedModifyWaitingApprovalSong(message: __('notification.failedDeleteRequestEditSong'));
             }
 
+            $user = Auth::user();
+            $actorId = $user->id;
+
             if ($song->task) {
                 // request changes to entertainment first
                 $this->projectSongListRepo->update([
@@ -7740,13 +7744,17 @@ class ProjectService
                 ], $songUid);
 
                 // send notification to PM entertainment
-                $requesterId = auth()->id();
-                RequestDeleteSongJob::dispatch($song, $requesterId);
+                RequestDeleteSongJob::dispatch($song, $actorId)->afterCommit();
 
                 goto result;
             }
 
+            $currentSongName = $song->name;
+            $currentProjectName = $song->project->name;
+
             $this->doDeleteSong($song->id, $song);
+
+            DeleteSongJob::dispatch($currentSongName, $currentProjectName, $actorId)->afterCommit();
 
             result:
             // get current data
@@ -7776,9 +7784,6 @@ class ProjectService
         $songName = $song->name;
         $projectName = $song->project->name;
         $this->projectSongListRepo->delete(id: $songId);
-
-        $requesterId = auth()->id();
-        DeleteSongJob::dispatch($songName, $projectName, $requesterId)->afterCommit();
     }
 
     /**
@@ -8070,7 +8075,7 @@ class ProjectService
                 uid: 'id,project_id,project_song_list_id,status',
                 select: 'id,time_tracker',
                 relation: [
-                    'project:id,name',
+                    'project:id,name,uid',
                     'song:id,name',
                 ],
                 where: "project_id = {$projectId} AND project_song_list_id = {$songId}"
@@ -8727,10 +8732,18 @@ class ProjectService
                 ]
             );
 
+            $payloadNotification = new \Modules\Production\Dto\Song\RemovePicNotificationDto(
+                songName: $currentTask->song->name,
+                projectName: $currentTask->project->name,
+                projectUid: $currentTask->project->uid,
+                employeeNickname: $currentTask->employee->nickname,
+                userId: $currentTask->employee->user_id
+            );
+
             $this->entertainmentTaskSongRepo->delete(id: 0, where: "project_song_list_id = {$songId} and project_id = {$projectId}");
 
             // send notification to the pic
-            RemovePicFromSong::dispatch($currentTask)->afterCommit();
+            RemovePicFromSong::dispatch($payloadNotification)->afterCommit();
 
             // refresh all cache
             $currentData = $this->detailCacheAction->run(projectUid: $projectUid, forceUpdateAll: true);
@@ -9479,6 +9492,58 @@ class ProjectService
             return generalResponse(
                 message: 'Success',
                 data: $teams
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Reject delete song request
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return array
+     */
+    public function rejectDeleteSong(string $projectUid, string $songUid): array
+    {
+        try {
+            // check validation
+            $song = $this->projectSongListRepo->show(
+                $songUid,
+                'id,project_id,name',
+                [
+                    'task:id,project_song_list_id,employee_id',
+                    'task.employee:id,name,nickname',
+                    'project:id,name,uid',
+                ]
+            );
+
+            if (! $song) {
+                throw new SongNotFound;
+            }
+
+            if ($song->is_request_edit) {
+                throw new FailedModifyWaitingApprovalSong(message: __('notification.failedDeleteRequestEditSong'));
+            }
+
+            $actor = Auth::user();
+            $actorId = $actor->id;
+
+            $this->projectSongListRepo->update([
+                'is_request_edit' => false,
+                'is_request_delete' => false,
+                'target_name' => null,
+            ], $songUid);
+
+            // get current data
+            $currentData = $this->detailCacheAction->run($projectUid);
+
+            return generalResponse(
+                message: __('notification.successRejectDeleteSong'),
+                data: [
+                    'full_detail' => $currentData,
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
