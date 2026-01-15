@@ -27,7 +27,7 @@ class RemovePicFromSongNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            TelegramChannel::class,
+            'database'
         ];
     }
 
@@ -47,7 +47,14 @@ class RemovePicFromSongNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-        return [];
+        $message = "You have been removed as PIC for the song '{$this->taskSong->song->name}' in project '{$this->taskSong->project->name}'.";
+        return [
+            'type' => 'production',
+            'title' => 'Removed as PIC from Song',
+            'message' => $message,
+            'button' => null,
+            'href' => '/admin/production/project/' . $this->taskSong->project->uid,
+        ];
     }
 
     public function toTelegram($notifiable): array

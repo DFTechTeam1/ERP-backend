@@ -28,6 +28,17 @@ class RemovePicFromSong implements ShouldQueue
      */
     public function handle(): void
     {
+        $message = "You have been removed as PIC for the song '{$this->taskSong->song->name}' in project '{$this->taskSong->project->name}'.";
+
         $this->taskSong->employee->notify(new RemovePicFromSongNotification($this->taskSong));
+
+        // Send to pusher notification
+        $pusher = new \App\Services\PusherNotification();
+        $pusher->send('my-channel-'.$this->taskSong->employee->user_id, 'new-db-notification', [
+            'update' => true,
+            'st' => true, // stand for stand for
+            'm' => 'You have been removed as PIC from a song', // stand for message
+            't' => 'Removed as PIC', // stand for title
+        ]);
     }
 }

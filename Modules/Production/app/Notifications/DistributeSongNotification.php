@@ -15,14 +15,18 @@ class DistributeSongNotification extends Notification
 
     public $message;
 
+    public $projectUid;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $telegramChatIds, string $message)
+    public function __construct(array $telegramChatIds, string $message, string $projectUid)
     {
         $this->telegramChatIds = $telegramChatIds;
 
         $this->message = $message;
+
+        $this->projectUid = $projectUid;
     }
 
     /**
@@ -31,7 +35,7 @@ class DistributeSongNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            TelegramChannel::class,
+            'database'
         ];
     }
 
@@ -51,7 +55,13 @@ class DistributeSongNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-        return [];
+        return [
+            'type' => 'production',
+            'title' => 'New Task Assigned',
+            'message' => $this->message,
+            'button' => null,
+            'href' => '/admin/production/project/' . $this->projectUid,
+        ];
     }
 
     public function toTelegram($notifiable): array

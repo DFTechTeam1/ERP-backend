@@ -8627,8 +8627,8 @@ class ProjectService
                 select: 'id,project_song_list_id,employee_id,project_id',
                 where: "project_song_list_id = {$songId}",
                 relation: [
-                    'employee:id,nickname,telegram_chat_id',
-                    'project:id,name',
+                    'employee:id,nickname,telegram_chat_id,user_id',
+                    'project:id,name,uid',
                     'song:id,name',
                 ]
             );

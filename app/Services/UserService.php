@@ -443,7 +443,7 @@ class UserService
             'notification_section' => [
                 'general' => $user->hasRole($allRoles),
                 'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
-                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
+                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value, BaseRole::Entertainment->value]),
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
             ],
         ];
@@ -890,7 +890,7 @@ class UserService
                 'message' => $item['data']['message'] ?? '',
                 'title' => $item['data']['title'] ?? '',
                 'icon' => $item['data']['icon'] ?? '',
-                'url' => $item['data']['url'] ?? '',
+                'url' => $item['data']['href'] ?? '',
                 'type' => $item['data']['type'] ?? '',
                 'created_at' => $item['created_at_raw'],
                 'id' => $item['id'],
