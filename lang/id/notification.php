@@ -165,4 +165,5 @@ return [
     'successResendActivationEmail' => 'Email aktivasi telah berhasil dikirim ulang',
     'pleaseAddDeadlineBeforeContinue' => 'Harap tambahkan tenggat waktu sebelum melanjutkan',
     'cannotRemovePicWithTask' => 'Tidak dapat menghapus PIC yang masih memiliki tugas di proyek',
+    'successRejectDeleteSong' => 'Permintaan untuk menghapus lagu telah berhasil ditolak',
 ];

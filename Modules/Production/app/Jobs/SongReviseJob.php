@@ -52,7 +52,9 @@ class SongReviseJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void {}
+    public function handle(): void {
+        $this->sendToWorker();
+    }
 
     protected function sendToWorker()
     {
@@ -61,20 +63,28 @@ class SongReviseJob implements ShouldQueue
 
         $task = EntertainmentTaskSong::selectRaw('id,project_song_list_id,employee_id,project_id')
             ->with([
-                'employee:id,nickname,telegram_chat_id',
-                'project:id,name',
+                'employee:id,nickname,telegram_chat_id,user_id',
+                'project:id,name,uid',
                 'song:id,name',
             ])
             ->whereRaw("project_id = {$projectId} and project_song_list_id = {$songId}")
             ->first();
 
-        if ($task->employee->telegram_chat_id) {
-            $message = "Halo {$task->employee->nickname}\n";
-            $message .= "JB musik {$task->song->name} di event {$task->project->name} di revisi oleh {$this->author}\n";
-            $message .= "JB direvisi karna {$this->payload['reason']}\n";
-            $message .= 'Silahkan login untuk melihat detailnya dan memulai revisinya.';
+        $user = \App\Models\User::find($task->employee->user_id);
 
-            $task->employee->notify(new SongReviseNotification([$task->employee->telegram_chat_id], $message));
-        }
+        \Illuminate\Support\Facades\Log::debug('Task Revise', $task->toArray());
+        \Illuminate\Support\Facades\Log::debug('User Revise', $user->toArray());
+
+        $message = "Your task for song '{$task->song->name}' in project '{$task->project->name}' has been revised by {$this->author}. Please check the revisions.";
+
+        $user->notify(new SongReviseNotification($message, $task->project->uid));
+
+        $pusher = new \App\Services\PusherNotification();
+        $pusher->send('my-channel-'.$user->id, 'new-db-notification', [
+            'update' => true,
+            'st' => true, // stand for stand for
+            'm' => 'Task has been revised', // stand for message
+            't' => 'Task Update', // stand for title
+        ]);
     }
 }

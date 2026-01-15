@@ -13,14 +13,15 @@ class RemovePicFromSong implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private $taskSong;
+    private $payload;
 
     /**
      * Create a new job instance.
+     * @param \Modules\Production\Dto\Song\RemovePicNotificationDto $payload
      */
-    public function __construct(object $taskSong)
+    public function __construct(\Modules\Production\Dto\Song\RemovePicNotificationDto $payload)
     {
-        $this->taskSong = $taskSong;
+        $this->payload = $payload;
     }
 
     /**
@@ -28,6 +29,18 @@ class RemovePicFromSong implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->taskSong->employee->notify(new RemovePicFromSongNotification($this->taskSong));
+        $message = "You have been removed as PIC for the song '{$this->payload->songName}' in project '{$this->payload->projectName}'.";
+
+        $user = \App\Models\User::find($this->payload->userId);
+        $user->notify(new RemovePicFromSongNotification($message, $this->payload->projectUid));
+
+        // Send to pusher notification
+        $pusher = new \App\Services\PusherNotification();
+        $pusher->send('my-channel-'.$this->payload->userId, 'new-db-notification', [
+            'update' => true,
+            'st' => true, // stand for stand for
+            'm' => 'You have been removed as PIC from a song', // stand for message
+            't' => 'Removed as PIC', // stand for title
+        ]);
     }
 }

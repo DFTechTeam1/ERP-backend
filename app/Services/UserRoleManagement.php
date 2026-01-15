@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\System\BaseRole;
+
 class UserRoleManagement
 {
     public function isProductionRole()
@@ -14,6 +16,6 @@ class UserRoleManagement
 
     public function isEntertainmentRole()
     {
-        return auth()->user()->hasRole('entertainment');
+        return auth()->user()->hasRole(BaseRole::Entertainment->value);
     }
 }
