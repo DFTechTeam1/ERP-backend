@@ -168,5 +168,7 @@ return [
     'successDeleteCity' => 'City has been deleted successfully',
     'cannotDeleteCityBcsRelation' => 'Cannot delete city because it has relation to [district/event]',
     'successResendActivationEmail' => 'Activation email has been resent successfully',
-    'pleaseAddDeadlineBeforeContinue' => 'Please add deadline before continue'
+    'pleaseAddDeadlineBeforeContinue' => 'Please add deadline before continue',
+    'cannotRemovePicWithTask' => 'Cannot remove PIC who still has tasks in the project',
+    'successRejectDeleteSong' => 'Request to delete song has been rejected successfully',
 ];

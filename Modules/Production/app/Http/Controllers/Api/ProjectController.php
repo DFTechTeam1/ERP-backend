@@ -1123,4 +1123,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->calculateProratePoint($request->validated(), $projectUid));
     }
+
+    public function rejectDeleteSong(string $projectUid, string $songUid)
+    {
+        return apiResponse($this->service->rejectDeleteSong($projectUid, $songUid));
+    }
 }

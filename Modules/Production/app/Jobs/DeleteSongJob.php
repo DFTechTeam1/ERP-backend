@@ -40,23 +40,22 @@ class DeleteSongJob implements ShouldQueue
             ->with('employee:id,nickname,user_id,telegram_chat_id')
             ->first();
 
-        if (
-            ($entertainmentPic) &&
-            (
-                ($entertainmentPic->employee) &&
-                ($entertainmentPic->employee->telegram_chat_id)
-            )
-        ) {
+        if ($entertainmentPic) {
             $employee = Employee::selectRaw('id,nickname')
                 ->where('user_id', $this->requesterId)
                 ->first();
 
-            $message = "Halo {$entertainmentPic->employee->nickname}";
-            $message .= "\n{$employee->nickname} telah menghapus musik ".$this->songName.' di event '.$this->projectName;
+            $message = "{$employee->nickname} has been deleted the song {$this->songName} from project {$this->projectName}.";
 
-            $telegramChatIds = [$entertainmentPic->employee->telegram_chat_id];
+            $entertainmentPic->notify(new DeleteSongNotification($message));
 
-            $entertainmentPic->notify(new DeleteSongNotification($telegramChatIds, $message));
+            $pusher = new \App\Services\PusherNotification();
+            $pusher->send('my-channel-'.$entertainmentPic->id, 'new-db-notification', [
+                'update' => true,
+                'st' => true, // stand for stand for
+                'm' => 'Song has been deleted by PM', // stand for message
+                't' => 'Song Update', // stand for title
+            ]);
         }
     }
 }

@@ -2,27 +2,21 @@
 
 namespace Modules\Production\Notifications;
 
-use App\Notifications\TelegramChannel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 
-class SongReviseNotification extends Notification
+class RejectDeleteSongNotification extends Notification
 {
     use Queueable;
-
-    public $projectUid;
-
-    public $message;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(string $message, string $projectUid)
+    public function __construct()
     {
-        $this->projectUid = $projectUid;
-
-        $this->message = $message;
+        //
     }
 
     /**
@@ -30,9 +24,7 @@ class SongReviseNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return [
-            'database'
-        ];
+        return ['mail'];
     }
 
     /**
@@ -51,12 +43,6 @@ class SongReviseNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-        return [
-            'type' => 'production',
-            'title' => 'Task Revised',
-            'message' => $this->message,
-            'button' => null,
-            'href' => '/admin/production/project/' . $this->projectUid,
-        ];
+        return [];
     }
 }

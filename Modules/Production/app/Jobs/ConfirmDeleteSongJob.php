@@ -3,6 +3,7 @@
 namespace Modules\Production\Jobs;
 
 use App\Enums\System\BaseRole;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -37,21 +38,27 @@ class ConfirmDeleteSongJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $employee = Employee::find($this->currentWorkerId);
+        $employee = User::where('employee_id', $this->currentWorkerId)->first();
         $entertainmentPic = \App\Models\User::role(BaseRole::ProjectManagerEntertainment->value)
             ->with('employee:id,nickname,user_id,telegram_chat_id')
             ->first();
 
-        if ($employee->telegram_chat_id && $entertainmentPic) {
+        if ($entertainmentPic) {
             $project = Project::selectRaw('id,name')
                 ->where('uid', $this->projectUid)
                 ->first();
 
-            $message = "Halo {$employee->nickname}\n";
-            $message .= "{$entertainmentPic->employee->nickname} sudah menyetujui untuk menghapus lagu {$this->currentSongName} dari event {$project->name}.\n";
-            $message .= 'Kamu bisa memulai tugas yang lain.';
+            $message = "The song {$this->currentSongName} has been successfully deleted from project {$project->name}. You can proceed with your next tasks.";
 
-            $employee->notify(new ConfirmDeleteSongNotification([$employee->telegram_chat_id], $message));
+            $employee->notify(new ConfirmDeleteSongNotification($message, $this->projectUid));
+
+            $pusher = new \App\Services\PusherNotification();
+            $pusher->send('my-channel-'.$employee->id, 'new-db-notification', [
+                'update' => true,
+                'st' => true, // stand for stand for
+                'm' => "The song you're working on has been deleted.", // stand for message
+                't' => 'Confirm Delete Song', // stand for title
+            ]);
         }
     }
 }
