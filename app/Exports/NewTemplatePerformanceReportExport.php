@@ -2,14 +2,21 @@
 
 namespace App\Exports;
 
+use App\Services\ExportImportService;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
+class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, WithEvents, ShouldQueue
 {
     use Exportable;
 
@@ -17,10 +24,16 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
 
     protected $endDate;
 
-    public function __construct(string $startDate = '', string $endDate = '')
+    protected $userId;
+
+    protected $filepath;
+
+    public function __construct(string $startDate = '', string $endDate = '', int $userId, string $filepath)
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
+        $this->userId = $userId;
+        $this->filepath = $filepath;
     }
 
     /**
@@ -28,14 +41,27 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
      */
     public function view(): View
     {
+        ini_set('memory_limit', '1024M');
+        logging('PHP Memory Limit: ', [ini_get('memory_limit')]);
+        logging('PHP Memory Usage: ', [memory_get_usage(true)]);
+        logging('Max Execution Time: ', [ini_get('max_execution_time')]);
         $employeeRepo = new EmployeeRepository;
         $pointProjectRepo = new EmployeePointProjectRepository;
         $projects = $pointProjectRepo->list(
             select: 'id,employee_point_id,project_id,total_point,additional_point,calculated_prorate_point,prorate_point,original_point',
             relation: [
-                'project:id,name,project_date',
-                'project.personInCharges:id,project_id,pic_id',
-                'project.personInCharges.employee:id,name',
+                'project' => function ($queryProject) {
+                    $queryProject->selectRaw('id,name,project_date')
+                        ->with([
+                            'personInCharges:id,project_id,pic_id',
+                            'personInCharges.employee:id,name',
+                            'entertainmentTaskSong.song:id,name',
+                            'entertainmentTaskSong.employee:id,name,position_id',
+                            'entertainmentTaskSong.employee.position:id,name',
+                            'feedbacks:id,project_id,pic_id,feedback',
+                            'feedbacks.pic:id,nickname'
+                        ]);
+                },
                 'details:id,point_id,task_id',
                 'employeePoint:id,type,employee_id',
                 'employeePoint.employee:id,name,position_id',
@@ -50,6 +76,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
         );
 
         $output = [];
+        $entertainmentList = [];
         foreach ($projects as $project) {
             $type = $project->employeePoint->type;
 
@@ -65,8 +92,32 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
                 $pics = collect($project->project->personInCharges)->pluck('employee.name')->toArray();
             }
 
+            if ($project->project->entertainmentTaskSong->count() > 0) {
+                $entertainmentList[$project->project->name] = $project->project->entertainmentTaskSong->groupBy('employee_id')
+                    ->map(function ($item) use ($pics) {
+                        return [
+                            'tasks' => $item->pluck('song.name')->implode(','),
+                            'total_tasks' => $item->count(),
+                            'point' => 1,
+                            'additional_point' => 0,
+                            'calculated_prorate_point' => 0,
+                            'prorate_point' => 0,
+                            'original_point' => 0,
+                            'total_point' => 0,
+                            'project_name' => $item->first()->project->name,
+                            'employee_name' => $item->first()->employee->name,
+                            'pics' => implode(',', $pics),
+                            'position' => $item->first()->employee->position ? $item->first()->employee->position->name : '-',
+                            'feedbacks' => $item->first()->project->feedbacks->map(function ($feedback) {
+                                return $feedback->pic->nickname . ': ' . $feedback->feedback;
+                            }),
+                        ];
+                    })->toArray();
+            }
+
             $output[$project->project->name][] = [
                 'tasks' => implode(',', $tasks),
+                'total_tasks' => count($tasks),
                 'point' => $project->total_point - $project->additional_point,
                 'additional_point' => $project->additional_point,
                 'calculated_prorate_point' => $project->calculated_prorate_point,
@@ -77,9 +128,87 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize
                 'employee_name' => $project->employeePoint->employee->name,
                 'pics' => implode(',', $pics),
                 'position' => $project->employeePoint->employee->position ? $project->employeePoint->employee->position->name : '-',
+                'feedbacks' => $project->project->feedbacks->map(function ($feedback) {
+                    return $feedback->pic->nickname . ': ' . $feedback->feedback;
+                }),
             ];
         }
 
+        // merge $output and $entertainmentList based on project_name
+        foreach ($entertainmentList as $projectName => $entertainmentItems) {
+            if (isset($output[$projectName])) {
+                $output[$projectName] = array_merge($output[$projectName], $entertainmentItems);
+            } else {
+                $output[$projectName] = $entertainmentItems;
+            }
+        }
+
+        logging('output', $entertainmentList);
+        logging('project output', $output);
+
         return view('hrd::new-export-performance-report', ['points' => $output]);
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                // freeze first column
+                $event->sheet->getDelegate()->freezePane('C1');
+
+                // set filter
+                $event->sheet->getDelegate()->setAutoFilter('A1:J1');
+
+                // set borders
+                $lastRow = $event->sheet->getDelegate()->getHighestRow();
+                $event->sheet->getDelegate()->getStyle("A1:J{$lastRow}")->applyFromArray([
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000'],
+                        ],
+                    ],
+                ]);
+
+                // set header to bold
+                $event->sheet->getDelegate()->getStyle('A1:J2')->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                    ],
+                ]);
+
+                // set column A vertical alignment to center
+                $event->sheet->getDelegate()->getStyle("A1:B{$lastRow}")->applyFromArray([
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                    ],
+                ]);
+
+                // set column J vertical alignment to center
+                $event->sheet->getDelegate()->getStyle("J1:J{$lastRow}")->applyFromArray([
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                    ],
+                ]);
+
+                // notify user
+                (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
+                    'description' => 'Your performance report file is ready. Please check your inbox to download the file.',
+                    'message' => '<p>Click <a href="'.$this->filepath.'" target="__blank">here</a> to download your performance report</p>',
+                    'area' => 'finance',
+                    'user_id' => $this->userId,
+                ]);
+            },
+        ];
+    }
+
+    public function failed(\Throwable $exception)
+    {
+        (new ExportImportService)->handleErrorProcessing(payload: [
+            'description' => 'Failed to export finance report',
+            'message' => $exception->getMessage(),
+            'area' => 'finance',
+            'user_id' => $this->userId,
+        ]);
     }
 }

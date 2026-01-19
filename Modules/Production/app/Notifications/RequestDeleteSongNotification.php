@@ -10,16 +10,17 @@ class RequestDeleteSongNotification extends Notification
 {
     use Queueable;
 
-    public $telegramChatIds;
-
     public $message;
+
+    public $projectUid;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $telegramChatIds, string $message)
+    public function __construct(string $message, string $projectUid)
     {
-        //
+        $this->message = $message;
+        $this->projectUid = $projectUid;
     }
 
     /**
@@ -27,7 +28,7 @@ class RequestDeleteSongNotification extends Notification
      */
     public function via($notifiable): array
     {
-        return ['mail'];
+        return ['database'];
     }
 
     /**
@@ -46,6 +47,12 @@ class RequestDeleteSongNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-        return [];
+        return [
+            'type' => 'production',
+            'title' => 'Request Delete Song',
+            'message' => $this->message,
+            'button' => null,
+            'href' => '/admin/production/project/'.$this->projectUid,
+        ];
     }
 }

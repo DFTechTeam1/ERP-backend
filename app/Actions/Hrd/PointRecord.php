@@ -62,14 +62,17 @@ class PointRecord
                     ->where('project_id', $projectId)
                     ->first();
                 if (! $pointProject) {
+                    $point = $data['point'];
+                    $additionalPoint = $data['additional_point'];
+                    $originalPoint = !isset($data['original_point']) ? $point - $additionalPoint : $data['original_point'];
                     $pointProject = EmployeePointProject::create([
                         'employee_point_id' => $currentPoint->id,
                         'project_id' => $projectId,
-                        'total_point' => $data['point'],
-                        'additional_point' => $data['additional_point'],
-                        'prorate_point' => $data['prorate_point'],
-                        'original_point' => $data['original_point'],
-                        'calculated_prorate_point' => $data['calculated_prorate_point'],
+                        'total_point' => $point,
+                        'additional_point' => $additionalPoint,
+                        'prorate_point' => $data['prorate_point'] ?? 0,
+                        'original_point' => $originalPoint,
+                        'calculated_prorate_point' => $data['calculated_prorate_point'] ?? 0,
                     ]);
                 }
 

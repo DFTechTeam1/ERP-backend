@@ -39,6 +39,7 @@ class Store extends FormRequest
             'interactive_area' => 'nullable',
             'interactive_detail' => 'nullable',
             'interactive_note' => 'nullable',
+            'interactive_fee' => 'nullable',
 
             // quotation
             'quotation' => 'required|array',
@@ -63,6 +64,7 @@ class Store extends FormRequest
             'quotation.items.*' => 'required',
 
             'include_tax' => 'required|boolean',
+            'with_accommodation' => 'required|boolean',
 
             'request_type' => 'nullable', // this will be save,draft or save_and_download
         ];

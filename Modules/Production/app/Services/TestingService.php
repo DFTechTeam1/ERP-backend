@@ -116,6 +116,21 @@ class TestingService
             ];
         }
 
+        if (request('pics')) {
+            $pics = collect(request('pics'))->map(function ($pic) {
+                $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee);
+
+                return $picId;
+            })->toArray();
+            $picData = implode(',', $pics);
+            $whereHas = [
+                [
+                    'relation' => 'personInCharges',
+                    'query' => "pic_id IN ({$picData})",
+                ],
+            ];
+        }
+
         $sorts = '';
         if (! empty(request('sortBy'))) {
             foreach (request('sortBy') as $sort) {
@@ -129,6 +144,11 @@ class TestingService
             $sorts = 'project_date ASC';
         }
 
+        logging('WHERE ENTERTAINMENT', [
+            'where' => $where,
+            'whereHas' => $whereHas,
+        ]);
+
         $paginated = $this->projectGroupRepo->projectRepo->pagination(
             $select,
             $where,
@@ -138,8 +158,6 @@ class TestingService
             $whereHas,
             $sorts
         );
-
-        logging('PAGINATED', $paginated->toArray());
 
         $eventTypes = \App\Enums\Production\EventType::cases();
         $classes = \App\Enums\Production\Classification::cases();

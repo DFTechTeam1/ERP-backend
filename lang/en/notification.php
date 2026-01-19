@@ -170,8 +170,9 @@ return [
     'successResendActivationEmail' => 'Activation email has been resent successfully',
     'pleaseAddDeadlineBeforeContinue' => 'Please add deadline before continue',
     'afterPartyStatusUpdated' => 'After party status has been updated successfully',
-    'marcommAssignedToProject' => 'Marcomm has been assigned to event :project',
     'entertainmentAssignedToProject' => 'Entertainment team has been assigned to event :project',
     'marcommAssignedToProject' => 'Marcomm has been assigned to event',
     'invalidPassword' => 'Invalid password',
+    'cannotRemovePicWithTask' => 'Cannot remove PIC who still has tasks in the project',
+    'successRejectDeleteSong' => 'Request to delete song has been rejected successfully',
 ];

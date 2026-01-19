@@ -11,6 +11,8 @@ use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -447,7 +449,7 @@ class UserService
             'notification_section' => [
                 'general' => $user->hasRole($allRoles),
                 'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
-                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
+                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value, BaseRole::Entertainment->value]),
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
             ],
         ];
@@ -883,5 +885,62 @@ class UserService
 
             return errorResponse($th);
         }
+    }
+
+    private function formatOutputNotification(DatabaseNotificationCollection $notifications)
+    {
+        $notifications = $notifications->map(function ($item) {
+            $item['created_at_raw'] = date('d F Y H:i', strtotime($item->created_at));
+
+            return [
+                'message' => $item['data']['message'] ?? '',
+                'title' => $item['data']['title'] ?? '',
+                'icon' => $item['data']['icon'] ?? '',
+                'url' => $item['data']['href'] ?? '',
+                'type' => $item['data']['type'] ?? '',
+                'created_at' => $item['created_at_raw'],
+                'id' => $item['id'],
+            ];
+        })->filter(function ($item) {
+            return $item['type'] !== null && $item['type'] !== '';
+        })->values();
+
+        if ($notifications->count() == 0) {
+            return collect([]);
+        }
+
+        return $notifications;
+    }
+
+    private function getEmployeeNotification(int $userId)
+    {
+        $employee = \Modules\Hrd\Models\Employee::where('user_id', $userId)->first();
+
+        return $this->formatOutputNotification(notifications: $employee->unreadNotifications);
+    }
+
+    private function getUserNotification(int $userId)
+    {
+        $user = \App\Models\User::find($userId);
+
+        return $this->formatOutputNotification(notifications: $user->unreadNotifications);
+    }
+
+    public function getApplicationNotification()
+    {
+        $user = Auth::user();
+        $userId = $user->id;
+
+        $employeeNotifications = $this->getEmployeeNotification(userId: $userId);
+        $userNotifications = $this->getUserNotification(userId: $userId);
+
+        $merged = $employeeNotifications->merge($userNotifications);
+
+        return [
+            'production' => $merged->where('type', 'production'),
+            'finance' => $merged->where('type', 'finance'),
+            'hrd' => $merged->where('type', 'hrd'),
+            'general' => $merged->where('type', 'general'),
+        ];
     }
 }

@@ -45,14 +45,20 @@ class ProjectTaskFactory extends Factory
         ];
     }
 
-    public function withPics(?Employee $employee = null, bool $withWorkState = false, bool $withHoldState = false)
+    public function withPics(?Employee $employee = null, bool $withWorkState = false, bool $withHoldState = false, bool $withCurrentPic = false)
     {
-        return $this->afterCreating(function (\Modules\Production\Models\ProjectTask $task) use ($employee, $withWorkState, $withHoldState) {
+        return $this->afterCreating(function (\Modules\Production\Models\ProjectTask $task) use ($employee, $withWorkState, $withHoldState, $withCurrentPic) {
             if (!$employee) {
                 $employee = Employee::factory()->create();
                 $employeeId = $employee->id;
             } else {
                 $employeeId = $employee->id;
+            }
+
+            if ($withCurrentPic) {
+                $task->update([
+                    'current_pics' => json_encode([$employeeId]),
+                ]);
             }
 
             \Modules\Production\Models\ProjectTaskPic::create([

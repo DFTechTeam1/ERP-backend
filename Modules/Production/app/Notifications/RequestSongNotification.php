@@ -15,14 +15,18 @@ class RequestSongNotification extends Notification
 
     public $message;
 
+    public $projectUid;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $telegramChatIds, mixed $message)
+    public function __construct(array $telegramChatIds, mixed $message, string $projectUid)
     {
         $this->telegramChatIds = $telegramChatIds;
 
         $this->message = $message;
+
+        $this->projectUid = $projectUid;
     }
 
     /**
@@ -32,7 +36,7 @@ class RequestSongNotification extends Notification
     {
         return [
             'database',
-            TelegramChannel::class,
+            // TelegramChannel::class,
         ];
     }
 
@@ -53,9 +57,11 @@ class RequestSongNotification extends Notification
     public function toArray($notifiable): array
     {
         return [
-            'title' => 'Request lagu',
+            'type' => 'production',
+            'title' => 'New Song Request Added',
             'message' => $this->message,
-            'link' => '',
+            'button' => null,
+            'href' => '/admin/production/project/' . $this->projectUid,
         ];
     }
 

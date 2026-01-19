@@ -7,6 +7,7 @@ use App\Exports\NewTemplatePerformanceReportExport;
 use App\Services\GeneralService;
 use Carbon\Carbon;
 use DateTime;
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeePointRepository;
@@ -438,10 +439,18 @@ class PerformanceReportService
             }
 
             $filename = "hrd/performance_report_{$startDate}_{$endDate}.xlsx";
-            Excel::store(new NewTemplatePerformanceReportExport($startDate, $endDate), $filename, 'public');
+            $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+                name: 'hrd.download.export.performanceReport',
+                parameters: [
+                    'fp' => $filename,
+                ],
+                expiration: now()->addHours(5)
+            );
+            // Excel::store(new NewTemplatePerformanceReportExport($startDate, $endDate), $filename, 'public');
+            (new NewTemplatePerformanceReportExport($startDate, $endDate, Auth::id(), $downloadPath))->queue($filename, 'public');
 
             return generalResponse(
-                message: 'Success',
+                message: "Your data is being processed. You'll receive a notification when the process is complete. You can check your inbox periodically to see the results",
                 data: [
                     'path' => asset("storage/{$filename}"),
                 ]

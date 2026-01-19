@@ -17,3 +17,6 @@ use Modules\Hrd\Http\Controllers\HrdController;
 Route::group([], function () {
     Route::resource('hrd', HrdController::class)->names('hrd');
 });
+
+
+Route::get('performanceReport/download/export', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'downloadExport'])->name('hrd.download.export.performanceReport');

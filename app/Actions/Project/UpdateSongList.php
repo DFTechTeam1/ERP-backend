@@ -20,7 +20,7 @@ class UpdateSongList
         $projectSongListRepo = new ProjectSongListRepository;
 
         $songs = $projectSongListRepo->list(
-            select: 'uid,id,name,created_by,is_request_edit,is_request_delete',
+            select: 'uid,id,name,created_by,is_request_edit,is_request_delete,created_at',
             where: 'project_id = '.$projectId,
             relation: [
                 'task:id,project_song_list_id,employee_id,status',
@@ -38,6 +38,10 @@ class UpdateSongList
                 $disabled = true;
             }
             $item['disabled'] = $disabled;
+            $createdAt = date('d M Y H:i', strtotime($item->created_at));
+
+            // Replace 'created_at' with formatted date
+            $item['formatted_created_at'] = $createdAt;
 
             return $item;
         })->toArray();

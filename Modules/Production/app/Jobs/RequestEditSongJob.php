@@ -64,14 +64,22 @@ class RequestEditSongJob implements ShouldQueue
                 ->where('user_id', $this->requesterId)
                 ->first();
 
-            $message = "Halo {$entertainmentPic->employee->nickname}\n";
-            $message .= "{$requesterData->nickname} request untuk ubah lagu untuk event {$project->name} dari {$currentSong->name} jadi {$this->payload['song']}";
-            $message .= "\nLogin untuk melihat detailnya.";
+            $message = "Song in project {$project->name} has been requested changes from {$currentSong->name} to {$this->payload['song']} by {$requesterData->nickname}";
 
             $entertainmentPic->notify(new RequestEditSongNotification(
                 [$entertainmentPic->employee->telegram_chat_id],
-                $message
+                $message,
+                $this->projectUid
             ));
+
+            // Send to pusher notification
+            $pusher = new \App\Services\PusherNotification();
+            $pusher->send('my-channel-'.$entertainmentPic->id, 'new-db-notification', [
+                'update' => true,
+                'st' => true, // stand for stand for
+                'm' => 'You have new song edit request',
+                't' => 'New Song Edit Request',
+            ]);
         }
     }
 }

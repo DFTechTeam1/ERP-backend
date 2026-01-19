@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Enums\Interactive\InteractiveRequestStatus;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Repository\TransactionRepository;
@@ -178,9 +179,9 @@ class ProjectQuotationService
         $quotationId = Crypt::decryptString($quotationId);
         $data = $this->repo->show(
             uid: 'uid',
-            select: 'id,project_deal_id,fix_price,quotation_id,description,design_job',
+            select: 'id,project_deal_id,fix_price,quotation_id,description,design_job,is_include_accomodation',
             relation: [
-                'deal:id,name,project_date,customer_id,event_type,venue,collaboration,led_detail,country_id,state_id,city_id,project_class_id,include_tax',
+                'deal:id,name,project_date,customer_id,event_type,venue,collaboration,led_detail,country_id,state_id,city_id,project_class_id,include_tax,status',
                 'deal.city:id,name',
                 'deal.country:id,name',
                 'deal.state:id,name',
@@ -188,15 +189,60 @@ class ProjectQuotationService
                 'deal.class:id,name',
                 'deal.marketings:id,employee_id,project_deal_id',
                 'deal.marketings.employee:id,name',
+                'deal.lastInteractiveRequest',
+                'deal.activeInteractiveRequest',
                 'items:quotation_id,id,item_id',
                 'items.item:id,name',
             ],
             where: "quotation_id = '{$quotationId}'"
         );
 
+        $interactiveLedDetail = [];
+        // if there have active interactive request, use that, otherwise use last interactive request. But if last reject is rejected, do not use it.
+        if ($data->deal->activeInteractiveRequest) {
+            $interactiveLedDetail = collect($data->deal->activeInteractiveRequest->interactive_detail)->map(function ($item) {
+                return [
+                    'name' => $item['name'] == 'main' ? 'Main Stage' : 'Prefunction',
+                    'size' => $item['textDetail'],
+                ];
+            })->toArray();
+        } else if ($data->deal->lastInteractiveRequest) {
+            if ($data->deal->lastInteractiveRequest->status == InteractiveRequestStatus::Rejected) {
+                $interactiveLedDetail = [];
+            } else {
+                $interactiveLedDetail = collect($data->deal->lastInteractiveRequest->interactive_detail)->map(function ($item) {
+                    return [
+                        'name' => $item['name'] == 'main' ? 'Main Stage' : 'Prefunction',
+                        'size' => $item['textDetail'],
+                    ];
+                })->toArray();
+            }
+        }
+
+        // if project deal status is Final, then check the interactive project. Replace interactiveLedDetail with this interactive projects led detail
+        if ($data->deal->status == \App\Enums\Production\ProjectDealStatus::Final) {
+            $interactiveProject = $this->projectDealRepo->show(
+                uid: $data->deal->id,
+                select: 'id',
+                relation: [
+                    'project.interactiveProject'
+                ],
+            );
+
+            if ($interactiveProject?->project?->interactiveProject) {
+                $interactiveLedDetail = collect($interactiveProject->project->interactiveProject->led_detail)->map(function ($item) {
+                    return [
+                        'name' => $item['name'] == 'main' ? 'Main Stage' : 'Prefunction',
+                        'size' => $item['textDetail'],
+                    ];
+                })->toArray();
+            }
+        }
+
         $output = [
             'include_tax' => $data->deal->include_tax,
             'rules' => $this->generalService->getSettingByKey('quotation_rules'),
+            'is_include_accomodation' => $data->is_include_accomodation,
             'company' => [
                 'address' => $this->generalService->getSettingByKey('company_address'),
                 'email' => $this->generalService->getSettingByKey('company_email'),
@@ -230,6 +276,7 @@ class ProjectQuotationService
             'items' => collect($data->items)->map(function ($item) {
                 return $item->item->name;
             })->toArray(),
+            'interactiveLedDetail' => $interactiveLedDetail
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('quotation.quotation-lato', $output)

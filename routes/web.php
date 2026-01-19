@@ -22,6 +22,7 @@ use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
 use Modules\Finance\Models\Invoice;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Jobs\RemindAssignmentMarcomm;
 use Modules\Production\Models\Project;
@@ -198,19 +199,107 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $projects = (new ProjectRepository)->list(
-        select: 'id,name,uid,project_date,venue,country_id,state_id,city_id',
-        where: "DATE(project_date) > DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND DATE(project_date) < DATE_ADD(CURDATE(), INTERVAL 14 DAY) AND NOT EXISTS (SELECT 1 FROM project_marcomm_attendances WHERE project_marcomm_attendances.project_id = projects.id) AND NOT EXISTS (SELECT 1 FROM project_marcomm_afpat_attendances WHERE project_marcomm_afpat_attendances.project_id = projects.id)",
-        relation: [
-            'country:id,name',
-            'state:id,name',
-            'city:id,name',
-            'personInCharges',
-            'personInCharges.employee:id,nickname,email,telegram_chat_id',
-        ]
-    );
+    return app(\App\Services\UserService::class)->getApplicationNotification();
+});
 
-    return $projects;
+Route::get('manual-add', function () {
+    $employees = Employee::selectRaw('id,name')
+        ->whereRaw("name LIKE '%kanza%' OR name LIKE '%ardian%' or name LIKE '%hafid%' or name LIKE '%laily%' or name LIKE '%gavyn%' or name LIKE '%arif%' or name LIKE '%giantoro%'")
+        ->get();
+
+    $payload = [
+        [
+            'employee_point_id' => '2',
+            'project_id' => 467,
+            'total_point' => 3,
+            'additional_point' => 0,
+            'prorate_point' => 0,
+            'calculated_prorate_point' => 0,
+            'original_point' => 3,
+        ],
+        [
+            'employee_point_id' => '12',
+            'project_id' => 467,
+            'total_point' => 2,
+            'additional_point' => 0,
+            'prorate_point' => 0,
+            'calculated_prorate_point' => 0,
+            'original_point' => 2,
+        ],
+        [
+            'employee_point_id' => '1',
+            'project_id' => 467,
+            'total_point' => 5,
+            'additional_point' => 0,
+            'prorate_point' => 0,
+            'calculated_prorate_point' => 0,
+            'original_point' => 5,
+        ],
+        [
+            'employee_point_id' => '5',
+            'project_id' => 467,
+            'total_point' => 2,
+            'additional_point' => 0,
+            'prorate_point' => 0,
+            'calculated_prorate_point' => 0,
+            'original_point' => 2,
+        ],
+        [
+            'employee_point_id' => '10',
+            'project_id' => 467,
+            'total_point' => 3,
+            'additional_point' => 0,
+            'prorate_point' => 0,
+            'calculated_prorate_point' => 0,
+            'original_point' => 3,
+        ],
+        [
+            'employee_point_id' => '3',
+            'project_id' => 467,
+            'total_point' => 1,
+            'additional_point' => 0,
+            'prorate_point' => 0,
+            'calculated_prorate_point' => 0,
+            'original_point' => 1,
+        ],
+        [
+            'employee_point_id' => '4',
+            'project_id' => 467,
+            'total_point' => 1,
+            'additional_point' => 0,
+            'prorate_point' => 0,
+            'calculated_prorate_point' => 0,
+            'original_point' => 1,
+        ],
+    ];
+
+    DB::beginTransaction();
+    try {
+        $total = count($payload);
+        $inputProcessed = 0;
+        foreach ($payload as $point) {
+            $check = EmployeePointProject::where('employee_point_id', $point['employee_point_id'])
+                ->where('project_id', $point['project_id'])
+                ->first();
+
+            if (!$check) {
+                $inputProcessed++;
+                EmployeePointProject::create($point);
+            }
+        }
+        DB::commit();
+        return [
+            'status' => 'success',
+            'message' => 'Processed ' . $inputProcessed . ' of ' . $total . ' data successfully.',
+        ];
+    } catch (\Throwable $th) {
+        return [
+            'status' => 'failed',
+            'message' => $th->getMessage(),
+        ];
+        DB::rollBack();
+    }
+
 });
 
 Route::get('migrate-duration', function () {

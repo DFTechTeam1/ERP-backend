@@ -7,14 +7,18 @@
 
 namespace App\Services;
 
+use App\Enums\Interactive\InteractiveRequestStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\System\BaseRole;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Vinkla\Hashids\Facades\Hashids;
@@ -486,7 +490,7 @@ class GeneralService
             'notification_section' => [
                 'general' => $user->hasRole($allRoles),
                 'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
-                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
+                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value, BaseRole::Entertainment->value]),
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
             ],
         ];
@@ -666,5 +670,72 @@ class GeneralService
         );
 
         return $projects;
+    }
+
+    /**
+     * Adding interactive to project deal
+     * Here we just create interactive request, and wait for approval from director
+     *
+     * @param  array  $payload  With these following structure
+     *                          - string|int $interactive_area
+     *                          - array $interactive_detail
+     *                          - string $interactive_note
+     *                          - string $interactive_fee
+     *                          - string $fix_price
+     */
+    public function addInteractive(string $projectDealUid, array $payload, bool $withDatabaseTransaction = false): array
+    {
+        if ($withDatabaseTransaction) {
+            DB::beginTransaction();
+        }
+        try {
+            $repo = (new ProjectDealRepository);
+
+            $userId = Auth::id();
+
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            $project = $repo->show(
+                uid: $projectDealId,
+                select: 'id,status',
+                relation: [
+                    'pendingInteractiveRequest:id,project_deal_id',
+                ]
+            );
+
+            // validate request, if already have interactive request, return error
+            if ($project->pendingInteractiveRequest) {
+                return errorResponse(message: __('notification.eventAlreadyHaveInteractiveRequest'));
+            }
+
+            $project->interactiveRequests()->create([
+                'status' => InteractiveRequestStatus::Pending,
+                'interactive_detail' => $payload['interactive_detail'],
+                'interactive_area' => $payload['interactive_area'],
+                'interactive_note' => $payload['interactive_note'],
+                'interactive_fee' => $payload['interactive_fee'],
+                'fix_price' => $payload['fix_price'],
+            ]);
+
+            if ($withDatabaseTransaction) {
+                AddInteractiveProjectJob::dispatch($projectDealId, $userId)->afterCommit();
+            } else {
+                AddInteractiveProjectJob::dispatch($projectDealId, $userId);
+            }
+
+            if ($withDatabaseTransaction) {
+                DB::commit();
+            }
+
+            return generalResponse(
+                message: __('notification.successAddInteractiveRequestAndWaitingApproval'),
+            );
+        } catch (\Throwable $th) {
+            if ($withDatabaseTransaction) {
+                DB::rollBack();
+            }
+
+            return errorResponse($th);
+        }
     }
 }

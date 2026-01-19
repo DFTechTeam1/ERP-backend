@@ -7,6 +7,8 @@ use App\Actions\Hrd\PointRecord;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
 
+use function Pest\Laravel\assertDatabaseHas;
+
 it ('First pic create new record', function () {
     // Arrange
     $employee = Employee::factory()->create();
@@ -32,7 +34,7 @@ it ('First pic create new record', function () {
     
     // Assert
     expect($result)->toBeTrue();
-    $this->assertDatabaseHas('employee_point_projects', [
+    assertDatabaseHas('employee_point_projects', [
         'project_id' => $project->id,
         'total_point' => 10,
         'additional_point' => 5,

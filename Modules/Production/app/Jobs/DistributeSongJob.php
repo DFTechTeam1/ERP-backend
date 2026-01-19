@@ -48,15 +48,20 @@ class DistributeSongJob implements ShouldQueue
             ->where('uid', $this->projectUid)
             ->first();
 
-        if ($employee->telegram_chat_id) {
-            $message = "Halo {$employee->nickname}\n";
-            $message .= "Kamu ditugaskan untuk buat JB di event {$project->name}.\n";
-            $message .= "Musik yang akan kamu kerjakan adalah {$song->name}";
+        $message = "You have been assigned to work on this '{$song->name}' song for project '{$project->name}'.";
 
-            $user = User::where('employee_id', $employee->id)
-                ->first();
+        $user = User::where('employee_id', $employee->id)
+            ->first();
 
-            $user->notify(new DistributeSongNotification([$employee->telegram_chat_id], $message));
-        }
+        $user->notify(new DistributeSongNotification([$employee->telegram_chat_id], $message, $this->projectUid));
+
+        // Send to pusher notification
+        $pusher = new \App\Services\PusherNotification();
+        $pusher->send('my-channel-'.$user->id, 'new-db-notification', [
+            'update' => true,
+            'st' => true, // stand for stand for
+            'm' => 'You have been assigned a new task', // stand for message
+            't' => 'New Task', // stand for title
+        ]);
     }
 }
