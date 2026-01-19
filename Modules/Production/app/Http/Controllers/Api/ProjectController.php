@@ -10,8 +10,13 @@ use Modules\Finance\Http\Requests\Refund\CreateTransaction;
 use Modules\Production\Http\Requests\CalculateProratePoint;
 use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
+use Modules\Production\Http\Requests\Incharge\AssignEntertainmentRequest;
+use Modules\Production\Http\Requests\Incharge\AssignMarcommRequest;
+use Modules\Production\Http\Requests\Incharge\AssignMarcommWidget;
+use Modules\Production\Http\Requests\Project\AssignMarcommToProject;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
+use Modules\Production\Http\Requests\Project\ChangeAfpatStatus;
 use Modules\Production\Http\Requests\Project\ChangeStatus;
 use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\CompleteProject;
@@ -37,6 +42,7 @@ use Modules\Production\Http\Requests\Project\UpdateSong;
 use Modules\Production\Http\Requests\Project\UploadProofOfWork;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Services\CustomerService;
+use Modules\Production\Services\InchargeService;
 use Modules\Production\Services\ProjectService;
 use Modules\Production\Services\TestingService;
 
@@ -54,7 +60,8 @@ class ProjectController extends Controller
         ProjectService $projectService,
         TestingService $testingService,
         CustomerService $customerService,
-        \Modules\Production\Services\ProjectDealService $projectDealService
+        \Modules\Production\Services\ProjectDealService $projectDealService,
+        private readonly InchargeService $inchargeService
     ) {
         $this->service = $projectService;
 
@@ -1122,6 +1129,70 @@ class ProjectController extends Controller
     public function calculateProratePoint(CalculateProratePoint $request, string $projectUid): JsonResponse
     {
         return apiResponse($this->service->calculateProratePoint($request->validated(), $projectUid));
+    }
+
+    /**
+     * Update after party status
+     * @param ChangeAfpatStatus  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function updateAfterPartyStatus(ChangeAfpatStatus $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->updateAfterPartyStatus($request->validated(), $projectUid));
+    }
+
+    /**
+     * Get incharge list
+     * @return JsonResponse
+     */
+    public function inchargeList(): JsonResponse
+    {
+        return apiResponse($this->inchargeService->list());
+    }
+
+    /**
+     * Assign on duty entertainment
+     * @param AssignEntertainmentRequest  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function assignOnDutyEntertainment(AssignEntertainmentRequest $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignOnDutyEntertainment($request->validated(), $projectUid));
+    }
+    
+    /**
+     * Assign on duty marcomm
+     * @param AssignMarcommRequest  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function assignOnDutyMarcomm(AssignMarcommRequest $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignOnDutyMarcomm($request->validated(), $projectUid));
+    }
+
+    /**
+     * Get marcomm assignment list
+     * @param string  $employeeUid
+     * @return JsonResponse
+     */
+    public function marcommAssignmentList(string $employeeUid, string $type): JsonResponse
+    {
+        return apiResponse($this->inchargeService->marcommAssignmentList($employeeUid));
+    }
+
+    /**
+     * Assign on duty from widget
+     * @param AssignMarcommWidget  $request
+     * @param string  $employeeUid
+     * @param string $type
+     * @return JsonResponse
+     */
+    public function assignOnDutyFromWidget(AssignMarcommWidget $request, string $employeeUid, string $type): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignOnDutyFromWidget($request->validated(), $employeeUid, $type));
     }
 
     public function rejectDeleteSong(string $projectUid, string $songUid)

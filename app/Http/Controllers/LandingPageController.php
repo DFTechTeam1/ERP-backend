@@ -2,6 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeePointService;
 use Modules\Hrd\Services\PerformanceReportService;
@@ -59,6 +65,69 @@ class LandingPageController extends Controller
     {
         return view('landing');
     }
+
+    /**
+     * Show the login form for documentation access
+     * 
+     * @return \Illuminate\View\View
+     */
+    public function showLoginForm()
+    {
+        // If user is already authenticated, redirect to intended page
+        // if (Auth::guard('web')->check()) {
+        //     return redirect()->intended('/');
+        // }
+        
+        return view('auth.login');
+    }
+
+    /**
+     * Handle login request for documentation access
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        
+        if ($user && Hash::check($request->password, $user->password)) {
+            Auth::guard('web')->attempt(['email' => $request->email, 'password' => $request->password]); // Start web session
+            return redirect('/scalar');
+        }
+
+        return back()->withErrors([
+            'email' => 'The provided credentials do not match our records.',
+        ]);
+    }
+
+    /**
+     * Handle logout request
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function logout(Request $request)
+    {
+        Log::info('Documentation logout', [
+            'user_id' => Auth::id(),
+            'email' => Auth::user()->email ?? 'unknown',
+        ]);
+
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('documentation.login')
+            ->with('success', 'You have been logged out successfully.');
+    }
+
 
     public function sendToNAS()
     {

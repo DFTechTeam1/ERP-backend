@@ -3138,6 +3138,12 @@ class ProjectService
 
     /**
      * Distribute task to modeler teams
+     * @param array $payload with these following structure
+     *                       - array <string> $teams
+     *                       - int $assign_to_me (1|0)
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return array<string, mixed>
      */
     public function distributeModellerTask(array $payload, string $projectUid, string $taskUid): array
     {

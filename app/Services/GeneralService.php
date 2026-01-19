@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Repository\ProjectDealRepository;
+use Modules\Production\Repository\ProjectRepository;
 use Vinkla\Hashids\Facades\Hashids;
 
 class GeneralService
@@ -403,6 +404,37 @@ class GeneralService
         ];
     }
 
+    /**
+     * Generate access token for express app
+     * Here we use static password since the express app will not store any user data
+     * So the password is only used to validate the request
+     * @param string $email
+     * @return string
+     */
+    public function authorizeExpressAccess(string $email): string
+    {
+        $response = \Illuminate\Support\Facades\Http::post(
+            url: config('app.express_endpoint').'/hrd/auth/login',
+            data: [
+                'email' => $email,
+                'password' => 'password'
+            ]
+        );
+
+        if ($response->status() > 300) {
+            throw new \App\Exceptions\UserNotFound(message: 'Failed to generate express token');
+        }
+
+        $token = $response->json()['data']['token'];
+
+        return $token;
+    }
+
+    /**
+     * Generate access token for reporting app
+     * @param string $email
+     * @return string
+     */
     public function authorizeReportingAccess(string $email): string
     {
         $response = \Illuminate\Support\Facades\Http::post(
@@ -479,8 +511,11 @@ class GeneralService
 
         $encryptedPayload = $this->getEncryptedPayloadData(tokenizer: $tokenizer);
 
-        // generate reporting token
+        // Generate reporting token
         $reportingToken = $this->authorizeReportingAccess(email: $user->email);
+
+        // Generate express token
+        $expressToken = $this->authorizeExpressAccess(email: $user->email);
 
         $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
@@ -501,6 +536,7 @@ class GeneralService
             'mEnc' => $menusEncrypted,
             'mainToken' => $token->plainTextToken,
             'menus' => $menus,
+            'expressToken' => $expressToken
         ];
     }
 
@@ -619,6 +655,21 @@ class GeneralService
     public function mainProcessToGetPicScheduler(string $projectUid, ?string $startDate = null, ?string $endDate = null)
     {
         return mainProcessToGetPicScheduler($projectUid, $startDate, $endDate);
+    }
+
+    public function getRemindIncomingProjects(): Collection
+    {
+        $projects = (new ProjectRepository)->list(
+            select: 'id,name,uid,project_date,venue,country_id,state_id,city_id',
+            where: "DATE(project_date) > DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND DATE(project_date) < DATE_ADD(CURDATE(), INTERVAL 14 DAY) AND NOT EXISTS (SELECT 1 FROM project_marcomm_attendances WHERE project_marcomm_attendances.project_id = projects.id) AND NOT EXISTS (SELECT 1 FROM project_marcomm_afpat_attendances WHERE project_marcomm_afpat_attendances.project_id = projects.id) AND marcomm_attendance_check = 0",
+            relation: [
+                'country:id,name',
+                'state:id,name',
+                'city:id,name',
+            ]
+        );
+
+        return $projects;
     }
 
     /**

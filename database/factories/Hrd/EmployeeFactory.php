@@ -106,11 +106,12 @@ class EmployeeFactory extends Factory
         ];
     }
 
-    public function withUser()
+    public function withUser(string $password = 'password')
     {
-        return $this->afterCreating(function (Employee $employee) {
+        return $this->afterCreating(function (Employee $employee) use ($password) {
             $user = User::factory()->create([
                 'employee_id' => $employee->id,
+                'password' => $password
             ]);
 
             Employee::where('id', $employee->id)
