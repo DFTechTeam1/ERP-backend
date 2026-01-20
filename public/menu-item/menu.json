@@ -16,7 +16,7 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-office-building-cog-outline",
             "childs": [
-                { "path": "/admin/development/projects", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "mdiPlain:mdi-folder", "permission": "list_project" }
+                { "path": "/admin/development/tasks", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "mdiPlain:mdi-folder", "permission": "list_project" }
             ]
         },
         {
