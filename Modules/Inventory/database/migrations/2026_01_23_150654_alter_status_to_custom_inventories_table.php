@@ -22,6 +22,7 @@ return new class extends Migration
             $table->dropColumn('location');
             $table->dropColumn('build_series');
             $table->dropColumn('barcode');
+            $table->dropColumn('type');
         });
     }
 
@@ -34,6 +35,7 @@ return new class extends Migration
             $table->string('barcode')->nullable();
             $table->string('build_series')->nullable();
             $table->string('location')->nullable();
+            $table->string('type')->nullable();
             $table->tinyInteger('default_request_item')->nullable();
 
             $table->dropColumn('status');
