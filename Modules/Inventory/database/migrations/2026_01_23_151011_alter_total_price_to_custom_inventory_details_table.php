@@ -27,7 +27,7 @@ return new class extends Migration
 
         // Create trigger for INSERT operations
         DB::unprepared('
-            CREATE TRIGGER calculate_total_price_insert 
+            CREATE DEFINER = CURRENT_USER TRIGGER calculate_total_price_insert
             BEFORE INSERT ON custom_inventory_details 
             FOR EACH ROW 
             SET NEW.total_price = COALESCE(NEW.price, 0) * COALESCE(NEW.quantity, 0);
@@ -35,7 +35,7 @@ return new class extends Migration
 
         // Create trigger for UPDATE operations
         DB::unprepared('
-            CREATE TRIGGER calculate_total_price_update 
+            CREATE DEFINER = CURRENT_USER TRIGGER calculate_total_price_update
             BEFORE UPDATE ON custom_inventory_details 
             FOR EACH ROW 
             SET NEW.total_price = COALESCE(NEW.price, 0) * COALESCE(NEW.quantity, 0);
