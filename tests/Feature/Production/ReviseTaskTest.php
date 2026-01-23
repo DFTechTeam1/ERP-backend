@@ -4,6 +4,10 @@ use App\Actions\Project\DetailCache;
 use Illuminate\Http\UploadedFile;
 use Modules\Production\Models\Project;
 
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+
 beforeEach(function () {
     $this->user = initAuthenticateUser(
         withEmployee: true,
@@ -17,7 +21,7 @@ beforeEach(function () {
         ]
     );
 
-    $this->actingAs($this->user);
+    actingAs($this->user);
 
     // create project pic employee
     $this->projectPic = \Modules\Hrd\Models\Employee::factory()->create();
@@ -40,9 +44,10 @@ it ('Revise task return success', function () {
     $task = \Modules\Production\Models\ProjectTask::factory()
         ->for($this->project, 'project')
         ->for($this->project->boards->first(), 'board')
-        ->withPics(employee: $employee, withWorkState: true)
+        ->withPics(employee: $employee, withWorkState: true, withCurrentPic: true)
         ->create([
             'status' => \App\Enums\Production\TaskStatus::OnProgress->value,
+            'end_date' => now()->addDays(3)->format('Y-m-d H:i:s')
         ]);
 
     $responseSubmit = $this->postJson(route('api.production.task.proof.store', [
@@ -66,7 +71,7 @@ it ('Revise task return success', function () {
 
     $response->assertStatus(201);
 
-    $this->assertDatabaseMissing('project_task_pic_approvalstates', [
+    assertDatabaseMissing('project_task_pic_approvalstates', [
         'task_id' => $task->id,
         'pic_id' => $this->projectPic->id,
         'project_id' => $this->project->id,
@@ -74,17 +79,17 @@ it ('Revise task return success', function () {
         'approved_at' => null,
     ]);
 
-    $this->assertDatabaseHas('project_tasks', [
+    assertDatabaseHas('project_tasks', [
         'id' => $task->id,
         'status' => \App\Enums\Production\TaskStatus::Revise->value,
     ]);
 
-    $this->assertDatabaseHas('project_task_pics', [
+    assertDatabaseHas('project_task_pics', [
         'project_task_id' => $task->id,
         'employee_id' => $employee->id,
     ]);
 
-    $this->assertDatabaseHas('project_task_pic_revisestates', [
+    assertDatabaseHas('project_task_pic_revisestates', [
         'task_id' => $task->id,
         'employee_id' => $employee->id,
         'finish_at' => null,

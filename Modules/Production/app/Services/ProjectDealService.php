@@ -38,6 +38,7 @@ use Modules\Finance\Repository\TransactionRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
+use Modules\Production\Jobs\NotifyApprovalRecipientWhenInteractiveHasBeenDelete;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Repository\InteractiveProjectPicRepository;
@@ -480,7 +481,8 @@ class ProjectDealService
                 'marketings',
                 'quotations',
                 'quotations.items',
-                'project:id,project_deal_id'
+                'project:id,project_deal_id',
+                'lastInteractiveRequest'
             ]);
 
             // only not finalized project that can be deleted
@@ -503,6 +505,40 @@ class ProjectDealService
                     ],
                     type: 'delete'
                 );
+            }
+
+            // if last inteactive request status is NOT rejected, remove the request, remove the interactive project also if exists
+            if ($detail->lastInteractiveRequest && $detail->lastInteractiveRequest->status != InteractiveRequestStatus::Rejected) {
+                // remove interactive project pics
+                $interactiveProject = $this->interactiveProjectRepo->show(
+                    uid: 'id,name,project_date',
+                    select: 'id',
+                    relation: [
+                        'pics'
+                    ],
+                    where: "project_deal_id = {$detail->id}"
+                );
+
+                $interactiveName = $interactiveProject->name;
+                $interactiveDate = $interactiveProject->project_date;
+
+                if ($interactiveProject) {
+                    foreach ($interactiveProject->pics as $pic) {
+                        // delete from db
+                        $this->interactiveProjectPicRepo->delete(id: $pic->id);
+                    }
+
+                    // delete interactive project
+                    $this->interactiveProjectRepo->delete(id: 0, where: "project_deal_id = {$detail->id}");
+                }
+
+                // delete interactive request
+                $this->interactiveRequestRepo->delete(id: 0, where: "project_deal_id = {$detail->id}");
+
+                NotifyApprovalRecipientWhenInteractiveHasBeenDelete::dispatch([
+                    'name' => $interactiveName,
+                    'date' => $interactiveDate
+                ])->afterCommit();
             }
 
             $this->repo->delete(id: $detail->id);
@@ -702,6 +738,7 @@ class ProjectDealService
                 'latestQuotation',
                 'latestQuotation.items:id,quotation_id,item_id',
                 'latestQuotation.items.item:id,name',
+                'lastInteractiveRequest'
             ]
         );
 
@@ -748,7 +785,9 @@ class ProjectDealService
                     'quotations.items:id,quotation_id,item_id',
                     'quotations.items.item:id,name',
                     'latestQuotation',
+                    'activeInteractiveRequest',
                     'finalQuotation',
+                    'interactiveRequests',
                     'customer:id,name,phone,email',
                     'refund:id,project_deal_id,refund_amount,refund_type,status,refund_percentage,refund_reason,created_by,created_at',
                     'refund.createdBy:id,employee_id',
@@ -756,7 +795,6 @@ class ProjectDealService
                     'refund.transaction',
                     'city:id,name',
                     'class:id,name',
-                    'activeInteractiveRequest',
                     'invoices' => function ($queryInvoice) {
                         $queryInvoice->where('is_main', 0)
                             ->with([
@@ -838,6 +876,12 @@ class ProjectDealService
                                 <li>Biaya diatas termasuk Akomodasi untuk Crew bertugas di hari-H event.</li>
                             </ul>
                         ',
+                        'activeInteractiveRequest' => $data->activeInteractiveRequest ? [
+                            'interactive_area' => $data->activeInteractiveRequest->interactive_area,
+                            'interactive_fee' => $data->activeInteractiveRequest->interactive_fee,
+                            'interactive_detail' => $data->activeInteractiveRequest->interactive_detail,
+                            'interactive_note' => $data->activeInteractiveRequest->interactive_note,
+                        ] : null,
                     ],
                 ];
             })->toArray();
@@ -1259,6 +1303,10 @@ class ProjectDealService
                         $field = 'include_tax';
                         break;
 
+                    case 'With Accommodation':
+                        $field = 'with_accommodation';
+                        break;
+
                     default:
                         $field = null;
                         break;
@@ -1269,6 +1317,9 @@ class ProjectDealService
                     if ($field == 'quotation_note') {
                         $needUpdateQuotationNote = true;
                         $payloadQuotation['description'] = $changeData['new_value'];
+                    } else if ($field == 'with_accommodation') {
+                        $needUpdateQuotationNote = true;
+                        $payloadQuotation['is_include_accomodation'] = $changeData['new_value'];
                     } else {
                         $payloadUpdate[$field] = $changeData['new_value'];
                         $mainPayload[$field] = $changeData['new_value'];
@@ -1647,46 +1698,11 @@ class ProjectDealService
      */
     public function addInteractive(string $projectDealUid, array $payload): array
     {
-        DB::beginTransaction();
-        try {
-            $userId = Auth::id();
-
-            $projectDealId = Crypt::decryptString($projectDealUid);
-
-            $project = $this->repo->show(
-                uid: $projectDealId,
-                select: 'id,status',
-                relation: [
-                    'pendingInteractiveRequest:id,project_deal_id',
-                ]
-            );
-
-            // validate request, if already have interactive request, return error
-            if ($project->pendingInteractiveRequest) {
-                return errorResponse(message: __('notification.eventAlreadyHaveInteractiveRequest'));
-            }
-
-            $project->interactiveRequests()->create([
-                'status' => InteractiveRequestStatus::Pending,
-                'interactive_detail' => $payload['interactive_detail'],
-                'interactive_area' => $payload['interactive_area'],
-                'interactive_note' => $payload['interactive_note'],
-                'interactive_fee' => $payload['interactive_fee'],
-                'fix_price' => $payload['fix_price'],
-            ]);
-
-            AddInteractiveProjectJob::dispatch($projectDealId, $userId)->afterCommit();
-
-            DB::commit();
-
-            return generalResponse(
-                message: __('notification.successAddInteractiveRequestAndWaitingApproval'),
-            );
-        } catch (\Throwable $th) {
-            DB::rollBack();
-
-            return errorResponse($th);
-        }
+        return $this->generalService->addInteractive(
+            projectDealUid: $projectDealUid,
+            payload: $payload,
+            withDatabaseTransaction: true
+        );
     }
 
     /**
@@ -1897,7 +1913,16 @@ class ProjectDealService
                 relation: [
                     'requester:id,employee_id',
                     'requester.employee:id,user_id,name',
-                    'projectDeal:id,name,project_date',
+                    'projectDeal' => function ($queryDeal) {
+                        $queryDeal->selectRaw('id,name,project_date')
+                            ->where('deleted_at', null);
+                    },
+                ],
+                whereHas: [
+                    [
+                        'relation' => 'projectDeal',
+                        'query' => "deleted_at IS NULL"
+                    ]
                 ],
                 limit: $itemsPerPage,
                 page: $page,
@@ -1909,8 +1934,8 @@ class ProjectDealService
                 return [
                     'id' => Crypt::encryptString($item->id),
                     'project_deal_uid' => Crypt::encryptString($item->project_deal_id),
-                    'project_name' => $item->projectDeal->name,
-                    'project_date' => date('d F Y', strtotime($item->projectDeal->project_date)),
+                    'project_name' => $item?->projectDeal?->name,
+                    'project_date' => $item?->projectDeal ? date('d F Y', strtotime($item->projectDeal->project_date)) : null,
                     'requester' => $item->requester->employee->name,
                     'status' => $item->status->label(),
                     'status_color' => $item->status->color(),

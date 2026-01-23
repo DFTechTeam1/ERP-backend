@@ -50,28 +50,28 @@ class RequestSongJob implements ShouldQueue
                 ($entertainmentPic->employee->telegram_chat_id)
             )
         ) {
-            $requester = Employee::selectRaw('id,nickname')
+            $requester = Employee::selectRaw('id,nickname,user_id')
                 ->where('user_id', $this->createdBy)
                 ->first();
 
-            $message = 'Halo '.$entertainmentPic->employee->nickname;
-            $message .= "\n".$requester->nickname.' telah menambahkan list lagu di event '.$this->project->name;
+            $numberOfSongs = count($this->songs);
 
-            $message .= "\nLagu untuk event ini adalah:\n";
-
-            $songs = ProjectSongList::select('name')
-                ->where('project_id', $this->project->id)
-                ->get();
-
-            foreach ($songs as $keySong => $song) {
-                $index = $keySong + 1;
-                $message .= "{$index}. {$song->name}\n";
-            }
+            $message = "{$numberOfSongs} new song request has been made for project {$this->project->name} by {$requester->nickname}";
 
             $entertainmentPic->notify(new RequestSongNotification(
                 telegramChatIds: [$entertainmentPic->employee->telegram_chat_id],
-                message: $message
+                message: $message,
+                projectUid: $this->project->uid
             ));
+
+            // Send to pusher notification
+            $pusher = new \App\Services\PusherNotification();
+            $pusher->send('my-channel-'.$entertainmentPic->id, 'new-db-notification', [
+                'update' => true,
+                'st' => true, // stand for stand for
+                'm' => 'You have new song request',
+                't' => 'New Song Request',
+            ]);
         }
     }
 }

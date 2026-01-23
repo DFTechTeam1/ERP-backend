@@ -1,0 +1,173 @@
+Enum RequestEquipmentMastersStatusEnum {
+    pending
+    on_process
+    success
+    cancel
+}
+
+Enum RequestEquipmentsOrderTypeEnum {
+    online
+    offline
+}
+
+Enum RequestEquipmmentWarehouseEnum {
+    office
+    entertainment
+}
+
+Enum RequestEquipmentApprovalStatusEnum {
+    fully_approved
+    partially_approved
+    fully_rejected
+}
+
+Enum RequestEquipmentMovementUpdateStatusEnum {
+    on_process
+    success
+}
+
+Enum InventoryItemStatusEnum {
+    in_use
+    in_repair
+    broke
+    disposal
+    available
+}
+
+Enum InventoryItemLocationEnum {
+    in_user
+    warehouse
+    in_event
+}
+Enum InventoryItemWarehouseEnum {
+    entertainment
+    office
+}
+
+Enum RequestEquipmentUpdateStatusEnum {
+    need_approval
+    approved
+    rejected
+}
+
+Table inventories {
+    id bigint [pk, increment]
+    created_at datetime
+    updated_at datetime [default: null]
+    uid char(36)
+    name varchar(255)
+    stock int
+    item_type_id bigint //Have relation with inventory_types tbl (not having an tbl update).
+    unit_id bigint
+    description varchar(255) [default: null]
+    created_by bigint [default: null]
+    updated_by bigint [default: null]
+}
+
+
+Table inventory_items {
+    id bigint [pk, increment]
+    uid char(36)
+    created_at datetime
+    updated_at datetime [default: null]
+    status InventoryItemStatusEnum [default: "available"]
+    location InventoryItemLocationEnum [default: "warehouse"]
+    inventory_id bigint
+    user_id bigint //Have relation with users tbl (not having an tbl update).
+    brand_id bigint //Have relation with brands tbl (not having an tbl update).
+    supplier_id bigint //Have relation with brands tbl (not having an tbl update).
+    qr varchar(255) [default: null]
+    warranty_month int [default: null]
+    purchased_date date [default: null]
+    purchased_price double
+    warehouse InventoryItemWarehouseEnum
+}
+
+Table request_equipment_masters {
+    id bigint [pk, increment]
+    created_at datetime
+    updated_at datetime [default: null]
+    deleted_at datetime [default: null]
+    uid char(36)
+    purchased_date date [note: "The date when the request should be processed"]
+    batch_code varchar(255) [note: "REQ-20260101"]
+    note varchar(255)
+    status RequestEquipmentMastersStatusEnum [default: "pending"]
+}
+
+Table request_equipments {
+    id bigint [pk, increment]
+    created_at datetime
+    updated_at datetime [default: null]
+    deleted_at datetime [default: null]
+    uid char(36)
+    master_id bigint
+    name varchar(255)
+    quantity int
+    price bigint
+    total_price bigint
+    inventory_id bigint [default: null]
+    supplier_id bigint
+    brand_id bigint
+    unit_id bigint
+    inventory_type_id bigint
+    warehouse RequestEquipmmentWarehouseEnum
+    image varchar(255) [default: null]
+    link varchar(255) [default: null]
+    approval_status RequestEquipmentApprovalStatusEnum [default: null]
+    movement_status RequestEquipmentMovementUpdateStatusEnum [default: null]
+    order_type RequestEquipmentsOrderTypeEnum [default: null]
+    warranty_month int [default: null]
+    note text [default: null]
+    remaining_item int
+    resolved_item int
+}
+
+Table equipment_save_logs {
+    id bigint [pk, increment]
+    created_at datetime
+    uid char(36)
+    equipment_id bigint
+    quantity int
+}
+
+Table equipment_refund_logs {
+    id bigint [pk, increment]
+    created_at datetime
+    uid char(36)
+    equipment_id bigint
+    quantity int
+    total_refund int
+    note text [default: null]
+    is_paid bool [default: False]
+}
+
+Table equipment_return_logs {
+    id bigint [pk, increment]
+    created_at datetime
+    uid char(36)
+    equipment_id bigint
+    quantity int
+    note text [default: null]
+}
+
+Table request_equipment_updates {
+    id bigint [pk, increment]
+    created_at datetime
+    updated_at datetime [default: null]
+    equipment_id bigint
+    uid char(36)
+    previous json
+    incoming json
+    approved_by bigint [default: null]
+    rejected_by bigint [default: null]
+    status RequestEquipmentUpdateStatusEnum
+}
+
+Ref: inventories.id < inventory_items.inventory_id
+Ref: request_equipment_masters.id < request_equipments.master_id
+Ref: request_equipments.id < equipment_save_logs.equipment_id
+Ref: request_equipments.id < equipment_refund_logs.equipment_id
+Ref: request_equipments.id < equipment_return_logs.equipment_id
+Ref: request_equipments.id < request_equipment_updates.equipment_id
+Ref: inventories.id < request_equipments.inventory_id

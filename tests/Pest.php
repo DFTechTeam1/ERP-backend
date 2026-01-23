@@ -347,6 +347,7 @@ function getProjectDealPayload(
             ],
         ] : null,
         'interactive_note' => $withInteractive ? 'This is interactive note' : null,
+        'interactive_fee' => $withInteractive ? '50000000' : null,
         'client_portal' => 'wedding-anniversary',
         'marketing_id' => [
             $employee ? $employee->uid : 'f063164d-62ff-44cf-823d-7c456dad1f4b',

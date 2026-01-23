@@ -620,7 +620,7 @@ class ProjectController extends Controller
 
     public function subtitutePic(\Modules\Production\Http\Requests\Project\SubtitutePic $request, string $projectUid)
     {
-        return $this->service->subtitutePic($projectUid, $request->validated());
+        return apiResponse($this->service->subtitutePic($projectUid, $request->validated()));
     }
 
     public function getPicForSubtitute(string $projectUid)
@@ -1193,5 +1193,10 @@ class ProjectController extends Controller
     public function assignOnDutyFromWidget(AssignMarcommWidget $request, string $employeeUid, string $type): JsonResponse
     {
         return apiResponse($this->inchargeService->assignOnDutyFromWidget($request->validated(), $employeeUid, $type));
+    }
+
+    public function rejectDeleteSong(string $projectUid, string $songUid)
+    {
+        return apiResponse($this->service->rejectDeleteSong($projectUid, $songUid));
     }
 }

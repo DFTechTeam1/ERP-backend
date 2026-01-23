@@ -11,16 +11,16 @@ class ConfirmDeleteSongNotification extends Notification
 {
     use Queueable;
 
-    public $telegramChatIds;
+    public $projectUid;
 
     public $message;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(array $telegramChatIds, mixed $message)
+    public function __construct(string $message, string $projectUid)
     {
-        $this->telegramChatIds = $telegramChatIds;
+        $this->projectUid = $projectUid;
         $this->message = $message;
     }
 
@@ -30,7 +30,7 @@ class ConfirmDeleteSongNotification extends Notification
     public function via($notifiable): array
     {
         return [
-            TelegramChannel::class,
+            'database'
         ];
     }
 
@@ -50,14 +50,12 @@ class ConfirmDeleteSongNotification extends Notification
      */
     public function toArray($notifiable): array
     {
-        return [];
-    }
-
-    public function toTelegram($notifiable): array
-    {
         return [
-            'chatIds' => $this->telegramChatIds,
+            'type' => 'production',
+            'title' => 'Confirm Delete Song',
             'message' => $this->message,
+            'button' => null,
+            'href' => '/admin/production/project/'.$this->projectUid,
         ];
     }
 }

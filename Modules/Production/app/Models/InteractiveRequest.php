@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Modules\Production\Database\Factories\InteractiveRequestFactory;
 
 // use Modules\Production\Database\Factories\InteractiveRequestFactory;
 
@@ -43,10 +44,10 @@ class InteractiveRequest extends Model
         'rejected_by',
     ];
 
-    // protected static function newFactory(): InteractiveRequestFactory
-    // {
-    //     // return InteractiveRequestFactory::new();
-    // }
+    protected static function newFactory(): InteractiveRequestFactory
+    {
+        return InteractiveRequestFactory::new();
+    }
 
     protected function casts()
     {

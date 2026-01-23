@@ -39,6 +39,7 @@ use Exception;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -55,9 +56,11 @@ use Modules\Inventory\Repository\InventoryItemRepository;
 use Modules\Production\Exceptions\FailedModifyWaitingApprovalSong;
 use Modules\Production\Exceptions\ProjectNotFound;
 use Modules\Production\Exceptions\SongNotFound;
+use Modules\Production\Jobs\ChangedSongJob;
 use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Jobs\DeleteSongJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
+use Modules\Production\Jobs\RejectDeleteSongJob;
 use Modules\Production\Jobs\RemovePicFromSong;
 use Modules\Production\Jobs\RequestDeleteSongJob;
 use Modules\Production\Jobs\RequestEditSongJob;
@@ -238,7 +241,7 @@ class ProjectService
         \Modules\Production\Repository\ProjectTaskPicHoldstateRepository $projectTaskPicHoldstateRepo,
         \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo,
         \App\Services\NasFolderCreationService $nasFolderCreationService,
-        ProjectTaskDeadlineRepository $projectTaskDeadlineRepo
+        ProjectTaskDeadlineRepository $projectTaskDeadlineRepo,
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -1020,8 +1023,6 @@ class ProjectService
             [],
             $whereHas
         );
-
-        logging('WHERE HAS', $whereHas);
 
         $data = collect((object) $data)->map(function ($project) {
             return [
@@ -2591,7 +2592,15 @@ class ProjectService
                 return errorResponse(message: __('notification.cannotCombineModeller'));
             }
 
-            $currentTask = $this->taskRepo->show(uid: $taskUid, select: 'id,status');
+            $currentTask = $this->taskRepo->show(uid: $taskUid, select: 'id,status,project_id,end_date');
+            if (
+                (isset($data['users'])) &&
+                (count($data['users']) > 0) &&
+                !$currentTask->end_date
+            ) {
+                return errorResponse(message: __('notification.pleaseAddDeadlineBeforeContinue'));
+            }
+            
             $taskId = $currentTask->id;
 
             $notifiedNewTask = [];
@@ -2607,7 +2616,7 @@ class ProjectService
 
                     // add to pic history
                     $this->taskPicHistory->store([
-                        'project_id' => $taskDetail->project_id,
+                        'project_id' => $currentTask->project_id,
                         'project_task_id' => $taskId,
                         'employee_id' => $employeeId,
                     ]);
@@ -2783,7 +2792,8 @@ class ProjectService
         bool $removeFromHistory = false,
         string $message = '',
         bool $doLogging = true, // sometime we don't need to log the action
-        bool $removeWorkState = true
+        bool $removeWorkState = true,
+        bool $removeCurrentPic = true
     ) {
         foreach ($ids as $removedUser) {
             if ($isEmployeeUid) {
@@ -2806,6 +2816,25 @@ class ProjectService
             // remove workstate
             if ($removeWorkState) {
                 $this->projectTaskWorkStateRepo->delete(id: 0, where: "task_id = {$taskId} AND employee_id = {$removedEmployeeId} and complete_at IS NULL");
+            }
+
+            // Remove employee id from current_pics in project_tasks table
+            if ($removeCurrentPic) {
+                $currentTask = $this->taskRepo->show(
+                    uid: 'uid',
+                    select: 'id,current_pics',
+                    where: "id = {$taskId}"
+                );
+                $currentPics = json_decode($currentTask->current_pics, true) ?? [];
+                if (in_array($removedEmployeeId, $currentPics)) {
+                    $updatedPics = array_values(array_diff($currentPics, [$removedEmployeeId]));
+                    $this->taskRepo->update(
+                        data: [
+                            'current_pics' => json_encode($updatedPics),
+                        ],
+                        where: "id = {$taskId}"
+                    );
+                }
             }
 
             $logMessage = __('global.removedMemberLogText', [
@@ -3033,7 +3062,7 @@ class ProjectService
             $data['project_id'] = $board->project_id;
             $data['project_board_id'] = $boardId;
             $data['start_date'] = date('Y-m-d');
-            $data['end_date'] = ! empty($data['end_date']) ? date('Y-m-d', strtotime($data['end_date'])) : null;
+            $data['end_date'] = ! empty($data['end_date']) ? date('Y-m-d H:i:s', strtotime($data['end_date'])) : null;
 
             // set as waiting employee approval
             if (! empty($data['pic'])) {
@@ -4023,7 +4052,7 @@ class ProjectService
             ]);
             $taskId = $task->id;
 
-            if ($data['nas_link'] && (isset($data['preview']) || $useDefaultImage)) {
+            if ($data['nas_link'] && $data['nas_link'] != '' && (isset($data['preview']) || $useDefaultImage)) {
                 $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
                 // update image
@@ -4185,7 +4214,8 @@ class ProjectService
         $this->detachTaskPic(
             ids: $taskPicUids,
             taskId: $taskId,
-            removeWorkState: false
+            removeWorkState: false,
+            removeCurrentPic: false
         );
 
         // attach project manager to selected task
@@ -5160,7 +5190,7 @@ class ProjectService
             );
 
             // assign current employee pic to task
-            $this->assignMemberToTask(
+            $assign = $this->assignMemberToTask(
                 data: [
                     'users' => $currentPicUids,
                     'removed' => [],
@@ -5438,7 +5468,8 @@ class ProjectService
         $this->detachTaskPic(
             ids: collect($currentPic)->pluck('employee.uid')->toArray(),
             taskId: $taskId,
-            removeWorkState: false
+            removeWorkState: false,
+            removeCurrentPic: false
         );
 
         // update task status
@@ -5661,6 +5692,7 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
+            $actorId = Auth::id();
             $this->repo->update(['status' => $data['status']], $projectUid);
 
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
@@ -5677,7 +5709,12 @@ class ProjectService
                     foreach ($employeeIds as $employeeId) {
                         $userData = $this->userRepo->detail(select: 'id', where: "employee_id = {$employeeId}");
 
-                        \Modules\Production\Jobs\AssignTaskJob::dispatch($employeeIds, $task->id, $userData);
+                        \Modules\Production\Jobs\AssignTaskJob::dispatch(
+                            $employeeIds,
+                            $task->id,
+                            $userData,
+                            $actorId
+                        );
                     }
                 }
             }
@@ -6193,21 +6230,29 @@ class ProjectService
                 
                 // Handle special employees (with accumulation)
                 if (!empty($specialEmployees)) {
-                    PointRecord::run(
+                    $recordPoint = PointRecord::run(
                         ['points' => $specialEmployees],
                         $projectUid,
                         'production',
                         false
                     );
+
+                    if (!$recordPoint) {
+                        return errorResponse('Failed to record points');
+                    }
                 }
                 
                 // Handle regular employees (normal flow)
                 if (!empty($regularEmployees)) {
-                    PointRecord::run(
+                    $recordPoint = PointRecord::run(
                         ['points' => $regularEmployees],
                         $projectUid,
                         'production'
                     );
+
+                    if (!$recordPoint) {
+                        return errorResponse('Failed to record points');
+                    }
                 }
 
                 // record project feedback
@@ -6662,6 +6707,71 @@ class ProjectService
     }
 
     /**
+     * Validate if pic still has task in selected project
+     * Failed if return FALSE
+     *
+     * @param array $picList
+     * @param integer $projectId
+     * @return boolean
+     */
+    public function validatePicHasTask(array $picList, int $projectId): bool
+    {
+        // Get task ids of project
+        $tasks = $this->taskRepo->list(
+            select: 'id',
+            where: "project_id = {$projectId}",
+        );
+        $taskIds = $tasks->pluck('id')->toArray();
+
+        if ($tasks->count() > 0) {
+            foreach ($picList as $list) {
+                $employeeId = getIdFromUid($list, new \Modules\Hrd\Models\Employee);
+    
+                // Get team memaber of employeeId
+                $teamMembers = $this->employeeRepo->list(
+                    select: 'id',
+                    where: "boss_id = {$employeeId}"
+                );
+                $teamMemberIds = $teamMembers->pluck('id')->toArray();
+                
+                // First, check employee_id in project_task_pics table
+                $taskPicCount = $this->taskPicRepo->show(
+                    id: 0,
+                    select: 'id',
+                    where: "employee_id IN (".implode(',', $teamMemberIds).") and project_task_id IN (".implode(',', $taskIds).")",
+                );
+                
+                if ($taskPicCount) {
+                    return false;
+                }
+    
+                // Check in employee id in current_pics of project_tasks table. current_pics will have value [12,34,56]
+                $taskCurrentPicCount = \Modules\Production\Models\ProjectTask::whereRaw(
+                    "project_id = {$projectId} AND JSON_CONTAINS(current_pics, ?)",
+                    [json_encode($teamMemberIds)]
+                )->count();
+    
+                if ($taskCurrentPicCount > 0) {
+                    return false;
+                }
+
+                // Check employee id in employee_task_states table
+                $employeeTaskStateCount = $this->employeeTaskStateRepo->show(
+                    uid: 'id',
+                    select: 'id',
+                    where: "employee_id IN (".implode(',', $teamMemberIds).") and project_id = {$projectId}",
+                );
+
+                if ($employeeTaskStateCount) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Assign new pic or remove current pic of project
      *
      * @param  array<string, array<string>>  $data
@@ -6672,14 +6782,21 @@ class ProjectService
         try {
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
+            // handle removed pic
+            if (count($data['removed']) > 0) {
+                // Validate if pic team member still has task in the project
+                $isValid = $this->validatePicHasTask(picList: $data['removed'], projectId: $projectId);
+
+                if (! $isValid) {
+                    return errorResponse(message: __('notification.cannotRemovePicWithTask'), code: 500);
+                }
+
+                $this->removePicProject($data['removed'], $projectUid, $projectId);
+            }
+
             // handle new pic
             if (count($data['pics']) > 0) {
                 $this->handleAssignPicLogic($data, $projectUid, $projectId);
-            }
-
-            // handle removed pic
-            if (count($data['removed']) > 0) {
-                $this->removePicProject($data['removed'], $projectUid, $projectId);
             }
 
             // update cache
@@ -7326,6 +7443,8 @@ class ProjectService
                 throw new SongNotFound;
             }
 
+            $requesterId = auth()->id();
+
             if ($song->task) {
                 // request changes to entertainment first
                 $this->projectSongListRepo->update([
@@ -7335,7 +7454,6 @@ class ProjectService
                 ], $songUid);
 
                 // send notification to PM entertainment
-                $requesterId = auth()->id();
                 RequestEditSongJob::dispatch($payload, $projectUid, $songUid, $requesterId)->afterCommit();
 
                 // log this request
@@ -7356,6 +7474,9 @@ class ProjectService
 
             // do edit when available
             $this->doEditSong(payload: ['name' => $payload['song']], songUid: $songUid);
+
+            // Notify entertainment pic about the changes
+            ChangedSongJob::dispatch($payload, $projectUid, $songUid, $requesterId)->afterCommit();
 
             // log the changes
             StoreLogAction::run(
@@ -7605,7 +7726,7 @@ class ProjectService
                 [
                     'task:id,project_song_list_id,employee_id',
                     'task.employee:id,name,nickname',
-                    'project:id,name',
+                    'project:id,name,uid',
                 ]
             );
 
@@ -7617,6 +7738,9 @@ class ProjectService
                 throw new FailedModifyWaitingApprovalSong(message: __('notification.failedDeleteRequestEditSong'));
             }
 
+            $user = Auth::user();
+            $actorId = $user->id;
+
             if ($song->task) {
                 // request changes to entertainment first
                 $this->projectSongListRepo->update([
@@ -7626,13 +7750,17 @@ class ProjectService
                 ], $songUid);
 
                 // send notification to PM entertainment
-                $requesterId = auth()->id();
-                RequestDeleteSongJob::dispatch($song, $requesterId);
+                RequestDeleteSongJob::dispatch($song, $actorId)->afterCommit();
 
                 goto result;
             }
 
+            $currentSongName = $song->name;
+            $currentProjectName = $song->project->name;
+
             $this->doDeleteSong($song->id, $song);
+
+            DeleteSongJob::dispatch($currentSongName, $currentProjectName, $actorId)->afterCommit();
 
             result:
             // get current data
@@ -7662,9 +7790,6 @@ class ProjectService
         $songName = $song->name;
         $projectName = $song->project->name;
         $this->projectSongListRepo->delete(id: $songId);
-
-        $requesterId = auth()->id();
-        DeleteSongJob::dispatch($songName, $projectName, $requesterId)->afterCommit();
     }
 
     /**
@@ -7956,7 +8081,7 @@ class ProjectService
                 uid: 'id,project_id,project_song_list_id,status',
                 select: 'id,time_tracker',
                 relation: [
-                    'project:id,name',
+                    'project:id,name,uid',
                     'song:id,name',
                 ],
                 where: "project_id = {$projectId} AND project_song_list_id = {$songId}"
@@ -8607,16 +8732,24 @@ class ProjectService
                 select: 'id,project_song_list_id,employee_id,project_id',
                 where: "project_song_list_id = {$songId}",
                 relation: [
-                    'employee:id,nickname,telegram_chat_id',
-                    'project:id,name',
+                    'employee:id,nickname,telegram_chat_id,user_id',
+                    'project:id,name,uid',
                     'song:id,name',
                 ]
+            );
+
+            $payloadNotification = new \Modules\Production\Dto\Song\RemovePicNotificationDto(
+                songName: $currentTask->song->name,
+                projectName: $currentTask->project->name,
+                projectUid: $currentTask->project->uid,
+                employeeNickname: $currentTask->employee->nickname,
+                userId: $currentTask->employee->user_id
             );
 
             $this->entertainmentTaskSongRepo->delete(id: 0, where: "project_song_list_id = {$songId} and project_id = {$projectId}");
 
             // send notification to the pic
-            RemovePicFromSong::dispatch($currentTask)->afterCommit();
+            RemovePicFromSong::dispatch($payloadNotification)->afterCommit();
 
             // refresh all cache
             $currentData = $this->detailCacheAction->run(projectUid: $projectUid, forceUpdateAll: true);
@@ -8768,9 +8901,11 @@ class ProjectService
         try {
             $user = Auth::user();
 
+            $haveInteractive = (isset($payload['interactive_area'])) && (!empty($payload['interactive_area'])) ? true : false;
+
             // define published_at and published_by
             $projectDealPayload = collect($payload)
-                ->except(['marketing_id', 'quotation']);
+                ->except(['marketing_id', 'quotation', 'with_accommodation']);
             if ($payload['status'] == ProjectDealStatus::Final->value) {
                 $projectDealPayload = $projectDealPayload->merge([
                     'published_at' => Carbon::now(),
@@ -8793,6 +8928,7 @@ class ProjectService
 
             // insert quotations
             $payload['quotation']['project_deal_id'] = $project->id;
+            $payload['quotation']['is_include_accomodation'] = $payload['with_accommodation'];
             $url = CreateQuotation::run($payload, $this->projectQuotationRepo);
 
             // handle when project deal have a final status
@@ -8805,7 +8941,7 @@ class ProjectService
                 $realProject = \App\Actions\CopyDealToProject::run($project, $this->generalService);
 
                 // create interactive project if needed
-                if (isset($payload['interactive_area'])) {
+                if ($haveInteractive) {
                     CreateInteractiveProject::run($realProject->id, $payload);
                 }
 
@@ -8813,6 +8949,26 @@ class ProjectService
                 \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $project->id);
 
                 ProjectHasBeenFinal::dispatch($project->id)->afterCommit();
+            } else {
+                if ($haveInteractive) {
+                    // create request inventory
+                    $interactiveRequest = $this->generalService->addInteractive(
+                        projectDealUid: Crypt::encryptString($project->id),
+                        payload: [
+                            'interactive_area' => $payload['interactive_area'],
+                            'interactive_detail' => $payload['interactive_detail'],
+                            'interactive_note' => $payload['interactive_note'],
+                            'interactive_fee' => $payload['interactive_fee'],
+                            'fix_price' => $payload['quotation']['fix_price'],
+                        ],
+                        withDatabaseTransaction: false
+                    );
+
+                    if ($interactiveRequest['error']) {
+                        DB::rollBack();
+                        return errorResponse($interactiveRequest['message']);
+                    }
+                }
             }
 
             DB::commit();
@@ -8864,7 +9020,7 @@ class ProjectService
 
             $this->projectDealRepo->update(
                 data: collect($payload)
-                    ->except(['marketing_id', 'quotation', 'status', 'request_type'])
+                    ->except(['marketing_id', 'quotation', 'status', 'request_type', 'interactive_area', 'interactive_detail', 'interactive_note', 'interactive_fee', 'with_accommodation'])
                     ->toArray(),
                 id: $projectDealUid
             );
@@ -8885,6 +9041,7 @@ class ProjectService
             $this->projectQuotationRepo->update(
                 data: collect($payload['quotation'])
                     ->except(['status', 'items', 'quotation_id'])
+                    ->merge(['is_include_accomodation' => $payload['with_accommodation']])
                     ->toArray(),
                 id: $project->latestQuotation->id
             );
@@ -9310,11 +9467,7 @@ class ProjectService
             $maxCollaborationPoint = $project->projectClass ? $project->projectClass->$variablePoint : 0;
             // dd($totalTaskPoint);
             $maxPointReached = $totalTaskPoint > $maxCollaborationPoint ? true : false;
-            logging('maxpoint', [
-                'maxpointreached' => $maxPointReached,
-                'totaltaskPoint' => $totalTaskPoint,
-                'payload' => $teams,
-            ]);
+
             if ($maxPointReached) {
                 // calculate prorate
                 $proratePerTask = number_format($maxCollaborationPoint / $totalTaskPoint, 1);
@@ -9345,6 +9498,58 @@ class ProjectService
             return generalResponse(
                 message: 'Success',
                 data: $teams
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Reject delete song request
+     *
+     * @param string $projectUid
+     * @param string $songUid
+     * @return array
+     */
+    public function rejectDeleteSong(string $projectUid, string $songUid): array
+    {
+        try {
+            // check validation
+            $song = $this->projectSongListRepo->show(
+                $songUid,
+                'id,project_id,name',
+                [
+                    'task:id,project_song_list_id,employee_id',
+                    'task.employee:id,name,nickname',
+                    'project:id,name,uid',
+                ]
+            );
+
+            if (! $song) {
+                throw new SongNotFound;
+            }
+
+            if ($song->is_request_edit) {
+                throw new FailedModifyWaitingApprovalSong(message: __('notification.failedDeleteRequestEditSong'));
+            }
+
+            $actor = Auth::user();
+            $actorId = $actor->id;
+
+            $this->projectSongListRepo->update([
+                'is_request_edit' => false,
+                'is_request_delete' => false,
+                'target_name' => null,
+            ], $songUid);
+
+            // get current data
+            $currentData = $this->detailCacheAction->run($projectUid);
+
+            return generalResponse(
+                message: __('notification.successRejectDeleteSong'),
+                data: [
+                    'full_detail' => $currentData,
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

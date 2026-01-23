@@ -22,5 +22,11 @@ php artisan view:cache
 # Restart queue workers
 php artisan queue:restart
 # Change folder permissions
-sudo chmod -R 777 storage/
-sudo chmod -R 777 bootstrap/
+sudo chmod -R 775 storage
+sudo chmod -R 775 bootstrap/cache
+sudo chown -R $USER:www-data storage
+sudo chown -R $USER:www-data bootstrap/cache
+sudo chmod g+s storage
+sudo chmod g+s bootstrap/cache
+sudo find storage -type d -exec chmod g+s {} \;
+sudo find bootstrap/cache -type d -exec chmod g+s {} \;

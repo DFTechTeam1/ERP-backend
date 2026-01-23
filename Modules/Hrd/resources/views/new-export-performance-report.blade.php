@@ -10,6 +10,7 @@
             <th style="font-weight: bold;">Detail Pekerjaan</th>
             <th></th>
             <th>Point Breakdown</th>
+            <th>Feedbacks</th>
         </tr>
     </thead>
     <tbody>
@@ -37,8 +38,20 @@
                         <p>Additional Point: {{ $point['additional_point'] }}</p>
                         <p>Calculated Prorate Point: {{ $point['calculated_prorate_point'] }}</p>
                         <p>Total Point: {{ $point['total_point'] }}</p>
+                        <p>Total Tasks: {{ $point['total_tasks'] }}</p>
                     </div>
                 </td>
+
+                {{-- only put in the first line, then do rowspan --}}
+                @if ($keyPoint == 0)
+                <td rowspan="{{ count($points) }}">
+                    <div>
+                        @foreach($point['feedbacks'] as $feedback)
+                            <p>{{ $feedback }}</p>
+                        @endforeach
+                    </div>
+                </td>
+                @endif
             </tr>
             @endforeach
         @php $key++ @endphp
