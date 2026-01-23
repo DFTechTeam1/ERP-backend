@@ -14,24 +14,39 @@ return new class extends Migration
     {
         Schema::table('custom_inventory_details', function (Blueprint $table) {
             $table->float('price')->change();
+            $table->float('total_price')
+                ->nullable();
 
             // Renama qty to quantity
             $table->renameColumn('qty', 'quantity');
-
-            $table->float('total_price')
-                ->virtualAs('COALESCE(price, 0) * COALESCE(quantity, 0)');
 
             $table->string('code')->nullable();
             $table->string('barcode')->nullable();
             $table->uuid('uid')->nullable();
         });
 
+        // Create trigger for INSERT operations
+        // DB::unprepared('
+        //     CREATE DEFINER = CURRENT_USER TRIGGER calculate_total_price_insert
+        //     BEFORE INSERT ON custom_inventory_details 
+        //     FOR EACH ROW 
+        //     SET NEW.total_price = COALESCE(NEW.price, 0) * COALESCE(NEW.quantity, 0);
+        // ');
+
+        // Create trigger for UPDATE operations
+        // DB::unprepared('
+        //     CREATE DEFINER = CURRENT_USER TRIGGER calculate_total_price_update
+        //     BEFORE UPDATE ON custom_inventory_details 
+        //     FOR EACH ROW 
+        //     SET NEW.total_price = COALESCE(NEW.price, 0) * COALESCE(NEW.quantity, 0);
+        // ');
+
         // Update existing records
-        DB::statement('
-            UPDATE custom_inventory_details 
-            SET total_price = COALESCE(price, 0) * COALESCE(quantity, 0) 
-            WHERE total_price IS NULL
-        ');
+        // DB::statement('
+        //     UPDATE custom_inventory_details 
+        //     SET total_price = COALESCE(price, 0) * COALESCE(quantity, 0) 
+        //     WHERE total_price IS NULL
+        // ');
     }
 
     /**
