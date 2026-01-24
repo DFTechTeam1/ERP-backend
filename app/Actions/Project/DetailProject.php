@@ -62,8 +62,6 @@ class DetailProject
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id,uid,boss_id',
                 'references:id,project_id,media_path,name,type',
-                'equipments.inventory:id,name',
-                'equipments.inventory.image',
                 'marketings:id,marketing_id,project_id',
                 'marketings.marketing:id,name',
                 'country:id,name',
@@ -106,8 +104,6 @@ class DetailProject
             }
 
             $boardsData = FormatBoards::run($uid);
-
-            $equipments = FormatEquipment::run($data->id);
 
             // days to go
             $projectEndDate = Carbon::parse($data->project_date);
@@ -166,7 +162,6 @@ class DetailProject
                 'task_type_text' => $data->task_type_text,
                 'task_type_color' => $data->task_type_color,
                 'progress' => $progress,
-                'equipments' => $equipments,
                 'showreels' => $data->showreels_path,
                 'person_in_charges' => $data->personInCharges,
                 'project_maximal_point' => $data->projectClass->maximal_point,
