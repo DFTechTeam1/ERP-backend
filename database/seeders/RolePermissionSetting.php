@@ -545,6 +545,52 @@ class RolePermissionSetting extends Seeder
     protected function inventoriesPermission()
     {
         return [
+            ['name' => 'create_custom_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'fetch_custom_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'edit_custom_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'delete_custom_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'fetch_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'assign_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'edit_assigned_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'delete_assigned_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'approve_request_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+
             ['name' => 'delete_existing_submission', 'group' => 'inventories', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),

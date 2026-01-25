@@ -376,6 +376,34 @@ Table "delete_office_email_queues" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "development_subtasks" {
+  "id" bigint [pk, not null]
+  "uid" char(36) [not null]
+  "project_id" bigint [not null, ref: > development_projects.id]
+  "name" varchar(255) [not null]
+  "description" text [null]
+  "created_by" bigint [not null, ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_subtask_uploads" {
+  "id" bigint [pk, not null]
+  "subtask_id" bigint [not null, ref: > development_subtasks.id]
+  "note" varchar(255) [default: NULL]
+  "uploaded_by" bigint [not null, ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_subtask_upload_files" {
+  "id" bigint [pk, not null]
+  "subtask_upload_id" bigint [not null, ref: > development_subtask_uploads.id]
+  "file_path" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "development_projects" {
   "id" bigint [pk, not null]
   "uid" char(36) [not null]

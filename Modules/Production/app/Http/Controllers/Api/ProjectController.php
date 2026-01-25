@@ -87,7 +87,6 @@ class ProjectController extends Controller
                 'marketings.marketing:id,name,employee_id',
                 'projectClass:id,name,color',
                 'vjs.employee:id,nickname',
-                'equipments:id,project_id',
             ]
         ));
     }
