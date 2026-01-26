@@ -49,7 +49,7 @@
             "childs": [
                 { "path": "/admin/production/projects", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "mdiPlain:mdi-briefcase-account-outline", "permission": "list_project" },
                 { "path": "/admin/production/interactives", "slug": "interactiveProject", "lang_id": "Interactive Event", "lang_en": "Interactive Event", "icon": "mdiPlain:mdi-application-braces-outline", "permission": "list_interactive_project" },
-                { "path": "/admin/production/incharges", "slug": "incharges", "lang_id": "Karyawan Bertugas", "lang_en": "On Duty", "icon": "mdiPlain:mdi-account-check-outline", "permission": "list_interactive_project" },
+                { "path": "/admin/production/incharges", "slug": "incharges", "lang_id": "Karyawan Bertugas", "lang_en": "On Duty", "icon": "mdiPlain:mdi-account-check-outline", "permission": "on_duty_list" },
                 { "path": "/admin/production/files", "slug": "files", "lang_id": "Files", "lang_en": "Files", "icon": "mdiPlain:mdi-file-multiple-outline", "permission": "list_file_manager" },
                 { "path": "/admin/production/tasks", "slug": "task", "lang_id": "Tugas", "lang_en": "Tasks", "icon": "mdiPlain:mdi-format-list-checks", "permission": "list_task" },
                 { "path": "/admin/production/team-transfer", "slug": "team-transfer", "lang_id": "Team Transfer", "lang_en": "Team Transfer", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_team_transfer" }

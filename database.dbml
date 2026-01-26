@@ -2307,74 +2307,23 @@ Table "user_login_histories" {
   "browser" varchar(200) [default: NULL]
 }
 
-Table "request_equipment_masters" { // new 15 nov 2025
-    id bigint [pk, increment]
-    created_at datetime
-    updated_at datetime [default: null]
-    uid char(32)
-    purchased_date date [note: "The date when the request should be processed"]
-    batch_code varchar(255) [note: "REQ-20260101"]
-    status RequestEquipmentMastersStatusEnum [default: "pending"]
+Table "allowances" {
+  "id" bigint [pk, not null]
+  "name" varchar(255) [not null]
+  "status" enum('active', 'inactive') [not null, default: 'active']
+  "period" enum('per_day', 'per_event') [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
-Table "request_equipments" { // new 15 nov 2025
-    id bigint [pk, increment]
-    created_at datetime
-    updated_at datetime [default: null]
-    deleted_at datetime [default: null]
-    approved_at datetime [default: null]
-    uid char(32)
-    master_id bigint
-    name varchar(255)
-    quantity int
-    price bigint
-    total_price bigint
-    inventory_id bigint [default: null]
-    supplier_id bigint
-    brand_id bigint
-    unit_id bigint
-    inventory_type_id bigint
-    warehouse_id tinyint
-    image varchar(255) [default: null]
-    link varchar(255) [default: null]
-    status RequestEquipmentStatusHistoriesStatusEnum [default: on_request]
-    order_type RequestEquipmentsOrderTypeEnum
-    warranty_month int [default: 0]
-    is_approved tinyint [default: 0]
+Table "division_allowances" {
+  "id" bigint [pk, not null]
+  "division_id" bigint [not null, ref: > division_backups.id]
+  "allowance_id" bigint [not null, ref: > allowances.id]
+  "amount" decimal(24,2) [not null, default: '0.00']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
-
-// Purpose of this table is to track movement of all requested equipment
-Table "request_equipment_movement_histories" { // new 15 nov 2025
-    id bigint [pk, increment]
-    request_id bigint
-    created_at datetime
-    action varchar(255)
-    description varchar(255)
-    user varchar(255)
-}
-
-//Purpose of this table is to changed item of on proggres equipment
-Table "request_equipment_histories" { // new 15 nov 2025
-    id bigint [pk, increment]
-    uid char(32)
-    request_id bigint
-    created_at datetime
-    updated_at datetime [default: null]
-    from json [default: null]
-    to json [default: null]
-    approved_by bigint [default null]
-    rejected_by bigint [default null]
-    status RequestEquipmentHistoriesStatusEnum [default: need_approval]
-}
-
-Ref: request_equipment_masters.id < request_equipments.master_id
-Ref: request_equipments.id < request_equipment_status_histories.request_id
-Ref: request_equipments.id < request_equipment_histories.request_id
-Ref: inventories.id < request_equipments.inventory_id
-Ref: suppliers.id < request_equipments.supplier_id
-Ref: brands.id < request_equipments.brand_id
-Ref: units.id < request_equipments.unit_id
-Ref: inventory_types.id < request_equipments.inventory_type_id
 
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
 
