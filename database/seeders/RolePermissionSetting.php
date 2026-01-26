@@ -257,6 +257,52 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function inchargePermission()
+    {
+        return [
+            ['name' => 'on_duty_list', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'assign_incharge_entertainment', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'assign_incharge_marcomm', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'assign_incharge_interactive', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'assign_incharge_production', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'detail_cost_estimation', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'add_transportation_request', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'cancel_transportation_request', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+        ];
+    }
+
     protected function userManagementPermission()
     {
         return [
@@ -1326,6 +1372,7 @@ class RolePermissionSetting extends Seeder
     {
         $permissions = [];
         $permissions = collect($permissions)->merge($this->dashboardPermission())
+            ->merge($this->inchargePermission())
             ->merge($this->userManagementPermission())
             ->merge($this->employeePermission())
             ->merge($this->masterPermission())
