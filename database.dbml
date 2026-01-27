@@ -5,6 +5,11 @@ Enum "RequestEquipmentMastersStatusEnum" {
     "cancel"
 }
 
+Enum "DevelopmentProjectTypeEnum" {
+  "develop"
+  "project"
+}
+
 Enum "RequestEquipmentsOrderTypeEnum" {
     "online"
     "offline"
@@ -410,6 +415,7 @@ Table "development_projects" {
   "name" varchar(255) [not null]
   "status" development_projects_status_enum [not null]
   "description" text
+  "project_type" DevelopmentProjectTypeEnum
   "project_date" date [default: NULL]
   "created_by" bigint [default: NULL]
   "created_at" timestamp [default: NULL]
