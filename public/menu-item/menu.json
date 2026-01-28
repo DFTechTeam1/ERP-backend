@@ -79,7 +79,8 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-package-variant",
             "childs": [
-                { "path": "/module", "slug": "inventory-detail", "lang_id": "Inventory", "lang_en": "Inventory", "icon": "", "permission": "list_supplier" }
+                { "path": "/module", "slug": "inventory-detail", "lang_id": "Inventory", "lang_en": "Inventory", "icon": "", "permission": "list_supplier" },
+                { "path": "/admin/request-equipment", "slug": "inventory-list", "lang_id": "Permintaan Barang", "lang_en": "Request Inventories", "icon": "mdiPlain:mdi-truck-fast-outline", "permission": "fetch_submission" }
             ]
         }
     ],
