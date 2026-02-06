@@ -129,6 +129,7 @@ class DetailProject
             $output = [
                 'id' => $data->id,
                 'allowed_upload_showreels' => $allowedUploadShowreels,
+                'identifier_id' => $data->identifier_id,
                 'uid' => $data->uid,
                 'name' => $data->name,
                 'country_id' => $data->country_id,
