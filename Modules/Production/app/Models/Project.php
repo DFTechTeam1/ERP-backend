@@ -64,6 +64,7 @@ class Project extends Model
     protected $fillable = [
         'name',
         'uid',
+        'identifier_id',
         'client_portal',
         'project_date',
         'event_type',
