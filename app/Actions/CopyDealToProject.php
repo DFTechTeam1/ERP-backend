@@ -23,10 +23,13 @@ class CopyDealToProject
             }
         }
 
+        $identifier = generateUniqueIdentifierId();
+
         $projectRepo = new ProjectRepository;
         $project = $projectRepo->store(data: [
             'name' => $projectDeal->name,
             'client_portal' => config('app.frontend_url').'/'.$generalService->linkShortener(length: 10),
+            'identifier_id' => $identifier,
             'project_date' => $projectDeal->project_date,
             'event_type' => $projectDeal->event_type,
             'venue' => $projectDeal->venue,
