@@ -1286,7 +1286,7 @@ if (! function_exists('generateUniqueIdentifierId')) {
     function generateUniqueIdentifierId()
     {
         $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-        $identifierId = '';
+        $identifierId = 'P-';
 
         for ($i = 0; $i < 4; $i++) {
             $index = rand(0, strlen($characters) - 1);
