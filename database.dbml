@@ -641,6 +641,16 @@ Table "development_project_tasks" {
   }
 }
 
+Table "development_task_board_changes_histories" {
+  "id" bigint [pk, not null, increment]
+  "task_id" bigint [ref: > development_project_tasks.id]
+  "from_board_id" enum [note: "'sketch', 'animate', 'compose'"]
+  "to_board_id" enum [note: "'sketch', 'animate', 'compose'"]
+  "moved_by" bigint [ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "development_projects" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
