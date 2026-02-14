@@ -526,7 +526,8 @@ class UserService
              * mainToken
              * menus
              */
-            $token = $this->generalService->generateAuthorizationToken(user: $user);
+            $rememberMe = isset($payload['remember_me']) && $payload['remember_me'] ? true : false;
+            $token = $this->generalService->generateAuthorizationToken(user: $user, rememberMe: $rememberMe);
 
             return $token;
         } catch (\Throwable $th) {

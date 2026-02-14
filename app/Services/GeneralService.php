@@ -376,7 +376,7 @@ class GeneralService
         return $output;
     }
 
-    public function generateAuthorizedUserToken(\App\Models\User $user): array
+    public function generateAuthorizedUserToken(\App\Models\User $user, bool $rememberMe = false): array
     {
         $role = $user->getRoleNames()[0];
         $roles = $user->roles;
@@ -387,8 +387,8 @@ class GeneralService
         }
         $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
-        $expireTime = now()->addHours(24);
-        if (isset($validated['remember_me'])) {
+        $expireTime = now()->addDays(3);
+        if ($rememberMe) {
             $expireTime = now()->addDays(30);
         }
 
@@ -411,13 +411,14 @@ class GeneralService
      * @param string $email
      * @return string
      */
-    public function authorizeExpressAccess(string $email): string
+    public function authorizeExpressAccess(string $email, bool $rememberMe): string
     {
         $response = \Illuminate\Support\Facades\Http::post(
             url: config('app.express_endpoint').'/hrd/auth/login',
             data: [
                 'email' => $email,
-                'password' => 'password'
+                'password' => 'password',
+                'remember_me' => $rememberMe,
             ]
         );
 
@@ -501,9 +502,9 @@ class GeneralService
     /**
      * Here we define all variable that will be saved in the frontend
      */
-    public function generateAuthorizationToken(\App\Models\User $user): array
+    public function generateAuthorizationToken(\App\Models\User $user, bool $rememberMe = false): array
     {
-        $tokenizer = $this->generateAuthorizedUserToken(user: $user);
+        $tokenizer = $this->generateAuthorizedUserToken(user: $user, rememberMe: $rememberMe);
 
         $roles = $tokenizer['roles'];
 
@@ -515,7 +516,7 @@ class GeneralService
         $reportingToken = $this->authorizeReportingAccess(email: $user->email);
 
         // Generate express token
-        $expressToken = $this->authorizeExpressAccess(email: $user->email);
+        $expressToken = $this->authorizeExpressAccess(email: $user->email, rememberMe: $rememberMe);
 
         $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
