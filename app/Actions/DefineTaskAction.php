@@ -183,23 +183,32 @@ class DefineTaskAction
         return $this->isDirector || $this->isProjectPic || $this->user->hasRole(BaseRole::Root->value) ? true : false;
     }
 
+    protected function isRegularEntertainmentUser(): bool
+    {
+        return $this->user->hasRole(BaseRole::Entertainment->value) ? true : false;
+    }
+
     protected function getDatesButton(object $task, string $key, array $detail): ?array
     {
         $dates = null;
 
+        if ($this->isRegularEntertainmentUser()) {
+            return null;
+        }
+
         $dates = $this->buildOutput(
             key: $key,
             disabled: $this->hasSuperPower() || $this->showForLeadModeler ?
-            false :
-            (
-                ! $this->isMyTask ?
-                true :
+                false :
                 (
-                    $task->status == TaskStatus::WaitingApproval->value ?
+                    ! $this->isMyTask ?
                     true :
-                    false
-                )
-            ),
+                    (
+                        $task->status == TaskStatus::WaitingApproval->value ?
+                        true :
+                        false
+                    )
+                ),
             detail: $detail
         );
 
@@ -251,6 +260,10 @@ class DefineTaskAction
     public function getAttachmentsButton(object $task, string $key, array $detail): ?array
     {
         $attach = null;
+
+        if ($this->isRegularEntertainmentUser()) {
+            return null;
+        }
 
         $attach = $this->buildOutput(
             key: $key,
