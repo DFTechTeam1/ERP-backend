@@ -140,6 +140,9 @@ class Employee extends Model
         'avatar_color',
 
         'talenta_user_id',
+
+        // greatday
+        'greatday_emp_id'
     ];
 
     protected $appends = [
