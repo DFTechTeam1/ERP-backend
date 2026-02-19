@@ -9455,4 +9455,46 @@ class ProjectService
             return errorResponse($th);
         }
     }
+
+    public function searchProjectsByNameAndIdentifier(string $search): array
+    {
+        try {
+            $projects = $this->repo->list(
+                select: 'id,name,uid,identifier_id,project_class_id,status,project_date',
+                where: "name LIKE '%{$search}%' OR identifier_id LIKE '%{$search}%'",
+                relation: [
+                    'projectClass:id,name,color',
+                    'personInCharges:id,project_id,pic_id',
+                    'personInCharges.employee:id,nickname',
+                ]
+            );
+
+            $output = [];
+            foreach ($projects as $project) {
+                $picName = '-';
+                if ($project->personInCharges->isNotEmpty()) {
+                    $picName = $project->personInCharges->map(function ($pic) {
+                        return $pic->employee ? $pic->employee->nickname : null;
+                    })->filter()->implode(', ');
+                }
+                $output[] = [
+                    'uid' => $project->uid,
+                    'name' => $project->name,
+                    'project_date' => date('d F Y', strtotime($project->project_date)),
+                    'event_class' => $project->projectClass ? $project->projectClass->name : null,
+                    'event_class_color' => $project->projectClass ? $project->projectClass->color : null,
+                    'status' => $project->status_text,
+                    'status_color' => $project->status_color,
+                    'pic' => $picName
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }
