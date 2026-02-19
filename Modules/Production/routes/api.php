@@ -34,6 +34,9 @@ Route::middleware(['auth:sanctum'])
         Route::get('deadlineReason/getAll', [DeadlineChangeReasonController::class, 'getAll']);
         Route::resource('deadlineReason', DeadlineChangeReasonController::class);
 
+        // hot keys search
+        Route::get('project/search/hotkeys', [ProjectController::class, 'searchProjectsByNameAndIdentifier']);
+
         Route::get('tasks', [ProjectController::class, 'getAllTasks']);
         Route::get('tasks/status', [ProjectController::class, 'getTaskStatus']);
         Route::get('tasks/{taskUid}', [ProjectController::class, 'detailTask']);
