@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\System\BaseRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -18,7 +19,7 @@ class DefineDetailProjectPermission
             'list_member' => $user->hasPermissionTo('list_member'),
             'list_entertainment_member' => $user->hasPermissionTo('list_entertainment_member'),
             'add_team_member' => $user->hasPermissionTo('add_team_member'),
-            'add_references' => $user->hasPermissionTo('add_references'),
+            'add_references' => $user->hasPermissionTo('add_references') && !$this->isRegularEntertainmentUser($user),
             'list_request_song' => $user->hasPermissionTo('list_request_song'),
             'create_request_song' => $user->hasPermissionTo('create_request_song'),
             'distribute_request_song' => $user->hasPermissionTo('distribute_request_song'),
@@ -33,5 +34,10 @@ class DefineDetailProjectPermission
             'add_task' => $user->hasPermissionTo('add_task'),
             'delete_task' => $user->hasPermissionTo('delete_task'),
         ];
+    }
+
+    protected function isRegularEntertainmentUser($user): bool
+    {
+        return $user->hasRole(BaseRole::Entertainment->value) ? true : false;
     }
 }
