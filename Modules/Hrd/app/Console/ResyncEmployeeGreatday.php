@@ -41,7 +41,6 @@ class ResyncEmployeeGreatday extends Command
             'page' => 1,
             'limit' => 100,
         ]);
-
         
         if ($response->status() < 300) {
             $total = $response->json()['total'] ?? 0;
@@ -60,6 +59,96 @@ class ResyncEmployeeGreatday extends Command
             $progress->finish();
             
             $this->info("\n{$total} Employee data resynced successfully.");
+
+            // Positions
+            $positions = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($service->getBaseUrl() . '/company/position', [
+                'page' => 1,
+                'limit' => 100,
+            ]);
+
+            if ($response->status() < 300) {
+                $this->info("Starting to sync divisions ...");
+
+                $progress = $this->output->createProgressBar(count($positions->json()['data']));
+
+                // Insert division first
+                foreach ($positions->json()['data'] as $position) {
+                    $parentPath = $position['parentPath'];
+                    $explodePath = explode(',', $parentPath);
+
+                    $isDivision = count($explodePath) == 2;
+
+                    if ($isDivision) {
+                        $currentDivision = \Modules\Company\Models\DivisionBackup::selectRaw('id')
+                            ->where('name', $position['posNameEn'])
+                            ->first();
+
+                        if (! $currentDivision) {
+                            $currentDivision = \Modules\Company\Models\DivisionBackup::create([
+                                'name' => $position['posNameEn'],
+                            ]);
+                        }
+                    }
+
+                    $progress->advance();
+                }
+
+                $this->info("Starting to sync positions ...");
+
+                // Then insert positions
+                foreach ($positions->json()['data'] as $position) {
+                    $parentPath = $position['parentPath'];
+                    $explodePath = explode(',', $parentPath);
+
+                    if (count($explodePath) == 3) {
+                        $divisionId = $explodePath[2];
+                        $divisionName = collect($positions->json()['data'])->where('positionId', $divisionId)->first()['posNameEn'] ?? null;
+                        $division = \Modules\Company\Models\DivisionBackup::where('name', $divisionName)->first();
+
+                        if ($division) {
+                            \Modules\Company\Models\PositionBackup::updateOrCreate(
+                                ['name' => $position['posNameEn']],
+                                [
+                                    'division_id' => $division->id,
+                                ]
+                            );
+                        }
+                    }
+
+                    $progress->advance();
+                }
+
+                $progress->finish();
+
+                $this->info("\n{$total} Position data resynced successfully.");
+
+                $this->info("\nStart update employee positions ...");
+
+                // $progress = $this->output->createProgressBar($total);
+
+                // foreach ($response->json()['data'] as $employee) {
+                //     $positionName = $employee['posNameEn'] ?? null;
+
+                //     if ($positionName) {
+                //         $position = \Modules\Company\Models\PositionBackup::where('name', $positionName)->first();
+
+                //         if ($position) {
+                //             $updateEmployeePayload = [
+                //                 'position_id' => $position->id,
+                //             ];
+                            
+                //             \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
+                //                 ->update($updateEmployeePayload);
+                //         }
+                //     }
+                //     $progress->advance();
+                // }
+
+                // $progress->finish();
+
+                $this->info("\nEmployee positions updated successfully.");
+            }
+
             return 0;
         }
 
