@@ -5,7 +5,6 @@ namespace Modules\Production\Models;
 use App\Enums\Cache\CacheKey;
 use App\Services\GeneralService;
 use App\Traits\ModelObserver;
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -96,6 +95,16 @@ class Project extends Model
     protected static function newFactory(): ProjectFactory
     {
         return ProjectFactory::new();
+    }
+
+    public function projectMarcommAttendances(): HasMany
+    {
+        return $this->hasMany(ProjectMarcommAttendance::class, 'project_id');
+    }
+
+    public function projectMarcommAfpatAttendances(): HasMany
+    {
+        return $this->hasMany(ProjectMarcommAfpatAttendance::class, 'project_id');
     }
 
     public function nasFolderCreation(): HasOne

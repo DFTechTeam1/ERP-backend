@@ -31,7 +31,7 @@ class DashboardController extends Controller
         //
     }
 
-    public function getReport()
+    public function getReport(): JsonResponse
     {
         return apiResponse($this->service->getReport());
     }

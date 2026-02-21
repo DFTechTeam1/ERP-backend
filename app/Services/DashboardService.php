@@ -8,6 +8,7 @@ use App\Enums\Production\ProjectStatus;
 use App\Enums\System\BaseRole;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -530,6 +531,56 @@ class DashboardService
         return $data;
     }
 
+    public function getMarketingProjects(Authenticatable|null $user): array
+    {
+        $output = [];
+
+        if ($user) {
+            $month = request('month') == 0 ? date('m') : request('month');
+            $year = request('year') == 0 ? date('Y') : request('year');
+            $firstDate = '01';
+            $endDate = \Carbon\Carbon::create($year, $month, $firstDate)->endOfMonth()->toDateString();
+            $startDate = \Carbon\Carbon::create($year, $month, $firstDate)->startOfMonth()->toDateString();
+            $where = "project_date BETWEEN '{$startDate}' AND '{$endDate}'";
+
+            $projects = $this->projectRepo->list(
+                select: 'id,name,project_date,status,venue',
+                where: $where,
+                relation: [
+                    'personInCharges:id,project_id,pic_id',
+                    'personInCharges.employee:id,uid,name',
+                    'vjs.employee:id,nickname',
+                ],
+                whereHas: [
+                    [
+                        'relation' => 'projectMarcommAttendances',
+                        'query' => 'employee_id = ' . $user->employee_id
+                    ],
+                    [
+                        'relation' => 'projectMarcommAfpatAttendances',
+                        'query' => 'employee_id = ' . $user->employee_id
+                    ],
+                ]
+            );
+
+            $output = $this->formattingProjectsForCalendarObjects(projects: $projects);
+        }
+
+        // grouping by date (for custom data)
+        $grouping = collect($output)->groupBy('project_date')->all();
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'events' => $output,
+                'group' => $grouping,
+                'month' => $month,
+                'year' => $year,
+            ],
+        );
+    }
+
     public function getProjectCalendarForProspectEvent(): array
     {
         $month = request('month') == 0 ? date('m') : request('month');
@@ -631,9 +682,14 @@ class DashboardService
         $where = '';
 
         $user = \Illuminate\Support\Facades\Auth::user();
-        if ($user->hasRole([BaseRole::Marketing->value, BaseRole::Director->value, BaseRole::Root->value])) {
+        if ($user->hasRole([BaseRole::Sales->value, BaseRole::Director->value, BaseRole::Root->value])) {
             return $this->getProjectCalendarForProspectEvent();
         }
+
+        if ($user->hasRole([BaseRole::Marketing->value])) {
+            return $this->getMarketingProjects($user);
+        }
+        
         $month = request('month') == 0 ? date('m') : request('month');
         $year = request('year') == 0 ? date('Y') : request('year');
         $startDate = $year.'-'.$month.'-01';

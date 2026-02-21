@@ -18,4 +18,5 @@ enum BaseRole: string
     case AssistantProjectManger = 'assistant manager';
     case ProjectManagerEntertainment = 'project manager entertainment';
     case LeadModeller = 'lead modeller';
+    case Sales = 'sales';
 }
