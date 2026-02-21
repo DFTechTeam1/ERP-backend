@@ -88,6 +88,8 @@ class Project extends Model
         'longitude',
         'latitude',
         'project_deal_id',
+        'marcomm_attendance_check',
+        'with_after_party'
     ];
 
     protected $appends = ['status_text', 'status_color', 'event_type_text', 'event_class_text', 'event_class_color', 'showreels_path'];
@@ -143,6 +145,31 @@ class Project extends Model
     public function vj(): HasOne
     {
         return $this->hasOne(\Modules\Production\Models\ProjectVj::class, 'project_id');
+    }
+
+    public function vjAfpatAttendances(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectVjAfpatAttendance::class, 'project_id');
+    }
+
+    public function marcommAttendances(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectMarcommAttendance::class, 'project_id');
+    }
+
+    public function marcommAfpatAttendances(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectMarcommAfpatAttendance::class, 'project_id');
+    }
+
+    public function transportation(): HasOne
+    {
+        return $this->hasOne(\Modules\Production\Models\ProjectTransportation::class, 'project_id');
+    }
+
+    public function transportationDetails(): HasMany
+    {
+        return $this->hasMany(\Modules\Production\Models\ProjectTransportationDetail::class, 'project_id');
     }
 
     public function projectClass(): BelongsTo
@@ -201,9 +228,9 @@ class Project extends Model
         return $this->hasMany(ProjectReference::class, 'project_id');
     }
 
-    public function equipments(): HasMany
+    public function equipments()
     {
-        return $this->hasMany(ProjectEquipment::class, 'project_id');
+        // return $this->hasMany(ProjectEquipment::class, 'project_id');
     }
 
     public function statusText(): Attribute

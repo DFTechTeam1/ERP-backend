@@ -24,8 +24,11 @@ use Modules\Finance\Models\Invoice;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Jobs\RemindAssignmentMarcomm;
+use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Repository\InteractiveProjectTaskRepository;
+use Modules\Production\Repository\ProjectRepository;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -109,9 +112,15 @@ Route::get('ilham', function () {
     UpcomingDeadlineTaskJob::dispatch($outputData);
 });
 
-Route::get('login', function () {
-    return view('auth.login');
-})->name('login');
+Route::get('login', [LandingPageController::class, 'showLoginForm'])
+    ->name('login');
+
+Route::post('login', [LandingPageController::class, 'login'])
+    ->name('documentation.login.submit');
+
+Route::post('logout', [LandingPageController::class, 'logout'])
+    ->name('documentation.logout')
+    ->middleware('auth');
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
 

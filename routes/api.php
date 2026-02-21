@@ -188,6 +188,7 @@ Route::middleware('auth:sanctum')
     ->group(function () {
         Route::get('logs', [DashboardController::class, 'getLogs']);
         Route::post('users/bulk', [UserController::class, 'bulkDelete'])->name('api.users.bulk-delete');
+        Route::post('users/resendActivationEmail/{userUid}', [UserController::class, 'resendActivationEmail'])->name('api.users.resend-activation-email');
         Route::apiResource('users', UserController::class)->names('api.users');
 
         Route::post('roles/bulk', [RoleController::class, 'bulkDelete']);

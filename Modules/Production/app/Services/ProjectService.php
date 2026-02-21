@@ -2792,7 +2792,8 @@ class ProjectService
         bool $removeFromHistory = false,
         string $message = '',
         bool $doLogging = true, // sometime we don't need to log the action
-        bool $removeWorkState = true
+        bool $removeWorkState = true,
+        bool $removeCurrentPic = true
     ) {
         foreach ($ids as $removedUser) {
             if ($isEmployeeUid) {
@@ -2815,6 +2816,25 @@ class ProjectService
             // remove workstate
             if ($removeWorkState) {
                 $this->projectTaskWorkStateRepo->delete(id: 0, where: "task_id = {$taskId} AND employee_id = {$removedEmployeeId} and complete_at IS NULL");
+            }
+
+            // Remove employee id from current_pics in project_tasks table
+            if ($removeCurrentPic) {
+                $currentTask = $this->taskRepo->show(
+                    uid: 'uid',
+                    select: 'id,current_pics',
+                    where: "id = {$taskId}"
+                );
+                $currentPics = json_decode($currentTask->current_pics, true) ?? [];
+                if (in_array($removedEmployeeId, $currentPics)) {
+                    $updatedPics = array_values(array_diff($currentPics, [$removedEmployeeId]));
+                    $this->taskRepo->update(
+                        data: [
+                            'current_pics' => json_encode($updatedPics),
+                        ],
+                        where: "id = {$taskId}"
+                    );
+                }
             }
 
             $logMessage = __('global.removedMemberLogText', [
@@ -3118,6 +3138,12 @@ class ProjectService
 
     /**
      * Distribute task to modeler teams
+     * @param array $payload with these following structure
+     *                       - array <string> $teams
+     *                       - int $assign_to_me (1|0)
+     * @param string $projectUid
+     * @param string $taskUid
+     * @return array<string, mixed>
      */
     public function distributeModellerTask(array $payload, string $projectUid, string $taskUid): array
     {
@@ -4026,7 +4052,7 @@ class ProjectService
             ]);
             $taskId = $task->id;
 
-            if ($data['nas_link'] && (isset($data['preview']) || $useDefaultImage)) {
+            if ($data['nas_link'] && $data['nas_link'] != '' && (isset($data['preview']) || $useDefaultImage)) {
                 $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
                 // update image
@@ -4188,7 +4214,8 @@ class ProjectService
         $this->detachTaskPic(
             ids: $taskPicUids,
             taskId: $taskId,
-            removeWorkState: false
+            removeWorkState: false,
+            removeCurrentPic: false
         );
 
         // attach project manager to selected task
@@ -4313,7 +4340,6 @@ class ProjectService
             storeCache('detailProject'.$projectId, $currentData);
 
             DB::commit();
-
             return generalResponse(
                 'success',
                 false,
@@ -5441,7 +5467,8 @@ class ProjectService
         $this->detachTaskPic(
             ids: collect($currentPic)->pluck('employee.uid')->toArray(),
             taskId: $taskId,
-            removeWorkState: false
+            removeWorkState: false,
+            removeCurrentPic: false
         );
 
         // update task status
@@ -6679,6 +6706,71 @@ class ProjectService
     }
 
     /**
+     * Validate if pic still has task in selected project
+     * Failed if return FALSE
+     *
+     * @param array $picList
+     * @param integer $projectId
+     * @return boolean
+     */
+    public function validatePicHasTask(array $picList, int $projectId): bool
+    {
+        // Get task ids of project
+        $tasks = $this->taskRepo->list(
+            select: 'id',
+            where: "project_id = {$projectId}",
+        );
+        $taskIds = $tasks->pluck('id')->toArray();
+
+        if ($tasks->count() > 0) {
+            foreach ($picList as $list) {
+                $employeeId = getIdFromUid($list, new \Modules\Hrd\Models\Employee);
+    
+                // Get team memaber of employeeId
+                $teamMembers = $this->employeeRepo->list(
+                    select: 'id',
+                    where: "boss_id = {$employeeId}"
+                );
+                $teamMemberIds = $teamMembers->pluck('id')->toArray();
+                
+                // First, check employee_id in project_task_pics table
+                $taskPicCount = $this->taskPicRepo->show(
+                    id: 0,
+                    select: 'id',
+                    where: "employee_id IN (".implode(',', $teamMemberIds).") and project_task_id IN (".implode(',', $taskIds).")",
+                );
+                
+                if ($taskPicCount) {
+                    return false;
+                }
+    
+                // Check in employee id in current_pics of project_tasks table. current_pics will have value [12,34,56]
+                $taskCurrentPicCount = \Modules\Production\Models\ProjectTask::whereRaw(
+                    "project_id = {$projectId} AND JSON_CONTAINS(current_pics, ?)",
+                    [json_encode($teamMemberIds)]
+                )->count();
+    
+                if ($taskCurrentPicCount > 0) {
+                    return false;
+                }
+
+                // Check employee id in employee_task_states table
+                $employeeTaskStateCount = $this->employeeTaskStateRepo->show(
+                    uid: 'id',
+                    select: 'id',
+                    where: "employee_id IN (".implode(',', $teamMemberIds).") and project_id = {$projectId}",
+                );
+
+                if ($employeeTaskStateCount) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Assign new pic or remove current pic of project
      *
      * @param  array<string, array<string>>  $data
@@ -6689,14 +6781,21 @@ class ProjectService
         try {
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
+            // handle removed pic
+            if (count($data['removed']) > 0) {
+                // Validate if pic team member still has task in the project
+                $isValid = $this->validatePicHasTask(picList: $data['removed'], projectId: $projectId);
+
+                if (! $isValid) {
+                    return errorResponse(message: __('notification.cannotRemovePicWithTask'), code: 500);
+                }
+
+                $this->removePicProject($data['removed'], $projectUid, $projectId);
+            }
+
             // handle new pic
             if (count($data['pics']) > 0) {
                 $this->handleAssignPicLogic($data, $projectUid, $projectId);
-            }
-
-            // handle removed pic
-            if (count($data['removed']) > 0) {
-                $this->removePicProject($data['removed'], $projectUid, $projectId);
             }
 
             // update cache

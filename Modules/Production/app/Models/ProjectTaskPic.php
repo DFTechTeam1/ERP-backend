@@ -22,6 +22,7 @@ class ProjectTaskPic extends Model
         'status',
         'approved_at',
         'assigned_at',
+        'assigned_by'
     ];
 
     protected $appends = ['status_text', 'is_active'];

@@ -14,6 +14,7 @@ class HrdDatabaseSeeder extends Seeder
         // $this->call([]);
         $this->call([
             EmployeeSeeder::class,
+            DefaultAllowanceSeedSeeder::class
         ]);
     }
 }
