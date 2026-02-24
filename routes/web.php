@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
@@ -15,17 +14,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
-use Modules\Company\Jobs\SlackNotificationJob;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
-use Modules\Finance\Models\Invoice;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectTask;
-use Modules\Production\Repository\InteractiveProjectTaskRepository;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -109,9 +104,15 @@ Route::get('ilham', function () {
     UpcomingDeadlineTaskJob::dispatch($outputData);
 });
 
-Route::get('login', function () {
-    return view('auth.login');
-})->name('login');
+Route::get('login', [LandingPageController::class, 'showLoginForm'])
+    ->name('login');
+
+Route::post('login', [LandingPageController::class, 'login'])
+    ->name('documentation.login.submit');
+
+Route::post('logout', [LandingPageController::class, 'logout'])
+    ->name('documentation.logout')
+    ->middleware('auth');
 
 Route::get('quotations/download/{quotationId}/{type}', [QuotationController::class, 'quotation']);
 
@@ -297,4 +298,26 @@ Route::get('migrate-duration', function () {
     $service = app(\Modules\Production\Services\ProjectService::class);
 
     return $service->migrateTaskDuration();
+});
+
+Route::get('sync-greatday', function () {
+    $service = app(\Modules\Hrd\Services\GreatdayService::class);
+
+    $accessToken = $service->login();
+
+    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($service->getBaseUrl() . '/employees', [
+        'page' => 1,
+        'limit' => 100,
+    ]);
+
+    if ($response->status() < 300) {
+        foreach ($response->json()['data'] as $employee) {
+            \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
+                ->update([
+                    'greatday_emp_id' => $employee['empId']
+                ]);
+        }
+    }
+
+    return $response->json()['data'] ?? [];
 });

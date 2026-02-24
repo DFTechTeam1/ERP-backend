@@ -50,7 +50,7 @@ class UserEmailActivation extends Notification
             ->markdown('mail.user.EmailActivation', [
                 'user' => $this->user,
                 'password' => $this->password,
-                'urlActivate' => env('FRONTEND_URL').'/activate/'.$this->encrypted,
+                'urlActivate' => config('app.frontend_url').'/activate/'.$this->encrypted,
             ]);
     }
 

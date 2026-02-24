@@ -49,6 +49,7 @@ class RepositoryGenerator extends Command
 
         // validate
         $moduleData = Module::find($module);
+        
         if (! $moduleData) {
             $this->error('Module not found');
 

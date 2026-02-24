@@ -130,6 +130,8 @@ class GetProjectTeams
             $employeeCondition .= " and position_id in ({$productionPositions})";
         }
 
+        logging('employee condition on teams project', [$employeeCondition]);
+
         $teams = $employeeRepo->list(
             'id,uid,name,email,nickname,position_id',
             $employeeCondition,

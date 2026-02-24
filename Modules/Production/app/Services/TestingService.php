@@ -219,14 +219,6 @@ class TestingService
             }
 
             $needReturnEquipment = false;
-            if ($item->status == \App\Enums\production\ProjectStatus::Completed->value && $item->equipments->count() > 0) {
-                $needReturnEquipment = true;
-            }
-            if ($item->equipments->count() > 0) {
-                if ($item->equipments[0]->is_returned) {
-                    $needReturnEquipment = false;
-                }
-            }
 
             $projectIsComplete = $item->status == \App\Enums\production\ProjectStatus::Completed->value;
             $noPic = count($pics) == 0 ? true : false;
@@ -255,7 +247,7 @@ class TestingService
                 'is_final_check' => $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false,
                 'need_return_equipment' => $needReturnEquipment,
                 'songs' => $item->songs,
-                'number_of_equipments' => $item->equipments->count(),
+                'number_of_equipments' => 0,
                 'action' => [
                     'detail' => true,
                     'remove_all_vj' => $this->user->can('assign_vj') && ! $projectIsComplete && ! $noPic && $haveVj,
@@ -548,14 +540,6 @@ class TestingService
                 }
 
                 $needReturnEquipment = false;
-                if ($item->status == \App\Enums\production\ProjectStatus::Completed->value && $item->equipments->count() > 0) {
-                    $needReturnEquipment = true;
-                }
-                if ($item->equipments->count() > 0) {
-                    if ($item->equipments[0]->is_returned) {
-                        $needReturnEquipment = false;
-                    }
-                }
 
                 $projectIsComplete = $item->status == \App\Enums\production\ProjectStatus::Completed->value;
                 $noPic = count($pics) == 0 ? true : false;
@@ -598,7 +582,7 @@ class TestingService
                     'is_final_check' => $isFinalCheck,
                     'need_return_equipment' => $needReturnEquipment,
                     'roles' => $roles,
-                    'number_of_equipments' => $item->equipments->count(),
+                    'number_of_equipments' => 0,
                     'action' => [
                         'delete' => $this->user->can('delete_project') ? true : false,
                         'detail' => true,
