@@ -228,27 +228,29 @@ class EmployeeService
             $search = request('search');
 
             if (! empty($search)) { // array
-                $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
+                // $filterNames = collect($search['filters'])->pluck('field')->values()->toArray();
 
-                // append status filter when user is not search for filter. This status filter will be as default filter
-                if (! in_array('status', $filterNames)) {
-                    $search['filters'] = collect($search['filters'])->merge([
-                        [
-                            'field' => 'status',
-                            'condition' => 'not_contain',
-                            'value' => Status::Deleted->value,
-                            'data_type' => 'integer',
-                        ],
-                        [
-                            'field' => 'status',
-                            'condition' => 'not_contain',
-                            'value' => Status::Inactive->value,
-                            'data_type' => 'integer',
-                        ],
-                    ])->toArray();
-                }
+                // // append status filter when user is not search for filter. This status filter will be as default filter
+                // if (! in_array('status', $filterNames)) {
+                //     $search['filters'] = collect($search['filters'])->merge([
+                //         [
+                //             'field' => 'status',
+                //             'condition' => 'not_contain',
+                //             'value' => Status::Deleted->value,
+                //             'data_type' => 'integer',
+                //         ],
+                //         [
+                //             'field' => 'status',
+                //             'condition' => 'not_contain',
+                //             'value' => Status::Inactive->value,
+                //             'data_type' => 'integer',
+                //         ],
+                //     ])->toArray();
+                // }
 
-                $where = formatSearchConditions($search['filters'], $where);
+                // $where = formatSearchConditions($search['filters'], $where);
+
+                $where = "name like '%{$search}%' and status != " . Status::Inactive->value . " and status != " . Status::Deleted->value;
             } else {
                 $where = 'status != '.Status::Deleted->value.' and status != '.Status::Inactive->value;
             }
