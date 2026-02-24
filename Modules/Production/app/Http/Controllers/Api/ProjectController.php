@@ -10,8 +10,13 @@ use Modules\Finance\Http\Requests\Refund\CreateTransaction;
 use Modules\Production\Http\Requests\CalculateProratePoint;
 use Modules\Production\Http\Requests\Deals\CancelProjectDeal;
 use Modules\Production\Http\Requests\Deals\NewQuotation;
+use Modules\Production\Http\Requests\Incharge\AssignEntertainmentRequest;
+use Modules\Production\Http\Requests\Incharge\AssignMarcommRequest;
+use Modules\Production\Http\Requests\Incharge\AssignMarcommWidget;
+use Modules\Production\Http\Requests\Project\AssignMarcommToProject;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
+use Modules\Production\Http\Requests\Project\ChangeAfpatStatus;
 use Modules\Production\Http\Requests\Project\ChangeStatus;
 use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\CompleteProject;
@@ -37,6 +42,7 @@ use Modules\Production\Http\Requests\Project\UpdateSong;
 use Modules\Production\Http\Requests\Project\UploadProofOfWork;
 use Modules\Production\Http\Requests\Project\UploadShowreels;
 use Modules\Production\Services\CustomerService;
+use Modules\Production\Services\InchargeService;
 use Modules\Production\Services\ProjectService;
 use Modules\Production\Services\TestingService;
 
@@ -54,7 +60,8 @@ class ProjectController extends Controller
         ProjectService $projectService,
         TestingService $testingService,
         CustomerService $customerService,
-        \Modules\Production\Services\ProjectDealService $projectDealService
+        \Modules\Production\Services\ProjectDealService $projectDealService,
+        private readonly InchargeService $inchargeService
     ) {
         $this->service = $projectService;
 
@@ -80,7 +87,6 @@ class ProjectController extends Controller
                 'marketings.marketing:id,name,employee_id',
                 'projectClass:id,name,color',
                 'vjs.employee:id,nickname',
-                'equipments:id,project_id',
             ]
         ));
     }
@@ -613,7 +619,7 @@ class ProjectController extends Controller
 
     public function subtitutePic(\Modules\Production\Http\Requests\Project\SubtitutePic $request, string $projectUid)
     {
-        return $this->service->subtitutePic($projectUid, $request->validated());
+        return apiResponse($this->service->subtitutePic($projectUid, $request->validated()));
     }
 
     public function getPicForSubtitute(string $projectUid)

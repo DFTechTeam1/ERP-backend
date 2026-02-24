@@ -1,9 +1,46 @@
+Enum "RequestEquipmentMastersStatusEnum" {
+    "pending"
+    "on_process"
+    "success"
+    "cancel"
+}
+
+Enum "RequestEquipmentsOrderTypeEnum" {
+    "online"
+    "offline"
+}
+
+Enum "RequestEquipmentStatusHistoriesStatusEnum" {
+    "on_request"
+    "on_process"
+    "returned"
+    "arrived"
+    "canceled"
+}
+
+Enum "RequestEquipmentHistoriesStatusEnum" {
+    "need_approval"
+    "approved"
+    "rejected"
+}
 
 Enum "development_projects_status_enum" {
   "1"
   "2"
   "3"
   "4"
+}
+
+Enum "ticket_type_enum" {
+  "departure"
+  "return"
+}
+
+Enum "transportation_type_enum" {
+  "air"
+  "train"
+  "car"
+  "other"
 }
 
 Enum "project_deal_refund_status_enum" {
@@ -213,6 +250,7 @@ Enum "transactions_transaction_type_enum" {
   "down_payment"
   "credit"
   "repayment"
+  "refund"
 }
 
 Table "addons" {
@@ -334,6 +372,34 @@ Table "delete_office_email_queues" {
   "employee_id" bigint [not null]
   "email" varchar(255) [not null]
   "status" tinyint(1) [not null, default: '0', note: '0 for pending, 1 for done']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_subtasks" {
+  "id" bigint [pk, not null]
+  "uid" char(36) [not null]
+  "project_id" bigint [not null, ref: > development_projects.id]
+  "name" varchar(255) [not null]
+  "description" text [null]
+  "created_by" bigint [not null, ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_subtask_uploads" {
+  "id" bigint [pk, not null]
+  "subtask_id" bigint [not null, ref: > development_subtasks.id]
+  "note" varchar(255) [default: NULL]
+  "uploaded_by" bigint [not null, ref: > users.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "development_subtask_upload_files" {
+  "id" bigint [pk, not null]
+  "subtask_upload_id" bigint [not null, ref: > development_subtask_uploads.id]
+  "file_path" varchar(255) [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
@@ -1422,6 +1488,8 @@ Table "projects" {
   "latitude" varchar(150) [default: NULL]
   "feedback" text
   "project_deal_id" bigint [default: NULL]
+  "marcomm_attendance_check" tinyint(1) [note: "this column will be true when marcomm already take action about project attendance"] // new column (14-11-2025)
+  "with_after_party" tinyint(1) [default: '0'] // new column (11-08-2025)
 }
 
 Table "project_feedbacks" {
@@ -1882,11 +1950,69 @@ Table "project_task_worktimes" {
 
 Table "project_vjs" {
   "id" bigint [pk, not null]
-  "project_id" bigint [not null]
-  "employee_id" bigint [not null]
+  "project_id" bigint [not null, ref: > projects.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "note" text // Added 13 Nov 2025
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "created_by" int [not null]
+}
+
+// new (11-08-2025)
+Table "project_vj_afpat_attendances" {
+  "id" bigint [pk, not null]
+  "project_id" bigint [not null, ref: > projects.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "note" varchar(255)
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+// new (11-08-2025)
+Table "project_marcomm_attendances" {
+  "id" bigint [pk, not null]
+  "project_id" bigint [not null, ref: > projects.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "note" varchar(255)
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+// new (11-08-2025)
+Table "project_marcomm_afpat_attendances" {
+  "id" bigint [pk, not null]
+  "project_id" bigint [not null, ref: > projects.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "note" varchar(255)
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+// new (11-08-2025)
+Table "project_transportations" {
+  "id" bigint [pk, not null]
+  "project_id" bigint [not null, ref: > projects.id]
+  "total_amount" decimal(24,2) [not null, default: '0']
+  "total_tickets" tinyint [not null, default: 0]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+// new (11-08-2025)
+Table "project_transportation_details" {
+  "id" bigint [pk, not null]
+  "transportation_id" bigint [not null, ref: > project_transportations.id]
+  "project_id" bigint [not null, ref: > projects.id]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "ticket_image" varchar(255) [note: "Ticket screenshot"]
+  "type" ticket_type_enum
+  "departure_datetime" timestamp [default: NULL]
+  "return_datetime" timestamp [default: NULL]
+  "transportation_type" transportation_type_enum
+  "amount" decimal(24,2) [default: '0']
+  "issued_by" bigint [not null, ref: > employees.id]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Table "quotation_items" {
@@ -2074,6 +2200,7 @@ Table "transactions" {
   "trx_id" varchar(255) [not null]
   "transaction_date" timestamp [not null]
   "transaction_type" transactions_transaction_type_enum [default: NULL]
+  "payment_information_text" varchar(255) [default: NULL, note: "Short information for user like: purchasing goods, purchasing tickets, client payments"] // new column (11-08-2025)
   "created_by" bigint [default: NULL]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
@@ -2178,6 +2305,24 @@ Table "user_login_histories" {
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "browser" varchar(200) [default: NULL]
+}
+
+Table "allowances" {
+  "id" bigint [pk, not null]
+  "name" varchar(255) [not null]
+  "status" enum('active', 'inactive') [not null, default: 'active']
+  "period" enum('per_day', 'per_event') [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "division_allowances" {
+  "id" bigint [pk, not null]
+  "division_id" bigint [not null, ref: > division_backups.id]
+  "allowance_id" bigint [not null, ref: > allowances.id]
+  "amount" decimal(24,2) [not null, default: '0.00']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]

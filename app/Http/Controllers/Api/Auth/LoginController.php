@@ -103,6 +103,7 @@ class LoginController extends Controller
                         'pEnc' => $generatedToken['pEnc'],
                         'menus' => $generatedToken['menus'],
                         'main' => $generatedToken['mainToken'],
+                        'expressToken' => $generatedToken['expressToken'],
                     ],
                 ),
             );

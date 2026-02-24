@@ -58,6 +58,7 @@ class EmployeeController extends Controller
             'gender',
             'martial_status',
             'user_id',
+            'nickname'
         ];
 
         return apiResponse(
@@ -454,5 +455,95 @@ class EmployeeController extends Controller
     public function getTheHighestEventNumberInPic(): JsonResponse
     {
         return apiResponse($this->employeeService->getTheHighestEventNumberInPic());
+    }
+
+    public function getGreatdayTimezones(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayTimezones());
+    }
+
+    public function getGreatdayCostCenter(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayCostCenter());
+    }
+
+    public function getGreatdayReligion(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayReligion());
+    }
+
+    public function getGreatdayJobGrade(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayJobGrade());
+    }
+
+    public function getGreatdayEmploymentStatus(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayEmploymentStatus());
+    }
+
+    public function getGreatdayWorkLocation(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayWorkLocation());
+    }
+
+    public function getGreatdayShiftPattern(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayShiftPattern());
+    }
+
+    public function getGreatdayJobStatus(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayJobStatus());
+    }
+
+    public function getGreatdayNationality(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayNationality());
+    }
+
+    public function listTimezones(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listTimezones());
+    }
+
+    public function listCostCenter(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listCostCenter());
+    }
+
+    public function listReligions(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listReligions());
+    }
+
+    public function listJobGrades(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listJobGrades());
+    }
+
+    public function listEmploymentStatuses(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listEmploymentStatuses());
+    }
+
+    public function listWorkLocations(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listWorkLocations());
+    }
+
+    public function listShiftPatterns(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listShiftPatterns());
+    }
+
+    public function listJobStatuses(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listJobStatuses());
+    }
+
+    public function listNationalities(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listNationalities());
     }
 }

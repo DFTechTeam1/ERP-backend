@@ -151,7 +151,15 @@ return [
 
     'python_endpoint_prod' => env('PYTHON_ENDPOINT_PRODUCTION', null),
 
+    'express_endpoint' => env('EXPRESS_ENDPOINT_STAGING', null),
+
     'salt_key_encryption' => env('SALT_KEY'),
 
     'developer_email' => env('DEVELOPER_EMAIL', null),
+
+    'greatday' => [
+        'access_key' => env('GREATDAY_ACCESS_KEY'),
+        'access_secret' => env('GREATDAY_ACCESS_SECRET'),
+        'base_url' => env('GREATDAY_BASE_URL'),
+    ],
 ];

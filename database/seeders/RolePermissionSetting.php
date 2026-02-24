@@ -50,18 +50,19 @@ class RolePermissionSetting extends Seeder
     protected function seedRoles()
     {
         $roles = [
-            ['is_permanent' => true, 'name' => $this->getRootRole(), 'permissions' => $this->getRolePermissions($this->getRootRole())],
-            ['is_permanent' => true, 'name' => $this->getDirectorRole(), 'permissions' => $this->getRolePermissions($this->getDirectorRole())],
-            ['is_permanent' => true, 'name' => $this->getMarketingRole(), 'permissions' => $this->getRolePermissions($this->getMarketingRole())],
-            ['is_permanent' => true, 'name' => $this->getProductionRole(), 'permissions' => $this->getRolePermissions($this->getProductionRole())],
-            ['is_permanent' => true, 'name' => $this->getProjectManagerRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerRole())],
-            ['is_permanent' => true, 'name' => $this->getProjectManagerAdminRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerAdminRole())],
-            ['is_permanent' => true, 'name' => $this->getProjectManagerEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerEntertainmentRole())],
-            ['is_permanent' => true, 'name' => $this->getEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getEntertainmentRole())],
-            ['is_permanent' => true, 'name' => $this->getItSupportRole(), 'permissions' => $this->getRolePermissions($this->getItSupportRole())],
-            ['is_permanent' => true, 'name' => $this->getHrdRole(), 'permissions' => $this->getRolePermissions($this->getHrdRole())],
-            ['is_permanent' => true, 'name' => $this->getFinanceRole(), 'permissions' => $this->getRolePermissions($this->getFinanceRole())],
-            ['is_permanent' => false, 'name' => $this->getRegularRole(), 'permissions' => $this->getRolePermissions($this->getRegularRole())],
+            ['is_permanent' => true, 'name' => $this->getRootRole(), 'permissions' => $this->getRolePermissions($this->getRootRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getDirectorRole(), 'permissions' => $this->getRolePermissions($this->getDirectorRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getMarketingRole(), 'permissions' => $this->getRolePermissions($this->getMarketingRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getSalesRole(), 'permissions' => $this->getRolePermissions($this->getSalesRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getProductionRole(), 'permissions' => $this->getRolePermissions($this->getProductionRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerAdminRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerAdminRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerEntertainmentRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getEntertainmentRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getItSupportRole(), 'permissions' => $this->getRolePermissions($this->getItSupportRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getHrdRole(), 'permissions' => $this->getRolePermissions($this->getHrdRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getFinanceRole(), 'permissions' => $this->getRolePermissions($this->getFinanceRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => false, 'name' => $this->getRegularRole(), 'permissions' => $this->getRolePermissions($this->getRegularRole()), 'guard_name' => 'sanctum'],
             ['is_permanent' => true, 'name' => $this->getAssistantProjectManagerRole(), 'permissions' => []],
             ['is_permanent' => true, 'name' => $this->getLeadModeller(), 'permissions' => []],
         ];
@@ -164,6 +165,11 @@ class RolePermissionSetting extends Seeder
         return BaseRole::Marketing->value;
     }
 
+    protected function getSalesRole()
+    {
+        return BaseRole::Sales->value;
+    }
+
     protected function getDirectorRole()
     {
         return BaseRole::Director->value;
@@ -253,6 +259,52 @@ class RolePermissionSetting extends Seeder
             ['name' => 'list_logs', 'group' => 'dashboard', 'used' => [
                 $this->getDirectorRole(),
                 $this->getRootRole(),
+            ]],
+        ];
+    }
+
+    protected function inchargePermission()
+    {
+        return [
+            ['name' => 'on_duty_list', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'assign_incharge_entertainment', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'assign_incharge_marcomm', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'assign_incharge_interactive', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'assign_incharge_production', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'detail_cost_estimation', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'add_transportation_request', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'cancel_transportation_request', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
             ]],
         ];
     }
@@ -545,6 +597,98 @@ class RolePermissionSetting extends Seeder
     protected function inventoriesPermission()
     {
         return [
+            ['name' => 'create_custom_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'fetch_custom_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'edit_custom_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'delete_custom_inventory', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'fetch_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'assign_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'edit_assigned_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'delete_assigned_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'approve_request_project_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+
+            ['name' => 'delete_existing_submission', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'create_submission', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'fetch_submission', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'add_new_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'delete_requested_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'approve_requested_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'approve_update_requested_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'edit_requested_equipment_status', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+            ['name' => 'edit_requested_equipment', 'group' => 'inventories', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getItSupportRole(),
+            ]],
+
             ['name' => 'manage_nas', 'group' => 'inventories', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
@@ -1234,6 +1378,7 @@ class RolePermissionSetting extends Seeder
     {
         $permissions = [];
         $permissions = collect($permissions)->merge($this->dashboardPermission())
+            ->merge($this->inchargePermission())
             ->merge($this->userManagementPermission())
             ->merge($this->employeePermission())
             ->merge($this->masterPermission())
