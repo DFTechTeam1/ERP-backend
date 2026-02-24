@@ -153,7 +153,7 @@ class UserService
     public function update(array $data, string $id)
     {
         try {
-            $user = $this->repo->detail($id);
+            $user = $this->repo->detail(id: '', where: "uid = '{$id}'");
             $roles = $user->roles;
             foreach ($roles as $role) {
                 $user->removeRole($role);

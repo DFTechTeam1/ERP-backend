@@ -6317,7 +6317,7 @@ class ProjectService
         }
     }
 
-    public function assignVJ(array $data, string $projectUid)
+    public function assignVJ(array $data, string $projectUid): array
     {
         DB::beginTransaction();
         try {

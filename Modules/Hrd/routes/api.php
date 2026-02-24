@@ -69,23 +69,23 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::prefix('greatday')
             ->group(function () {
                 Route::get('/timezones', 'listTimezones');
-                Route::get('/timezones/refresh', 'getGreatdayTimezones');
+                Route::get('/timezones/refresh', 'getGreatdayTimezones')->name('greatday.refreshTimezones');
                 Route::get('/religion', 'listReligions');
-                Route::get('/religion/refresh', 'getGreatdayReligion');
+                Route::get('/religion/refresh', 'getGreatdayReligion')->name('greatday.refreshReligion');
                 Route::get('/jobgrade', 'listJobGrades');
-                Route::get('/jobgrade/refresh', 'getGreatdayJobGrade');
+                Route::get('/jobgrade/refresh', 'getGreatdayJobGrade')->name('greatday.refreshJobGrade');
                 Route::get('/costcenter', 'listCostCenter');
-                Route::get('/costcenter/refresh', 'getGreatdayCostCenter');
+                Route::get('/costcenter/refresh', 'getGreatdayCostCenter')->name('greatday.refreshCostCenter');
                 Route::get('/employmentstatus', 'listEmploymentStatuses');
-                Route::get('/employmentstatus/refresh', 'getGreatdayEmploymentStatus');
+                Route::get('/employmentstatus/refresh', 'getGreatdayEmploymentStatus')->name('greatday.refreshEmploymentStatus');
                 Route::get('/worklocation', 'listWorkLocations');
-                Route::get('/worklocation/refresh', 'getGreatdayWorkLocation');
+                Route::get('/worklocation/refresh', 'getGreatdayWorkLocation')->name('greatday.refreshWorkLocation');
                 Route::get('/shiftpattern', 'listShiftPatterns');
-                Route::get('/shiftpattern/refresh', 'getGreatdayShiftPattern');
+                Route::get('/shiftpattern/refresh', 'getGreatdayShiftPattern')->name('greatday.refreshShiftPattern');
                 Route::get('/jobstatus', 'listJobStatuses');
-                Route::get('/jobstatus/refresh', 'getGreatdayJobStatus');
+                Route::get('/jobstatus/refresh', 'getGreatdayJobStatus')->name('greatday.refreshJobStatus');
                 Route::get('/nationality', 'listNationalities');
-                Route::get('/nationality/refresh', 'getGreatdayNationality');
+                Route::get('/nationality/refresh', 'getGreatdayNationality')->name('greatday.refreshNationality');
             });
     });
 

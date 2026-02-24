@@ -347,7 +347,7 @@ class EmployeeService
         try {
             $projectId = $this->generalService->getIdFromUid($projectUid, new Project);
             $project = $this->projectRepo->show(uid: $projectUid, select: 'id,project_date');
-            $position = $this->positionRepo->show(uid: 0, select: 'id', where: "name = '3D Modeller'");
+            $position = $this->positionRepo->show(uid: 0, select: 'id', where: "name = 'Modeller'");
 
             $where = "position_id = '{$position->id}'";
             $leader = $this->generalService->getSettingByKey('lead_3d_modeller');
