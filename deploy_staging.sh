@@ -14,6 +14,10 @@ php artisan migrate --force
 php artisan optimize:clear
 # Run necessary commands
 php artisan app:migrate-invoice-uid
+
+# Migrate greatday data
+php artisan app:resync-employee-greatday
+
 php artisan db:seed --class=RolePermissionSetting --force
 php artisan db:seed --class=UpdatePriceGuideSetting --force
 php artisan config:cache

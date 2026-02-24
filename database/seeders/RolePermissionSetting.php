@@ -50,18 +50,19 @@ class RolePermissionSetting extends Seeder
     protected function seedRoles()
     {
         $roles = [
-            ['is_permanent' => true, 'name' => $this->getRootRole(), 'permissions' => $this->getRolePermissions($this->getRootRole())],
-            ['is_permanent' => true, 'name' => $this->getDirectorRole(), 'permissions' => $this->getRolePermissions($this->getDirectorRole())],
-            ['is_permanent' => true, 'name' => $this->getMarketingRole(), 'permissions' => $this->getRolePermissions($this->getMarketingRole())],
-            ['is_permanent' => true, 'name' => $this->getProductionRole(), 'permissions' => $this->getRolePermissions($this->getProductionRole())],
-            ['is_permanent' => true, 'name' => $this->getProjectManagerRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerRole())],
-            ['is_permanent' => true, 'name' => $this->getProjectManagerAdminRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerAdminRole())],
-            ['is_permanent' => true, 'name' => $this->getProjectManagerEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerEntertainmentRole())],
-            ['is_permanent' => true, 'name' => $this->getEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getEntertainmentRole())],
-            ['is_permanent' => true, 'name' => $this->getItSupportRole(), 'permissions' => $this->getRolePermissions($this->getItSupportRole())],
-            ['is_permanent' => true, 'name' => $this->getHrdRole(), 'permissions' => $this->getRolePermissions($this->getHrdRole())],
-            ['is_permanent' => true, 'name' => $this->getFinanceRole(), 'permissions' => $this->getRolePermissions($this->getFinanceRole())],
-            ['is_permanent' => false, 'name' => $this->getRegularRole(), 'permissions' => $this->getRolePermissions($this->getRegularRole())],
+            ['is_permanent' => true, 'name' => $this->getRootRole(), 'permissions' => $this->getRolePermissions($this->getRootRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getDirectorRole(), 'permissions' => $this->getRolePermissions($this->getDirectorRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getMarketingRole(), 'permissions' => $this->getRolePermissions($this->getMarketingRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getSalesRole(), 'permissions' => $this->getRolePermissions($this->getSalesRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getProductionRole(), 'permissions' => $this->getRolePermissions($this->getProductionRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerAdminRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerAdminRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getProjectManagerEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getProjectManagerEntertainmentRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getEntertainmentRole(), 'permissions' => $this->getRolePermissions($this->getEntertainmentRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getItSupportRole(), 'permissions' => $this->getRolePermissions($this->getItSupportRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getHrdRole(), 'permissions' => $this->getRolePermissions($this->getHrdRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => true, 'name' => $this->getFinanceRole(), 'permissions' => $this->getRolePermissions($this->getFinanceRole()), 'guard_name' => 'sanctum'],
+            ['is_permanent' => false, 'name' => $this->getRegularRole(), 'permissions' => $this->getRolePermissions($this->getRegularRole()), 'guard_name' => 'sanctum'],
             ['is_permanent' => true, 'name' => $this->getAssistantProjectManagerRole(), 'permissions' => []],
             ['is_permanent' => true, 'name' => $this->getLeadModeller(), 'permissions' => []],
         ];
@@ -162,6 +163,11 @@ class RolePermissionSetting extends Seeder
     protected function getMarketingRole()
     {
         return BaseRole::Marketing->value;
+    }
+
+    protected function getSalesRole()
+    {
+        return BaseRole::Sales->value;
     }
 
     protected function getDirectorRole()

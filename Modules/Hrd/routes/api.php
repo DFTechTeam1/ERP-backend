@@ -65,6 +65,28 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/modeller/{projectUid?}/{taskUid?}', 'get3DModeller');
 
         Route::post('employees/import', 'import');
+
+        Route::prefix('greatday')
+            ->group(function () {
+                Route::get('/timezones', 'listTimezones');
+                Route::get('/timezones/refresh', 'getGreatdayTimezones')->name('greatday.refreshTimezones');
+                Route::get('/religion', 'listReligions');
+                Route::get('/religion/refresh', 'getGreatdayReligion')->name('greatday.refreshReligion');
+                Route::get('/jobgrade', 'listJobGrades');
+                Route::get('/jobgrade/refresh', 'getGreatdayJobGrade')->name('greatday.refreshJobGrade');
+                Route::get('/costcenter', 'listCostCenter');
+                Route::get('/costcenter/refresh', 'getGreatdayCostCenter')->name('greatday.refreshCostCenter');
+                Route::get('/employmentstatus', 'listEmploymentStatuses');
+                Route::get('/employmentstatus/refresh', 'getGreatdayEmploymentStatus')->name('greatday.refreshEmploymentStatus');
+                Route::get('/worklocation', 'listWorkLocations');
+                Route::get('/worklocation/refresh', 'getGreatdayWorkLocation')->name('greatday.refreshWorkLocation');
+                Route::get('/shiftpattern', 'listShiftPatterns');
+                Route::get('/shiftpattern/refresh', 'getGreatdayShiftPattern')->name('greatday.refreshShiftPattern');
+                Route::get('/jobstatus', 'listJobStatuses');
+                Route::get('/jobstatus/refresh', 'getGreatdayJobStatus')->name('greatday.refreshJobStatus');
+                Route::get('/nationality', 'listNationalities');
+                Route::get('/nationality/refresh', 'getGreatdayNationality')->name('greatday.refreshNationality');
+            });
     });
 
 Route::middleware('auth:sanctum')

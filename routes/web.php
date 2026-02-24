@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
@@ -15,20 +14,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
-use Modules\Company\Jobs\SlackNotificationJob;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
-use Modules\Finance\Models\Invoice;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Production\Http\Controllers\Api\QuotationController;
-use Modules\Production\Jobs\RemindAssignmentMarcomm;
-use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectTask;
-use Modules\Production\Repository\InteractiveProjectTaskRepository;
-use Modules\Production\Repository\ProjectRepository;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -306,4 +298,26 @@ Route::get('migrate-duration', function () {
     $service = app(\Modules\Production\Services\ProjectService::class);
 
     return $service->migrateTaskDuration();
+});
+
+Route::get('sync-greatday', function () {
+    $service = app(\Modules\Hrd\Services\GreatdayService::class);
+
+    $accessToken = $service->login();
+
+    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($service->getBaseUrl() . '/employees', [
+        'page' => 1,
+        'limit' => 100,
+    ]);
+
+    if ($response->status() < 300) {
+        foreach ($response->json()['data'] as $employee) {
+            \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
+                ->update([
+                    'greatday_emp_id' => $employee['empId']
+                ]);
+        }
+    }
+
+    return $response->json()['data'] ?? [];
 });
