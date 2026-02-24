@@ -22,6 +22,10 @@ php artisan optimize:clear
 #php artisan app:migrate-new-point-scheme
 #php artisan app:migrate-project-task-duration-history
 php artisan db:seed --class=RolePermissionSetting --force
+
+# Migrate greatday data
+php artisan app:resync-employee-greatday
+
 #php artisan db:seed --class=UpdatePriceGuideSetting --force
 php artisan config:cache
 php artisan route:cache

@@ -124,27 +124,35 @@ class ResyncEmployeeGreatday extends Command
 
                 $this->info("\nStart update employee positions ...");
 
-                // $progress = $this->output->createProgressBar($total);
+                $progress = $this->output->createProgressBar($total);
 
-                // foreach ($response->json()['data'] as $employee) {
-                //     $positionName = $employee['posNameEn'] ?? null;
+                foreach ($response->json()['data'] as $employee) {
+                    $positionName = $employee['posNameEn'] ?? null;
 
-                //     if ($positionName) {
-                //         $position = \Modules\Company\Models\PositionBackup::where('name', $positionName)->first();
+                    if ($positionName) {
+                        $position = \Modules\Company\Models\PositionBackup::where('name', $positionName)->first();
 
-                //         if ($position) {
-                //             $updateEmployeePayload = [
-                //                 'position_id' => $position->id,
-                //             ];
-                            
-                //             \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
-                //                 ->update($updateEmployeePayload);
-                //         }
-                //     }
-                //     $progress->advance();
-                // }
+                        if ($position) {
+                            $updateEmployeePayload = [
+                                'position_id' => $position->id,
+                            ];
 
-                // $progress->finish();
+                            $user = \App\Models\User::selectRaw('id,employee_id,email')
+                                ->where('email', $employee['email'])
+                                ->first();
+
+                            if ($user) {
+                                $this->info("Updating employee {$user->email} with position {$positionName}");
+                                
+                                \Modules\Hrd\Models\Employee::where('id', $user->employee_id)
+                                    ->update($updateEmployeePayload);
+                            }
+                        }
+                    }
+                    $progress->advance();
+                }
+
+                $progress->finish();
 
                 $this->info("\nEmployee positions updated successfully.");
             }

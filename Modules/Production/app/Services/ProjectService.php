@@ -4770,6 +4770,8 @@ class ProjectService
      * Get all assigned task
      * If admin is logged in, show all task from all employee
      * If employee is logged in, only show assigned task
+     * 
+     * @return array
      */
     public function getAllTasks(): array
     {
@@ -4863,6 +4865,20 @@ class ProjectService
                 } else {
                     $where .= " AND status IN ({$status})";
                 }
+            }
+
+            if (! empty(request("pics"))) {
+                $pics = explode(',', request('pics'));
+                $picIds = "'" . implode("','", $pics) . "'";
+                $employeeList = $this->employeeRepo->list(
+                    select: 'id',
+                    where: "uid IN (" . $picIds . ")"
+                );
+                $employeeIds = $employeeList->pluck('id')->join(',');
+                $whereHas[] = [
+                    'relation' => 'pics',
+                    'query' => 'employee_id IN (' . $employeeIds . ')'
+                ];
             }
 
             $data = $this->taskRepo->pagination(

@@ -278,7 +278,7 @@ class UserService
 
     public function show(string $id)
     {
-        $data = $this->repo->detail($id);
+        $data = $this->repo->detail(id: '', select: '*', where: "uid = '{$id}'");
         $data->roles;
 
         $employeeData = $this->employeeRepo->show('id', 'id,uid', [], 'user_id = '.$data->id);

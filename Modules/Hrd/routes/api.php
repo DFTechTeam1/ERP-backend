@@ -65,6 +65,28 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/modeller/{projectUid?}/{taskUid?}', 'get3DModeller');
 
         Route::post('employees/import', 'import');
+
+        Route::prefix('greatday')
+            ->group(function () {
+                Route::get('/timezones', 'listTimezones');
+                Route::get('/timezones/refresh', 'getGreatdayTimezones');
+                Route::get('/religion', 'listReligions');
+                Route::get('/religion/refresh', 'getGreatdayReligion');
+                Route::get('/jobgrade', 'listJobGrades');
+                Route::get('/jobgrade/refresh', 'getGreatdayJobGrade');
+                Route::get('/costcenter', 'listCostCenter');
+                Route::get('/costcenter/refresh', 'getGreatdayCostCenter');
+                Route::get('/employmentstatus', 'listEmploymentStatuses');
+                Route::get('/employmentstatus/refresh', 'getGreatdayEmploymentStatus');
+                Route::get('/worklocation', 'listWorkLocations');
+                Route::get('/worklocation/refresh', 'getGreatdayWorkLocation');
+                Route::get('/shiftpattern', 'listShiftPatterns');
+                Route::get('/shiftpattern/refresh', 'getGreatdayShiftPattern');
+                Route::get('/jobstatus', 'listJobStatuses');
+                Route::get('/jobstatus/refresh', 'getGreatdayJobStatus');
+                Route::get('/nationality', 'listNationalities');
+                Route::get('/nationality/refresh', 'getGreatdayNationality');
+            });
     });
 
 Route::middleware('auth:sanctum')

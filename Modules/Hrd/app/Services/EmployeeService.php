@@ -36,6 +36,9 @@ use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeResignRepository;
 use Modules\Hrd\Repository\EmployeeTimeoffRepository;
+use Modules\Hrd\Repository\GreatdayJobGradeRepository;
+use Modules\Hrd\Repository\GreatdayReligionRepository;
+use Modules\Hrd\Repository\GreatdayTimezoneRepository;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -95,6 +98,26 @@ class EmployeeService
 
     private $projectTaskPicRepo;
 
+    private $greatdayService;
+
+    private $greatdayTimezoneRepo;
+
+    private $greatdayCostCenterRepo;
+
+    private $greatdayReligionRepo;
+
+    private $greatdayJobGradeRepo;
+
+    private $greatdayEmploymentStatusRepo;
+
+    private $greatdayWorkLocationRepo;
+
+    private $greatdayShiftPatternRepo;
+
+    private $greatdayJobStatusRepo;
+
+    private $greatdayNationalityRepo;
+
     public function __construct(
         EmployeeRepository $employeeRepo,
         PositionRepository $positionRepo,
@@ -115,7 +138,17 @@ class EmployeeService
         TalentaService $talentaService,
         EmployeeResignRepository $employeeResignRepo,
         DeleteOfficeEmailQueueRepository $deleteOfficeEmailQueueRepo,
-        ProjectTaskPicRepository $projectTaskPicRepo
+        ProjectTaskPicRepository $projectTaskPicRepo,
+        GreatdayService $greatdayService,
+        GreatdayTimezoneRepository $greatdayTimezoneRepo,
+        \Modules\Hrd\Repository\GreatdayCostCenterRepository $greatdayCostCenterRepo,
+        GreatdayReligionRepository $greatdayReligionRepo,
+        GreatdayJobGradeRepository $greatdayJobGradeRepo,
+        \Modules\Hrd\Repository\GreatdayEmploymentStatusRepository $greatdayEmploymentStatusRepo,
+        \Modules\Hrd\Repository\GreatdayWorkLocationRepository $greatdayWorkLocationRepo,
+        \Modules\Hrd\Repository\GreatdayShiftPatternRepository $greatdayShiftPatternRepo,
+        \Modules\Hrd\Repository\GreatdayJobStatusRepository $greatdayJobStatusRepo,
+        \Modules\Hrd\Repository\GreatdayNationalityRepository $greatdayNationalityRepo,
     ) {
         $this->talentaService = $talentaService;
 
@@ -156,6 +189,26 @@ class EmployeeService
         $this->deleteOfficeEmailQueueRepo = $deleteOfficeEmailQueueRepo;
 
         $this->projectTaskPicRepo = $projectTaskPicRepo;
+
+        $this->greatdayService = $greatdayService;
+
+        $this->greatdayTimezoneRepo = $greatdayTimezoneRepo;
+
+        $this->greatdayCostCenterRepo = $greatdayCostCenterRepo;
+
+        $this->greatdayReligionRepo = $greatdayReligionRepo;
+
+        $this->greatdayJobGradeRepo = $greatdayJobGradeRepo;
+
+        $this->greatdayEmploymentStatusRepo = $greatdayEmploymentStatusRepo;
+
+        $this->greatdayWorkLocationRepo = $greatdayWorkLocationRepo;
+
+        $this->greatdayShiftPatternRepo = $greatdayShiftPatternRepo;
+
+        $this->greatdayJobStatusRepo = $greatdayJobStatusRepo;
+
+        $this->greatdayNationalityRepo = $greatdayNationalityRepo;
     }
 
     /**
@@ -199,8 +252,6 @@ class EmployeeService
             } else {
                 $where = 'status != '.Status::Deleted->value.' and status != '.Status::Inactive->value;
             }
-
-            logging('where employee', [$where]);
 
             $sort = 'name asc';
             if (request('sort')) {
@@ -263,6 +314,7 @@ class EmployeeService
                     'user' => $item->user,
                     'is_resign' => $item->resignData ? true : false,
                     'can_cancel_resign' => $canCancelResign,
+                    'nickname' => $item->nickname
                 ];
             })->toArray();
 
@@ -2372,6 +2424,850 @@ class EmployeeService
                 ]
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    protected function isGreatdayResponseSuccess(\Illuminate\Http\Client\Response $response): bool
+    {
+        return $response->status() < 300 && isset($response->json()['data']);
+    }
+
+    protected function getGreatdayRepositoryData(string $type)
+    {
+        $type = ucfirst($type);
+        return "greatday{$type}Repo";
+    }
+
+    public function greatdayListData(string $select, string $type, string $searchAbleColumn = 'name', string $secondSearchAbleColumn = '')
+    {
+        try {
+            $repo = $this->getGreatdayRepositoryData($type);
+            $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $sortBy = request('sortBy') ?? [];
+
+            $search = request('search');
+
+            $where = '';
+
+            if (! empty($search)) {
+                $where = "{$searchAbleColumn} like '%{$search}%'";
+
+                if (! empty($secondSearchAbleColumn)) {
+                    $where .= " OR {$secondSearchAbleColumn} like '%{$search}%'";
+                }
+            }
+
+            $data = $this->$repo->pagination(
+                select: $select,
+                where: $where,
+                relation: [],
+                itemsPerPage: $itemsPerPage,
+                page: $page,
+                orderBy: $sortBy
+            );
+
+            $totalData = $this->$repo->list('id', $where)->count();
+
+            return [
+                'data' => $data,
+                'totalData' => $totalData
+            ];
+        } catch (\Throwable $th) {
+            return [
+                'data' => collect([]),
+                'totalData' => 0
+            ];
+        }
+    }
+
+    /**
+     * Get list cost centers
+     * 
+     * @return array
+     */
+    public function listCostCenter(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name_en,name_id,updated_at',
+                type: 'costCenter',
+                searchAbleColumn: 'name_en',
+                secondSearchAbleColumn: 'name_id'
+            );
+            $costCenters = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            $currentLocale = \Illuminate\Support\Facades\App::currentLocale();
+            foreach ($costCenters as $costCenter) {
+                $name = "name_{$currentLocale}";
+                $output[] = [
+                    'code' => $costCenter['code'],
+                    'display_name' => $costCenter[$name],
+                    'updated_at' => date('d F Y, H:i', strtotime($costCenter['updated_at']))
+                ];
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get timezones
+     * 
+     * @return array
+     */
+    public function listTimezones(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'timezone_id,name,updated_at,gmt_ref_hour,gmt_ref_minute,gmt_plus_min',
+                type: 'timezone',
+                searchAbleColumn: 'name',
+            );
+            $timezones = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($timezones as $timezone) {
+                $output[] = [
+                    'name' => "(GMT{$timezone->gmt_plus_min}{$timezone->gmt_ref_hour}:{$timezone->gmt_ref_minute}) {$timezone->name}",
+                    'updated_at' => date('d F Y, H:i', strtotime($timezone->updated_at)),
+                    'timezone_id' => $timezone->timezone_id
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get timezones
+     * 
+     * @return array
+     */
+    public function listReligions(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,updated_at',
+                type: 'religion',
+                searchAbleColumn: 'name',
+            );
+            $religions = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($religions as $religion) {
+                $output[] = [
+                    'religion_code' => $religion->code,
+                    'name' => $religion->name,
+                    'updated_at' => date('d F Y, H:i', strtotime($religion->updated_at))
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get job grades
+     * 
+     * @return array
+     */
+    public function listJobGrades(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,updated_at',
+                type: 'jobGrade',
+                searchAbleColumn: 'name',
+            );
+            $religions = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($religions as $religion) {
+                $output[] = [
+                    'job_grade_code' => $religion->code,
+                    'name' => $religion->name,
+                    'updated_at' => date('d F Y, H:i', strtotime($religion->updated_at))
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get Employment status
+     * 
+     * @return array
+     */
+    public function listEmploymentStatuses(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,updated_at,need_employment_date',
+                type: 'employmentStatus',
+                searchAbleColumn: 'name',
+            );
+            $employmentStatuses = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($employmentStatuses as $status) {
+                $output[] = [
+                    'employment_status_code' => $status->code,
+                    'name' => $status->name,
+                    'need_employment_date' => $status->need_employment_date,
+                    'updated_at' => date('d F Y, H:i', strtotime($status->updated_at))
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get Work Location
+     * 
+     * @return array
+     */
+    public function listWorkLocations(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,address,max_radius',
+                type: 'workLocation',
+                searchAbleColumn: 'name',
+            );
+            $workLocations = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($workLocations as $location) {
+                $output[] = [
+                    'work_location_code' => $location->code,
+                    'name' => $location->name,
+                    'address' => $location->address,
+                    'max_radius' => $location->max_radius,
+                    'updated_at' => date('d F Y, H:i', strtotime($location->updated_at))
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get Shift Pattern
+     * 
+     * @return array
+     */
+    public function listShiftPatterns(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,total_working_hour_per_day,total_day_off_per_week,note,updated_at',
+                type: 'shiftPattern',
+                searchAbleColumn: 'name',
+            );
+            $shiftPatterns = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($shiftPatterns as $pattern) {
+                $output[] = [
+                    'shift_pattern_code' => $pattern->code,
+                    'name' => $pattern->name,
+                    'total_working_hour_per_day' => $pattern->total_working_hour_per_day,
+                    'total_day_off_per_week' => $pattern->total_day_off_per_week,
+                    'note' => $pattern->note,
+                    'updated_at' => date('d F Y, H:i', strtotime($pattern->updated_at))
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get Job Status
+     * 
+     * @return array
+     */
+    public function listJobStatuses(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,updated_at',
+                type: 'jobStatus',
+                searchAbleColumn: 'name',
+            );
+            $jobStatuses = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($jobStatuses as $status) {
+                $output[] = [
+                    'job_status_code' => $status->code,
+                    'name' => $status->name,
+                    'updated_at' => date('d F Y, H:i', strtotime($status->updated_at))
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get Nationality
+     * 
+     * @return array
+     */
+    public function listNationalities(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,updated_at',
+                type: 'nationality',
+                searchAbleColumn: 'name',
+            );
+            $nationalities = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($nationalities as $nationality) {
+                $output[] = [
+                    'nationality_code' => $nationality->code,
+                    'name' => $nationality->name,
+                    'updated_at' => date('d F Y, H:i', strtotime($nationality->updated_at))
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday timezone and store in the database, this function is used to sync timezone data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayTimezones(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/timezone', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $costCenters = $response->json()['data'];
+
+                $payload = [];
+                foreach ($costCenters as $costCenter) {
+                    $payload[] = [
+                        'timezone_id' => $costCenter['gmtId'],
+                        'name' => $costCenter['gmtcountry'],
+                        'gmt_ref_hour' => $costCenter['gmtrefhour'],
+                        'gmt_ref_minute' => $costCenter['gmtrefminute'],
+                        'gmt_plus_min' => $costCenter['gmtplusmin'],
+                        'created_at' => \Carbon\Carbon::now(),
+                        'updated_at' => \Carbon\Carbon::now(),
+                    ];
+                }
+
+                $this->greatdayTimezoneRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['timezone_id'],
+                    updateColumns: ['name', 'gmt_ref_hour', 'gmt_ref_minute', 'gmt_plus_min']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday cost center and store in the database, this function is used to sync cost center data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayCostCenter(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/costcenter', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $costCenters = $response->json()['data'];
+
+                $payload = [];
+                foreach ($costCenters as $costCenter) {
+                    if ($costCenter['status'] == 1 && $costCenter['depth'] == 1) {
+                        $payload[] = [
+                            'code' => $costCenter['costcenterCode'],
+                            'name_en' => $costCenter['costcenterNameEn'],
+                            'name_id' => $costCenter['costcenterNameId'],
+                            'created_at' => \Carbon\Carbon::now(),
+                            'updated_at' => \Carbon\Carbon::now(),
+                        ];
+                    }
+                }
+
+                $this->greatdayCostCenterRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name_en', 'name_id']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday religion and store in the database, this function is used to sync religion data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayReligion(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/religion', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $religions = $response->json()['data'];
+
+                $payload = [];
+                foreach ($religions as $religion) {
+                    $payload[] = [
+                        'code' => $religion['religionCode'],
+                        'name' => $religion['religionNameEn'],
+                    ];
+                }
+
+                $this->greatdayReligionRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday job grade and store in the database, this function is used to sync job grade data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayJobGrade(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/jobgrade', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $jobGrades = $response->json()['data'];
+
+                $payload = [];
+                foreach ($jobGrades as $jobGrade) {
+                    $payload[] = [
+                        'code' => $jobGrade['gradeCode'],
+                        'name' => $jobGrade['gradeName'],
+                    ];
+                }
+
+                $this->greatdayJobGradeRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday employment status and store in the database, this function is used to sync employment status data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayEmploymentStatus(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/employmentstatus', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $employmentStatuses = $response->json()['data'];
+
+                $payload = [];
+                foreach ($employmentStatuses as $employmentStatus) {
+                    $payload[] = [
+                        'code' => $employmentStatus['employmentstatusCode'],
+                        'name' => $employmentStatus['employmentstatusNameEn'],
+                        'need_employment_date' => $employmentStatus['reqEmploymentdate']
+                    ];
+                }
+
+                $this->greatdayEmploymentStatusRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday work location and store in the database, this function is used to sync work location data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayWorkLocation(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/worklocation', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $workLocations = $response->json()['data'];
+
+                $payload = [];
+                foreach ($workLocations as $workLocation) {
+                    $payload[] = [
+                        'code' => $workLocation['worklocationCode'],
+                        'name' => $workLocation['worklocationName'],
+                        'address' => $workLocation['worklocationAddress'] ?? null,
+                        'max_radius' => (float) $workLocation['maxRadius']
+                    ];
+                }
+
+                $this->greatdayWorkLocationRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name', 'address', 'max_radius']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday shift pattern and store in the database, this function is used to sync shift pattern data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayShiftPattern(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/attendances/shift-pattern', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $shiftPatterns = $response->json()['data'];
+
+                $payload = [];
+                foreach ($shiftPatterns as $shift) {
+                    $groups = $shift['ttarshiftgroupdailys'];
+                    $totalOff = collect($groups)->where('shiftdailycode', '=', 'OFF')->count();
+                    $activeDay = collect($groups)->where('shiftdailycode', '!=', 'OFF')->first();
+                    $remark = null;
+                    if ($activeDay && isset($activeDay['ttamshiftdaily']) && (isset($activeDay['ttamshiftdaily']['remark']))) {
+                        $remark = $activeDay['ttamshiftdaily']['remark'];
+                    }
+                    $payload[] = [
+                        'code' => $shift['shiftgroupcode'],
+                        'name' => $shift['shiftgroupname'],
+                        'total_working_hour_per_day' => 0,
+                        'total_day_off_per_week' => $totalOff,
+                        'note' => $remark
+                    ];
+                }
+
+                $this->greatdayShiftPatternRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name', 'total_working_hour_per_day', 'total_day_off_per_week', 'note']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday job status and store in the database, this function is used to sync job status data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayJobStatus(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/jobstatus', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $jobStatuses = $response->json()['data'];
+
+                $payload = [];
+                foreach ($jobStatuses as $jobStatus) {
+                    $payload[] = [
+                        'code' => $jobStatus['jobstatuscode'],
+                        'name' => $jobStatus['jobstatusnameEn'],
+                    ];
+                }
+
+                $this->greatdayJobStatusRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday nationality and store in the database, this function is used to sync nationality data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayNationality(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/nationality', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $jobStatuses = $response->json()['data'];
+
+                $payload = [];
+                foreach ($jobStatuses as $jobStatus) {
+                    $payload[] = [
+                        'code' => $jobStatus['nationalityCode'],
+                        'name' => $jobStatus['nationalityNameEn'],
+                    ];
+                }
+
+                $this->greatdayNationalityRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
             return errorResponse($th);
         }
     }
