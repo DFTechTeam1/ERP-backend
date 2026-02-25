@@ -86,6 +86,8 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::get('/jobstatus/refresh', 'getGreatdayJobStatus')->name('greatday.refreshJobStatus');
                 Route::get('/nationality', 'listNationalities');
                 Route::get('/nationality/refresh', 'getGreatdayNationality')->name('greatday.refreshNationality');
+                Route::get('/companies', 'listCompanies');
+                Route::get('/companies/refresh', 'getGreatdayCompanies')->name('greatday.refreshCompanies');
             });
     });
 
