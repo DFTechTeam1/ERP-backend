@@ -502,6 +502,11 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->getGreatdayNationality());
     }
 
+    public function getGreatdayCompanies(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayCompanies());
+    }
+
     public function listTimezones(): JsonResponse
     {
         return apiResponse($this->employeeService->listTimezones());
@@ -545,5 +550,10 @@ class EmployeeController extends Controller
     public function listNationalities(): JsonResponse
     {
         return apiResponse($this->employeeService->listNationalities());
+    }
+
+    public function listCompanies(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listCompanies());
     }
 }
