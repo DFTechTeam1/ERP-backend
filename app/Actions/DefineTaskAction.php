@@ -180,7 +180,7 @@ class DefineTaskAction
      */
     protected function hasSuperPower(): bool
     {
-        return $this->isDirector || $this->isProjectPic || $this->user->hasRole(BaseRole::Root->value) ? true : false;
+        return $this->isDirector || $this->isProjectPic || $this->user->hasRole(BaseRole::Root->value) || $this->user->hasRole(BaseRole::Hrd->value) ? true : false;
     }
 
     protected function isRegularEntertainmentUser(): bool
@@ -294,7 +294,12 @@ class DefineTaskAction
     {
         $proof = null;
 
-        if ((($this->hasSuperPower() || $this->isMyTask) && $task->proofOfWorks->count() > 0) || $this->isMyCurrentTask) {
+        if (
+            (
+                ($this->hasSuperPower() || $this->isMyTask) && $task->proofOfWorks->count() > 0
+            ) || 
+            $this->isMyCurrentTask
+        ) {
             $proof = $this->buildOutput($key, false, $detail);
         }
 
