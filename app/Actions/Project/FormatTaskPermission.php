@@ -59,6 +59,7 @@ class FormatTaskPermission
         $entertainTeam = $projectTeams['entertain'];
 
         $teams = $projectTeams['teams'];
+        logging('teams', $teams);
         if (isset($project['personInCharges'])) {
             unset($project['personInCharges']);
         }
