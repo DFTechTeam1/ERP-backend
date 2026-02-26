@@ -118,6 +118,8 @@ class EmployeeService
 
     private $greatdayNationalityRepo;
 
+    private $greatdayCompanyRepo;
+
     public function __construct(
         EmployeeRepository $employeeRepo,
         PositionRepository $positionRepo,
@@ -149,6 +151,7 @@ class EmployeeService
         \Modules\Hrd\Repository\GreatdayShiftPatternRepository $greatdayShiftPatternRepo,
         \Modules\Hrd\Repository\GreatdayJobStatusRepository $greatdayJobStatusRepo,
         \Modules\Hrd\Repository\GreatdayNationalityRepository $greatdayNationalityRepo,
+        \Modules\Hrd\Repository\GreatdayCompanyRepository $greatdayCompanyRepo,
     ) {
         $this->talentaService = $talentaService;
 
@@ -209,6 +212,8 @@ class EmployeeService
         $this->greatdayJobStatusRepo = $greatdayJobStatusRepo;
 
         $this->greatdayNationalityRepo = $greatdayNationalityRepo;
+
+        $this->greatdayCompanyRepo = $greatdayCompanyRepo;
     }
 
     /**
@@ -631,8 +636,11 @@ class EmployeeService
         }
 
         $data = $this->repo->list(
-            'uid,id,name,email',
-            $where
+            select: 'uid,id,name,email,avatar,position_id',
+            where: $where,
+            relation: [
+                'position:id,name'
+            ]
         );
 
         $data = collect((object) $data)->map(function ($item) {
@@ -640,6 +648,8 @@ class EmployeeService
                 'value' => $item->uid,
                 'title' => $item->name,
                 'email' => $item->email,
+                'avatar' => $item->avatar,
+                'position' => $item->position ? $item->position->name : '-',
             ];
         })->toArray();
 
@@ -2829,6 +2839,44 @@ class EmployeeService
     }
 
     /**
+     * Get Companies
+     * 
+     * @return array
+     */
+    public function listCompanies(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,updated_at,company_id',
+                type: 'company',
+                searchAbleColumn: 'name',
+            );
+            $companies = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($companies as $company) {
+                $output[] = [
+                    'company_code' => $company->code,
+                    'name' => $company->name,
+                    'company_id' => $company->company_id,
+                    'updated_at' => date('d F Y, H:i', strtotime($company->updated_at))
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Get greatday timezone and store in the database, this function is used to sync timezone data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
      *
      * @return array
@@ -3258,6 +3306,58 @@ class EmployeeService
                     payload: $payload,
                     uniqueBy: ['code'],
                     updateColumns: ['name']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday companies and store in the database, this function is used to sync companies data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayCompanies(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/company', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $jobStatuses = $response->json()['data'];
+
+                $payload = [];
+                foreach ($jobStatuses as $jobStatus) {
+                    $payload[] = [
+                        'code' => $jobStatus['companyCode'],
+                        'name' => $jobStatus['companyName'],
+                        'company_id' => $jobStatus['companyId'],
+                        'nickname' => $jobStatus['nickName'],
+                        'is_base_office' => $jobStatus['isbase'],
+                        'address' => $jobStatus['companyAddress'],
+                        'address2' => $jobStatus['companyAddress2'],
+                    ];
+                }
+
+                $this->greatdayCompanyRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code', 'company_id'],
+                    updateColumns: ['name', 'nickname', 'is_base_office', 'address', 'address2']
                 );
             }
 

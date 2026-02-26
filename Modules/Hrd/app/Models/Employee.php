@@ -91,13 +91,6 @@ class Employee extends Model
         'ptkp_status',
         'basic_salary',
         'salary_type',
-        'tax_configuration',
-        'employee_tax_status',
-        'salary_configuration',
-        'jht_configuration',
-        'jp_configuration',
-        'overtime_status',
-        'bpjs_kesehatan_config',
 
         'bpjs_ketenagakerjaan_number',
         'npwp_number',
@@ -136,13 +129,21 @@ class Employee extends Model
         'resign_reason',
         'telegram_chat_id',
         'job_level_id',
-        'is_sync_with_talenta',
         'avatar_color',
 
-        'talenta_user_id',
-
         // greatday
-        'greatday_emp_id'
+        'greatday_emp_id',
+        'greatday_nationality',
+        'greatday_job_grade',
+        'greatday_marital_status',
+        'greatday_cost_center',
+        'greatday_employment_status',
+        'greatday_work_location',
+        'greatday_religion',
+        'greatday_timezone',
+        'greatday_shift_pattern',
+        'greatday_job_status',
+        'greatday_company',
     ];
 
     protected $appends = [
