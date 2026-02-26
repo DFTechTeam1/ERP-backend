@@ -117,6 +117,7 @@ class ResyncEmployeeGreatday extends Command
                                 ['name' => $position['posNameEn']],
                                 [
                                     'division_id' => $division->id,
+                                    'greatday_code' => $position['posCode']
                                 ]
                             );
                         }
@@ -296,12 +297,21 @@ class ResyncEmployeeGreatday extends Command
     protected function adjustProductionPositionInSettings(): void
     {
         $productionDivision = \Modules\Company\Models\DivisionBackup::where('name', 'production')->first();
+        $productDevelopmentDivision = \Modules\Company\Models\DivisionBackup::where('name', 'product development')->first();
 
         // Get position uids in production division
         if ($productionDivision) {
             $productionPositions = \Modules\Company\Models\PositionBackup::select('uid')->where('division_id', $productionDivision->id)->pluck('uid')->toArray();
+
+            $productDevPosition = [];
+            if ($productDevelopmentDivision) {
+                $productDevPosition = \Modules\Company\Models\PositionBackup::select('uid')->where('division_id', $productDevelopmentDivision->id)->pluck('uid')->toArray();
+            }
             
             if ($productionPositions) {
+                // Merge
+                $productionPositions = array_merge($productionPositions, $productDevPosition);
+
                 // Insert to settings with key 'position_as_production'
                 \Modules\Company\Models\Setting::updateOrCreate(
                     ['key' => 'position_as_production'],

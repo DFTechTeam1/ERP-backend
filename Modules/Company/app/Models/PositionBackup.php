@@ -21,6 +21,7 @@ class PositionBackup extends Model
     protected $fillable = [
         'name',
         'division_id',
+        'greatday_code',
         'uid',
         'created_by',
         'updated_by',
