@@ -1273,7 +1273,7 @@ class ProjectService
                 ],
                 [
                     'relation' => 'position.division',
-                    'query' => "LOWER(name) like '%production%'",
+                    'query' => "LOWER(name) like '%production%' or LOWER(name) like '%product development%'",
                 ],
             ]
         );
