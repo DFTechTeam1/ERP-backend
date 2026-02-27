@@ -66,6 +66,7 @@ class Employee extends Model
      */
     protected $fillable = [
         'uid',
+        'employment_status_id',
         'name',
         'nickname',
         'email',
