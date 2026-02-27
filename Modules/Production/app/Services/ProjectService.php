@@ -6282,9 +6282,9 @@ class ProjectService
             $this->repo->update($payloadProject, $projectUid);
 
             // update project equipment
-            $this->projectEquipmentRepo->update([
-                'status' => \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn->value,
-            ], 'dummy', 'project_id = '.$projectId);
+            // $this->projectEquipmentRepo->update([
+            //     'status' => \App\Enums\Production\RequestEquipmentStatus::CompleteAndNotReturn->value,
+            // ], 'dummy', 'project_id = '.$projectId);
 
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $projectUid,
