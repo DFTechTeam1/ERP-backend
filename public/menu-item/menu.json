@@ -75,7 +75,8 @@
                 { "path": "/admin/employees/performanceReport", "slug": "performance-report", "lang_id": "Performance Report", "lang_en": "Performance Report", "icon": "mdiPlain:mdi-trending-up", "permission": "list_performance_report" },
                 { "path": "/admin/employees/master", "slug": "employee-master-data", "lang_id": "Employee Master", "lang_en": "Employee Master", "icon": "mdiPlain:mdi-cog", "permission": "list_performance_report", "childs": [
                     { "path": "/admin/employees/master/timezone", "slug": "timezone-setting", "lang_id": "Timezone master", "lang_en": "Timezone Master", "icon": "mdiPlain:mdi-map-clock-outline", "permission": "list_performance_report" },
-                    { "path": "/admin/employees/master/costcenter", "slug": "costcenter-setting", "lang_id": "Cost Center master", "lang_en": "Cost Center Master", "icon": "mdiPlain:mdi-cash-multiple", "permission": "list_performance_report" }
+                    { "path": "/admin/employees/master/costcenter", "slug": "costcenter-setting", "lang_id": "Cost Center master", "lang_en": "Cost Center Master", "icon": "mdiPlain:mdi-cash-multiple", "permission": "list_performance_report" },
+                    { "path": "/admin/employees/master/employmentstatus", "slug": "employmentstatus-setting", "lang_id": "Employment Status master", "lang_en": "Employment Status Master", "icon": "mdiPlain:mdi-account-check-outline", "permission": "list_performance_report" }
                 ] }
             ]
         },
