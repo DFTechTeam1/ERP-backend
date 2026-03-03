@@ -118,35 +118,34 @@ class ResyncLocalEmploymentStatusWithGreatday extends Command
             Status::Inactive->value,
         ];
 
-        $greatdayStatuses = EmploymentStatus::selectRaw('id,name')->get();
-
         $progress = $this->output->createProgressBar(count($employees));
-        $resignStatusId = EmploymentStatus::select('id')->where('name', 'Resign')->first()?->id || 0;
-        $permanentStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Tetap')->first()?->id || 0;
-        $partimeStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Paruh Waktu')->first()?->id || 0;
-        $contractStatusId = EmploymentStatus::select('id')->where('name', 'Kontrak Pertama')->first()?->id || 0;
-        $internshipStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Magang')->first()?->id || 0;
-        $probationStatusId = EmploymentStatus::select('id')->where('name', 'Percobaan')->first()?->id || 0;
+        $resignStatusId = EmploymentStatus::select('id')->where('name', 'Resign')->first();
+        $permanentStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Tetap')->first();
+        $partimeStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Paruh Waktu')->first();
+        $contractStatusId = EmploymentStatus::select('id')->where('name', 'Kontrak Pertama')->first();
+        $internshipStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Magang')->first();
+        $probationStatusId = EmploymentStatus::select('id')->where('name', 'Percobaan')->first();
 
         foreach ($employees as $employee) {
             $currentStatus = $employee->status->value;
 
             if (in_array($currentStatus, $resignStatus)) {
-                $status = $resignStatusId;
+                $status = $resignStatusId?->id ?? 0;
             } else if ($currentStatus == Status::Permanent->value) {
-                $status = $permanentStatusId;
+                $status = $permanentStatusId?->id ?? 0;
             } else if ($currentStatus == Status::PartTime->value) {
-                $status = $partimeStatusId;
+                $status = $partimeStatusId?->id ?? 0;
             } else if ($currentStatus == Status::Contract->value) {
-                $status = $contractStatusId;
+                $status = $contractStatusId?->id ?? 0;
             } else if ($currentStatus == Status::Internship->value) {
-                $status = $internshipStatusId;
+                $status = $internshipStatusId?->id ?? 0;
             } else if ($currentStatus == Status::Probation->value) {
-                $status = $probationStatusId;
+                $status = $probationStatusId?->id ?? 0;
             } else {
                 $status = 0; // Default to 0 if no matching status is found
             }
 
+            $this->info('');
             $this->info("Updating employee ID {$employee->id} from {$currentStatus} to employment status ID {$status}...");
 
             $employee->update([

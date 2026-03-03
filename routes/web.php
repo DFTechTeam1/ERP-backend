@@ -191,7 +191,21 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    return app(\App\Services\UserService::class)->getApplicationNotification();
+    $resignStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Resign')->first();
+    $permanentStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Tetap')->first();
+    $partimeStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Paruh Waktu')->first();
+    $contractStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Kontrak Pertama')->first();
+    $internshipStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Magang')->first();
+    $probationStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Percobaan')->first();
+
+    return [
+        'resignStatusId' => $resignStatusId,
+        'permanentStatusId' => $permanentStatusId,
+        'partimeStatusId' => $partimeStatusId,
+        'contractStatusId' => $contractStatusId,
+        'internshipStatusId' => $internshipStatusId,
+        'probationStatusId' => $probationStatusId,
+    ];
 });
 
 Route::get('manual-add', function () {
