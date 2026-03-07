@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\BearerTokenMiddleware;
 use App\Http\Middleware\CustomSignedRouteMiddleware;
+use App\Http\Middleware\PartnerMiddleware;
 use App\Http\Middleware\PermissionCheck;
 use App\Http\Middleware\ScalarAuth;
 use Illuminate\Foundation\Application;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
+            'partner' => PartnerMiddleware::class,
             'BearerToken' => BearerTokenMiddleware::class,
             'customSignedMiddleware' => CustomSignedRouteMiddleware::class,
             'permissionCheck' => PermissionCheck::class,

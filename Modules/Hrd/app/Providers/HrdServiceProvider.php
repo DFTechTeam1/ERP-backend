@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Hrd\Console\AutoUpdateEmployeeTimeoff;
 use Modules\Hrd\Console\CheckEmployeeResign;
+use Modules\Hrd\Console\CreatePartnerUser;
 use Modules\Hrd\Console\InitateAvatarColor;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
@@ -60,7 +61,8 @@ class HrdServiceProvider extends ServiceProvider
             SynchronizingTalentUserId::class,
             UpdateBankIdInBankDetail::class,
             CheckEmployeeResign::class,
-            ResyncEmployeeGreatday::class
+            ResyncEmployeeGreatday::class,
+            CreatePartnerUser::class
         ]);
     }
 

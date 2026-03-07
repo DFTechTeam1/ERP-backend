@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use KodePandai\Indonesia\Models\District;
 use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
+use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -305,3 +306,7 @@ Route::get('/files/{path}', function (Request $request, $path) {
         ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         ->header('Access-Control-Allow-Headers', '*');
 })->where('path', '.*');
+
+Route::middleware('partner')->group(function() {
+    Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
+});

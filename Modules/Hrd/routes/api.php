@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 use Modules\Hrd\Http\Controllers\HrdController;
 
 /*
@@ -25,6 +26,10 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
 
 Route::get('employees/downloadTemplate', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'downloadTemplate']);
 
+// Route::middleware('partner')->group(function() {
+//     Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
+// });
+
 Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
     ->middleware(['auth:sanctum'])
     ->group(function () {
@@ -48,7 +53,6 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::post('employees/bulk', 'bulkDelete');
         Route::post('employees/addAsUser', 'addAsUser')->name('employees.addAsUser');
         Route::post('employees/submitImport', 'submitImport');
-        Route::post('employees/{employeeId}/resendVerification', 'resendVerificationEmail')->name('employees.resendVerificationEmail');
         Route::get('employees/getVJ/{projectUid}', 'getVJ');
         Route::post('employees/{employeeUid}/resign', 'resign')->name('employees.resign');
         Route::get('employees/{employeeUid}/cancelResign', 'cancelResign')->name('employees.cancelResign');
