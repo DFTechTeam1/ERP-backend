@@ -556,4 +556,9 @@ class EmployeeController extends Controller
     {
         return apiResponse($this->employeeService->listCompanies());
     }
+
+    public function resendVerificationEmail(\Modules\Hrd\Http\Requests\ResendVerification $request, string $employeeId)
+    {
+    
+    }
 }

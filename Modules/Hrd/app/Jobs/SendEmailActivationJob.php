@@ -20,7 +20,7 @@ class SendEmailActivationJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct($user, $password)
+    public function __construct($user, string|null $password)
     {
         $this->user = $user;
 
