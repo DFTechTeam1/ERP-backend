@@ -3373,4 +3373,39 @@ class EmployeeService
             return errorResponse($th);
         }
     }
+
+    /**
+     * Resend email verification to unverified employee
+     * 
+     * @param array<string, string> $payload            -> will be ['email', 'note']
+     * @param string $employeeId
+     * 
+     * @return array
+     */
+    public function resendVerification(array $payload, string $employeeId)
+    {
+        try {
+            $employee = $this->repo->show(
+                uid: '',
+                select: 'id,email,user_id',
+                where: "employee_id = '{$employeeId}'",
+                relation: [
+                    'user:id,email'
+                ]
+            );
+
+            if (! $employee) {
+                return errorResponse(__('notification.employeeNotFound'));
+            }
+
+            // SendEmailActivationJob::dispatch($user, $data['password'])->afterCommit();
+
+            return generalResponse(
+                message: 'Success',
+                data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }
