@@ -175,4 +175,7 @@ return [
     'invalidPassword' => 'Invalid password',
     'cannotRemovePicWithTask' => 'Cannot remove PIC who still has tasks in the project',
     'successRejectDeleteSong' => 'Request to delete song has been rejected successfully',
+    'successSendEmailActivation' => 'Email activation has been sent successfully',
+    'userNotFound' => 'User not found',
+    'emailAlreadyVerified' => 'Email is already verified',
 ];

@@ -21,6 +21,7 @@ use App\Services\UserService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Company\Models\JobLevel;
 use Modules\Company\Models\PositionBackup;
@@ -28,6 +29,7 @@ use Modules\Company\Repository\JobLevelRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
 use Modules\Hrd\Jobs\DeleteOfficeEmailJob;
+use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\DeleteOfficeEmailQueueRepository;
 use Modules\Hrd\Repository\EmployeeActiveReportRepository;
@@ -3390,7 +3392,7 @@ class EmployeeService
                 select: 'id,email,user_id',
                 where: "employee_id = '{$employeeId}'",
                 relation: [
-                    'user:id,email'
+                    'user:id,email,email_verified_at,employee_id'
                 ]
             );
 
@@ -3398,10 +3400,32 @@ class EmployeeService
                 return errorResponse(__('notification.employeeNotFound'));
             }
 
-            // SendEmailActivationJob::dispatch($user, $data['password'])->afterCommit();
+            if (! $employee->user) {
+                return errorResponse(__('notification.userNotFound'));
+            }
+
+            if ($employee->user->email_verified_at) {
+                return errorResponse(__('notification.emailAlreadyVerified'));
+            }
+
+            // Update password
+            $newPassword = generateRandomPassword(10);
+            $this->userRepo->update(
+                data: [
+                        'password' => Hash::make($newPassword)
+                    ],
+                key: 'id',
+                value: $employee->user_id
+            );
+
+            $user = $this->userRepo->detail(
+                id: $employee->user_id,
+            );
+
+            SendEmailActivationJob::dispatch($user, $newPassword)->afterCommit();
 
             return generalResponse(
-                message: 'Success',
+                message: __('notification.successSendEmailActivation'),
                 data: []
             );
         } catch (\Throwable $th) {

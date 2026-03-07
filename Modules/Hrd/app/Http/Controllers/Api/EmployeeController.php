@@ -542,23 +542,45 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->listShiftPatterns());
     }
 
+    /**
+     * List job statuses from Greatday
+     *
+     * @return JsonResponse
+     */
     public function listJobStatuses(): JsonResponse
     {
         return apiResponse($this->employeeService->listJobStatuses());
     }
 
+    /**
+     * List nationalities from Greatday
+     *
+     * @return JsonResponse
+     */
     public function listNationalities(): JsonResponse
     {
         return apiResponse($this->employeeService->listNationalities());
     }
 
+    /**
+     * List companies from Greatday
+     *
+     * @return JsonResponse
+     */
     public function listCompanies(): JsonResponse
     {
         return apiResponse($this->employeeService->listCompanies());
     }
 
-    public function resendVerificationEmail(\Modules\Hrd\Http\Requests\ResendVerification $request, string $employeeId)
+    /**
+     * Resend verification email to employee's email
+     *
+     * @param \Modules\Hrd\Http\Requests\ResendVerification $request
+     * @param string $employeeId
+     * @return JsonResponse
+     */
+    public function resendVerificationEmail(\Modules\Hrd\Http\Requests\ResendVerification $request, string $employeeId): JsonResponse
     {
-    
+        return apiResponse($this->employeeService->resendVerification(payload: $request->validated(), employeeId: $employeeId));
     }
 }
