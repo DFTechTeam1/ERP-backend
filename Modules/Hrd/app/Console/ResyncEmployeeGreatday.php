@@ -3,6 +3,8 @@
 namespace Modules\Hrd\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 
@@ -27,10 +29,93 @@ class ResyncEmployeeGreatday extends Command
     }
 
     /**
+     * Add personal_email column in employees table if not exists. 
+     * This column will be used to store the old email before we update the email with user email, because in greatday, 
+     * the email is used to identify the employee, 
+     * so we need to make sure that the email in our system is the same as the email in greatday before we sync the employee data from greatday.
+     *
+     * @return void
+     */
+    protected function addPersonalEmailColumn()
+    {
+        $this->info("Check personal_email column in employees table ...");
+
+        // Check if personal_email exists or not
+        if (Schema::hasColumn('employees', 'personal_email')) {
+            $this->info('personal_email column already exists in employees table, skipping adding column.');
+            return false;
+        }
+
+        // Create if not exists
+        $this->info("Adding personal_email column in employees table ...");
+        Schema::table('employees', function (Blueprint $table) {
+            $table->string('personal_email')->nullable()->after('email');
+        });
+        $this->info("personal_email column added successfully.");
+
+        return true;
+    }
+
+    /**
+     * Update employee email with user email and store the old email in personal_email column. 
+     * This is needed because in greatday, the email is used to identify the employee,
+     * so we need to make sure that the email in our system is the same as the email in greatday before we sync the employee data from greatday.
+     *
+     * @return void
+     */
+    protected function updateEmployeeEmailFromUserTable()
+    {
+        $this->info("Updating employee email from user table ...");
+        
+        $isColumnAdded = $this->addPersonalEmailColumn();
+
+        // Stop the process if personal email already exists.
+        // That's mean the email has been synchronized before
+        if (! $isColumnAdded) {
+            $this->info("Skipping updating employee email from user table because personal_email column already exists, to avoid overwriting existing personal_email data.");
+            return;
+        }
+
+        $employees = \Modules\Hrd\Models\Employee::select('id', 'email', 'user_id')
+            ->with([
+                'user:id,employee_id,email'
+            ])
+            ->get();
+
+        $progress = $this->output->createProgressBar($employees->count());
+        $progress->start();
+        foreach ($employees as $employee) {
+            if ($employee->user) {
+                $userEmail = $employee->user->email;
+                $currentEmail = $employee->email;
+
+                // Update employee email with user email and store the old email in personal_email column
+                \Modules\Hrd\Models\Employee::where('id', $employee->id)
+                    ->update([
+                        'personal_email' => $currentEmail,
+                        'email' => $userEmail
+                    ]);
+            }
+
+            $progress->advance();
+        }
+
+        $progress->finish();
+        $this->info('');
+        $this->info("Employee email updated successfully.");
+        $this->info('');
+    }
+
+    /**
      * Execute the console command.
      */
     public function handle()
     {
+        // Update employee email with user email and store the old email in personal_email column. 
+        // This is needed because in greatday, the email is used to identify the employee, 
+        // so we need to make sure that the email in our system is the same as the email in greatday before we sync the employee data from greatday.
+        $this->updateEmployeeEmailFromUserTable();
+
         $service = app(\Modules\Hrd\Services\GreatdayService::class);
 
         $accessToken = $service->login();
@@ -50,7 +135,7 @@ class ResyncEmployeeGreatday extends Command
             foreach ($response->json()['data'] as $employee) {
                 $email = $employee['email'];
 
-                \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
+                \Modules\Hrd\Models\Employee::where('email', $employee['email'])
                     ->update([
                         'greatday_emp_id' => $employee['empId']
                     ]);

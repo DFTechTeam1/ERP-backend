@@ -16,10 +16,10 @@ class EmployeeResign extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'created_by',
         'employee_id',
         'reason',
         'resign_date',
-        'severance',
         'current_position_id',
         'current_employee_status',
     ];

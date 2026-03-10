@@ -5,6 +5,11 @@ Enum "RequestEquipmentMastersStatusEnum" {
     "cancel"
 }
 
+Enum "OutOfSyncEmployeeStatusEnum" {
+  "synced",
+  "out_of_sync"
+}
+
 Enum "RequestEquipmentsOrderTypeEnum" {
     "online"
     "offline"
@@ -574,6 +579,33 @@ Table "division_backups" {
 
 Table "document_templates" {
   "id" bigint [pk, not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "out_of_sync_employees" {
+  "id" bigint [pk, not null]
+  "first_name" varchar [not null]
+  "middle_name" varchar
+  "last_name" varchar
+  "email" varchar [not null]
+  "employee_id" varchar [not null]
+  "greatday_employee_id" varchar [not null]
+  "position_code" varchar(100) [not null]
+  "position_name" varchar(200) [not null]
+  "employment_status" varchar(100) [not null]
+  "employment_status_code" varchar(100) [not null]
+  "start_working_date" timestamp
+  "end_working_date" timestamp
+  "company_id" bigint
+  "address" varchar
+  "phone" varchar(20)
+  "job_status" varchar(100)
+  "work_location_code" varchar(100)
+  "cost_center_code" varchar(100)
+  "org_unit" varchar(100)
+  "employment_start_date" timestamp [default: NULL]
+  "status" OutOfSyncEmployeeStatusEnum
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }

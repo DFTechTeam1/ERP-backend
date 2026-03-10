@@ -309,4 +309,13 @@ Route::get('/files/{path}', function (Request $request, $path) {
 
 Route::middleware('partner')->group(function() {
     Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
+    Route::post('partner/notification/mail', function (Request $request) {
+        $request->validate([
+            'to' => 'required|email',
+            'subject' => 'required|string',
+            'body' => 'required|string',
+        ]);
+        
+        \App\Jobs\PartnerEmailJob::dispatch($request->to, $request->subject, $request->body);
+    });
 });
