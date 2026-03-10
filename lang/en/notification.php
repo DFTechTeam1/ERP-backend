@@ -178,4 +178,5 @@ return [
     'successSendEmailActivation' => 'Email activation has been sent successfully',
     'userNotFound' => 'User not found',
     'emailAlreadyVerified' => 'Email is already verified',
+    'employeeAlreadyHasResignationRecord' => 'Employee already has an existing resignation record.'
 ];

@@ -173,4 +173,5 @@ return [
     'successSendEmailActivation' => 'Email aktivasi telah berhasil dikirim',
     'userNotFound' => 'User tidak ditemukan',
     'emailAlreadyVerified' => 'Email sudah terverifikasi',
+    'employeeAlreadyHasResignationRecord' => 'Karyawan sudah memiliki catatan pengunduran diri yang ada.'
 ];

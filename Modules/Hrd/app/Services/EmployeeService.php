@@ -1915,6 +1915,17 @@ class EmployeeService
                 return errorResponse(message: __('notification.employeeHasOngoingTasks'));
             }
 
+            // Check if current employee id is exists or not
+            $check = $this->employeeResignRepo->show(
+                uid: '',
+                select: 'id',
+                where: "employee_id = {$employeeId}"
+            );
+
+            if ($check) {
+                return errorResponse(message: __('notification.employeeAlreadyHasResignationRecord'));
+            }
+
             $this->employeeResignRepo->store(data: [
                 'employee_id' => $employeeId,
                 'reason' => $data['reason'],
