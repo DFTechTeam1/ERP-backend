@@ -2325,6 +2325,25 @@ Table "division_allowances" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "project_leads" {
+  "id" bigint [pk, not null]
+  "name" varchar(255) [not null]
+  "project_date" date [not null]
+  "event_type" projects_event_type_enum [DEFAULT: NULL]
+  "venue" varchar(255) [DEFAULT: NULL]
+  "city_id" bigint [DEFAULT: NULL, ref: > cities.id]
+  "pic_id" varchar (255) [DEFAULT: NULL]
+  "collaboration" varchar(255) [DEFAULT: NULL]
+  "note" text [DEFAULT: NULL]
+  "total_led" varchar(100) [DEFAULT: NULL, note: "in m2"]
+  "project_class_id" bigint [DEFAULT: NULL, ref: > project_classes.id]
+  "created_by" bigint [DEFAULT: NULL, ref: > employees.id]
+  "updated_by" bigint [DEFAULT: NULL, ref: > employees.id]
+  "is_final" tinyint(1) [not null, default: '0']
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
 
 Ref "development_project_boards_development_project_id_foreign":"development_projects"."id" < "development_project_boards"."development_project_id" [delete: cascade]
