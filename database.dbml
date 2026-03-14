@@ -2328,6 +2328,7 @@ Table "division_allowances" {
 Table "project_leads" {
   "id" bigint [pk, not null]
   "name" varchar(255) [not null]
+  "customer_phone" varchar(20) [DEFAULT: NULL]
   "project_date" date [not null]
   "event_type" projects_event_type_enum [DEFAULT: NULL]
   "venue" varchar(255) [DEFAULT: NULL]
