@@ -493,6 +493,8 @@ class GeneralService
                 'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value, BaseRole::Entertainment->value]),
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
             ],
+            'is_root' => amIRootUser($user),
+            'is_lead_modeller' => amILeadModeller($user)
         ];
 
         return (new EncryptionService)->encrypt(string: json_encode($output), key: config('app.salt_key_encryption'));
