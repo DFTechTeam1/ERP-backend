@@ -281,8 +281,48 @@ Route::get('notification', function () {
 });
 
 Route::get('playground', function () {
-    $user = Auth::user();
-    InvoiceHasBeenDeletedJob::dispatch(parentNumber: '#7773', projectName: 'Project Name', user: $user);
+    try {
+        if (! request()->has(['uid', 'taskUid']) || ! request()->get('uid') || ! request()->get('taskUid')) {
+            return apiResponse(
+                errorResponse('uid and taskUid is required')
+            );
+        }
+
+        $task = \Modules\Production\Models\ProjectTask::selectRaw('id')
+            ->where('uid', request('taskUid'))
+            ->first();
+        if (! $task) {
+            return apiResponse(
+                errorResponse('Task not found')
+            );
+        }
+
+        $employee = \Modules\Hrd\Models\Employee::selectRaw('id')
+            ->where('uid', request('uid'))
+            ->first();
+
+        if (! $employee) {
+            return apiResponse(
+                errorResponse('Employee not found')
+            );
+        }
+
+        $projectService = app(\Modules\Production\Services\ProjectService::class);
+        $assign = $projectService->assignMemberToTask(
+            data: [
+                'users' => [request('uid')],
+                'removed' => []
+            ],
+            taskUid: request('taskUid'),
+            needChangeTaskStatus: false
+        );
+    
+        return apiResponse($assign);
+    } catch (\Throwable $th) {
+        return apiResponse(
+            errorResponse($th)
+        );
+    }
 })->middleware('auth:sanctum');
 
 Route::get('/files/{path}', function (Request $request, $path) {

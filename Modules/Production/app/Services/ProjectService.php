@@ -1144,6 +1144,9 @@ class ProjectService
         $picIds = [];
         $picUids = [];
 
+        $actorIsLeadModeller = amILeadModeller();
+        $actorIsRoot = amIRootUser();
+
         if ($productionPositions = json_decode(getSettingByKey('position_as_production'), true)) {
             $productionPositions = collect($productionPositions)->map(function ($item) {
                 return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
@@ -1185,16 +1188,17 @@ class ProjectService
             if ($leadModeller != null && $leadModeller != '' && $leadModeller != 'null' && ! $forceGetSpecialTeam) {
                 $leadModeller = $this->generalService->getIdFromUid($leadModeller, new Employee);
                 $whereSpecial = "id = {$leadModeller}";
+
                 $isLeadModeller = true;
             }
 
             $specialEmployee = $this->employeeRepo->list('id,uid,name,nickname,email,position_id,avatar,boss_id', $whereSpecial, ['position:id,name'])->toArray();
 
-            $specialEmployee = collect($specialEmployee)->map(function ($employee) use ($isLeadModeller) {
+            $specialEmployee = collect($specialEmployee)->map(function ($employee) use ($leadModeller) {
                 $employee['loan'] = false;
                 $employee['is_special_employee'] = true;
                 $employee['image'] = $employee['avatar'] ? $employee['avatar'] : asset('images/user.png');
-                $employee['is_lead_modeller'] = $isLeadModeller;
+                $employee['is_lead_modeller'] = $leadModeller == $employee['id'] ? true : false;
 
                 return $employee;
             })->toArray();
@@ -2565,7 +2569,7 @@ class ProjectService
      *
      * @param  array  $data  With these following structure
      *                       - array <string> $users
-     *                       - array <string> $remmoved
+     *                       - array <string> $removed
      * @return array
      */
     public function assignMemberToTask(
