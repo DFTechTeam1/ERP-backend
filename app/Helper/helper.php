@@ -1296,3 +1296,23 @@ if (! function_exists('generateUniqueIdentifierId')) {
         return $identifierId;
     }
 }
+
+if (!function_exists('amILeadModeller')) {
+    function amILeadModeller(?\App\Models\User $user = null): bool
+    {
+        if (! $user) $user = \Illuminate\Support\Facades\Auth::user();
+        $leadModellerId = getSettingByKey('lead_3d_modeller');
+        $leadModellerId = getIdFromUid($leadModellerId, new Employee);
+
+        return $user->employee_id == $leadModellerId;
+    }
+}
+
+if (!function_exists('amIRootUser')) {
+    function amIRootUser(?\App\Models\User $user = null): bool
+    {
+        if (! $user) $user = \Illuminate\Support\Facades\Auth::user();
+
+        return $user->hasRole(BaseRole::Root->value);
+    }
+}
