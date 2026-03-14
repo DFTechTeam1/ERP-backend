@@ -41,7 +41,7 @@ class CityService {
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('name');
+            $search = request('search');
 
             $state = request('state');
             $countryId = request('country');
