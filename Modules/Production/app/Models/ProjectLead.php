@@ -34,6 +34,7 @@ class ProjectLead extends Model
         'created_by',
         'updated_by',
         'is_final',
+        'cell_options',
     ];
 
     // protected static function newFactory(): ProjectLeadFactory
