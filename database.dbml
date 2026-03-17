@@ -2341,6 +2341,7 @@ Table "project_leads" {
   "created_by" bigint [DEFAULT: NULL, ref: > employees.id]
   "updated_by" bigint [DEFAULT: NULL, ref: > employees.id]
   "is_final" tinyint(1) [not null, default: '0']
+  "cell_options" longtext [DEFAULT: NULL , note: "This column will be used to store the options for each cell in the project lead table. Format will be {cell_name: {option1: value1, option2: value2}}"]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
