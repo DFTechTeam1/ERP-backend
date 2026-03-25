@@ -53,7 +53,7 @@
                 { "path": "/admin/production/files", "slug": "files", "lang_id": "Files", "lang_en": "Files", "icon": "mdiPlain:mdi-file-multiple-outline", "permission": "list_file_manager" },
                 { "path": "/admin/production/tasks", "slug": "task", "lang_id": "Tugas", "lang_en": "Tasks", "icon": "mdiPlain:mdi-format-list-checks", "permission": "list_task" },
                 { "path": "/admin/production/team-transfer", "slug": "team-transfer", "lang_id": "Team Transfer", "lang_en": "Team Transfer", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_team_transfer" },
-                { "path": "/admin/leads", "slug": "leads", "lang_id": "Leads", "lang_en": "Leads", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_leads" }
+                { "path": "/admin/production/leads", "slug": "leads", "lang_id": "Leads", "lang_en": "Leads", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_leads" }
             ]
         },
         {
