@@ -1130,6 +1130,70 @@ class ProjectController extends Controller
         return apiResponse($this->service->calculateProratePoint($request->validated(), $projectUid));
     }
 
+    /**
+     * Update after party status
+     * @param ChangeAfpatStatus  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function updateAfterPartyStatus(ChangeAfpatStatus $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->updateAfterPartyStatus($request->validated(), $projectUid));
+    }
+
+    /**
+     * Get incharge list
+     * @return JsonResponse
+     */
+    public function inchargeList(): JsonResponse
+    {
+        return apiResponse($this->inchargeService->list());
+    }
+
+    /**
+     * Assign on duty entertainment
+     * @param AssignEntertainmentRequest  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function assignOnDutyEntertainment(AssignEntertainmentRequest $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignOnDutyEntertainment($request->validated(), $projectUid));
+    }
+    
+    /**
+     * Assign on duty marcomm
+     * @param AssignMarcommRequest  $request
+     * @param string  $projectUid
+     * @return JsonResponse
+     */
+    public function assignOnDutyMarcomm(AssignMarcommRequest $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignOnDutyMarcomm($request->validated(), $projectUid));
+    }
+
+    /**
+     * Get marcomm assignment list
+     * @param string  $employeeUid
+     * @return JsonResponse
+     */
+    public function marcommAssignmentList(string $employeeUid, string $type): JsonResponse
+    {
+        return apiResponse($this->inchargeService->marcommAssignmentList($employeeUid));
+    }
+
+    /**
+     * Assign on duty from widget
+     * @param AssignMarcommWidget  $request
+     * @param string  $employeeUid
+     * @param string $type
+     * @return JsonResponse
+     */
+    public function assignOnDutyFromWidget(AssignMarcommWidget $request, string $employeeUid, string $type): JsonResponse
+    {
+        return apiResponse($this->inchargeService->assignOnDutyFromWidget($request->validated(), $employeeUid, $type));
+    }
+
     public function rejectDeleteSong(string $projectUid, string $songUid)
     {
         return apiResponse($this->service->rejectDeleteSong($projectUid, $songUid));

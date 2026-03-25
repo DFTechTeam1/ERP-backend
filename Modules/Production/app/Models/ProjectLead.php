@@ -30,6 +30,7 @@ class ProjectLead extends Model
         'collaboration',
         'note',
         'total_led',
+        'lead_detail',
         'project_class_id',
         'created_by',
         'updated_by',

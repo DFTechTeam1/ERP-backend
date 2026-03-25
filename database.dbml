@@ -2337,11 +2337,23 @@ Table "project_leads" {
   "collaboration" varchar(255) [DEFAULT: NULL]
   "note" text [DEFAULT: NULL]
   "total_led" varchar(100) [DEFAULT: NULL, note: "in m2"]
+  "led_detail" text [DEFAULT: NULL]
   "project_class_id" bigint [DEFAULT: NULL, ref: > project_classes.id]
   "created_by" bigint [DEFAULT: NULL, ref: > employees.id]
   "updated_by" bigint [DEFAULT: NULL, ref: > employees.id]
   "is_final" tinyint(1) [not null, default: '0']
   "cell_options" longtext [DEFAULT: NULL , note: "This column will be used to store the options for each cell in the project lead table. Format will be {cell_name: {option1: value1, option2: value2}}"]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
+Table "project_lead_follow_ups" {
+  "id" bigint [pk, not null]
+  "project_lead_id" bigint [not null, ref: > project_leads.id]
+  "follow_up_date" date [not null]
+  "customer_phone" varchar(20) [DEFAULT: NULL]
+  "message" text [DEFAULT: NULL]
+  "created_by" bigint [DEFAULT: NULL, ref: > employees.id]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
 }
