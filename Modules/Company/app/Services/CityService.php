@@ -3,6 +3,7 @@
 namespace Modules\Company\Services;
 
 use App\Enums\ErrorCode\Code;
+use Illuminate\Support\Facades\Auth;
 use Modules\Company\Repository\CityRepository;
 use Modules\Company\Repository\CountryRepository;
 
@@ -34,8 +35,16 @@ class CityService {
     ): array
     {
         try {
+            $canEdit = false;
+            $canDelete = false;
+
             $user = \Illuminate\Support\Facades\Auth::user();
-            $user = (new \App\Repository\UserRepository)->detail(id: $user->id, select: 'id');
+            if ($user) {
+                $user = (new \App\Repository\UserRepository)->detail(id: $user->id, select: 'id');
+
+                $canEdit = $user->hasPermissionTo('create_city');
+                $canDelete = $user->hasPermissionTo('delete_city');
+            }
 
             $itemsPerPage = request('itemsPerPage') ?? 2;
             $page = request('page') ?? 1;
@@ -68,12 +77,12 @@ class CityService {
                 $page
             );
             $totalData = $this->repo->list('id', $where)->count();
-            $paginated = $paginated->map(function ($city) use ($user) {
+            $paginated = $paginated->map(function ($city) use ($canEdit, $canDelete) {
                 $city['country_name'] = $city->state ? $city->state->country?->name : null;
                 $city['state_name'] = $city->state?->name;
                 $city['uid'] = $city->id;
-                $city['can_edit'] = $user->hasPermissionTo('create_city');
-                $city['can_delete'] = $user->hasPermissionTo('delete_city');
+                $city['can_edit'] = $canEdit;
+                $city['can_delete'] = $canDelete;
 
                 return $city;
             });
