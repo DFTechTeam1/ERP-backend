@@ -52,8 +52,7 @@
                 { "path": "/admin/production/incharges", "slug": "incharges", "lang_id": "Karyawan Bertugas", "lang_en": "On Duty", "icon": "mdiPlain:mdi-account-check-outline", "permission": "on_duty_list" },
                 { "path": "/admin/production/files", "slug": "files", "lang_id": "Files", "lang_en": "Files", "icon": "mdiPlain:mdi-file-multiple-outline", "permission": "list_file_manager" },
                 { "path": "/admin/production/tasks", "slug": "task", "lang_id": "Tugas", "lang_en": "Tasks", "icon": "mdiPlain:mdi-format-list-checks", "permission": "list_task" },
-                { "path": "/admin/production/team-transfer", "slug": "team-transfer", "lang_id": "Team Transfer", "lang_en": "Team Transfer", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_team_transfer" },
-                { "path": "/admin/production/leads", "slug": "leads", "lang_id": "Leads", "lang_en": "Leads", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_leads" }
+                { "path": "/admin/production/team-transfer", "slug": "team-transfer", "lang_id": "Team Transfer", "lang_en": "Team Transfer", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_team_transfer" }
             ]
         },
         {
@@ -61,6 +60,7 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-calculator-variant-outline",
             "childs": [
+                { "path": "/admin/finance/leads", "slug": "leads", "lang_id": "Leads", "lang_en": "Leads", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_leads" },
                 { "path": "/admin/finance/deals", "slug": "projectDeals", "lang_id": "Deals", "lang_en": "Deals", "icon": "mdiPlain:mdi-calendar-check", "permission": "list_deals" },
                 { "path": "/admin/finance/transactions", "slug": "transactions", "lang_id": "Transaksi", "lang_en": "Transactions", "icon": "mdiPlain:mdi-receipt-text", "permission": "list_transaction" },
                 { "path": "/admin/finance/refund", "slug": "refund", "lang_id": "Refund", "lang_en": "Refund", "icon": "mdiPlain:mdi-cash-refund", "permission": "list_refund" }
