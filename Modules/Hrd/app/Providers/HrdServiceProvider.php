@@ -13,6 +13,8 @@ use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
 use Modules\Hrd\Console\ResyncEmployeeGreatday;
+use Modules\Hrd\Console\ResyncGreatdayPosition;
+use Modules\Hrd\Console\SeedGreatdayMasterData;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateBankIdInBankDetail;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
@@ -64,7 +66,9 @@ class HrdServiceProvider extends ServiceProvider
             CheckEmployeeResign::class,
             ResyncEmployeeGreatday::class,
             CreatePartnerUser::class,
-            GetGreatdayOutOfSyncEmployee::class
+            GetGreatdayOutOfSyncEmployee::class,
+            SeedGreatdayMasterData::class,
+            ResyncGreatdayPosition::class
         ]);
     }
 

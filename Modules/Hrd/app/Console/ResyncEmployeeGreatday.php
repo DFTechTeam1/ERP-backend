@@ -4,6 +4,7 @@ namespace Modules\Hrd\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
@@ -107,7 +108,11 @@ class ResyncEmployeeGreatday extends Command
     }
 
     /**
-     * Execute the console command.
+     * The function handles syncing employee and position data from Greatday to the system, updating
+     * employee positions, seeding master HRIS data, and adjusting various positions and settings.
+     * 
+     * @return The `handle()` function returns an integer value of 0 if the process completes
+     * successfully.
      */
     public function handle()
     {
@@ -158,62 +163,8 @@ class ResyncEmployeeGreatday extends Command
                 'limit' => 100,
             ]);
 
-            if ($response->status() < 300) {
-                $this->info("Starting to sync divisions ...");
-
-                $progress = $this->output->createProgressBar(count($positions->json()['data']));
-
-                // Insert division first
-                foreach ($positions->json()['data'] as $position) {
-                    $parentPath = $position['parentPath'];
-                    $explodePath = explode(',', $parentPath);
-
-                    $isDivision = count($explodePath) == 2;
-
-                    if ($isDivision) {
-                        $currentDivision = \Modules\Company\Models\DivisionBackup::selectRaw('id')
-                            ->where('name', $position['posNameEn'])
-                            ->first();
-
-                        if (! $currentDivision) {
-                            $currentDivision = \Modules\Company\Models\DivisionBackup::create([
-                                'name' => $position['posNameEn'],
-                            ]);
-                        }
-                    }
-
-                    $progress->advance();
-                }
-
-                $this->info("Starting to sync positions ...");
-
-                // Then insert positions
-                foreach ($positions->json()['data'] as $position) {
-                    $parentPath = $position['parentPath'];
-                    $explodePath = explode(',', $parentPath);
-
-                    if (count($explodePath) == 3) {
-                        $divisionId = $explodePath[2];
-                        $divisionName = collect($positions->json()['data'])->where('positionId', $divisionId)->first()['posNameEn'] ?? null;
-                        $division = \Modules\Company\Models\DivisionBackup::where('name', $divisionName)->first();
-
-                        if ($division) {
-                            \Modules\Company\Models\PositionBackup::updateOrCreate(
-                                ['name' => $position['posNameEn']],
-                                [
-                                    'division_id' => $division->id,
-                                    'greatday_code' => $position['posCode']
-                                ]
-                            );
-                        }
-                    }
-
-                    $progress->advance();
-                }
-
-                $progress->finish();
-
-                $this->info("\n{$total} Position data resynced successfully.");
+            if ($positions->status() < 300) {
+                Artisan::call('app:resync-greatday-position');
 
                 $this->info("\nStart update employee positions ...");
 
@@ -415,69 +366,7 @@ class ResyncEmployeeGreatday extends Command
      */
     protected function seedGreatdayMasterData()
     {
-        $this->info('Seeding greatday timezones ...');
-
-        $service = app(\Modules\Hrd\Services\EmployeeService::class);
-
-        $timezone = $service->getGreatdayTimezones();
-
-        $this->handleNotificationGreatdaySeedingData($timezone, 'timezones');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday religions ...');
-        $religions = $service->getGreatdayReligion();
-
-        $this->handleNotificationGreatdaySeedingData($religions, 'religion');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday cost center ...');
-        $costCenters = $service->getGreatdayCostCenter();
-
-        $this->handleNotificationGreatdaySeedingData($costCenters, 'cost center');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday job grade ...');
-        $jobGrades = $service->getGreatdayJobGrade();
-
-        $this->handleNotificationGreatdaySeedingData($jobGrades, 'job grade');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday employment status ...');
-        $employmentStatuses = $service->getGreatdayEmploymentStatus();
-
-        $this->handleNotificationGreatdaySeedingData($employmentStatuses, 'employment status');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday work location ...');
-        $workLocations = $service->getGreatdayWorkLocation();
-
-        $this->handleNotificationGreatdaySeedingData($workLocations, 'work location');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday shift pattern ...');
-        $shiftPatterns = $service->getGreatdayShiftPattern();
-
-        $this->handleNotificationGreatdaySeedingData($shiftPatterns, 'shift pattern');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday job status ...');
-        $jobStatuses = $service->getGreatdayJobStatus();
-
-        $this->handleNotificationGreatdaySeedingData($jobStatuses, 'job status');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday nationality ...');
-        $nationalities = $service->getGreatdayNationality();
-
-        $this->handleNotificationGreatdaySeedingData($nationalities, 'nationality');
+        Artisan::call('app:seed-greatday-master');
     }
 
     /**
