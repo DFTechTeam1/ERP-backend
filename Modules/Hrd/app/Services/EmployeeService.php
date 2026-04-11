@@ -3398,10 +3398,11 @@ class EmployeeService
     public function resendVerification(array $payload, string $employeeId)
     {
         try {
+            $requestEmail = $payload['email'];
             $employee = $this->repo->show(
                 uid: '',
                 select: 'id,email,user_id',
-                where: "employee_id = '{$employeeId}'",
+                where: "employee_id = '{$employeeId}' and email = '{$requestEmail}'",
                 relation: [
                     'user:id,email,email_verified_at,employee_id'
                 ]

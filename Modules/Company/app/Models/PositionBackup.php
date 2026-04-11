@@ -6,6 +6,7 @@ use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Company\Database\Factories\PositionFactory;
 use Modules\Hrd\Models\Employee;
 
@@ -13,7 +14,7 @@ use Modules\Hrd\Models\Employee;
 
 class PositionBackup extends Model
 {
-    use HasFactory, ModelObserver;
+    use HasFactory, ModelObserver, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
