@@ -59,6 +59,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::put('employees/{uid}/basicInfo', 'updateBasicInfo')->name('employees.updateBasicInfo');
         Route::put('employees/{uid}/identity', 'updateIdentity')->name('employees.updateIdentity');
         Route::post('employees/{employeeUid}/storeFamily', 'storeFamily')->name('employees.storeFamily');
+        Route::post('employee/resendVerification/{employeeId}', 'resendVerificationEmail');
         Route::put('employees/{familyUid}/updateFamily', 'updateFamily')->name('employees.updateFamily');
         Route::get('employees/{employeeUid}/initFamily', 'initFamily');
         Route::delete('employees/{familyUid}/deleteFamily', 'deleteFamily');
