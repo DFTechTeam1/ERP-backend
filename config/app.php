@@ -168,4 +168,6 @@ return [
     'partner_email' => env('PARTNER_EMAIL', ''),
 
     'partner_url' => env('PARTNER_URL', null),
+
+    'internal_service_secret' => env('INTERNAL_SERVICE_SECRET', null),
 ];

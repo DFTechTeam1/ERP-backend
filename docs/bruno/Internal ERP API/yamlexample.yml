@@ -1,0 +1,58 @@
+info:
+  name: Create Employee
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{url_express}}/hrd/employees"
+  body:
+    type: json
+    data: |-
+      {
+          // Personal info
+          "username": "testlagi", // required | unique | note: for greatday login
+          "email": "ilhamtestlagi@gmail.com", // required
+          "first_name": "test", // required
+          "nickname": "again",
+          "id_number": "37377366277282",
+          "nationality": "ID", // required | nationality code
+          "gender": "1", // required | note: 1 = male, 0 = female
+          "birth_day": "1996-10-24", // required | y-m-d
+          "birth_place": "surabaya", // required
+          "religion": "ISLAM", // required | religion code
+          "marital_status": "0", // required | note: 0 = single, 1 = married, 2 = widow, 3 = widower
+          "address": "Jl. lontar 100", // required
+          "timezone_id": "30", // required | timezone master data
+          "mobile_phone": "08577955412", // required
+          "middle_name": "zein", // optional
+          "last_name": "", // optional
+          
+          // Work information
+          "employee_no": "DF100", // required
+          "join_date": "2026-03-01", // required | y-m-d
+          "company_id": 35532, // required
+          "position": "200ff75b-7f48-49ac-a188-538ef947958a", // required | position uid
+          "job_grade": "STF", // required | grade code
+          "cost_center": "DFV", // required | Cost center code
+          "employment_status": "PROBATION", // required | employment status code
+          "work_location": "KCP", // required | work location code
+          "supervisor": "9a4e881c-feee-48c9-b072-a4f1ebe2cf44", // required | supervisor employee uid
+          "manager": "9a4e881c-feee-48c9-b072-a4f1ebe2cf44", // required | manager employee uid
+          "shift_pattern": "GR_REGULARSHIFT_KLSXKW3T", // required | shift pattern code
+          "org_unit": "", // Optional | organization unit code
+          "job_status": "DIRECT", // optional | job status code
+          "end_date": "", // optional
+          "bank_name": "bca",
+          "bank_account_number": "ilham testing",
+          "bank_account_holder_name": "37773773883",
+
+          "register_on_greatday": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

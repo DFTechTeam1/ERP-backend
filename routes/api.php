@@ -347,6 +347,13 @@ Route::get('/files/{path}', function (Request $request, $path) {
         ->header('Access-Control-Allow-Headers', '*');
 })->where('path', '.*');
 
+// Internal service-to-service routes — protected by HMAC signature
+Route::middleware('internal.service')
+    ->prefix('internal')
+    ->group(function () {
+        Route::post('notifications/send', [\App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
+    });
+
 Route::middleware('partner')->group(function() {
     Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
     Route::post('partner/notification/mail', function (Request $request) {
