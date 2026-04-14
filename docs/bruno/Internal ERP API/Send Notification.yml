@@ -1,0 +1,57 @@
+info:
+  name: Send Notification
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/internal/notifications/send"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: X-Service-Name
+      value: bruno-test
+    - name: X-Timestamp
+      value: "{{timestamp}}"
+    - name: X-Signature
+      value: "{{signature}}"
+  body:
+    type: json
+    data: |-
+      {
+        "recipient_email": "user@example.com",
+        "action": "invoice_sent",
+        "channels": ["email", "database"],
+        "data": {
+          "parameter1": "Invoice #001",
+          "parameter2": "Rp 5.000.000"
+        },
+        "options": {}
+      }
+  auth: inherit
+
+script:
+  req: |-
+    const CryptoJS = require('crypto-js');
+
+    const secret = bru.getEnvVar('INTERNAL_SERVICE_SECRET');
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const path = 'api/internal/notifications/send';
+
+    // Normalize to minified JSON — must match Laravel's json_encode(json_decode($body))
+    // req.body in Bruno is a parsed JS object for JSON body type
+    const normalizedBody = JSON.stringify(req.body);
+
+    const signingString = ['POST', path, normalizedBody, timestamp].join('\n');
+
+    const signature = CryptoJS.HmacSHA256(signingString, secret).toString(CryptoJS.enc.Hex);
+
+    bru.setVar('timestamp', timestamp);
+    bru.setVar('signature', signature);
+  res: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
