@@ -15,8 +15,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Email\Emails\EmployeeMutationMail;
+use Modules\Email\Emails\SupervisorMutationMail;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
+use Modules\Hrd\Emails\EmployeeTransferEntityMail;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Production\Http\Controllers\Api\QuotationController;
@@ -334,4 +337,14 @@ Route::get('sync-greatday', function () {
     }
 
     return $response->json()['data'] ?? [];
+});
+
+Route::get('preview-mail', function () {
+    return (new EmployeeTransferEntityMail)->render();
+})->middleware('allow-iframe');
+
+Route::get('preview-data', function () {
+    $string = 'EmployeeMutationMail';
+    $classString = "\\Modules\\Email\\Emails\\{$string}";
+    return class_exists($classString);
 });

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AllowIframe;
 use App\Http\Middleware\BearerTokenMiddleware;
 use App\Http\Middleware\CustomSignedRouteMiddleware;
 use App\Http\Middleware\InternalServiceMiddleware;
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'internal.service' => InternalServiceMiddleware::class,
+            'allow-iframe' => AllowIframe::class,
             'partner' => PartnerMiddleware::class,
             'BearerToken' => BearerTokenMiddleware::class,
             'customSignedMiddleware' => CustomSignedRouteMiddleware::class,

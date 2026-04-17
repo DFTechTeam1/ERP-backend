@@ -134,6 +134,29 @@ if (! function_exists('apiResponse')) {
     }
 }
 
+if (! function_exists('validationErrorResponse')) {
+    /**
+     * Return a 422 response formatted exactly like Laravel's validation errors.
+     *
+     * @param  array<string, string[]>  $errors  Dot-notation keyed messages, e.g. ['name' => ['required'], 'items.0.qty' => ['min:1']]
+     */
+    function validationErrorResponse(array $errors, string $message = 'The given data was invalid.'): array
+    {
+        $formatted = [];
+
+        foreach ($errors as $field => $messages) {
+            $formatted[$field] = is_array($messages) ? $messages : [$messages];
+        }
+
+        return generalResponse(
+            message: $message,
+            error: true,
+            data: $formatted,
+            code: 422,
+        );
+    }
+}
+
 if (! function_exists('errorResponse')) {
     function errorResponse($message, array $data = [], $code = null)
     {
