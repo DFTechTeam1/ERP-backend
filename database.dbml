@@ -6,7 +6,7 @@ Enum "RequestEquipmentMastersStatusEnum" {
 }
 
 Enum "OutOfSyncEmployeeStatusEnum" {
-  "synced",
+  "synced"
   "out_of_sync"
 }
 
@@ -86,7 +86,7 @@ Enum "development_project_tasks_status_enum" {
 }
 
 Enum "interactive_project_task_status_enum" {
-  "1",
+  "1"
   "2"
 }
 
