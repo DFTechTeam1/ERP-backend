@@ -7,7 +7,6 @@ use App\Imports\SummaryInventoryReport;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Notifications\DummyNotification;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
@@ -15,11 +14,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
-use Modules\Email\Emails\EmployeeMutationMail;
-use Modules\Email\Emails\SupervisorMutationMail;
+use Modules\Email\Emails\InviteToErpMail;
+use Modules\Email\Emails\ResignEmployeeMail;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
-use Modules\Hrd\Emails\EmployeeTransferEntityMail;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Production\Http\Controllers\Api\QuotationController;
@@ -291,15 +289,16 @@ Route::get('manual-add', function () {
                 ->where('project_id', $point['project_id'])
                 ->first();
 
-            if (!$check) {
+            if (! $check) {
                 $inputProcessed++;
                 EmployeePointProject::create($point);
             }
         }
         DB::commit();
+
         return [
             'status' => 'success',
-            'message' => 'Processed ' . $inputProcessed . ' of ' . $total . ' data successfully.',
+            'message' => 'Processed '.$inputProcessed.' of '.$total.' data successfully.',
         ];
     } catch (\Throwable $th) {
         return [
@@ -322,7 +321,7 @@ Route::get('sync-greatday', function () {
 
     $accessToken = $service->login();
 
-    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($service->getBaseUrl() . '/employees', [
+    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($service->getBaseUrl().'/employees', [
         'page' => 1,
         'limit' => 100,
     ]);
@@ -331,7 +330,7 @@ Route::get('sync-greatday', function () {
         foreach ($response->json()['data'] as $employee) {
             \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
                 ->update([
-                    'greatday_emp_id' => $employee['empId']
+                    'greatday_emp_id' => $employee['empId'],
                 ]);
         }
     }
@@ -340,11 +339,18 @@ Route::get('sync-greatday', function () {
 });
 
 Route::get('preview-mail', function () {
-    return (new EmployeeTransferEntityMail)->render();
+    return (new InviteToErpMail(
+        'Ilham',
+        'ilham@gmail.com',
+        'password',
+        'https://google.com',
+        'https://google.com'
+    ))->render();
 })->middleware('allow-iframe');
 
 Route::get('preview-data', function () {
     $string = 'EmployeeMutationMail';
     $classString = "\\Modules\\Email\\Emails\\{$string}";
+
     return class_exists($classString);
 });
