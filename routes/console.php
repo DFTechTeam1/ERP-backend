@@ -34,6 +34,8 @@ Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 
 \Illuminate\Support\Facades\Schedule::command(ResyncNasFolderCreation::class)->twiceDailyAt(9, 16);
 
+// \Illuminate\Support\Facades\Schedule::job
+
 // Schedule::command('telescope:prune --hours=72')->daily();
 
 Schedule::command(CheckEmployeeResign::class)->dailyAt('00:15');

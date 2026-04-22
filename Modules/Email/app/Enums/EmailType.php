@@ -7,15 +7,20 @@ use Modules\Email\Data\Employees\Mutation\EmployeeData;
 use Modules\Email\Data\Employees\Mutation\SupervisorData;
 use Modules\Email\Data\Notification\SendEmailData;
 
-enum EmailType: string {
+enum EmailType: string
+{
     case Employee = 'employee';
     case Supervisor = 'supervisor';
+    case ResignEmployee = 'resign-employee';
+    case InviteToErp = 'invite-to-erp';
 
     public function getMailable(): string
     {
         return match ($this) {
             self::Employee => 'EmployeeMutationMail',
             self::Supervisor => 'SupervisorMutationMail',
+            self::ResignEmployee => 'ResignEmployeeMail',
+            self::InviteToErp => 'InviteToErpMail'
         };
     }
 
@@ -49,7 +54,7 @@ enum EmailType: string {
                 'oldPosition' => 'required',
                 'newPosition' => 'required',
                 'department' => 'required',
-                'effectiveDate' => 'required'
+                'effectiveDate' => 'required',
             ];
         } else {
             return [
@@ -58,12 +63,12 @@ enum EmailType: string {
                 'oldPosition' => 'required',
                 'newPosition' => 'required',
                 'department' => 'required',
-                'effectiveDate' => 'required'
+                'effectiveDate' => 'required',
             ];
         }
     }
 
-    public function validatePayload(SendEmailData $payload): array | null
+    public function validatePayload(SendEmailData $payload): ?array
     {
         // Get data per type
         $typeData = $this->getTypeData($payload);
