@@ -40,6 +40,8 @@ use Modules\Hrd\Repository\EmployeeResignRepository;
 use Modules\Hrd\Repository\EmployeeTimeoffRepository;
 use Modules\Hrd\Repository\GreatdayJobGradeRepository;
 use Modules\Hrd\Repository\GreatdayReligionRepository;
+use Modules\Hrd\Repository\GreatdayResignReasonRepository;
+use Modules\Hrd\Repository\GreatdayResignTypeRepository;
 use Modules\Hrd\Repository\GreatdayTimezoneRepository;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectPersonInCharge;
@@ -122,6 +124,10 @@ class EmployeeService
 
     private $greatdayCompanyRepo;
 
+    private GreatdayResignTypeRepository $greatdayResignTypeRepo;
+
+    private GreatdayResignReasonRepository $greatdayResignReasonRepo;
+
     public function __construct(
         EmployeeRepository $employeeRepo,
         PositionRepository $positionRepo,
@@ -154,7 +160,13 @@ class EmployeeService
         \Modules\Hrd\Repository\GreatdayJobStatusRepository $greatdayJobStatusRepo,
         \Modules\Hrd\Repository\GreatdayNationalityRepository $greatdayNationalityRepo,
         \Modules\Hrd\Repository\GreatdayCompanyRepository $greatdayCompanyRepo,
+        GreatdayResignTypeRepository $greatdayResignTypeRepo,
+        GreatdayResignReasonRepository $greatdayResignReasonRepo
     ) {
+        $this->greatdayResignTypeRepo = $greatdayResignTypeRepo;
+
+        $this->greatdayResignReasonRepo = $greatdayResignReasonRepo;
+
         $this->talentaService = $talentaService;
 
         $this->repo = $employeeRepo;
@@ -3441,6 +3453,141 @@ class EmployeeService
                 data: []
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get timezones
+     * 
+     * @return array
+     */
+    public function listResignTypes(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,id',
+                type: 'resignType',
+                searchAbleColumn: 'name',
+            );
+            $resignTypes = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($resignTypes as $resignType) {
+                $output[] = [
+                    'name' => $resignType->name,
+                    'code' => $resignType->code
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday resign types and store in the database, this function is used to sync resign type data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayResignType(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/resigntype', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $resignTypes = $response->json()['data'];
+
+                $payload = [];
+                foreach ($resignTypes as $resignType) {
+                    $payload[] = [
+                        'code' => $resignType['code'],
+                        'name' => $resignType['nameEn'],
+                        'created_at' => \Carbon\Carbon::now(),
+                        'updated_at' => \Carbon\Carbon::now(),
+                    ];
+                }
+
+                $this->greatdayResignTypeRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code'],
+                    updateColumns: ['name']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get greatday resign reasons and store in the database, this function is used to sync resign reasons data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
+     *
+     * @return array
+     */
+    public function getGreatdayResignReason(): array
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $accessToken = $this->greatdayService->login();
+
+            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/resignreason', [
+                'page' => 1,
+                'limit' => 100
+            ]);
+
+            if ($this->isGreatdayResponseSuccess($response)) {
+                $resignReasons = $response->json()['data'];
+
+                $payload = [];
+                foreach ($resignReasons as $resignReason) {
+                    $payload[] = [
+                        'code' => $resignReason['reasonCode'],
+                        'name' => $resignReason['reasonDescEn'],
+                        'resign_type' => $resignReason['resignation'],
+                        'created_at' => \Carbon\Carbon::now(),
+                        'updated_at' => \Carbon\Carbon::now(),
+                    ];
+                }
+
+                $this->greatdayResignReasonRepo->upsert(
+                    payload: $payload,
+                    uniqueBy: ['code', 'resign_type'],
+                    updateColumns: ['name']
+                );
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            \Illuminate\Support\Facades\DB::rollBack();
+
             return errorResponse($th);
         }
     }
