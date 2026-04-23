@@ -462,6 +462,16 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->getGreatdayTimezones());
     }
 
+    public function getGreatdayResignType(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayResignType());
+    }
+
+    public function getGreatdayResignReason(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayResignReason());
+    }
+
     public function getGreatdayCostCenter(): JsonResponse
     {
         return apiResponse($this->employeeService->getGreatdayCostCenter());
@@ -510,6 +520,11 @@ class EmployeeController extends Controller
     public function listTimezones(): JsonResponse
     {
         return apiResponse($this->employeeService->listTimezones());
+    }
+
+    public function listResignTypes(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listResignTypes());
     }
 
     public function listCostCenter(): JsonResponse
