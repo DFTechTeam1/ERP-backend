@@ -94,6 +94,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::get('/nationality/refresh', 'getGreatdayNationality')->name('greatday.refreshNationality');
                 Route::get('/companies', 'listCompanies');
                 Route::get('/resigntypes', 'listResignTypes');
+                Route::get('/resignreasons', 'listResignReasons');
                 Route::get('/companies/refresh', 'getGreatdayCompanies')->name('greatday.refreshCompanies');
                 Route::get('/resigntype/refresh', 'getGreatdayResignType')->name('greatday.refreshResignType');
                 Route::get('/resignreason/refresh', 'getGreatdayResignReason')->name('greatday.refreshResignReason');

@@ -54,7 +54,8 @@ class GreatdayResignReasonRepository extends GreatdayResignReasonInterface {
         string $where = "",
         array $relation = [],
         int $itemsPerPage,
-        int $page
+        int $page,
+        array $orderBy = []
     )
     {
         $query = $this->model->query();
@@ -67,6 +68,12 @@ class GreatdayResignReasonRepository extends GreatdayResignReasonInterface {
 
         if ($relation) {
             $query->with($relation);
+        }
+
+        if (! empty($orderBy)) {
+            foreach ($orderBy as $order) {
+                $query->orderBy($order['key'], $order['order']);
+            }
         }
         
         return $query->skip($page)->take($itemsPerPage)->get();

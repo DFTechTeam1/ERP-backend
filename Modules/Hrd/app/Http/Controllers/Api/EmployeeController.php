@@ -527,6 +527,11 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->listResignTypes());
     }
 
+    public function listResignReasons(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listResignReasons());
+    }
+
     public function listCostCenter(): JsonResponse
     {
         return apiResponse($this->employeeService->listCostCenter());
