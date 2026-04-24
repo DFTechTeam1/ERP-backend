@@ -3494,6 +3494,43 @@ class EmployeeService
     }
 
     /**
+     * Get resign reasons
+     * 
+     * @return array
+     */
+    public function listResignReasons(): array
+    {
+        try {
+            $data = $this->greatdayListData(
+                select: 'code,name,id,resign_type',
+                type: 'resignReason',
+                searchAbleColumn: 'name',
+            );
+            $resignReasons = $data['data'];
+            $totalData = $data['totalData'];
+
+            $output = [];
+            foreach ($resignReasons as $resignReason) {
+                $output[] = [
+                    'name' => $resignReason->name,
+                    'code' => $resignReason->code,
+                    'resign_type' => $resignReason->resign_type
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Get greatday resign types and store in the database, this function is used to sync resign type data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
      *
      * @return array
