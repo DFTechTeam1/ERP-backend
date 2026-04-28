@@ -50,25 +50,122 @@ class GlobalSlackNotification extends Notification
 
     public function toSlack($notifiable): SlackMessage
     {
+        // $slackMessage = (new SlackMessage)
+        //     ->text($this->payload->messageTitle)
+        //     ->headerBlock($this->payload->title);
+
+        // if ($this->payload->sectionBlock !== null) {
+        //     foreach ($this->payload->sectionBlock as $block) {
+        //         $slackMessage->sectionBlock(function ($section) use ($block) {
+        //             $section->field($block->message)->markdown();
+        //         });
+        //     }
+        // }
+
+        // if ($this->payload->contextBlock !== null) {
+        //     foreach ($this->payload->contextBlock as $contextMessage) {
+        //         $slackMessage->contextBlock(function ($section) use ($contextMessage) {
+        //             $section->text($contextMessage->message);
+        //         });
+        //     }
+        // }
+        $template = <<<JSON
+            {
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Team Announcement"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "We are hiring!"
+                        }
+                    },
+                    {
+                        "type": "divider"
+                    },
+                    {
+                        "type": "table",
+                        "rows": [
+                            [
+                                {
+                                    "type": "rich_text",
+                                    "elements": [
+                                        {
+                                            "type": "rich_text_section",
+                                            "elements": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Header 1",
+                                                    "style": {
+                                                        "bold": true
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "rich_text",
+                                    "elements": [
+                                        {
+                                            "type": "rich_text_section",
+                                            "elements": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Header 2",
+                                                    "style": {
+                                                        "bold": true
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            [
+                                {
+                                    "type": "rich_text",
+                                    "elements": [
+                                        {
+                                            "type": "rich_text_section",
+                                            "elements": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Datum 1"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "rich_text",
+                                    "elements": [
+                                        {
+                                            "type": "rich_text_section",
+                                            "elements": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Datum 2"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        ]
+                    }
+                ]
+            }
+        JSON;
+
         $slackMessage = (new SlackMessage)
-            ->text($this->payload->messageTitle)
-            ->headerBlock($this->payload->title);
-
-        if ($this->payload->sectionBlock !== null) {
-            foreach ($this->payload->sectionBlock as $block) {
-                $slackMessage->sectionBlock(function ($section) use ($block) {
-                    $section->text($block->message);
-                });
-            }
-        }
-
-        if ($this->payload->contextBlock !== null) {
-            foreach ($this->payload->contextBlock as $contextMessage) {
-                $slackMessage->contextBlock(function ($section) use ($contextMessage) {
-                    $section->text($contextMessage->message);
-                });
-            }
-        }
+                ->usingBlockKitTemplate($template);
 
         return $slackMessage;
     }

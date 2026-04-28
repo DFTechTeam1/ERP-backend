@@ -37,7 +37,7 @@ class CheckTransferEntityScheduleJob implements ShouldQueue
         $nowDate = date('Y-m-d');
         $data = $repo->list(
             select: '*',
-            where: "status = 'pending' and effective_date = '{$nowDate}'"
+            where: "status = 'pending' and effective_date = '{$nowDate}' and LOWER(transfer_type) != 'termination'"
         );
 
         if ($data->isNotEmpty()) {
