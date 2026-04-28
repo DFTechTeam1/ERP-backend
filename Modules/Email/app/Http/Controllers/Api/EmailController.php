@@ -5,16 +5,16 @@ namespace Modules\Email\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Modules\Email\Data\Notification\SendEmailData;
-use Modules\Email\Http\Requests\SendEmailRequest;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Modules\Email\Enums\EmailType;
 use Modules\Email\Services\EmailService;
 
 class EmailController extends Controller
 {
     public function __construct(
         private EmailService $emailService
-    )
-    {}
+    ) {}
 
     /**
      * Display a listing of the resource.
@@ -24,10 +24,33 @@ class EmailController extends Controller
         return view('email::index');
     }
 
-    public function send(SendEmailRequest $request): JsonResponse
+    protected function validateData(Request $request)
     {
-        $data = SendEmailData::fromRequest($request);
+        $validator = Validator::make($request->all(), [
+            'recipientEmail' => 'required',
+            'emailType' => [
+                Rule::enum(EmailType::class),
+                'required',
+            ],
+        ]);
 
-        return apiResponse($this->emailService->send(payload: $data));
+        if ($validator->fails()) {
+            return validationErrorResponse($validator->errors()->toArray());
+        }
+
+        return EmailType::from($request->emailType)->validatePayload($request->all());
+    }
+
+    public function send(Request $request): JsonResponse
+    {
+        $isNotValid = $this->validateData($request);
+
+        if ($isNotValid) {
+            return apiResponse($isNotValid);
+        }
+
+        $data = EmailType::from($request->emailType)->getTypeData($request->all());
+
+        return apiResponse($this->emailService->send(recipientEmail: $request->recipientEmail, emailType: EmailType::from($request->emailType), payload: $data));
     }
 }

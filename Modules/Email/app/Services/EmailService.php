@@ -3,11 +3,13 @@
 namespace Modules\Email\Services;
 
 use App\Exceptions\NotFoundError;
-use Modules\Email\Data\Notification\SendEmailData;
+use Modules\Email\Data\BaseData;
+use Modules\Email\Enums\EmailType;
 use Modules\Email\Jobs\SendEmailJob;
 use Modules\Hrd\Repository\EmployeeRepository;
 
-class EmailService {
+class EmailService
+{
     public function __construct(
         public EmployeeRepository $employeeRepo
     ) {}
@@ -22,29 +24,28 @@ class EmailService {
         return class_exists($className);
     }
 
-    public function send(SendEmailData $payload): array
+    public function send(string $recipientEmail, EmailType $emailType, BaseData $payload): array
     {
         try {
-            $isNotValid = $payload->emailType->validatePayload($payload);
-
-            // Return validation error if exists
-            if ($isNotValid) return $isNotValid;
-
             $employee = $this->employeeRepo->show(
                 uid: 'id',
                 select: 'id',
-                where: "email = '{$payload->recipientEmail}'"
+                where: "email = '{$recipientEmail}'"
             );
 
             // Validate employee
             if (! $employee) {
-                throw new NotFoundError(message: "Employee is not found");
+                throw new NotFoundError(message: 'Employee is not found');
             }
 
-            SendEmailJob::dispatch($payload);
+            SendEmailJob::dispatch(
+                $recipientEmail,
+                $emailType,
+                $payload
+            );
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

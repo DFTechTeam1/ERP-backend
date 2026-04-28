@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Email\Data\Notification\SendSlackMessageData;
 use Modules\Email\Emails\InviteToErpMail;
-use Modules\Email\Emails\ResignEmployeeMail;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
 use Modules\Hrd\Models\Employee;
@@ -349,8 +349,21 @@ Route::get('preview-mail', function () {
 })->middleware('allow-iframe');
 
 Route::get('preview-data', function () {
-    $string = 'EmployeeMutationMail';
-    $classString = "\\Modules\\Email\\Emails\\{$string}";
-
-    return class_exists($classString);
+    $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
+    \Illuminate\Support\Facades\Log::debug('developer', [$developer ? $developer->toArray() : null]);
+    if ($developer) {
+        $developer->notify(new \Modules\Email\Notifications\GlobalSlackNotification(
+            SendSlackMessageData::from([
+                'messageTitle' => 'message title',
+                'title' => 'Im the title of this message',
+                'sectionBlock' => [
+                    ['message' => 'Testing', 'type' => null],
+                    ['message' => 'New message from me', 'type' => null],
+                ],
+                'contextBlock' => [
+                    ['message' => 'time: '.now()->toDateString(), 'type' => null],
+                ],
+            ])
+        ));
+    }
 });

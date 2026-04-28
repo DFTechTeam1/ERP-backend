@@ -3,8 +3,8 @@
 namespace Modules\Hrd\Console;
 
 use Illuminate\Console\Command;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class SeedGreatdayMasterData extends Command
 {
@@ -38,6 +38,18 @@ class SeedGreatdayMasterData extends Command
         $timezone = $service->getGreatdayTimezones();
 
         $this->handleNotificationGreatdaySeedingData($timezone, 'timezones');
+
+        sleep(1); // Add delay to avoid hitting API rate limits
+
+        $resignType = $service->getGreatdayResignType();
+
+        $this->handleNotificationGreatdaySeedingData($resignType, 'resign type');
+
+        sleep(1); // Add delay to avoid hitting API rate limits
+
+        $resignReason = $service->getGreatdayResignReason();
+
+        $this->handleNotificationGreatdaySeedingData($resignReason, 'resign reason');
 
         sleep(1); // Add delay to avoid hitting API rate limits
 
@@ -105,15 +117,11 @@ class SeedGreatdayMasterData extends Command
 
     /**
      * Handle notification after seeding greatday master data. If there is an error, it will show error message, if not it will show success message.
-     *
-     * @param array $response
-     * @param string $type
-     * @return void
      */
     protected function handleNotificationGreatdaySeedingData(array $response, string $type): void
     {
         if ($response['error']) {
-            $this->error("Failed to seed greatday {$type} data. Message: " . $response['message']);
+            $this->error("Failed to seed greatday {$type} data. Message: ".$response['message']);
         } else {
             $this->info("Greatday {$type} data seeded successfully.");
         }

@@ -4,12 +4,13 @@ namespace Modules\Email\Jobs;
 
 use App\Exceptions\NotFoundError;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
-use Modules\Email\Data\Notification\SendEmailData;
+use Modules\Email\Data\BaseData;
+use Modules\Email\Enums\EmailType;
 
 class SendEmailJob implements ShouldQueue
 {
@@ -18,8 +19,11 @@ class SendEmailJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public SendEmailData $payload)
-    {
+    public function __construct(
+        public string $recipientEmail,
+        public EmailType $emailType,
+        public BaseData $payload
+    ) {
         //
     }
 
@@ -39,15 +43,17 @@ class SendEmailJob implements ShouldQueue
     public function handle(): void
     {
         // Check mailable class
-        $mailable = $this->formatClass(mailable: $this->payload->emailType->getMailable());
+        $mailable = $this->formatClass(mailable: $this->emailType->getMailable());
 
         if (! $this->checkMailableClass(className: $mailable)) {
             throw new NotFoundError('Email template is not found');
         }
 
         setEmailConfiguration();
-            
-        Mail::to($this->payload->recipientEmail)
-            ->send(new $mailable($this->payload->emailType->getTypeData($this->payload)));
+
+        $dataMailable = $this->emailType->getTypeData($this->payload);
+
+        Mail::to($this->recipientEmail)
+            ->send(new $mailable($dataMailable));
     }
 }
