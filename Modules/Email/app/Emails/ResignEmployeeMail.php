@@ -5,6 +5,7 @@ namespace Modules\Email\Emails;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use Modules\Email\Data\Employees\Resign\EmployeeResign;
 
 class ResignEmployeeMail extends Mailable
 {
@@ -14,11 +15,7 @@ class ResignEmployeeMail extends Mailable
      * Create a new message instance.
      */
     public function __construct(
-        public string $employeeName,
-        public string $employeeId,
-        public string $position,
-        public string $department,
-        public string $resignDate,
+        public EmployeeResign $payload
     ) {}
 
     /**
@@ -29,11 +26,11 @@ class ResignEmployeeMail extends Mailable
         return $this->subject('Resignation Schedule Confirmation')
             ->markdown('email::mail.hrd.employees.resign.resign')
             ->with([
-                'employeeName' => $this->employeeName,
-                'employeeId' => $this->employeeId,
-                'position' => $this->position,
-                'department' => $this->department,
-                'resignDate' => $this->resignDate,
+                'employeeName' => $this->payload->employeeName,
+                'employeeId' => $this->payload->employeeId,
+                'position' => $this->payload->position,
+                'department' => $this->payload->department,
+                'resignDate' => $this->payload->resignDate,
             ]);
     }
 }

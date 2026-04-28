@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Email\Http\Controllers\Api\EmailController as ApiEmailController;
+use Modules\Email\Http\Controllers\Api\SlackController;
 use Modules\Email\Http\Controllers\EmailController;
 
 /*
@@ -24,4 +25,11 @@ Route::middleware(['internal.service'])
     ->prefix('system-email')
     ->group(function () {
         Route::post('send/employee-mutation', [ApiEmailController::class, 'send']);
+    });
+
+Route::middleware(['internal.service'])
+    ->name('slack')
+    ->prefix('system-slack')
+    ->group(function () {
+        Route::post('send-message', [SlackController::class, 'send']);
     });

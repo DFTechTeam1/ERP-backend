@@ -13,16 +13,14 @@ class SendEmailRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'recipientEmail' => 'required',
+        $rules = [
             'emailType' => Rule::enum(EmailType::class),
-            'supervisorName' => 'nullable',
-            'employeeName' => 'nullable',
-            'oldPosition' => 'nullable',
-            'newPosition' => 'nullable',
-            'department' => 'nullable',
-            'effectiveDate' => 'nullable',
+            'recipientEmail' => 'required',
         ];
+
+        $additionalRules = EmailType::injectTypeValidator($this->request->get('emailType'));
+
+        return array_merge($rules, $additionalRules);
     }
 
     /**

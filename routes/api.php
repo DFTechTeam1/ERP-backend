@@ -172,7 +172,7 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [LoginController::class, 'login'])->name('login-form');
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
-    Route::post('changePassword', [LoginController::class, 'changePassword']);
+    Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth:sanctum');
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
 });
 
@@ -217,7 +217,7 @@ Route::middleware('auth:sanctum')
 
         // NOTIFICATION
         Route::get('user/notifications', function () {
-            $output = app(\App\Services\UserService::class)->getApplicationNotification();;
+            $output = app(\App\Services\UserService::class)->getApplicationNotification();
 
             $service = new EncryptionService;
             $encrypt = $service->encrypt(json_encode($output), config('app.salt_key_encryption'));
@@ -354,7 +354,7 @@ Route::middleware('internal.service')
         Route::post('notifications/send', [\App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
     });
 
-Route::middleware('partner')->group(function() {
+Route::middleware('partner')->group(function () {
     Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
     Route::post('partner/notification/mail', function (Request $request) {
         $request->validate([
@@ -362,7 +362,7 @@ Route::middleware('partner')->group(function() {
             'subject' => 'required|string',
             'body' => 'required|string',
         ]);
-        
+
         \App\Jobs\PartnerEmailJob::dispatch($request->to, $request->subject, $request->body);
     });
 });
