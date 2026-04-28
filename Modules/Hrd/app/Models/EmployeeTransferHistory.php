@@ -2,8 +2,10 @@
 
 namespace Modules\Hrd\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 // use Modules\Hrd\Database\Factories\EmployeeTransferHistoryFactory;
@@ -44,8 +46,28 @@ class EmployeeTransferHistory extends Model
         'note',
     ];
 
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
     // protected static function newFactory(): EmployeeTransferHistoryFactory
     // {
     //     // return EmployeeTransferHistoryFactory::new();
     // }
+
+    protected function scopePendingHistories(Builder $builder): void
+    {
+        $nowDate = date('Y-m-d');
+        $builder->whereNot('transfer_type', 'termination')
+            ->whereDate('effective_date', '<=', $nowDate)
+            ->where('status', 'pending');
+    }
+
+    protected function scopePendingHistoriesRelation(Builder $builder): void
+    {
+        $builder->with([
+            'employee:id,nickname,employee_id,name'
+        ]);
+    }
 }

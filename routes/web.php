@@ -348,22 +348,4 @@ Route::get('preview-mail', function () {
     ))->render();
 })->middleware('allow-iframe');
 
-Route::get('preview-data', function () {
-    $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
-    \Illuminate\Support\Facades\Log::debug('developer', [$developer ? $developer->toArray() : null]);
-    if ($developer) {
-        $developer->notify(new \Modules\Email\Notifications\GlobalSlackNotification(
-            SendSlackMessageData::from([
-                'messageTitle' => 'message title',
-                'title' => 'Im the title of this message',
-                'sectionBlock' => [
-                    ['message' => 'Testing', 'type' => null],
-                    ['message' => 'New message from me', 'type' => null],
-                ],
-                'contextBlock' => [
-                    ['message' => 'time: '.now()->toDateString(), 'type' => null],
-                ],
-            ])
-        ));
-    }
-});
+Route::get('preview-data', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'testingData']);
