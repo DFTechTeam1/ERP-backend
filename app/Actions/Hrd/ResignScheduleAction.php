@@ -1,40 +1,19 @@
 <?php
 
-/**
- * This job is to get transfer entity schedule for current date
- * If status is 'pending' update the employees data based on transfer history record
- * Notify HR and Employee about the changes
- */
+namespace App\Actions\Hrd;
 
-namespace Modules\Hrd\Jobs;
-
-use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
+use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Data\TransferHistory\HistoryData;
 use Modules\Hrd\Data\TransferHistory\ValidEmployeeData;
 use Spatie\LaravelData\DataCollection;
 
-class CheckTransferEntityScheduleJob implements ShouldQueue
+class ResignScheduleAction
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use AsAction;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
+    public function handle()
     {
-        //
-    }
-
-    /**
-     * Execute the job.
-     */
-    public function handle(): void
-    {
-        $this->processData();
+        return $this->processData();
     }
 
     protected function assignFailedData(
@@ -101,7 +80,7 @@ class CheckTransferEntityScheduleJob implements ShouldQueue
         \Illuminate\Support\Facades\DB::beginTransaction();
 
         try {
-            $transferHistories = \Modules\Hrd\Models\EmployeeTransferHistory::pendingHistories()
+            $transferHistories = \Modules\Hrd\Models\EmployeeTransferHistory::pendingResign()
                 ->pendingHistoriesRelation()
                 ->get();
     
@@ -110,21 +89,23 @@ class CheckTransferEntityScheduleJob implements ShouldQueue
 
             /** @var array<int, DataCollection<ValidEmployeeData>> $validData */
             $validData = [];
+
+            // Get employment status that categorize as terminal status
+            $terminalStatus = \Modules\Hrd\Models\EmploymentStatus::select('id')
+                ->where('is_terminal', 1)
+                ->first();
+
             foreach ($transferHistories as $history) {
                 $isValid = true;
-                $targetCostCenter = null;
-                $targetWorkLocation = null;
-                $targetEmploymentStatus = null;
-    
-                // Check target data one by one sending magic parameters
-                $this->validateHistoryData(
-                    isValid: $isValid,
-                    failedData: $failedData,
-                    history: $history,
-                    targetEmploymentStatus: $targetEmploymentStatus,
-                    targetWorkLocation: $targetWorkLocation,
-                    targetCostCenter: $targetCostCenter
-                );
+
+                if (! $terminalStatus) {
+                    $isValid = false;
+                    $failedData[$history->employee->name][] = new ValidEmployeeData(
+                        employeeId: $history->employee_id,
+                        employeeName: $history->employee->name,
+                        reason: 'Terminal Employment Status is not found'
+                    );
+                }
     
                 if ($isValid) {
                     // Update employment transfer history status
@@ -133,15 +114,41 @@ class CheckTransferEntityScheduleJob implements ShouldQueue
                             'status' => 'active'
                         ]);
 
-                    // Update employee table
-                    \Modules\Hrd\Models\Employee::where('id', $history->employee_id)
-                        ->update([
-                            'position_id' => $history->to_position_id,
-                            'greatday_cost_center' => $targetCostCenter ? $targetCostCenter->code : null,
-                            'greatday_employment_status' => $targetEmploymentStatus ? $targetEmploymentStatus->code : null,
-                            'greatday_work_location' => $targetWorkLocation ? $targetWorkLocation->code : null,
-                            'boss_id' => $history->to_boss_id
+                    // Terminate ERP accounts
+                    $userData = \App\Models\User::lockForUpdate()
+                        ->where('employee_id', $history->employee_id)
+                        ->first();
+
+                    if ($userData) {
+                        $userData->email = "resign_{$userData->email}";
+                        $userData->save();
+
+                        // Delete
+                        $userData->delete();
+                    }
+
+                    // Update employment status
+                    $employeeData = \Modules\Hrd\Models\Employee::select('id', 'name', 'email', 'position_id', 'employment_status_id')
+                        ->lockForUpdate()
+                        ->find($history->employee_id);
+                    
+                    if ($employeeData) {
+                        if (!\Illuminate\Support\Str::contains($employeeData->email, 'resign')) {
+                            $employeeData->email = "resign_{$employeeData->email}";
+                        }
+                        $employeeData->employment_status_id = $terminalStatus->id;
+                        $employeeData->status = \App\Enums\Employee\Status::Inactive->value;
+                        $employeeData->save();
+
+                        // Create employee resign record
+                        \Modules\Hrd\Models\EmployeeResign::create([
+                            'employee_id' => $employeeData->id,
+                            'reason' => 'Reason',
+                            'resign_date' => date('Y-m-d'),
+                            'current_position_id' => $employeeData->position_id,
+                            'current_employee_status' => $employeeData->employment_status_id
                         ]);
+                    }
 
                     $validData[$history->employee->name][] = new ValidEmployeeData(
                         employeeId: $history->employee_id,
@@ -157,13 +164,24 @@ class CheckTransferEntityScheduleJob implements ShouldQueue
             );
 
             // Send notification to developer for all report, failed and valid
-            \Modules\Hrd\Jobs\TransferEntityScheduleNotificationToDeveloperJob::dispatch(
+            \Modules\Hrd\Jobs\ResignScheduleNotificationToDeveloperJob::dispatch(
                 $payloadJob
             )->afterCommit();
 
             \Illuminate\Support\Facades\DB::commit();
+    
+            return response()->json([
+                'histories' => $transferHistories,
+                'failed' => $failedData,
+                'validData' => $validData
+            ]);
         } catch (\Throwable $th) {
             \Illuminate\Support\Facades\DB::rollBack();
+
+            return response()->json([
+                'error' => true,
+                'message' => errorMessage($th)
+            ]);
         }
 
     }
