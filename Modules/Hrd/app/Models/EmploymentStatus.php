@@ -4,11 +4,18 @@ namespace Modules\Hrd\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Modules\Hrd\Database\Factories\EmploymentStatusFactory;
+
 // use Modules\Hrd\Database\Factories\EmploymentStatusFactory;
 
 class EmploymentStatus extends Model
 {
     use HasFactory;
+
+    protected static function newFactory()
+    {
+        return EmploymentStatusFactory::new();
+    }
 
     /**
      * The attributes that are mass assignable.

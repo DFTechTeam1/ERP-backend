@@ -7,6 +7,11 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
 use Modules\Email\Data\Notification\SendSlackMessageData;
+use Modules\Email\Data\Notification\SlackTableHeaderColumnData;
+use Modules\Email\Data\Notification\SlackTableHeaderElementData;
+use Modules\Email\Data\Notification\SlackTableHeaderSectionData;
+use Modules\Email\Data\Notification\SlackTableHeaderStyleData;
+use Spatie\LaravelData\DataCollection;
 
 class GlobalSlackNotification extends Notification
 {
@@ -50,123 +55,150 @@ class GlobalSlackNotification extends Notification
 
     public function toSlack($notifiable): SlackMessage
     {
-        // $slackMessage = (new SlackMessage)
-        //     ->text($this->payload->messageTitle)
-        //     ->headerBlock($this->payload->title);
-
-        // if ($this->payload->sectionBlock !== null) {
-        //     foreach ($this->payload->sectionBlock as $block) {
-        //         $slackMessage->sectionBlock(function ($section) use ($block) {
-        //             $section->field($block->message)->markdown();
-        //         });
-        //     }
-        // }
-
-        // if ($this->payload->contextBlock !== null) {
-        //     foreach ($this->payload->contextBlock as $contextMessage) {
-        //         $slackMessage->contextBlock(function ($section) use ($contextMessage) {
-        //             $section->text($contextMessage->message);
-        //         });
-        //     }
-        // }
-        $template = <<<JSON
-            {
-                "blocks": [
-                    {
-                        "type": "header",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Team Announcement"
-                        }
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "We are hiring!"
-                        }
-                    },
-                    {
-                        "type": "divider"
-                    },
-                    {
-                        "type": "table",
-                        "rows": [
-                            [
-                                {
-                                    "type": "rich_text",
-                                    "elements": [
-                                        {
-                                            "type": "rich_text_section",
-                                            "elements": [
-                                                {
-                                                    "type": "text",
-                                                    "text": "Header 1",
-                                                    "style": {
-                                                        "bold": true
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    "type": "rich_text",
-                                    "elements": [
-                                        {
-                                            "type": "rich_text_section",
-                                            "elements": [
-                                                {
-                                                    "type": "text",
-                                                    "text": "Header 2",
-                                                    "style": {
-                                                        "bold": true
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                }
-                            ],
-                            [
-                                {
-                                    "type": "rich_text",
-                                    "elements": [
-                                        {
-                                            "type": "rich_text_section",
-                                            "elements": [
-                                                {
-                                                    "type": "text",
-                                                    "text": "Datum 1"
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    "type": "rich_text",
-                                    "elements": [
-                                        {
-                                            "type": "rich_text_section",
-                                            "elements": [
-                                                {
-                                                    "type": "text",
-                                                    "text": "Datum 2"
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                }
-                            ]
-                        ]
-                    }
-                ]
-            }
-        JSON;
-
         $slackMessage = (new SlackMessage)
-                ->usingBlockKitTemplate($template);
+            ->text($this->payload->messageTitle)
+            ->headerBlock($this->payload->title);
+
+        if ($this->payload->sectionBlock !== null) {
+            foreach ($this->payload->sectionBlock as $block) {
+                $slackMessage->sectionBlock(function ($section) use ($block) {
+                    $section->field($block->message)->markdown();
+                });
+            }
+        }
+
+        if ($this->payload->contextBlock !== null) {
+            foreach ($this->payload->contextBlock as $contextMessage) {
+                $slackMessage->contextBlock(function ($section) use ($contextMessage) {
+                    $section->text($contextMessage->message);
+                });
+            }
+        }
+        // $header = [
+        //     [
+        //         'type' => 'rich_text',
+        //         'elements' => [
+        //             [
+        //                 'type' => 'rich_text_section',
+        //                 'elements' => [
+        //                     [
+        //                         'type' => 'text',
+        //                         'text' => 'Header One',
+        //                         'style' => [
+        //                             'bold' => true,
+        //                         ],
+        //                     ],
+        //                 ],
+        //             ],
+        //         ],
+        //     ],
+        //     [
+        //         'type' => 'rich_text',
+        //         'elements' => [
+        //             [
+        //                 'type' => 'rich_text_section',
+        //                 'elements' => [
+        //                     [
+        //                         'type' => 'text',
+        //                         'text' => 'Header Two',
+        //                         'style' => [
+        //                             'bold' => true,
+        //                         ],
+        //                     ],
+        //                 ],
+        //             ],
+        //         ],
+        //     ],
+        // ];
+        // $template = <<<JSON
+        //     {
+        //         "blocks": [
+        //             {
+        //                 "type": "header",
+        //                 "text": {
+        //                     "type": "plain_text",
+        //                     "text": "Team Announcement"
+        //                 }
+        //             },
+        //             {
+        //                 "type": "section",
+        //                 "text": {
+        //                     "type": "plain_text",
+        //                     "text": "We are hiring!"
+        //                 }
+        //             },
+        //             {
+        //                 "type": "divider"
+        //             },
+        //             {
+        //                 "type": "table",
+        //                 "rows": [
+        //                     $header,
+        //                     [
+        //                         {
+        //                             "type": "rich_text",
+        //                             "elements": [
+        //                                 {
+        //                                     "type": "rich_text_section",
+        //                                     "elements": [
+        //                                         {
+        //                                             "type": "text",
+        //                                             "text": "Datum 1"
+        //                                         }
+        //                                     ]
+        //                                 }
+        //                             ]
+        //                         },
+        //                         {
+        //                             "type": "rich_text",
+        //                             "elements": [
+        //                                 {
+        //                                     "type": "rich_text_section",
+        //                                     "elements": [
+        //                                         {
+        //                                             "type": "text",
+        //                                             "text": "Datum 2"
+        //                                         }
+        //                                     ]
+        //                                 }
+        //                             ]
+        //                         }
+        //                     ]
+        //                 ]
+        //             }
+        //         ]
+        //     }
+        // JSON;
+
+        // $slackMessage = (new SlackMessage)
+        //     ->usingBlockKitTemplate($template);
 
         return $slackMessage;
+    }
+
+    public function dummyDataTable(): DataCollection
+    {
+        $makeColumn = function (string $text, bool $bold = false): SlackTableHeaderColumnData {
+            return new SlackTableHeaderColumnData(
+                type: 'rich_text',
+                elements: SlackTableHeaderSectionData::collect([
+                    new SlackTableHeaderSectionData(
+                        type: 'rich_text_section',
+                        elements: SlackTableHeaderElementData::collect([
+                            new SlackTableHeaderElementData(
+                                type: 'text',
+                                text: $text,
+                                style: new SlackTableHeaderStyleData(bold: $bold),
+                            ),
+                        ], DataCollection::class),
+                    ),
+                ], DataCollection::class),
+            );
+        };
+
+        return SlackTableHeaderColumnData::collect([
+            $makeColumn('Header One', bold: true),
+            $makeColumn('Header Two', bold: true),
+        ], DataCollection::class);
     }
 }

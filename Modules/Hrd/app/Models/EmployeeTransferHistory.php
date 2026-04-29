@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\Hrd\Database\Factories\EmployeeTransferHistoryFactory;
 
 // use Modules\Hrd\Database\Factories\EmployeeTransferHistoryFactory;
 
@@ -51,10 +52,10 @@ class EmployeeTransferHistory extends Model
         return $this->belongsTo(Employee::class, 'employee_id');
     }
 
-    // protected static function newFactory(): EmployeeTransferHistoryFactory
-    // {
-    //     // return EmployeeTransferHistoryFactory::new();
-    // }
+    protected static function newFactory(): EmployeeTransferHistoryFactory
+    {
+        return EmployeeTransferHistoryFactory::new();
+    }
 
     protected function scopePendingHistories(Builder $builder): void
     {
@@ -67,7 +68,15 @@ class EmployeeTransferHistory extends Model
     protected function scopePendingHistoriesRelation(Builder $builder): void
     {
         $builder->with([
-            'employee:id,nickname,employee_id,name'
+            'employee:id,nickname,employee_id,name,email'
         ]);
+    }
+
+    protected function scopePendingResign(Builder $builder): void
+    {
+        $nowDate = date('Y-m-d', strtotime('+1 day'));
+        $builder->where('transfer_type', 'termination')
+            ->whereDate('effective_date', '<=', $nowDate)
+            ->where('status', 'pending');
     }
 }

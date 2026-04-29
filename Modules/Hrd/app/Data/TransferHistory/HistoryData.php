@@ -6,10 +6,10 @@ use Spatie\LaravelData\Data;
 
 class HistoryData extends Data {
     public function __construct(
-        /** @var array<int, ValidEmployeeData[]> */
+        /** @var array<string, ValidEmployeeData[]> */
         public array $validData,
 
-        /** @var array<int, ValidEmployeeData[]> */
+        /** @var array<string, ValidEmployeeData[]> */
         public array $failedData
     ) {}
 }

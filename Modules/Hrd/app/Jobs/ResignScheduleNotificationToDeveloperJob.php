@@ -12,7 +12,7 @@ use Modules\Email\Data\Notification\SlackSectionBlockData;
 use Modules\Email\Notifications\GlobalSlackNotification;
 use Modules\Hrd\Data\TransferHistory\HistoryData;
 
-class TransferEntityScheduleNotificationToDeveloperJob implements ShouldQueue
+class ResignScheduleNotificationToDeveloperJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -42,10 +42,10 @@ class TransferEntityScheduleNotificationToDeveloperJob implements ShouldQueue
             }
             $payloadData = SendSlackMessageData::from([
                 'messageTitle' => 'Title',
-                'title' => "Report of Employee Transfer Schedule",
+                'title' => "Report of Resign Employee Schedule",
                 'sectionBlock' => [
                     new SlackSectionBlockData(
-                        message: "All employee transfer schedule for " . now()->toDayDateTimeString() . " has been running successfully\nHere are the result",
+                        message: "All employee resign schedule for " . now()->toDayDateTimeString() . " has been running successfully\nHere are the result",
                         type: null
                     ),
                     new SlackSectionBlockData(
