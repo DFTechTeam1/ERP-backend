@@ -178,5 +178,8 @@ return [
     'successSendEmailActivation' => 'Email activation has been sent successfully',
     'userNotFound' => 'User not found',
     'emailAlreadyVerified' => 'Email is already verified',
-    'employeeAlreadyHasResignationRecord' => 'Employee already has an existing resignation record.'
+    'employeeAlreadyHasResignationRecord' => 'Employee already has an existing resignation record.',
+    'taskIsNotPoolTask' => 'This task is not a pool task.',
+    'taskAlreadyPicked' => 'This task has already been picked by another employee.',
+    'taskPickedSuccessfully' => 'Task picked successfully. You are now working on it.',
 ];

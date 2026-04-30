@@ -24,6 +24,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('transaction/{projectDealUid}', [ApiFinanceController::class, 'createTransaction']);
         Route::get('transactions', [ApiFinanceController::class, 'index']);
         Route::get('transactions/summary', [ApiFinanceController::class, 'getTransactionSummary']);
+        Route::get('transactions/trend/monthly', [ApiFinanceController::class, 'getMonthlyTrend']);
+        Route::get('transactions/sources/top', [ApiFinanceController::class, 'getTopSources']);
+        Route::get('transactions/outstanding', [ApiFinanceController::class, 'getOutstandingData']);
         Route::get('transactions/{uid}', [ApiFinanceController::class, 'show']);
         Route::post('invoices/download', [ApiFinanceController::class, 'downloadInvoice']);
 
