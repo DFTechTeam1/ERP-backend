@@ -9,6 +9,7 @@ use Modules\Finance\Jobs\InvoiceDueCheck;
 use Modules\Hrd\Console\CheckEmployeeResign;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
+use Modules\Hrd\Jobs\CheckTransferEntityScheduleJob;
 use Modules\Production\Console\ClearAllCache;
 use Modules\Production\Console\PaymentDueReminderCommand;
 use Modules\Production\Console\ResyncNasFolderCreation;
@@ -34,9 +35,11 @@ Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 
 \Illuminate\Support\Facades\Schedule::command(ResyncNasFolderCreation::class)->twiceDailyAt(9, 16);
 
+// \Illuminate\Support\Facades\Schedule::job
+
 // Schedule::command('telescope:prune --hours=72')->daily();
 
-Schedule::command(CheckEmployeeResign::class)->dailyAt('00:15');
+Schedule::job(CheckTransferEntityScheduleJob::class)->dailyAt('15:50');
 
 Schedule::command(PaymentDueReminderCommand::class)->dailyAt('06:00');
 

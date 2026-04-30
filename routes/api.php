@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use KodePandai\Indonesia\Models\District;
 use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
+use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -171,7 +172,7 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [LoginController::class, 'login'])->name('login-form');
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
-    Route::post('changePassword', [LoginController::class, 'changePassword']);
+    Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth:sanctum');
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
 });
 
@@ -216,7 +217,7 @@ Route::middleware('auth:sanctum')
 
         // NOTIFICATION
         Route::get('user/notifications', function () {
-            $output = app(\App\Services\UserService::class)->getApplicationNotification();;
+            $output = app(\App\Services\UserService::class)->getApplicationNotification();
 
             $service = new EncryptionService;
             $encrypt = $service->encrypt(json_encode($output), config('app.salt_key_encryption'));
@@ -345,3 +346,23 @@ Route::get('/files/{path}', function (Request $request, $path) {
         ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         ->header('Access-Control-Allow-Headers', '*');
 })->where('path', '.*');
+
+// Internal service-to-service routes — protected by HMAC signature
+Route::middleware('internal.service')
+    ->prefix('internal')
+    ->group(function () {
+        Route::post('notifications/send', [\App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
+    });
+
+Route::middleware('partner')->group(function () {
+    Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
+    Route::post('partner/notification/mail', function (Request $request) {
+        $request->validate([
+            'to' => 'required|email',
+            'subject' => 'required|string',
+            'body' => 'required|string',
+        ]);
+
+        \App\Jobs\PartnerEmailJob::dispatch($request->to, $request->subject, $request->body);
+    });
+});
