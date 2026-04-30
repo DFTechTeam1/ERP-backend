@@ -19,7 +19,7 @@ class UserEmailActivation extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct($user, $encryptedData, $password)
+    public function __construct($user, $encryptedData, string|null $password)
     {
         $this->user = $user;
 

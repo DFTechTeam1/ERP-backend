@@ -7,7 +7,6 @@ use App\Imports\SummaryInventoryReport;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Notifications\DummyNotification;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Email\Data\Notification\SendSlackMessageData;
+use Modules\Email\Emails\InviteToErpMail;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
 use Modules\Hrd\Models\Employee;
@@ -191,7 +192,21 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    return app(\App\Services\UserService::class)->getApplicationNotification();
+    $resignStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Resign')->first();
+    $permanentStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Tetap')->first();
+    $partimeStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Paruh Waktu')->first();
+    $contractStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Kontrak Pertama')->first();
+    $internshipStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Magang')->first();
+    $probationStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Percobaan')->first();
+
+    return [
+        'resignStatusId' => $resignStatusId,
+        'permanentStatusId' => $permanentStatusId,
+        'partimeStatusId' => $partimeStatusId,
+        'contractStatusId' => $contractStatusId,
+        'internshipStatusId' => $internshipStatusId,
+        'probationStatusId' => $probationStatusId,
+    ];
 });
 
 Route::get('manual-add', function () {
@@ -274,15 +289,16 @@ Route::get('manual-add', function () {
                 ->where('project_id', $point['project_id'])
                 ->first();
 
-            if (!$check) {
+            if (! $check) {
                 $inputProcessed++;
                 EmployeePointProject::create($point);
             }
         }
         DB::commit();
+
         return [
             'status' => 'success',
-            'message' => 'Processed ' . $inputProcessed . ' of ' . $total . ' data successfully.',
+            'message' => 'Processed '.$inputProcessed.' of '.$total.' data successfully.',
         ];
     } catch (\Throwable $th) {
         return [
@@ -305,7 +321,7 @@ Route::get('sync-greatday', function () {
 
     $accessToken = $service->login();
 
-    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($service->getBaseUrl() . '/employees', [
+    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($service->getBaseUrl().'/employees', [
         'page' => 1,
         'limit' => 100,
     ]);
@@ -314,10 +330,22 @@ Route::get('sync-greatday', function () {
         foreach ($response->json()['data'] as $employee) {
             \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
                 ->update([
-                    'greatday_emp_id' => $employee['empId']
+                    'greatday_emp_id' => $employee['empId'],
                 ]);
         }
     }
 
     return $response->json()['data'] ?? [];
 });
+
+Route::get('preview-mail', function () {
+    return (new InviteToErpMail(
+        'Ilham',
+        'ilham@gmail.com',
+        'password',
+        'https://google.com',
+        'https://google.com'
+    ))->render();
+})->middleware('allow-iframe');
+
+Route::get('preview-data', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'testingData']);

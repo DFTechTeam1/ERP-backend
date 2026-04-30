@@ -6,11 +6,15 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Hrd\Console\AutoUpdateEmployeeTimeoff;
 use Modules\Hrd\Console\CheckEmployeeResign;
+use Modules\Hrd\Console\CreatePartnerUser;
+use Modules\Hrd\Console\GetGreatdayOutOfSyncEmployee;
 use Modules\Hrd\Console\InitateAvatarColor;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
 use Modules\Hrd\Console\ResyncEmployeeGreatday;
+use Modules\Hrd\Console\ResyncGreatdayPosition;
+use Modules\Hrd\Console\SeedGreatdayMasterData;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateBankIdInBankDetail;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
@@ -60,7 +64,11 @@ class HrdServiceProvider extends ServiceProvider
             SynchronizingTalentUserId::class,
             UpdateBankIdInBankDetail::class,
             CheckEmployeeResign::class,
-            ResyncEmployeeGreatday::class
+            ResyncEmployeeGreatday::class,
+            CreatePartnerUser::class,
+            GetGreatdayOutOfSyncEmployee::class,
+            SeedGreatdayMasterData::class,
+            ResyncGreatdayPosition::class
         ]);
     }
 

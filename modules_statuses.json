@@ -8,5 +8,6 @@
     "LineMessaging": true,
     "Telegram": true,
     "Finance": true,
-    "Development": true
+    "Development": true,
+    "Email": true
 }

@@ -70,7 +70,7 @@ class SettingService
                     $item['value'] = json_decode($item['value'], true);
                 } elseif ($item['key'] == 'default_boards') {
                     $item['value'] = $this->formatKanbanSetting($item);
-                } elseif ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment' || $item['key'] == 'person_to_approve_invoice_changes' || $item['key'] == 'interactive_pic' || $item['key'] == 'position_in_interactive_task' || $item['key'] == 'person_to_approve_interactive_event' || $item['key'] == 'approve_requested_equipment' || $item['key'] == 'position_as_marcomm' || $item['key'] == 'marcomm_pic' || $item['key'] == 'interactive_employees' || $item['key'] == 'development_employees') {
+                } elseif ($item['key'] == 'position_as_directors' || $item['key'] == 'position_as_project_manager' || $item['key'] == 'position_as_production' || $item['key'] == 'position_as_visual_jokey' || $item['key'] == 'project_manager_role' || $item['key'] == 'director_role' || $item['key'] == 'role_as_entertainment' || $item['key'] == 'person_to_approve_invoice_changes' || $item['key'] == 'interactive_pic' || $item['key'] == 'position_in_interactive_task' || $item['key'] == 'person_to_approve_interactive_event' || $item['key'] == 'approve_requested_equipment' || $item['key'] == 'position_as_marcomm' || $item['key'] == 'marcomm_pic' || $item['key'] == 'interactive_employees' || $item['key'] == 'development_employees' || $item['key'] == 'employee_variable') {
                     $item['value'] = json_decode($item['value'], true);
                 }
 
@@ -202,6 +202,36 @@ class SettingService
         }
     }
 
+    protected function storeEmployeeVariable(array $data) 
+    {
+        $check = $this->repo->show(
+            uid: '',
+            select: 'id',
+            where: "code = 'employee_variable'"
+        );
+
+        if (! $check) {
+            $this->repo->store(
+                data: [
+                    'key' => 'employee_variable',
+                    'value' => json_encode($data),
+                    'code' => 'employee_variable',
+                ]
+            );
+        } else {
+            $this->repo->update(
+                data: [
+                    'key' => 'employee_variable',
+                    'value' => json_encode($data),
+                    'code' => 'employee_variable',
+                ],
+                id: $check->id,
+            );
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('setting');
+    }
+
     /**
      * Store data
      */
@@ -223,6 +253,8 @@ class SettingService
                 $this->storeCompany($data);
             } elseif ($code == 'price') {
                 $this->storePricing($data);
+            } else if ($code === 'employee_variable') {
+                $this->storeEmployeeVariable($data);
             }
 
             cachingSetting();

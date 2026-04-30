@@ -54,7 +54,7 @@ class GreatdayService
     protected function checkAccessToken(): void
     {
         $check = \Illuminate\Support\Facades\Cache::get($this->getCacheTokenKey());
-
+        
         if ($check) {
             if (now()->greaterThanOrEqualTo($check['token_expires_in'])) {
                 // Access token expired, refresh token
@@ -80,6 +80,13 @@ class GreatdayService
                 'refreshToken' => $refreshToken,
             ]
         );
+
+        if ($response->status() === 422) {
+            // Refresh token expired, request new token
+            $this->requestToken();
+
+            return;
+        }
 
         if ($response->status() < 300) {
             // Delete old token

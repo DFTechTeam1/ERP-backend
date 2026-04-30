@@ -5,6 +5,11 @@ Enum "RequestEquipmentMastersStatusEnum" {
     "cancel"
 }
 
+Enum "OutOfSyncEmployeeStatusEnum" {
+  "synced"
+  "out_of_sync"
+}
+
 Enum "RequestEquipmentsOrderTypeEnum" {
     "online"
     "offline"
@@ -81,7 +86,7 @@ Enum "development_project_tasks_status_enum" {
 }
 
 Enum "interactive_project_task_status_enum" {
-  "1",
+  "1"
   "2"
 }
 
@@ -578,6 +583,33 @@ Table "document_templates" {
   "updated_at" timestamp [default: NULL]
 }
 
+Table "out_of_sync_employees" {
+  "id" bigint [pk, not null]
+  "first_name" varchar [not null]
+  "middle_name" varchar
+  "last_name" varchar
+  "email" varchar [not null]
+  "employee_id" varchar [not null]
+  "greatday_employee_id" varchar [not null]
+  "position_code" varchar(100) [not null]
+  "position_name" varchar(200) [not null]
+  "employment_status" varchar(100) [not null]
+  "employment_status_code" varchar(100) [not null]
+  "start_working_date" timestamp
+  "end_working_date" timestamp
+  "company_id" bigint
+  "address" varchar
+  "phone" varchar(20)
+  "job_status" varchar(100)
+  "work_location_code" varchar(100)
+  "cost_center_code" varchar(100)
+  "org_unit" varchar(100)
+  "employment_start_date" timestamp [default: NULL]
+  "status" OutOfSyncEmployeeStatusEnum
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+}
+
 Table "employees" {
   "id" bigint [pk, not null]
   "uid" char(36) [not null]
@@ -648,6 +680,36 @@ Table "employees" {
   "jp_configuration" varchar(255) [default: NULL]
   "overtime_status" varchar(255) [default: NULL]
   "bpjs_kesehatan_config" varchar(255) [default: NULL]
+}
+
+Table "employee_transfer_histories" {
+  "id" bigint [pk, not null]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "from_position_id" bigint [not null, ref: > position_backups.id]
+  "to_position_id" bigint [not null, ref: > position_backups.id]
+  "transfer_type" varchar(50) [not null, note: "promotion, demotion, mutation, employment_status_change"]
+  "from_work_location_id" bigint [not null, ref: > greatday_work_locations.id]
+  "from_work_location_name" varchar(100) [not null]
+  "to_work_location_id" bigint [not null, ref: > greatday_work_locations.id]
+  "to_work_location_name" varchar(100) [not null]
+  "from_cost_center_id" bigint [not null, ref: > greatday_cost_centers.id]
+  "from_cost_center_name" varchar(255) [not null]
+  "to_cost_center_id" bigint [not null, ref: > greatday_cost_centers.id]
+  "to_cost_center_name" varchar(255) [not null]
+  "from_job_grade_id" bigint [not null, ref: > greatday_job_grades.id]
+  "to_job_grade_id" bigint [not null, ref: > greatday_job_grades.id]
+  "effective_date" date [not null]
+  "transferred_by" bigint [not null, ref: > employees.id, note: "Who initiated this transfer"]
+  "note" text [default: NULL]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "deleted_at" timestamp [default: NULL]
+
+  indexes {
+    employee_id
+    (employee_id, effective_date)
+    status
+  }
 }
 
 Table "employee_active_reports" {
@@ -2325,37 +2387,34 @@ Table "division_allowances" {
   "updated_at" timestamp [default: NULL]
 }
 
-Table "project_leads" {
+Table "greatday_work_locations" {
   "id" bigint [pk, not null]
   "name" varchar(255) [not null]
-  "customer_phone" varchar(20) [DEFAULT: NULL]
-  "project_date" date [not null]
-  "event_type" projects_event_type_enum [DEFAULT: NULL]
-  "venue" varchar(255) [DEFAULT: NULL]
-  "city_id" bigint [DEFAULT: NULL, ref: > cities.id]
-  "pic_id" varchar (255) [DEFAULT: NULL]
-  "collaboration" varchar(255) [DEFAULT: NULL]
-  "note" text [DEFAULT: NULL]
-  "total_led" varchar(100) [DEFAULT: NULL, note: "in m2"]
-  "led_detail" text [DEFAULT: NULL]
-  "project_class_id" bigint [DEFAULT: NULL, ref: > project_classes.id]
-  "created_by" bigint [DEFAULT: NULL, ref: > employees.id]
-  "updated_by" bigint [DEFAULT: NULL, ref: > employees.id]
-  "is_final" tinyint(1) [not null, default: '0']
-  "cell_options" longtext [DEFAULT: NULL , note: "This column will be used to store the options for each cell in the project lead table. Format will be {cell_name: {option1: value1, option2: value2}}"]
+  "code" varchar(100) [not null]
+  "address" varchar(255) [not null]
+  "max_radius" double [not null, default: 0]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
+  "deleted_at" timestamp [default: NULL]
 }
 
-Table "project_lead_follow_ups" {
+Table "greatday_job_grades" {
   "id" bigint [pk, not null]
-  "project_lead_id" bigint [not null, ref: > project_leads.id]
-  "follow_up_date" date [not null]
-  "customer_phone" varchar(20) [DEFAULT: NULL]
-  "message" text [DEFAULT: NULL]
-  "created_by" bigint [DEFAULT: NULL, ref: > employees.id]
+  "name" varchar(255) [not null]
+  "code" varchar(100) [not null]
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
+  "deleted_at" timestamp [default: NULL]
+}
+
+Table "greatday_cost_centers" {
+  "id" bigint [pk, not null]
+  "name_id" varchar(255) [not null]
+  "name_en" varchar(255) [not null]
+  "code" varchar(255) [not null]
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
+  "deleted_at" timestamp [default: NULL]
 }
 
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
