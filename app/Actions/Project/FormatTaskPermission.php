@@ -125,7 +125,7 @@ class FormatTaskPermission
 
         $project['progress'] = FormatProjectProgress::run($projectTasks, $projectId);
         $project['can_complete_project'] = (bool) $this->user->hasPermissionTo('complete_project');
-        
+
         // define pic have been given their feedback or not
         $project['feedback_data'] = [];
         if (count($project['feedbacks']) > 0) {
@@ -154,7 +154,6 @@ class FormatTaskPermission
 
             $project['feedback_data'] = $feedbacks;
         }
-
 
         foreach ($project['boards'] as $keyBoard => $board) {
             $output[$keyBoard] = $board;
@@ -308,6 +307,44 @@ class FormatTaskPermission
             }
 
             $output[$keyBoard]['tasks'] = $outputTask;
+
+            // process pool_tasks with the same permission decorations
+            $outputPoolTask = [];
+            foreach ($board['pool_tasks'] ?? [] as $keyTask => $task) {
+                $outputPoolTask[$keyTask] = $task;
+                $outputPoolTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+                $outputPoolTask[$keyTask]['is_mine'] = false;
+                $outputPoolTask[$keyTask]['stop_action'] = $project['status'] == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
+                $outputPoolTask[$keyTask]['is_active'] = true;
+                $outputPoolTask[$keyTask]['can_add_description'] = false;
+                $outputPoolTask[$keyTask]['can_edit_description'] = false;
+                $outputPoolTask[$keyTask]['can_delete_description'] = false;
+                if ($this->user->hasPermissionTo('edit_task_description') && hasSuperPower(projectId: $projectId)) {
+                    $outputPoolTask[$keyTask]['can_edit_description'] = true;
+                }
+                if ($this->user->hasPermissionTo('add_task_description') && hasSuperPower(projectId: $projectId)) {
+                    $outputPoolTask[$keyTask]['can_add_description'] = true;
+                }
+                if ($this->user->hasPermissionTo('delete_task_description') && hasSuperPower(projectId: $projectId)) {
+                    $outputPoolTask[$keyTask]['can_delete_description'] = true;
+                }
+                $outputPoolTask[$keyTask]['show_hold_button'] = false;
+                $outputPoolTask[$keyTask]['is_hold'] = false;
+                $outputPoolTask[$keyTask]['can_delete_attachment'] = hasSuperPower(projectId: $projectId);
+                $outputPoolTask[$keyTask]['is_project_pic'] = $isProjectPic;
+                $outputPoolTask[$keyTask]['is_director'] = $this->isDirector;
+                $outputPoolTask[$keyTask]['need_approval_pm'] = false;
+                $outputPoolTask[$keyTask]['time_tracker'] = [];
+                $outputPoolTask[$keyTask]['picIds'] = [];
+                $outputPoolTask[$keyTask]['has_task_access'] = $superUserRole || $isProjectPic || $this->isDirector || isAssistantPMRole();
+                $outputPoolTask[$keyTask]['need_user_approval'] = false;
+                $outputPoolTask[$keyTask]['action_to_complete_task'] = false;
+                $outputPoolTask[$keyTask]['have_permission_to_move_board'] = false;
+                $outputPoolTask[$keyTask]['can_pick_task'] = true;
+                // $outputPoolTask[$keyTask]['can_pick_task'] = $this->user->hasPermissionTo('pick_pool_task');
+            }
+
+            $output[$keyBoard]['pool_tasks'] = array_values($outputPoolTask);
         }
 
         $project['boards'] = $output;
@@ -319,7 +356,7 @@ class FormatTaskPermission
         $allowedUploadShowreels = true;
         $currentTasks = [];
         foreach ($project['boards'] as $board) {
-            foreach ($board['tasks'] as $task) {
+            foreach ($board['tasks'] as $task) { // only regular tasks count toward progress
                 $currentTasks[] = $task;
             }
         }

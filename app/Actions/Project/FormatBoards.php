@@ -26,35 +26,39 @@ class FormatBoards
         $employeeId = $user->employee_id ?? 0;
         $superUserRole = isSuperUserRole();
 
-        $relation = [
-            'tasks' => function ($query) use ($filterSearch) {
-                $query->selectRaw('*')
+        $taskRelations = [
+            'revises',
+            'project:id,uid,status',
+            'proofOfWorks',
+            'logs',
+            'board',
+            'pics' => function ($queryPic) {
+                $queryPic->selectRaw('id,project_task_id,employee_id,status')
                     ->with([
-                        'revises',
-                        'project:id,uid,status',
-                        'proofOfWorks',
-                        'logs',
-                        'board',
-                        'pics' => function ($queryPic) {
-                            $queryPic->selectRaw('id,project_task_id,employee_id,status')
-                                ->with([
-                                    'employee' => function ($queryEmployee) {
-                                        $queryEmployee->selectRaw('id,name,email,uid,avatar_color');
-                                    },
-                                    'user:id,employee_id',
-                                ]);
-
-                            // if ($myTask) {
-                            //     $queryPic->whereHas('employee', function ($q) use ($employeeId) {
-                            //         $q->where("id", $employeeId);
-                            //     });
-                            // }
+                        'employee' => function ($queryEmployee) {
+                            $queryEmployee->selectRaw('id,name,email,uid,avatar_color');
                         },
-                        'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
-                        'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
-                        'times:id,project_task_id,employee_id,work_type,time_added',
-                        'times.employee:id,uid,name',
+                        'user:id,employee_id',
                     ]);
+            },
+            'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
+            'times:id,project_task_id,employee_id,work_type,time_added',
+            'times.employee:id,uid,name',
+        ];
+
+        $relation = [
+            'tasks' => function ($query) use ($filterSearch, $taskRelations) {
+                $query->selectRaw('*')
+                    ->where('is_pool_task', false)
+                    ->with($taskRelations);
+
+                if ($filterSearch) {
+                    $query->whereLike('name', "%{$filterSearch}%");
+                }
+            },
+            'poolTasks' => function ($query) use ($filterSearch, $taskRelations) {
+                $query->selectRaw('*')
+                    ->with($taskRelations);
 
                 if ($filterSearch) {
                     $query->whereLike('name', "%{$filterSearch}%");
@@ -191,7 +195,28 @@ class FormatBoards
                 $outputTask[$keyTask]['is_active'] = $isActive;
             }
 
-            $out[$keyBoard]['tasks'] = $outputTask;
+            $out[$keyBoard]['tasks'] = array_values($outputTask);
+
+            // pool tasks — already constrained to is_pool_task = true by the relationship
+            $poolOutputTask = [];
+            foreach ($board->poolTasks as $keyTask => $task) {
+                $poolOutputTask[$keyTask] = $task;
+                unset($poolOutputTask[$keyTask]['time_tracker']);
+                $poolOutputTask[$keyTask]['action_list'] = [];
+                $poolOutputTask[$keyTask]['need_user_approval'] = false;
+                $poolOutputTask[$keyTask]['stop_action'] = $task->project->status == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
+                $poolOutputTask[$keyTask]['need_approval_pm'] = false;
+                $poolOutputTask[$keyTask]['time_tracker'] = [];
+                $poolOutputTask[$keyTask]['is_project_pic'] = $isProjectPic;
+                $poolOutputTask[$keyTask]['is_director'] = $isDirector;
+                $poolOutputTask[$keyTask]['is_mine'] = false;
+                $poolOutputTask[$keyTask]['have_permission_to_move_board'] = false;
+                $poolOutputTask[$keyTask]['action_to_complete_task'] = false;
+                $poolOutputTask[$keyTask]['has_task_access'] = false;
+                $poolOutputTask[$keyTask]['is_active'] = false;
+            }
+
+            $out[$keyBoard]['pool_tasks'] = array_values($poolOutputTask);
         }
 
         return $out;

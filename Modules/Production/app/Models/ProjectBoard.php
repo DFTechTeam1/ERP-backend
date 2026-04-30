@@ -32,6 +32,12 @@ class ProjectBoard extends Model
         return $this->hasMany(ProjectTask::class, 'project_board_id');
     }
 
+    public function poolTasks(): HasMany
+    {
+        return $this->hasMany(ProjectTask::class, 'project_board_id')
+            ->where('is_pool_task', true);
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id');

@@ -40,6 +40,8 @@ class ProjectTask extends Model
         'current_board',
         'is_approved',
         'is_modeler_task',
+        'is_pool_task',
+        'is_pool_type',
     ];
 
     protected static function newFactory(): ProjectTaskFactory
