@@ -125,6 +125,12 @@ class DefineTaskAction
                 'color' => 'red',
                 'action' => 'deleteTaskAction',
             ],
+            'pickTask' => [
+                'icon' => asset('images/taskAction/check-white.png'),
+                'group' => 'bottom',
+                'color' => 'primary',
+                'action' => 'pickTaskAction',
+            ],
         ];
     }
 
@@ -230,9 +236,9 @@ class DefineTaskAction
     {
         $members = null;
 
-        if ($this->hasSuperPower() || $this->showForLeadModeler) {
+        if (($this->hasSuperPower() || $this->showForLeadModeler) && ! $task->is_pool_task) {
             $members = $this->buildOutput(
-                key:$key,
+                key: $key,
                 disabled: $task->status == \App\Enums\Production\TaskStatus::CheckByPm->value ? true : false,
                 detail: $detail
             );
@@ -245,7 +251,7 @@ class DefineTaskAction
     {
         $revise = null;
 
-        if (($this->hasSuperPower() || $this->isMyCurrentTask || $this->isMyTask) && $task->revises->count() > 0) {
+        if (($this->hasSuperPower() || $this->isMyCurrentTask || $this->isMyTask) && $task->revises->count() > 0 && ! $task->is_pool_task) {
             $revise = $this->buildOutput($key, false, $detail);
         }
 
@@ -297,7 +303,7 @@ class DefineTaskAction
         if (
             (
                 ($this->hasSuperPower() || $this->isMyTask) && $task->proofOfWorks->count() > 0
-            ) || 
+            ) ||
             $this->isMyCurrentTask
         ) {
             $proof = $this->buildOutput($key, false, $detail);
@@ -480,6 +486,23 @@ class DefineTaskAction
         }
 
         return $delete;
+    }
+
+    /**
+     * Will show when:
+     * 1. Task is a pool task (not yet picked by anyone)
+     * 2. Authorized user has pick_pool_task permission
+     */
+    protected function getPickTaskButton(object $task, string $key, array $detail): ?array
+    {
+        if ($task->is_pool_task) {
+            return $this->buildOutput($key, false, $detail);
+        }
+        // if ($task->is_pool_task && $this->user->hasPermissionTo('pick_pool_task')) {
+        //     return $this->buildOutput($key, false, $detail);
+        // }
+
+        return null;
     }
 
     /**

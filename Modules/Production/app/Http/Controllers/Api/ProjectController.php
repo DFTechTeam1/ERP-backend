@@ -13,7 +13,6 @@ use Modules\Production\Http\Requests\Deals\NewQuotation;
 use Modules\Production\Http\Requests\Incharge\AssignEntertainmentRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommWidget;
-use Modules\Production\Http\Requests\Project\AssignMarcommToProject;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
 use Modules\Production\Http\Requests\Project\ChangeAfpatStatus;
@@ -22,6 +21,7 @@ use Modules\Production\Http\Requests\Project\ChangeTaskBoard;
 use Modules\Production\Http\Requests\Project\CompleteProject;
 use Modules\Production\Http\Requests\Project\Create;
 use Modules\Production\Http\Requests\Project\CreateDescription;
+use Modules\Production\Http\Requests\Project\CreatePoolTask;
 use Modules\Production\Http\Requests\Project\CreateTask;
 use Modules\Production\Http\Requests\Project\Deals\Customer\StoreCustomer;
 use Modules\Production\Http\Requests\Project\DistributeModelerTask;
@@ -205,6 +205,22 @@ class ProjectController extends Controller
     public function storeTask(CreateTask $request, $boardId)
     {
         return apiResponse($this->service->storeTask($request->validated(), (int) $boardId));
+    }
+
+    /**
+     * Create a new pool task on the selected board.
+     */
+    public function storePoolTask(CreatePoolTask $request, int $boardId): JsonResponse
+    {
+        return apiResponse($this->service->storePoolTask($request->validated(), $boardId));
+    }
+
+    /**
+     * Employee picks a pool task, becoming the PIC and starting work immediately.
+     */
+    public function pickPoolTask(string $projectUid, string $taskUid): JsonResponse
+    {
+        return apiResponse($this->service->pickPoolTask($projectUid, $taskUid));
     }
 
     /**
@@ -1067,7 +1083,6 @@ class ProjectController extends Controller
 
     /**
      * Get project deal selection list
-     * @return JsonResponse
      */
     public function requestProjectDealSelectionList(): JsonResponse
     {
@@ -1076,9 +1091,6 @@ class ProjectController extends Controller
 
     /**
      * Store refund for selected project deal
-     * @param CreateRefund  $request
-     * @param string  $projectDealUid
-     * @return JsonResponse
      */
     public function storeRefund(CreateRefund $request, string $projectDealUid): JsonResponse
     {
@@ -1087,7 +1099,6 @@ class ProjectController extends Controller
 
     /**
      * List of refunds
-     * @return JsonResponse
      */
     public function listRefunds(): JsonResponse
     {
@@ -1096,8 +1107,6 @@ class ProjectController extends Controller
 
     /**
      * Detail of refund
-     * @param string  $refundUid
-     * @return JsonResponse
      */
     public function detailRefund(string $refundUid): JsonResponse
     {
@@ -1106,9 +1115,6 @@ class ProjectController extends Controller
 
     /**
      * Make refund payment
-     * @param CreateTransaction  $request
-     * @param string  $refundUid
-     * @return JsonResponse
      */
     public function makeRefundPayment(CreateTransaction $request, string $refundUid): JsonResponse
     {
@@ -1117,8 +1123,6 @@ class ProjectController extends Controller
 
     /**
      * Delete refund
-     * @param string  $refundUid
-     * @return JsonResponse
      */
     public function deleteRefund(string $refundUid): JsonResponse
     {
@@ -1132,9 +1136,6 @@ class ProjectController extends Controller
 
     /**
      * Update after party status
-     * @param ChangeAfpatStatus  $request
-     * @param string  $projectUid
-     * @return JsonResponse
      */
     public function updateAfterPartyStatus(ChangeAfpatStatus $request, string $projectUid): JsonResponse
     {
@@ -1143,7 +1144,6 @@ class ProjectController extends Controller
 
     /**
      * Get incharge list
-     * @return JsonResponse
      */
     public function inchargeList(): JsonResponse
     {
@@ -1152,20 +1152,14 @@ class ProjectController extends Controller
 
     /**
      * Assign on duty entertainment
-     * @param AssignEntertainmentRequest  $request
-     * @param string  $projectUid
-     * @return JsonResponse
      */
     public function assignOnDutyEntertainment(AssignEntertainmentRequest $request, string $projectUid): JsonResponse
     {
         return apiResponse($this->inchargeService->assignOnDutyEntertainment($request->validated(), $projectUid));
     }
-    
+
     /**
      * Assign on duty marcomm
-     * @param AssignMarcommRequest  $request
-     * @param string  $projectUid
-     * @return JsonResponse
      */
     public function assignOnDutyMarcomm(AssignMarcommRequest $request, string $projectUid): JsonResponse
     {
@@ -1174,8 +1168,6 @@ class ProjectController extends Controller
 
     /**
      * Get marcomm assignment list
-     * @param string  $employeeUid
-     * @return JsonResponse
      */
     public function marcommAssignmentList(string $employeeUid, string $type): JsonResponse
     {
@@ -1184,10 +1176,6 @@ class ProjectController extends Controller
 
     /**
      * Assign on duty from widget
-     * @param AssignMarcommWidget  $request
-     * @param string  $employeeUid
-     * @param string $type
-     * @return JsonResponse
      */
     public function assignOnDutyFromWidget(AssignMarcommWidget $request, string $employeeUid, string $type): JsonResponse
     {

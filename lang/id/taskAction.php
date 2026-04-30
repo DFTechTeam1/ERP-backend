@@ -17,4 +17,5 @@ return [
     'markAsComplete' => 'Selesai',
     'revise' => 'Revise',
     'delete' => 'Hapus',
+    'pickTask' => 'Ambil Task',
 ];

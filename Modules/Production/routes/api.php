@@ -146,7 +146,6 @@ Route::middleware(['auth:sanctum'])
         Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');
         Route::get('interactives/{uid}', [InteractiveController::class, 'show'])->name('interactives.show');
 
-
         // songs
         Route::post('project/{projectUid}/song', [ProjectController::class, 'storeSongs'])->name('projects.storeSongs');
         Route::post('project/{projectUid}/bulkAssignWorkerForSong', [ProjectController::class, 'bulkAssignWorkerForSong'])->name('projects.bulkAssignWorkerForSong');
@@ -192,6 +191,12 @@ Route::middleware(['auth:sanctum'])
         Route::get('project/{id}/getBoards', [ProjectController::class, 'getProjectBoards']);
         Route::get('project/{id}/getProjectTeams', [ProjectController::class, 'getProjectTeams']);
         Route::post('project/{boardId}/task', [ProjectController::class, 'storeTask'])->name('storeTask');
+        Route::post('project/{boardId}/pool-task', [ProjectController::class, 'storePoolTask'])
+            // ->middleware(PermissionCheck::class.':create_pool_task')
+            ->name('storePoolTask');
+        Route::post('project/{projectUid}/pool-task/{taskUid}/pick', [ProjectController::class, 'pickPoolTask'])
+            // ->middleware(PermissionCheck::class.':pick_pool_task')
+            ->name('pickPoolTask');
         Route::post('project/{taskId}/description', [ProjectController::class, 'storeDescription']);
         Route::post('project/{taskId}/changeTaskBoard', [ProjectController::class, 'changeTaskBoard']);
         Route::post('project/{taskId}/manualMoveBoard', [ProjectController::class, 'manualMoveBoard']);
