@@ -118,12 +118,69 @@ async function sendErpNotification({ recipientEmail, action, channels, data = {}
   return response.data;
 }
 
-// Usage
-sendErpNotification({
-  recipientEmail: 'user@example.com',
-  action: 'invoice_sent',
-  channels: ['email', 'database'],
-  data: { parameter1: 'Invoice #001', parameter2: 'Rp 5.000.000' },
+/**
+ * Fetch data from any upstream service, then forward a notification to the ERP.
+ *
+ * @param {object} params
+ * @param {string} params.serviceUrl        - Full URL of the upstream service endpoint
+ * @param {string} [params.serviceMethod]   - HTTP method to use when calling the service (default: 'GET')
+ * @param {object} [params.servicePayload]  - Request body for POST/PUT calls to the service
+ * @param {object} [params.serviceHeaders]  - Extra headers needed by the upstream service
+ * @param {function} params.mapToNotification - Maps the service response to notification params:
+ *                                             ({ recipientEmail, action, channels, data, options })
+ */
+async function fetchAndNotify({
+  serviceUrl,
+  serviceMethod = 'GET',
+  servicePayload = null,
+  serviceHeaders = {},
+  mapToNotification,
+}) {
+  const serviceResponse = await axios({
+    method: serviceMethod,
+    url: serviceUrl,
+    data: servicePayload,
+    headers: serviceHeaders,
+  });
+
+  const notificationParams = mapToNotification(serviceResponse.data);
+  return sendErpNotification(notificationParams);
+}
+
+// --- Usage examples ---
+
+// 1. Fetch an invoice from an invoice service and notify the recipient
+fetchAndNotify({
+  serviceUrl: 'https://invoice-service.internal/invoices/INV-001',
+  mapToNotification: (invoice) => ({
+    recipientEmail: invoice.customer_email,
+    action: 'invoice_sent',
+    channels: ['email', 'database'],
+    data: {
+      parameter1: invoice.invoice_number,
+      parameter2: invoice.total_amount,
+    },
+  }),
+});
+
+// 2. POST to a report service, then notify when the report is ready
+fetchAndNotify({
+  serviceUrl: 'https://reporting-service.internal/reports/generate',
+  serviceMethod: 'POST',
+  servicePayload: { type: 'monthly_sales', month: '2026-04' },
+  serviceHeaders: { Authorization: `Bearer ${process.env.REPORTING_SERVICE_TOKEN}` },
+  mapToNotification: (report) => ({
+    recipientEmail: report.requested_by_email,
+    action: 'report_generated',
+    channels: ['email'],
+    data: {
+      parameter1: report.title,
+      parameter2: report.period,
+    },
+    options: {
+      attachment_url: report.download_url,
+    },
+  }),
 });
 ```
 
