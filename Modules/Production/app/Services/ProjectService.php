@@ -2716,6 +2716,8 @@ class ProjectService
                     $payloadStatus['status'] = TaskStatus::CheckByPm->value;
                 }
 
+                $payloadStatus['is_pool_task'] = false;
+
                 if (! empty($payloadStatus)) {
                     $this->taskRepo->update($payloadStatus, $taskUid);
                 }
@@ -3031,6 +3033,55 @@ class ProjectService
         }
     }
 
+    protected function mainStoreTask(ProjectTask $task, int $boardId, mixed $board, bool $isForLeadModeller, array $pics = [])
+    {
+        // task log
+        $this->loggingTask([
+            'board_id' => $boardId,
+            'board' => $board,
+            'task' => $task,
+        ], 'addNewTask');
+
+        // assign pic and record work timing if needed
+        if (! empty($pics)) {
+            $this->assignMemberToTask(
+                data: [
+                    'users' => $pics,
+                    'removed' => [],
+                ],
+                taskUid: $task->uid,
+                needChangeTaskStatus: $isForLeadModeller ? false : true
+            );
+            // send notification if needed
+
+        }
+
+        // add image attachment if needed
+        if (! empty($data['media'])) {
+            $this->uploadTaskMedia(
+                [
+                    'media' => $data['media'],
+                ],
+                $task->id,
+                $board->project_id,
+                $board->project->uid,
+                $task->uid
+            );
+        }
+
+        $this->formattedDetailTask($task->uid);
+
+        // only record a task deadline when user add end date and assign pic on it
+        // if (
+        //     (isset($data['end_date'])) &&
+        //     ($data['end_date']) &&
+        //     (isset($data['pic'])) &&
+        //     (!empty($data['pic']))
+        // ) {
+        //     $this->storeTaskDeadline(task: $task, payload: collect($data)->only(['end_date'])->toArray());
+        // }
+    }
+
     /**
      * Store task on selected board
      *
@@ -3070,40 +3121,47 @@ class ProjectService
             $taskStore = $this->taskRepo->store(collect($data)->except(['pic', 'media'])->toArray());
 
             // task log
-            $this->loggingTask([
-                'board_id' => $boardId,
-                'board' => $board,
-                'task' => $taskStore,
-            ], 'addNewTask');
+            $this->mainStoreTask(
+                task: $taskStore,
+                boardId: $boardId,
+                board: $board,
+                isForLeadModeller: $isForLeadModeller,
+                pics: isset($data['pic']) ? $data['pic'] : []
+            );
+            // $this->loggingTask([
+            //     'board_id' => $boardId,
+            //     'board' => $board,
+            //     'task' => $taskStore,
+            // ], 'addNewTask');
 
-            // assign pic and record work timing if needed
-            if (! empty($data['pic'])) {
-                $this->assignMemberToTask(
-                    data: [
-                        'users' => $data['pic'],
-                        'removed' => [],
-                    ],
-                    taskUid: $taskStore->uid,
-                    needChangeTaskStatus: $isForLeadModeller ? false : true
-                );
-                // send notification if needed
+            // // assign pic and record work timing if needed
+            // if (! empty($data['pic'])) {
+            //     $this->assignMemberToTask(
+            //         data: [
+            //             'users' => $data['pic'],
+            //             'removed' => [],
+            //         ],
+            //         taskUid: $taskStore->uid,
+            //         needChangeTaskStatus: $isForLeadModeller ? false : true
+            //     );
+            //     // send notification if needed
 
-            }
+            // }
 
-            // add image attachment if needed
-            if (! empty($data['media'])) {
-                $this->uploadTaskMedia(
-                    [
-                        'media' => $data['media'],
-                    ],
-                    $taskStore->id,
-                    $board->project_id,
-                    $board->project->uid,
-                    $taskStore->uid
-                );
-            }
+            // // add image attachment if needed
+            // if (! empty($data['media'])) {
+            //     $this->uploadTaskMedia(
+            //         [
+            //             'media' => $data['media'],
+            //         ],
+            //         $taskStore->id,
+            //         $board->project_id,
+            //         $board->project->uid,
+            //         $taskStore->uid
+            //     );
+            // }
 
-            $task = $this->formattedDetailTask($taskStore->uid);
+            // $this->formattedDetailTask($taskStore->uid);
 
             // only record a task deadline when user add end date and assign pic on it
             // if (
@@ -3147,17 +3205,21 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
-            $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid']);
+            $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
+            $isForLeadModeller = (isset($data['pic'])) && ($data['pic'][0] == $leadModeller) ? true : false;
+
+            $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid', 'project.personInCharges']);
 
             $taskPayload = [
                 'name' => $data['name'],
                 'project_id' => $board->project_id,
                 'project_board_id' => $boardId,
                 'start_date' => date('Y-m-d'),
+                'status' => !isset($data['pic']) || (isset($data['pic']) && count($data['pic']) == 0) ? null : ($isForLeadModeller ? TaskStatus::WaitingDistribute->value : TaskStatus::WaitingApproval->value),
                 'end_date' => ! empty($data['end_date']) ? date('Y-m-d H:i:s', strtotime($data['end_date'])) : null,
                 'description' => $data['description'] ?? null,
-                'is_pool_task' => true,
-                'is_pool_type' => true,
+                'is_pool_task' => isset($data['pic']) && count($data['pic']) > 0 ? false : true,
+                'is_pool_type' => isset($data['pic']) && count($data['pic']) > 0 ? false : true,
             ];
 
             $task = $this->taskRepo->store($taskPayload);
@@ -3169,6 +3231,17 @@ class ProjectService
                     $board->project_id,
                     $board->project->uid,
                     $task->uid
+                );
+            }
+
+            // validate pic
+            if (isset($data['pic']) && count($data['pic']) > 0) {
+                $this->mainStoreTask(
+                    task: $task,
+                    boardId: $boardId,
+                    board: $board,
+                    isForLeadModeller: $isForLeadModeller,
+                    pics: isset($data['pic']) ? $data['pic'] : []
                 );
             }
 
@@ -5624,12 +5697,12 @@ class ProjectService
         );
 
         // update task status
-        $statusUpdate = $currentTaskData->is_pool_type
-            ? \App\Enums\Production\TaskStatus::OnProgress->value
-            : \App\Enums\Production\TaskStatus::Completed->value;
+        // $statusUpdate = $currentTaskData->is_pool_type
+        //     ? \App\Enums\Production\TaskStatus::OnProgress->value
+        //     : \App\Enums\Production\TaskStatus::Completed->value;
 
         $updatePayload = [
-            'status' => $statusUpdate,
+            'status' => \App\Enums\Production\TaskStatus::Completed->value,
             'end_date' => null,
         ];
 

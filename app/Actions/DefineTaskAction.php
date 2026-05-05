@@ -13,7 +13,7 @@ class DefineTaskAction
 {
     use AsAction;
 
-    private $user;
+    private object $user;
 
     private bool $isProjectPic;
 
@@ -244,7 +244,10 @@ class DefineTaskAction
     {
         $members = null;
 
-        if (($this->hasSuperPower() || $this->showForLeadModeler) && ! $task->is_pool_task) {
+        if (
+            ($this->hasSuperPower() || $this->showForLeadModeler) &&  // If superpower and for lead modeler
+            ($task->is_pool_task && ($this->user->can('create_pool_task')) ?? false) // if is pool task and user can create pool task
+        ) {
             $members = $this->buildOutput(
                 key: $key,
                 disabled: $task->status == \App\Enums\Production\TaskStatus::CheckByPm->value ? true : false,

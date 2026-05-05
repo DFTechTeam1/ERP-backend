@@ -1092,6 +1092,14 @@ class RolePermissionSetting extends Seeder
     protected function projectPermission()
     {
         return [
+            ['name' => 'pick_task', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
+            ['name' => 'create_pool_task', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'list_leads', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
