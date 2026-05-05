@@ -202,7 +202,7 @@ class FormatBoards
             foreach ($board->poolTasks as $keyTask => $task) {
                 $poolOutputTask[$keyTask] = $task;
                 unset($poolOutputTask[$keyTask]['time_tracker']);
-                $poolOutputTask[$keyTask]['action_list'] = [];
+                $poolOutputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user);
                 $poolOutputTask[$keyTask]['need_user_approval'] = false;
                 $poolOutputTask[$keyTask]['stop_action'] = $task->project->status == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
                 $poolOutputTask[$keyTask]['need_approval_pm'] = false;

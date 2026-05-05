@@ -50,32 +50,41 @@ class TestingService
                 ],
             ];
         } else { // get based on task
-            $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = '.$employee->id);
-            $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
+            // $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = '.$employee->id);
+            // $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
 
-            // get from project_task_pics table
-            $taskPics = $this->taskPicRepo->list(
-                select: 'project_task_id',
-                where: "employee_id = {$employee->id}"
-            );
-            if ($taskPics->count() > 0) {
-                $taskIds = collect($taskIds)
-                    ->merge(
-                        collect($taskPics)->pluck('project_task_id')->toArray()
-                    )->unique()->values()->toArray();
-            }
+            // // get from project_task_pics table
+            // $taskPics = $this->taskPicRepo->list(
+            //     select: 'project_task_id',
+            //     where: "employee_id = {$employee->id}"
+            // );
+            // if ($taskPics->count() > 0) {
+            //     $taskIds = collect($taskIds)
+            //         ->merge(
+            //             collect($taskPics)->pluck('project_task_id')->toArray()
+            //         )->unique()->values()->toArray();
+            // }
 
-            if (count($taskIds) > 0) {
-                $queryNewHas = 'id IN ('.implode(',', $taskIds).')';
-            } else {
-                $queryNewHas = 'id = 0';
-            }
+            // if (count($taskIds) > 0) {
+            //     $queryNewHas = 'id IN ('.implode(',', $taskIds).')';
+            // } else {
+            //     $queryNewHas = 'id = 0';
+            // }
 
+            // $newWhereHas = [
+            //     [
+            //         'relation' => 'tasks',
+            //         'query' => $queryNewHas,
+            //     ],
+            // ];
+
+            // V2 -> Get based on boss id project
+            $bossId = $employee->boss_id;
             $newWhereHas = [
                 [
-                    'relation' => 'tasks',
-                    'query' => $queryNewHas,
-                ],
+                    'relation' => 'personInCharges',
+                    'query' => "pic_id = {$bossId}"
+                ]
             ];
         }
 

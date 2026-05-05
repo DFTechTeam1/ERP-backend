@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
 use Illuminate\Support\Facades\Auth;
@@ -12,9 +13,11 @@ class DefineTaskAction
 {
     use AsAction;
 
-    private $user;
+    private object $user;
 
-    private $isProjectPic;
+    private bool $isProjectPic;
+
+    private int $projectStatus;
 
     private $isDirector;
 
@@ -155,9 +158,10 @@ class DefineTaskAction
     /**
      * This action will define which button should be appear in the selected task
      */
-    public function handle(\Modules\Production\Models\ProjectTask $task): array
+    public function handle(\Modules\Production\Models\ProjectTask $task, object | null $user = null, int | null $projectStatus = null): array
     {
-        $this->user = Auth::user();
+        $this->user = !$user ? Auth::user() : $user;
+        $this->projectStatus = $projectStatus;
         $this->isProjectPic = isProjectPIC((int) $task->project_id, $this->user->employee_id);
         $this->isDirector = isDirector();
         $this->defineMyTask($task);
@@ -236,7 +240,10 @@ class DefineTaskAction
     {
         $members = null;
 
-        if (($this->hasSuperPower() || $this->showForLeadModeler) && ! $task->is_pool_task) {
+        if (
+            ($this->hasSuperPower() || $this->showForLeadModeler) &&  // If superpower and for lead modeler
+            ($task->is_pool_task && ($this->user->can('create_pool_task')) ?? false) // if is pool task and user can create pool task
+        ) {
             $members = $this->buildOutput(
                 key: $key,
                 disabled: $task->status == \App\Enums\Production\TaskStatus::CheckByPm->value ? true : false,
@@ -495,7 +502,7 @@ class DefineTaskAction
      */
     protected function getPickTaskButton(object $task, string $key, array $detail): ?array
     {
-        if ($task->is_pool_task) {
+        if ($task->is_pool_task && $this->user->can('pick_task') && !$this->user->can('create_pool_task') && $this->projectStatus === ProjectStatus::OnGoing->value) {
             return $this->buildOutput($key, false, $detail);
         }
         // if ($task->is_pool_task && $this->user->hasPermissionTo('pick_pool_task')) {
