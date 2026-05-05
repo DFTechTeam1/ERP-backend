@@ -15,6 +15,8 @@ class CreatePoolTask extends FormRequest
             'name' => 'required|string',
             'end_date' => 'nullable|date',
             'description' => 'nullable|string',
+            'pic' => 'nullable|array',
+            'pic.*' => 'nullable|string',
             'media' => 'nullable|array',
             'media.*' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf',
         ];
