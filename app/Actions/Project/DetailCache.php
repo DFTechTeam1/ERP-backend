@@ -31,6 +31,7 @@ class DetailCache
             foreach ($necessaryUpdate as $key => $value) {
                 $currentData[$key] = $value;
             }
+            storeCache('detailProject'.$projectId, $currentData);
         }
 
         $currentData = FormatTaskPermission::run($currentData, $projectId);
