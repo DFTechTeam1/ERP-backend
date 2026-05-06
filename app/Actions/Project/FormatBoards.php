@@ -4,19 +4,35 @@ namespace App\Actions\Project;
 
 use App\Actions\DefineTaskAction;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
+use Modules\Production\Repository\ProjectRepository;
 
 class FormatBoards
 {
     use AsAction;
 
+    private int $specialPositionid;
+
+    protected function fetchSpecialPosition()
+    {
+        $specialPosition = getSettingByKey('special_production_position');
+        $this->specialPositionid = 0;
+        if ($specialPosition) {
+            $this->specialPositionid = getIdFromUid($specialPosition, new PositionBackup());
+        }
+    }
+
     public function handle(string $projectUid, ?string $filterSearch = '', bool $myTask = false)
     {
+        $this->fetchSpecialPosition();
         $boardRepo = new ProjectBoardRepository;
         $projectPicRepository = new ProjectPersonInChargeRepository;
-        $user = auth()->user();
+        $projectRepo = new ProjectRepository();
+
+        $user = auth()->user()->load('employee');
         $leaderModeller = getSettingByKey('lead_3d_modeller');
         if ($leaderModeller) {
             $leaderModeller = getIdFromUid($leaderModeller, new Employee);
@@ -66,6 +82,11 @@ class FormatBoards
             },
         ];
 
+        $projectData = $projectRepo->show(
+            uid: $projectUid,
+            select: 'id,status'
+        );
+
         $data = $boardRepo->list(
             select: 'id,project_id,name,sort,based_board_id',
             where: 'project_id = '.$projectId,
@@ -108,7 +129,7 @@ class FormatBoards
 
                 unset($outputTask[$keyTask]['time_tracker']);
 
-                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid);
 
                 // check if task already active or not, if not show activating button
                 $isActive = false;
@@ -202,7 +223,7 @@ class FormatBoards
             foreach ($board->poolTasks as $keyTask => $task) {
                 $poolOutputTask[$keyTask] = $task;
                 unset($poolOutputTask[$keyTask]['time_tracker']);
-                $poolOutputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user);
+                $poolOutputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid);
                 $poolOutputTask[$keyTask]['need_user_approval'] = false;
                 $poolOutputTask[$keyTask]['stop_action'] = $task->project->status == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
                 $poolOutputTask[$keyTask]['need_approval_pm'] = false;

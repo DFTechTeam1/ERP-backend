@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use DateTime;
 use Illuminate\Support\Facades\Auth;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectRepository;
@@ -17,20 +18,31 @@ class FormatTaskPermission
 {
     use AsAction;
 
-    private $user;
+    private mixed $user;
 
-    private $isDirector;
+    private mixed $isDirector;
 
-    private $isProjectPic;
+    private mixed $isProjectPic;
 
-    private $employeeId;
+    private mixed $employeeId;
 
-    public function handle($project, int $projectId)
+    private int $specialPositionid;
+
+    protected function fetchSpecialPosition()
+    {
+        $specialPosition = getSettingByKey('special_production_position');
+        $this->specialPositionid = 0;
+        if ($specialPosition) {
+            $this->specialPositionid = getIdFromUid($specialPosition, new PositionBackup());
+        }
+    }
+
+    public function handle(mixed $project, int $projectId)
     {
         $projectPicRepository = new ProjectPersonInChargeRepository;
         $repo = new ProjectRepository;
 
-        $this->user = Auth::user();
+        $this->user = Auth::user()->load('employee');
         $this->employeeId = $this->user->employee_id;
         $this->isProjectPic = isProjectPIC((int) $projectId, $this->employeeId);
         $this->isDirector = isDirector();
@@ -157,7 +169,7 @@ class FormatTaskPermission
             foreach ($board['tasks'] as $keyTask => $task) {
                 $outputTask[$keyTask] = $task;
 
-                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $this->user, $project['status_raw'], $this->specialPositionid);
 
                 // highlight task for authorized user
                 $picIds = collect($task->pics)->pluck('employee_id')->toArray();
@@ -271,7 +283,7 @@ class FormatTaskPermission
             $outputPoolTask = [];
             foreach ($board['pool_tasks'] ?? [] as $keyTask => $task) {
                 $outputPoolTask[$keyTask] = $task;
-                $outputPoolTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+                $outputPoolTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $this->user, $project['status_raw'], $this->specialPositionid);
                 $outputPoolTask[$keyTask]['is_mine'] = false;
                 $outputPoolTask[$keyTask]['stop_action'] = $project['status'] == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
                 $outputPoolTask[$keyTask]['is_active'] = true;
