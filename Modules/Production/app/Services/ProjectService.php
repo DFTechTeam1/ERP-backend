@@ -5706,10 +5706,12 @@ class ProjectService
             'end_date' => null,
         ];
 
-        if ($currentTaskData->is_pool_type) {
-            // re-pool the task so employees in the next position can pick it up
-            $updatePayload['is_pool_task'] = true;
-        }
+        // if ($currentTaskData->is_pool_type) {
+        //     // re-pool the task so employees in the next position can pick it up
+        // }
+
+        // V2: Always set pool task to true, every complted task, will be on pool section in next board
+        $updatePayload['is_pool_task'] = true;
 
         $this->taskRepo->update($updatePayload, $taskUid);
 
