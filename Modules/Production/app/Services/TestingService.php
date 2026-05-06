@@ -45,7 +45,7 @@ class TestingService
     {
         $specialPosition = getSettingByKey('special_production_position');
         $specialPositionId = 0;
-        if ($specialPosition) getIdFromUid($specialPosition, new PositionBackup());
+        if ($specialPosition) $specialPositionId = getIdFromUid($specialPosition, new PositionBackup());
 
         if ($this->user->hasRole('entertainment')) { // just get event for entertainment. Look at transfer_team_members table
             $newWhereHas = [
@@ -408,7 +408,7 @@ class TestingService
                 return $this->listForEntertainment($select, $where, $relation);
             }
 
-            $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id', [], 'id = '.$this->user->employee_id);
+            $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id,position_id', [], 'id = '.$this->user->employee_id);
 
             // get project that only related to authorized user
             if ($isProductionRole || $isEntertainmentRole || $this->user->hasRole(BaseRole::LeadModeller->value)) {

@@ -511,7 +511,6 @@ class DefineTaskAction
      */
     protected function getPickTaskButton(object $task, string $key, array $detail): ?array
     {
-        dd($this->specialPositionId);
         if (
             (
                 $task->is_pool_task && 

@@ -39,6 +39,7 @@ class FormatTaskPermission
 
     public function handle(mixed $project, int $projectId)
     {
+        $this->fetchSpecialPosition();
         $projectPicRepository = new ProjectPersonInChargeRepository;
         $repo = new ProjectRepository;
 
