@@ -53,11 +53,11 @@ Route::post('{token}/telegram-webhook', function (Request $request, string $toke
     $event->categorize($request->all());
 });
 
-Route::get('telegram', function () {
-    $model = \Modules\Production\Models\Project::find(232);
-    $observer = new \Modules\Production\Observers\NasFolderObserver;
-    $observer->updated($model);
-});
+// Route::get('telegram', function () {
+//     $model = \Modules\Production\Models\Project::find(232);
+//     $observer = new \Modules\Production\Observers\NasFolderObserver;
+//     $observer->updated($model);
+// });
 
 Route::get('messages', function () {
     $invoice = 'https://quicklyevents.com/storage/invoices/1/1706684868139-invoice.pdf';
@@ -275,8 +275,8 @@ Route::get('notification', function () {
     $service = new \App\Services\EncryptionService;
     $encrypt = $service->encrypt($user->email, env('SALT_KEY'));
 
-    return (new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt))
-        ->toMail($user);
+    // return (new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt))
+    //     ->toMail($user);
 
     // Notification::send($user, new \Modules\Hrd\Notifications\UserEmailActivation('passwordnya', $user));
 });

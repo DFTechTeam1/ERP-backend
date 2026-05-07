@@ -612,6 +612,6 @@ class EmployeeController extends Controller
 
     public function testingData()
     {
-        return ResignScheduleAction::run();
+        return encrypt('gumilang.dev@gmail.com');
     }
 }

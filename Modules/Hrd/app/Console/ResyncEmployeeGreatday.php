@@ -19,7 +19,7 @@ class ResyncEmployeeGreatday extends Command
     /**
      * The console command description.
      */
-    protected $description = 'Resync employee data with Greatday.';
+    protected $description = 'Resync employee IDs, positions, and master HRIS data from Greatday; updates email mappings, marks resigned employees, adjusts division/position settings, and clears cache.';
 
     /**
      * Create a new command instance.

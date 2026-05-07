@@ -21,7 +21,10 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
 
 Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
     ->group(function () {
-        Route::get('employees/activate/{key}', 'activateAccount');
+        Route::get('employees/activate/account', 'activateAccount')
+            ->name('hrd.activate-account.nokey');
+        Route::get('employees/activate/{key}', 'activateAccount')
+            ->name('hrd.activate-account');
     });
 
 Route::get('employees/downloadTemplate', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'downloadTemplate']);

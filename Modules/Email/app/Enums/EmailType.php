@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Validator;
 use Modules\Email\Data\Employees\Mutation\EmployeeData;
 use Modules\Email\Data\Employees\Mutation\SupervisorData;
 use Modules\Email\Data\Employees\Resign\EmployeeResign;
+use Modules\Email\Data\Employees\User\InvitationEmail;
 
 enum EmailType: string
 {
@@ -24,12 +25,13 @@ enum EmailType: string
         };
     }
 
-    public function getTypeData(array|object $payload): EmployeeData|SupervisorData|EmployeeResign
+    public function getTypeData(array|object $payload): EmployeeData|SupervisorData|EmployeeResign|InvitationEmail
     {
         return match ($this) {
             self::Employee => EmployeeData::from($payload),
             self::Supervisor => SupervisorData::from($payload),
             self::ResignEmployee => EmployeeResign::from($payload),
+            self::InviteToErp => InvitationEmail::from($payload)
         };
     }
 
@@ -62,8 +64,8 @@ enum EmailType: string
                 'employeeName' => 'required',
                 'email' => 'required',
                 'password' => 'required',
-                'erpUrl' => 'required',
-                'activationUrl' => 'required',
+                'erpUrl' => 'nullable',
+                'activationUrl' => 'nullable',
             ],
         };
     }
@@ -92,7 +94,14 @@ enum EmailType: string
                 'position' => 'required',
                 'department' => 'required',
                 'resignDate' => 'required',
-            ]
+            ],
+            self::InviteToErp => [
+                'employeeName' => 'required',
+                'password' => 'required',
+                'email' => 'required',
+                'erpUrl' => 'nullable',
+                'activationUrl' => 'nullable',
+            ],
         };
     }
 

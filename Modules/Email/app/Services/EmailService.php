@@ -34,7 +34,7 @@ class EmailService
             );
 
             // Validate employee
-            if (! $employee) {
+            if (! $employee && (request('validate') == null || request('validate') == '')) {
                 throw new NotFoundError(message: 'Employee is not found');
             }
 
