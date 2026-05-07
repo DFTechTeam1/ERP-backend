@@ -338,14 +338,14 @@ Route::get('sync-greatday', function () {
     return $response->json()['data'] ?? [];
 });
 
-Route::get('preview-mail', function () {
-    return (new InviteToErpMail(
-        'Ilham',
-        'ilham@gmail.com',
-        'password',
-        'https://google.com',
-        'https://google.com'
-    ))->render();
-})->middleware('allow-iframe');
+// Route::get('preview-mail', function () {
+//     return (new InviteToErpMail(
+//         'Ilham',
+//         'ilham@gmail.com',
+//         'password',
+//         'https://google.com',
+//         'https://google.com'
+//     ))->render();
+// })->middleware('allow-iframe');
 
 Route::get('preview-data', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'testingData']);

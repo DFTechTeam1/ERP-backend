@@ -5,6 +5,7 @@ namespace Modules\Email\Emails;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use Modules\Email\Data\Employees\User\InvitationEmail;
 
 class InviteToErpMail extends Mailable
 {
@@ -13,13 +14,7 @@ class InviteToErpMail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(
-        public string $employeeName,
-        public string $email,
-        public string $password,
-        public string $erpUrl,
-        public string $activationUrl,
-    ) {}
+    public function __construct(public InvitationEmail $payload) {}
 
     /**
      * Build the message.
@@ -29,11 +24,11 @@ class InviteToErpMail extends Mailable
         return $this->subject('Welcome to '.config('app.name').' — Your ERP Access')
             ->markdown('email::mail.hrd.employees.invite.invite-to-erp')
             ->with([
-                'employeeName' => $this->employeeName,
-                'email' => $this->email,
-                'password' => $this->password,
-                'erpUrl' => $this->erpUrl,
-                'activationUrl' => $this->activationUrl,
+                'employeeName' => $this->payload->employeeName,
+                'email' => $this->payload->email,
+                'password' => $this->payload->password,
+                'erpUrl' => $this->payload->erpUrl,
+                'activationUrl' => $this->payload->activationUrl,
             ]);
     }
 }
