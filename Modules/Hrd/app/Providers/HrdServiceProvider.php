@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Hrd\Console\AutoUpdateEmployeeTimeoff;
 use Modules\Hrd\Console\CheckEmployeeResign;
+use Modules\Hrd\Console\CheckTransferEntityScheduleCommand;
 use Modules\Hrd\Console\CreatePartnerUser;
 use Modules\Hrd\Console\GetGreatdayOutOfSyncEmployee;
 use Modules\Hrd\Console\InitateAvatarColor;
@@ -70,7 +71,8 @@ class HrdServiceProvider extends ServiceProvider
             GetGreatdayOutOfSyncEmployee::class,
             SeedGreatdayMasterData::class,
             ResyncGreatdayPosition::class,
-            SyncEmployeeIdGreatdayToErp::class
+            SyncEmployeeIdGreatdayToErp::class,
+            CheckTransferEntityScheduleCommand::class
         ]);
     }
 
