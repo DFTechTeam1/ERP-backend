@@ -182,4 +182,7 @@ return [
     'taskIsNotPoolTask' => 'This task is not a pool task.',
     'taskAlreadyPicked' => 'This task has already been picked by another employee.',
     'taskPickedSuccessfully' => 'Task picked successfully. You are now working on it.',
+    'otpHasBeenExpired' => "OTP has been expired",
+    'otpMismatch' => 'Mismatch OTP data',
+    'phoneNumberVerfied' => 'Phone number has been verified'
 ];
