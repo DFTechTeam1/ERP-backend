@@ -35,6 +35,7 @@ return new class extends Migration
     {
         Schema::table('employee_whatsapp_groups', function (Blueprint $table) {
             $table->dropForeign(['group_id']);
+            $table->dropForeign(['employee_id']);
         });
         Schema::dropIfExists('employee_whatsapp_groups');
     }

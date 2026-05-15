@@ -312,6 +312,11 @@ class RolePermissionSetting extends Seeder
     protected function userManagementPermission()
     {
         return [
+            ['name' => 'manage_whatsapp_group', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'create_user', 'group' => 'user_management', 'used' => [
                 $this->getRootRole(),
                 $this->getHrdRole(),
