@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class UpdateProfile extends FormRequest
+class VerifyOtp extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,9 +25,8 @@ class UpdateProfile extends FormRequest
     public function rules(): array
     {
         return [
-            'nickname' => 'required|string|max:255',
-            'profile_image' => 'nullable|string',
-            'phone' => 'required'
+            'otp' => 'string|required',
+            'email' => 'string|required'
         ];
     }
 

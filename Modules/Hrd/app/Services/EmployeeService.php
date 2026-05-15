@@ -650,7 +650,7 @@ class EmployeeService
         }
 
         $data = $this->repo->list(
-            select: 'uid,id,name,email,avatar,position_id',
+            select: 'uid,id,name,email,avatar,position_id,phone',
             where: $where,
             relation: [
                 'position:id,name'
@@ -662,6 +662,7 @@ class EmployeeService
                 'value' => $item->uid,
                 'title' => $item->name,
                 'email' => $item->email,
+                'phone' => $item->phone,
                 'avatar' => $item->avatar,
                 'position' => $item->position ? $item->position->name : '-',
             ];

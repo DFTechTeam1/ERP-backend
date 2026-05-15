@@ -312,6 +312,11 @@ class RolePermissionSetting extends Seeder
     protected function userManagementPermission()
     {
         return [
+            ['name' => 'manage_whatsapp_group', 'group' => 'user_management', 'used' => [
+                $this->getRootRole(),
+                $this->getHrdRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'create_user', 'group' => 'user_management', 'used' => [
                 $this->getRootRole(),
                 $this->getHrdRole(),
@@ -368,6 +373,26 @@ class RolePermissionSetting extends Seeder
     protected function employeePermission()
     {
         return [
+            ['name' => 'list_employmentstatus', 'group' => 'employee', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getLeadModeller(),
+            ]],
+            ['name' => 'list_jobstatus', 'group' => 'employee', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getLeadModeller(),
+            ]],
+            ['name' => 'list_costcenter', 'group' => 'employee', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getLeadModeller(),
+            ]],
+            ['name' => 'list_timezone', 'group' => 'employee', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getLeadModeller(),
+            ]],
             ['name' => 'assign_modeller', 'group' => 'employee', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),

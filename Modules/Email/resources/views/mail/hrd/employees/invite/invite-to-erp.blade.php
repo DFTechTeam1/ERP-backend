@@ -5,15 +5,14 @@ Dear {{ $employeeName }},
 
 You have been invited to access the **{{ config('app.name') }} ERP System**. Please find your login credentials below.
 
-<x-mail::panel>
 **Your Login Credentials**
-
-| Field    | Details          |
-|----------|------------------|
-| URL      | {{ $erpUrl }}    |
-| Email    | {{ $email }}     |
-| Password | {{ $password }}  |
-</x-mail::panel>
+<x-mail::table>
+| Field       | Details              |
+| :---------- | :------------------- |
+| URL         | **{{ $erpUrl }}**    |
+| Email       | **{{ $email }}**     |
+| Password    | **{{ $password }}**  |
+</x-mail::table>
 
 **Important:** For security reasons, please change your password immediately after your first login.
 
@@ -25,7 +24,7 @@ Activate My Account
 
 If the button above does not work, copy and paste the following link into your browser:
 
-{{ $activationUrl }}
+<span style="overflow-wrap: break-word;">{{ $activationUrl }}</span>
 
 > This activation link will expire in **24 hours**. If you did not expect this invitation, please ignore this email or contact HR immediately.
 

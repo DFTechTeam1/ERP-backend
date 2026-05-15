@@ -145,6 +145,8 @@ class Employee extends Model
         'greatday_shift_pattern',
         'greatday_job_status',
         'greatday_company',
+
+        'is_phone_verified'
     ];
 
     protected $appends = [

@@ -17,7 +17,7 @@ class DefineTaskAction
 
     private bool $isProjectPic;
 
-    private int | null $projectStatus;
+    private ?int $projectStatus;
 
     private int $specialPositionId;
 
@@ -160,10 +160,10 @@ class DefineTaskAction
     /**
      * This action will define which button should be appear in the selected task
      */
-    public function handle(\Modules\Production\Models\ProjectTask $task, object | null $user = null, int | null $projectStatus = null, int $specialPositionId = 0): array
+    public function handle(\Modules\Production\Models\ProjectTask $task, ?object $user = null, ?int $projectStatus = null, int $specialPositionId = 0): array
     {
         $this->specialPositionId = $specialPositionId;
-        $this->user = !$user ? Auth::user() : $user;
+        $this->user = ! $user ? Auth::user() : $user;
         $this->projectStatus = $projectStatus;
         $this->specialPositionId = $specialPositionId;
         $this->isProjectPic = isProjectPIC((int) $task->project_id, $this->user->employee_id);
@@ -206,7 +206,7 @@ class DefineTaskAction
     {
         $dates = null;
 
-        if ($this->isRegularEntertainmentUser() || !$this->user->can('add_task_deadline')) {
+        if ($this->isRegularEntertainmentUser() || ! $this->user->can('add_task_deadline')) {
             return null;
         }
 
@@ -440,7 +440,7 @@ class DefineTaskAction
         if (
             (
                 (
-                (in_array($this->user->employee_id, $taskPics) || $this->hasSuperPower())
+                    (in_array($this->user->employee_id, $taskPics) || $this->hasSuperPower())
                 ) &&
                 (
                     ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics)) ||
@@ -512,13 +512,10 @@ class DefineTaskAction
     protected function getPickTaskButton(object $task, string $key, array $detail): ?array
     {
         if (
-            (
-                $task->is_pool_task && 
-                $this->user->can('pick_task') &&
-                !$this->user->can('create_pool_task') &&
-                $this->projectStatus === ProjectStatus::OnGoing->value &&
-                $this->user->employee->position_id != $this->specialPositionId
-            )
+            ! $task->status &&
+            $task->is_pool_task &&
+            $this->user->can('pick_task') &&
+            $this->projectStatus === ProjectStatus::OnGoing->value
         ) {
             return $this->buildOutput($key, false, $detail);
         }
