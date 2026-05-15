@@ -36,6 +36,7 @@ use App\Services\UserRoleManagement;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -46,6 +47,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\Company\Models\PositionBackup;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
+use Modules\Email\Services\WhatsappService;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -3192,6 +3194,51 @@ class ProjectService
         }
     }
 
+    private function buildWhatsappMessageNewPoolTask(
+        bool $isUsingPic = false,
+        array $mentions = [],
+        ?ProjectTask $task = null,
+        mixed $project = null,
+        mixed $board = null
+    ) {
+        try {
+            $whatsappMessage = "Halo All. Ada task baru *{{taskname}}* ({$board->name}) di event {{eventname}} yang sudah siap diambil";
+            if ($isUsingPic) {
+                $whatsappMessage = "Halo, task {{taskname}} ({$board->name}) di event {{eventname}} sudah di assign ke kamu dan menunggu approval.\nLogin ERP untuk melanjutkan.";
+            }
+            $whatsappMessage = str_replace(
+                ["{{taskname}}", "{{eventname}}"],
+                [$task->name, $project->name],
+                $whatsappMessage
+            );
+    
+            if (! empty($mentions)) {
+                $mentions = collect($mentions)->map(function ($mention) {
+                    return "62{$mention}";
+                })->toArray();
+            }
+
+            logging('check project person in charge whatsapp', $project->personInCharges->toArray());
+            
+            $whatsapp = new WhatsappService();
+            foreach ($project->personInCharges as $picProject) {
+                if ($picProject->whatsappGroupPic && $picProject->whatsappGroupPic->group_id) {
+                    $payload = [
+                        'to' => $picProject->whatsappGroupPic->group_id,
+                        'message' => $whatsappMessage,
+                        'isGroup' => true,
+                        'mentions' => $mentions,
+                        'actionType' => 'new-assignment-task'
+                    ];
+    
+                    $whatsapp->sendWhatsappMessage($payload);
+                }
+            }
+        } catch (\Throwable $th) {
+            logging("ERROR SENDING POOL TASK WHATSAPP NOTIFICATION", [$th]);
+        }
+    }
+
     /**
      * Store a pool task on the selected board.
      *
@@ -3209,6 +3256,16 @@ class ProjectService
             $isForLeadModeller = (isset($data['pic'])) && ($data['pic'][0] == $leadModeller) ? true : false;
 
             $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid', 'project.personInCharges']);
+            $project = $this->repo->show(
+                uid: '',
+                select: 'id,name',
+                where: 'id = ' . $board->project_id,
+                relation: [
+                    'personInCharges:id,pic_id,project_id',
+                    'personInCharges.employee:id,phone,is_phone_verified',
+                    'personInCharges.whatsappGroupPic:id,employee_id,group_id'
+                ]
+            );
 
             $taskPayload = [
                 'name' => $data['name'],
@@ -3235,6 +3292,8 @@ class ProjectService
             }
 
             // validate pic
+            $usingPic = false;
+            $mentions = [];
             if (isset($data['pic']) && count($data['pic']) > 0) {
                 $this->mainStoreTask(
                     task: $task,
@@ -3243,11 +3302,33 @@ class ProjectService
                     isForLeadModeller: $isForLeadModeller,
                     pics: isset($data['pic']) ? $data['pic'] : []
                 );
+
+                $usingPic = true;
+
+                // Fetch pic phone
+                foreach ($data['pic'] as $dataPic) {
+                    $employeePic = $this->employeeRepo->show(
+                        uid: $dataPic,
+                        select: 'id,phone,is_phone_verified',
+                    );
+
+                    if ($employeePic->is_phone_verified) {
+                        $mentions[]= $employeePic->phone;
+                    }
+                }
             }
 
             $currentData = $this->detailCacheAction->handle(
                 projectUid: $board->project->uid,
                 forceUpdateAll: true
+            );
+
+            $this->buildWhatsappMessageNewPoolTask(
+                isUsingPic: $usingPic,
+                mentions: $mentions,
+                task: $task,
+                project: $project,
+                board: $board
             );
 
             DB::commit();

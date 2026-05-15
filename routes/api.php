@@ -9,7 +9,6 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
 use App\Services\EncryptionService;
-use App\Services\WhatsappService;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,17 +58,6 @@ Route::post('{token}/telegram-webhook', function (Request $request, string $toke
 //     $observer = new \Modules\Production\Observers\NasFolderObserver;
 //     $observer->updated($model);
 // });
-
-Route::get('messages', function () {
-    $invoice = 'https://quicklyevents.com/storage/invoices/1/1706684868139-invoice.pdf';
-
-    $payload = [
-        'url' => $invoice,
-    ];
-
-    $service = new WhatsappService;
-    $service->sendTemplateMessage('booking_confirmation_message_new', $payload, ['6285795327357']);
-});
 
 Route::post('base64', function (Request $request) {
     $base64Image = $request->image;

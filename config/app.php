@@ -169,5 +169,7 @@ return [
 
     'partner_url' => env('PARTNER_URL', null),
 
+    'whatsapp_service' => env('WHATSAPP_SERVICE', null),
+
     'internal_service_secret' => env('INTERNAL_SERVICE_SECRET', null),
 ];

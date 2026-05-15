@@ -6,6 +6,7 @@ use App\Actions\Hrd\ResignScheduleAction;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Http\Controllers\Controller;
+use App\Services\WhatsappService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -612,6 +613,13 @@ class EmployeeController extends Controller
 
     public function testingData()
     {
-        return encrypt('gumilang.dev@gmail.com');
+        $service = new \Modules\Email\Services\WhatsappService();
+        return $service->sendWhatsappMessage([
+            'to' => '120363427017574669',
+            'message' => "Halo team, ada task baru *<TaskName>* yang sudah bisa di ambil (board compositing) di event - Josssss",
+            'isGroup' => true,
+            'mentions' => [],
+            'actionType' => 'assign-new-task'
+        ]);
     }
 }
