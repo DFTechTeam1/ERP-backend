@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,11 @@ class DefineTaskAction
 
     private $user;
 
-    private $isProjectPic;
+    private bool $isProjectPic;
+
+    private ?int $projectStatus;
+
+    private int $specialPositionId;
 
     private $isDirector;
 
@@ -149,9 +154,12 @@ class DefineTaskAction
     /**
      * This action will define which button should be appear in the selected task
      */
-    public function handle(\Modules\Production\Models\ProjectTask $task): array
+    public function handle(\Modules\Production\Models\ProjectTask $task, ?object $user = null, ?int $projectStatus = null, int $specialPositionId = 0): array
     {
-        $this->user = Auth::user();
+        $this->specialPositionId = $specialPositionId;
+        $this->user = ! $user ? Auth::user() : $user;
+        $this->projectStatus = $projectStatus;
+        $this->specialPositionId = $specialPositionId;
         $this->isProjectPic = isProjectPIC((int) $task->project_id, $this->user->employee_id);
         $this->isDirector = isDirector();
         $this->defineMyTask($task);
@@ -192,7 +200,7 @@ class DefineTaskAction
     {
         $dates = null;
 
-        if ($this->isRegularEntertainmentUser()) {
+        if ($this->isRegularEntertainmentUser() || ! $this->user->can('add_task_deadline')) {
             return null;
         }
 
@@ -422,8 +430,14 @@ class DefineTaskAction
 
         if (
             (
-                (in_array($this->user->employee_id, $taskPics) || $this->hasSuperPower())
-            ) &&
+                (
+                    (in_array($this->user->employee_id, $taskPics) || $this->hasSuperPower())
+                ) &&
+                (
+                    ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics)) ||
+                    ($task->status == TaskStatus::WaitingDistribute->value && $this->hasSuperPower())
+                ) // First main condition
+            ) ||
             (
                 ($task->status == TaskStatus::WaitingDistribute->value && in_array($leadModeller, $taskPics)) ||
                 ($task->status == TaskStatus::WaitingDistribute->value && $this->hasSuperPower())
@@ -480,6 +494,28 @@ class DefineTaskAction
         }
 
         return $delete;
+    }
+
+    /**
+     * Will show when:
+     * 1. Task is a pool task (not yet picked by anyone)
+     * 2. Authorized user has pick_pool_task permission
+     */
+    protected function getPickTaskButton(object $task, string $key, array $detail): ?array
+    {
+        if (
+            ! $task->status &&
+            $task->is_pool_task &&
+            $this->user->can('pick_task') &&
+            $this->projectStatus === ProjectStatus::OnGoing->value
+        ) {
+            return $this->buildOutput($key, false, $detail);
+        }
+        // if ($task->is_pool_task && $this->user->hasPermissionTo('pick_pool_task')) {
+        //     return $this->buildOutput($key, false, $detail);
+        // }
+
+        return null;
     }
 
     /**
