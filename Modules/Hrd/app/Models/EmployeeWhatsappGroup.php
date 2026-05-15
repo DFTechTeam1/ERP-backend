@@ -15,7 +15,8 @@ class EmployeeWhatsappGroup extends Model
      */
     protected $fillable = [
         'employee_id',
-        'group_id'
+        'group_id',
+        'is_admin'
     ];
 
     // protected static function newFactory(): EmployeeWhatsappGroupFactory
