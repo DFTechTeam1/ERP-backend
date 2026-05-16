@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(vendor/bin/pint --dirty Modules/Production/app/Jobs/Notification/NewPoolTask.php Modules/Production/app/Services/ProjectService.php)"
+    ]
+  }
+}
