@@ -7,6 +7,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Modules\Email\Services\WhatsappService;
+use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\WhatsappGroup;
 
 class ProofOfWorkJob implements ShouldQueue
 {
@@ -20,6 +23,8 @@ class ProofOfWorkJob implements ShouldQueue
 
     public $taskPic;
 
+    public WhatsappService $whatsappService;
+
     /**
      * Create a new job instance.
      */
@@ -31,6 +36,8 @@ class ProofOfWorkJob implements ShouldQueue
         $this->taskId = $taskId;
 
         $this->taskPic = $taskPic;
+
+        $this->whatsappService = new WhatsappService;
     }
 
     /**
@@ -41,7 +48,7 @@ class ProofOfWorkJob implements ShouldQueue
         // get project manager
         $pm = \Modules\Production\Models\ProjectPersonInCharge::selectRaw('id,project_id,pic_id')
             ->with([
-                'employee:id,user_id,nickname,user_id',
+                'employee:id,user_id,nickname,user_id,phone',
             ])
             ->where('project_id', $this->projectId)
             ->get();
@@ -59,6 +66,13 @@ class ProofOfWorkJob implements ShouldQueue
             ->find($this->taskId);
 
         foreach ($pm as $manager) {
+            $this->sendToWhatsapp(
+                manager: $manager->employee,
+                taskName: $task->name,
+                projectName: $task->project->name,
+                taskPicName: $taskPic->nickname
+            );
+
             \App\Services\NotificationService::send(
                 recipients: $manager->employee,
                 action: 'task_has_been_hold_by_user',
@@ -70,19 +84,41 @@ class ProofOfWorkJob implements ShouldQueue
                 ],
                 channels: ['database'],
                 options: [
-                    'url' => '/admin/production/project/' . $task->project->uid,
-                    'database_type' => 'production'
+                    'url' => '/admin/production/project/'.$task->project->uid,
+                    'database_type' => 'production',
                 ]
             );
 
             // send pusher
             (new \App\Services\PusherNotification)->send(
-                channel: 'my-channel-' . $manager->employee->user_id,
+                channel: 'my-channel-'.$manager->employee->user_id,
                 event: 'new-db-notification',
                 payload: [
-                    'update' => true
+                    'update' => true,
                 ],
             );
+        }
+    }
+
+    public function sendToWhatsapp(
+        Employee $manager,
+        string $taskName,
+        string $projectName,
+        string $taskPicName
+    ) {
+        $whatsappGroup = WhatsappGroup::where('employee_id', $manager->id)
+            ->first();
+
+        if ($whatsappGroup) {
+            $payload = [
+                'to' => $whatsappGroup->group_id,
+                'message' => "{$taskPicName} telah menyelesaikan task {$taskName} di event {$projectName}. Kamu sudah bisa mulai check ya.",
+                'isGroup' => true,
+                'mentions' => ["62{$manager->phone}"],
+                'actionType' => 'new-assignment-task',
+            ];
+
+            $this->whatsappService->sendWhatsappMessage($payload);
         }
     }
 }

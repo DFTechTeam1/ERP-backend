@@ -47,7 +47,6 @@ use Illuminate\Support\Facades\Log;
 use Modules\Company\Models\PositionBackup;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
-use Modules\Email\Services\WhatsappService;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -61,6 +60,8 @@ use Modules\Production\Exceptions\SongNotFound;
 use Modules\Production\Jobs\ChangedSongJob;
 use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Jobs\DeleteSongJob;
+use Modules\Production\Jobs\Notification\NewPoolTask;
+use Modules\Production\Jobs\Notification\PickPoolJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
 use Modules\Production\Jobs\RemovePicFromSong;
 use Modules\Production\Jobs\RequestDeleteSongJob;
@@ -3194,49 +3195,18 @@ class ProjectService
         }
     }
 
-    private function buildWhatsappMessageNewPoolTask(
-        bool $isUsingPic = false,
-        array $mentions = [],
-        ?ProjectTask $task = null,
-        mixed $project = null,
-        mixed $board = null
-    ) {
-        try {
-            $whatsappMessage = "Halo All. Ada task baru *{{taskname}}* ({$board->name}) di event {{eventname}} yang sudah siap diambil";
-            if ($isUsingPic) {
-                $whatsappMessage = "Halo, task {{taskname}} ({$board->name}) di event {{eventname}} sudah di assign ke kamu dan menunggu approval.\nLogin ERP untuk melanjutkan.";
-            }
-            $whatsappMessage = str_replace(
-                ["{{taskname}}", "{{eventname}}"],
-                [$task->name, $project->name],
-                $whatsappMessage
-            );
-    
-            if (! empty($mentions)) {
-                $mentions = collect($mentions)->map(function ($mention) {
-                    return "62{$mention}";
-                })->toArray();
-            }
-
-            logging('check project person in charge whatsapp', $project->personInCharges->toArray());
-            
-            $whatsapp = new WhatsappService();
-            foreach ($project->personInCharges as $picProject) {
-                if ($picProject->whatsappGroupPic && $picProject->whatsappGroupPic->group_id) {
-                    $payload = [
-                        'to' => $picProject->whatsappGroupPic->group_id,
-                        'message' => $whatsappMessage,
-                        'isGroup' => true,
-                        'mentions' => $mentions,
-                        'actionType' => 'new-assignment-task'
-                    ];
-    
-                    $whatsapp->sendWhatsappMessage($payload);
-                }
-            }
-        } catch (\Throwable $th) {
-            logging("ERROR SENDING POOL TASK WHATSAPP NOTIFICATION", [$th]);
-        }
+    private function fetchProjectForWhatsappNotification(int $projectId)
+    {
+        return $this->repo->show(
+            uid: '',
+            select: 'id,name',
+            where: 'id = '.$projectId,
+            relation: [
+                'personInCharges:id,pic_id,project_id',
+                'personInCharges.employee:id,phone,is_phone_verified',
+                'personInCharges.whatsappGroupPic:id,employee_id,group_id',
+            ]
+        );
     }
 
     /**
@@ -3256,23 +3226,15 @@ class ProjectService
             $isForLeadModeller = (isset($data['pic'])) && ($data['pic'][0] == $leadModeller) ? true : false;
 
             $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid', 'project.personInCharges']);
-            $project = $this->repo->show(
-                uid: '',
-                select: 'id,name',
-                where: 'id = ' . $board->project_id,
-                relation: [
-                    'personInCharges:id,pic_id,project_id',
-                    'personInCharges.employee:id,phone,is_phone_verified',
-                    'personInCharges.whatsappGroupPic:id,employee_id,group_id'
-                ]
-            );
+
+            $project = $this->fetchProjectForWhatsappNotification($board->project_id);
 
             $taskPayload = [
                 'name' => $data['name'],
                 'project_id' => $board->project_id,
                 'project_board_id' => $boardId,
                 'start_date' => date('Y-m-d'),
-                'status' => !isset($data['pic']) || (isset($data['pic']) && count($data['pic']) == 0) ? null : ($isForLeadModeller ? TaskStatus::WaitingDistribute->value : TaskStatus::WaitingApproval->value),
+                'status' => ! isset($data['pic']) || (isset($data['pic']) && count($data['pic']) == 0) ? null : ($isForLeadModeller ? TaskStatus::WaitingDistribute->value : TaskStatus::WaitingApproval->value),
                 'end_date' => ! empty($data['end_date']) ? date('Y-m-d H:i:s', strtotime($data['end_date'])) : null,
                 'description' => $data['description'] ?? null,
                 'is_pool_task' => isset($data['pic']) && count($data['pic']) > 0 ? false : true,
@@ -3313,7 +3275,7 @@ class ProjectService
                     );
 
                     if ($employeePic->is_phone_verified) {
-                        $mentions[]= $employeePic->phone;
+                        $mentions[] = $employeePic->phone;
                     }
                 }
             }
@@ -3323,13 +3285,13 @@ class ProjectService
                 forceUpdateAll: true
             );
 
-            $this->buildWhatsappMessageNewPoolTask(
-                isUsingPic: $usingPic,
-                mentions: $mentions,
-                task: $task,
-                project: $project,
-                board: $board
-            );
+            NewPoolTask::dispatch(
+                $usingPic,
+                $mentions,
+                $task,
+                $project,
+                $board->name
+            )->afterCommit();
 
             DB::commit();
 
@@ -3368,7 +3330,7 @@ class ProjectService
             // picks from employees in the same position cannot both pass the
             // availability checks and double-assign the same task.
             $task = ProjectTask::query()
-                ->selectRaw('id,project_id,is_pool_task,end_date,status')
+                ->selectRaw('id,project_id,is_pool_task,end_date,status,name')
                 ->where('uid', $taskUid)
                 ->with([
                     'project:id,uid',
@@ -3384,6 +3346,14 @@ class ProjectService
             if ($task->pics->isNotEmpty()) {
                 return errorResponse(message: __('notification.taskAlreadyPicked'));
             }
+
+            $project = $this->fetchProjectForWhatsappNotification($task->project_id);
+
+            $actor = $this->employeeRepo->show(
+                uid: '',
+                select: 'id,phone,is_phone_verified,nickname,name',
+                where: "id = {$employeeId}"
+            );
 
             $taskId = $task->id;
 
@@ -3432,6 +3402,11 @@ class ProjectService
             $currentData = $this->detailCacheAction->handle($projectUid, [
                 'boards' => FormatBoards::run($projectUid),
             ]);
+
+            // Send whatsapp notification
+            PickPoolJob::dispatch(
+                $task, $project, $actor
+            )->afterCommit();
 
             DB::commit();
 

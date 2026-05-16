@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Services\EncryptionService;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +19,6 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use KodePandai\Indonesia\Models\District;
-use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 
 Route::get('/user', function (Request $request) {
@@ -301,12 +301,12 @@ Route::get('playground', function () {
         $assign = $projectService->assignMemberToTask(
             data: [
                 'users' => [request('uid')],
-                'removed' => []
+                'removed' => [],
             ],
             taskUid: request('taskUid'),
             needChangeTaskStatus: false
         );
-    
+
         return apiResponse($assign);
     } catch (\Throwable $th) {
         return apiResponse(
@@ -341,6 +341,9 @@ Route::middleware('internal.service')
     ->prefix('internal')
     ->group(function () {
         Route::post('notifications/send', [\App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
+        Route::post('system/reset-cache', function (Request $request) {
+            Artisan::call('cache:clear');
+        });
     });
 
 Route::middleware('partner')->group(function () {
