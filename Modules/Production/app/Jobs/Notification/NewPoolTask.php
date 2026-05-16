@@ -36,6 +36,7 @@ class NewPoolTask implements ShouldQueue
     public function handle(): void
     {
         try {
+            $canSendMessage = true;
             $whatsappMessage = "Halo All. Ada task baru *{{taskname}}* ({$this->boardName}) di event {{eventname}} yang sudah siap diambil";
             if ($this->isUsingPic) {
                 $whatsappMessage = "Halo, task {{taskname}} ({$this->boardName}) di event {{eventname}} sudah di assign ke kamu dan menunggu approval.\nLogin ERP untuk melanjutkan.";
@@ -53,8 +54,12 @@ class NewPoolTask implements ShouldQueue
                 })->toArray();
             }
 
+            if ($this->isUsingPic && empty($localMentions)) {
+                $canSendMessage = false;
+            }
+
             foreach ($this->project->personInCharges as $picProject) {
-                if ($picProject->whatsappGroupPic && $picProject->whatsappGroupPic->group_id) {
+                if ($picProject->whatsappGroupPic && $picProject->whatsappGroupPic->group_id && $canSendMessage) {
                     $payload = [
                         'to' => $picProject->whatsappGroupPic->group_id,
                         'message' => $whatsappMessage,

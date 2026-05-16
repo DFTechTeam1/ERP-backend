@@ -63,11 +63,13 @@ class TransactionService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
 
-            if (! empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
-            }
+            $month = request('month');
+            $year = request('year');
+            $startDate = $month && $year ? \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth()->toDateString() : null;
+            $endDate = $month && $year ? \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth()->toDateString() : null;
+
+            $where = "transaction_date between '{$startDate}' and '{$endDate}'";
 
             $whereHas = [];
 
