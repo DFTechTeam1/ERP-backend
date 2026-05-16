@@ -7,6 +7,8 @@ use Modules\Production\Http\Controllers\Api\InteractiveController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Http\Controllers\Api\TeamTransferController;
+use Modules\Production\Http\Requests\Notification\UpdateLeadPicRequest;
+use Modules\Production\Jobs\UpdatePicProjectLeadJob;
 
 /*
  *--------------------------------------------------------------------------
@@ -252,6 +254,14 @@ Route::middleware(['auth:sanctum'])
         Route::post('team-transfers/approve-selection/{transferUid}', [TeamTransferController::class, 'approveSelection']);
         Route::get('team-transfers/approve/{transferUid}/{deviceAction}', [TeamTransferController::class, 'approveRequest']);
         Route::get('team-transfers/{transferUid}/getMembersToLend/{employeeUid}', [TeamTransferController::class, 'getMembersToLend']);
+    });
+
+Route::middleware(['internal.service'])
+    ->prefix('production-notification')
+    ->group(function () {
+        Route::post('update-pic-lead', function (UpdateLeadPicRequest $request) {
+            UpdatePicProjectLeadJob::dispatch($request->validated());
+        });
     });
 
 Route::get('production/project/{taskId}/downloadAttachment/{attachmentId}', [ProjectController::class, 'downloadAttachment']);

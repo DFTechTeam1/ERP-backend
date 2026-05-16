@@ -512,7 +512,7 @@ class DefineTaskAction
     protected function getPickTaskButton(object $task, string $key, array $detail): ?array
     {
         if (
-            ! $task->status &&
+            (! $task->status || $task->status == TaskStatus::Completed->value) &&
             $task->is_pool_task &&
             $this->user->can('pick_task') &&
             $this->projectStatus === ProjectStatus::OnGoing->value
