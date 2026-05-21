@@ -31,7 +31,7 @@ class DefineDetailProjectPermission
             'move_task_to_revise' => false,
             'move_task_to_completed' => false,
             'move_task' => false,
-            'add_task' => $user->hasPermissionTo('add_task'),
+            'add_task' => $user->hasPermissionTo('create_pool_task'),
             'delete_task' => $user->hasPermissionTo('delete_task'),
             'can_see_detail_cost_estimation' => $user->hasPermissionTo('detail_cost_estimation')
         ];
