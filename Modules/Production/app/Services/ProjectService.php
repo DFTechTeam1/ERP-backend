@@ -9833,9 +9833,39 @@ class ProjectService
     public function searchProjectsByNameAndIdentifier(string $search): array
     {
         try {
+            $user = $this->userRepo->detail(id: Auth::id(), select: 'id,email,employee_id', relation: [
+                'employee:id,user_id,boss_id'
+            ]);
+            $isProjectManager = $user->hasRole(BaseRole::ProjectManager->value);
+            $isProjectManagerAdmin = $user->hasRole(BaseRole::ProjectManagerAdmin->value);
+            $isRoot = $user->hasRole(BaseRole::Root->value);
+            $isProduction = $user->hasRole(BaseRole::Production->value);
+            
+            // Build where has
+            $whereHas = [];
+            if (! $isRoot && ! $isProjectManagerAdmin) {
+                if ($isProjectManager) {
+                    $whereHas[] = [
+                        'relation' => 'personInCharges',
+                        'query' => 'pic_id = '.$user->employee_id,
+                    ];
+
+                }
+
+                if ($isProduction && $user->employee) {
+                    $whereHas[] = [
+                        'relation' => 'personInCharges',
+                        'query' => 'pic_id = '.$user->employee->boss_id,
+                    ];
+                }
+            }
+
+            $where = "(name LIKE '%{$search}%' OR identifier_id LIKE '%{$search}%')";
+            
             $projects = $this->repo->list(
                 select: 'id,name,uid,identifier_id,project_class_id,status,project_date',
-                where: "name LIKE '%{$search}%' OR identifier_id LIKE '%{$search}%'",
+                where: $where,
+                whereHas: $whereHas,
                 relation: [
                     'projectClass:id,name,color',
                     'personInCharges:id,project_id,pic_id',
