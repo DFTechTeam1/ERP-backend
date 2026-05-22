@@ -30,6 +30,7 @@ class Store extends FormRequest
             'latitude' => 'nullable',
             'equipment_type' => 'string|required',
             'is_high_season' => 'required',
+            'lead_uid' => 'nullable',
 
             'client_portal' => 'required',
             'marketing_id' => 'nullable|array',

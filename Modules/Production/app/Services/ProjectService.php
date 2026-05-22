@@ -80,6 +80,7 @@ use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
 use Modules\Production\Repository\EntertainmentTaskSongReviseRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
+use Modules\Production\Repository\ProjectLeadRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Production\Repository\ProjectRepository;
@@ -192,6 +193,8 @@ class ProjectService
 
     private ProjectTaskDeadlineRepository $projectTaskDeadlineRepo;
 
+    private ProjectLeadRepository $projectLeadRepo;
+
     private $nasFolderCreationService;
 
     /**
@@ -244,6 +247,7 @@ class ProjectService
         \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo,
         \App\Services\NasFolderCreationService $nasFolderCreationService,
         ProjectTaskDeadlineRepository $projectTaskDeadlineRepo,
+        ProjectLeadRepository $projectLeadRepo
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -336,6 +340,8 @@ class ProjectService
         $this->nasFolderCreationService = $nasFolderCreationService;
 
         $this->projectTaskDeadlineRepo = $projectTaskDeadlineRepo;
+
+        $this->projectLeadRepo = $projectLeadRepo;
     }
 
     /**
@@ -9191,7 +9197,7 @@ class ProjectService
 
             // define published_at and published_by
             $projectDealPayload = collect($payload)
-                ->except(['marketing_id', 'quotation', 'with_accommodation']);
+                ->except(['marketing_id', 'quotation', 'with_accommodation', 'lead_uid']);
             if ($payload['status'] == ProjectDealStatus::Final->value) {
                 $projectDealPayload = $projectDealPayload->merge([
                     'published_at' => Carbon::now(),
@@ -9199,9 +9205,30 @@ class ProjectService
                 ]);
             }
 
+            $isFromLead = (isset($payload['lead_uid']) && !empty($payload['lead_uid'])) ? true : false;
+
+            if ($this->projectDealRepo->isExists($payload['name'], $payload['project_date'])) {
+                return errorResponse(__('notification.projectDealIsExists'));
+            }
+
+            if ($this->repo->isExists($payload['name'], $payload['project_date'])) {
+                return errorResponse(__('notification.projectIsExists'));
+            }
+
             $project = $this->projectDealRepo->store(
                 $projectDealPayload->toArray()
             );
+
+            // If lead Uid is exists, update the lead data to be connected with this deal
+            if ($isFromLead) {
+                $this->projectLeadRepo->update(
+                    data: [
+                        'skip_check' => true,
+                        'project_deal_id' => $project->id
+                    ],
+                    id: $payload['lead_uid']
+                );
+            }
 
             // insert project details marketing
             $project->marketings()->createMany(

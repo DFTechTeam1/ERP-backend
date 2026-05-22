@@ -4,6 +4,7 @@ namespace Modules\Production\Models;
 
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -493,5 +494,11 @@ class ProjectDeal extends Model
         }
 
         return $output;
+    }
+
+    public function scopeIsDuplicate(Builder $builder, string $name, string $projectDate)
+    {
+        $builder->whereLike('name', '%'. $name. '%')
+            ->whereDate('project_date', $projectDate);
     }
 }
