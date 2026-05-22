@@ -162,4 +162,16 @@ return [
         'access_secret' => env('GREATDAY_ACCESS_SECRET'),
         'base_url' => env('GREATDAY_BASE_URL'),
     ],
+
+    'partner_password' => env('PARTNER_PASSWORD', null),
+
+    'partner_email' => env('PARTNER_EMAIL', ''),
+
+    'partner_url' => env('PARTNER_URL', null),
+
+    'whatsapp_service' => env('WHATSAPP_SERVICE', null),
+
+    'internal_service_secret' => env('INTERNAL_SERVICE_SECRET', null),
+
+    'whatsapp_service' => env('WHATSAPP_SERVICE', null),
 ];

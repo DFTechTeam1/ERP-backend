@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\Create;
 use App\Http\Requests\User\Update;
 use App\Http\Requests\User\UpdateProfile;
+use App\Http\Requests\User\VerifyOtp;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -87,5 +88,10 @@ class UserController extends Controller
     public function updateProfile(UpdateProfile $request, int $userId)
     {
         return apiResponse($this->service->updateProfile($request->validated(), $userId));
+    }
+    
+    public function verifyOtp(VerifyOtp $request)
+    {
+        return apiResponse($this->service->verifyOtp($request->validated()));
     }
 }

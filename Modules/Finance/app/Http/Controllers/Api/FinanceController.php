@@ -41,11 +41,34 @@ class FinanceController extends Controller
 
     /**
      * Get transaction summary
-     * @return JsonResponse
      */
     public function getTransactionSummary(): JsonResponse
     {
         return apiResponse($this->service->getTransactionSummary());
+    }
+
+    /**
+     * Get monthly income and outcome trend for the last 12 months.
+     */
+    public function getMonthlyTrend(): JsonResponse
+    {
+        return apiResponse($this->service->getMonthlyTrend());
+    }
+
+    /**
+     * Get top income sources ordered by payment amount.
+     */
+    public function getTopSources(): JsonResponse
+    {
+        return apiResponse($this->service->getTopSources());
+    }
+
+    /**
+     * Get outstanding invoice summary.
+     */
+    public function getOutstandingData(): JsonResponse
+    {
+        return apiResponse($this->service->getOutstandingData());
     }
 
     /**

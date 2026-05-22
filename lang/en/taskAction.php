@@ -17,4 +17,5 @@ return [
     'markAsComplete' => 'Mark As Complete',
     'revise' => 'Revise',
     'delete' => 'Delete',
+    'pickTask' => 'Pick Task',
 ];

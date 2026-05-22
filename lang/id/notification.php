@@ -170,4 +170,13 @@ return [
     'invalidPassword' => 'Password tidak valid',
     'cannotRemovePicWithTask' => 'Tidak dapat menghapus PIC yang masih memiliki tugas di proyek',
     'successRejectDeleteSong' => 'Permintaan untuk menghapus lagu telah berhasil ditolak',
+    'successSendEmailActivation' => 'Email aktivasi telah berhasil dikirim',
+    'userNotFound' => 'User tidak ditemukan',
+    'emailAlreadyVerified' => 'Email sudah terverifikasi',
+    'employeeAlreadyHasResignationRecord' => 'Karyawan sudah memiliki catatan pengunduran diri yang ada.',
+    'otpHasBeenExpired' => "OTP sudah tidak bisa digunakan",
+    'otpMismatch' => 'OTP tidak sama',
+    'phoneNumberVerfied' => 'Nomor telepon berhasil di verifikasi',
+    'projectDealIsExists' => 'Event ini sudah ada di database',
+    'projectIsExists' => "Event ini sudah ada di database production"
 ];

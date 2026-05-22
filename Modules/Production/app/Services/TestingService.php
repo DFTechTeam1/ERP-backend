@@ -5,6 +5,7 @@ namespace Modules\Production\Services;
 use App\Enums\System\BaseRole;
 use App\Services\UserRoleManagement;
 use Carbon\Carbon;
+use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Services\EmployeeRepoGroup;
 use Modules\Production\Repository\ProjectTaskPicRepository;
 
@@ -42,6 +43,10 @@ class TestingService
      */
     protected function getProjectTaskRelationQuery(object $employee): array
     {
+        $specialPosition = getSettingByKey('special_production_position');
+        $specialPositionId = 0;
+        if ($specialPosition) $specialPositionId = getIdFromUid($specialPosition, new PositionBackup());
+
         if ($this->user->hasRole('entertainment')) { // just get event for entertainment. Look at transfer_team_members table
             $newWhereHas = [
                 [
@@ -50,33 +55,54 @@ class TestingService
                 ],
             ];
         } else { // get based on task
-            $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = '.$employee->id);
-            $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
-
-            // get from project_task_pics table
-            $taskPics = $this->taskPicRepo->list(
-                select: 'project_task_id',
-                where: "employee_id = {$employee->id}"
-            );
-            if ($taskPics->count() > 0) {
-                $taskIds = collect($taskIds)
-                    ->merge(
-                        collect($taskPics)->pluck('project_task_id')->toArray()
-                    )->unique()->values()->toArray();
-            }
-
-            if (count($taskIds) > 0) {
-                $queryNewHas = 'id IN ('.implode(',', $taskIds).')';
+            if ($employee->position_id == $specialPositionId) {
+                $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = '.$employee->id);
+                $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
+    
+                // get from project_task_pics table
+                $taskPics = $this->taskPicRepo->list(
+                    select: 'project_task_id',
+                    where: "employee_id = {$employee->id}"
+                );
+                if ($taskPics->count() > 0) {
+                    $taskIds = collect($taskIds)
+                        ->merge(
+                            collect($taskPics)->pluck('project_task_id')->toArray()
+                        )->unique()->values()->toArray();
+                }
+    
+                if (count($taskIds) > 0) {
+                    $queryNewHas = 'id IN ('.implode(',', $taskIds).')';
+                } else {
+                    $queryNewHas = 'id = 0';
+                }
+    
+                $newWhereHas = [
+                    [
+                        'relation' => 'tasks',
+                        'query' => $queryNewHas,
+                    ],
+                ];
             } else {
-                $queryNewHas = 'id = 0';
+                // V2 -> Get based on boss id project
+                $bossId = $employee->boss_id;
+                $newWhereHas = [
+                    [
+                        'relation' => 'personInCharges',
+                        'query' => "pic_id = {$bossId}"
+                    ]
+                ];
             }
 
-            $newWhereHas = [
-                [
-                    'relation' => 'tasks',
-                    'query' => $queryNewHas,
-                ],
-            ];
+
+            if ($this->user->hasRole(BaseRole::LeadModeller->value)) {
+                $newWhereHas = [
+                    [
+                        'relation' => 'personInCharges',
+                        'query' => "pic_id > 0"
+                    ]
+                ];
+            }
         }
 
         return $newWhereHas;
@@ -382,7 +408,7 @@ class TestingService
                 return $this->listForEntertainment($select, $where, $relation);
             }
 
-            $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id', [], 'id = '.$this->user->employee_id);
+            $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id,position_id', [], 'id = '.$this->user->employee_id);
 
             // get project that only related to authorized user
             if ($isProductionRole || $isEntertainmentRole || $this->user->hasRole(BaseRole::LeadModeller->value)) {
@@ -409,6 +435,7 @@ class TestingService
                     $whereHas = array_merge($whereHas, $newWhereHas);
                 }
             }
+
 
             $isAssistant = isAssistantPMRole();
             if ($isPMRole || $isAssistant) {

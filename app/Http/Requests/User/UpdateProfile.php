@@ -26,7 +26,8 @@ class UpdateProfile extends FormRequest
     {
         return [
             'nickname' => 'required|string|max:255',
-            'profile_image' => 'nullable|string'
+            'profile_image' => 'nullable|string',
+            'phone' => 'required'
         ];
     }
 

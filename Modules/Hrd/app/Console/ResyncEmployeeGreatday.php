@@ -3,6 +3,9 @@
 namespace Modules\Hrd\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 
@@ -16,7 +19,7 @@ class ResyncEmployeeGreatday extends Command
     /**
      * The console command description.
      */
-    protected $description = 'Resync employee data with Greatday.';
+    protected $description = 'Resync employee IDs, positions, and master HRIS data from Greatday; updates email mappings, marks resigned employees, adjusts division/position settings, and clears cache.';
 
     /**
      * Create a new command instance.
@@ -27,10 +30,97 @@ class ResyncEmployeeGreatday extends Command
     }
 
     /**
-     * Execute the console command.
+     * Add personal_email column in employees table if not exists. 
+     * This column will be used to store the old email before we update the email with user email, because in greatday, 
+     * the email is used to identify the employee, 
+     * so we need to make sure that the email in our system is the same as the email in greatday before we sync the employee data from greatday.
+     *
+     * @return void
+     */
+    protected function addPersonalEmailColumn()
+    {
+        $this->info("Check personal_email column in employees table ...");
+
+        // Check if personal_email exists or not
+        if (Schema::hasColumn('employees', 'personal_email')) {
+            $this->info('personal_email column already exists in employees table, skipping adding column.');
+            return false;
+        }
+
+        // Create if not exists
+        $this->info("Adding personal_email column in employees table ...");
+        Schema::table('employees', function (Blueprint $table) {
+            $table->string('personal_email')->nullable()->after('email');
+        });
+        $this->info("personal_email column added successfully.");
+
+        return true;
+    }
+
+    /**
+     * Update employee email with user email and store the old email in personal_email column. 
+     * This is needed because in greatday, the email is used to identify the employee,
+     * so we need to make sure that the email in our system is the same as the email in greatday before we sync the employee data from greatday.
+     *
+     * @return void
+     */
+    protected function updateEmployeeEmailFromUserTable()
+    {
+        $this->info("Updating employee email from user table ...");
+        
+        $isColumnAdded = $this->addPersonalEmailColumn();
+
+        // Stop the process if personal email already exists.
+        // That's mean the email has been synchronized before
+        if (! $isColumnAdded) {
+            $this->info("Skipping updating employee email from user table because personal_email column already exists, to avoid overwriting existing personal_email data.");
+            return;
+        }
+
+        $employees = \Modules\Hrd\Models\Employee::select('id', 'email', 'user_id')
+            ->with([
+                'user:id,employee_id,email'
+            ])
+            ->get();
+
+        $progress = $this->output->createProgressBar($employees->count());
+        $progress->start();
+        foreach ($employees as $employee) {
+            if ($employee->user) {
+                $userEmail = $employee->user->email;
+                $currentEmail = $employee->email;
+
+                // Update employee email with user email and store the old email in personal_email column
+                \Modules\Hrd\Models\Employee::where('id', $employee->id)
+                    ->update([
+                        'personal_email' => $currentEmail,
+                        'email' => $userEmail
+                    ]);
+            }
+
+            $progress->advance();
+        }
+
+        $progress->finish();
+        $this->info('');
+        $this->info("Employee email updated successfully.");
+        $this->info('');
+    }
+
+    /**
+     * The function handles syncing employee and position data from Greatday to the system, updating
+     * employee positions, seeding master HRIS data, and adjusting various positions and settings.
+     * 
+     * @return The `handle()` function returns an integer value of 0 if the process completes
+     * successfully.
      */
     public function handle()
     {
+        // Update employee email with user email and store the old email in personal_email column. 
+        // This is needed because in greatday, the email is used to identify the employee, 
+        // so we need to make sure that the email in our system is the same as the email in greatday before we sync the employee data from greatday.
+        $this->updateEmployeeEmailFromUserTable();
+
         $service = app(\Modules\Hrd\Services\GreatdayService::class);
 
         $accessToken = $service->login();
@@ -50,7 +140,7 @@ class ResyncEmployeeGreatday extends Command
             foreach ($response->json()['data'] as $employee) {
                 $email = $employee['email'];
 
-                \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
+                \Modules\Hrd\Models\Employee::where('email', $employee['email'])
                     ->update([
                         'greatday_emp_id' => $employee['empId']
                     ]);
@@ -73,61 +163,8 @@ class ResyncEmployeeGreatday extends Command
                 'limit' => 100,
             ]);
 
-            if ($response->status() < 300) {
-                $this->info("Starting to sync divisions ...");
-
-                $progress = $this->output->createProgressBar(count($positions->json()['data']));
-
-                // Insert division first
-                foreach ($positions->json()['data'] as $position) {
-                    $parentPath = $position['parentPath'];
-                    $explodePath = explode(',', $parentPath);
-
-                    $isDivision = count($explodePath) == 2;
-
-                    if ($isDivision) {
-                        $currentDivision = \Modules\Company\Models\DivisionBackup::selectRaw('id')
-                            ->where('name', $position['posNameEn'])
-                            ->first();
-
-                        if (! $currentDivision) {
-                            $currentDivision = \Modules\Company\Models\DivisionBackup::create([
-                                'name' => $position['posNameEn'],
-                            ]);
-                        }
-                    }
-
-                    $progress->advance();
-                }
-
-                $this->info("Starting to sync positions ...");
-
-                // Then insert positions
-                foreach ($positions->json()['data'] as $position) {
-                    $parentPath = $position['parentPath'];
-                    $explodePath = explode(',', $parentPath);
-
-                    if (count($explodePath) == 3) {
-                        $divisionId = $explodePath[2];
-                        $divisionName = collect($positions->json()['data'])->where('positionId', $divisionId)->first()['posNameEn'] ?? null;
-                        $division = \Modules\Company\Models\DivisionBackup::where('name', $divisionName)->first();
-
-                        if ($division) {
-                            \Modules\Company\Models\PositionBackup::updateOrCreate(
-                                ['name' => $position['posNameEn']],
-                                [
-                                    'division_id' => $division->id,
-                                ]
-                            );
-                        }
-                    }
-
-                    $progress->advance();
-                }
-
-                $progress->finish();
-
-                $this->info("\n{$total} Position data resynced successfully.");
+            if ($positions->status() < 300) {
+                Artisan::call('app:resync-greatday-position');
 
                 $this->info("\nStart update employee positions ...");
 
@@ -296,12 +333,21 @@ class ResyncEmployeeGreatday extends Command
     protected function adjustProductionPositionInSettings(): void
     {
         $productionDivision = \Modules\Company\Models\DivisionBackup::where('name', 'production')->first();
+        $productDevelopmentDivision = \Modules\Company\Models\DivisionBackup::where('name', 'product development')->first();
 
         // Get position uids in production division
         if ($productionDivision) {
             $productionPositions = \Modules\Company\Models\PositionBackup::select('uid')->where('division_id', $productionDivision->id)->pluck('uid')->toArray();
+
+            $productDevPosition = [];
+            if ($productDevelopmentDivision) {
+                $productDevPosition = \Modules\Company\Models\PositionBackup::select('uid')->where('division_id', $productDevelopmentDivision->id)->pluck('uid')->toArray();
+            }
             
             if ($productionPositions) {
+                // Merge
+                $productionPositions = array_merge($productionPositions, $productDevPosition);
+
                 // Insert to settings with key 'position_as_production'
                 \Modules\Company\Models\Setting::updateOrCreate(
                     ['key' => 'position_as_production'],
@@ -320,69 +366,7 @@ class ResyncEmployeeGreatday extends Command
      */
     protected function seedGreatdayMasterData()
     {
-        $this->info('Seeding greatday timezones ...');
-
-        $service = app(\Modules\Hrd\Services\EmployeeService::class);
-
-        $timezone = $service->getGreatdayTimezones();
-
-        $this->handleNotificationGreatdaySeedingData($timezone, 'timezones');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday religions ...');
-        $religions = $service->getGreatdayReligion();
-
-        $this->handleNotificationGreatdaySeedingData($religions, 'religion');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday cost center ...');
-        $costCenters = $service->getGreatdayCostCenter();
-
-        $this->handleNotificationGreatdaySeedingData($costCenters, 'cost center');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday job grade ...');
-        $jobGrades = $service->getGreatdayJobGrade();
-
-        $this->handleNotificationGreatdaySeedingData($jobGrades, 'job grade');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday employment status ...');
-        $employmentStatuses = $service->getGreatdayEmploymentStatus();
-
-        $this->handleNotificationGreatdaySeedingData($employmentStatuses, 'employment status');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday work location ...');
-        $workLocations = $service->getGreatdayWorkLocation();
-
-        $this->handleNotificationGreatdaySeedingData($workLocations, 'work location');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday shift pattern ...');
-        $shiftPatterns = $service->getGreatdayShiftPattern();
-
-        $this->handleNotificationGreatdaySeedingData($shiftPatterns, 'shift pattern');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday job status ...');
-        $jobStatuses = $service->getGreatdayJobStatus();
-
-        $this->handleNotificationGreatdaySeedingData($jobStatuses, 'job status');
-
-        sleep(1); // Add delay to avoid hitting API rate limits
-
-        $this->info('Seeding greatday nationality ...');
-        $nationalities = $service->getGreatdayNationality();
-
-        $this->handleNotificationGreatdaySeedingData($nationalities, 'nationality');
+        Artisan::call('app:seed-greatday-master');
     }
 
     /**

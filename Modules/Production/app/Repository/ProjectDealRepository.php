@@ -65,6 +65,13 @@ class ProjectDealRepository extends ProjectDealInterface
         return $query->get();
     }
 
+    public function isExists(string $name, string $projectDate)
+    {
+        return $this->model->select('id')
+            ->isDuplicate($name, $projectDate)
+            ->exists();
+    }
+
     /**
      * Paginated data for datatable
      *

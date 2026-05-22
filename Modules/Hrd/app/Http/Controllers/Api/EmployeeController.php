@@ -2,12 +2,18 @@
 
 namespace Modules\Hrd\Http\Controllers\Api;
 
+use App\Actions\Hrd\ResignScheduleAction;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Http\Controllers\Controller;
+use App\Services\WhatsappService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Modules\Email\Data\Notification\SlackTableHeaderColumnData;
+use Modules\Email\Data\Notification\SlackTablePayloadData;
+use Modules\Hrd\Data\TransferHistory\HistoryData;
+use Modules\Hrd\Data\TransferHistory\ValidEmployeeData;
 use Modules\Hrd\Http\Requests\Employee\AddAsUser;
 use Modules\Hrd\Http\Requests\Employee\Create;
 use Modules\Hrd\Http\Requests\Employee\Update;
@@ -16,6 +22,7 @@ use Modules\Hrd\Http\Requests\Employee\UpdateIdentity;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeeService;
+use Spatie\LaravelData\DataCollection;
 
 class EmployeeController extends Controller
 {
@@ -462,6 +469,16 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->getGreatdayTimezones());
     }
 
+    public function getGreatdayResignType(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayResignType());
+    }
+
+    public function getGreatdayResignReason(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayResignReason());
+    }
+
     public function getGreatdayCostCenter(): JsonResponse
     {
         return apiResponse($this->employeeService->getGreatdayCostCenter());
@@ -502,9 +519,24 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->getGreatdayNationality());
     }
 
+    public function getGreatdayCompanies(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getGreatdayCompanies());
+    }
+
     public function listTimezones(): JsonResponse
     {
         return apiResponse($this->employeeService->listTimezones());
+    }
+
+    public function listResignTypes(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listResignTypes());
+    }
+
+    public function listResignReasons(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listResignReasons());
     }
 
     public function listCostCenter(): JsonResponse
@@ -537,13 +569,57 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->listShiftPatterns());
     }
 
+    /**
+     * List job statuses from Greatday
+     *
+     * @return JsonResponse
+     */
     public function listJobStatuses(): JsonResponse
     {
         return apiResponse($this->employeeService->listJobStatuses());
     }
 
+    /**
+     * List nationalities from Greatday
+     *
+     * @return JsonResponse
+     */
     public function listNationalities(): JsonResponse
     {
         return apiResponse($this->employeeService->listNationalities());
+    }
+
+    /**
+     * List companies from Greatday
+     *
+     * @return JsonResponse
+     */
+    public function listCompanies(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listCompanies());
+    }
+
+    /**
+     * Resend verification email to employee's email
+     *
+     * @param \Modules\Hrd\Http\Requests\ResendVerification $request
+     * @param string $employeeId
+     * @return JsonResponse
+     */
+    public function resendVerificationEmail(\Modules\Hrd\Http\Requests\ResendVerification $request, string $employeeId): JsonResponse
+    {
+        return apiResponse($this->employeeService->resendVerification(payload: $request->validated(), employeeId: $employeeId));
+    }
+
+    public function testingData()
+    {
+        $service = new \Modules\Email\Services\WhatsappService();
+        return $service->sendWhatsappMessage([
+            'to' => '120363427017574669',
+            'message' => "Halo team, ada task baru *<TaskName>* yang sudah bisa di ambil (board compositing) di event - Josssss",
+            'isGroup' => true,
+            'mentions' => [],
+            'actionType' => 'assign-new-task'
+        ]);
     }
 }

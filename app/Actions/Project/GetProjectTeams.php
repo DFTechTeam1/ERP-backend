@@ -61,7 +61,7 @@ class GetProjectTeams
             $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\PositionBackup);
             $whereSpecial = "position_id = {$specialPosition}";
             $isLeadModeller = false;
-            if ($leadModeller != null && $leadModeller != '' && $leadModeller != 'null' && !$allSpecialPosition) {
+            if ($leadModeller != null && $leadModeller != '' && $leadModeller != 'null' && ! $allSpecialPosition) {
                 $leadModeller = getIdFromUid($leadModeller, new Employee);
                 $whereSpecial = "id = {$leadModeller}";
                 $isLeadModeller = true;
@@ -129,8 +129,6 @@ class GetProjectTeams
             $productionPositions = implode(',', $productionPositions);
             $employeeCondition .= " and position_id in ({$productionPositions})";
         }
-
-        logging('employee condition on teams project', [$employeeCondition]);
 
         $teams = $employeeRepo->list(
             'id,uid,name,email,nickname,position_id',

@@ -1,0 +1,102 @@
+flowchart TD
+
+    %% ─────────────────────────────────────────
+    %% TASK CREATION PATHS
+    %% ─────────────────────────────────────────
+
+    START([Start]) --> CREATE_PATH{Who creates - the task?}
+
+    %% ── PATH A: PM creates & assigns directly ──
+    CREATE_PATH -- "PM assigns directly" --> PM_CREATE[PM creates task - using regular task form]
+    PM_CREATE --> BOARD_SET{No need board set}
+    BOARD_SET -- Yes --> TASK_ASSIGNED[Task: Assigned - Not counted in - member task limit]
+
+    %% ── PATH B: PM creates pool task ──
+    CREATE_PATH -- "PM creates pool task - no PIC" --> PM_POOL[PM creates pool task]
+    PM_POOL --> POOL_BOARD_SET{target_board - set?}
+    POOL_BOARD_SET -- No --> BLOCK_POOL([BLOCKED: board - is mandatory])
+    POOL_BOARD_SET -- Yes --> POOL_BOARD[Task sits in Pool Board - status: Unassigned]
+    POOL_BOARD --> STALE_CHECK{Unclaimed > - PM stale alert - threshold?}
+    STALE_CHECK -- Yes --> NOTIFY_PM_STALE[Notify PM: - task unclaimed]
+    STALE_CHECK -- No --> MEMBER_BROWSE
+    NOTIFY_PM_STALE --> MEMBER_BROWSE[Member browses - pool tasks - filtered by their board]
+    MEMBER_BROWSE --> ROLE_CHECK{member.position - matches task - target_board?}
+    ROLE_CHECK -- No → hidden from member --> MEMBER_BROWSE
+    ROLE_CHECK -- Yes --> CLAIM_ATTEMPT[Member clicks - 'Take Task']
+    CLAIM_ATTEMPT --> ATOMIC_LOCK{Atomic DB lock - UPDATE WHERE - claimed_by IS NULL - check affected rows}
+    ATOMIC_LOCK -- 0 rows affected - already taken --> POOL_BOARD
+    ATOMIC_LOCK -- Claimed OK --> SLOT_CHECK_POOL{Member uncompleted - tasks < PM limit - per project?}
+    SLOT_CHECK_POOL -- Over limit --> RELEASE_CLAIM[Release claim - Notify member]
+    RELEASE_CLAIM --> POOL_BOARD
+    SLOT_CHECK_POOL -- OK --> TASK_ASSIGNED_POOL[Task: Assigned to member - claimed_by = member - Counted in member limit]
+    TASK_ASSIGNED_POOL --> NOTIFY_PM_CLAIM[Notify PM: - member took pool task]
+    NOTIFY_PM_CLAIM --> TASK_ASSIGNED
+
+    %% ── PATH C: Member self-creates ──
+    CREATE_PATH -- "Member self-creates" --> MEMBER_BOARD_CHECK{Member creating - on their own - board only?}
+    MEMBER_BOARD_CHECK -- Wrong board --> BLOCK_MEMBER([BLOCKED: can only - create on own board])
+    MEMBER_BOARD_CHECK -- OK --> TEMPLATE_CHECK[Member fills task form - using project template]
+    TEMPLATE_CHECK --> NAME_CHECK{task_name - filled and - >= 5 chars?}
+    NAME_CHECK -- No --> BLOCK_NAME([BLOCKED: task name - is mandatory])
+    NAME_CHECK -- Yes --> SLOT_CHECK_MEMBER{Member uncompleted - self-created tasks - < PM limit 1–20 - per project?}
+    SLOT_CHECK_MEMBER -- Over limit --> BLOCK_LIMIT([BLOCKED: task - limit reached])
+    SLOT_CHECK_MEMBER -- OK --> MEMBER_TASK_CREATED[Task created - Status based on - PM auto-active setting]
+    MEMBER_TASK_CREATED --> NOTIFY_PM_NEW[Notify PM: - new member-created task]
+    NOTIFY_PM_NEW --> AUTO_ACTIVE{PM setting: - auto-active = true?}
+    AUTO_ACTIVE -- Yes --> TASK_ASSIGNED
+    AUTO_ACTIVE -- No --> PENDING_PM[Task: Pending PM Approval - member cannot start yet]
+    PENDING_PM --> PM_PRE_REVIEW{PM reviews - before work}
+    PM_PRE_REVIEW -- Reject --> TASK_VOIDED([Task Voided - Slot freed - Member notified])
+    PM_PRE_REVIEW -- Approve --> TASK_ASSIGNED
+
+    %% ─────────────────────────────────────────
+    %% WORK EXECUTION
+    %% ─────────────────────────────────────────
+
+    TASK_ASSIGNED --> PM_CAN_VOID{PM voids task - while in progress?}
+    PM_CAN_VOID -- Yes → PM cancels --> TASK_CANCELLED([Task Cancelled - Slot freed - Member notified])
+    PM_CAN_VOID -- No → continues --> MEMBER_START[Member clicks - 'Start Work']
+    MEMBER_START --> RECORD_START[System records - start_time]
+    RECORD_START --> MEMBER_WORKING[Member works...]
+    MEMBER_WORKING --> UPLOAD[Member uploads work - System records end_time - Status: Pending Review]
+
+    %% ─────────────────────────────────────────
+    %% PM REVIEW
+    %% ─────────────────────────────────────────
+
+    UPLOAD --> PM_REVIEW{PM reviews - work}
+    PM_REVIEW -- Reject / Revise --> REVISION_NOTE[PM adds revision note - Status: Needs Revision]
+    REVISION_NOTE --> MEMBER_WORKING
+    PM_REVIEW -- Approve --> STATUS_COMPLETE[Status: Completed - Slot freed in member limit - Task locked]
+
+    %% ─────────────────────────────────────────
+    %% BOARD PROGRESSION
+    %% ─────────────────────────────────────────
+
+    STATUS_COMPLETE --> LAST_BOARD{Is this the - last board?}
+    LAST_BOARD -- No --> NEXT_BOARD[Task auto-moves - to next board - board_id updated]
+    NEXT_BOARD --> NEXT_BOARD_TYPE{Next board - mode?}
+    NEXT_BOARD_TYPE -- PM assigns --> PM_ASSIGN_NEXT[PM assigns new PIC - Not counted in - member limit]
+    NEXT_BOARD_TYPE -- Pool --> POOL_BOARD
+    PM_ASSIGN_NEXT --> TASK_ASSIGNED
+    LAST_BOARD -- Yes --> PROJECT_DONE([Task fully complete - Project updated])
+
+    %% ─────────────────────────────────────────
+    %% STYLES
+    %% ─────────────────────────────────────────
+
+    classDef pmAction fill:#4A90D9,stroke:#2C5F8A,color:#fff
+    classDef memberAction fill:#27AE60,stroke:#1A7A42,color:#fff
+    classDef systemAction fill:#8E44AD,stroke:#6C3483,color:#fff
+    classDef decision fill:#F39C12,stroke:#B7770D,color:#fff
+    classDef terminal fill:#2C3E50,stroke:#1A252F,color:#fff
+    classDef blocked fill:#E74C3C,stroke:#A93226,color:#fff
+    classDef notify fill:#1ABC9C,stroke:#148F77,color:#fff
+
+    class PM_CREATE,PM_POOL,PM_ASSIGN_NEXT,PM_PRE_REVIEW,PM_REVIEW pmAction
+    class MEMBER_BROWSE,CLAIM_ATTEMPT,MEMBER_CREATE,MEMBER_START,MEMBER_WORKING,UPLOAD,TEMPLATE_CHECK memberAction
+    class RECORD_START,ATOMIC_LOCK,STATUS_COMPLETE,NEXT_BOARD,MEMBER_TASK_CREATED,TASK_ASSIGNED_POOL systemAction
+    class CREATE_PATH,ROLE_CHECK,SLOT_CHECK_POOL,SLOT_CHECK_MEMBER,NAME_CHECK,BOARD_SET,POOL_BOARD_SET,MEMBER_BOARD_CHECK,AUTO_ACTIVE,LAST_BOARD,NEXT_BOARD_TYPE,STALE_CHECK,PM_CAN_VOID,PM_PRE_REVIEW decision
+    class START,PROJECT_DONE,TASK_VOIDED,TASK_CANCELLED terminal
+    class BLOCK_CREATE,BLOCK_POOL,BLOCK_MEMBER,BLOCK_NAME,BLOCK_LIMIT,RELEASE_CLAIM blocked
+    class NOTIFY_PM_CLAIM,NOTIFY_PM_NEW,NOTIFY_PM_STALE notify

@@ -131,6 +131,13 @@ class ProjectRepository extends ProjectInterface
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
+    public function isExists(string $name, string $projectDate)
+    {
+        return $this->model->select('id')
+            ->isDuplicate($name, $projectDate)
+            ->exists();
+    }
+
     /**
      * Get Detail Data
      *

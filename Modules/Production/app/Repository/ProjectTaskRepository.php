@@ -125,7 +125,7 @@ class ProjectTaskRepository extends ProjectTaskInterface
     /**
      * Store Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return ProjectTask
      */
     public function store(array $data)
     {

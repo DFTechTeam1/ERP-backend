@@ -4,6 +4,9 @@ use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectDealMarketing;
 use Modules\Production\Models\QuotationItem;
 
+use function Pest\Laravel\assertDatabaseCount;
+use function Pest\Laravel\assertDatabaseHas;
+
 it('Add more quotation return success', function () {
     // create project first
     $projectDeal = ProjectDeal::factory()
@@ -45,11 +48,11 @@ it('Add more quotation return success', function () {
     expect($response)->toHaveKey('error');
     expect($response['error'])->toBeFalse();
 
-    $this->assertDatabaseHas('project_deals', [
+    assertDatabaseHas('project_deals', [
         'name' => $projectDeal->name,
     ]);
-    $this->assertDatabaseCount('project_quotations', 1);
-    $this->assertDatabaseHas('project_quotations', [
+    assertDatabaseCount('project_quotations', 1);
+    assertDatabaseHas('project_quotations', [
         'project_deal_id' => $projectDeal->id,
     ]);
 });

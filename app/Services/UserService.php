@@ -20,22 +20,27 @@ use Illuminate\Support\Facades\Storage;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\WhatsappOtpRepository;
 use Spatie\Permission\Models\Role;
 use Vinkla\Hashids\Facades\Hashids;
 
+use function Laravel\Prompts\error;
+
 class UserService
 {
-    private $repo;
+    private UserRepository $repo;
 
-    private $employeeRepo;
+    private EmployeeRepository $employeeRepo;
 
-    private $roleRepo;
+    private RoleRepository $roleRepo;
 
-    private $loginHistoryRepo;
+    private UserLoginHistoryRepository $loginHistoryRepo;
 
-    private $generalService;
+    private GeneralService $generalService;
 
-    private $roleService;
+    private RoleService $roleService;
+
+    private WhatsappOtpRepository $whatsappOtpRepo;
 
     public function __construct(
         UserRepository $userRepo,
@@ -43,7 +48,8 @@ class UserService
         RoleRepository $roleRepo,
         UserLoginHistoryRepository $userLogHistoryRepo,
         GeneralService $generalService,
-        RoleService $roleService
+        RoleService $roleService,
+        WhatsappOtpRepository $whatsappOtpRepo
     ) {
         $this->repo = $userRepo;
 
@@ -56,6 +62,8 @@ class UserService
         $this->generalService = $generalService;
 
         $this->roleService = $roleService;
+
+        $this->whatsappOtpRepo = $whatsappOtpRepo;
     }
 
     public function addAsUser(string $userId)
@@ -467,7 +475,7 @@ class UserService
                 select: 'id,email,employee_id,email_verified_at,password,image',
                 where: "email = '".$payload['email']."' and user_status = 1",
                 relation: [
-                    'employee:id,name,email,user_id,position_id,uid,nickname',
+                    'employee:id,name,email,user_id,position_id,uid,nickname,phone,is_phone_verified',
                     'employee.position:id,name',
                 ]
             );
@@ -751,6 +759,81 @@ class UserService
         }
     }
 
+    public function verifyOtp(array $payload) {
+        DB::beginTransaction();
+        try {
+            $employee = $this->employeeRepo->show(
+                uid: '',
+                where: "email = '" . $payload['email'] . "'",
+                select: 'id,phone,uid,user_id'
+            );
+
+            if (! $employee) {
+                return errorResponse(message: __('notification.userNotFound'));
+            }
+
+            $verifyData = $this->whatsappOtpRepo->show(
+                uid: '',
+                where: "phone = '{$employee->phone}' and employee_id = {$employee->id} and is_verified = 0",
+                select: 'id,expired_date,otp'
+            );
+
+            if (! $verifyData) {
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
+
+            $expiredDate = Carbon::parse($verifyData->expired_date);
+            if ($expiredDate->isPast()) {
+                return errorResponse(message: __('notification.otpHasBeenExpired'));
+            }
+
+            if ($verifyData->otp != $payload['otp']) {
+                return errorResponse(message: __("notification.otpMismatch"));
+            }
+
+            // Update data
+            $this->whatsappOtpRepo->update(
+                data: [
+                    'is_verified' => 1,
+                ],
+                id: $verifyData->id
+            );
+
+            $this->employeeRepo->update(
+                data: [
+                    'is_phone_verified' => true
+                ],
+                uid: $employee->uid
+            );
+
+            $user = $this->repo->detail(
+                id: $employee->user_id,
+                select: 'id,email,employee_id,email_verified_at,password,image',
+                relation: [
+                    'employee:id,name,email,user_id,position_id,uid,nickname,phone,is_phone_verified',
+                    'employee.position:id,name',
+                ]
+            );
+
+            // get encryption payload
+            $tokenizer = $this->generalService->generateAuthorizedUserToken(user: $user);
+            $encryptedPayload = $this->generalService->getEncryptedPayloadData(tokenizer: $tokenizer);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __("notification.phoneNumberVerfied"),
+                data: [
+                    'token' => $encryptedPayload
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
     /**
      * Update user profile
      * @param  array<string, string> $data
@@ -764,9 +847,12 @@ class UserService
             $currentUser = $this->repo->detail(
                 select: 'id,image,employee_id',
                 id: $userId,
+                relation: [
+                    'employee:id,phone,is_phone_verified'
+                ]
             );
 
-            if ((isset($data['profile_image'])) && ($data['profile_image'])) {
+            if ((isset($data['profile_image'])) && ($data['profile_image']) && !\Illuminate\Support\Str::contains($data['profile_image'], 'https')) {
                 // get current image from tmp file
                 if (!Storage::disk('public')->exists($data['profile_image'])) {
                     return errorResponse(__('notification.fileNotFound'));
@@ -789,8 +875,12 @@ class UserService
                 );
             }
 
+            $isNeedVerifyPhone = $currentUser->employee->phone != $data['phone'] ? true : false;
+
             $payloadUpdateEmployee = [
                 'nickname' => $data['nickname'] ?? null,
+                'phone' => $data['phone'],
+                'is_phone_verified' => !$isNeedVerifyPhone
             ];
 
             if (isset($completePath)) {
@@ -808,7 +898,7 @@ class UserService
                 id: $userId,
                 select: 'id,email,employee_id,email_verified_at,password,image',
                 relation: [
-                    'employee:id,name,email,user_id,position_id,uid,nickname',
+                    'employee:id,name,email,user_id,position_id,uid,nickname,phone,is_phone_verified',
                     'employee.position:id,name',
                 ]
             );
