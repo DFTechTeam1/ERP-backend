@@ -5,7 +5,7 @@ namespace App\Actions\Project;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
-use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
+use Modules\Production\Models\ProjectTaskPicHistory;
 use Modules\Production\Repository\TransferTeamMemberRepository;
 
 class GetProjectTeams
@@ -16,7 +16,6 @@ class GetProjectTeams
     {
         $employeeRepo = new EmployeeRepository;
         $transferTeamRepo = new TransferTeamMemberRepository;
-        $taskPicHistory = new ProjectTaskPicHistoryRepository;
 
         $where = '';
         $pics = [];
@@ -25,21 +24,27 @@ class GetProjectTeams
         $picUids = [];
 
         if ($productionPositions = json_decode(getSettingByKey('position_as_production'), true)) {
-            $productionPositions = collect($productionPositions)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
-            })->toArray();
+            $productionPositions = \Modules\Company\Models\PositionBackup::whereIn('uid', $productionPositions)
+                ->pluck('id')
+                ->toArray();
         }
+
+        // batch-load all PIC users with their roles to avoid N queries in the loop
+        $picEmployeeIds = collect($project->personInCharges)->pluck('pic_id')->toArray();
+        $picUsersWithRoles = \App\Models\User::with('roles:id,name')
+            ->whereIn('employee_id', $picEmployeeIds)
+            ->get(['id', 'employee_id'])
+            ->keyBy('employee_id');
 
         foreach ($project->personInCharges as $key => $pic) {
             $pics[] = $pic->employee->name.'('.$pic->employee->employee_id.')';
             $picIds[] = $pic->pic_id;
             $picUids[] = $pic->employee->uid;
 
-            // check persion in charge role
+            // check person in charge role
             // if Assistant, then get teams based his team and his boss team
-            $userPerson = \App\Models\User::selectRaw('id')->where('employee_id', $pic->employee->id)
-                ->first();
-            if ($userPerson->hasRole('assistant manager')) {
+            $userPerson = $picUsersWithRoles->get($pic->employee->id);
+            if ($userPerson && $userPerson->hasRole('assistant manager')) {
                 // get boss team
                 if ($pic->employee->boss_id) {
                     array_push($picIds, $pic->employee->boss_id);
@@ -169,13 +174,19 @@ class GetProjectTeams
 
         $teams = collect($teams)->merge($specialEmployee)->toArray();
 
-        // get task on selected project
+        // get task counts in a single query instead of one per team member
+        $teamIds = collect($teams)->pluck('id')->toArray();
+        $taskCounts = ProjectTaskPicHistory::query()
+            ->selectRaw('employee_id, COUNT(id) as total')
+            ->where('project_id', $project->id)
+            ->whereIn('employee_id', $teamIds)
+            ->groupBy('employee_id')
+            ->pluck('total', 'employee_id');
+
         $outputTeam = [];
         foreach ($teams as $key => $team) {
-            $task = $taskPicHistory->list('id', 'project_id = '.$project->id.' and employee_id = '.$team['id'])->count();
-
             $outputTeam[$key] = $team;
-            $outputTeam[$key]['total_task'] = $task;
+            $outputTeam[$key]['total_task'] = $taskCounts->get($team['id'], 0);
         }
 
         // get entertainment teams
