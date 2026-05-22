@@ -160,13 +160,13 @@ class DefineTaskAction
     /**
      * This action will define which button should be appear in the selected task
      */
-    public function handle(\Modules\Production\Models\ProjectTask $task, ?object $user = null, ?int $projectStatus = null, int $specialPositionId = 0): array
+    public function handle(\Modules\Production\Models\ProjectTask $task, ?object $user = null, ?int $projectStatus = null, int $specialPositionId = 0, ?bool $isProjectPic = null): array
     {
         $this->specialPositionId = $specialPositionId;
         $this->user = ! $user ? Auth::user() : $user;
         $this->projectStatus = $projectStatus;
         $this->specialPositionId = $specialPositionId;
-        $this->isProjectPic = isProjectPIC((int) $task->project_id, $this->user->employee_id);
+        $this->isProjectPic = $isProjectPic ?? isProjectPIC((int) $task->project_id, $this->user->employee_id);
         $this->isDirector = isDirector();
         $this->defineMyTask($task);
         $this->defineMyCurrentTask($task);
@@ -433,8 +433,7 @@ class DefineTaskAction
     {
         $distribute = null;
 
-        $leadModeller = getSettingByKey('lead_3d_modeller');
-        $leadModeller = $leadModeller ? getIdFromUid($leadModeller, new Employee) : null;
+        $leadModeller = $this->leadModelerUid;
         $taskPics = collect($task->pics)->pluck('employee_id')->toArray();
 
         if (
