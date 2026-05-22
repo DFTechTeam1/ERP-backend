@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 use Modules\Hrd\Http\Controllers\HrdController;
 
 /*
@@ -20,10 +21,17 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
 
 Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
     ->group(function () {
-        Route::get('employees/activate/{key}', 'activateAccount');
+        Route::get('employees/activate/account', 'activateAccount')
+            ->name('hrd.activate-account.nokey');
+        Route::get('employees/activate/{key}', 'activateAccount')
+            ->name('hrd.activate-account');
     });
 
 Route::get('employees/downloadTemplate', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'downloadTemplate']);
+
+// Route::middleware('partner')->group(function() {
+//     Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
+// });
 
 Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
     ->middleware(['auth:sanctum'])
@@ -54,6 +62,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::put('employees/{uid}/basicInfo', 'updateBasicInfo')->name('employees.updateBasicInfo');
         Route::put('employees/{uid}/identity', 'updateIdentity')->name('employees.updateIdentity');
         Route::post('employees/{employeeUid}/storeFamily', 'storeFamily')->name('employees.storeFamily');
+        Route::post('employee/resendVerification/{employeeId}', 'resendVerificationEmail');
         Route::put('employees/{familyUid}/updateFamily', 'updateFamily')->name('employees.updateFamily');
         Route::get('employees/{employeeUid}/initFamily', 'initFamily');
         Route::delete('employees/{familyUid}/deleteFamily', 'deleteFamily');
@@ -86,6 +95,12 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::get('/jobstatus/refresh', 'getGreatdayJobStatus')->name('greatday.refreshJobStatus');
                 Route::get('/nationality', 'listNationalities');
                 Route::get('/nationality/refresh', 'getGreatdayNationality')->name('greatday.refreshNationality');
+                Route::get('/companies', 'listCompanies');
+                Route::get('/resigntypes', 'listResignTypes');
+                Route::get('/resignreasons', 'listResignReasons');
+                Route::get('/companies/refresh', 'getGreatdayCompanies')->name('greatday.refreshCompanies');
+                Route::get('/resigntype/refresh', 'getGreatdayResignType')->name('greatday.refreshResignType');
+                Route::get('/resignreason/refresh', 'getGreatdayResignReason')->name('greatday.refreshResignReason');
             });
     });
 

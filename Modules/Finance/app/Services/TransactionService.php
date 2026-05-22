@@ -2,13 +2,16 @@
 
 namespace Modules\Finance\Services;
 
+use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
 use App\Services\GeneralService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\TransactionCreatedJob;
 use Modules\Finance\Models\Invoice;
+use Modules\Finance\Models\Transaction;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\TransactionRepository;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -60,11 +63,13 @@ class TransactionService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
 
-            if (! empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
-            }
+            $month = request('month');
+            $year = request('year');
+            $startDate = $month && $year ? \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth()->toDateString() : null;
+            $endDate = $month && $year ? \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth()->toDateString() : null;
+
+            $where = "transaction_date between '{$startDate}' and '{$endDate}'";
 
             $whereHas = [];
 
@@ -108,32 +113,65 @@ class TransactionService
 
     /**
      * Get transaction summary
+     *
      * @return array<string, mixed>
      */
     public function getTransactionSummary(): array
     {
         try {
-            $totalIncomeInCurrentMonth = $this->repo->list(
+            $now = Carbon::now();
+            $currentMonth = $now->month;
+            $currentYear = $now->year;
+            $prevMonth = $now->copy()->subMonth()->month;
+            $prevYear = $now->copy()->subMonth()->year;
+
+            $currentWhere = "MONTH(transaction_date) = {$currentMonth} AND YEAR(transaction_date) = {$currentYear}";
+            $prevWhere = "MONTH(transaction_date) = {$prevMonth} AND YEAR(transaction_date) = {$prevYear}";
+            $refundType = TransactionType::Refund->value;
+
+            $totalIncomeInCurrentMonth = (float) ($this->repo->list(
                 select: 'SUM(payment_amount) as total_income',
-                where: "debit_credit = 'debit' AND MONTH(transaction_date) = MONTH(CURRENT_DATE()) AND YEAR(transaction_date) = YEAR(CURRENT_DATE())"
-            )->first()->total_income ?? 0;
+                where: "debit_credit = 'debit' AND {$currentWhere}"
+            )->first()->total_income ?? 0);
 
-            $totalOutcomeInCurrentMonth = $this->repo->list(
+            $totalOutcomeInCurrentMonth = (float) ($this->repo->list(
                 select: 'SUM(payment_amount) as total_outcome',
-                where: "debit_credit = 'credit' AND MONTH(transaction_date) = MONTH(CURRENT_DATE()) AND YEAR(transaction_date) = YEAR(CURRENT_DATE())"
-            )->first()->total_outcome ?? 0;
+                where: "transaction_type = '{$refundType}' AND {$currentWhere}"
+            )->first()->total_outcome ?? 0);
 
-            $totalRefunds = $this->repo->list(
-                select: 'SUM(payment_amount) as total_refunds',
-                where: "transaction_type = '". TransactionType::Refund->value ."' AND MONTH(transaction_date) = MONTH(CURRENT_DATE()) AND YEAR(transaction_date) = YEAR(CURRENT_DATE())"
-            )->first()->total_refunds ?? 0;
+            $totalRefunds = $totalOutcomeInCurrentMonth;
 
             $transactionCount = $this->repo->list(
                 select: 'id',
-                where: "MONTH(transaction_date) = MONTH(CURRENT_DATE()) AND YEAR(transaction_date) = YEAR(CURRENT_DATE())"
+                where: $currentWhere
             )->count();
 
-            $netAmount = $totalIncomeInCurrentMonth - $totalOutcomeInCurrentMonth - $totalRefunds;
+            $prevIncome = (float) ($this->repo->list(
+                select: 'SUM(payment_amount) as total_income',
+                where: "debit_credit = 'debit' AND {$prevWhere}"
+            )->first()->total_income ?? 0);
+
+            $prevOutcome = (float) ($this->repo->list(
+                select: 'SUM(payment_amount) as total_outcome',
+                where: "transaction_type = '{$refundType}' AND {$prevWhere}"
+            )->first()->total_outcome ?? 0);
+
+            $netAmount = $totalIncomeInCurrentMonth - $totalRefunds;
+            $prevNet = $prevIncome - $prevOutcome;
+
+            $incomeGrowth = $prevIncome > 0
+                ? round((($totalIncomeInCurrentMonth - $prevIncome) / $prevIncome) * 100, 2)
+                : ($totalIncomeInCurrentMonth > 0 ? 100.0 : 0.0);
+
+            $outcomeGrowth = $prevOutcome > 0
+                ? round((($totalOutcomeInCurrentMonth - $prevOutcome) / $prevOutcome) * 100, 2)
+                : ($totalOutcomeInCurrentMonth > 0 ? 100.0 : 0.0);
+
+            $refundGrowth = $outcomeGrowth;
+
+            $netGrowth = $prevNet > 0
+                ? round((($netAmount - $prevNet) / $prevNet) * 100, 2)
+                : ($netAmount > 0 ? 100.0 : 0.0);
 
             return generalResponse(
                 message: 'Success',
@@ -143,9 +181,115 @@ class TransactionService
                     'total_refunds' => $totalRefunds,
                     'transaction_count' => $transactionCount,
                     'net_amount' => $netAmount,
-                    'total_payments' => 0
+                    'total_payments' => $transactionCount,
+                    'income_growth' => $incomeGrowth,
+                    'outcome_growth' => $outcomeGrowth,
+                    'refund_growth' => $refundGrowth,
+                    'net_growth' => $netGrowth,
                 ],
             );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Monthly income and outcome trend for the last 12 months.
+     *
+     * @return array<string, mixed>
+     */
+    public function getMonthlyTrend(): array
+    {
+        try {
+            $start = Carbon::now()->subMonths(11)->startOfMonth();
+            $refundType = TransactionType::Refund->value;
+
+            $incomeByMonth = Transaction::query()
+                ->selectRaw("DATE_FORMAT(transaction_date, '%Y-%m') as month_key, SUM(payment_amount) as total")
+                ->where('debit_credit', 'debit')
+                ->where('transaction_date', '>=', $start)
+                ->groupByRaw("DATE_FORMAT(transaction_date, '%Y-%m')")
+                ->pluck('total', 'month_key');
+
+            $outcomeByMonth = Transaction::query()
+                ->selectRaw("DATE_FORMAT(transaction_date, '%Y-%m') as month_key, SUM(payment_amount) as total")
+                ->where('transaction_type', $refundType)
+                ->where('transaction_date', '>=', $start)
+                ->groupByRaw("DATE_FORMAT(transaction_date, '%Y-%m')")
+                ->pluck('total', 'month_key');
+
+            $trend = collect(range(11, 0))->map(function (int $i) use ($incomeByMonth, $outcomeByMonth) {
+                $date = Carbon::now()->subMonths($i);
+                $key = $date->format('Y-m');
+
+                return [
+                    'month' => $date->format('M'),
+                    'income' => (float) ($incomeByMonth[$key] ?? 0),
+                    'outcome' => (float) ($outcomeByMonth[$key] ?? 0),
+                ];
+            });
+
+            return generalResponse('Success', false, $trend->values()->toArray());
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Top income sources ordered by payment amount.
+     *
+     * @return array<string, mixed>
+     */
+    public function getTopSources(): array
+    {
+        try {
+            $data = Transaction::query()
+                ->with('projectDeal:id,name,event_type')
+                ->where('debit_credit', 'debit')
+                ->orderBy('payment_amount', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(fn (Transaction $trx) => [
+                    'name' => $trx->projectDeal?->name ?? '-',
+                    'type' => $trx->projectDeal?->event_type?->label() ?? 'Event',
+                    'amount' => (float) $trx->payment_amount,
+                    'date' => date('d M Y', strtotime($trx->transaction_date)),
+                ]);
+
+            return generalResponse('Success', false, $data->toArray());
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Outstanding invoice summary.
+     *
+     * @return array<string, mixed>
+     */
+    public function getOutstandingData(): array
+    {
+        try {
+            $today = Carbon::today()->toDateString();
+            $in7Days = Carbon::today()->addDays(7)->toDateString();
+            $in30Days = Carbon::today()->addDays(30)->toDateString();
+            $unpaid = InvoiceStatus::Unpaid->value;
+
+            $base = Invoice::query()->where('status', $unpaid);
+
+            $totalOutstanding = (float) (clone $base)->sum('amount');
+            $overdueAmount = (float) (clone $base)->where('payment_due', '<', $today)->sum('amount');
+            $overdueCount = (int) (clone $base)->where('payment_due', '<', $today)->count();
+            $upcoming7Days = (float) (clone $base)->whereBetween('payment_due', [$today, $in7Days])->sum('amount');
+            $upcoming30Days = (float) (clone $base)->whereBetween('payment_due', [$today, $in30Days])->sum('amount');
+
+            return generalResponse('Success', false, [
+                'total_outstanding' => $totalOutstanding,
+                'overdue_amount' => $overdueAmount,
+                'overdue_count' => $overdueCount,
+                'upcoming_7_days' => $upcoming7Days,
+                'upcoming_30_days' => $upcoming30Days,
+            ]);
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
@@ -437,7 +581,8 @@ class TransactionService
         return [];
     }
 
-    protected function generateInvoice(int $id, array $payload, string $filepath, string $cacheKey): string {
+    protected function generateInvoice(int $id, array $payload, string $filepath, string $cacheKey): string
+    {
         return '';
     }
 }

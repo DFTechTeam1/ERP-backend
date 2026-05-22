@@ -4,19 +4,35 @@ namespace App\Actions\Project;
 
 use App\Actions\DefineTaskAction;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
+use Modules\Production\Repository\ProjectRepository;
 
 class FormatBoards
 {
     use AsAction;
 
+    private int $specialPositionid;
+
+    protected function fetchSpecialPosition()
+    {
+        $specialPosition = getSettingByKey('special_production_position');
+        $this->specialPositionid = 0;
+        if ($specialPosition) {
+            $this->specialPositionid = getIdFromUid($specialPosition, new PositionBackup());
+        }
+    }
+
     public function handle(string $projectUid, ?string $filterSearch = '', bool $myTask = false)
     {
+        $this->fetchSpecialPosition();
         $boardRepo = new ProjectBoardRepository;
         $projectPicRepository = new ProjectPersonInChargeRepository;
-        $user = auth()->user();
+        $projectRepo = new ProjectRepository();
+
+        $user = auth()->user()->load('employee');
         $leaderModeller = getSettingByKey('lead_3d_modeller');
         if ($leaderModeller) {
             $leaderModeller = getIdFromUid($leaderModeller, new Employee);
@@ -26,41 +42,50 @@ class FormatBoards
         $employeeId = $user->employee_id ?? 0;
         $superUserRole = isSuperUserRole();
 
-        $relation = [
-            'tasks' => function ($query) use ($filterSearch) {
-                $query->selectRaw('*')
+        $taskRelations = [
+            'revises',
+            'project:id,uid,status',
+            'proofOfWorks',
+            'logs',
+            'board',
+            'pics' => function ($queryPic) {
+                $queryPic->selectRaw('id,project_task_id,employee_id,status')
                     ->with([
-                        'revises',
-                        'project:id,uid,status',
-                        'proofOfWorks',
-                        'logs',
-                        'board',
-                        'pics' => function ($queryPic) {
-                            $queryPic->selectRaw('id,project_task_id,employee_id,status')
-                                ->with([
-                                    'employee' => function ($queryEmployee) {
-                                        $queryEmployee->selectRaw('id,name,email,uid,avatar_color');
-                                    },
-                                    'user:id,employee_id',
-                                ]);
-
-                            // if ($myTask) {
-                            //     $queryPic->whereHas('employee', function ($q) use ($employeeId) {
-                            //         $q->where("id", $employeeId);
-                            //     });
-                            // }
+                        'employee' => function ($queryEmployee) {
+                            $queryEmployee->selectRaw('id,name,email,uid,avatar_color');
                         },
-                        'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
-                        'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
-                        'times:id,project_task_id,employee_id,work_type,time_added',
-                        'times.employee:id,uid,name',
+                        'user:id,employee_id',
                     ]);
+            },
+            'medias:id,project_id,project_task_id,media,display_name,related_task_id,type,updated_at',
+            'times:id,project_task_id,employee_id,work_type,time_added',
+            'times.employee:id,uid,name',
+        ];
+
+        $relation = [
+            'tasks' => function ($query) use ($filterSearch, $taskRelations) {
+                $query->selectRaw('*')
+                    ->where('is_pool_task', false)
+                    ->with($taskRelations);
+
+                if ($filterSearch) {
+                    $query->whereLike('name', "%{$filterSearch}%");
+                }
+            },
+            'poolTasks' => function ($query) use ($filterSearch, $taskRelations) {
+                $query->selectRaw('*')
+                    ->with($taskRelations);
 
                 if ($filterSearch) {
                     $query->whereLike('name', "%{$filterSearch}%");
                 }
             },
         ];
+
+        $projectData = $projectRepo->show(
+            uid: $projectUid,
+            select: 'id,status'
+        );
 
         $data = $boardRepo->list(
             select: 'id,project_id,name,sort,based_board_id',
@@ -104,7 +129,7 @@ class FormatBoards
 
                 unset($outputTask[$keyTask]['time_tracker']);
 
-                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task);
+                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid);
 
                 // check if task already active or not, if not show activating button
                 $isActive = false;
@@ -191,7 +216,28 @@ class FormatBoards
                 $outputTask[$keyTask]['is_active'] = $isActive;
             }
 
-            $out[$keyBoard]['tasks'] = $outputTask;
+            $out[$keyBoard]['tasks'] = array_values($outputTask);
+
+            // pool tasks — already constrained to is_pool_task = true by the relationship
+            $poolOutputTask = [];
+            foreach ($board->poolTasks as $keyTask => $task) {
+                $poolOutputTask[$keyTask] = $task;
+                unset($poolOutputTask[$keyTask]['time_tracker']);
+                $poolOutputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid);
+                $poolOutputTask[$keyTask]['need_user_approval'] = false;
+                $poolOutputTask[$keyTask]['stop_action'] = $task->project->status == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
+                $poolOutputTask[$keyTask]['need_approval_pm'] = false;
+                $poolOutputTask[$keyTask]['time_tracker'] = [];
+                $poolOutputTask[$keyTask]['is_project_pic'] = $isProjectPic;
+                $poolOutputTask[$keyTask]['is_director'] = $isDirector;
+                $poolOutputTask[$keyTask]['is_mine'] = false;
+                $poolOutputTask[$keyTask]['have_permission_to_move_board'] = false;
+                $poolOutputTask[$keyTask]['action_to_complete_task'] = false;
+                $poolOutputTask[$keyTask]['has_task_access'] = false;
+                $poolOutputTask[$keyTask]['is_active'] = false;
+            }
+
+            $out[$keyBoard]['pool_tasks'] = array_values($poolOutputTask);
         }
 
         return $out;

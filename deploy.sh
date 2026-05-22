@@ -10,9 +10,13 @@ php8.2 artisan migrate --force
 # Clear cache
 php8.2 artisan optimize:clear
 # Run necessary commands
-php8.2 artisan app:migrate-invoice-uid
+#php8.2 artisan app:migrate-invoice-uid
+
+# Migrate greatday data
+php artisan app:resync-employee-greatday
+
 php8.2 artisan db:seed --class=RolePermissionSetting --force
-php8.2 artisan db:seed --class=UpdatePriceGuideSetting --force
+#php8.2 artisan db:seed --class=UpdatePriceGuideSetting --force
 php8.2 artisan config:cache
 php8.2 artisan route:cache
 php8.2 artisan view:cache

@@ -5,6 +5,8 @@ namespace Modules\Production\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Hrd\Models\WhatsappGroup;
 use Modules\Production\Database\Factories\ProjectPersonInChargeFactory;
 
 class ProjectPersonInCharge extends Model
@@ -27,6 +29,11 @@ class ProjectPersonInCharge extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(\Modules\Production\Models\Project::class, 'project_id');
+    }
+
+    public function whatsappGroupPic(): HasOne
+    {
+        return $this->hasOne(WhatsappGroup::class, 'employee_id', 'pic_id');
     }
 
     // protected static function newFactory(): ProjectPersonInChargeFactory

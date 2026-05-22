@@ -36,6 +36,7 @@ use App\Services\UserRoleManagement;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -59,8 +60,9 @@ use Modules\Production\Exceptions\SongNotFound;
 use Modules\Production\Jobs\ChangedSongJob;
 use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Jobs\DeleteSongJob;
+use Modules\Production\Jobs\Notification\NewPoolTask;
+use Modules\Production\Jobs\Notification\PickPoolJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
-use Modules\Production\Jobs\RejectDeleteSongJob;
 use Modules\Production\Jobs\RemovePicFromSong;
 use Modules\Production\Jobs\RequestDeleteSongJob;
 use Modules\Production\Jobs\RequestEditSongJob;
@@ -78,6 +80,7 @@ use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
 use Modules\Production\Repository\EntertainmentTaskSongReviseRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
+use Modules\Production\Repository\ProjectLeadRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectReferenceRepository;
 use Modules\Production\Repository\ProjectRepository;
@@ -190,6 +193,8 @@ class ProjectService
 
     private ProjectTaskDeadlineRepository $projectTaskDeadlineRepo;
 
+    private ProjectLeadRepository $projectLeadRepo;
+
     private $nasFolderCreationService;
 
     /**
@@ -242,6 +247,7 @@ class ProjectService
         \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo,
         \App\Services\NasFolderCreationService $nasFolderCreationService,
         ProjectTaskDeadlineRepository $projectTaskDeadlineRepo,
+        ProjectLeadRepository $projectLeadRepo
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -334,6 +340,8 @@ class ProjectService
         $this->nasFolderCreationService = $nasFolderCreationService;
 
         $this->projectTaskDeadlineRepo = $projectTaskDeadlineRepo;
+
+        $this->projectLeadRepo = $projectLeadRepo;
     }
 
     /**
@@ -380,7 +388,7 @@ class ProjectService
             // call nas creation to delete the folder
             $this->nasFolderCreationService->sendRequest(
                 payload: [
-                    "project_id" => $projectId,
+                    'project_id' => $projectId,
                 ],
                 type: 'delete'
             );
@@ -1358,8 +1366,6 @@ class ProjectService
 
     /**
      * Format detail task
-     * 
-     * @return \Modules\Production\Models\ProjectTask
      */
     protected function formattedDetailTask(string $taskUid, string $where = ''): \Modules\Production\Models\ProjectTask
     {
@@ -1662,8 +1668,6 @@ class ProjectService
 
     /**
      * Format single task
-     * @param \Modules\Production\Models\ProjectTask $task
-     * @return \Modules\Production\Models\ProjectTask
      */
     protected function formatSingleTaskPermission(\Modules\Production\Models\ProjectTask $task): \Modules\Production\Models\ProjectTask
     {
@@ -2600,11 +2604,11 @@ class ProjectService
             if (
                 (isset($data['users'])) &&
                 (count($data['users']) > 0) &&
-                !$currentTask->end_date
+                ! $currentTask->end_date
             ) {
                 return errorResponse(message: __('notification.pleaseAddDeadlineBeforeContinue'));
             }
-            
+
             $taskId = $currentTask->id;
 
             $notifiedNewTask = [];
@@ -2659,7 +2663,7 @@ class ProjectService
 
                     // if task status is InProgress, insert new pic to workstate table
                     // // only insert new pic if combination of task_id and employee_id not exists
-                    if (!$isForProjectManager) {
+                    if (! $isForProjectManager) {
                         $checkWorkState = $this->projectTaskWorkStateRepo->show(
                             uid: 'id',
                             select: 'id',
@@ -2673,7 +2677,7 @@ class ProjectService
                                 where: "task_id = {$currentTask->id} AND complete_at IS NULL"
                             );
                             $startTime = $currentWorkStateData ? $currentWorkStateData->started_at : Carbon::now();
-    
+
                             $this->projectTaskWorkStateRepo->store([
                                 'employee_id' => $employeeId,
                                 'task_id' => $currentTask->id,
@@ -2712,7 +2716,7 @@ class ProjectService
                 }
 
                 // if currentTask status is null, than now we have pic, than change to waiting approval
-                if ((!$currentTask->status && $lastPic->count() > 0) || $currentTask->status == TaskStatus::Completed->value) {
+                if ((! $currentTask->status && $lastPic->count() > 0) || $currentTask->status == TaskStatus::Completed->value) {
                     $payloadStatus['status'] = TaskStatus::WaitingApproval->value;
                 }
 
@@ -2721,7 +2725,9 @@ class ProjectService
                     $payloadStatus['status'] = TaskStatus::CheckByPm->value;
                 }
 
-                if (!empty($payloadStatus)) {
+                $payloadStatus['is_pool_task'] = false;
+
+                if (! empty($payloadStatus)) {
                     $this->taskRepo->update($payloadStatus, $taskUid);
                 }
             }
@@ -2733,7 +2739,7 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskUid);
 
-            if (!$isForProjectManager) {
+            if (! $isForProjectManager) {
                 $this->assignPicToCurrentTaskDeadline(task: $task);
             }
 
@@ -2868,7 +2874,7 @@ class ProjectService
         try {
             $task = $this->taskRepo->show($taskUid, 'id,project_id', [
                 'project:id,uid',
-                'workStates'
+                'workStates',
             ]);
 
             $projectUid = $task->project->uid;
@@ -2966,9 +2972,8 @@ class ProjectService
 
     /**
      * Create new record for project task deadline
-     * @param ProjectTask $task
-     * @param array<string, string> $payload
-     * @return void
+     *
+     * @param  array<string, string>  $payload
      */
     public function storeTaskDeadline(ProjectTask $task, array $payload): void
     {
@@ -2991,21 +2996,21 @@ class ProjectService
                 'deadline' => $deadline,
                 'is_first_deadline' => $checkDeadline ? false : true,
                 'due_reason' => $checkDeadline && isset($payload['reason_id']) ? $payload['reason_id'] : null,
-                'custom_reason' => $checkDeadline && 
+                'custom_reason' => $checkDeadline &&
                                             (
-                                                (isset($payload['custom_reason'])) && 
-                                                (!empty($payload['custom_reason']))
-                                            ) 
-                                    ? $payload['custom_reason'] 
+                                                (isset($payload['custom_reason'])) &&
+                                                (! empty($payload['custom_reason']))
+                                            )
+                                    ? $payload['custom_reason']
                                     : null,
-                'updated_by' => Auth::id()
+                'updated_by' => Auth::id(),
             ]);
         }
     }
 
     /**
      * Assign or remove pic from project task deadline
-     * @param ProjectTask $task
+     *
      * @return void
      */
     public function assignPicToCurrentTaskDeadline(ProjectTask $task)
@@ -3026,7 +3031,7 @@ class ProjectService
                 'employee_id' => $newPicId,
                 'deadline' => $task->end_date, // deadline will be the same as task end_date
                 'is_first_deadline' => true,
-                'updated_by' => Auth::id()
+                'updated_by' => Auth::id(),
             ]);
         }
 
@@ -3035,6 +3040,55 @@ class ProjectService
         foreach ($removedPicIds as $removedPicId) {
             $this->projectTaskDeadlineRepo->delete(where: "project_task_id = {$task->id} AND employee_id = {$removedPicId} AND actual_finish_time IS NULL", id: 0);
         }
+    }
+
+    protected function mainStoreTask(ProjectTask $task, int $boardId, mixed $board, bool $isForLeadModeller, array $pics = [])
+    {
+        // task log
+        $this->loggingTask([
+            'board_id' => $boardId,
+            'board' => $board,
+            'task' => $task,
+        ], 'addNewTask');
+
+        // assign pic and record work timing if needed
+        if (! empty($pics)) {
+            $this->assignMemberToTask(
+                data: [
+                    'users' => $pics,
+                    'removed' => [],
+                ],
+                taskUid: $task->uid,
+                needChangeTaskStatus: $isForLeadModeller ? false : true
+            );
+            // send notification if needed
+
+        }
+
+        // add image attachment if needed
+        if (! empty($data['media'])) {
+            $this->uploadTaskMedia(
+                [
+                    'media' => $data['media'],
+                ],
+                $task->id,
+                $board->project_id,
+                $board->project->uid,
+                $task->uid
+            );
+        }
+
+        $this->formattedDetailTask($task->uid);
+
+        // only record a task deadline when user add end date and assign pic on it
+        // if (
+        //     (isset($data['end_date'])) &&
+        //     ($data['end_date']) &&
+        //     (isset($data['pic'])) &&
+        //     (!empty($data['pic']))
+        // ) {
+        //     $this->storeTaskDeadline(task: $task, payload: collect($data)->only(['end_date'])->toArray());
+        // }
     }
 
     /**
@@ -3076,40 +3130,47 @@ class ProjectService
             $taskStore = $this->taskRepo->store(collect($data)->except(['pic', 'media'])->toArray());
 
             // task log
-            $this->loggingTask([
-                'board_id' => $boardId,
-                'board' => $board,
-                'task' => $taskStore,
-            ], 'addNewTask');
+            $this->mainStoreTask(
+                task: $taskStore,
+                boardId: $boardId,
+                board: $board,
+                isForLeadModeller: $isForLeadModeller,
+                pics: isset($data['pic']) ? $data['pic'] : []
+            );
+            // $this->loggingTask([
+            //     'board_id' => $boardId,
+            //     'board' => $board,
+            //     'task' => $taskStore,
+            // ], 'addNewTask');
 
-            // assign pic and record work timing if needed
-            if (! empty($data['pic'])) {
-                $this->assignMemberToTask(
-                    data: [
-                        'users' => $data['pic'],
-                        'removed' => [],
-                    ],
-                    taskUid: $taskStore->uid,
-                    needChangeTaskStatus: $isForLeadModeller ? false : true
-                );
-                // send notification if needed
+            // // assign pic and record work timing if needed
+            // if (! empty($data['pic'])) {
+            //     $this->assignMemberToTask(
+            //         data: [
+            //             'users' => $data['pic'],
+            //             'removed' => [],
+            //         ],
+            //         taskUid: $taskStore->uid,
+            //         needChangeTaskStatus: $isForLeadModeller ? false : true
+            //     );
+            //     // send notification if needed
 
-            }
+            // }
 
-            // add image attachment if needed
-            if (! empty($data['media'])) {
-                $this->uploadTaskMedia(
-                    [
-                        'media' => $data['media'],
-                    ],
-                    $taskStore->id,
-                    $board->project_id,
-                    $board->project->uid,
-                    $taskStore->uid
-                );
-            }
+            // // add image attachment if needed
+            // if (! empty($data['media'])) {
+            //     $this->uploadTaskMedia(
+            //         [
+            //             'media' => $data['media'],
+            //         ],
+            //         $taskStore->id,
+            //         $board->project_id,
+            //         $board->project->uid,
+            //         $taskStore->uid
+            //     );
+            // }
 
-            $task = $this->formattedDetailTask($taskStore->uid);
+            // $this->formattedDetailTask($taskStore->uid);
 
             // only record a task deadline when user add end date and assign pic on it
             // if (
@@ -3140,13 +3201,242 @@ class ProjectService
         }
     }
 
+    private function fetchProjectForWhatsappNotification(int $projectId)
+    {
+        return $this->repo->show(
+            uid: '',
+            select: 'id,name',
+            where: 'id = '.$projectId,
+            relation: [
+                'personInCharges:id,pic_id,project_id',
+                'personInCharges.employee:id,phone,is_phone_verified',
+                'personInCharges.whatsappGroupPic:id,employee_id,group_id',
+            ]
+        );
+    }
+
+    /**
+     * Store a pool task on the selected board.
+     *
+     * Pool tasks have no PIC assigned; employees can later pick them up.
+     * Required: name. Optional: end_date, description, media (images/pdf).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function storePoolTask(array $data, int $boardId): array
+    {
+        DB::beginTransaction();
+        try {
+            $leadModeller = $this->generalService->getSettingByKey('lead_3d_modeller');
+            $isForLeadModeller = (isset($data['pic'])) && ($data['pic'][0] == $leadModeller) ? true : false;
+
+            $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid', 'project.personInCharges']);
+
+            $project = $this->fetchProjectForWhatsappNotification($board->project_id);
+
+            $taskPayload = [
+                'name' => $data['name'],
+                'project_id' => $board->project_id,
+                'project_board_id' => $boardId,
+                'start_date' => date('Y-m-d'),
+                'status' => ! isset($data['pic']) || (isset($data['pic']) && count($data['pic']) == 0) ? null : ($isForLeadModeller ? TaskStatus::WaitingDistribute->value : TaskStatus::WaitingApproval->value),
+                'end_date' => ! empty($data['end_date']) ? date('Y-m-d H:i:s', strtotime($data['end_date'])) : null,
+                'description' => $data['description'] ?? null,
+                'is_pool_task' => isset($data['pic']) && count($data['pic']) > 0 ? false : true,
+                'is_pool_type' => isset($data['pic']) && count($data['pic']) > 0 ? false : true,
+            ];
+
+            $task = $this->taskRepo->store($taskPayload);
+
+            if (! empty($data['media'])) {
+                $this->uploadTaskMedia(
+                    ['media' => $data['media']],
+                    $task->id,
+                    $board->project_id,
+                    $board->project->uid,
+                    $task->uid
+                );
+            }
+
+            // validate pic
+            $usingPic = false;
+            $mentions = [];
+            if (isset($data['pic']) && count($data['pic']) > 0) {
+                $this->mainStoreTask(
+                    task: $task,
+                    boardId: $boardId,
+                    board: $board,
+                    isForLeadModeller: $isForLeadModeller,
+                    pics: isset($data['pic']) ? $data['pic'] : []
+                );
+
+                $usingPic = true;
+
+                // Fetch pic phone
+                foreach ($data['pic'] as $dataPic) {
+                    $employeePic = $this->employeeRepo->show(
+                        uid: $dataPic,
+                        select: 'id,phone,is_phone_verified',
+                    );
+
+                    if ($employeePic->is_phone_verified) {
+                        $mentions[] = $employeePic->phone;
+                    }
+                }
+            }
+
+            $currentData = $this->detailCacheAction->handle(
+                projectUid: $board->project->uid,
+                forceUpdateAll: true
+            );
+
+            NewPoolTask::dispatch(
+                $usingPic,
+                $mentions,
+                $task,
+                $project,
+                $board->name
+            )->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.taskCreated'),
+                false,
+                $currentData
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Employee picks a pool task, immediately becoming the PIC and starting work.
+     *
+     * Flow:
+     * 1. Validate the task is still in the pool (is_pool_task = true, no existing PIC)
+     * 2. Assign the authenticated user as PIC with Approved status
+     * 3. Move task out of pool (is_pool_task = false) and set status to OnProgress
+     * 4. Record Assigned + OnProgress work time entries
+     * 5. Create a work state record so time-tracking begins immediately
+     *
+     * @return array<string, mixed>
+     */
+    public function pickPoolTask(string $projectUid, string $taskUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = Auth::user();
+            $employeeId = $user->employee_id;
+
+            // Lock the row for the duration of the transaction so concurrent
+            // picks from employees in the same position cannot both pass the
+            // availability checks and double-assign the same task.
+            $task = ProjectTask::query()
+                ->selectRaw('id,project_id,is_pool_task,end_date,status,name')
+                ->where('uid', $taskUid)
+                ->with([
+                    'project:id,uid',
+                    'pics:id,project_task_id,employee_id',
+                ])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $task || ! $task->is_pool_task) {
+                return errorResponse(message: __('notification.taskIsNotPoolTask'));
+            }
+
+            if ($task->pics->isNotEmpty()) {
+                return errorResponse(message: __('notification.taskAlreadyPicked'));
+            }
+
+            $project = $this->fetchProjectForWhatsappNotification($task->project_id);
+
+            $actor = $this->employeeRepo->show(
+                uid: '',
+                select: 'id,phone,is_phone_verified,nickname,name',
+                where: "id = {$employeeId}"
+            );
+
+            $taskId = $task->id;
+
+            // record in pic history
+            $this->taskPicHistory->store([
+                'project_id' => $task->project_id,
+                'project_task_id' => $taskId,
+                'employee_id' => $employeeId,
+            ]);
+
+            // assign employee as approved PIC immediately
+            $this->taskPicRepo->store([
+                'project_task_id' => $taskId,
+                'employee_id' => $employeeId,
+                'status' => TaskPicStatus::Approved->value,
+                'assigned_at' => Carbon::now(),
+            ]);
+
+            // move task out of the pool and set to on progress
+            $this->taskRepo->update([
+                'is_pool_task' => false,
+                'status' => TaskStatus::OnProgress->value,
+            ], $taskUid);
+
+            // record work time: assigned then immediately on progress
+            $this->setTaskWorkingTime($taskId, $employeeId, \App\Enums\Production\WorkType::Assigned->value);
+            $this->setTaskWorkingTime($taskId, $employeeId, \App\Enums\Production\WorkType::OnProgress->value);
+
+            // start the work state so time-tracking begins now
+            $this->projectTaskWorkStateRepo->store([
+                'employee_id' => $employeeId,
+                'task_id' => $taskId,
+                'started_at' => Carbon::now(),
+            ]);
+
+            $this->loggingTask([
+                'task_id' => $taskId,
+                'employee_uid' => $user->employee->uid ?? '',
+            ], 'assignMemberTask');
+
+            $updatedTask = $this->formattedDetailTask($taskUid);
+
+            // sync deadline if the task already has an end date
+            $this->assignPicToCurrentTaskDeadline(task: $updatedTask);
+
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid),
+            ]);
+
+            // Send whatsapp notification
+            PickPoolJob::dispatch(
+                $task, $project, $actor
+            )->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.taskPickedSuccessfully'),
+                false,
+                [
+                    'task' => $updatedTask,
+                    'full_detail' => $currentData,
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
     /**
      * Distribute task to modeler teams
-     * @param array $payload with these following structure
-     *                       - array <string> $teams
-     *                       - int $assign_to_me (1|0)
-     * @param string $projectUid
-     * @param string $taskUid
+     *
+     * @param  array  $payload  with these following structure
+     *                          - array <string> $teams
+     *                          - int $assign_to_me (1|0)
      * @return array<string, mixed>
      */
     public function distributeModellerTask(array $payload, string $projectUid, string $taskUid): array
@@ -3173,7 +3463,7 @@ class ProjectService
             }
 
             $payloadUpdateTask = [
-                'is_modeler_task' => true
+                'is_modeler_task' => true,
             ];
 
             if ($payload['assign_to_me'] == 1) { // auto change status to on progress
@@ -3742,11 +4032,6 @@ class ProjectService
 
     /**
      * Update current task deadline
-     * 
-     * @param array $data
-     * @param string $projectUid
-     * @param string $taskUid
-     * @return array
      */
     public function updateDeadline(array $data, string $projectUid, string $taskUid): array
     {
@@ -4052,7 +4337,7 @@ class ProjectService
             $task = $this->taskRepo->show(uid: $taskUid, select: 'id,status,project_id', relation: [
                 'workStates:id,task_id',
                 'project:id',
-                'project.personInCharges:id,project_id,pic_id'
+                'project.personInCharges:id,project_id,pic_id',
             ]);
             $taskId = $task->id;
 
@@ -4143,9 +4428,7 @@ class ProjectService
     /**
      * Function to upload proof of work, and change task to next task and assign PM to check employee work
      *
-     * @param array<string, mixed> $data
-     * @param string $projectUid
-     * @param string $taskUid
+     * @param  array<string, mixed>  $data
      * @param  bool  $useDefaultImage  -> this parameter will be TRUE IF PM / ROOT / DIRECTOR force complete the task before completing the project
      * @return array<string, mixed>
      */
@@ -4235,11 +4518,6 @@ class ProjectService
 
     /**
      * Change task board
-     * @param array $data
-     * @param string $projectUid
-     * @param string $nextTaskStatus
-     * @param bool $setCurrentPic
-     * @return void
      */
     protected function changeTaskBoardProcess(array $data, string $projectUid, string $nextTaskStatus = '', bool $setCurrentPic = false): void
     {
@@ -4442,7 +4720,7 @@ class ProjectService
     {
         if (config('app.env') != 'testing') {
             $type .= 'Log';
-    
+
             return $this->{$type}($payload);
         }
     }
@@ -4774,8 +5052,6 @@ class ProjectService
      * Get all assigned task
      * If admin is logged in, show all task from all employee
      * If employee is logged in, only show assigned task
-     * 
-     * @return array
      */
     public function getAllTasks(): array
     {
@@ -4871,17 +5147,17 @@ class ProjectService
                 }
             }
 
-            if (! empty(request("pics"))) {
+            if (! empty(request('pics'))) {
                 $pics = explode(',', request('pics'));
-                $picIds = "'" . implode("','", $pics) . "'";
+                $picIds = "'".implode("','", $pics)."'";
                 $employeeList = $this->employeeRepo->list(
                     select: 'id',
-                    where: "uid IN (" . $picIds . ")"
+                    where: 'uid IN ('.$picIds.')'
                 );
                 $employeeIds = $employeeList->pluck('id')->join(',');
                 $whereHas[] = [
                     'relation' => 'pics',
-                    'query' => 'employee_id IN (' . $employeeIds . ')'
+                    'query' => 'employee_id IN ('.$employeeIds.')',
                 ];
             }
 
@@ -5071,9 +5347,6 @@ class ProjectService
      * Function to approve task based on authenticate user
      *
      * @param string @projectUid
-     * @param string $taskUid
-     * @param bool $isFromTelegram
-     * @return array
      */
     public function approveTask(string $projectUid, string $taskUid, bool $isFromTelegram = false): array
     {
@@ -5283,9 +5556,7 @@ class ProjectService
 
     /**
      * Start task after being hold
-     * 
-     * @param string $projectUid
-     * @param string $taskUid
+     *
      * @return array<string, mixed>
      */
     public function startTask(string $projectUid, string $taskUid): array
@@ -5304,7 +5575,7 @@ class ProjectService
                 select: 'id,employee_id',
                 where: "task_id = {$taskId} AND complete_at IS NULL",
                 relation: [
-                    'employee:id,nickname'
+                    'employee:id,nickname',
                 ]
             );
 
@@ -5347,9 +5618,8 @@ class ProjectService
 
     /**
      * Hold the task
-     * @param string $projectUid
-     * @param string $taskUid
-     * @param array<string, string> $payload
+     *
+     * @param  array<string, string>  $payload
      * @return array<string, mixed>
      */
     public function holdTask(string $projectUid, string $taskUid, array $payload = []): array
@@ -5370,7 +5640,7 @@ class ProjectService
                 select: 'id,employee_id',
                 where: "task_id = {$taskId} AND complete_at IS NULL",
                 relation: [
-                    'employee:id,nickname'
+                    'employee:id,nickname',
                 ]
             );
 
@@ -5382,7 +5652,7 @@ class ProjectService
                         'task_id' => $taskId,
                         'work_state_id' => $workState->id,
                         'holded_at' => Carbon::now(),
-                        'employee_id' => $workState->employee_id
+                        'employee_id' => $workState->employee_id,
                     ]
                 );
 
@@ -5420,11 +5690,7 @@ class ProjectService
 
     /**
      * Complete the task
-     * 
-     * @param string $projectUid
-     * @param string $taskUid
-     * @param ?object $employee
-     * @param bool $sendNotification
+     *
      * @return array<mixed>
      */
     protected function mainMarkAsCompleted(string $projectUid, string $taskUid, ?object $employee = null, bool $sendNotification = true)
@@ -5438,7 +5704,7 @@ class ProjectService
         $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
         // this variable is to alert current pics which is the worker
-        $currentTaskData = $this->taskRepo->show($taskUid, 'id,current_pics,current_board,project_board_id');
+        $currentTaskData = $this->taskRepo->show($taskUid, 'id,current_pics,current_board,project_board_id,is_pool_type');
         $currentPics = json_decode($currentTaskData->current_pics, true) ?? [];
         $currentPicIds = [];
         foreach ($currentPics as $currentPic) {
@@ -5493,10 +5759,23 @@ class ProjectService
         );
 
         // update task status
-        $this->taskRepo->update([
+        // $statusUpdate = $currentTaskData->is_pool_type
+        //     ? \App\Enums\Production\TaskStatus::OnProgress->value
+        //     : \App\Enums\Production\TaskStatus::Completed->value;
+
+        $updatePayload = [
             'status' => \App\Enums\Production\TaskStatus::Completed->value,
-            'end_date' => null // reset end date data
-        ], $taskUid);
+            'end_date' => null,
+        ];
+
+        // if ($currentTaskData->is_pool_type) {
+        //     // re-pool the task so employees in the next position can pick it up
+        // }
+
+        // V2: Always set pool task to true, every complted task, will be on pool section in next board
+        $updatePayload['is_pool_task'] = true;
+
+        $this->taskRepo->update($updatePayload, $taskUid);
 
         $payloadOutput = [];
         if ($this->telegramEmployee) {
@@ -5521,7 +5800,7 @@ class ProjectService
             data: [
                 'complete_at' => Carbon::now(),
             ],
-            where: "task_id = {$task->id} AND employee_id IN (". implode(',', $currentPics) .") AND complete_at IS NULL"
+            where: "task_id = {$task->id} AND employee_id IN (".implode(',', $currentPics).') AND complete_at IS NULL'
         );
 
         // mark current approval state as complete
@@ -5545,10 +5824,7 @@ class ProjectService
      * Project task status will be complete (refer to \App\Enums\Production\TaskStatus.php)
      * Set working time to finish (refer to \App\Enums\Production\WorkType.php)
      * Detach ALL PIC
-     * 
-     * @param string $projectUid
-     * @param string $taskUid
-     * @param ?object $employee
+     *
      * @return array<string, mixed>
      */
     public function markAsCompleted(string $projectUid, string $taskUid, ?object $employee = null): array
@@ -6052,7 +6328,7 @@ class ProjectService
     /**
      * Get team who worked on selected project.
      * Just return teams based on authenticated user
-     * @param string $projectUid
+     *
      * @return array<string, mixed>
      */
     public function getTaskTeamForReview(string $projectUid): array
@@ -6068,7 +6344,7 @@ class ProjectService
             select: 'id,uid,event_type,classification,name,project_date,project_class_id',
             relation: [
                 'projectClass:id,maximal_point,base_point,point_2_team,point_3_team,point_4_team,point_5_team',
-                'personInCharges:id,project_id,pic_id'
+                'personInCharges:id,project_id,pic_id',
             ]
         );
 
@@ -6093,8 +6369,8 @@ class ProjectService
                     [
                         'relation' => 'task',
                         'query' => '',
-                        'type' => 'plain'
-                    ]
+                        'type' => 'plain',
+                    ],
                 ]
             );
 
@@ -6156,7 +6432,7 @@ class ProjectService
                 'max_point_reached' => false,
                 'maximum_collaboration_point' => $maxCollaborationPoint,
             ]
-            
+
         );
 
         // $histories = $this->taskPicHistory->list('DISTINCT project_id,project_task_id,employee_id', 'project_id = '.$projectId, ['employee:id,name,employee_id,uid,nickname']);
@@ -6233,13 +6509,13 @@ class ProjectService
             $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
 
             $payloadProject = [
-                'status' => \App\Enums\Production\ProjectStatus::PartialComplete->value
+                'status' => \App\Enums\Production\ProjectStatus::PartialComplete->value,
             ];
             if (! empty($data['points'])) {
                 // Separate special and regular employees
                 $specialEmployees = [];
                 $regularEmployees = [];
-                
+
                 foreach ($data['points'] as $point) {
                     if (isset($point['is_special_employee']) && $point['is_special_employee'] == 1) {
                         $specialEmployees[] = $point;
@@ -6247,9 +6523,9 @@ class ProjectService
                         $regularEmployees[] = $point;
                     }
                 }
-                
+
                 // Handle special employees (with accumulation)
-                if (!empty($specialEmployees)) {
+                if (! empty($specialEmployees)) {
                     $recordPoint = PointRecord::run(
                         ['points' => $specialEmployees],
                         $projectUid,
@@ -6257,20 +6533,20 @@ class ProjectService
                         false
                     );
 
-                    if (!$recordPoint) {
+                    if (! $recordPoint) {
                         return errorResponse('Failed to record points');
                     }
                 }
-                
+
                 // Handle regular employees (normal flow)
-                if (!empty($regularEmployees)) {
+                if (! empty($regularEmployees)) {
                     $recordPoint = PointRecord::run(
                         ['points' => $regularEmployees],
                         $projectUid,
                         'production'
                     );
 
-                    if (!$recordPoint) {
+                    if (! $recordPoint) {
                         return errorResponse('Failed to record points');
                     }
                 }
@@ -6729,10 +7005,6 @@ class ProjectService
     /**
      * Validate if pic still has task in selected project
      * Failed if return FALSE
-     *
-     * @param array $picList
-     * @param integer $projectId
-     * @return boolean
      */
     public function validatePicHasTask(array $picList, int $projectId): bool
     {
@@ -6746,31 +7018,31 @@ class ProjectService
         if ($tasks->count() > 0) {
             foreach ($picList as $list) {
                 $employeeId = getIdFromUid($list, new \Modules\Hrd\Models\Employee);
-    
+
                 // Get team memaber of employeeId
                 $teamMembers = $this->employeeRepo->list(
                     select: 'id',
                     where: "boss_id = {$employeeId}"
                 );
                 $teamMemberIds = $teamMembers->pluck('id')->toArray();
-                
+
                 // First, check employee_id in project_task_pics table
                 $taskPicCount = $this->taskPicRepo->show(
                     id: 0,
                     select: 'id',
-                    where: "employee_id IN (".implode(',', $teamMemberIds).") and project_task_id IN (".implode(',', $taskIds).")",
+                    where: 'employee_id IN ('.implode(',', $teamMemberIds).') and project_task_id IN ('.implode(',', $taskIds).')',
                 );
-                
+
                 if ($taskPicCount) {
                     return false;
                 }
-    
+
                 // Check in employee id in current_pics of project_tasks table. current_pics will have value [12,34,56]
                 $taskCurrentPicCount = \Modules\Production\Models\ProjectTask::whereRaw(
                     "project_id = {$projectId} AND JSON_CONTAINS(current_pics, ?)",
                     [json_encode($teamMemberIds)]
                 )->count();
-    
+
                 if ($taskCurrentPicCount > 0) {
                     return false;
                 }
@@ -6779,7 +7051,7 @@ class ProjectService
                 $employeeTaskStateCount = $this->employeeTaskStateRepo->show(
                     uid: 'id',
                     select: 'id',
-                    where: "employee_id IN (".implode(',', $teamMemberIds).") and project_id = {$projectId}",
+                    where: 'employee_id IN ('.implode(',', $teamMemberIds).") and project_id = {$projectId}",
                 );
 
                 if ($employeeTaskStateCount) {
@@ -8921,21 +9193,42 @@ class ProjectService
         try {
             $user = Auth::user();
 
-            $haveInteractive = (isset($payload['interactive_area'])) && (!empty($payload['interactive_area'])) ? true : false;
+            $haveInteractive = (isset($payload['interactive_area'])) && (! empty($payload['interactive_area'])) ? true : false;
 
             // define published_at and published_by
             $projectDealPayload = collect($payload)
-                ->except(['marketing_id', 'quotation', 'with_accommodation']);
+                ->except(['marketing_id', 'quotation', 'with_accommodation', 'lead_uid']);
             if ($payload['status'] == ProjectDealStatus::Final->value) {
                 $projectDealPayload = $projectDealPayload->merge([
                     'published_at' => Carbon::now(),
-                    'published_by' => $user->id
+                    'published_by' => $user->id,
                 ]);
+            }
+
+            $isFromLead = (isset($payload['lead_uid']) && !empty($payload['lead_uid'])) ? true : false;
+
+            if ($this->projectDealRepo->isExists($payload['name'], $payload['project_date'])) {
+                return errorResponse(__('notification.projectDealIsExists'));
+            }
+
+            if ($this->repo->isExists($payload['name'], $payload['project_date'])) {
+                return errorResponse(__('notification.projectIsExists'));
             }
 
             $project = $this->projectDealRepo->store(
                 $projectDealPayload->toArray()
             );
+
+            // If lead Uid is exists, update the lead data to be connected with this deal
+            if ($isFromLead) {
+                $this->projectLeadRepo->update(
+                    data: [
+                        'skip_check' => true,
+                        'project_deal_id' => $project->id
+                    ],
+                    id: $payload['lead_uid']
+                );
+            }
 
             // insert project details marketing
             $project->marketings()->createMany(
@@ -8986,6 +9279,7 @@ class ProjectService
 
                     if ($interactiveRequest['error']) {
                         DB::rollBack();
+
                         return errorResponse($interactiveRequest['message']);
                     }
                 }
@@ -8997,9 +9291,9 @@ class ProjectService
                 // call NAS service
                 $queueNasCreated = $this->nasFolderCreationService->sendRequest(
                     payload: [
-                        "project_id" => $realProject->id,
-                        "project_name" => $realProject->name,
-                        "project_date" => $realProject->project_date,
+                        'project_id' => $realProject->id,
+                        'project_name' => $realProject->name,
+                        'project_date' => $realProject->project_date,
                     ]
                 );
                 if (! $queueNasCreated) {
@@ -9376,9 +9670,6 @@ class ProjectService
     /**
      * Record the work state of a task.
      * This function will create record in the intr_project_task_pic_workstates table
-     * 
-     * @param \Modules\Production\Models\ProjectTask $task
-     * @return void
      */
     public function recordWorkState(\Modules\Production\Models\ProjectTask $task): void
     {
@@ -9437,15 +9728,12 @@ class ProjectService
 
     /**
      * Mark deadline as complete
-     * 
-     * @param ProjectTask $task
-     * @return void
      */
     protected function recordDeadlineAsFinish(ProjectTask $task): void
     {
         $this->projectTaskDeadlineRepo->update(
             data: [
-                'actual_finish_time' => Carbon::now()
+                'actual_finish_time' => Carbon::now(),
             ],
             where: "project_task_id = {$task->id} AND actual_finish_time IS NULL"
         );
@@ -9453,9 +9741,6 @@ class ProjectService
 
     /**
      * Calculate prorate point based on project class and number of pic
-     * @param  array  $payload 
-     * @param  string  $projectUid
-     * @return array
      */
     public function calculateProratePoint(array $payload, string $projectUid): array
     {
@@ -9469,7 +9754,7 @@ class ProjectService
                 relation: [
                     'personInCharges:id,project_id,pic_id',
                     'personInCharges.employee:id,name',
-                    'projectClass'
+                    'projectClass',
                 ]
             );
 
@@ -9526,10 +9811,6 @@ class ProjectService
 
     /**
      * Reject delete song request
-     *
-     * @param string $projectUid
-     * @param string $songUid
-     * @return array
      */
     public function rejectDeleteSong(string $projectUid, string $songUid): array
     {
@@ -9579,9 +9860,39 @@ class ProjectService
     public function searchProjectsByNameAndIdentifier(string $search): array
     {
         try {
+            $user = $this->userRepo->detail(id: Auth::id(), select: 'id,email,employee_id', relation: [
+                'employee:id,user_id,boss_id'
+            ]);
+            $isProjectManager = $user->hasRole(BaseRole::ProjectManager->value);
+            $isProjectManagerAdmin = $user->hasRole(BaseRole::ProjectManagerAdmin->value);
+            $isRoot = $user->hasRole(BaseRole::Root->value);
+            $isProduction = $user->hasRole(BaseRole::Production->value);
+            
+            // Build where has
+            $whereHas = [];
+            if (! $isRoot && ! $isProjectManagerAdmin) {
+                if ($isProjectManager) {
+                    $whereHas[] = [
+                        'relation' => 'personInCharges',
+                        'query' => 'pic_id = '.$user->employee_id,
+                    ];
+
+                }
+
+                if ($isProduction && $user->employee) {
+                    $whereHas[] = [
+                        'relation' => 'personInCharges',
+                        'query' => 'pic_id = '.$user->employee->boss_id,
+                    ];
+                }
+            }
+
+            $where = "(name LIKE '%{$search}%' OR identifier_id LIKE '%{$search}%')";
+            
             $projects = $this->repo->list(
                 select: 'id,name,uid,identifier_id,project_class_id,status,project_date',
-                where: "name LIKE '%{$search}%' OR identifier_id LIKE '%{$search}%'",
+                where: $where,
+                whereHas: $whereHas,
                 relation: [
                     'projectClass:id,name,color',
                     'personInCharges:id,project_id,pic_id',
@@ -9605,7 +9916,7 @@ class ProjectService
                     'event_class_color' => $project->projectClass ? $project->projectClass->color : null,
                     'status' => $project->status_text,
                     'status_color' => $project->status_color,
-                    'pic' => $picName
+                    'pic' => $picName,
                 ];
             }
 

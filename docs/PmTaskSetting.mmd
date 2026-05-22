@@ -1,0 +1,88 @@
+flowchart TD
+
+    %% ─────────────────────────────────────────
+    %% SETTINGS HIERARCHY
+    %% ─────────────────────────────────────────
+
+    SYS([System Level\nHard Rules\ncannot be changed by anyone])
+    PM([PM Level\nPer-project overrides\nwithin system boundaries])
+    MEMBER([Member Level\nno setting control])
+
+    SYS -->|overridden within bounds by| PM
+    PM -->|enforced on| MEMBER
+
+    %% ─────────────────────────────────────────
+    %% SYSTEM LEVEL RULES
+    %% ─────────────────────────────────────────
+
+    SYS --> S1["task_name is ALWAYS mandatory\ncannot be removed from template"]
+    SYS --> S2["task_name minimum length: 5 characters"]
+    SYS --> S3["target_board is ALWAYS mandatory\nfor PM pool tasks and PM assigned tasks"]
+    SYS --> S4["PM notification is ALWAYS ON\n• member creates task\n• member takes pool task\n• stale pool task alert"]
+    SYS --> S5["Each project ALWAYS has exactly one PM\nproject cannot exist without PM"]
+    SYS --> S6["Member task limit range: 1 – 20\nPM cannot set outside this range"]
+    SYS --> S7["Task limit counts: uncompleted tasks only\nper project, per member\nPM-created tasks excluded from count"]
+    SYS --> S8["Completing a task frees one slot\nin member task limit counter"]
+    SYS --> S9["member.position must match\ntask.target_board to claim pool task\nenforced on backend regardless of UI"]
+
+    %% ─────────────────────────────────────────
+    %% PM LEVEL SETTINGS
+    %% ─────────────────────────────────────────
+
+    PM --> P1["max_member_task_limit\ndefault: 20 | range: 1–20\nScope: per project"]
+    PM --> P2["auto_active_on_member_create\ndefault: true\ntrue = task active immediately\nfalse = task waits PM approval"]
+    PM --> P3["stale_pool_task_alert_days\ndefault: 3 days\n0 = disabled\nnotify PM if pool task unclaimed > N days"]
+    PM --> P4["task_form_template\ndefault fields: task_name only\nPM can ADD fields\nPM can set each added field as mandatory or optional\nPM cannot remove or modify task_name field"]
+    PM --> P5["member_can_create_task\ndefault: true\ntrue = member can self-create\nfalse = only PM can create tasks"]
+    PM --> P6["member_create_board_restriction\ndefault: own board only\nalways: member can only create\non boards matching their position"]
+
+    %% ─────────────────────────────────────────
+    %% TEMPLATE FIELD SCHEMA
+    %% ─────────────────────────────────────────
+
+    P4 --> TF[Task Form Template Fields]
+    TF --> TF1["task_name\ntype: text\nmandatory: ALWAYS true\nlock: cannot edit or delete"]
+    TF --> TF2["[PM custom field]\ntype: text / number / date\n/ dropdown / checkbox\nmandatory: PM decides\ncan be added or removed by PM"]
+    TF --> TF3["NOTE: template changes apply\nto NEW tasks only\nexisting tasks keep their\noriginal field structure"]
+
+    %% ─────────────────────────────────────────
+    %% MEMBER TASK SLOT COUNTER LOGIC
+    %% ─────────────────────────────────────────
+
+    P1 --> COUNTER[Member Task Slot Counter\nper project]
+    COUNTER --> C1["COUNTS toward limit:\n• member self-created tasks\n• pool tasks claimed by member\nStatus: any non-completed"]
+    COUNTER --> C2["DOES NOT count:\n• PM-assigned tasks\n• Completed tasks\n• Voided / Cancelled tasks"]
+    COUNTER --> C3["Slot freed when:\n• task status = Completed\n• task status = Voided\n• task status = Cancelled"]
+    COUNTER --> C4["Mid-project limit reduction:\nexisting tasks grandfathered\nmember cannot create NEW tasks\nuntil count drops below new limit"]
+
+    %% ─────────────────────────────────────────
+    %% NOTIFICATION RULES
+    %% ─────────────────────────────────────────
+
+    S4 --> N1[PM Always Notified When:]
+    N1 --> N2["• Member creates a task"]
+    N1 --> N3["• Member claims a pool task"]
+    N1 --> N4["• Member uploads work\n  status → Pending Review"]
+    N1 --> N5["• Pool task unclaimed > stale threshold"]
+
+    %% ─────────────────────────────────────────
+    %% STYLES
+    %% ─────────────────────────────────────────
+
+    classDef sysLevel fill:#2C3E50,stroke:#1A252F,color:#fff
+    classDef pmLevel fill:#4A90D9,stroke:#2C5F8A,color:#fff
+    classDef memberLevel fill:#27AE60,stroke:#1A7A42,color:#fff
+    classDef sysRule fill:#717D7E,stroke:#4D5656,color:#fff
+    classDef pmRule fill:#AED6F1,stroke:#4A90D9,color:#2C3E50
+    classDef templateRule fill:#D5F5E3,stroke:#27AE60,color:#2C3E50
+    classDef counterRule fill:#FAD7A0,stroke:#F39C12,color:#2C3E50
+    classDef notifRule fill:#D2B4DE,stroke:#8E44AD,color:#2C3E50
+
+    class SYS sysLevel
+    class PM pmLevel
+    class MEMBER memberLevel
+    class S1,S2,S3,S4,S5,S6,S7,S8,S9 sysRule
+    class P1,P2,P3,P4,P5,P6 pmRule
+    class TF,TF1,TF2,TF3 templateRule
+    class COUNTER,C1,C2,C3,C4 counterRule
+    class N1,N2,N3,N4,N5 notifRule

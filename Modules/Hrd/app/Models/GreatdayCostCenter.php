@@ -4,6 +4,8 @@ namespace Modules\Hrd\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Modules\Hrd\Database\Factories\GreatdayCostCenterFactory;
+
 // use Modules\Hrd\Database\Factories\GreatdayCostCenterFactory;
 
 class GreatdayCostCenter extends Model
@@ -19,8 +21,8 @@ class GreatdayCostCenter extends Model
         'code'
     ];
 
-    // protected static function newFactory(): GreatdayCostCenterFactory
-    // {
-    //     // return GreatdayCostCenterFactory::new();
-    // }
+    protected static function newFactory(): GreatdayCostCenterFactory
+    {
+        return GreatdayCostCenterFactory::new();
+    }
 }

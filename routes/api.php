@@ -9,9 +9,9 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
 use App\Services\EncryptionService;
-use App\Services\WhatsappService;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Http;
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use KodePandai\Indonesia\Models\District;
-use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
+use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -43,6 +43,7 @@ Route::get('testing', function () {
 Route::get('telegram-login', [\Modules\Telegram\Http\Controllers\TelegramAuthorizationController::class, 'index']);
 
 Route::post('upload-profile-temp', [UserController::class, 'uploadProfileTemp']);
+Route::post('users/verify-otp', [UserController::class, 'verifyOtp'])->middleware('auth:sanctum');
 Route::post('users/profile/update/{userId}', [UserController::class, 'updateProfile'])->middleware('auth:sanctum');
 
 Route::get('line-flex', function () {});
@@ -52,22 +53,11 @@ Route::post('{token}/telegram-webhook', function (Request $request, string $toke
     $event->categorize($request->all());
 });
 
-Route::get('telegram', function () {
-    $model = \Modules\Production\Models\Project::find(232);
-    $observer = new \Modules\Production\Observers\NasFolderObserver;
-    $observer->updated($model);
-});
-
-Route::get('messages', function () {
-    $invoice = 'https://quicklyevents.com/storage/invoices/1/1706684868139-invoice.pdf';
-
-    $payload = [
-        'url' => $invoice,
-    ];
-
-    $service = new WhatsappService;
-    $service->sendTemplateMessage('booking_confirmation_message_new', $payload, ['6285795327357']);
-});
+// Route::get('telegram', function () {
+//     $model = \Modules\Production\Models\Project::find(232);
+//     $observer = new \Modules\Production\Observers\NasFolderObserver;
+//     $observer->updated($model);
+// });
 
 Route::post('base64', function (Request $request) {
     $base64Image = $request->image;
@@ -171,7 +161,7 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [LoginController::class, 'login'])->name('login-form');
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
-    Route::post('changePassword', [LoginController::class, 'changePassword']);
+    Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth:sanctum');
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
 });
 
@@ -216,7 +206,7 @@ Route::middleware('auth:sanctum')
 
         // NOTIFICATION
         Route::get('user/notifications', function () {
-            $output = app(\App\Services\UserService::class)->getApplicationNotification();;
+            $output = app(\App\Services\UserService::class)->getApplicationNotification();
 
             $service = new EncryptionService;
             $encrypt = $service->encrypt(json_encode($output), config('app.salt_key_encryption'));
@@ -274,8 +264,8 @@ Route::get('notification', function () {
     $service = new \App\Services\EncryptionService;
     $encrypt = $service->encrypt($user->email, env('SALT_KEY'));
 
-    return (new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt))
-        ->toMail($user);
+    // return (new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt))
+    //     ->toMail($user);
 
     // Notification::send($user, new \Modules\Hrd\Notifications\UserEmailActivation('passwordnya', $user));
 });
@@ -311,12 +301,12 @@ Route::get('playground', function () {
         $assign = $projectService->assignMemberToTask(
             data: [
                 'users' => [request('uid')],
-                'removed' => []
+                'removed' => [],
             ],
             taskUid: request('taskUid'),
             needChangeTaskStatus: false
         );
-    
+
         return apiResponse($assign);
     } catch (\Throwable $th) {
         return apiResponse(
@@ -345,3 +335,26 @@ Route::get('/files/{path}', function (Request $request, $path) {
         ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         ->header('Access-Control-Allow-Headers', '*');
 })->where('path', '.*');
+
+// Internal service-to-service routes — protected by HMAC signature
+Route::middleware('internal.service')
+    ->prefix('internal')
+    ->group(function () {
+        Route::post('notifications/send', [\App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
+        Route::post('system/reset-cache', function (Request $request) {
+            Artisan::call('cache:clear');
+        });
+    });
+
+Route::middleware('partner')->group(function () {
+    Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
+    Route::post('partner/notification/mail', function (Request $request) {
+        $request->validate([
+            'to' => 'required|email',
+            'subject' => 'required|string',
+            'body' => 'required|string',
+        ]);
+
+        \App\Jobs\PartnerEmailJob::dispatch($request->to, $request->subject, $request->body);
+    });
+});
