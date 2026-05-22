@@ -6,6 +6,7 @@ use App\Enums\Cache\CacheKey;
 use App\Services\GeneralService;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -339,6 +340,12 @@ class Project extends Model
     public function isMyFeedbackExists(int $employeeId)
     {
         return $this->feedbacks()->where('pic_id', $employeeId)->exists();
+    }
+
+    public function scopeIsDuplicate(Builder $builder, string $name, string $projectDate)
+    {
+        $builder->whereLike('name', '%'. $name. '%')
+            ->whereDate('project_date', $projectDate);
     }
 
     // protected static function newFactory(): ProjectFactory

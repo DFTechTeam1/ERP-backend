@@ -184,5 +184,7 @@ return [
     'taskPickedSuccessfully' => 'Task picked successfully. You are now working on it.',
     'otpHasBeenExpired' => "OTP has been expired",
     'otpMismatch' => 'Mismatch OTP data',
-    'phoneNumberVerfied' => 'Phone number has been verified'
+    'phoneNumberVerfied' => 'Phone number has been verified',
+    'projectDealIsExists' => "Project deal already exists in the database",
+    'projectIsExists' => "Project already exists in the database"
 ];

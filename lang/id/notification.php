@@ -176,5 +176,7 @@ return [
     'employeeAlreadyHasResignationRecord' => 'Karyawan sudah memiliki catatan pengunduran diri yang ada.',
     'otpHasBeenExpired' => "OTP sudah tidak bisa digunakan",
     'otpMismatch' => 'OTP tidak sama',
-    'phoneNumberVerfied' => 'Nomor telepon berhasil di verifikasi'
+    'phoneNumberVerfied' => 'Nomor telepon berhasil di verifikasi',
+    'projectDealIsExists' => 'Event ini sudah ada di database',
+    'projectIsExists' => "Event ini sudah ada di database production"
 ];
