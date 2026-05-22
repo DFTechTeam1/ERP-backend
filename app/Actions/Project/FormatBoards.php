@@ -21,7 +21,7 @@ class FormatBoards
         $specialPosition = getSettingByKey('special_production_position');
         $this->specialPositionid = 0;
         if ($specialPosition) {
-            $this->specialPositionid = getIdFromUid($specialPosition, new PositionBackup());
+            $this->specialPositionid = getIdFromUid($specialPosition, new PositionBackup);
         }
     }
 
@@ -30,7 +30,7 @@ class FormatBoards
         $this->fetchSpecialPosition();
         $boardRepo = new ProjectBoardRepository;
         $projectPicRepository = new ProjectPersonInChargeRepository;
-        $projectRepo = new ProjectRepository();
+        $projectRepo = new ProjectRepository;
 
         $user = auth()->user()->load('employee');
         $leaderModeller = getSettingByKey('lead_3d_modeller');
@@ -129,7 +129,7 @@ class FormatBoards
 
                 unset($outputTask[$keyTask]['time_tracker']);
 
-                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid);
+                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid, $isProjectPic);
 
                 // check if task already active or not, if not show activating button
                 $isActive = false;
@@ -223,7 +223,7 @@ class FormatBoards
             foreach ($board->poolTasks as $keyTask => $task) {
                 $poolOutputTask[$keyTask] = $task;
                 unset($poolOutputTask[$keyTask]['time_tracker']);
-                $poolOutputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid);
+                $poolOutputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid, $isProjectPic);
                 $poolOutputTask[$keyTask]['need_user_approval'] = false;
                 $poolOutputTask[$keyTask]['stop_action'] = $task->project->status == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
                 $poolOutputTask[$keyTask]['need_approval_pm'] = false;

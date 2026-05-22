@@ -3,16 +3,13 @@
 namespace App\Actions\Project;
 
 use App\Actions\DefineDetailProjectPermission;
-use App\Actions\DefineTaskAction;
 use App\Enums\System\BaseRole;
 use Carbon\Carbon;
-use DateTime;
 use Illuminate\Support\Facades\Auth;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
-use Modules\Production\Repository\ProjectRepository;
 
 class FormatTaskPermission
 {
@@ -33,7 +30,7 @@ class FormatTaskPermission
         $specialPosition = getSettingByKey('special_production_position');
         $this->specialPositionid = 0;
         if ($specialPosition) {
-            $this->specialPositionid = getIdFromUid($specialPosition, new PositionBackup());
+            $this->specialPositionid = getIdFromUid($specialPosition, new PositionBackup);
         }
     }
 
@@ -41,11 +38,9 @@ class FormatTaskPermission
     {
         $this->fetchSpecialPosition();
         $projectPicRepository = new ProjectPersonInChargeRepository;
-        $repo = new ProjectRepository;
 
         $this->user = Auth::user()->load('employee');
         $this->employeeId = $this->user->employee_id;
-        $this->isProjectPic = isProjectPIC((int) $projectId, $this->employeeId);
         $this->isDirector = isDirector();
 
         $output = [];
@@ -60,12 +55,14 @@ class FormatTaskPermission
         $project['feedback_given'] = count($project['feedbacks']) > 0 ? true : false;
 
         $superUserRole = isSuperUserRole();
-        $isProjectPic = $this->isProjectPic || $superUserRole;
         $isAssistantPM = isAssistantPMRole();
-        $hasSuperPower = $this->isDirector || $this->isProjectPic || $this->user->hasRole(BaseRole::Root->value);
 
-        // get teams
+        // get teams — derive isProjectPic from the same query, avoiding a separate DB hit
         $personInCharges = $projectPicRepository->list('*', 'project_id = '.$projectId, ['employee:id,uid,name,email,nickname,boss_id,position_id']);
+        $this->isProjectPic = in_array($this->employeeId, collect($personInCharges)->pluck('pic_id')->toArray());
+
+        $isProjectPic = $this->isProjectPic || $superUserRole;
+        $hasSuperPower = $this->isDirector || $this->isProjectPic || $this->user->hasRole(BaseRole::Root->value);
         $project['personInCharges'] = $personInCharges;
         $projectTeams = GetProjectTeams::run((object) $project);
 
@@ -162,6 +159,11 @@ class FormatTaskPermission
             $project['feedback_data'] = $feedbacks;
         }
 
+        $canEditDescription = $this->user->hasPermissionTo('edit_task_description');
+        $canAddDescription = $this->user->hasPermissionTo('add_task_description');
+        $canDeleteDescription = $this->user->hasPermissionTo('delete_task_description');
+        $havePermissionToMoveBoard = $superUserRole || $isProjectPic || $this->isDirector || $this->user->hasPermissionTo('move_board', 'sanctum');
+
         foreach ($project['boards'] as $keyBoard => $board) {
             $output[$keyBoard] = $board;
 
@@ -170,141 +172,40 @@ class FormatTaskPermission
             foreach ($board['tasks'] as $keyTask => $task) {
                 $outputTask[$keyTask] = $task;
 
-                $outputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $this->user, $project['status_raw'], $this->specialPositionid);
+                // FormatBoards already set: action_list, is_mine, stop_action, is_active,
+                // need_user_approval (with leaderModeller check), need_approval_pm, is_project_pic,
+                // is_director, have_permission_to_move_board, has_task_access, action_to_complete_task,
+                // time_tracker. Only compute fields unique to this pass.
 
-                // highlight task for authorized user
-                $picIds = collect($task->pics)->pluck('employee_id')->toArray();
-                $outputTask[$keyTask]['is_mine'] = (bool) in_array($this->user->employee_id, $picIds);
+                $picIds = collect($task['pics'])->pluck('employee_id')->toArray();
+                $outputTask[$keyTask]['picIds'] = $picIds;
 
-                // stop action when project status is DRAFT
-                $outputTask[$keyTask]['stop_action'] = $project['status'] == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
-
-                // check if task already active or not, if not show activating button
-
-                if (in_array($this->employeeId, collect($task['pics'])->pluck('employee_id')->toArray())) {
-                    $search = collect($task['pics'])->filter(function ($filterEmployee) {
-                        return $filterEmployee['employee_id'] == $this->employeeId;
-                    })->values();
-                    $search = $search->toArray()[0];
-
-                    $outputTask[$keyTask]['is_active'] = $search['is_active'];
-                }
-
-                // override is_active if task status is on already ON PROGRESS
-                if ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value) {
-                    $outputTask[$keyTask]['is_active'] = true;
-                }
-
-                // disable when task is on hold
-                if ($task['status'] === \App\Enums\Production\TaskStatus::OnHold->value) {
-                    $outputTask[$keyTask]['is_active'] = false;
-                }
-
-                // define user can add, edit or delete the task description
                 $isLittlePower = (bool) $leadModeller && (
-                    (in_array($leadModeller, collect($task['pics'])->pluck('employee_id')->toArray()) && $leadModeller == $this->employeeId) ||
+                    (in_array($leadModeller, $picIds) && $leadModeller == $this->employeeId) ||
                     ($this->employeeId == $leadModeller && $task['is_modeler_task'])
                 );
                 $canModify = $hasSuperPower || $isLittlePower;
 
-                $outputTask[$keyTask]['can_edit_description'] = $this->user->hasPermissionTo('edit_task_description') && $canModify;
-                $outputTask[$keyTask]['can_add_description'] = $this->user->hasPermissionTo('add_task_description') && $canModify;
-                $outputTask[$keyTask]['can_delete_description'] = $this->user->hasPermissionTo('delete_task_description') && $canModify;
-
-                $outputTask[$keyTask]['show_hold_button'] = $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value || $task['status'] == \App\Enums\Production\TaskStatus::Revise->value;
-                $outputTask[$keyTask]['is_hold'] = $task['status'] == \App\Enums\Production\TaskStatus::OnHold->value ? true : false;
-
+                $outputTask[$keyTask]['can_edit_description'] = $canEditDescription && $canModify;
+                $outputTask[$keyTask]['can_add_description'] = $canAddDescription && $canModify;
+                $outputTask[$keyTask]['can_delete_description'] = $canDeleteDescription && $canModify;
                 $outputTask[$keyTask]['can_delete_attachment'] = $canModify;
-
-                // push 'is_project_pic' to task collection
-                $outputTask[$keyTask]['is_project_pic'] = $isProjectPic;
-
-                $outputTask[$keyTask]['is_director'] = $this->isDirector;
-
-                // define task need approval from project manager or not
-                $outputTask[$keyTask]['need_approval_pm'] = $isProjectPic && $task['status'] == \App\Enums\Production\TaskStatus::CheckByPm->value;
-
-                $outputTask[$keyTask]['time_tracker'] = $this->formatTimeTracker(collect($task['times'])->toArray());
-
-                // check the ownership of task
-                $picIds = collect($task['pics'])->pluck('employee_id')->toArray();
-                $haveTaskAccess = true;
-                if (! $superUserRole && ! $isProjectPic && ! $this->isDirector && ! $isAssistantPM) {
-                    if (! in_array($this->employeeId, $picIds)) { // where logged user is not a in task pic except the project manager
-                        $haveTaskAccess = false;
-                    }
-                }
-
-                $needUserApproval = false;
-                if (
-                    $task['status'] == \App\Enums\Production\TaskStatus::WaitingApproval->value &&
-                    (in_array($this->employeeId, $picIds) || $this->isDirector || $isProjectPic)
-                ) {
-                    $needUserApproval = true;
-                }
-                $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
-
-                if (
-                    (
-                        in_array($this->employeeId, $picIds) ||
-                        $superUserRole || $isProjectPic || $this->isDirector || $isAssistantPM
-                    ) &&
-                    $project['status_raw'] == \App\Enums\Production\ProjectStatus::OnGoing->value &&
-                    ($task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value ||
-                    $task['status'] == \App\Enums\Production\TaskStatus::Revise->value)
-                ) {
-                    $outputTask[$keyTask]['action_to_complete_task'] = true;
-                } else {
-                    $outputTask[$keyTask]['action_to_complete_task'] = false;
-                }
-
-                $outputTask[$keyTask]['picIds'] = $picIds;
-                $outputTask[$keyTask]['has_task_access'] = $haveTaskAccess;
-
-                $havePermissionToMoveBoard = false;
-                if ($superUserRole || $isProjectPic || $this->isDirector || $this->user->hasPermissionTo('move_board', 'sanctum')) {
-                    $havePermissionToMoveBoard = true;
-                }
-
+                $outputTask[$keyTask]['show_hold_button'] = $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value || $task['status'] == \App\Enums\Production\TaskStatus::Revise->value;
+                $outputTask[$keyTask]['is_hold'] = $task['status'] == \App\Enums\Production\TaskStatus::OnHold->value;
                 $outputTask[$keyTask]['have_permission_to_move_board'] = $havePermissionToMoveBoard;
-
-                if ($superUserRole || $isProjectPic || $this->isDirector || $isAssistantPM) {
-                    $outputTask[$keyTask]['is_active'] = true;
-                }
-
-                // last checker
-                if ($project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value || ! $project['status_raw']) {
-                    $outputTask[$keyTask]['is_active'] = false;
-                }
             }
 
             $output[$keyBoard]['tasks'] = $outputTask;
 
-            // process pool_tasks with the same permission decorations
+            // pool_tasks only need the description/attachment permission fields added
             $outputPoolTask = [];
             foreach ($board['pool_tasks'] ?? [] as $keyTask => $task) {
                 $outputPoolTask[$keyTask] = $task;
-                $outputPoolTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $this->user, $project['status_raw'], $this->specialPositionid);
-                $outputPoolTask[$keyTask]['is_mine'] = false;
-                $outputPoolTask[$keyTask]['stop_action'] = $project['status'] == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
-                $outputPoolTask[$keyTask]['is_active'] = true;
-                $outputPoolTask[$keyTask]['can_edit_description'] = $this->user->hasPermissionTo('edit_task_description') && $hasSuperPower;
-                $outputPoolTask[$keyTask]['can_add_description'] = $this->user->hasPermissionTo('add_task_description') && $hasSuperPower;
-                $outputPoolTask[$keyTask]['can_delete_description'] = $this->user->hasPermissionTo('delete_task_description') && $hasSuperPower;
-                $outputPoolTask[$keyTask]['show_hold_button'] = false;
-                $outputPoolTask[$keyTask]['is_hold'] = false;
+                $outputPoolTask[$keyTask]['can_edit_description'] = $canEditDescription && $hasSuperPower;
+                $outputPoolTask[$keyTask]['can_add_description'] = $canAddDescription && $hasSuperPower;
+                $outputPoolTask[$keyTask]['can_delete_description'] = $canDeleteDescription && $hasSuperPower;
                 $outputPoolTask[$keyTask]['can_delete_attachment'] = $hasSuperPower;
-                $outputPoolTask[$keyTask]['is_project_pic'] = $isProjectPic;
-                $outputPoolTask[$keyTask]['is_director'] = $this->isDirector;
-                $outputPoolTask[$keyTask]['need_approval_pm'] = false;
-                $outputPoolTask[$keyTask]['time_tracker'] = [];
-                $outputPoolTask[$keyTask]['picIds'] = [];
-                $outputPoolTask[$keyTask]['has_task_access'] = $superUserRole || $isProjectPic || $this->isDirector || $isAssistantPM;
-                $outputPoolTask[$keyTask]['need_user_approval'] = false;
-                $outputPoolTask[$keyTask]['action_to_complete_task'] = false;
-                $outputPoolTask[$keyTask]['have_permission_to_move_board'] = false;
                 $outputPoolTask[$keyTask]['can_pick_task'] = true;
-                // $outputPoolTask[$keyTask]['can_pick_task'] = $this->user->hasPermissionTo('pick_pool_task');
             }
 
             $output[$keyBoard]['pool_tasks'] = array_values($outputPoolTask);
@@ -312,30 +213,12 @@ class FormatTaskPermission
 
         $project['boards'] = $output;
 
-        // showreels
-        $showreels = $repo->show($project['uid'], 'id,showreels');
-        $project['showreels'] = $showreels->showreels_path;
-
-        $allowedUploadShowreels = true;
-        $currentTasks = [];
-        foreach ($project['boards'] as $board) {
-            foreach ($board['tasks'] as $task) { // only regular tasks count toward progress
-                $currentTasks[] = $task;
-            }
-        }
-        $currentTaskStatusses = collect($currentTasks)->pluck('status')->count();
-        $completedStatus = collect($currentTasks)->filter(function ($filter) {
-            return $filter['status'] == \App\Enums\Production\TaskStatus::Completed->value;
-        })->values()->count();
-        // if ($currentTaskStatusses == $completedStatus) {
-        //     $allowedUploadShowreels = true;
-        // }
-        $project['allowed_upload_showreels'] = $allowedUploadShowreels;
+        $project['allowed_upload_showreels'] = true;
 
         $project['permission_list'] = DefineDetailProjectPermission::run();
 
-        // check if authenticated user have feedback or not
-        $isMyFeedbackExists = \Modules\Production\Models\Project::selectRaw('id')->find($project['id'])->isMyFeedbackExists($this->user->employee_id);
+        // reuse cached value — avoids a redundant DB query on every request
+        $isMyFeedbackExists = $project['is_my_feedback_exists'];
         if ($project['is_super_user'] || $project['is_director'] || $this->user->hasRole(BaseRole::Hrd->value) || $this->user->hasRole(BaseRole::Finance->value)) {
             $isMyFeedbackExists = true;
         }
