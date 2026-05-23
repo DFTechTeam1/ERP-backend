@@ -9205,7 +9205,7 @@ class ProjectService
                 ]);
             }
 
-            $isFromLead = (isset($payload['lead_uid']) && !empty($payload['lead_uid'])) ? true : false;
+            $isFromLead = (isset($payload['lead_uid']) && ! empty($payload['lead_uid'])) ? true : false;
 
             if ($this->projectDealRepo->isExists($payload['name'], $payload['project_date'])) {
                 return errorResponse(__('notification.projectDealIsExists'));
@@ -9224,7 +9224,7 @@ class ProjectService
                 $this->projectLeadRepo->update(
                     data: [
                         'skip_check' => true,
-                        'project_deal_id' => $project->id
+                        'project_deal_id' => $project->id,
                     ],
                     id: $payload['lead_uid']
                 );
@@ -9860,14 +9860,57 @@ class ProjectService
     public function searchTaskByNameAndIdentifier(string $search): array
     {
         try {
+            $user = $this->userRepo->detail(id: Auth::id(), select: 'id,email,employee_id', relation: [
+                'employee:id,user_id,boss_id',
+            ]);
+            $isProjectManager = $user->hasRole(BaseRole::ProjectManager->value);
+            $isProjectManagerAdmin = $user->hasRole(BaseRole::ProjectManagerAdmin->value);
+            $isRoot = $user->hasRole(BaseRole::Root->value);
+            $isProduction = $user->hasRole(BaseRole::Production->value);
+
+            // Build where has
+            $whereHas = [];
+            if (! $isRoot && ! $isProjectManagerAdmin) {
+                if ($isProjectManager) {
+                    // He only can see task of their member
+                    $members = getProjectManagerMember(employeeId: $user->employee_id);
+                    if (count($members) > 0) {
+                        $memberIds = $members->pluck('id')->implode(',');
+                        // $whereHas[] = [
+                        //     'relation' => 'pics',
+                        //     'query' => "employee_id IN ({$memberIds})",
+                        // ];
+                        $whereHas[] = [
+                            'relation' => 'project.personInCharges',
+                            'query' => "pic_id = {$user->employee_id}",
+                        ];
+                    }
+
+                }
+
+                if ($isProduction && $user->employee && $user->employee->boss_id) {
+                    // Only can see task in their boss projects
+                    $whereHas[] = [
+                        'relation' => 'project.personInCharges',
+                        'query' => "pic_id = {$user->employee->boss_id}",
+                    ];
+                }
+            }
+
             $where = "(name LIKE '%{$search}%' OR task_identifier_id LIKE '%{$search}%')";
+
+            logging('check data', [
+                'where' => $where,
+                'whereHas' => $whereHas
+            ]);
 
             $tasks = $this->taskRepo->list(
                 select: 'id,name,project_id,uid,end_date,status',
                 where: $where,
                 relation: [
-                    'project:id,name'
-                ]
+                    'project:id,name',
+                ],
+                whereHas: $whereHas
             );
 
             $output = [];
@@ -9883,7 +9926,7 @@ class ProjectService
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: $output
             );
         } catch (\Throwable $th) {
@@ -9895,13 +9938,13 @@ class ProjectService
     {
         try {
             $user = $this->userRepo->detail(id: Auth::id(), select: 'id,email,employee_id', relation: [
-                'employee:id,user_id,boss_id'
+                'employee:id,user_id,boss_id',
             ]);
             $isProjectManager = $user->hasRole(BaseRole::ProjectManager->value);
             $isProjectManagerAdmin = $user->hasRole(BaseRole::ProjectManagerAdmin->value);
             $isRoot = $user->hasRole(BaseRole::Root->value);
             $isProduction = $user->hasRole(BaseRole::Production->value);
-            
+
             // Build where has
             $whereHas = [];
             if (! $isRoot && ! $isProjectManagerAdmin) {
@@ -9922,7 +9965,7 @@ class ProjectService
             }
 
             $where = "(name LIKE '%{$search}%' OR identifier_id LIKE '%{$search}%')";
-            
+
             $projects = $this->repo->list(
                 select: 'id,name,uid,identifier_id,project_class_id,status,project_date',
                 where: $where,
