@@ -359,7 +359,7 @@ class ProjectService
                 // delete all related data with this project
                 $this->deleteProjectReference($projectId);
                 $this->deleteProjectTasks($projectId);
-                $this->deleteProjectEquipmentRequest($projectId);
+                // $this->deleteProjectEquipmentRequest($projectId);
                 $this->deleteProjectPic($projectId);
                 $this->deleteProjectBoard($projectId);
                 $this->deleteProjectDeal($projectId);
@@ -9334,7 +9334,7 @@ class ProjectService
 
             $this->projectDealRepo->update(
                 data: collect($payload)
-                    ->except(['marketing_id', 'quotation', 'status', 'request_type', 'interactive_area', 'interactive_detail', 'interactive_note', 'interactive_fee', 'with_accommodation'])
+                    ->except(['marketing_id', 'quotation', 'status', 'request_type', 'interactive_area', 'interactive_detail', 'interactive_note', 'interactive_fee', 'with_accommodation', 'lead_uid'])
                     ->toArray(),
                 id: $projectDealUid
             );
