@@ -25,6 +25,11 @@ class CompanyController extends Controller
         $this->companyService = $companyService;
     }
 
+    public function deleteUserGuide(Request $request, string $guideId) 
+    {
+        return apiResponse($this->companyService->deleteUserGuide($guideId));
+    }
+
     public function listUserGuides()
     {
         return apiResponse($this->companyService->listUserGuides());
