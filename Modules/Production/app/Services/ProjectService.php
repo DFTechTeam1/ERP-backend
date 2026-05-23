@@ -9857,6 +9857,40 @@ class ProjectService
         }
     }
 
+    public function searchTaskByNameAndIdentifier(string $search): array
+    {
+        try {
+            $where = "(name LIKE '%{$search}%' OR task_identifier_id LIKE '%{$search}%')";
+
+            $tasks = $this->taskRepo->list(
+                select: 'id,name,project_id,uid,end_date,status',
+                where: $where,
+                relation: [
+                    'project:id,name'
+                ]
+            );
+
+            $output = [];
+            foreach ($tasks as $task) {
+                $output[] = [
+                    'uid' => $task->uid,
+                    'name' => $task->name,
+                    'due_date' => $task->end_date ? date('d F Y, H:i', strtotime($task->end_date)) : null,
+                    'project' => $task?->project?->name ?? null,
+                    'status_text' => $task->task_status ?? 'N/A',
+                    'status_color' => $task->task_status_color,
+                ];
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     public function searchProjectsByNameAndIdentifier(string $search): array
     {
         try {

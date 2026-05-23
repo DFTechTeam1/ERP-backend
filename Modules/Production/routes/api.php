@@ -38,6 +38,7 @@ Route::middleware(['auth:sanctum'])
 
         // hot keys search
         Route::get('project/search/hotkeys', [ProjectController::class, 'searchProjectsByNameAndIdentifier']);
+        Route::get('task/search/hotkeys', [ProjectController::class, 'searchTaskByNameAndIdentifier']);
 
         Route::get('tasks', [ProjectController::class, 'getAllTasks']);
         Route::get('tasks/status', [ProjectController::class, 'getTaskStatus']);
