@@ -1187,6 +1187,11 @@ class ProjectController extends Controller
         return apiResponse($this->service->rejectDeleteSong($projectUid, $songUid));
     }
 
+    public function searchTaskByNameAndIdentifier(Request $request): JsonResponse
+    {
+        return apiResponse($this->service->searchTaskByNameAndIdentifier($request->search));
+    }
+
     public function searchProjectsByNameAndIdentifier(Request $request): JsonResponse
     {
         return apiResponse($this->service->searchProjectsByNameAndIdentifier($request->search));
