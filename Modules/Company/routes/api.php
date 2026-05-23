@@ -28,6 +28,9 @@ Route::middleware(['auth:sanctum'])
         Route::post('branch/bulk', [BranchController::class, 'bulkDelete'])->name('branches.bulk-delete');
         Route::get('inboxData', [CompanyController::class, 'loadInboxData'])->name('inboxData');
         Route::get('inboxData/clear', [CompanyController::class, 'clearInboxData']);
+        Route::post('company/guidance', [CompanyController::class, 'uploadGuidance']);
+        Route::get('company/guidance', [CompanyController::class, 'listUserGuides']);
+        Route::delete('company/guidance/{guideId}', [CompanyController::class, 'deleteUserGuide']);
     });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::class)

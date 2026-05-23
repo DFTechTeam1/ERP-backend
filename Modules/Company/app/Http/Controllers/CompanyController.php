@@ -6,14 +6,15 @@ use App\Enums\Company\ExportImportAreaType;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Company\Http\Requests\UploadGuidanceRequest;
 use Modules\Company\Services\CompanyService;
 use Modules\Company\Services\MasterService;
 
 class CompanyController extends Controller
 {
-    private $masterService;
+    private MasterService $masterService;
 
-    private $companyService;
+    private CompanyService $companyService;
 
     public function __construct(
         MasterService $masterService,
@@ -22,6 +23,21 @@ class CompanyController extends Controller
         $this->masterService = $masterService;
 
         $this->companyService = $companyService;
+    }
+
+    public function deleteUserGuide(Request $request, string $guideId) 
+    {
+        return apiResponse($this->companyService->deleteUserGuide($guideId));
+    }
+
+    public function listUserGuides()
+    {
+        return apiResponse($this->companyService->listUserGuides());
+    }
+
+    public function uploadGuidance(UploadGuidanceRequest $request)
+    {
+        return apiResponse($this->companyService->uploadGuidance($request->validated()));
     }
 
     /**
