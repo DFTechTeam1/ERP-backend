@@ -1320,10 +1320,12 @@ if (! function_exists('generateUniqueIdentifierId')) {
     }
 }
 
-if (!function_exists('amILeadModeller')) {
+if (! function_exists('amILeadModeller')) {
     function amILeadModeller(?\App\Models\User $user = null): bool
     {
-        if (! $user) $user = \Illuminate\Support\Facades\Auth::user();
+        if (! $user) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+        }
         $leadModellerId = getSettingByKey('lead_3d_modeller');
         $leadModellerId = getIdFromUid($leadModellerId, new Employee);
 
@@ -1331,11 +1333,22 @@ if (!function_exists('amILeadModeller')) {
     }
 }
 
-if (!function_exists('amIRootUser')) {
+if (! function_exists('amIRootUser')) {
     function amIRootUser(?\App\Models\User $user = null): bool
     {
-        if (! $user) $user = \Illuminate\Support\Facades\Auth::user();
+        if (! $user) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+        }
 
         return $user->hasRole(BaseRole::Root->value);
+    }
+}
+
+if (! function_exists('getProjectManagerMember')) {
+    function getProjectManagerMember(int $employeeId)
+    {
+        return \Modules\Hrd\Models\Employee::selectRaw('id,name')
+            ->where('boss_id', $employeeId)
+            ->get();
     }
 }
