@@ -240,7 +240,7 @@ if (! function_exists('getSlug')) {
 }
 
 if (! function_exists('uploadFile')) {
-    function uploadFile(string $path, $file)
+    function uploadFile(string $path, mixed $file)
     {
         try {
             $ext = $file->getClientOriginalExtension();
