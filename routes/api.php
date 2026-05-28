@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Mcp\OauthController;
 use App\Services\EncryptionService;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
@@ -358,3 +359,13 @@ Route::middleware('partner')->group(function () {
         \App\Jobs\PartnerEmailJob::dispatch($request->to, $request->subject, $request->body);
     });
 });
+
+Route::post('/generate-mcp-token', [OauthController::class, 'generateMcpBearerToken']);
+
+Route::middleware(['mcp.auth'])
+    ->prefix('mcp')
+    ->group(function () {
+        Route::get('/user', function (Request $request) {
+            return $request->user();
+        });
+    });
