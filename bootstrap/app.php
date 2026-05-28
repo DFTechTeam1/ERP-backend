@@ -28,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->validateCsrfTokens(except: [
+            '/oauth/token',
+        ]);
+
         $middleware->alias([
             'internal.service' => InternalServiceMiddleware::class,
             'allow-iframe' => AllowIframe::class,
@@ -35,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'BearerToken' => BearerTokenMiddleware::class,
             'customSignedMiddleware' => CustomSignedRouteMiddleware::class,
             'permissionCheck' => PermissionCheck::class,
-            'scalar.auth' => ScalarAuth::class
+            'scalar.auth' => ScalarAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
