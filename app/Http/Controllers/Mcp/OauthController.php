@@ -110,6 +110,8 @@ class OauthController extends Controller
             $authCode = \App\Models\Mcp\OauthAuthCode::where('code', $request->code)
                 ->notExpired()
                 ->first();
+
+            logging('auth code data', $authCode->toArray());
     
             if (! $authCode) {
                 return response()->json(['error' => 'Invalid or expired authorization code'], 400);
@@ -120,6 +122,12 @@ class OauthController extends Controller
                 strtr(base64_encode(hash('sha256', $request->code_verifier, true)), '+/', '-_'),
                 '='
             );
+
+            logging('computed challenge', [
+                'computed' => $computedChallenge,
+                'expected' => $authCode->code_challenge,
+                'check hash' => hash_equals($authCode->code_challenge, $computedChallenge)
+            ]);
     
             if (! hash_equals($authCode->code_challenge, $computedChallenge)) {
                 return response()->json(['error' => 'Invalid code verifier'], 400);
