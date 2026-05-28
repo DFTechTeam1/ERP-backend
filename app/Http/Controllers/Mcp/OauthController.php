@@ -62,6 +62,7 @@ class OauthController extends Controller
             'redirect_uri' => 'required|url',
             'code_challenge' => 'required|string',
             'code_challenge_method' => 'required|string|in:S256',
+            'token_expiry' => 'required|string|in:5h,1d,1w,2w,1m,2m',
         ]);
 
         $user = \App\Models\User::where('email', $request->email)->first();
@@ -84,6 +85,7 @@ class OauthController extends Controller
             'code' => $code,
             'user_id' => $user->id,
             'scope' => $request->input('scope'),
+            'token_expiry' => $request->input('token_expiry'),
             'code_challenge' => $request->input('code_challenge'),
             'expires_at' => now()->addMinutes(10),
         ]);
@@ -95,23 +97,35 @@ class OauthController extends Controller
         return redirect($redirectUri);
     }
 
-    public function generateStringToken(int $userId, string $scope): string
+    public function generateStringToken(int $userId, string $scope, string $tokenExpiry = '1m'): string
     {
         $config = $this->jwtConfig();
         $now = new DateTimeImmutable;
 
         $token = $config->builder()
-            ->issuedBy(config('app.url'))                               // iss — must match BACKEND_URL in MCP .env
-            ->permittedFor(config('mcp.server_url'))                    // aud — must match MCP_SERVER_URL in MCP .env
-            ->relatedTo((string) $userId)                               // sub — user ID from your DB
-            ->identifiedBy((string) \Illuminate\Support\Str::uuid())    // jti
-            ->issuedAt($now)                                            // iat
-            ->canOnlyBeUsedAfter($now)                                  // nbf
-            ->expiresAt($now->modify('+1 hour'))                        // exp
-            ->withClaim('scope', $scope)                                // custom scope claim
+            ->issuedBy(config('app.url'))
+            ->permittedFor(config('mcp.server_url'))
+            ->relatedTo((string) $userId)
+            ->identifiedBy((string) \Illuminate\Support\Str::uuid())
+            ->issuedAt($now)
+            ->canOnlyBeUsedAfter($now)
+            ->expiresAt($now->modify($this->resolveExpiryModifier($tokenExpiry)))
+            ->withClaim('scope', $scope)
             ->getToken($config->signer(), $config->signingKey());
 
         return $token->toString();
+    }
+
+    private function resolveExpiryModifier(string $expiry): string
+    {
+        return match ($expiry) {
+            '5h' => '+5 hours',
+            '1d' => '+1 day',
+            '1w' => '+1 week',
+            '2w' => '+2 weeks',
+            '2m' => '+2 months',
+            default => '+1 month',
+        };
     }
 
     public function generateMcpBearerToken(RequestMcpBearerToken $request)
@@ -183,7 +197,7 @@ class OauthController extends Controller
             $scope = $authCode->scope;
             $authCode->delete();
 
-            $tokenString = $this->generateStringToken($userId, $scope);
+            $tokenString = $this->generateStringToken($userId, $scope, $authCode->token_expiry);
 
             DB::commit();
 
