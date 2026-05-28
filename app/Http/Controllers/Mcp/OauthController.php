@@ -163,6 +163,12 @@ class OauthController extends Controller
             ]);
         } catch (\Throwable $th) {
             DB::rollBack();
+            logging('token exchange error', [
+                'message' => $th->getMessage(),
+                'file'    => $th->getFile(),
+                'line'    => $th->getLine(),
+                'trace'   => $th->getTraceAsString(),
+            ]);
             return response()->json(['error' => 'An error occurred while processing the token request'], 500);
         }
     }
