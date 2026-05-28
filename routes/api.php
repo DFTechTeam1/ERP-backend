@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use KodePandai\Indonesia\Models\District;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
+use Modules\Production\Http\Controllers\Api\ProjectController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -368,4 +369,5 @@ Route::middleware(['mcp.auth'])
         Route::get('/user', function (Request $request) {
             return $request->user();
         });
+        Route::get('classList', [ProjectController::class, 'getClassList']);
     });
