@@ -355,3 +355,4 @@ Route::get('/.well-known/jwks.json', [OauthController::class, 'jwks']);
 Route::get('/oauth/authorize', [OauthController::class, 'authorizeForm']);
 Route::post('/oauth/authorize', [OauthController::class, 'authorize']);
 Route::post('/oauth/token', [OauthController::class, 'token']);
+Route::post('/oauth/register', [OauthController::class, 'register']);
