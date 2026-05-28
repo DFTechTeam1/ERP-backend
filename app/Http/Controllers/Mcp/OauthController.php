@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mcp;
 
 use App\Http\Controllers\Controller;
+use App\Models\OauthClient;
 use DateTimeImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,14 +24,24 @@ class OauthController extends Controller
     public function authorizeForm(Request $request)
     {
         $request->validate([
-            'response_type' => 'required|string|in:code',
-            'client_id' => 'required|string',
-            'redirect_uri' => 'required|url',
-            'code_challenge' => 'required|string',
-            'code_challenge_method' => 'required|string|in:S256',
-            'scope' => 'nullable|string',
-            'state' => 'nullable|string',
+            'response_type'         => 'required|in:code',
+            'client_id'             => 'required|string|exists:oauth_clients,client_id',
+            'redirect_uri'          => 'required|url',
+            'code_challenge'        => 'required|string',
+            'code_challenge_method' => 'required|in:S256',
+            'scope'                 => 'nullable|string',
+            'state'                 => 'nullable|string',
         ]);
+
+        $client = OauthClient::find($request->client_id);
+
+        // Check redirect_uri is in registered list
+        if (!in_array($request->redirect_uri, $client->redirect_uris)) {
+            // Also allow if it starts with claude.ai domain
+            if (!str_starts_with($request->redirect_uri, 'https://claude.ai')) {
+                abort(400, 'Invalid redirect_uri');
+            }
+        }
 
         return view('oauth.authorize', [
             'redirect_uri' => $request->input('redirect_uri'),
@@ -185,14 +196,28 @@ class OauthController extends Controller
 
     public function register(Request $request)
     {
-        return response()->json([
-            'client_id' => 'claude-' . \Illuminate\Support\Str::random(16),
-            'client_name' => $request->client_name ?? "Claude",
-            'redirect_uris' => $request->redirect_uris ?? [],
-            'grant_types' => ['authorization_code'],
-            'response_type' => ['code'],
-            'token_endpoint_auth_method' => 'none',
-            'client_id_issued_at' => time(),
+        $clientId = 'claude-' . \Illuminate\Support\Str::random(16);
+
+        $redirectUris = $request->redirect_uris ?? [
+            'https://claude.ai/api/mcp/auth_callback',
+        ];
+
+        OauthClient::create([
+            'client_id'           => $clientId,
+            'client_name'         => $request->client_name ?? 'Claude',
+            'redirect_uris'       => $redirectUris,
+            'client_id_issued_at' => now(),
         ]);
+
+        return response()->json([
+            'client_id'                  => $clientId,
+            'client_name'                => $request->client_name ?? 'Claude',
+            'redirect_uris'              => $redirectUris,
+            'grant_types'                => ['authorization_code'],
+            'response_types'             => ['code'],           // ← plural
+            'token_endpoint_auth_method' => 'none',
+            'client_id_issued_at'        => time(),
+            'client_secret_expires_at'   => 0,                 // ← add this
+        ], 201);
     }
 }
