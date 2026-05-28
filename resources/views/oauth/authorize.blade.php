@@ -254,6 +254,54 @@
             color: var(--primary-color);
         }
 
+        .expiry-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .expiry-option input[type="radio"] {
+            display: none;
+        }
+
+        .expiry-option label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 6px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            text-align: center;
+            transition: all 0.2s ease;
+            line-height: 1.3;
+        }
+
+        .expiry-option label span.unit {
+            font-size: 11px;
+            font-weight: 400;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .expiry-option input[type="radio"]:checked + label {
+            border-color: var(--primary-color);
+            background: rgba(79, 70, 229, 0.06);
+            color: var(--primary-color);
+        }
+
+        .expiry-option input[type="radio"]:checked + label span.unit {
+            color: var(--primary-light);
+        }
+
+        .expiry-option label:hover {
+            border-color: #a5b4fc;
+        }
+
         @media (max-width: 768px) {
             .login-card {
                 flex-direction: column;
@@ -389,6 +437,39 @@
                         </div>
                         @error('password')
                             <div class="form-text text-danger">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Token Expiration</label>
+                        <div class="expiry-grid">
+                            <div class="expiry-option">
+                                <input type="radio" name="token_expiry" id="expiry_5h" value="5h">
+                                <label for="expiry_5h">5<span class="unit">hours</span></label>
+                            </div>
+                            <div class="expiry-option">
+                                <input type="radio" name="token_expiry" id="expiry_1d" value="1d">
+                                <label for="expiry_1d">1<span class="unit">day</span></label>
+                            </div>
+                            <div class="expiry-option">
+                                <input type="radio" name="token_expiry" id="expiry_1w" value="1w">
+                                <label for="expiry_1w">1<span class="unit">week</span></label>
+                            </div>
+                            <div class="expiry-option">
+                                <input type="radio" name="token_expiry" id="expiry_2w" value="2w">
+                                <label for="expiry_2w">2<span class="unit">weeks</span></label>
+                            </div>
+                            <div class="expiry-option">
+                                <input type="radio" name="token_expiry" id="expiry_1m" value="1m" checked>
+                                <label for="expiry_1m">1<span class="unit">month</span></label>
+                            </div>
+                            <div class="expiry-option">
+                                <input type="radio" name="token_expiry" id="expiry_2m" value="2m">
+                                <label for="expiry_2m">2<span class="unit">months</span></label>
+                            </div>
+                        </div>
+                        @error('token_expiry')
+                            <div class="form-text text-danger mt-2">{{ $message }}</div>
                         @enderror
                     </div>
 

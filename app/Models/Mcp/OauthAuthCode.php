@@ -14,6 +14,7 @@ class OauthAuthCode extends Model
         'code',
         'user_id',
         'scope',
+        'token_expiry',
         'code_challenge',
         'expires_at',
     ];
