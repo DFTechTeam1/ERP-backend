@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mcp;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RequestMcpBearerToken;
 use App\Models\OauthClient;
 use DateTimeImmutable;
 use Illuminate\Http\Request;
@@ -24,21 +25,21 @@ class OauthController extends Controller
     public function authorizeForm(Request $request)
     {
         $request->validate([
-            'response_type'         => 'required|in:code',
-            'client_id'             => 'required|string|exists:oauth_clients,client_id',
-            'redirect_uri'          => 'required|url',
-            'code_challenge'        => 'required|string',
+            'response_type' => 'required|in:code',
+            'client_id' => 'required|string|exists:oauth_clients,client_id',
+            'redirect_uri' => 'required|url',
+            'code_challenge' => 'required|string',
             'code_challenge_method' => 'required|in:S256',
-            'scope'                 => 'nullable|string',
-            'state'                 => 'nullable|string',
+            'scope' => 'nullable|string',
+            'state' => 'nullable|string',
         ]);
 
         $client = OauthClient::find($request->client_id);
 
         // Check redirect_uri is in registered list
-        if (!in_array($request->redirect_uri, $client->redirect_uris)) {
+        if (! in_array($request->redirect_uri, $client->redirect_uris)) {
             // Also allow if it starts with claude.ai domain
-            if (!str_starts_with($request->redirect_uri, 'https://claude.ai')) {
+            if (! str_starts_with($request->redirect_uri, 'https://claude.ai')) {
                 abort(400, 'Invalid redirect_uri');
             }
         }
@@ -94,6 +95,51 @@ class OauthController extends Controller
         return redirect($redirectUri);
     }
 
+    public function generateStringToken(int $userId, string $scope): string
+    {
+        $config = $this->jwtConfig();
+        $now = new DateTimeImmutable;
+
+        $token = $config->builder()
+            ->issuedBy(config('app.url'))                               // iss — must match BACKEND_URL in MCP .env
+            ->permittedFor(config('mcp.server_url'))                    // aud — must match MCP_SERVER_URL in MCP .env
+            ->relatedTo((string) $userId)                               // sub — user ID from your DB
+            ->identifiedBy((string) \Illuminate\Support\Str::uuid())    // jti
+            ->issuedAt($now)                                            // iat
+            ->canOnlyBeUsedAfter($now)                                  // nbf
+            ->expiresAt($now->modify('+1 hour'))                        // exp
+            ->withClaim('scope', $scope)                                // custom scope claim
+            ->getToken($config->signer(), $config->signingKey());
+
+        return $token->toString();
+    }
+
+    public function generateMcpBearerToken(RequestMcpBearerToken $request)
+    {
+        try {
+            $user = \App\Models\User::where('email', $request->email)->first();
+
+            if (! $user) {
+                return response()->json(['message' => 'Invalid credentials'], 401);
+            }
+
+            if ($user && ! \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+                return response()->json(['message' => 'Invalid credentials'], 401);
+            }
+
+            $tokenString = $this->generateStringToken($user->id, 'tasks:read tasks:write');
+
+            return response()->json([
+                'access_token' => $tokenString,
+                'token_type' => 'Bearer',
+                'expires_in' => 3600,
+                'scope' => 'tasks:read tasks:write',
+            ]);
+        } catch (\Throwable $th) {
+            return apiResponse(errorResponse($th));
+        }
+    }
+
     // Exchnage function code for JWT
     public function token(Request $request)
     {
@@ -106,17 +152,17 @@ class OauthController extends Controller
                 'code' => 'required|string',
                 'code_verifier' => 'required|string',
             ]);
-    
+
             $authCode = \App\Models\Mcp\OauthAuthCode::where('code', $request->code)
                 ->notExpired()
                 ->first();
 
             logging('auth code data', $authCode->toArray());
-    
+
             if (! $authCode) {
                 return response()->json(['error' => 'Invalid or expired authorization code'], 400);
             }
-    
+
             // Verify PKCE
             $computedChallenge = rtrim(
                 strtr(base64_encode(hash('sha256', $request->code_verifier, true)), '+/', '-_'),
@@ -126,37 +172,23 @@ class OauthController extends Controller
             logging('computed challenge', [
                 'computed' => $computedChallenge,
                 'expected' => $authCode->code_challenge,
-                'check hash' => hash_equals($authCode->code_challenge, $computedChallenge)
+                'check hash' => hash_equals($authCode->code_challenge, $computedChallenge),
             ]);
-    
+
             if (! hash_equals($authCode->code_challenge, $computedChallenge)) {
                 return response()->json(['error' => 'Invalid code verifier'], 400);
             }
-    
+
             $userId = $authCode->user_id;
             $scope = $authCode->scope;
             $authCode->delete();
-    
-            // Issue JWT using lcobucci/jwt
-            $config = $this->jwtConfig();
-            $now = new DateTimeImmutable;
-    
-            $token = $config->builder()
-                ->issuedBy(config('app.url'))                               // iss — must match BACKEND_URL in MCP .env
-                ->permittedFor(config('mcp.server_url'))                    // aud — must match MCP_SERVER_URL in MCP .env
-                ->relatedTo((string) $userId)                               // sub — user ID from your DB
-                ->identifiedBy((string) \Illuminate\Support\Str::uuid())    // jti
-                ->issuedAt($now)                                            // iat
-                ->expiresAt($now->modify('+1 hour'))                        // exp
-                ->withClaim('scope', $scope)                                // custom scope claim
-                ->getToken($config->signer(), $config->signingKey());
+
+            $tokenString = $this->generateStringToken($userId, $scope);
 
             DB::commit();
 
-            logging("type token", ['token' => $token->toString()]);
-    
             return response()->json([
-                'access_token' => $token->toString(),
+                'access_token' => $tokenString,
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
                 'scope' => $scope,
@@ -165,10 +197,11 @@ class OauthController extends Controller
             DB::rollBack();
             logging('token exchange error', [
                 'message' => $th->getMessage(),
-                'file'    => $th->getFile(),
-                'line'    => $th->getLine(),
-                'trace'   => $th->getTraceAsString(),
+                'file' => $th->getFile(),
+                'line' => $th->getLine(),
+                'trace' => $th->getTraceAsString(),
             ]);
+
             return response()->json(['error' => 'An error occurred while processing the token request'], 500);
         }
     }
@@ -214,28 +247,28 @@ class OauthController extends Controller
 
     public function register(Request $request)
     {
-        $clientId = 'claude-' . \Illuminate\Support\Str::random(16);
+        $clientId = 'claude-'.\Illuminate\Support\Str::random(16);
 
         $redirectUris = $request->redirect_uris ?? [
             'https://claude.ai/api/mcp/auth_callback',
         ];
 
         OauthClient::create([
-            'client_id'           => $clientId,
-            'client_name'         => $request->client_name ?? 'Claude',
-            'redirect_uris'       => $redirectUris,
+            'client_id' => $clientId,
+            'client_name' => $request->client_name ?? 'Claude',
+            'redirect_uris' => $redirectUris,
             'client_id_issued_at' => now(),
         ]);
 
         return response()->json([
-            'client_id'                  => $clientId,
-            'client_name'                => $request->client_name ?? 'Claude',
-            'redirect_uris'              => $redirectUris,
-            'grant_types'                => ['authorization_code'],
-            'response_types'             => ['code'],           // ← plural
+            'client_id' => $clientId,
+            'client_name' => $request->client_name ?? 'Claude',
+            'redirect_uris' => $redirectUris,
+            'grant_types' => ['authorization_code'],
+            'response_types' => ['code'],           // ← plural
             'token_endpoint_auth_method' => 'none',
-            'client_id_issued_at'        => time(),
-            'client_secret_expires_at'   => 0,                 // ← add this
+            'client_id_issued_at' => time(),
+            'client_secret_expires_at' => 0,                 // ← add this
         ], 201);
     }
 }
