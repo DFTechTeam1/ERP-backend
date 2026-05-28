@@ -3,6 +3,7 @@
 use App\Enums\Production\TaskStatus;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\LandingPageController;
+use App\Http\Controllers\Mcp\OauthController;
 use App\Imports\SummaryInventoryReport;
 use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
@@ -14,7 +15,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
-use Modules\Email\Data\Notification\SendSlackMessageData;
 use Modules\Email\Emails\InviteToErpMail;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
@@ -349,3 +349,9 @@ Route::get('sync-greatday', function () {
 // })->middleware('allow-iframe');
 
 Route::get('preview-data', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'testingData']);
+
+Route::get('/.well-known/oauth-authorization-server', [OauthController::class, 'authorizationServerMetadata']);
+Route::get('/.well-known/jwks.json', [OauthController::class, 'jwks']);
+Route::get('/oauth/authorize', [OauthController::class, 'authorizeForm']);
+Route::post('/oauth/authorize', [OauthController::class, 'authorize']);
+Route::post('/oauth/token', [OauthController::class, 'token']);
