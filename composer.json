@@ -17,6 +17,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/slack-notification-channel": "^3.6",
         "laravel/tinker": "^2.9",
+        "lcobucci/jwt": "^5.6",
         "lorisleiva/laravel-actions": "^2.8",
         "maatwebsite/excel": "^3.1",
         "milon/barcode": "^11.0",
