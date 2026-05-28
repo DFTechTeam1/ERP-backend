@@ -99,6 +99,8 @@ class OauthController extends Controller
     {
         DB::beginTransaction();
         try {
+            logging('exchange token', $request->all());
+
             $request->validate([
                 'grant_type' => 'required|string|in:authorization_code',
                 'code' => 'required|string',
@@ -142,6 +144,8 @@ class OauthController extends Controller
                 ->getToken($config->signer(), $config->signingKey());
 
             DB::commit();
+
+            logging("type token", ['token' => $token->toString()]);
     
             return response()->json([
                 'access_token' => $token->toString(),
