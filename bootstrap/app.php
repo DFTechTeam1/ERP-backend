@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
+            'mcp.auth' => \App\Http\Middleware\AuthenticateWithMcpToken::class,
             'internal.service' => InternalServiceMiddleware::class,
             'allow-iframe' => AllowIframe::class,
             'partner' => PartnerMiddleware::class,
