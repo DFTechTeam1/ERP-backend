@@ -144,7 +144,7 @@ class OauthController extends Controller
         }
     }
 
-    // GET /.well-known/oahuth-authorization-server
+    // GET /.well-known/oauth-authorization-server
     public function authorizationServerMetadata()
     {
         $base = config('app.url');
@@ -154,6 +154,7 @@ class OauthController extends Controller
             'authorization_endpoint' => "{$base}/oauth/authorize",
             'token_endpoint' => "{$base}/oauth/token",
             'jwks_uri' => "{$base}/.well-known/jwks.json",
+            'registration_endpoint' => "{$base}/oauth/register",
             'scopes_supported' => ['tasks:read', 'tasks:write'],
             'response_types_supported' => ['code'],
             'grant_types_supported' => ['authorization_code'],
