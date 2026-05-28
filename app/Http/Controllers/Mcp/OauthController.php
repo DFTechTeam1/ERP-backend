@@ -181,4 +181,17 @@ class OauthController extends Controller
             ]],
         ]);
     }
+
+    public function register(Request $request)
+    {
+        return response()->json([
+            'client_id' => 'claude-' . \Illuminate\Support\Str::random(16),
+            'client_name' => $request->client_name ?? "Claude",
+            'redirect_uris' => $request->redirect_uris ?? [],
+            'grant_types' => ['authorization_code'],
+            'response_type' => ['code'],
+            'token_endpoint_auth_method' => 'none',
+            'client_id_issued_at' => time(),
+        ]);
+    }
 }
