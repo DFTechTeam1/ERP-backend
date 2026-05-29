@@ -163,7 +163,6 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [LoginController::class, 'login'])->name('login-form');
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
-    Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth:sanctum');
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
 });
 
@@ -171,7 +170,7 @@ Route::middleware('auth:sanctum')
     ->prefix('auth')
     ->group(function () {
         Route::post('logout', [LoginController::class, 'logout']);
-
+        Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth:sanctum');
     });
 
 Route::get('users/activate/{key}', [UserController::class, 'activate']);
@@ -202,6 +201,9 @@ Route::middleware('auth:sanctum')
         Route::get('dashboard/eventSuccessRate', [DashboardController::class, 'getEventSuccessRate']);
         Route::get('dashboard/getSalesPreview', [DashboardController::class, 'getSalesPreview']);
         Route::get('dashboard/getEventClassDistribution', [DashboardController::class, 'getEventClassDistribution']);
+
+        // Add route to fetch user whatsapp group or invitation group link
+        Route::get('user/whatsapp-group', [UserController::class, 'getWhatsappGroup']);
 
         // Dashboard for human resources
         Route::get('dashboard/hr/{type}', [DashboardController::class, 'getHrReport']);

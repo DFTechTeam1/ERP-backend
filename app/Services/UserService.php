@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\User\WhatsappInformationData;
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
 use App\Exceptions\UserNotFound;
@@ -11,7 +12,6 @@ use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,12 +19,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeeWhatsappGroup;
+use Modules\Hrd\Models\WhatsappGroup;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\WhatsappOtpRepository;
 use Spatie\Permission\Models\Role;
 use Vinkla\Hashids\Facades\Hashids;
-
-use function Laravel\Prompts\error;
 
 class UserService
 {
@@ -130,7 +130,7 @@ class UserService
                 $isDeletable = false;
             }
 
-            if (!$item->email_verified_at) {
+            if (! $item->email_verified_at) {
                 $canResendActivation = true;
             }
 
@@ -759,12 +759,13 @@ class UserService
         }
     }
 
-    public function verifyOtp(array $payload) {
+    public function verifyOtp(array $payload)
+    {
         DB::beginTransaction();
         try {
             $employee = $this->employeeRepo->show(
                 uid: '',
-                where: "email = '" . $payload['email'] . "'",
+                where: "email = '".$payload['email']."'",
                 select: 'id,phone,uid,user_id'
             );
 
@@ -788,7 +789,7 @@ class UserService
             }
 
             if ($verifyData->otp != $payload['otp']) {
-                return errorResponse(message: __("notification.otpMismatch"));
+                return errorResponse(message: __('notification.otpMismatch'));
             }
 
             // Update data
@@ -801,7 +802,7 @@ class UserService
 
             $this->employeeRepo->update(
                 data: [
-                    'is_phone_verified' => true
+                    'is_phone_verified' => true,
                 ],
                 uid: $employee->uid
             );
@@ -822,9 +823,9 @@ class UserService
             DB::commit();
 
             return generalResponse(
-                message: __("notification.phoneNumberVerfied"),
+                message: __('notification.phoneNumberVerfied'),
                 data: [
-                    'token' => $encryptedPayload
+                    'token' => $encryptedPayload,
                 ]
             );
         } catch (\Throwable $th) {
@@ -836,7 +837,8 @@ class UserService
 
     /**
      * Update user profile
-     * @param  array<string, string> $data
+     *
+     * @param  array<string, string>  $data
      * @return array<string, mixed>
      */
     public function updateProfile(array $data, int $userId): array
@@ -848,27 +850,27 @@ class UserService
                 select: 'id,image,employee_id',
                 id: $userId,
                 relation: [
-                    'employee:id,phone,is_phone_verified'
+                    'employee:id,phone,is_phone_verified',
                 ]
             );
 
-            if ((isset($data['profile_image'])) && ($data['profile_image']) && !\Illuminate\Support\Str::contains($data['profile_image'], 'https')) {
+            if ((isset($data['profile_image'])) && ($data['profile_image']) && ! \Illuminate\Support\Str::contains($data['profile_image'], 'https')) {
                 // get current image from tmp file
-                if (!Storage::disk('public')->exists($data['profile_image'])) {
+                if (! Storage::disk('public')->exists($data['profile_image'])) {
                     return errorResponse(__('notification.fileNotFound'));
                 }
-    
+
                 // move image to permanent folder
                 $newImagePath = 'profiles/'.basename($data['profile_image']);
                 Storage::disk('public')->move($data['profile_image'], $newImagePath);
-    
-                $completePath = asset('storage/' . $newImagePath);
+
+                $completePath = asset('storage/'.$newImagePath);
 
                 $removedImage[] = $currentUser->image;
-    
+
                 $this->repo->update(
                     data: [
-                        'image' => $completePath
+                        'image' => $completePath,
                     ],
                     key: 'id',
                     value: $userId
@@ -880,7 +882,7 @@ class UserService
             $payloadUpdateEmployee = [
                 'nickname' => $data['nickname'] ?? null,
                 'phone' => $data['phone'],
-                'is_phone_verified' => !$isNeedVerifyPhone
+                'is_phone_verified' => ! $isNeedVerifyPhone,
             ];
 
             if (isset($completePath)) {
@@ -922,7 +924,7 @@ class UserService
             return generalResponse(
                 message: __('notification.successUpdateProfile'),
                 data: [
-                    'token' => $encryptedPayload
+                    'token' => $encryptedPayload,
                 ]
             );
         } catch (\Throwable $th) {
@@ -934,7 +936,7 @@ class UserService
 
     /**
      * Resend activation email to user
-     * @param  string  $userUid
+     *
      * @return array<string, mixed>
      */
     public function resendActivationEmail(string $userUid): array
@@ -1032,5 +1034,56 @@ class UserService
             'hrd' => $merged->where('type', 'hrd'),
             'general' => $merged->where('type', 'general'),
         ];
+    }
+
+    /**
+     * @return array<WhatsappInformationData>
+     */
+    public function getWhatsappGroup(): array
+    {
+        try {
+            $user = $this->repo->detail(
+                id: Auth::id(),
+                select: 'id,employee_id',
+                relation: ['employee:id,boss_id']
+            );
+
+            if (! $user || ! $user->employee) {
+                return generalResponse(message: 'Success', data: []);
+            }
+
+            $employee = $user->employee;
+
+            // boss_id null = this employee IS a leader, so show their own team group
+            // boss_id set = show their boss's team group
+            $teamOwnerId = $employee->boss_id ?? $employee->id;
+
+            $groups = WhatsappGroup::query()
+                ->where(function ($query) use ($teamOwnerId) {
+                    $query->where('target_type', 'all')
+                        ->orWhere(function ($q) use ($teamOwnerId) {
+                            $q->where('target_type', 'team')
+                                ->where('employee_id', $teamOwnerId);
+                        });
+                })
+                ->get();
+
+            $joinedGroupIds = EmployeeWhatsappGroup::query()
+                ->where('employee_id', $employee->id)
+                ->pluck('group_id')
+                ->all();
+
+            $output = $groups->map(fn (WhatsappGroup $group) => new WhatsappInformationData(
+                id: $group->id,
+                name: $group->group_name,
+                type: $group->target_type->value,
+                joined: in_array($group->group_id, $joinedGroupIds),
+                invitationLink: $group->invitation_link ?? '',
+            ))->values()->all();
+
+            return generalResponse(message: 'Success', data: $output);
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }
