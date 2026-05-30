@@ -6,7 +6,7 @@ use App\Data\Whatsapp\CreateCommunitySchemaData;
 use App\Data\Whatsapp\CreateGroupSchemaData;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Modules\Hrd\Http\Requests\WhatsappGroup\Store;
+use Modules\Hrd\Http\Requests\WhatsappGroup\AddParticipant;
 use Modules\Hrd\Http\Requests\WhatsappGroup\Update;
 use Modules\Hrd\Services\WhatsappGroupService;
 
@@ -47,5 +47,24 @@ class WhatsappGroupController extends Controller
     public function storeCommunity(CreateCommunitySchemaData $request): JsonResponse
     {
         return apiResponse($this->service->storeCommunity($request));
+    }
+
+    public function communityGroups(string $communityId): JsonResponse
+    {
+        return apiResponse($this->service->listCommunityGroups($communityId));
+    }
+
+    public function sync(string $groupId): JsonResponse
+    {
+        return apiResponse($this->service->sync($groupId));
+    }
+
+    public function addParticipant(AddParticipant $request, string $groupId): JsonResponse
+    {
+        return apiResponse($this->service->addParticipant(
+            $groupId,
+            $request->validated('employee_uid'),
+            $request->boolean('is_admin'),
+        ));
     }
 }

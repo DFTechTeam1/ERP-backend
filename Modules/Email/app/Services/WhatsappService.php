@@ -56,6 +56,8 @@ class WhatsappService
         $url = $this->whatsappUrl.'/message/group/participant/add';
         $response = $this->client($headers)->post($url, $body);
 
+        logging('RESULTS ADD TO WHATSAPP', [$response->json()]);
+
         if ($response->successful()) {
             return ['success' => true, 'message' => 'Success add participant'];
         }
@@ -88,14 +90,12 @@ class WhatsappService
         return $response->json('data.isAvailable', false);
     }
 
-    public function createCommunity(CreateCommunityServerSchemaData $request): bool
+    public function createCommunity(CreateCommunityServerSchemaData $request): ?string
     {
         $body = $request->toArray();
         $headers = $this->buildHmacHeaders('POST', 'api/message/community/create', $body);
         $url = $this->whatsappUrl.'/message/community/create';
         $response = $this->client($headers)->post($url, $body);
-
-        logging('check data create community whatsapp', [$response->json()]);
 
         return $response->json('data.id', null);
     }
@@ -130,12 +130,28 @@ class WhatsappService
         $url = $this->whatsappUrl.'/message/group/invite-link';
         $response = $this->client($headers)->post($url, $body);
 
-        logging("invitation group response", [$response->json()]);
+        logging('invitation group response', [$response->json()]);
 
         if ($response->successful()) {
             return ['success' => true, 'message' => 'Success get invite link', 'data' => $response->json('data')];
         }
 
         return $response->json() ?? ['success' => false, 'message' => 'Failed to get invite link'];
+    }
+
+    public function whatsappSync(string $groupId)
+    {
+        $body = ['groupId' => $groupId];
+        $headers = $this->buildHmacHeaders('POST', 'api/message/group/sync', $body);
+        $url = $this->whatsappUrl.'/message/group/sync';
+        $response = $this->client($headers)->post($url, $body);
+
+        logging('sync group response', [$response->json()]);
+
+        if ($response->successful()) {
+            return ['success' => true, 'message' => 'Success sync group', 'data' => []];
+        }
+
+        return $response->json() ?? ['success' => false, 'message' => 'Failed to sync group'];
     }
 }

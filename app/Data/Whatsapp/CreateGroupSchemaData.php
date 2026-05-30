@@ -15,6 +15,6 @@ class CreateGroupSchemaData extends Data
         public string $community_id,
         #[Enum(GroupTargetType::class)]
         public string $target_type,
-        public ?string $employee_uid = null,
+        public string $employee_uid,
     ) {}
 }
