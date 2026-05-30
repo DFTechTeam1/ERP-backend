@@ -8,16 +8,22 @@
     <title>Authorize - MCP Server</title>
     <style>
         :root {
-            --primary-color: #4f46e5;
-            --primary-dark: #4338ca;
-            --primary-light: #6366f1;
-            --gradient-start: #667eea;
-            --gradient-end: #764ba2;
+            --black: #0a0a0a;
+            --dark: #111111;
+            --dark-2: #1a1a1a;
+            --gray: #6b7280;
+            --gray-light: #d1d5db;
+            --gray-subtle: #f5f5f5;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            background: var(--gray-subtle);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -26,162 +32,167 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 24px;
         }
 
         .login-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: var(--white);
+            border-radius: 4px;
+            box-shadow: 0 2px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0,0,0,0.04);
             overflow: hidden;
-            max-width: 1000px;
+            max-width: 980px;
             width: 100%;
             display: flex;
             flex-direction: row;
         }
 
+        /* ── Left panel ── */
         .login-left {
             flex: 1;
-            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-            padding: 60px 40px;
+            background: var(--black);
+            padding: 60px 48px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
+            justify-content: space-between;
+            color: var(--white);
             position: relative;
-            overflow: hidden;
         }
 
-        .login-left::before {
-            content: '';
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            top: -100px;
-            right: -100px;
-        }
-
-        .login-left::after {
-            content: '';
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            bottom: -50px;
-            left: -50px;
-        }
-
-        .login-left-content {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-        }
-
-        .logo-icon {
-            width: 80px;
-            height: 80px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
+        .left-top {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 30px;
-            backdrop-filter: blur(10px);
+            flex-direction: column;
+            align-items: flex-start;
         }
 
-        .logo-icon svg {
-            width: 50px;
-            height: 50px;
+        .brand-logo {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            margin-bottom: 40px;
+            filter: brightness(0) invert(1);
         }
 
         .login-left h2 {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
         }
 
-        .login-left p {
-            font-size: 15px;
-            opacity: 0.9;
-            line-height: 1.6;
+        .login-left > .left-top > p {
+            font-size: 14px;
+            color: rgba(255,255,255,0.55);
+            line-height: 1.7;
+            margin-bottom: 0;
         }
 
         .scope-list {
-            margin-top: 30px;
-            text-align: left;
-            width: 100%;
+            margin-top: 44px;
         }
 
         .scope-list h6 {
-            font-size: 12px;
-            letter-spacing: 1px;
+            font-size: 10px;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            opacity: 0.7;
-            margin-bottom: 12px;
+            color: rgba(255,255,255,0.35);
+            margin-bottom: 14px;
         }
 
         .scope-item {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 4px;
+            padding: 9px 14px;
             font-size: 13px;
+            color: rgba(255,255,255,0.8);
         }
 
         .scope-item svg {
             margin-right: 10px;
             flex-shrink: 0;
-            opacity: 0.9;
+            color: rgba(255,255,255,0.5);
         }
 
+        .left-footer {
+            font-size: 11px;
+            color: rgba(255,255,255,0.2);
+            letter-spacing: 0.5px;
+        }
+
+        /* ── Right panel ── */
         .login-right {
-            flex: 1;
-            padding: 60px 50px;
+            flex: 1.1;
+            padding: 60px 56px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            background: var(--white);
         }
 
         .login-header {
-            margin-bottom: 32px;
+            margin-bottom: 36px;
+            padding-bottom: 28px;
+            border-bottom: 1px solid var(--gray-subtle);
         }
 
         .login-header h1 {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 700;
-            color: #1f2937;
+            color: var(--black);
             margin-bottom: 6px;
+            letter-spacing: -0.3px;
         }
 
         .login-header p {
-            color: #6b7280;
+            color: var(--gray);
             font-size: 14px;
+            margin-bottom: 0;
+        }
+
+        .client-badge {
+            display: inline-flex;
+            align-items: center;
+            background: var(--gray-subtle);
+            border: 1px solid var(--gray-light);
+            border-radius: 4px;
+            padding: 5px 12px;
+            font-size: 12px;
+            color: var(--dark);
+            margin-bottom: 28px;
+            gap: 7px;
+            font-weight: 500;
         }
 
         .form-label {
             font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-            font-size: 14px;
+            color: var(--dark);
+            margin-bottom: 7px;
+            font-size: 13px;
+            letter-spacing: 0.1px;
         }
 
         .form-control {
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 12px 16px;
-            font-size: 15px;
-            transition: all 0.3s ease;
+            border: 1.5px solid var(--gray-light);
+            border-radius: 4px;
+            padding: 11px 15px;
+            font-size: 14px;
+            color: var(--dark);
+            background: var(--white);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+            border-color: var(--black);
+            box-shadow: 0 0 0 3px rgba(10,10,10,0.06);
+            outline: none;
+        }
+
+        .form-control::placeholder {
+            color: var(--gray-light);
         }
 
         .input-group {
@@ -190,70 +201,18 @@
 
         .input-icon {
             position: absolute;
-            left: 16px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
-            color: #9ca3af;
+            color: var(--gray-light);
             z-index: 10;
         }
 
         .form-control.with-icon {
-            padding-left: 45px;
+            padding-left: 44px;
         }
 
-        .btn-login {
-            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-            border: none;
-            border-radius: 10px;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: 600;
-            color: white;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
-        }
-
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
-            color: white;
-        }
-
-        .btn-login:active {
-            transform: translateY(0);
-        }
-
-        .alert {
-            border-radius: 10px;
-            border: none;
-            padding: 12px 16px;
-        }
-
-        .alert-danger {
-            background-color: #fef2f2;
-            color: #991b1b;
-        }
-
-        .form-text {
-            font-size: 13px;
-        }
-
-        .client-badge {
-            display: inline-flex;
-            align-items: center;
-            background: #f3f4f6;
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 13px;
-            color: #374151;
-            margin-bottom: 24px;
-            gap: 6px;
-        }
-
-        .client-badge svg {
-            color: var(--primary-color);
-        }
-
+        /* ── Expiry grid ── */
         .expiry-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -270,56 +229,104 @@
             align-items: center;
             justify-content: center;
             padding: 10px 6px;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
+            border: 1.5px solid var(--gray-light);
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray);
             text-align: center;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             line-height: 1.3;
+            user-select: none;
         }
 
         .expiry-option label span.unit {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 400;
-            color: #9ca3af;
+            color: var(--gray-light);
             margin-top: 2px;
+            letter-spacing: 0.3px;
         }
 
         .expiry-option input[type="radio"]:checked + label {
-            border-color: var(--primary-color);
-            background: rgba(79, 70, 229, 0.06);
-            color: var(--primary-color);
+            border-color: var(--black);
+            background: var(--black);
+            color: var(--white);
         }
 
         .expiry-option input[type="radio"]:checked + label span.unit {
-            color: var(--primary-light);
+            color: rgba(255,255,255,0.5);
         }
 
         .expiry-option label:hover {
-            border-color: #a5b4fc;
+            border-color: var(--dark-2);
+            color: var(--dark);
         }
 
+        /* ── Button ── */
+        .btn-login {
+            background: var(--black);
+            border: none;
+            border-radius: 4px;
+            padding: 13px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--white);
+            transition: background 0.2s ease, transform 0.1s ease;
+            letter-spacing: 0.3px;
+            width: 100%;
+        }
+
+        .btn-login:hover {
+            background: var(--dark-2);
+            color: var(--white);
+        }
+
+        .btn-login:active {
+            transform: scale(0.99);
+        }
+
+        /* ── Alerts ── */
+        .alert {
+            border-radius: 4px;
+            border: none;
+            padding: 12px 16px;
+        }
+
+        .alert-danger {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-left: 3px solid #ef4444;
+        }
+
+        .form-text {
+            font-size: 12px;
+        }
+
+        /* ── Responsive ── */
         @media (max-width: 768px) {
             .login-card {
                 flex-direction: column;
             }
 
             .login-left {
-                padding: 40px 30px;
+                padding: 40px 32px;
             }
 
             .login-right {
-                padding: 40px 30px;
+                padding: 40px 32px;
             }
 
             .login-left h2 {
-                font-size: 22px;
+                font-size: 20px;
             }
 
             .scope-list {
+                display: none;
+            }
+
+            .left-footer {
                 display: none;
             }
         }
@@ -328,16 +335,11 @@
 <body>
     <div class="login-container">
         <div class="login-card">
-            <!-- Left Side - Branding -->
+            <!-- Left Side -->
             <div class="login-left">
-                <div class="login-left-content">
-                    <div class="logo-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24">
-                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v5.7c0 4.15-2.77 8.03-7 9.37-4.23-1.34-7-5.22-7-9.37V6.3l7-3.12z"/>
-                            <path d="M12 7l-1.5 3H8l2.5 1.8-1 3 3-1.8 3 1.8-1-3L17 10h-2.5L12 7z"/>
-                        </svg>
-                    </div>
-                    <h2>MCP Server Access</h2>
+                <div class="left-top">
+                    <img src="/images/dfactory.webp" alt="DFactory Logo" class="brand-logo">
+                    <h2>MCP Server<br>Access</h2>
                     <p>Sign in to authorize the MCP client to access this server on your behalf.</p>
 
                     @if(!empty($scope))
@@ -345,7 +347,7 @@
                             <h6>Permissions Requested</h6>
                             @foreach(explode(' ', $scope) as $s)
                                 <div class="scope-item">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
                                         <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z"/>
                                     </svg>
                                     {{ $s }}
@@ -354,9 +356,11 @@
                         </div>
                     @endif
                 </div>
+
+                <div class="left-footer">MCP SERVER &mdash; SECURE AUTHORIZATION</div>
             </div>
 
-            <!-- Right Side - Login Form -->
+            <!-- Right Side -->
             <div class="login-right">
                 <div class="login-header">
                     <h1>Sign In to Authorize</h1>
@@ -365,17 +369,17 @@
 
                 @if(!empty($client_id))
                     <div class="client-badge">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+                            <path d="M7 11.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5z"/>
                         </svg>
-                        Client: {{ $client_id }}
+                        {{ $client_id }}
                     </div>
                 @endif
 
                 @if($errors->any())
                     <div class="alert alert-danger mb-4" role="alert">
-                        <strong>Error!</strong>
+                        <strong>Authentication failed.</strong>
                         <ul class="mb-0 mt-2">
                             @foreach($errors->all() as $error)
                                 <li>{{ $error }}</li>
@@ -398,7 +402,7 @@
                         <label for="email" class="form-label">Email Address</label>
                         <div class="input-group">
                             <span class="input-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                                     <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.758 2.855L15 11.114v-5.73zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741zM1 11.114l4.758-2.876L1 5.383v5.73z"/>
                                 </svg>
                             </span>
@@ -414,7 +418,7 @@
                             >
                         </div>
                         @error('email')
-                            <div class="form-text text-danger">{{ $message }}</div>
+                            <div class="form-text text-danger mt-1">{{ $message }}</div>
                         @enderror
                     </div>
 
@@ -422,7 +426,7 @@
                         <label for="password" class="form-label">Password</label>
                         <div class="input-group">
                             <span class="input-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                                     <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
                                 </svg>
                             </span>
@@ -436,11 +440,11 @@
                             >
                         </div>
                         @error('password')
-                            <div class="form-text text-danger">{{ $message }}</div>
+                            <div class="form-text text-danger mt-1">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="mb-4">
+                    <div class="mb-5">
                         <label class="form-label">Token Expiration</label>
                         <div class="expiry-grid">
                             <div class="expiry-option">
@@ -473,18 +477,15 @@
                         @enderror
                     </div>
 
-                    <div class="d-grid mb-3">
+                    <div class="d-grid mb-4">
                         <button type="submit" class="btn btn-login">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16" style="display: inline-block; vertical-align: middle;">
-                                <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                            </svg>
                             Authorize Access
                         </button>
                     </div>
 
                     <div class="text-center">
-                        <small class="text-muted">
-                            By signing in you grant the MCP client the permissions listed above.
+                        <small style="font-size: 12px; color: #9ca3af;">
+                            By signing in you grant the MCP client the permissions listed.
                         </small>
                     </div>
                 </form>
