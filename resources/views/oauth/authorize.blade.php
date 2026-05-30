@@ -65,11 +65,11 @@
         }
 
         .brand-logo {
-            width: 64px;
-            height: 64px;
+            width: 72px;
+            height: 72px;
             object-fit: contain;
             margin-bottom: 40px;
-            filter: brightness(0) invert(1);
+            /* filter: brightness(0) invert(1); */
         }
 
         .login-left h2 {
