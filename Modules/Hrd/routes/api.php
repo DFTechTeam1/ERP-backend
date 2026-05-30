@@ -115,6 +115,9 @@ Route::middleware('auth:sanctum')
         Route::get('/community', 'indexCommunity');
         Route::post('/community', 'storeCommunity');
         Route::delete('/community/{community}', 'destroyCommunity');
+        Route::get('/{communityId}/community/groups', 'communityGroups');
+        Route::post('/{groupId}/sync', 'sync');
+        Route::post('/{groupId}/participants', 'addParticipant');
     });
 
 Route::middleware('auth:sanctum')
