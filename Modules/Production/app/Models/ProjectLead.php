@@ -3,9 +3,10 @@
 namespace Modules\Production\Models;
 
 use App\Enums\Production\EventType;
+use App\Enums\Production\ProjectLeadStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Company\Models\City;
 use Modules\Hrd\Models\Employee;
 
@@ -37,7 +38,8 @@ class ProjectLead extends Model
         'is_final',
         'cell_options',
         'skip_check',
-        'project_deal_id'
+        'project_deal_id',
+        'status',
     ];
 
     // protected static function newFactory(): ProjectLeadFactory
@@ -48,7 +50,8 @@ class ProjectLead extends Model
     protected function casts()
     {
         return [
-            'event_type' => EventType::class
+            'event_type' => EventType::class,
+            'status' => ProjectLeadStatus::class,
         ];
     }
 
