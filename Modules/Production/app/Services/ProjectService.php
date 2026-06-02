@@ -36,6 +36,7 @@ use App\Services\UserRoleManagement;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
@@ -74,6 +75,7 @@ use Modules\Production\Jobs\TaskSongApprovedJob;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSongList;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Repository\CustomerRepository;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultImageRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
@@ -197,6 +199,8 @@ class ProjectService
 
     private $nasFolderCreationService;
 
+    private CustomerRepository $customerRepo;
+
     /**
      * Construction Data
      */
@@ -247,7 +251,8 @@ class ProjectService
         \Modules\Production\Repository\ProjectTaskPicApprovalstateRepository $projectTaskPicApprovalstateRepo,
         \App\Services\NasFolderCreationService $nasFolderCreationService,
         ProjectTaskDeadlineRepository $projectTaskDeadlineRepo,
-        ProjectLeadRepository $projectLeadRepo
+        ProjectLeadRepository $projectLeadRepo,
+        CustomerRepository $customerRepo
     ) {
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
@@ -342,6 +347,8 @@ class ProjectService
         $this->projectTaskDeadlineRepo = $projectTaskDeadlineRepo;
 
         $this->projectLeadRepo = $projectLeadRepo;
+
+        $this->customerRepo = $customerRepo;
     }
 
     /**
@@ -10000,6 +10007,25 @@ class ProjectService
             return generalResponse(
                 message: 'Success',
                 data: $output
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function searchCustomer(Request $request)
+    {
+        try {
+            $searchQuery = $request->input('search');
+
+            $response = $this->customerRepo->list(
+                select: 'id,name,phone,email',
+                where: "name LIKE '%{$searchQuery}%' OR email LIKE '%{$searchQuery}%'",
+            );
+
+            return generalResponse(
+                message: 'Success',
+                data: $response->toArray()
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

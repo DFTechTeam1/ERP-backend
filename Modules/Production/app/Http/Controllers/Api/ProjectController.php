@@ -1196,4 +1196,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->searchProjectsByNameAndIdentifier($request->search));
     }
+
+    public function searchCustomer(Request $request)
+    {
+        return apiResponse($this->service->searchCustomer($request));
+    }
 }
