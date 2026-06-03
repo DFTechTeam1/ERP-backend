@@ -20,5 +20,6 @@ docs
 .claude
 Dockerfile*
 docker-compose*
-compose*
+compose*.yaml
+compose*.yml
 laravel_migration.sql
