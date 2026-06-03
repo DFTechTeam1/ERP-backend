@@ -44,7 +44,7 @@ class ProjectTaskPicLog extends Model
     {
         $out = '';
         if (isset($this->attributes['employee_id'])) {
-            $employee = \Modules\Hrd\Models\Employee::select('nickname')->find($this->attributes['employee_id']);
+            $employee = $this->employee;
 
             if (\App\Enums\Production\WorkType::OnProgress->value == $this->attributes['work_type']) {
                 $out = __('global.employeeStartWorking', ['name' => $employee->nickname]);
