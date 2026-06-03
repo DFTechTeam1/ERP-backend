@@ -171,6 +171,10 @@ class FormatBoards
 
                 $outputTask[$keyTask]['time_tracker'] = $this->formatTimeTracker($task->times->toArray());
 
+                // Drop the raw `times` relation from the payload (~1.4MB): the
+                // frontend only consumes `time_tracker` (the chunked view).
+                unset($outputTask[$keyTask]['times']);
+
                 $outputTask[$keyTask]['is_project_pic'] = $isProjectPic;
 
                 $outputTask[$keyTask]['is_director'] = $isDirector;

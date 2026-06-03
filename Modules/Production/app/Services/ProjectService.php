@@ -1645,12 +1645,8 @@ class ProjectService
         try {
             $output = $this->detailProjectAction->handle($uid, $this->repo, $this->entertainmentTaskSongRepo);
 
-            $serviceEncrypt = new \App\Services\EncryptionService;
-            $encrypts = $serviceEncrypt->encrypt(json_encode($output), env('SALT_KEY'));
-
             $outputData = [
                 'data' => $output,
-                'detail' => $encrypts,
             ];
 
             return generalResponse(
