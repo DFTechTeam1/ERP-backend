@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AllowIframe;
+use App\Http\Middleware\AuthenticateWithMcpToken;
 use App\Http\Middleware\BearerTokenMiddleware;
 use App\Http\Middleware\CustomSignedRouteMiddleware;
 use App\Http\Middleware\InternalServiceMiddleware;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
+use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         channels: __DIR__.'/../routes/channels.php',
         using: function () {
+            Route::get('/up', fn () => response('OK'));
+
             Route::prefix('api')
                 ->namespace('App\Http\Controllers\Api')
                 ->group(base_path('routes/api.php'));
@@ -34,7 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'mcp.auth' => \App\Http\Middleware\AuthenticateWithMcpToken::class,
+            'mcp.auth' => AuthenticateWithMcpToken::class,
             'internal.service' => InternalServiceMiddleware::class,
             'allow-iframe' => AllowIframe::class,
             'partner' => PartnerMiddleware::class,
@@ -45,5 +49,5 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        \Sentry\Laravel\Integration::handles($exceptions);
+        Integration::handles($exceptions);
     })->create();

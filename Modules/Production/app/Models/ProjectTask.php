@@ -123,6 +123,7 @@ class ProjectTask extends Model
     public function times(): HasMany
     {
         return $this->hasMany(\Modules\Production\Models\ProjectTaskPicLog::class, 'project_task_id')
+            ->with('employee:id,nickname')
             ->orderBy('created_at', 'ASC');
     }
 

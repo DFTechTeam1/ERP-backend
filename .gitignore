@@ -20,3 +20,7 @@ yarn-error.log
 /.idea
 /.vscode
 laradumps.yaml
+
+**/caddy
+frankenphp
+frankenphp-worker.php

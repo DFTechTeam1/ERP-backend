@@ -19,7 +19,10 @@ class FormatProjectProgress
             $grouping[$task['project_board_id']][] = $task;
         }
 
-        $groupData = collect($tasks)->groupBy('project_board_id')->toArray();
+        // Keep tasks as models (no toArray) so we don't trigger their heavy
+        // $appends accessors (proof_of_works_detail, revise_detail, etc.) here —
+        // this calculation only needs `status` and `project_board_id`.
+        $groupData = collect($tasks)->groupBy('project_board_id');
 
         $projectBoards = $boardRepo->list('id,project_id,name,based_board_id', 'project_id = '.$projectId);
 
