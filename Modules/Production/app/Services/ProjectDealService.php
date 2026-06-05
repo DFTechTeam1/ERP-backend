@@ -5,12 +5,14 @@ namespace Modules\Production\Services;
 use App\Actions\CopyDealToProject;
 use App\Actions\CreateInteractiveProject;
 use App\Actions\CreateQuotation;
+use App\Actions\Finance\CreateMasterInvoice;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Finance\RefundStatus;
 use App\Enums\Interactive\InteractiveRequestStatus;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\Production\ProjectLeadStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
@@ -35,18 +37,20 @@ use Modules\Finance\Repository\PriceChangeReasonRepository;
 use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
 use Modules\Finance\Repository\ProjectDealRefundRepository;
 use Modules\Finance\Repository\TransactionRepository;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
-use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Jobs\NotifyApprovalProjectDealChangeJob;
 use Modules\Production\Jobs\NotifyApprovalRecipientWhenInteractiveHasBeenDelete;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
+use Modules\Production\Models\InteractiveProject;
 use Modules\Production\Repository\InteractiveProjectPicRepository;
 use Modules\Production\Repository\InteractiveProjectRepository;
 use Modules\Production\Repository\InteractiveRequestRepository;
 use Modules\Production\Repository\ProjectDealChangeRepository;
 use Modules\Production\Repository\ProjectDealMarketingRepository;
 use Modules\Production\Repository\ProjectDealRepository;
+use Modules\Production\Repository\ProjectLeadRepository;
 use Modules\Production\Repository\ProjectQuotationRepository;
 use Modules\Production\Repository\ProjectRepository;
 
@@ -86,6 +90,8 @@ class ProjectDealService
 
     private InteractiveProjectPicRepository $interactiveProjectPicRepo;
 
+    private ProjectLeadRepository $projectLeadRepo;
+
     /**
      * Construction Data
      */
@@ -106,9 +112,12 @@ class ProjectDealService
         NasFolderCreationService $nasFolderCreationService,
         ProjectDealRefundRepository $projectDealRefundRepo,
         TransactionRepository $transactionRepo,
-        InteractiveProjectPicRepository $interactiveProjectPicRepo
+        InteractiveProjectPicRepository $interactiveProjectPicRepo,
+        ProjectLeadRepository $projectLeadRepo
     ) {
         $this->interactiveProjectPicRepo = $interactiveProjectPicRepo;
+
+        $this->projectLeadRepo = $projectLeadRepo;
 
         $this->projectDealChangeRepo = $projectDealChangeRepo;
 
@@ -215,7 +224,7 @@ class ProjectDealService
                 $marketing = request('marketing') ?? [];
 
                 $marketingIds = collect($marketing)->map(function ($itemMarketing) {
-                    $id = $this->generalService->getIdFromUid($itemMarketing, new \Modules\Hrd\Models\Employee);
+                    $id = $this->generalService->getIdFromUid($itemMarketing, new Employee);
 
                     return $id;
                 })->toArray();
@@ -281,7 +290,7 @@ class ProjectDealService
                 }
 
                 // define refund permission
-                $canAddRefund = !$item->refund && $user->hasPermissionTo('create_refund') ? true : false;
+                $canAddRefund = ! $item->refund && $user->hasPermissionTo('create_refund') ? true : false;
 
                 // interactive status
                 $interactiveStatus = __('global.notAvailable');
@@ -321,8 +330,8 @@ class ProjectDealService
                 }
 
                 return [
-                    'uid' => \Illuminate\Support\Facades\Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
-                    'latest_quotation_id' => \Illuminate\Support\Facades\Crypt::encryptString($item->latestQuotation->quotation_id),
+                    'uid' => Crypt::encryptString($item->id), // stand for encrypted of latest quotation id
+                    'latest_quotation_id' => Crypt::encryptString($item->latestQuotation->quotation_id),
                     'name' => $item->name,
                     'venue' => $item->venue,
                     'project_date' => $item->formatted_project_date,
@@ -370,7 +379,7 @@ class ProjectDealService
                     ],
                     'unpaidInvoices' => $item->unpaidInvoices->map(function ($invoice) {
                         return [
-                            'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                            'id' => Crypt::encryptString($invoice->id),
                             'uid' => $invoice->uid,
                             'number' => $invoice->number,
                             'amount' => $invoice->amount,
@@ -393,7 +402,7 @@ class ProjectDealService
                     'interactive_note' => $item->lastInteractiveRequest && ! $canAddInteractive ? $item->lastInteractiveRequest->interactive_note : null,
                     'can_edit_interactive' => $canEditInteractive,
                     'can_add_interactive' => $canAddInteractive,
-                    'can_add_refund' => $canAddRefund
+                    'can_add_refund' => $canAddRefund,
                 ];
             });
 
@@ -477,12 +486,12 @@ class ProjectDealService
     {
         DB::beginTransaction();
         try {
-            $detail = $this->repo->show(uid: (string) \Illuminate\Support\Facades\Crypt::decryptString($id), select: 'id,name,status', relation: [
+            $detail = $this->repo->show(uid: (string) Crypt::decryptString($id), select: 'id,name,status', relation: [
                 'marketings',
                 'quotations',
                 'quotations.items',
                 'project:id,project_deal_id',
-                'lastInteractiveRequest'
+                'lastInteractiveRequest',
             ]);
 
             // only not finalized project that can be deleted
@@ -501,7 +510,7 @@ class ProjectDealService
                 // create nas delete request
                 $this->nasFolderCreationService->sendRequest(
                     payload: [
-                        "project_id" => $detail->project->id,
+                        'project_id' => $detail->project->id,
                     ],
                     type: 'delete'
                 );
@@ -514,7 +523,7 @@ class ProjectDealService
                     uid: 'id,name,project_date',
                     select: 'id',
                     relation: [
-                        'pics'
+                        'pics',
                     ],
                     where: "project_deal_id = {$detail->id}"
                 );
@@ -537,7 +546,7 @@ class ProjectDealService
 
                 NotifyApprovalRecipientWhenInteractiveHasBeenDelete::dispatch([
                     'name' => $interactiveName,
-                    'date' => $interactiveDate
+                    'date' => $interactiveDate,
                 ])->afterCommit();
             }
 
@@ -652,7 +661,7 @@ class ProjectDealService
             $projectDealId = Crypt::decryptString($projectDealId);
 
             $payload = [
-                'status' => $type === 'publish' ? \App\Enums\Production\ProjectDealStatus::Temporary->value : \App\Enums\Production\ProjectDealStatus::Final->value,
+                'status' => $type === 'publish' ? ProjectDealStatus::Temporary->value : ProjectDealStatus::Final->value,
                 'published_at' => Carbon::now(),
                 'published_by' => Auth::user()->id,
                 // 'identifier_number' => $this->generalService->setProjectIdentifier()
@@ -696,7 +705,7 @@ class ProjectDealService
                 }
 
                 // generate master invoice
-                \App\Actions\Finance\CreateMasterInvoice::run(projectDealId: $projectDealId);
+                CreateMasterInvoice::run(projectDealId: $projectDealId);
 
                 ProjectHasBeenFinal::dispatch($projectDealId)->afterCommit();
             }
@@ -707,9 +716,9 @@ class ProjectDealService
             if (config('app.env') !== 'testing') {
                 $this->nasFolderCreationService->sendRequest(
                     payload: [
-                        "project_id" => $project->id,
-                        "project_name" => $project->name,
-                        "project_date" => $project->project_date,
+                        'project_id' => $project->id,
+                        'project_name' => $project->name,
+                        'project_date' => $project->project_date,
                     ]
                 );
             }
@@ -738,7 +747,7 @@ class ProjectDealService
                 'latestQuotation',
                 'latestQuotation.items:id,quotation_id,item_id',
                 'latestQuotation.items.item:id,name',
-                'lastInteractiveRequest'
+                'lastInteractiveRequest',
             ]
         );
 
@@ -755,6 +764,66 @@ class ProjectDealService
             message: 'Success',
             data: $data->toArray()
         );
+    }
+
+    /**
+     * Build the quotation PDF download link for a quotation_id.
+     *
+     * Mirrors the URL produced in {@see CreateQuotation}.
+     */
+    protected function buildQuotationDownloadUrl(string $quotationId): string
+    {
+        $encrypted = Crypt::encryptString(str_replace('#', '', $quotationId));
+
+        return url("quotations/download/{$encrypted}/download");
+    }
+
+    /**
+     * Get the quotation PDF download links of a project deal.
+     *
+     * Returns the latest quotation link (always present when a quotation exists)
+     * and the final quotation link (null until the deal is published as final).
+     *
+     * @return array{error: bool, message: string, data: array{latest_quotation: ?array{quotation_id: string, download_url: string}, final_quotation: ?array{quotation_id: string, download_url: string}}}
+     */
+    public function getQuotationDownloadLink(string $projectDealUid): array
+    {
+        try {
+            $projectDealId = Crypt::decryptString($projectDealUid);
+
+            $deal = $this->repo->show(
+                uid: $projectDealId,
+                select: 'id,name',
+                relation: [
+                    'latestQuotation:id,project_deal_id,quotation_id',
+                    'finalQuotation:id,project_deal_id,quotation_id',
+                ]
+            );
+
+            if (! $deal) {
+                return errorResponse(__('notification.dataNotFound'));
+            }
+
+            if (! $deal->latestQuotation) {
+                return errorResponse(__('notification.quotationNotFound'));
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'latest_quotation' => [
+                        'quotation_id' => $deal->latestQuotation->quotation_id,
+                        'download_url' => $this->buildQuotationDownloadUrl($deal->latestQuotation->quotation_id),
+                    ],
+                    'final_quotation' => $deal->finalQuotation ? [
+                        'quotation_id' => $deal->finalQuotation->quotation_id,
+                        'download_url' => $this->buildQuotationDownloadUrl($deal->finalQuotation->quotation_id),
+                    ] : null,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 
     /**
@@ -966,7 +1035,7 @@ class ProjectDealService
                 ];
             }
 
-            $transactions = $data->transactions->where('transaction_type', '!=', \App\Enums\Transaction\TransactionType::Refund)->map(function ($trx) use ($data) {
+            $transactions = $data->transactions->where('transaction_type', '!=', TransactionType::Refund)->map(function ($trx) use ($data) {
                 $trx['description'] = 'Receiving invoice payment';
                 $trx['images'] = collect($trx->attachments)->pluck('real_path')->toArray();
                 $trx['customer'] = [
@@ -980,7 +1049,7 @@ class ProjectDealService
 
             // we need to encrypt this data to keep it safe
             $invoiceList = $data->invoices->map(function ($invoice, $key) use ($projectDealUid, $user) {
-                $invoiceUrl = \Illuminate\Support\Facades\URL::signedRoute(
+                $invoiceUrl = URL::signedRoute(
                     name: 'invoice.download.type',
                     parameters: [
                         'type' => $invoice->status == InvoiceStatus::Unpaid ? 'collection' : 'proof_of_payment',
@@ -1005,7 +1074,7 @@ class ProjectDealService
 
                 return [
                     'type_invoice' => $key == 0 ? 'down_payment' : 'invoice',
-                    'id' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                    'id' => Crypt::encryptString($invoice->id),
                     'uid' => $invoice->uid,
                     'amount' => $invoice->amount,
                     'paid_amount' => $invoice->paid_amount,
@@ -1033,7 +1102,7 @@ class ProjectDealService
             $generalInvoiceUrl = URL::signedRoute(
                 name: 'invoice.general.download',
                 parameters: [
-                    'i' => \Illuminate\Support\Facades\Crypt::encryptString($projectDealUidRaw),
+                    'i' => Crypt::encryptString($projectDealUidRaw),
                 ],
                 expiration: now()->addHours(6)
             );
@@ -1147,7 +1216,11 @@ class ProjectDealService
     }
 
     /**
-     * Cancel temporary project deal
+     * Cancel a project deal.
+     *
+     * A deal cannot be cancelled once it is final. When the deal is linked to a
+     * project lead, the lead is cancelled as well and keeps the same cancellation
+     * trail (reason, who and when).
      *
      * @param  array  $payload  With this following structure
      *                          - string $reason
@@ -1157,18 +1230,35 @@ class ProjectDealService
         DB::beginTransaction();
         try {
             $projectDealId = Crypt::decryptString($projectDealUid);
-            $projectDeal = $this->repo->show(uid: 'id', select: 'id,status', where: "id = {$projectDealId} and status = ".ProjectDealStatus::Temporary->value);
+            $projectDeal = $this->repo->show(uid: 'id', select: 'id,status', where: "id = {$projectDealId}");
 
             if (! $projectDeal) {
                 return errorResponse(message: __('notification.eventCannotBeCancel'));
             }
 
+            if ($projectDeal->status === ProjectDealStatus::Final) {
+                return errorResponse(message: __('notification.finalEventCannotBeCancel'));
+            }
+
+            $userId = Auth::id();
+            $cancelAt = Carbon::now();
+
             $this->repo->update(data: [
                 'status' => ProjectDealStatus::Canceled,
                 'cancel_reason' => $payload['reason'],
-                'cancel_by' => Auth::id(),
-                'cancel_at' => Carbon::now(),
+                'cancel_by' => $userId,
+                'cancel_at' => $cancelAt,
             ], id: $projectDealId);
+
+            $this->projectLeadRepo->update(
+                data: [
+                    'status' => ProjectLeadStatus::CANCELLED,
+                    'cancel_reason' => $payload['reason'],
+                    'cancel_by' => $userId,
+                    'cancel_at' => $cancelAt,
+                ],
+                where: "project_deal_id = {$projectDealId}"
+            );
 
             ProjectDealCanceledJob::dispatch($projectDealId)->afterCommit();
 
@@ -1197,12 +1287,12 @@ class ProjectDealService
     {
         DB::beginTransaction();
         try {
-            $user = \Illuminate\Support\Facades\Auth::user();
+            $user = Auth::user();
             $projectDealId = Crypt::decryptString($projectDealUid);
 
             $changes = $this->projectDealChangeRepo->store(data: [
                 'requested_by' => $user->id,
-                'requested_at' => \Carbon\Carbon::now(),
+                'requested_at' => Carbon::now(),
                 'detail_changes' => $payload['detail_changes'],
                 'project_deal_id' => $projectDealId,
                 'status' => ProjectDealChangeStatus::Pending,
@@ -1312,12 +1402,11 @@ class ProjectDealService
                         break;
                 }
 
-
                 if ($field) {
                     if ($field == 'quotation_note') {
                         $needUpdateQuotationNote = true;
                         $payloadQuotation['description'] = $changeData['new_value'];
-                    } else if ($field == 'with_accommodation') {
+                    } elseif ($field == 'with_accommodation') {
                         $needUpdateQuotationNote = true;
                         $payloadQuotation['is_include_accomodation'] = $changeData['new_value'];
                     } else {
@@ -1366,9 +1455,9 @@ class ProjectDealService
                 $currentProject = $this->projectRepo->show(uid: 'uid', select: 'id,uid,name,project_date', where: "project_deal_id = {$change->project_deal_id}");
                 $this->nasFolderCreationService->sendRequest(
                     payload: [
-                        "project_id" => $currentProject->id,
-                        "changed_project_name_to" => $currentProject->name,
-                        "changed_project_date_to" => $currentProject->project_date
+                        'project_id' => $currentProject->id,
+                        'changed_project_name_to' => $currentProject->name,
+                        'changed_project_date_to' => $currentProject->project_date,
                     ],
                     type: 'update'
                 );
@@ -1905,7 +1994,7 @@ class ProjectDealService
                 $where = 'status = '.request('status');
             }
 
-            $orderBy = "id desc";
+            $orderBy = 'id desc';
 
             $data = $this->interactiveRequestRepo->list(
                 select: 'id,project_deal_id,requester_id,status,interactive_detail,interactive_area,interactive_note,interactive_fee,fix_price,approved_at,rejected_at',
@@ -1921,8 +2010,8 @@ class ProjectDealService
                 whereHas: [
                     [
                         'relation' => 'projectDeal',
-                        'query' => "deleted_at IS NULL"
-                    ]
+                        'query' => 'deleted_at IS NULL',
+                    ],
                 ],
                 limit: $itemsPerPage,
                 page: $page,
@@ -1963,12 +2052,13 @@ class ProjectDealService
     /**
      * Request project deal selection list
      * This function is used to get project deal list for selection purpose
+     *
      * @return array<mixed>
      */
     public function requestProjectDealSelectionList(): array
     {
         $search = request('search');
-        $where = "1 = 1";
+        $where = '1 = 1';
         $itemsPerPage = request('per_page') ?? 10;
         $itemsPerPage = $itemsPerPage == -1 ? 999999 : $itemsPerPage;
         $page = request('page') ?? 1;
@@ -1985,7 +2075,7 @@ class ProjectDealService
             relation: [
                 'latestQuotation',
                 'customer:id,name',
-                'refund:id,project_deal_id'
+                'refund:id,project_deal_id',
             ],
             itemsPerPage: $itemsPerPage,
             page: $page
@@ -2001,7 +2091,7 @@ class ProjectDealService
         });
 
         return generalResponse(
-            message: "Success",
+            message: 'Success',
             data: $paginated->toArray()
         );
     }
@@ -2014,7 +2104,6 @@ class ProjectDealService
      *                          - string|int $refund_percentage
      *                          - string $refund_type
      *                          - string $refund_reason
-     * @param string $projectDealUid
      * @return array<string, mixed>
      */
     public function storeRefund(array $payload, string $projectDealUid): array
@@ -2064,7 +2153,7 @@ class ProjectDealService
         $page = $page == 1 ? 0 : $page;
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
-        $where = "1 = 1";
+        $where = '1 = 1';
         $whereHas = [];
 
         if (request('name')) {
@@ -2137,7 +2226,6 @@ class ProjectDealService
     /**
      * Detail project deal refund
      *
-     * @param string $refundUid
      * @return array<string, mixed>
      */
     public function detailRefund(string $refundUid): array
@@ -2153,13 +2241,13 @@ class ProjectDealService
                     'createdBy:id,employee_id',
                     'createdBy.employee:id,name',
                     'transaction',
-                    'transaction.attachments'
+                    'transaction.attachments',
                 ]
             );
 
             $imageProof = null;
             if (($detail->transaction) && ($detail->transaction->attachments->count() > 0)) {
-                $imageProof = asset('storage/transactions/refunds/' . $detail->transaction->attachments[0]->image);
+                $imageProof = asset('storage/transactions/refunds/'.$detail->transaction->attachments[0]->image);
             }
 
             $output = [
@@ -2189,6 +2277,7 @@ class ProjectDealService
                 'payment_proof' => $imageProof,
                 'payment_notes' => $detail->transaction ? $detail->transaction->note : '-',
             ];
+
             return generalResponse(
                 message: 'Success',
                 data: $output
@@ -2207,7 +2296,6 @@ class ProjectDealService
      *                          - string $payment_method
      *                          - string|null $payment_notes
      *                          - file|null $payment_proof
-     * @param string $refundUid
      * @return array<string, mixed>
      */
     public function makeRefundPayment(array $payload, string $refundUid): array
@@ -2264,7 +2352,7 @@ class ProjectDealService
                 }
 
                 $tmpImage[] = $imageName;
-                
+
                 $trx->attachments()->create([
                     'image' => $imageName,
                 ]);
@@ -2287,7 +2375,6 @@ class ProjectDealService
                 }
             }
 
-            
             return errorResponse($th);
         }
     }
@@ -2295,7 +2382,6 @@ class ProjectDealService
     /**
      * Delete project deal refund
      *
-     * @param string $refundUid
      * @return array<string, mixed>
      */
     public function deleteRefund(string $refundUid): array
@@ -2310,7 +2396,7 @@ class ProjectDealService
                 return errorResponse(__('notification.cannotDeletePaidRefund'));
             }
 
-            if (!$check) {
+            if (! $check) {
                 return errorResponse(__('notification.refundDataNotFound'));
             }
 
@@ -2332,7 +2418,7 @@ class ProjectDealService
     public function getPicForSubtitute(string $interactiveUid): array
     {
         try {
-            $projectId = getIdFromUid($interactiveUid, new \Modules\Production\Models\InteractiveProject());
+            $projectId = getIdFromUid($interactiveUid, new InteractiveProject);
 
             $project = $this->interactiveProjectRepo->show($interactiveUid, 'id,name,project_date');
             $startDate = date('Y-m-d', strtotime('-7 days', strtotime($project->project_date)));
@@ -2342,7 +2428,7 @@ class ProjectDealService
 
             $selectedPic = $this->interactiveProjectPicRepo->list(
                 'id,intr_project_id,employee_id',
-                "intr_project_id = {$projectId}", 
+                "intr_project_id = {$projectId}",
                 ['employee:id,uid,name,email,employee_id,avatar'],
             );
 

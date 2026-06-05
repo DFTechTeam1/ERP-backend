@@ -4,12 +4,17 @@ use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\Api\MenuController;
+use App\Http\Controllers\Api\Nas\LocalNasController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Mcp\OauthController;
+use App\Jobs\PartnerEmailJob;
+use App\Models\User;
 use App\Services\EncryptionService;
+use App\Services\UserService;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -23,9 +28,17 @@ use KodePandai\Indonesia\Models\District;
 use Modules\Company\Http\Controllers\Api\ProjectClassController;
 use Modules\Company\Http\Controllers\Api\RegionController;
 use Modules\Company\Http\Controllers\Api\SettingController;
+use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
+use Modules\Hrd\Models\Employee;
+use Modules\LineMessaging\Http\Controllers\Api\LineController;
+use Modules\LineMessaging\Services\LineConnectionService;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Models\ProjectTask;
+use Modules\Production\Services\ProjectService;
+use Modules\Telegram\Http\Controllers\TelegramAuthorizationController;
+use Modules\Telegram\Service\Webhook\Telegram;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -41,12 +54,12 @@ Route::post('/onesignal-clicked', function (Request $request) {
 Route::post('interactive/image', [InteractiveController::class, 'generateImageQrCode']);
 
 Route::get('testing', function () {
-    $file = \Illuminate\Support\Facades\Storage::disk('public')->size('settings/image_17485858746.webp');
+    $file = Storage::disk('public')->size('settings/image_17485858746.webp');
 
     return $file;
 });
 
-Route::get('telegram-login', [\Modules\Telegram\Http\Controllers\TelegramAuthorizationController::class, 'index']);
+Route::get('telegram-login', [TelegramAuthorizationController::class, 'index']);
 
 Route::post('upload-profile-temp', [UserController::class, 'uploadProfileTemp']);
 Route::post('users/verify-otp', [UserController::class, 'verifyOtp'])->middleware('auth:sanctum');
@@ -55,7 +68,7 @@ Route::post('users/profile/update/{userId}', [UserController::class, 'updateProf
 Route::get('line-flex', function () {});
 
 Route::post('{token}/telegram-webhook', function (Request $request, string $token) {
-    $event = new \Modules\Telegram\Service\Webhook\Telegram;
+    $event = new Telegram;
     $event->categorize($request->all());
 });
 
@@ -92,7 +105,7 @@ Route::post('base64', function (Request $request) {
     $filePath = 'base64/'.$fileName;
 
     // Save the image using Laravel's Storage facade
-    \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $imageBase64);
+    Storage::disk('public')->put($filePath, $imageBase64);
 
     return response()->json([
         'success' => 'Upload success',
@@ -108,14 +121,14 @@ Route::put('forms/{uid}', [TestingController::class, 'updateForm']);
 Route::delete('forms/{uid}', [TestingController::class, 'deleteForm']);
 Route::post('forms/response/{uid}', [TestingController::class, 'storeFormResponse']);
 
-Route::get('delete-projects', [\App\Http\Controllers\Api\TestingController::class, 'deleteCurrentProjects']);
-Route::post('manual-migrate-project', [\App\Http\Controllers\Api\TestingController::class, 'manualMigrateProjects']);
-Route::post('manual-assign-pm', [\App\Http\Controllers\Api\TestingController::class, 'manualAssignPM']);
-Route::post('manual-assign-status', [\App\Http\Controllers\Api\TestingController::class, 'manualAssignStatus']);
-Route::get('generate-official-email', [\App\Http\Controllers\Api\TestingController::class, 'generateOfficialEmail']);
+Route::get('delete-projects', [TestingController::class, 'deleteCurrentProjects']);
+Route::post('manual-migrate-project', [TestingController::class, 'manualMigrateProjects']);
+Route::post('manual-assign-pm', [TestingController::class, 'manualAssignPM']);
+Route::post('manual-assign-status', [TestingController::class, 'manualAssignStatus']);
+Route::get('generate-official-email', [TestingController::class, 'generateOfficialEmail']);
 
-Route::get('notification/readAll', [\App\Http\Controllers\Api\NotificationController::class, 'readAll'])->middleware('auth:sanctum');
-Route::get('notification/markAsRead/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
+Route::get('notification/readAll', [NotificationController::class, 'readAll'])->middleware('auth:sanctum');
+Route::get('notification/markAsRead/{id}', [NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
 
 // Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
@@ -140,7 +153,7 @@ Route::get('nasTestConnection', function (Request $request) {
         }
 
         // get the folder detail
-        $folder = HTTP::get($http.'/entry.cgi', [
+        $folder = Http::get($http.'/entry.cgi', [
             'api' => 'SYNO.FileStation.List',
             'version' => '2',
             'method' => 'list',
@@ -158,7 +171,7 @@ Route::get('nasTestConnection', function (Request $request) {
             __('global.connectionIsSecure'),
             false,
         );
-    } catch (\Throwable $th) {
+    } catch (Throwable $th) {
         return errorResponse('Cannot get to the given server');
     }
 });
@@ -214,7 +227,7 @@ Route::middleware('auth:sanctum')
 
         // NOTIFICATION
         Route::get('user/notifications', function () {
-            $output = app(\App\Services\UserService::class)->getApplicationNotification();
+            $output = app(UserService::class)->getApplicationNotification();
 
             $service = new EncryptionService;
             $encrypt = $service->encrypt(json_encode($output), config('app.salt_key_encryption'));
@@ -231,12 +244,12 @@ Route::middleware('auth:sanctum')
         });
     });
 
-Route::post('line-webhook', [\Modules\LineMessaging\Http\Controllers\Api\LineController::class, 'webhook']);
+Route::post('line-webhook', [LineController::class, 'webhook']);
 
 Route::get('line-message', function () {
     $lineId = request()->get('line_id');
 
-    $service = new \Modules\LineMessaging\Services\LineConnectionService;
+    $service = new LineConnectionService;
 
     $messages = [
         [
@@ -262,14 +275,14 @@ Route::get('indonesia/districts', function () {
 
 // LOCAL NAS CONNECTION
 Route::prefix('local')->group(function () {
-    Route::get('sharedFolders', [\App\Http\Controllers\Api\Nas\LocalNasController::class, 'sharedFolders']);
-    Route::post('upload', [\App\Http\Controllers\Api\Nas\LocalNasController::class, 'upload']);
+    Route::get('sharedFolders', [LocalNasController::class, 'sharedFolders']);
+    Route::post('upload', [LocalNasController::class, 'upload']);
 });
 
 Route::get('notification', function () {
-    $user = \App\Models\User::selectRaw('*')->first();
+    $user = User::selectRaw('*')->first();
 
-    $service = new \App\Services\EncryptionService;
+    $service = new EncryptionService;
     $encrypt = $service->encrypt($user->email, env('SALT_KEY'));
 
     // return (new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt))
@@ -286,7 +299,7 @@ Route::get('playground', function () {
             );
         }
 
-        $task = \Modules\Production\Models\ProjectTask::selectRaw('id')
+        $task = ProjectTask::selectRaw('id')
             ->where('uid', request('taskUid'))
             ->first();
         if (! $task) {
@@ -295,7 +308,7 @@ Route::get('playground', function () {
             );
         }
 
-        $employee = \Modules\Hrd\Models\Employee::selectRaw('id')
+        $employee = Employee::selectRaw('id')
             ->where('uid', request('uid'))
             ->first();
 
@@ -305,7 +318,7 @@ Route::get('playground', function () {
             );
         }
 
-        $projectService = app(\Modules\Production\Services\ProjectService::class);
+        $projectService = app(ProjectService::class);
         $assign = $projectService->assignMemberToTask(
             data: [
                 'users' => [request('uid')],
@@ -316,7 +329,7 @@ Route::get('playground', function () {
         );
 
         return apiResponse($assign);
-    } catch (\Throwable $th) {
+    } catch (Throwable $th) {
         return apiResponse(
             errorResponse($th)
         );
@@ -348,7 +361,7 @@ Route::get('/files/{path}', function (Request $request, $path) {
 Route::middleware('internal.service')
     ->prefix('internal')
     ->group(function () {
-        Route::post('notifications/send', [\App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
+        Route::post('notifications/send', [App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
         Route::post('system/reset-cache', function (Request $request) {
             Artisan::call('cache:clear');
         });
@@ -363,7 +376,7 @@ Route::middleware('partner')->group(function () {
             'body' => 'required|string',
         ]);
 
-        \App\Jobs\PartnerEmailJob::dispatch($request->to, $request->subject, $request->body);
+        PartnerEmailJob::dispatch($request->to, $request->subject, $request->body);
     });
 });
 
@@ -389,9 +402,16 @@ Route::middleware(['mcp.auth'])
         Route::get('world/countries', [RegionController::class, 'getCountries']);
         Route::get('production/project/customer/list', [ProjectController::class, 'getCustomer']);
         Route::get('production/project/initProjectCount', [ProjectController::class, 'initProjectCount']);
+        Route::post('production/project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal']);
+        Route::get('production/project/deals/{projectDealUid}/quotation/download-link', [ProjectController::class, 'getQuotationDownloadLink']);
+        Route::get('production/project/deals/publish/{projectDealUid}/{type}', [ProjectController::class, 'publishProjectDeal']);
+        Route::get('production/project/deals', [ProjectController::class, 'listProjectDeals'])->name('mcp.project-deal.list');
 
         // Customer management
         Route::get('production/project/customer/search', [ProjectController::class, 'searchCustomer']);
+
+        // Finance
+        Route::post('finance/billInvoice', [InvoiceController::class, 'generateBillInvoice']);
 
         // Create deal flow — Step 1 inputs
         Route::post('production/project/customer/add', [ProjectController::class, 'storeCustomer']);
@@ -405,4 +425,7 @@ Route::middleware(['mcp.auth'])
 
         // Create deal flow — Step 3 submit
         Route::post('production/project/deals', [ProjectController::class, 'storeProjectDeals'])->name('mcp.project-deal.store');
+
+        // Invoice download links
+        Route::get('finance/invoices/download-url/{type}', [InvoiceController::class, 'getInvoiceDownloadUrlBasedOnType']);
     });

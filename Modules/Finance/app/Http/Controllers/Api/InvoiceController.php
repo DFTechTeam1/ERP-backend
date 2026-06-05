@@ -5,6 +5,7 @@ namespace Modules\Finance\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Modules\Finance\Http\Requests\Invoice\BillInvoice;
 use Modules\Finance\Http\Requests\Invoice\EditInvoice;
 use Modules\Finance\Services\InvoiceService;
@@ -24,7 +25,7 @@ class InvoiceController extends Controller
      */
     public function index(string $projectDealUid)
     {
-        $projectDealId = \Illuminate\Support\Facades\Crypt::decryptString($projectDealUid);
+        $projectDealId = Crypt::decryptString($projectDealUid);
 
         return apiResponse($this->service->list(
             select: 'id,parent_number,number,sequence,project_deal_id,amount,paid_amount,status',
@@ -148,6 +149,23 @@ class InvoiceController extends Controller
         ];
 
         return $this->service->downloadInvoiceBasedOnType(type: $type, payload: $payload);
+    }
+
+    /**
+     * Get the invoice download URL based on type for MCP clients.
+     *
+     * @return JsonResponse
+     */
+    public function getInvoiceDownloadUrlBasedOnType(string $type)
+    {
+        $payload = [
+            'projectDealUid' => request('projectDealUid'),
+            'amount' => request('amount'),
+            'paymentDate' => request('paymentDate'),
+            'invoiceUid' => request('invoiceUid'),
+        ];
+
+        return apiResponse($this->service->getInvoiceDownloadUrlBasedOnType(type: $type, payload: $payload));
     }
 
     public function downloadGeneralInvoice()

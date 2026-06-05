@@ -100,6 +100,7 @@ return [
     'successRejectInvoiceChanges' => 'Berhasil menolak perubahan faktur',
     'projectDealHasBeenCanceled' => 'Event telah berhasil di batalkan',
     'eventCannotBeCancel' => 'Event tidak bisa di batalkan',
+    'finalEventCannotBeCancel' => 'Event yang sudah final tidak bisa di batalkan',
     'eventHasBeenCancelBecause' => 'Event telah di batalkan karena :reason',
     'successCreateDevelopmentProject' => 'Project pengembangan telah berhasil dibuat',
     'successDeleteDevelopmentProject' => 'Project pengembangan telah berhasil dihapus',
@@ -158,6 +159,7 @@ return [
     'successDeleteCountry' => 'Negara telah berhasil dihapus',
     'cannotDeleteCountryBcsRelation' => 'Tidak dapat menghapus negara karena memiliki hubungan dengan [provinsi/kota]',
     'dataNotFound' => 'Data tidak ditemukan',
+    'invalidInvoiceType' => 'Tipe invoice tidak valid',
     'successCreateCity' => 'Kota telah berhasil dibuat',
     'successUpdateCity' => 'Kota telah berhasil diperbarui',
     'successDeleteCity' => 'Kota telah berhasil dihapus',
@@ -174,9 +176,9 @@ return [
     'userNotFound' => 'User tidak ditemukan',
     'emailAlreadyVerified' => 'Email sudah terverifikasi',
     'employeeAlreadyHasResignationRecord' => 'Karyawan sudah memiliki catatan pengunduran diri yang ada.',
-    'otpHasBeenExpired' => "OTP sudah tidak bisa digunakan",
+    'otpHasBeenExpired' => 'OTP sudah tidak bisa digunakan',
     'otpMismatch' => 'OTP tidak sama',
     'phoneNumberVerfied' => 'Nomor telepon berhasil di verifikasi',
     'projectDealIsExists' => 'Event ini sudah ada di database',
-    'projectIsExists' => "Event ini sudah ada di database production"
+    'projectIsExists' => 'Event ini sudah ada di database production',
 ];
