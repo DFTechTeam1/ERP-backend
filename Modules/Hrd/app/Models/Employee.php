@@ -146,7 +146,7 @@ class Employee extends Model
         'greatday_job_status',
         'greatday_company',
 
-        'is_phone_verified'
+        'is_phone_verified',
     ];
 
     protected $appends = [
@@ -333,6 +333,11 @@ class Employee extends Model
     public function resignData(): HasOne
     {
         return $this->hasOne(EmployeeResign::class, 'employee_id');
+    }
+
+    public function whatsappGroups(): HasMany
+    {
+        return $this->hasMany(EmployeeWhatsappGroup::class, 'employee_id');
     }
 
     public function vjs(): HasMany

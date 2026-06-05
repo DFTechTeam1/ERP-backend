@@ -111,8 +111,7 @@ class CustomerService
             $this->repo->store($data);
 
             return generalResponse(
-                'Customer created successfully',
-                false,
+                message: 'Customer created successfully',
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

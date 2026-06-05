@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "298b0471e1fa1248abed242525e93a06",
+    "content-hash": "841562ef69f7b96922ea9be6889c8b7d",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -5649,7 +5649,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-08-16T11:10:48+00:00"
+            "time": "2025-06-03T07:45:57+00:00"
         },
         {
             "name": "phpdocumentor/reflection-common",
