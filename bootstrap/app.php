@@ -32,6 +32,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Behind the docker edge nginx (and the host nginx terminating TLS), trust
+        // the forwarded headers so the app sees the real client IP and the https
+        // scheme. Without this, $request->isSecure() is false and signed-route
+        // validation runs over http while generation forces https — a mismatch.
+        $middleware->trustProxies(at: '*');
+
         $middleware->validateCsrfTokens(except: [
             '/oauth/token',
             '/oauth/register',
