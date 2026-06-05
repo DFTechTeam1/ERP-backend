@@ -100,6 +100,7 @@ return [
     'successRejectInvoiceChanges' => 'Successfully rejected the invoice change',
     'projectDealHasBeenCanceled' => 'Event has been canceled',
     'eventCannotBeCancel' => 'Event cannot be canceled',
+    'finalEventCannotBeCancel' => 'A final event cannot be canceled',
     'eventHasBeenCancelBecause' => 'Event have been cancel because :reason',
     'successCreateDevelopmentProject' => 'Development project has been created successfully',
     'successDeleteDevelopmentProject' => 'Development project has been deleted successfully',
@@ -163,6 +164,7 @@ return [
     'successDeleteState' => 'State has been deleted successfully',
     'cannotDeleteStateBcsRelation' => 'Cannot delete state because it has relation to [city/employee]',
     'dataNotFound' => 'Data not found',
+    'invalidInvoiceType' => 'Invalid invoice type',
     'successCreateCity' => 'City has been created successfully',
     'successUpdateCity' => 'City has been updated successfully',
     'successDeleteCity' => 'City has been deleted successfully',
@@ -182,9 +184,9 @@ return [
     'taskIsNotPoolTask' => 'This task is not a pool task.',
     'taskAlreadyPicked' => 'This task has already been picked by another employee.',
     'taskPickedSuccessfully' => 'Task picked successfully. You are now working on it.',
-    'otpHasBeenExpired' => "OTP has been expired",
+    'otpHasBeenExpired' => 'OTP has been expired',
     'otpMismatch' => 'Mismatch OTP data',
     'phoneNumberVerfied' => 'Phone number has been verified',
-    'projectDealIsExists' => "Project deal already exists in the database",
-    'projectIsExists' => "Project already exists in the database"
+    'projectDealIsExists' => 'Project deal already exists in the database',
+    'projectIsExists' => 'Project already exists in the database',
 ];
