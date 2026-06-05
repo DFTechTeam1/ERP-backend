@@ -30,8 +30,6 @@ class UserController extends Controller
 
     /**
      * Resend activation email to user
-     * @param  string  $userUid
-     * @return JsonResponse
      */
     public function resendActivationEmail(string $userUid): JsonResponse
     {
@@ -89,9 +87,14 @@ class UserController extends Controller
     {
         return apiResponse($this->service->updateProfile($request->validated(), $userId));
     }
-    
+
     public function verifyOtp(VerifyOtp $request)
     {
         return apiResponse($this->service->verifyOtp($request->validated()));
+    }
+
+    public function getWhatsappGroup()
+    {
+        return apiResponse($this->service->getWhatsappGroup());
     }
 }

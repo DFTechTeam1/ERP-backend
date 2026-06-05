@@ -1,0 +1,113 @@
+flowchart TD
+
+    %% ─────────────────────────────────────────
+    %% SECTION 1 - HOW ADMIN MANAGES GROUPS
+    %% ─────────────────────────────────────────
+
+    MGT([SECTION 1\nHow Admin Manages Groups])
+
+    MGT --> MG_CREATE[Create New Group]
+    MGT --> MG_EDIT[Edit Existing Group]
+    MGT --> MG_DELETE[Delete Group]
+
+    %% --- CREATE ---
+    MG_CREATE --> CR1["1. Admin opens WhatsApp\ncreates the group manually"]
+    CR1 --> CR2["2. Admin opens the group in WhatsApp\ncopies the Group ID from the group link\nExample: 120363406226726746"]
+    CR2 --> CR3["3. Admin generates Invitation Link\nfrom WhatsApp group settings"]
+    CR3 --> CR4["4. Admin goes to ERP Group Management\nfills in the form"]
+    CR4 --> CR5["Form fields:\n- group_name (display name in ERP)\n- group_id (WA internal ID)\n- invitation_link\n- target_type: all OR team\n- leader (only if team)"]
+    CR5 --> CR6["Saved to whatsapp_groups table\nTargeted employees see this group\non their next WhatsApp Info open"]
+
+    %% --- EDIT ---
+    MG_EDIT --> ED1{What changed?}
+    ED1 -->|Invitation link expired| ED2["Admin regenerates link in WhatsApp\npastes new link in ERP\nemployees get updated link immediately"]
+    ED1 -->|Leader changed| ED3["Admin updates employee_id\nOld leader's team no longer sees it\nNew leader's team now sees it"]
+    ED1 -->|Group renamed| ED4["Admin updates group_name only\nno effect on targeting"]
+    ED1 -->|Change all to team or vice versa| ED5["Admin updates target_type\nVisibility changes on next employee API call"]
+
+    %% --- DELETE ---
+    MG_DELETE --> DL1["Admin deletes the group from ERP\nCascade removes employee_whatsapp_groups\nEmployees no longer see it in their list"]
+    DL1 --> DL2["NOTE: The actual WA group is NOT deleted\nOnly the ERP record is removed\nAdmin must manually delete WA group if needed"]
+
+    %% ─────────────────────────────────────────
+    %% SECTION 2 - WHAT THE SCHEDULED JOB DOES
+    %% ─────────────────────────────────────────
+
+    JOB([SECTION 2\nScheduled Job - Sync Join Status])
+
+    JOB --> JB0["WHY this job exists:\nBackend cannot auto-add employees to WA group\nEmployee must voluntarily click the invitation link\nBut we want to KNOW if they actually joined\nwithout asking them to self-report"]
+
+    JB0 --> JB1["Runs every X hours\nor triggered on-demand when\nemployee opens WhatsApp modal"]
+
+    JB1 --> JB2["Step 1: Load all active employees\nwho have a verified phone number"]
+
+    JB2 --> JB3["Step 2: For each employee\ndetermine which groups they are targeted for\n- all target_type = all groups\n- team groups where employee_id = employee's PIC"]
+
+    JB3 --> JB4["Step 3: For each targeted group\ncall WhatsappService.checkNumberIsPresentOnGroup\nphone: employee.phone\ngroupId: whatsapp_groups.group_id\nThis is READ-ONLY, no force-join happens"]
+
+    JB4 --> JB5{Is phone present\nin WA group?}
+
+    JB5 -->|Yes - employee joined| JB6["Upsert employee_whatsapp_groups\nemployee_id + group_id\njoined = true in API response"]
+
+    JB5 -->|No - employee has not joined| JB7["Delete employee_whatsapp_groups record\nif it existed\njoined = false in API response\nemployee still sees the invitation link"]
+
+    JB6 --> JB8["employee_whatsapp_groups is now\nan accurate CACHE of real WA membership\nalso used for production notification routing"]
+    JB7 --> JB8
+
+    %% ─────────────────────────────────────────
+    %% SECTION 3 - WHAT EMPLOYEE SEES (API)
+    %% ─────────────────────────────────────────
+
+    API([SECTION 3\nWhat Employee Sees])
+
+    API --> AP1["GET /user/whatsapp-groups\nfetches groups based on targeting rules\nchecks employee_whatsapp_groups cache for join status"]
+
+    AP1 --> AP2["all groups → always in list"]
+    AP1 --> AP3["team group where leader = employee's PIC → in list"]
+    AP2 --> AP4["For each group:\njoined = employee_whatsapp_groups record exists\ninvitation_link = always returned\nso employee can always join or rejoin"]
+    AP3 --> AP4
+
+    AP4 --> AP5["Result shown in frontend modal:\n✅ checkmark = joined (record in cache)\n📋 copy icon = not joined yet (no cache record)\ninvitation link available for both cases"]
+
+    %% ─────────────────────────────────────────
+    %% SECTION 4 - EDGE CASES
+    %% ─────────────────────────────────────────
+
+    EDGE([SECTION 4\nEdge Cases])
+
+    EDGE --> E1["Employee leaves WA group voluntarily"]
+    E1 --> E1A["Next scheduled job run:\ncheckNumberIsPresentOnGroup = false\nCache record deleted\njoined flips back to false\nEmployee sees invitation link again"]
+
+    EDGE --> E2["Invitation link expires"]
+    E2 --> E2A["Admin must manually regenerate\nlink in WhatsApp and update ERP\nNo automatic detection by backend"]
+
+    EDGE --> E3["Employee has no verified phone"]
+    E3 --> E3A["Skipped by scheduled job\njoined = false always\nInvitation link still shown\nso they can join once phone is verified"]
+
+    EDGE --> E4["Leader resigns / status Inactive"]
+    E4 --> E4A["Observer sets whatsapp_groups.employee_id = null\nteam group disappears from all members' view\nAdmin must reassign leader or delete group"]
+
+    EDGE --> E5["New employee created"]
+    E5 --> E5A["No manual setup needed\nall groups appear immediately on API call\nteam group appears once PIC is assigned\njoined = false until they click invitation link\nnext job run confirms if they joined"]
+
+    %% ─────────────────────────────────────────
+    %% STYLES
+    %% ─────────────────────────────────────────
+
+    classDef sectionHeader fill:#2C3E50,stroke:#1A252F,color:#fff
+    classDef adminAction fill:#4A90D9,stroke:#2C5F8A,color:#fff
+    classDef systemAction fill:#27AE60,stroke:#1A7A42,color:#fff
+    classDef decisionNode fill:#F39C12,stroke:#D68910,color:#fff
+    classDef dangerAction fill:#C0392B,stroke:#922B21,color:#fff
+    classDef infoNode fill:#AED6F1,stroke:#4A90D9,color:#2C3E50
+    classDef warningNode fill:#FAD7A0,stroke:#F39C12,color:#2C3E50
+    classDef privacyNode fill:#D5F5E3,stroke:#27AE60,color:#2C3E50
+
+    class MGT,JOB,API,EDGE sectionHeader
+    class MG_CREATE,MG_EDIT,MG_DELETE adminAction
+    class JB1,JB2,JB3,JB4 systemAction
+    class ED1,JB5 decisionNode
+    class MG_DELETE,DL1,DL2 dangerAction
+    class CR1,CR2,CR3,CR4,CR5,CR6,ED2,ED3,ED4,ED5,JB0,JB6,JB7,JB8,AP1,AP2,AP3,AP4,AP5 infoNode
+    class E1A,E2A,E3A,E4A,E5A warningNode
+    class E1,E2,E3,E4,E5 privacyNode

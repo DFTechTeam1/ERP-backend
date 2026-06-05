@@ -279,4 +279,22 @@ class RegionController extends Controller
 
         return response()->json([]);
     }
+
+    public function searchCity(Request $request)
+    {
+        $searchTerm = $request->input('search');
+
+        $data = \Illuminate\Support\Facades\DB::table('cities')
+            ->selectRaw('id as value,name as title,state_id,country_id')
+            ->where('name', 'like', '%' . $searchTerm . '%')
+            ->get();
+
+        return apiResponse(
+            generalResponse(
+                'success',
+                false,
+                $data->toArray(),
+            )
+        );
+    }
 }

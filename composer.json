@@ -31,7 +31,7 @@
         "scalar/laravel": "^0.2.0",
         "sentry/sentry-laravel": "^4.9",
         "simplesoftwareio/simple-qrcode": "^4.2",
-        "spatie/laravel-data": "^4.17",
+        "spatie/laravel-data": "^4.23",
         "spatie/laravel-permission": "^6.4",
         "spatie/laravel-ray": "^1.37",
         "spatie/laravel-typescript-transformer": "^2.6",

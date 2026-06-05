@@ -20,8 +20,12 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use KodePandai\Indonesia\Models\District;
+use Modules\Company\Http\Controllers\Api\ProjectClassController;
+use Modules\Company\Http\Controllers\Api\RegionController;
+use Modules\Company\Http\Controllers\Api\SettingController;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
+use Modules\Production\Http\Controllers\Api\QuotationController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -163,7 +167,6 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [LoginController::class, 'login'])->name('login-form');
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
-    Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth:sanctum');
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
 });
 
@@ -171,7 +174,7 @@ Route::middleware('auth:sanctum')
     ->prefix('auth')
     ->group(function () {
         Route::post('logout', [LoginController::class, 'logout']);
-
+        Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth:sanctum');
     });
 
 Route::get('users/activate/{key}', [UserController::class, 'activate']);
@@ -202,6 +205,9 @@ Route::middleware('auth:sanctum')
         Route::get('dashboard/eventSuccessRate', [DashboardController::class, 'getEventSuccessRate']);
         Route::get('dashboard/getSalesPreview', [DashboardController::class, 'getSalesPreview']);
         Route::get('dashboard/getEventClassDistribution', [DashboardController::class, 'getEventClassDistribution']);
+
+        // Add route to fetch user whatsapp group or invitation group link
+        Route::get('user/whatsapp-group', [UserController::class, 'getWhatsappGroup']);
 
         // Dashboard for human resources
         Route::get('dashboard/hr/{type}', [DashboardController::class, 'getHrReport']);
@@ -370,4 +376,33 @@ Route::middleware(['mcp.auth'])
             return $request->user();
         });
         Route::get('classList', [ProjectController::class, 'getClassList']);
+
+        // Create deal flow — reference data fetches (Stage 0)
+        Route::get('production/project/getQuotationNumber', [ProjectController::class, 'getQuotationNumber']);
+        Route::get('dashboard/projectCalendar', [DashboardController::class, 'getProjectCalendar']);
+        Route::get('setting/calculation', [SettingController::class, 'getPriceCalculation']);
+        Route::get('setting/{code?}', [SettingController::class, 'getSetting']);
+        Route::get('production/quotations', [QuotationController::class, 'index']);
+        Route::get('production/eventTypes', [ProjectController::class, 'getEventTypes']);
+        Route::get('projectClass/getAll', [ProjectClassController::class, 'getAll']);
+        Route::get('production/project/marketings', [ProjectController::class, 'getMarketingListForProject']);
+        Route::get('world/countries', [RegionController::class, 'getCountries']);
+        Route::get('production/project/customer/list', [ProjectController::class, 'getCustomer']);
+        Route::get('production/project/initProjectCount', [ProjectController::class, 'initProjectCount']);
+
+        // Customer management
+        Route::get('production/project/customer/search', [ProjectController::class, 'searchCustomer']);
+
+        // Create deal flow — Step 1 inputs
+        Route::post('production/project/customer/add', [ProjectController::class, 'storeCustomer']);
+        Route::get('world/states', [RegionController::class, 'getStates']);
+        Route::get('world/cities', [RegionController::class, 'getCities']);
+        Route::get('world/searchCity', [RegionController::class, 'searchCity']);
+
+        // Create deal flow — Step 1→2 transition
+        Route::post('production/project/checkHighSeason', [ProjectController::class, 'checkHighSeason']);
+        Route::post('production/project/customer/add', [ProjectController::class, 'storeCustomer']);
+
+        // Create deal flow — Step 3 submit
+        Route::post('production/project/deals', [ProjectController::class, 'storeProjectDeals'])->name('mcp.project-deal.store');
     });
