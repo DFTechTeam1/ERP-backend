@@ -28,12 +28,14 @@ use KodePandai\Indonesia\Models\District;
 use Modules\Company\Http\Controllers\Api\ProjectClassController;
 use Modules\Company\Http\Controllers\Api\RegionController;
 use Modules\Company\Http\Controllers\Api\SettingController;
+use Modules\Finance\Http\Controllers\Api\FinanceController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 use Modules\Hrd\Models\Employee;
 use Modules\LineMessaging\Http\Controllers\Api\LineController;
 use Modules\LineMessaging\Services\LineConnectionService;
 use Modules\Production\Http\Controllers\Api\ProjectController;
+use Modules\Production\Http\Controllers\Api\ProjectDealChangeController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Services\ProjectService;
@@ -413,6 +415,16 @@ Route::middleware(['mcp.auth'])
         // Finance
         Route::post('finance/billInvoice', [InvoiceController::class, 'generateBillInvoice']);
 
+        // Finance — price change requests (approval-gated; approval stays human)
+        Route::get('finance/price-change-reasons', [FinanceController::class, 'getPriceChangeReasons']);
+        Route::post('finance/project/deals/{projectDealUid}/price-change', [FinanceController::class, 'requestPriceChanges']);
+
+        // Finance insight (role-aware: director/root, finance, marketing)
+        Route::get('finance/insight', [FinanceController::class, 'getFinanceInsight']);
+        Route::get('finance/insight/receivables', [FinanceController::class, 'getFinanceReceivables']);
+        Route::get('finance/insight/marketing-performance', [FinanceController::class, 'getMarketingPerformance']);
+        Route::get('finance/insight/top-deals', [FinanceController::class, 'getTopDeals']);
+
         // Create deal flow — Step 1 inputs
         Route::post('production/project/customer/add', [ProjectController::class, 'storeCustomer']);
         Route::get('world/states', [RegionController::class, 'getStates']);
@@ -425,6 +437,11 @@ Route::middleware(['mcp.auth'])
 
         // Create deal flow — Step 3 submit
         Route::post('production/project/deals', [ProjectController::class, 'storeProjectDeals'])->name('mcp.project-deal.store');
+        Route::put('production/project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal'])->name('mcp.project-deal.update');
+
+        // Final-deal change requests (approval-gated; approval stays human)
+        Route::post('production/project/deals/{projectDealUid}/final-change', [ProjectDealChangeController::class, 'requestFinalDealChange'])->name('mcp.project-deal.final-change.request');
+        Route::get('production/project/deals/{projectDealUid}/final-changes', [ProjectDealChangeController::class, 'getFinalDealChanges'])->name('mcp.project-deal.final-change.list');
 
         // Invoice download links
         Route::get('finance/invoices/download-url/{type}', [InvoiceController::class, 'getInvoiceDownloadUrlBasedOnType']);

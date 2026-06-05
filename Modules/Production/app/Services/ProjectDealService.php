@@ -492,6 +492,7 @@ class ProjectDealService
                 'quotations.items',
                 'project:id,project_deal_id',
                 'lastInteractiveRequest',
+                'projectLead:id,project_deal_id',
             ]);
 
             // only not finalized project that can be deleted
@@ -505,6 +506,19 @@ class ProjectDealService
 
             $detail->quotations()->delete();
             $detail->marketings()->delete();
+
+            // if this deal was generated from a lead, cancel the lead instead of leaving it orphaned
+            if ($detail->projectLead) {
+                $this->projectLeadRepo->update(
+                    data: [
+                        'status' => ProjectLeadStatus::CANCELLED,
+                        'cancel_reason' => __('notification.leadCancelledByDealDeletion'),
+                        'cancel_by' => Auth::id(),
+                        'cancel_at' => Carbon::now(),
+                    ],
+                    where: "project_deal_id = {$detail->id}"
+                );
+            }
 
             if ($detail->project && config('app.env') !== 'testing') {
                 // create nas delete request

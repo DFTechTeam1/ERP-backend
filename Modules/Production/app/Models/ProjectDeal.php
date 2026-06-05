@@ -2,8 +2,17 @@
 
 namespace Modules\Production\Models;
 
+use App\Enums\Cache\CacheKey;
+use App\Enums\Interactive\InteractiveRequestStatus;
+use App\Enums\Production\EquipmentType;
+use App\Enums\Production\EventType;
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Enums\Production\ProjectDealChangeStatus;
+use App\Enums\Production\ProjectDealStatus;
+use App\Enums\Production\ProjectStatus;
+use App\Enums\Transaction\InvoiceStatus;
+use App\Models\User;
+use App\Services\GeneralService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,8 +21,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\Company\Models\City;
+use Modules\Company\Models\Country;
+use Modules\Company\Models\ProjectClass;
+use Modules\Company\Models\State;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\ProjectDealPriceChange;
+use Modules\Finance\Models\ProjectDealRefund;
 use Modules\Finance\Models\Transaction;
 use Modules\Production\Database\Factories\ProjectDealFactory;
 
@@ -67,16 +81,16 @@ class ProjectDeal extends Model
     {
         static::creating(function (ProjectDeal $projectDeal) {
             // get current identifier number from cache
-            $currentIdentifier = (new \App\Services\GeneralService)->generateDealIdentifierNumber();
+            $currentIdentifier = (new GeneralService)->generateDealIdentifierNumber();
             $projectDeal->identifier_number = $currentIdentifier;
 
             // increase value of the identifier number
-            (new \App\Services\GeneralService)->clearCache(cacheId: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value);
+            (new GeneralService)->clearCache(cacheId: CacheKey::ProjectDealIdentifierNumber->value);
             $nextIdentifier = (int) $currentIdentifier + 1;
             // convert to sequence number
             $lengthOfSentence = strlen($nextIdentifier) < 4 ? 4 : strlen($nextIdentifier) + 1;
-            $nextIdentifier = (new \App\Services\GeneralService)->generateSequenceNumber(number: $nextIdentifier, length: $lengthOfSentence);
-            (new \App\Services\GeneralService)->storeCache(key: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value, value: $nextIdentifier, isForever: true);
+            $nextIdentifier = (new GeneralService)->generateSequenceNumber(number: $nextIdentifier, length: $lengthOfSentence);
+            (new GeneralService)->storeCache(key: CacheKey::ProjectDealIdentifierNumber->value, value: $nextIdentifier, isForever: true);
         });
 
         static::deleted(function (ProjectDeal $projectDeal) {
@@ -96,9 +110,9 @@ class ProjectDeal extends Model
     ];
 
     protected $casts = [
-        'event_type' => \App\Enums\Production\EventType::class,
-        'equipment_type' => \App\Enums\Production\EquipmentType::class,
-        'status' => \App\Enums\Production\ProjectDealStatus::class,
+        'event_type' => EventType::class,
+        'equipment_type' => EquipmentType::class,
+        'status' => ProjectDealStatus::class,
     ];
 
     public function ledDetail(): Attribute
@@ -119,7 +133,7 @@ class ProjectDeal extends Model
 
     public function publishedBy(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'published_by');
+        return $this->belongsTo(User::class, 'published_by');
     }
 
     public function interactiveRequests(): HasMany
@@ -136,14 +150,14 @@ class ProjectDeal extends Model
     public function activeInteractiveRequest(): HasOne
     {
         return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
-            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Approved)
+            ->where('status', InteractiveRequestStatus::Approved)
             ->latestOfMany();
     }
 
     public function pendingInteractiveRequest(): HasOne
     {
         return $this->hasOne(InteractiveRequest::class, 'project_deal_id')
-            ->where('status', \App\Enums\Interactive\InteractiveRequestStatus::Pending);
+            ->where('status', InteractiveRequestStatus::Pending);
     }
 
     public function ProjectDealPriceChanges(): HasMany
@@ -180,7 +194,7 @@ class ProjectDeal extends Model
 
     public function class(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Company\Models\ProjectClass::class, 'project_class_id');
+        return $this->belongsTo(ProjectClass::class, 'project_class_id');
     }
 
     public function quotations(): HasMany
@@ -192,6 +206,11 @@ class ProjectDeal extends Model
     {
         return $this->hasOne(ProjectQuotation::class, 'project_deal_id')
             ->final();
+    }
+
+    public function projectLead(): HasOne
+    {
+        return $this->hasOne(ProjectLead::class, 'project_deal_id');
     }
 
     public function invoices(): HasMany
@@ -221,14 +240,14 @@ class ProjectDeal extends Model
     {
         return $this->hasOne(Invoice::class, 'project_deal_id')
             ->where('is_main', 0)
-            ->where('status', \App\Enums\Transaction\InvoiceStatus::Unpaid);
+            ->where('status', InvoiceStatus::Unpaid);
     }
 
     public function unpaidInvoices(): HasMany
     {
         return $this->hasMany(Invoice::class, 'project_deal_id')
             ->where('is_main', 0)
-            ->where('status', \App\Enums\Transaction\InvoiceStatus::Unpaid);
+            ->where('status', InvoiceStatus::Unpaid);
     }
 
     public function latestQuotation(): HasOne
@@ -239,27 +258,27 @@ class ProjectDeal extends Model
 
     public function customer(): BelongsTo
     {
-        return $this->BelongsTo(\Modules\Production\Models\Customer::class, 'customer_id');
+        return $this->BelongsTo(Customer::class, 'customer_id');
     }
 
     public function city(): BelongsTo
     {
-        return $this->BelongsTo(\Modules\Company\Models\City::class, 'city_id');
+        return $this->BelongsTo(City::class, 'city_id');
     }
 
     public function country(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Company\Models\Country::class, 'country_id');
+        return $this->belongsTo(Country::class, 'country_id');
     }
 
     public function state(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Company\Models\State::class, 'state_id');
+        return $this->belongsTo(State::class, 'state_id');
     }
 
     public function refund(): HasOne
     {
-        return $this->hasOne(\Modules\Finance\Models\ProjectDealRefund::class, 'project_deal_id');
+        return $this->hasOne(ProjectDealRefund::class, 'project_deal_id');
     }
 
     public function activeProjectDealChange(): HasOne
@@ -286,7 +305,7 @@ class ProjectDeal extends Model
         $output = __('global.undetermined');
 
         if (isset($this->attributes['status'])) {
-            $statuses = \App\Enums\Production\ProjectStatus::cases();
+            $statuses = ProjectStatus::cases();
             foreach ($statuses as $status) {
                 if ($status->value == $this->attributes['status']) {
                     $output = $status->label();
@@ -304,7 +323,7 @@ class ProjectDeal extends Model
         $output = 'grey-lighten-1';
 
         if (isset($this->attributes['status'])) {
-            $statuses = \App\Enums\Production\ProjectStatus::cases();
+            $statuses = ProjectStatus::cases();
             foreach ($statuses as $status) {
                 if ($status->value == $this->attributes['status']) {
                     $output = $status->color();
@@ -319,12 +338,12 @@ class ProjectDeal extends Model
 
     public function isDraft(): bool
     {
-        return $this->attributes['status'] === \App\Enums\Production\ProjectDealStatus::Draft->value ? true : false;
+        return $this->attributes['status'] === ProjectDealStatus::Draft->value ? true : false;
     }
 
     public function isFinal(): bool
     {
-        return $this->attributes['status'] === \App\Enums\Production\ProjectDealStatus::Final->value ? true : false;
+        return $this->attributes['status'] === ProjectDealStatus::Final->value ? true : false;
     }
 
     public function isPaid(): bool
@@ -498,7 +517,7 @@ class ProjectDeal extends Model
 
     public function scopeIsDuplicate(Builder $builder, string $name, string $projectDate)
     {
-        $builder->whereLike('name', '%'. $name. '%')
+        $builder->whereLike('name', '%'.$name.'%')
             ->whereDate('project_date', $projectDate);
     }
 }
