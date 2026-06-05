@@ -7,6 +7,7 @@ use App\Enums\Production\ProjectLeadStatus;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Company\Models\City;
 use Modules\Hrd\Models\Employee;
 
@@ -40,6 +41,9 @@ class ProjectLead extends Model
         'skip_check',
         'project_deal_id',
         'status',
+        'cancel_reason',
+        'cancel_at',
+        'cancel_by',
     ];
 
     // protected static function newFactory(): ProjectLeadFactory
@@ -63,17 +67,17 @@ class ProjectLead extends Model
         );
     }
 
-    public function city(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function city(): BelongsTo
     {
         return $this->belongsTo(City::class);
     }
 
-    public function createdBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'created_by');
     }
 
-    public function updatedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'updated_by');
     }

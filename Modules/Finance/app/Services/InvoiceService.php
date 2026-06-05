@@ -5,13 +5,16 @@ namespace Modules\Finance\Services;
 use App\Actions\Finance\GenerateInvoiceContent;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Transaction\InvoiceStatus;
+use App\Exports\SummaryFinanceExport;
 use App\Models\User;
 use App\Services\GeneralService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\ApproveInvoiceChangesJob;
 use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
 use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
@@ -86,7 +89,7 @@ class InvoiceService
 
             // format response
             $paginated = collect((object) $paginated)->map(function ($item) {
-                $uid = \Illuminate\Support\Facades\Crypt::encryptString($item->id);
+                $uid = Crypt::encryptString($item->id);
 
                 return [
                     'uid' => $uid,
@@ -202,7 +205,7 @@ class InvoiceService
             // generate url with expired time
             $paramSignedRoute = [
                 'i' => $projectDealUid,
-                'n' => \Illuminate\Support\Facades\Crypt::encryptString($invoice->id),
+                'n' => Crypt::encryptString($invoice->id),
                 'additional' => 1,
                 'am' => $data['amount'],
                 'rd' => $paymentDate,
@@ -211,7 +214,7 @@ class InvoiceService
                 $paramSignedRoute['t'] = 'downPayment';
             }
 
-            $url = \Illuminate\Support\Facades\URL::signedRoute(
+            $url = URL::signedRoute(
                 name: 'invoice.download.type',
                 parameters: [
                     'type' => 'collection',
@@ -544,7 +547,7 @@ class InvoiceService
             $rawData['remainingPayment'] = 'Rp'.number_format(num: $remaining, decimal_separator: ',');
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, $rawData)
+        $pdf = Pdf::loadView($view, $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
@@ -567,7 +570,7 @@ class InvoiceService
      */
     public function downloadGeneralInvoice(array $payload): Response
     {
-        $projectDealId = \Illuminate\Support\Facades\Crypt::decryptString($payload['projectDealUid']);
+        $projectDealId = Crypt::decryptString($payload['projectDealUid']);
         $projectDeal = $this->projectDealRepo->show(
             uid: $projectDealId,
             select: 'id',
@@ -595,7 +598,7 @@ class InvoiceService
             $rawData['invoiceNumber'] = $invoiceNumber;
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.invoice', $rawData)
+        $pdf = Pdf::loadView('invoices.invoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
@@ -637,6 +640,67 @@ class InvoiceService
         }
 
         abort(404);
+    }
+
+    /**
+     * Build the invoice PDF download URL based on type.
+     *
+     * Instead of streaming the PDF (as {@see downloadInvoiceBasedOnType} does), this returns
+     * the URL of the {@see invoice.download.type} route so it can be consumed by MCP clients.
+     *
+     * @param  array{projectDealUid: ?string, amount: ?string, paymentDate: ?string, invoiceUid: ?string}  $payload
+     * @return array{error: bool, message: string, data: array{type: string, download_url: string}}
+     */
+    public function getInvoiceDownloadUrlBasedOnType(string $type, array $payload): array
+    {
+        try {
+            $allowedTypes = ['general', 'collection', 'proof_of_payment', 'history'];
+            if (! in_array($type, $allowedTypes, true)) {
+                return errorResponse(__('notification.invalidInvoiceType'));
+            }
+
+            if (empty($payload['projectDealUid'])) {
+                return errorResponse(__('notification.dataNotFound'));
+            }
+
+            $projectDealId = Crypt::decryptString($payload['projectDealUid']);
+            $projectDeal = $this->projectDealRepo->show(
+                uid: $projectDealId,
+                select: 'id',
+                relation: [
+                    'mainInvoice:id,project_deal_id',
+                ]
+            );
+
+            if (! $projectDeal || ! $projectDeal->mainInvoice) {
+                return errorResponse(__('notification.dataNotFound'));
+            }
+
+            if (in_array($type, ['collection', 'proof_of_payment'], true)) {
+                if (empty($payload['invoiceUid']) || ! $projectDeal->getInvoice(invoiceUid: $payload['invoiceUid'])) {
+                    return errorResponse(__('notification.dataNotFound'));
+                }
+            }
+
+            $query = collect([
+                'projectDealUid' => $payload['projectDealUid'],
+                'amount' => $payload['amount'] ?? null,
+                'paymentDate' => $payload['paymentDate'] ?? null,
+                'invoiceUid' => $payload['invoiceUid'] ?? null,
+            ])->filter(fn ($value) => ! is_null($value))->toArray();
+
+            $url = route('invoice.download.type', array_merge(['type' => $type], $query));
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'type' => $type,
+                    'download_url' => $url,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 
     /**
@@ -689,7 +753,7 @@ class InvoiceService
         // define down payment status
         $rawData['isDownPayment'] = $currentInvoice->is_down_payment;
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.collectionInvoice', $rawData)
+        $pdf = Pdf::loadView('invoices.collectionInvoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
@@ -751,7 +815,7 @@ class InvoiceService
 
         $rawData['payment'] = 'Rp'.number_format(num: $currentInvoice->paid_amount, decimal_separator: ',');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.proofOfPaymentInvoice', $rawData)
+        $pdf = Pdf::loadView('invoices.proofOfPaymentInvoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
@@ -816,7 +880,7 @@ class InvoiceService
         // define fix price, amount is take from finalQuotation relation
         $rawData['fixPrice'] = 'Rp'.number_format(num: $projectDeal->finalQuotation->fix_price, decimal_separator: ',');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.historyInvoice', $rawData)
+        $pdf = Pdf::loadView('invoices.historyInvoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
@@ -843,12 +907,12 @@ class InvoiceService
     public function exportFinanceData(array $payload): array
     {
         try {
-            $user = \Illuminate\Support\Facades\Auth::user();
+            $user = Auth::user();
 
             $path = 'finance/report/';
             $filename = 'finance_report_'.now().'.xlsx';
             $filepath = $path.$filename;
-            $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+            $downloadPath = URL::signedRoute(
                 name: 'finance.download.export.financeReport',
                 parameters: [
                     'fp' => $filepath,
@@ -856,7 +920,7 @@ class InvoiceService
                 expiration: now()->addHours(5)
             );
 
-            (new \App\Exports\SummaryFinanceExport(payload: $payload, userId: $user->id, filepath: $downloadPath))->queue($filepath, 'public');
+            (new SummaryFinanceExport(payload: $payload, userId: $user->id, filepath: $downloadPath))->queue($filepath, 'public');
 
             $data = $this->generalService->getFinanceExportData(payload: $payload);
 
