@@ -444,5 +444,5 @@ Route::middleware(['mcp.auth'])
         Route::get('production/project/deals/{projectDealUid}/final-changes', [ProjectDealChangeController::class, 'getFinalDealChanges'])->name('mcp.project-deal.final-change.list');
 
         // Invoice download links
-        Route::get('finance/invoices/download-url/{type}', [InvoiceController::class, 'getInvoiceDownloadUrlBasedOnType']);
+        Route::post('finance/invoices/download-url/{type}', [InvoiceController::class, 'getInvoiceDownloadUrlBasedOnType']);
     });
