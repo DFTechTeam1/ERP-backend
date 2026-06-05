@@ -124,6 +124,7 @@ class FinanceInsightService
             $dealIds = $access['scope_deal_ids'];
             $isExecutive = $access['tier'] === self::TIER_EXECUTIVE;
             $canSeeExpense = $access['tier'] !== self::TIER_MARKETING;
+            $period = $this->resolvePeriod();
 
             $data = [
                 'access' => [
@@ -132,20 +133,21 @@ class FinanceInsightService
                     'scope' => $access['scope_label'],
                     'generated_at' => Carbon::now()->toDateTimeString(),
                 ],
+                'period' => $this->periodMeta($period),
             ];
 
             $sections = $access['sections'];
 
             if (in_array('overview', $sections, true)) {
-                $data['overview'] = $this->buildOverview($dealIds, $canSeeExpense);
+                $data['overview'] = $this->buildOverview($dealIds, $canSeeExpense, $period);
             }
 
             if (in_array('profitability', $sections, true)) {
-                $data['profitability'] = $this->buildProfitability($dealIds);
+                $data['profitability'] = $this->buildProfitability($dealIds, $period);
             }
 
             if (in_array('monthly_trend', $sections, true)) {
-                $data['monthly_trend'] = $this->buildMonthlyTrend($dealIds, $canSeeExpense);
+                $data['monthly_trend'] = $this->buildMonthlyTrend($dealIds, $canSeeExpense, $period);
             }
 
             if (in_array('receivables', $sections, true)) {
@@ -153,15 +155,15 @@ class FinanceInsightService
             }
 
             if (in_array('refunds', $sections, true)) {
-                $data['refunds'] = $this->buildRefunds($dealIds);
+                $data['refunds'] = $this->buildRefunds($dealIds, $period);
             }
 
             if ($isExecutive && in_array('marketing_performance', $sections, true)) {
-                $data['marketing_performance'] = $this->buildMarketingPerformance();
+                $data['marketing_performance'] = $this->buildMarketingPerformance($period);
             }
 
             if (in_array('top_deals', $sections, true)) {
-                $data['top_deals'] = $this->buildTopDeals($dealIds);
+                $data['top_deals'] = $this->buildTopDeals($dealIds, 10, $period);
             }
 
             if (in_array('payment_status', $sections, true)) {
@@ -191,7 +193,7 @@ class FinanceInsightService
      */
     public function getMarketingPerformance(): array
     {
-        return $this->guardedSection('marketing_performance', fn () => $this->buildMarketingPerformance());
+        return $this->guardedSection('marketing_performance', fn () => $this->buildMarketingPerformance($this->resolvePeriod()));
     }
 
     /**
@@ -201,7 +203,7 @@ class FinanceInsightService
      */
     public function getTopDeals(): array
     {
-        return $this->guardedSection('top_deals', fn (?array $dealIds) => $this->buildTopDeals($dealIds, (int) (request('limit') ?? 10)));
+        return $this->guardedSection('top_deals', fn (?array $dealIds) => $this->buildTopDeals($dealIds, (int) (request('limit') ?? 10), $this->resolvePeriod()));
     }
 
     /**
@@ -249,38 +251,156 @@ class FinanceInsightService
     }
 
     /**
-     * Headline KPIs for the current month with month-over-month growth.
+     * Resolve a reporting period from the request query parameters.
      *
-     * @param  ?list<int>  $dealIds
+     * Supported (in priority order):
+     *  - start_date + end_date                                  -> custom day range
+     *  - start_year + start_month + end_year + end_month        -> month-year range
+     *  - year + month                                           -> a single month
+     *  - year                                                   -> a whole year
+     *  - (none)                                                 -> null (callers fall back to their defaults)
+     *
+     * @return array{start: Carbon, end: Carbon, label: string, mode: string}|null
+     */
+    private function resolvePeriod(): ?array
+    {
+        $startDate = request('start_date');
+        $endDate = request('end_date');
+        $year = request('year');
+        $month = request('month');
+        $startYear = request('start_year');
+        $startMonth = request('start_month');
+        $endYear = request('end_year');
+        $endMonth = request('end_month');
+
+        if ($startDate && $endDate) {
+            $start = Carbon::parse($startDate)->startOfDay();
+            $end = Carbon::parse($endDate)->endOfDay();
+            $label = $start->format('d M Y').' - '.$end->format('d M Y');
+
+            return $this->orderedPeriod($start, $end, $label, 'custom_range');
+        }
+
+        if ($startYear && $startMonth && $endYear && $endMonth) {
+            $start = Carbon::createFromDate((int) $startYear, (int) $startMonth, 1)->startOfMonth();
+            $end = Carbon::createFromDate((int) $endYear, (int) $endMonth, 1)->endOfMonth();
+
+            return $this->orderedPeriod($start, $end, $start->format('M Y').' - '.$end->format('M Y'), 'month_range');
+        }
+
+        if ($year && $month) {
+            $start = Carbon::createFromDate((int) $year, (int) $month, 1)->startOfMonth();
+            $end = $start->copy()->endOfMonth();
+
+            return $this->orderedPeriod($start, $end, $start->format('F Y'), 'month');
+        }
+
+        if ($year) {
+            $start = Carbon::createFromDate((int) $year, 1, 1)->startOfYear();
+            $end = $start->copy()->endOfYear();
+
+            return $this->orderedPeriod($start, $end, $start->format('Y'), 'year');
+        }
+
+        return null;
+    }
+
+    /**
+     * Build a period array, swapping the bounds if they were supplied reversed.
+     *
+     * @return array{start: Carbon, end: Carbon, label: string, mode: string}
+     */
+    private function orderedPeriod(Carbon $start, Carbon $end, string $label, string $mode): array
+    {
+        if ($start->greaterThan($end)) {
+            [$start, $end] = [$end, $start];
+        }
+
+        return ['start' => $start, 'end' => $end, 'label' => $label, 'mode' => $mode];
+    }
+
+    /**
+     * Period descriptor returned in the payload.
+     *
+     * @param  array{start: Carbon, end: Carbon, label: string, mode: string}|null  $period
      * @return array<string, mixed>
      */
-    private function buildOverview(?array $dealIds, bool $canSeeExpense): array
+    private function periodMeta(?array $period): array
     {
-        $now = Carbon::now();
-        [$currentStart, $currentEnd] = [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()];
-        $prev = $now->copy()->subMonth();
-        [$prevStart, $prevEnd] = [$prev->copy()->startOfMonth(), $prev->copy()->endOfMonth()];
+        if (! $period) {
+            return [
+                'mode' => 'default',
+                'label' => 'All-time (current month for monthly KPIs)',
+                'start' => null,
+                'end' => null,
+                'is_filtered' => false,
+            ];
+        }
+
+        return [
+            'mode' => $period['mode'],
+            'label' => $period['label'],
+            'start' => $period['start']->toDateString(),
+            'end' => $period['end']->toDateString(),
+            'is_filtered' => true,
+        ];
+    }
+
+    /**
+     * Convert a period descriptor into a [start, end] range, or null.
+     *
+     * @param  array{start: Carbon, end: Carbon, label: string, mode: string}|null  $period
+     * @return ?array{0: Carbon, 1: Carbon}
+     */
+    private function periodRange(?array $period): ?array
+    {
+        return $period ? [$period['start'], $period['end']] : null;
+    }
+
+    /**
+     * Headline KPIs for the selected period (defaults to the current month) with
+     * growth vs the equal-length preceding window.
+     *
+     * @param  ?list<int>  $dealIds
+     * @param  array{start: Carbon, end: Carbon, label: string, mode: string}|null  $period
+     * @return array<string, mixed>
+     */
+    private function buildOverview(?array $dealIds, bool $canSeeExpense, ?array $period): array
+    {
+        if ($period) {
+            [$currentStart, $currentEnd] = [$period['start'], $period['end']];
+            $lengthSeconds = $currentStart->diffInSeconds($currentEnd);
+            $prevEnd = $currentStart->copy()->subSecond();
+            $prevStart = $prevEnd->copy()->subSeconds($lengthSeconds);
+            $label = $period['label'];
+        } else {
+            $now = Carbon::now();
+            [$currentStart, $currentEnd] = [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()];
+            $prev = $now->copy()->subMonth();
+            [$prevStart, $prevEnd] = [$prev->copy()->startOfMonth(), $prev->copy()->endOfMonth()];
+            $label = $now->format('F Y');
+        }
 
         $currentIncome = $this->incomeSum($dealIds, [$currentStart, $currentEnd]);
         $prevIncome = $this->incomeSum($dealIds, [$prevStart, $prevEnd]);
 
         $overview = [
-            'period' => $now->format('F Y'),
-            'income_this_month' => $currentIncome,
-            'income_prev_month' => $prevIncome,
+            'period' => $label,
+            'income' => $currentIncome,
+            'income_previous' => $prevIncome,
             'income_growth_percent' => $this->growth($currentIncome, $prevIncome),
-            'transactions_this_month' => $this->incomeCount($dealIds, [$currentStart, $currentEnd]),
-            'total_collected' => $this->incomeSum($dealIds, null),
-            'total_booked' => $this->bookedRevenue($dealIds),
+            'transaction_count' => $this->incomeCount($dealIds, [$currentStart, $currentEnd]),
+            'collected_all_time' => $this->incomeSum($dealIds, null),
+            'booked' => $this->bookedRevenue($dealIds, $period),
             'total_outstanding' => $this->outstandingSum($dealIds),
         ];
 
         if ($canSeeExpense) {
             $currentRefund = $this->refundSum($dealIds, [$currentStart, $currentEnd]);
             $prevRefund = $this->refundSum($dealIds, [$prevStart, $prevEnd]);
-            $overview['refunds_this_month'] = $currentRefund;
+            $overview['refunds'] = $currentRefund;
             $overview['refund_growth_percent'] = $this->growth($currentRefund, $prevRefund);
-            $overview['net_this_month'] = $currentIncome - $currentRefund;
+            $overview['net'] = $currentIncome - $currentRefund;
         }
 
         return $overview;
@@ -292,13 +412,14 @@ class FinanceInsightService
      * @param  ?list<int>  $dealIds
      * @return array<string, mixed>
      */
-    private function buildProfitability(?array $dealIds): array
+    private function buildProfitability(?array $dealIds, ?array $period = null): array
     {
-        $booked = $this->bookedRevenue($dealIds);
-        $collected = $this->incomeSum($dealIds, null);
+        $range = $this->periodRange($period);
+        $booked = $this->bookedRevenue($dealIds, $period);
+        $collected = $this->incomeSum($dealIds, $range);
         $outstanding = $this->outstandingSum($dealIds);
-        $refunded = $this->refundSum($dealIds, null);
-        $finalDeals = $this->finalDealCount($dealIds);
+        $refunded = $this->refundSum($dealIds, $range);
+        $finalDeals = $this->finalDealCount($dealIds, $period);
 
         return [
             'total_booked' => $booked,
@@ -319,15 +440,16 @@ class FinanceInsightService
      * @param  ?list<int>  $dealIds
      * @return list<array<string, mixed>>
      */
-    private function buildMonthlyTrend(?array $dealIds, bool $canSeeExpense): array
+    private function buildMonthlyTrend(?array $dealIds, bool $canSeeExpense, ?array $period = null): array
     {
-        $start = Carbon::now()->subMonths(11)->startOfMonth();
+        $start = $period ? $period['start']->copy()->startOfMonth() : Carbon::now()->subMonths(11)->startOfMonth();
+        $end = $period ? $period['end']->copy()->endOfMonth() : Carbon::now()->endOfMonth();
 
         $incomeByMonth = $this->scopeDeals(
             Transaction::query()
                 ->selectRaw("DATE_FORMAT(transaction_date, '%Y-%m') as month_key, SUM(payment_amount) as total")
                 ->where('debit_credit', 'debit')
-                ->where('transaction_date', '>=', $start)
+                ->whereBetween('transaction_date', [$start, $end])
                 ->groupByRaw("DATE_FORMAT(transaction_date, '%Y-%m')"),
             $dealIds
         )->pluck('total', 'month_key');
@@ -338,18 +460,19 @@ class FinanceInsightService
                 Transaction::query()
                     ->selectRaw("DATE_FORMAT(transaction_date, '%Y-%m') as month_key, SUM(payment_amount) as total")
                     ->where('transaction_type', TransactionType::Refund->value)
-                    ->where('transaction_date', '>=', $start)
+                    ->whereBetween('transaction_date', [$start, $end])
                     ->groupByRaw("DATE_FORMAT(transaction_date, '%Y-%m')"),
                 $dealIds
             )->pluck('total', 'month_key');
         }
 
-        return collect(range(11, 0))->map(function (int $i) use ($incomeByMonth, $outcomeByMonth, $canSeeExpense) {
-            $date = Carbon::now()->subMonths($i);
-            $key = $date->format('Y-m');
+        $rows = [];
+        $cursor = $start->copy();
+        while ($cursor->lessThanOrEqualTo($end)) {
+            $key = $cursor->format('Y-m');
 
             $row = [
-                'month' => $date->format('M Y'),
+                'month' => $cursor->format('M Y'),
                 'income' => (float) ($incomeByMonth[$key] ?? 0),
             ];
 
@@ -357,8 +480,11 @@ class FinanceInsightService
                 $row['outcome'] = (float) ($outcomeByMonth[$key] ?? 0);
             }
 
-            return $row;
-        })->values()->all();
+            $rows[] = $row;
+            $cursor->addMonth();
+        }
+
+        return $rows;
     }
 
     /**
@@ -411,26 +537,36 @@ class FinanceInsightService
      * @param  ?list<int>  $dealIds
      * @return array<string, mixed>
      */
-    private function buildRefunds(?array $dealIds): array
+    private function buildRefunds(?array $dealIds, ?array $period = null): array
     {
-        $monthStart = Carbon::now()->startOfMonth();
-        $monthEnd = Carbon::now()->endOfMonth();
+        $range = $this->periodRange($period);
 
-        $paidBase = fn () => $this->scopeDeals(
-            ProjectDealRefund::query()->where('status', RefundStatus::Paid->value),
-            $dealIds
+        // Paid refunds within the selected period (by created_at), or all-time when unfiltered.
+        $paidBase = fn () => $this->applyDateRange(
+            $this->scopeDeals(
+                ProjectDealRefund::query()->where('status', RefundStatus::Paid->value),
+                $dealIds
+            ),
+            $range,
+            'created_at'
         );
+
+        // Pending refunds are current-state and not period-bound.
         $pendingBase = fn () => $this->scopeDeals(
             ProjectDealRefund::query()->where('status', RefundStatus::Pending->value),
             $dealIds
         );
+
+        $periodRefund = $range
+            ? $this->refundSum($dealIds, $range)
+            : $this->refundSum($dealIds, [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
 
         return [
             'total_refunded' => (float) $paidBase()->sum('refund_amount'),
             'refunded_count' => (int) $paidBase()->count(),
             'pending_amount' => (float) $pendingBase()->sum('refund_amount'),
             'pending_count' => (int) $pendingBase()->count(),
-            'refunded_this_month' => $this->refundSum($dealIds, [$monthStart, $monthEnd]),
+            'refunded_in_period' => $periodRefund,
         ];
     }
 
@@ -440,19 +576,27 @@ class FinanceInsightService
      *
      * @return list<array<string, mixed>>
      */
-    private function buildMarketingPerformance(): array
+    private function buildMarketingPerformance(?array $period = null): array
     {
-        $bookedPerDeal = ProjectQuotation::query()
+        $range = $this->periodRange($period);
+
+        $bookedQuery = ProjectQuotation::query()
             ->where('is_final', 1)
             ->selectRaw('project_deal_id, SUM(fix_price) as total')
-            ->groupBy('project_deal_id')
-            ->pluck('total', 'project_deal_id');
+            ->groupBy('project_deal_id');
+        if ($period) {
+            $bookedQuery->whereHas('deal', fn ($d) => $d->whereBetween('project_date', [$period['start']->toDateString(), $period['end']->toDateString()]));
+        }
+        $bookedPerDeal = $bookedQuery->pluck('total', 'project_deal_id');
 
-        $collectedPerDeal = Transaction::query()
-            ->where('debit_credit', 'debit')
-            ->selectRaw('project_deal_id, SUM(payment_amount) as total')
-            ->groupBy('project_deal_id')
-            ->pluck('total', 'project_deal_id');
+        $collectedPerDeal = $this->applyDateRange(
+            Transaction::query()
+                ->where('debit_credit', 'debit')
+                ->selectRaw('project_deal_id, SUM(payment_amount) as total')
+                ->groupBy('project_deal_id'),
+            $range,
+            'transaction_date'
+        )->pluck('total', 'project_deal_id');
 
         $outstandingPerDeal = Invoice::query()
             ->where('status', InvoiceStatus::Unpaid->value)
@@ -494,16 +638,20 @@ class FinanceInsightService
      * @param  ?list<int>  $dealIds
      * @return list<array<string, mixed>>
      */
-    private function buildTopDeals(?array $dealIds, int $limit = 10): array
+    private function buildTopDeals(?array $dealIds, int $limit = 10, ?array $period = null): array
     {
-        $collectedPerDeal = $this->scopeDeals(
-            Transaction::query()
-                ->where('debit_credit', 'debit')
-                ->selectRaw('project_deal_id, SUM(payment_amount) as total')
-                ->groupBy('project_deal_id')
-                ->orderByDesc('total')
-                ->limit($limit),
-            $dealIds
+        $collectedPerDeal = $this->applyDateRange(
+            $this->scopeDeals(
+                Transaction::query()
+                    ->where('debit_credit', 'debit')
+                    ->selectRaw('project_deal_id, SUM(payment_amount) as total')
+                    ->groupBy('project_deal_id')
+                    ->orderByDesc('total')
+                    ->limit($limit),
+                $dealIds
+            ),
+            $this->periodRange($period),
+            'transaction_date'
         )->pluck('total', 'project_deal_id');
 
         if ($collectedPerDeal->isEmpty()) {
@@ -653,14 +801,22 @@ class FinanceInsightService
     /**
      * Total booked value (final quotations of final deals).
      *
+     * When a period is given, only deals whose project_date falls in the period count.
+     *
      * @param  ?list<int>  $dealIds
+     * @param  array{start: Carbon, end: Carbon, label: string, mode: string}|null  $period
      */
-    private function bookedRevenue(?array $dealIds): float
+    private function bookedRevenue(?array $dealIds, ?array $period = null): float
     {
         return (float) $this->scopeDeals(
             ProjectQuotation::query()
                 ->where('is_final', 1)
-                ->whereHas('deal', fn ($q) => $q->where('status', ProjectDealStatus::Final->value)),
+                ->whereHas('deal', function ($q) use ($period) {
+                    $q->where('status', ProjectDealStatus::Final->value);
+                    if ($period) {
+                        $q->whereBetween('project_date', [$period['start']->toDateString(), $period['end']->toDateString()]);
+                    }
+                }),
             $dealIds
         )->sum('fix_price');
     }
@@ -680,14 +836,35 @@ class FinanceInsightService
 
     /**
      * @param  ?list<int>  $dealIds
+     * @param  array{start: Carbon, end: Carbon, label: string, mode: string}|null  $period
      */
-    private function finalDealCount(?array $dealIds): int
+    private function finalDealCount(?array $dealIds, ?array $period = null): int
     {
-        return (int) $this->scopeDeals(
+        $query = $this->scopeDeals(
             ProjectDeal::query()->where('status', ProjectDealStatus::Final->value),
             $dealIds,
             'id'
-        )->count();
+        );
+
+        if ($period) {
+            $query->whereBetween('project_date', [$period['start']->toDateString(), $period['end']->toDateString()]);
+        }
+
+        return (int) $query->count();
+    }
+
+    /**
+     * Apply a [start, end] date range to a query on the given column, when present.
+     *
+     * @param  ?array{0: Carbon, 1: Carbon}  $range
+     */
+    private function applyDateRange(Builder $query, ?array $range, string $column): Builder
+    {
+        if ($range) {
+            $query->whereBetween($column, [$range[0], $range[1]]);
+        }
+
+        return $query;
     }
 
     /**
