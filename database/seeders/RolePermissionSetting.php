@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSetting extends Seeder
 {
@@ -16,7 +17,7 @@ class RolePermissionSetting extends Seeder
      */
     public function run(): void
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Schema::disableForeignKeyConstraints();
 
@@ -44,7 +45,7 @@ class RolePermissionSetting extends Seeder
 
         Schema::enableForeignKeyConstraints();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
 
     protected function seedRoles()
@@ -1078,7 +1079,7 @@ class RolePermissionSetting extends Seeder
             'assign_interactive_pic',
             'change_interactive_status',
             'complete_interactive_task',
-            'delete_interactive_task_attachment'
+            'delete_interactive_task_attachment',
         ];
 
         $output = [];
@@ -1087,7 +1088,7 @@ class RolePermissionSetting extends Seeder
                 'name' => $list, 'group' => 'interactive', 'used' => [
                     $this->getRootRole(),
                     $this->getDirectorRole(),
-                ]
+                ],
             ];
         }
 
@@ -1097,6 +1098,10 @@ class RolePermissionSetting extends Seeder
     protected function projectPermission()
     {
         return [
+            ['name' => 'ai_search', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'pick_task', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
