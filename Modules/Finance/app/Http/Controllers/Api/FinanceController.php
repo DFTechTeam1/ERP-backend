@@ -9,6 +9,7 @@ use Modules\Finance\Http\Requests\ExportProjectDealSummary;
 use Modules\Finance\Http\Requests\ExportRequest;
 use Modules\Finance\Http\Requests\PriceChanges;
 use Modules\Finance\Http\Requests\Transaction\Create;
+use Modules\Finance\Services\FinanceInsightService;
 use Modules\Finance\Services\InvoiceService;
 use Modules\Finance\Services\TransactionService;
 use Modules\Production\Services\ProjectDealService;
@@ -24,11 +25,47 @@ class FinanceController extends Controller
     public function __construct(
         TransactionService $service,
         InvoiceService $invoiceService,
-        ProjectDealService $projectDealService
+        ProjectDealService $projectDealService,
+        private readonly FinanceInsightService $financeInsightService
     ) {
         $this->service = $service;
         $this->invoiceService = $invoiceService;
         $this->projectDealService = $projectDealService;
+    }
+
+    /**
+     * Comprehensive, role-aware finance insight for MCP analysis.
+     *
+     * Access is resolved from the authenticated user's ROLE (director/root,
+     * finance, marketing) — not the MCP permission.
+     */
+    public function getFinanceInsight(): JsonResponse
+    {
+        return apiResponse($this->financeInsightService->getInsight());
+    }
+
+    /**
+     * Outstanding receivables drill-down (director/root & finance only).
+     */
+    public function getFinanceReceivables(): JsonResponse
+    {
+        return apiResponse($this->financeInsightService->getReceivables());
+    }
+
+    /**
+     * Per-marketing performance leaderboard (director/root only).
+     */
+    public function getMarketingPerformance(): JsonResponse
+    {
+        return apiResponse($this->financeInsightService->getMarketingPerformance());
+    }
+
+    /**
+     * Top revenue deals drill-down (scope follows the role).
+     */
+    public function getTopDeals(): JsonResponse
+    {
+        return apiResponse($this->financeInsightService->getTopDeals());
     }
 
     /**
