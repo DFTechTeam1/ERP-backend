@@ -5,6 +5,7 @@ use App\Http\Middleware\AuthenticateWithMcpToken;
 use App\Http\Middleware\BearerTokenMiddleware;
 use App\Http\Middleware\CustomSignedRouteMiddleware;
 use App\Http\Middleware\InternalServiceMiddleware;
+use App\Http\Middleware\LogMcpAccess;
 use App\Http\Middleware\PartnerMiddleware;
 use App\Http\Middleware\PermissionCheck;
 use App\Http\Middleware\ScalarAuth;
@@ -45,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'mcp.auth' => AuthenticateWithMcpToken::class,
+            'mcp.log' => LogMcpAccess::class,
             'internal.service' => InternalServiceMiddleware::class,
             'allow-iframe' => AllowIframe::class,
             'partner' => PartnerMiddleware::class,
