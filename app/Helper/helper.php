@@ -1,20 +1,33 @@
 <?php
 
+use App\Enums\Cache\CacheKey;
+use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
+use App\Models\User;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Imagick\Driver;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Laravel\Facades\Image;
+use Milon\Barcode\DNS1D;
+use Modules\Company\Models\City;
+use Modules\Company\Models\Setting;
+use Modules\Company\Repository\SettingRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\TalentaService;
+use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Telegram\Models\TelegramSession;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as FacadesQrCode;
@@ -39,6 +52,15 @@ if (! function_exists('setEmailConfiguration')) {
             'mail.default' => 'smtp',
             'mail.mailers.smtp.encryption' => 'tls',
         ]);
+
+        // Long-running queue workers (and Octane) keep the resolved SMTP mailer
+        // in MailManager's in-memory cache, so the config() overrides above are
+        // ignored after the first send in a worker process — it keeps using the
+        // SMTP transport built from the credentials present at boot. Purge the
+        // cached mailer so the next send rebuilds the transport with the fresh
+        // settings. This is why a manual `cache:clear` / worker restart was
+        // previously needed for new email settings to take effect.
+        app('mail.manager')->purge('smtp');
     }
 }
 
@@ -251,7 +273,7 @@ if (! function_exists('uploadFile')) {
             Storage::disk('public')->putFileAs($path, $file, $name);
 
             return $name;
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             Log::debug('uploadFile Error', [
                 'file' => $th->getFile(),
                 'message' => $th->getMessage(),
@@ -290,7 +312,7 @@ if (! function_exists('uploadAddon')) {
                 'mime' => $mime,
                 'file' => $uploadedFile,
             ];
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             Log::debug('uploadAddon Error', [
                 'file' => $th->getFile(),
                 'message' => $th->getMessage(),
@@ -352,14 +374,14 @@ if (! function_exists('uploadImageandCompress')) {
 
             //        Image::read($image)->toWebp($compressValue)->save($filepath);
 
-            $imageManager = new ImageManager(new \Intervention\Image\Drivers\Imagick\Driver);
+            $imageManager = new ImageManager(new Driver);
             $newImage = $imageManager->read($image);
             $newImage->scale(height: 400);
             $newImage->toWebp(60);
             $newImage->save($filepath);
 
             return $name;
-        } catch (\Throwable $th) {
+        } catch (Throwable $th) {
             errorMessage($th);
 
             return false;
@@ -424,7 +446,7 @@ if (! function_exists('generateRandomSymbol')) {
 if (! function_exists('getSetting')) {
     function getSetting($code = '')
     {
-        $data = \Illuminate\Support\Facades\Cache::get('setting');
+        $data = Cache::get('setting');
 
         $out = $data;
         if (! empty($code)) {
@@ -438,7 +460,7 @@ if (! function_exists('getSetting')) {
 if (! function_exists('getSettingByKey')) {
     function getSettingByKey($key)
     {
-        $data = \Illuminate\Support\Facades\Cache::get('setting');
+        $data = Cache::get('setting');
 
         $data = collect($data)->where('key', $key)->values();
 
@@ -453,7 +475,7 @@ if (! function_exists('cachingSetting')) {
 
         if (! $setting) {
             Cache::rememberForever('setting', function () {
-                $data = \Modules\Company\Models\Setting::get();
+                $data = Setting::get();
 
                 return $data->toArray();
             });
@@ -516,9 +538,9 @@ if (! function_exists('logging')) {
     function logging($key, array $value)
     {
         if ($key == 'error: ') {
-            \Illuminate\Support\Facades\Log::error($key, $value);
+            Log::error($key, $value);
         } else {
-            \Illuminate\Support\Facades\Log::debug($key, $value);
+            Log::debug($key, $value);
         }
     }
 }
@@ -526,7 +548,7 @@ if (! function_exists('logging')) {
 if (! function_exists('getUserByRole')) {
     function getUserByRole(string $roleName)
     {
-        $users = \App\Models\User::whereHas('roles', function (\Illuminate\Database\Eloquent\Builder $query) use ($roleName) {
+        $users = User::whereHas('roles', function (Builder $query) use ($roleName) {
             $query->whereRaw("LOWER(name) = '".$roleName."'");
         })->get();
 
@@ -545,7 +567,7 @@ if (! function_exists('getPicOfInventory')) {
             $permissions = $user->getPermissionsViaRoles();
             $permissionNames = collect($permissions)->pluck('name')->toArray();
             if (in_array('accept_request_equipment', $permissionNames)) {
-                $employees[] = \Modules\Hrd\Models\Employee::selectRaw('id,uid,name,line_id,telegram_chat_id,user_id')
+                $employees[] = Employee::selectRaw('id,uid,name,line_id,telegram_chat_id,user_id')
                     ->where('user_id', $user->id)
                     ->first();
             }
@@ -575,7 +597,7 @@ if (! function_exists('isSuperUserRole')) {
 if (! function_exists('isHrdRole')) {
     function isHrdRole()
     {
-        $role = \Illuminate\Support\Facades\DB::table('roles')
+        $role = DB::table('roles')
             ->whereRaw("lower(name) = 'hrd'")
             ->first();
 
@@ -599,10 +621,10 @@ if (! function_exists('isProjectPIC')) {
     function isProjectPIC($projectId, int $employeeId)
     {
         if (gettype($projectId) == 'string') {
-            $projectId = getIdFromUid($projectId, new \Modules\Production\Models\Project);
+            $projectId = getIdFromUid($projectId, new Project);
         }
 
-        $projectData = \Modules\Production\Models\ProjectPersonInCharge::select('id')
+        $projectData = ProjectPersonInCharge::select('id')
             ->where('project_id', $projectId)
             ->where('pic_id', $employeeId)
             ->first();
@@ -869,7 +891,7 @@ if (! function_exists('uploadBase64')) {
         $filePath = $path.'/'.$fileName;
 
         // Save the image using Laravel's Storage facade
-        \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $imageBase64);
+        Storage::disk('public')->put($filePath, $imageBase64);
 
         return $fileName;
     }
@@ -879,7 +901,7 @@ if (! function_exists('generateBarcode')) {
     function generateBarcode(string $code, string $path)
     {
         $realPath = storage_path('app/public/'.$path);
-        $service = new \Milon\Barcode\DNS1D;
+        $service = new DNS1D;
         if (! is_dir($realPath)) {
             mkdir($realPath, 0777, true);
         }
@@ -950,10 +972,10 @@ if (! function_exists('stringToPascalSnakeCase')) {
 if (! function_exists('checkForeignKey')) {
     function checkForeignKey($tableName, $columnName)
     {
-        return \Illuminate\Support\Facades\DB::table('information_schema.KEY_COLUMN_USAGE')
+        return DB::table('information_schema.KEY_COLUMN_USAGE')
             ->where('TABLE_NAME', $tableName)
             ->where('COLUMN_NAME', $columnName)
-            ->where('TABLE_SCHEMA', \Illuminate\Support\Facades\DB::getDatabaseName())
+            ->where('TABLE_SCHEMA', DB::getDatabaseName())
             ->exists();
 
     }
@@ -962,7 +984,7 @@ if (! function_exists('checkForeignKey')) {
 if (! function_exists('putTelegramSession')) {
     function putTelegramSession(string $chatId, mixed $value)
     {
-        $check = \Modules\Telegram\Models\TelegramSession::select('*')
+        $check = TelegramSession::select('*')
             ->where('chat_id', $chatId)
             ->active()
             ->first();
@@ -974,7 +996,7 @@ if (! function_exists('putTelegramSession')) {
         }
 
         // create new session
-        \Modules\Telegram\Models\TelegramSession::create([
+        TelegramSession::create([
             'chat_id' => $chatId,
             'value' => $value,
             'status' => 1,
@@ -1101,7 +1123,7 @@ if (! function_exists('applyNestedWhereHas')) {
 if (! function_exists('getPriceSetting')) {
     function getPriceSetting()
     {
-        $settings = \Modules\Company\Models\Setting::selectRaw('key,value')
+        $settings = Setting::selectRaw('key,value')
             ->whereIn('key', [
                 'discount_type',
                 'discount',
@@ -1134,7 +1156,7 @@ if (! function_exists('setPriceGuideSetting')) {
             'equipment_type',
             'equipment',
         ];
-        $settingRepo = new \Modules\Company\Repository\SettingRepository;
+        $settingRepo = new SettingRepository;
 
         $settings = $settingRepo->list(
             select: '`key`, `value`',
@@ -1187,7 +1209,7 @@ if (! function_exists('setPriceGuideSetting')) {
 if (! function_exists('getPriceGuideSetting')) {
     function getPriceGuideSetting()
     {
-        $settings = \Illuminate\Support\Facades\Cache::get(\App\Enums\Cache\CacheKey::PriceGuideSetting->value);
+        $settings = Cache::get(CacheKey::PriceGuideSetting->value);
 
         if (! $settings) {
             $settings = setPriceGuideSetting();
@@ -1218,10 +1240,10 @@ if (! function_exists('linkShortener')) {
 if (! function_exists('mainProcessToGetPicScheduler')) {
     function mainProcessToGetPicScheduler(string $projectUid, ?string $startDate = null, ?string $endDate = null): array
     {
-        $userPics = \App\Models\User::role('project manager')->get();
-        $userPicsAdmin = \App\Models\User::role('project manager admin')->get();
-        $assistant = \App\Models\User::role('assistant manager')->get();
-        $director = \App\Models\User::role('director')->get();
+        $userPics = User::role('project manager')->get();
+        $userPicsAdmin = User::role('project manager admin')->get();
+        $assistant = User::role('assistant manager')->get();
+        $director = User::role('director')->get();
         $pics = collect($userPics)->merge($director)->merge($assistant)->merge($userPicsAdmin)->toArray();
 
         // get all workload in each pics
@@ -1231,7 +1253,7 @@ if (! function_exists('mainProcessToGetPicScheduler')) {
                 $employee = (new EmployeeRepository)->show(
                     uid: 'dummy',
                     select: 'id,uid,name,email,employee_id,avatar',
-                    where: 'id = '.$pic['employee_id'].' and status != '.\App\Enums\Employee\Status::Inactive->value.' and status != '.\App\Enums\Employee\Status::Deleted->value
+                    where: 'id = '.$pic['employee_id'].' and status != '.Status::Inactive->value.' and status != '.Status::Deleted->value
                 );
 
                 if ($employee) {
@@ -1261,7 +1283,7 @@ if (! function_exists('mainProcessToGetPicScheduler')) {
 if (! function_exists('getPicWorkload')) {
     function getPicWorkload(object $pic, string $projectUid, ?string $startDate = null, ?string $endDate = null): array
     {
-        $surabaya = \Modules\Company\Models\City::selectRaw('id')
+        $surabaya = City::selectRaw('id')
             ->whereRaw("lower(name) like 'kota surabaya' or lower(name) like 'surabaya'")
             ->get();
 
@@ -1321,10 +1343,10 @@ if (! function_exists('generateUniqueIdentifierId')) {
 }
 
 if (! function_exists('amILeadModeller')) {
-    function amILeadModeller(?\App\Models\User $user = null): bool
+    function amILeadModeller(?User $user = null): bool
     {
         if (! $user) {
-            $user = \Illuminate\Support\Facades\Auth::user();
+            $user = Auth::user();
         }
         $leadModellerId = getSettingByKey('lead_3d_modeller');
         $leadModellerId = getIdFromUid($leadModellerId, new Employee);
@@ -1334,10 +1356,10 @@ if (! function_exists('amILeadModeller')) {
 }
 
 if (! function_exists('amIRootUser')) {
-    function amIRootUser(?\App\Models\User $user = null): bool
+    function amIRootUser(?User $user = null): bool
     {
         if (! $user) {
-            $user = \Illuminate\Support\Facades\Auth::user();
+            $user = Auth::user();
         }
 
         return $user->hasRole(BaseRole::Root->value);
@@ -1347,7 +1369,7 @@ if (! function_exists('amIRootUser')) {
 if (! function_exists('getProjectManagerMember')) {
     function getProjectManagerMember(int $employeeId)
     {
-        return \Modules\Hrd\Models\Employee::selectRaw('id,name')
+        return Employee::selectRaw('id,name')
             ->where('boss_id', $employeeId)
             ->get();
     }
