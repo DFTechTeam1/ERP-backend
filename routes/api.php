@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InteractiveController;
+use App\Http\Controllers\Api\Mcp\McpAccessLogController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\Nas\LocalNasController;
 use App\Http\Controllers\Api\NotificationController;
@@ -382,9 +383,20 @@ Route::middleware('partner')->group(function () {
     });
 });
 
+// MCP access log monitoring (consumed by the admin frontend)
+Route::middleware('auth:sanctum')
+    ->prefix('mcp-logs')
+    ->group(function () {
+        Route::get('/', [McpAccessLogController::class, 'index']);
+        Route::get('summary', [McpAccessLogController::class, 'summary']);
+        Route::get('usage', [McpAccessLogController::class, 'usage']);
+        Route::get('usage-by-route', [McpAccessLogController::class, 'usageByRoute']);
+        Route::get('{id}', [McpAccessLogController::class, 'show'])->whereNumber('id');
+    });
+
 Route::post('/generate-mcp-token', [OauthController::class, 'generateMcpBearerToken']);
 
-Route::middleware(['mcp.auth'])
+Route::middleware(['mcp.log', 'mcp.auth'])
     ->prefix('mcp')
     ->group(function () {
         Route::get('/user', function (Request $request) {
