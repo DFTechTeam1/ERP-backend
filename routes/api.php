@@ -425,7 +425,7 @@ Route::middleware(['mcp.log', 'mcp.auth'])
         Route::get('production/project/customer/search', [ProjectController::class, 'searchCustomer']);
 
         // Finance
-        Route::post('finance/billInvoice', [InvoiceController::class, 'generateBillInvoice']);
+        Route::post('finance/billInvoice/{projectDealUid}', [InvoiceController::class, 'generateBillInvoice']);
 
         // Finance — price change requests (approval-gated; approval stays human)
         Route::get('finance/price-change-reasons', [FinanceController::class, 'getPriceChangeReasons']);
