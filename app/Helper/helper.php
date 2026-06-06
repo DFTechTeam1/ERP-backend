@@ -446,6 +446,13 @@ if (! function_exists('generateRandomSymbol')) {
 if (! function_exists('getSetting')) {
     function getSetting($code = '')
     {
+        // Self-warm: after a fresh boot (e.g. `make dev`) nothing has populated
+        // the 'setting' cache yet, so a plain Cache::get returns null. Build it
+        // on first read instead of returning null.
+        if (! Cache::has('setting')) {
+            cachingSetting();
+        }
+
         $data = Cache::get('setting');
 
         $out = $data;
@@ -460,6 +467,14 @@ if (! function_exists('getSetting')) {
 if (! function_exists('getSettingByKey')) {
     function getSettingByKey($key)
     {
+        // Self-warm: after a fresh boot (e.g. `make dev`) nothing has populated
+        // the 'setting' cache yet, so a plain Cache::get returns null and every
+        // getSettingByKey() call (SMTP host, etc.) would be null. Build it on
+        // first read instead.
+        if (! Cache::has('setting')) {
+            cachingSetting();
+        }
+
         $data = Cache::get('setting');
 
         $data = collect($data)->where('key', $key)->values();
