@@ -809,7 +809,7 @@ class ProjectDealService
                 uid: $projectDealId,
                 select: 'id,name',
                 relation: [
-                    'latestQuotation:id,project_deal_id,quotation_id',
+                    'latestQuotation:project_quotations.id,project_quotations.project_deal_id,project_quotations.quotation_id',
                     'finalQuotation:id,project_deal_id,quotation_id',
                 ]
             );
