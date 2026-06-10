@@ -2,10 +2,14 @@
 
 namespace Modules\Production\Services;
 
+use App\Enums\Production\Classification;
+use App\Enums\Production\EventType;
+use App\Enums\Production\ProjectStatus;
 use App\Enums\System\BaseRole;
 use App\Services\UserRoleManagement;
 use Carbon\Carbon;
 use Modules\Company\Models\PositionBackup;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Services\EmployeeRepoGroup;
 use Modules\Production\Repository\ProjectTaskPicRepository;
 
@@ -45,7 +49,9 @@ class TestingService
     {
         $specialPosition = getSettingByKey('special_production_position');
         $specialPositionId = 0;
-        if ($specialPosition) $specialPositionId = getIdFromUid($specialPosition, new PositionBackup());
+        if ($specialPosition) {
+            $specialPositionId = getIdFromUid($specialPosition, new PositionBackup);
+        }
 
         if ($this->user->hasRole('entertainment')) { // just get event for entertainment. Look at transfer_team_members table
             $newWhereHas = [
@@ -58,7 +64,7 @@ class TestingService
             if ($employee->position_id == $specialPositionId) {
                 $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = '.$employee->id);
                 $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
-    
+
                 // get from project_task_pics table
                 $taskPics = $this->taskPicRepo->list(
                     select: 'project_task_id',
@@ -70,13 +76,13 @@ class TestingService
                             collect($taskPics)->pluck('project_task_id')->toArray()
                         )->unique()->values()->toArray();
                 }
-    
+
                 if (count($taskIds) > 0) {
                     $queryNewHas = 'id IN ('.implode(',', $taskIds).')';
                 } else {
                     $queryNewHas = 'id = 0';
                 }
-    
+
                 $newWhereHas = [
                     [
                         'relation' => 'tasks',
@@ -89,18 +95,17 @@ class TestingService
                 $newWhereHas = [
                     [
                         'relation' => 'personInCharges',
-                        'query' => "pic_id = {$bossId}"
-                    ]
+                        'query' => "pic_id = {$bossId}",
+                    ],
                 ];
             }
-
 
             if ($this->user->hasRole(BaseRole::LeadModeller->value)) {
                 $newWhereHas = [
                     [
                         'relation' => 'personInCharges',
-                        'query' => "pic_id > 0"
-                    ]
+                        'query' => 'pic_id > 0',
+                    ],
                 ];
             }
         }
@@ -144,7 +149,7 @@ class TestingService
 
         if (request('pics')) {
             $pics = collect(request('pics'))->map(function ($pic) {
-                $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee);
+                $picId = getIdFromUid($pic, new Employee);
 
                 return $picId;
             })->toArray();
@@ -185,9 +190,9 @@ class TestingService
             $sorts
         );
 
-        $eventTypes = \App\Enums\Production\EventType::cases();
-        $classes = \App\Enums\Production\Classification::cases();
-        $statusses = \App\Enums\Production\ProjectStatus::cases();
+        $eventTypes = EventType::cases();
+        $classes = Classification::cases();
+        $statusses = ProjectStatus::cases();
 
         $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses) {
             $pics = collect($item->personInCharges)->map(function ($pic) {
@@ -270,7 +275,7 @@ class TestingService
                 'project_is_complete' => $item->status == \App\Enums\production\ProjectStatus::Completed->value,
                 'vj' => $vj,
                 'have_vj' => $item->vjs->count() > 0 ? true : false,
-                'is_final_check' => $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false,
+                'is_final_check' => $item->status == ProjectStatus::ReadyToGo->value || $item->status == ProjectStatus::Completed->value ? true : false,
                 'need_return_equipment' => $needReturnEquipment,
                 'songs' => $item->songs,
                 'number_of_equipments' => 0,
@@ -322,7 +327,7 @@ class TestingService
 
             // $filterResult = $this->buildFilterResult();
 
-            if (request('filter_month') == 'true' && !request('date')) {
+            if (request('filter_month') == 'true' && ! request('date')) {
                 $startMonth = date('Y-m').'-01';
                 $endDateOfMonth = Carbon::createFromDate(
                     (int) date('Y'),
@@ -339,7 +344,7 @@ class TestingService
                 }
             }
 
-            if (request('filter_year') == 'true' && !request('date')) {
+            if (request('filter_year') == 'true' && ! request('date')) {
                 $startMonth = date('Y').'-01-01';
                 $endMonth = date('Y').'-12-31';
 
@@ -350,7 +355,7 @@ class TestingService
                 }
             }
 
-            if (request('filter_today') == 'true' && !request('date')) {
+            if (request('filter_today') == 'true' && ! request('date')) {
                 $startDate = date('Y-m-d');
                 if (empty($where)) {
                     $where = "project_date = '{$startDate}'";
@@ -365,12 +370,12 @@ class TestingService
             }
 
             if (request('event_type')) {
-                $eventType = "'" . collect(request('event_type'))->implode("','") . "'";
+                $eventType = "'".collect(request('event_type'))->implode("','")."'";
                 $where .= " AND lower(event_type) IN ({$eventType})";
             }
 
             if (request('event_class')) {
-                $eventClass = collect(request('event_class'))->implode(",");
+                $eventClass = collect(request('event_class'))->implode(',');
                 $where .= " AND project_class_id IN ({$eventClass})";
             }
 
@@ -387,7 +392,7 @@ class TestingService
 
             if (request('pics')) {
                 $pics = collect(request('pics'))->map(function ($pic) {
-                    $picId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee);
+                    $picId = getIdFromUid($pic, new Employee);
 
                     return $picId;
                 })->toArray();
@@ -400,10 +405,16 @@ class TestingService
                 ];
             }
 
-            // override logic when user is entertianment
+            // override logic when user is entertianment.
+            // Root can explicitly request the entertainment list via the `is_entertainment` flag
+            // (root sees both general and entertainment tabs on the frontend).
+            $rootRequestsEntertainment = $this->user->hasRole(BaseRole::Root->value)
+                && filter_var(request('is_entertainment'), FILTER_VALIDATE_BOOLEAN);
+
             if (
                 in_array(BaseRole::Entertainment->value, $roleNames) ||
-                in_array(BaseRole::ProjectManagerEntertainment->value, $roleNames)
+                in_array(BaseRole::ProjectManagerEntertainment->value, $roleNames) ||
+                $rootRequestsEntertainment
             ) {
                 return $this->listForEntertainment($select, $where, $relation);
             }
@@ -435,7 +446,6 @@ class TestingService
                     $whereHas = array_merge($whereHas, $newWhereHas);
                 }
             }
-
 
             $isAssistant = isAssistantPMRole();
             if ($isPMRole || $isAssistant) {
@@ -507,9 +517,9 @@ class TestingService
             );
             $totalData = $this->projectGroupRepo->projectRepo->list('id', $where, [], $whereHas)->count();
 
-            $eventTypes = \App\Enums\Production\EventType::cases();
-            $classes = \App\Enums\Production\Classification::cases();
-            $statusses = \App\Enums\Production\ProjectStatus::cases();
+            $eventTypes = EventType::cases();
+            $classes = Classification::cases();
+            $statusses = ProjectStatus::cases();
 
             $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses, $roles) {
                 $pics = collect($item->personInCharges)->map(function ($pic) {
@@ -570,7 +580,7 @@ class TestingService
 
                 $projectIsComplete = $item->status == \App\Enums\production\ProjectStatus::Completed->value;
                 $noPic = count($pics) == 0 ? true : false;
-                $isFinalCheck = $item->status == \App\Enums\Production\ProjectStatus::ReadyToGo->value || $item->status == \App\Enums\Production\ProjectStatus::Completed->value ? true : false;
+                $isFinalCheck = $item->status == ProjectStatus::ReadyToGo->value || $item->status == ProjectStatus::Completed->value ? true : false;
                 $haveVj = $item->vjs->count() > 0 ? true : false;
 
                 /**
