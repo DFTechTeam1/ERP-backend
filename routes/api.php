@@ -404,6 +404,9 @@ Route::middleware(['mcp.log', 'mcp.auth'])
         });
         Route::get('classList', [ProjectController::class, 'getClassList']);
 
+        // Project list — role/permission-aware (delegates to listForEntertainment for entertainment roles)
+        Route::get('production/project', [ProjectController::class, 'index'])->name('mcp.project.list');
+
         // Create deal flow — reference data fetches (Stage 0)
         Route::get('production/project/getQuotationNumber', [ProjectController::class, 'getQuotationNumber']);
         Route::get('dashboard/projectCalendar', [DashboardController::class, 'getProjectCalendar']);
