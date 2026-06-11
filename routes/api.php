@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\AuthTokenController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InteractiveController;
@@ -181,10 +182,14 @@ Route::get('nasTestConnection', function (Request $request) {
 
 Route::prefix('auth')->group(function () {
     Route::post('login', [LoginController::class, 'login'])->name('login-form');
+    Route::post('refresh', [AuthTokenController::class, 'refresh']);
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
 });
+
+// Menu tree for the access-token-authenticated user (built fresh from permissions)
+Route::middleware('jwt.auth')->get('menu', [MenuController::class, 'userMenu']);
 
 Route::middleware('auth:sanctum')
     ->prefix('auth')
