@@ -9,9 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Lcobucci\JWT\UnencryptedToken;
 use Lcobucci\JWT\Validation\Constraint\IssuedBy;
+use Lcobucci\JWT\Validation\Constraint\LooseValidAt;
 use Lcobucci\JWT\Validation\Constraint\PermittedFor;
 use Lcobucci\JWT\Validation\Constraint\SignedWith;
-use Lcobucci\JWT\Validation\Constraint\StrictValidAt;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -50,7 +50,7 @@ class AuthenticateWithAccessToken
                 new SignedWith($config->signer(), $config->verificationKey()),
                 new IssuedBy(config('jwt.issuer')),
                 new PermittedFor(config('jwt.audience')),
-                new StrictValidAt($clock),
+                new LooseValidAt($clock),
             );
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Invalid token'], 401);
