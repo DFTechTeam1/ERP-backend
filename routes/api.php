@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Auth\AuthTokenController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InteractiveController;
+use App\Http\Controllers\Api\Internal\ServiceTokenController;
 use App\Http\Controllers\Api\Mcp\McpAccessLogController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\Nas\LocalNasController;
@@ -373,6 +374,9 @@ Route::middleware('internal.service')
         Route::post('system/reset-cache', function (Request $request) {
             Artisan::call('cache:clear');
         });
+        // Mint a centralized RS256 token for the configured service account so
+        // internal services can call centralized-auth-protected downstreams.
+        Route::post('auth/service-token', [ServiceTokenController::class, 'issue']);
     });
 
 Route::middleware('partner')->group(function () {
