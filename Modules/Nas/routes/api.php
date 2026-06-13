@@ -14,7 +14,7 @@ use Modules\Nas\Http\Controllers\NasController;
  *
 */
 
-Route::middleware(['auth:sanctum'])->prefix('nas')->group(function () {
+Route::middleware(['auth.session'])->prefix('nas')->group(function () {
     Route::post('testConnection', [NasController::class, 'testConnection']);
     Route::post('addon/storeConfiguration', [NasController::class, 'storeAddonConfiguration']);
     Route::get('addon/configuration', [NasController::class, 'addonConfiguration']);

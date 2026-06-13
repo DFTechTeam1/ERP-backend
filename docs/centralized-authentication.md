@@ -210,28 +210,36 @@ and sends it as `Authorization: Bearer <token>` on every request.
 
 ## Refresh-cookie behavior in local dev (http)
 
-The refresh cookie defaults to `Secure=true; SameSite=lax`. In a browser those
-defaults can stop the cookie from being **stored or sent** in the dev setup,
-because:
+The refresh cookie defaults to `Secure=true; SameSite=lax`. With those defaults
+the **refresh** flow returns `Unauthenticated` on every call, because the cookie
+never reaches the server (`$request->cookie('df_refresh_token')` is `null`).
+Login itself still works — it returns the access token in the body — so only
+refresh is affected.
 
-- Dev runs over **http** (`http://erp.localhost:8080`), and a `Secure` cookie is
-  only stored over https.
-- The frontend origin (`erp.localhost:8080`) and the API origin
-  (`backend.localhost:8080`) are **cross-site**, so the cookie must be
-  `SameSite=None` to ride a cross-origin request — and `SameSite=None` itself
-  requires `Secure`.
+Why the cookie is dropped in the default dev setup:
 
-Login (which returns the access token in the body) works regardless; only the
-**refresh** flow is affected. If refresh fails in dev, the cleanest fix is to
-serve the frontend **same-origin** with the API (both behind the edge nginx on
-`*.localhost:8080`) so `SameSite=lax` is satisfied. Only if you cannot do that,
-relax the cookie for dev via env:
+- The frontend (`erp.localhost:8080` / `localhost:5173`) and the API
+  (`backend.localhost:8080`) are **cross-site**. "Same-site" is decided by the
+  registrable domain (eTLD+1); since `localhost` is the eTLD, `erp.localhost`
+  and `backend.localhost` are *different* sites. A `SameSite=Lax` cookie is
+  **never** attached to cross-site XHR/fetch — only to top-level navigations —
+  so it is omitted from the refresh request.
+- A cross-site cookie therefore needs `SameSite=None`, and `SameSite=None`
+  **requires `Secure`**. Over http that is normally rejected, but browsers treat
+  any host ending in `.localhost` as a **secure context**, so the Secure cookie
+  is still accepted in dev.
+
+**Fix for the cross-host dev setup (current architecture):**
 
 ```dotenv
-# dev only — never in staging/prod
-JWT_REFRESH_COOKIE_SECURE=false
-JWT_REFRESH_COOKIE_SAME_SITE=lax
+JWT_REFRESH_COOKIE_SECURE=true
+JWT_REFRESH_COOKIE_SAME_SITE=none
 ```
+
+Do **not** use `SameSite=lax` + `Secure=false` here — Lax is not sent cross-site,
+so refresh would still fail. `lax`/`false` is only correct if you serve the SPA
+**same-origin** with the API (same host:port, e.g. both behind the edge nginx),
+in which case the request is same-origin and Lax is satisfied with no Secure.
 
 In **staging/prod** keep `Secure=true`; for a cross-site SPA use
 `SameSite=None` + `Secure=true` + a shared parent domain

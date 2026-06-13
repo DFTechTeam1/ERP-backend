@@ -126,7 +126,7 @@ Route::get('invoices/general/download', [InvoiceController::class, 'downloadGene
 
 Route::get('/notification-preview', function () {
     return Auth::user();
-})->middleware('auth:sanctum');
+})->middleware('auth.session');
 
 Route::get('dummy-send-email', function () {
     $user = Employee::where('email', 'gumilang.dev@gmail.com')->first();

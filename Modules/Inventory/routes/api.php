@@ -16,7 +16,7 @@ use Modules\Inventory\Http\Controllers\Api\InventoryController;
 
 $namespace = 'Modules\Inventory\Http\Controllers\Api';
 
-Route::middleware(['auth:sanctum'])->group(function () use ($namespace) {
+Route::middleware(['auth.session'])->group(function () use ($namespace) {
     Route::get('inventories/list-request-equipment', [InventoryController::class, 'getEquipmentForProjectRequest']);
 
     Route::post('inventories/export', "{$namespace}\InventoryController@export");

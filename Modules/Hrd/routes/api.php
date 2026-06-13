@@ -15,7 +15,7 @@ use Modules\Hrd\Http\Controllers\HrdController;
  *
 */
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
+Route::middleware(['auth.session'])->prefix('v1')->group(function () {
     Route::apiResource('hrd', HrdController::class)->names('hrd');
 });
 
@@ -34,7 +34,7 @@ Route::get('employees/downloadTemplate', [\Modules\Hrd\Http\Controllers\Api\Empl
 // });
 
 Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
-    ->middleware(['auth:sanctum'])
+    ->middleware(['auth.session'])
     ->group(function () {
         Route::get('employees', 'list');
         Route::post('employees', 'store')->name('employees.store');
@@ -104,7 +104,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
             });
     });
 
-Route::middleware('auth:sanctum')
+Route::middleware('auth.session')
     ->controller(\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class)
     ->prefix('whatsapp-groups')
     ->group(function () {
@@ -120,7 +120,7 @@ Route::middleware('auth:sanctum')
         Route::post('/{groupId}/participants', 'addParticipant');
     });
 
-Route::middleware('auth:sanctum')
+Route::middleware('auth.session')
     ->prefix('performanceReport')
     ->group(function () {
         Route::post('export', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'export']);

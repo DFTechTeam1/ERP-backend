@@ -15,7 +15,7 @@ use Modules\Finance\Http\Controllers\Api\InvoiceController;
  *
 */
 
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth.session'])->group(function () {
     // route for price changes reasons
     Route::get('price-reasons', [ApiFinanceController::class, 'getPriceChangeReasons'])
         ->name('finance.getPriceChangeReasons');

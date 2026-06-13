@@ -14,7 +14,7 @@ use Modules\Development\Http\Controllers\Api\DevelopmentProjectController;
  *
 */
 
-Route::middleware(['auth:sanctum'])->prefix('development')->group(function () {
+Route::middleware(['auth.session'])->prefix('development')->group(function () {
     Route::get('/projects', [DevelopmentProjectController::class, 'index'])->name('development.projects.index');
     Route::post('/projects', [DevelopmentProjectController::class, 'store'])->name('development.projects.store');
     Route::get('/projects/{id}', [DevelopmentProjectController::class, 'show'])->name('development.projects.show');

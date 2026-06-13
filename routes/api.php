@@ -134,7 +134,7 @@ Route::get('generate-official-email', [TestingController::class, 'generateOffici
 Route::get('notification/readAll', [NotificationController::class, 'readAll'])->middleware('auth.session');
 Route::get('notification/markAsRead/{id}', [NotificationController::class, 'markAsRead'])->middleware('auth.session');
 
-// Broadcast::routes(['middleware' => ['auth:sanctum']]);
+// Broadcast::routes(['middleware' => ['auth.session']]);
 
 Route::get('nasTestConnection', function (Request $request) {
     try {
