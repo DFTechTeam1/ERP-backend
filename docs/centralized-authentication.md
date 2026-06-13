@@ -205,6 +205,22 @@ and sends it as `Authorization: Bearer <token>` on every request.
 | POST | `/api/auth/refresh` | refresh cookie | rotate refresh, return new access token |
 | POST | `/api/auth/logout` | `auth.session` | revoke refresh, clear cookie |
 | GET  | `/api/menu` | `jwt.auth` | menu tree for the authenticated user |
+| POST | `/api/internal/auth/service-token` | `internal.service` (HMAC) | mint a centralized token for the service account |
+
+### Service-to-service tokens (`/api/internal/auth/service-token`)
+
+Internal services (e.g. erp-backend-node) sometimes need to call other services
+that verify the centralized token, but have no end-user token in context (e.g.
+background jobs). Rather than forwarding a user token or storing a password,
+they POST to this endpoint, authenticated by the **internal-service HMAC**
+(`INTERNAL_SERVICE_SECRET`, the same mechanism as `/api/internal/*`). It mints an
+access token via `TokenService` for the user configured in
+`JWT_SERVICE_ACCOUNT_EMAIL` and returns `{ data: { access_token } }`.
+
+The identity is **fixed server-side** by config — the caller cannot request a
+token for an arbitrary user — so a leaked request body can't escalate privileges.
+Set `JWT_SERVICE_ACCOUNT_EMAIL` to a real, low-privilege ERP user.
+(`ServiceTokenController`; consumed by erp-backend-node's `getServiceAccessToken`.)
 
 ---
 
