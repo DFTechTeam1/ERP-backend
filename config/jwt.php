@@ -32,6 +32,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Service account
+    |--------------------------------------------------------------------------
+    | Email of the ERP user that internal services (e.g. erp-backend-node) mint a
+    | centralized token for, via the HMAC-protected
+    | /api/internal/auth/service-token endpoint. Lets service-to-service calls
+    | present a valid RS256 token without exchanging a password. Should be a
+    | real, low-privilege ERP user.
+    */
+    'service_account_email' => env('JWT_SERVICE_ACCOUNT_EMAIL'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Key id (kid) header
     |--------------------------------------------------------------------------
     | Set on every issued token so verifiers can pick the right key during a
