@@ -26,6 +26,9 @@ Schedule::command(SynchronizingTalentUserId::class)->cron('1 1,2,3 * * *');
 // clear logs
 Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 
+// prune long-expired refresh tokens
+Schedule::command(\App\Console\Commands\PruneRefreshTokens::class)->dailyAt('02:00');
+
 \Illuminate\Support\Facades\Schedule::call(new \App\Schedules\PostNotifyCompleteProject)->dailyAt('00:01');
 
 \Illuminate\Support\Facades\Schedule::call(new \App\Schedules\UpcomingDeadlineTask)->dailyAt('09:00');

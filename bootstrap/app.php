@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\AllowIframe;
+use App\Http\Middleware\AuthenticateWithAccessToken;
+use App\Http\Middleware\AuthenticateWithAccessTokenOrSanctum;
 use App\Http\Middleware\AuthenticateWithMcpToken;
 use App\Http\Middleware\BearerTokenMiddleware;
 use App\Http\Middleware\CustomSignedRouteMiddleware;
@@ -45,6 +47,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
+            'jwt.auth' => AuthenticateWithAccessToken::class,
+            'auth.session' => AuthenticateWithAccessTokenOrSanctum::class,
             'mcp.auth' => AuthenticateWithMcpToken::class,
             'mcp.log' => LogMcpAccess::class,
             'internal.service' => InternalServiceMiddleware::class,

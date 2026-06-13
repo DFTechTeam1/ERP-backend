@@ -19,7 +19,17 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    /*
+    | Centralized auth: the rotating refresh token is delivered as an httpOnly
+    | cookie, so the frontend must send credentialed requests. Browsers reject
+    | credentialed CORS against a wildcard origin, so when credentials are on,
+    | set CORS_ALLOWED_ORIGINS to an explicit comma-separated list of origins
+    | (e.g. https://staging.dfactory.pro). Defaults preserve the prior behavior.
+    */
+    'allowed_origins' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('CORS_ALLOWED_ORIGINS', '*'))
+    ))),
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +39,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    'supports_credentials' => (bool) env('CORS_SUPPORTS_CREDENTIALS', false),
 
 ];

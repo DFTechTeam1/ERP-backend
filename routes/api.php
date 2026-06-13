@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\AuthTokenController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InteractiveController;
@@ -45,7 +46,7 @@ use Modules\Telegram\Service\Webhook\Telegram;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware('auth.session');
 
 Route::post('/onesignal', function (Request $request) {
     logging('onesignal', $request->toArray());
@@ -65,8 +66,8 @@ Route::get('testing', function () {
 Route::get('telegram-login', [TelegramAuthorizationController::class, 'index']);
 
 Route::post('upload-profile-temp', [UserController::class, 'uploadProfileTemp']);
-Route::post('users/verify-otp', [UserController::class, 'verifyOtp'])->middleware('auth:sanctum');
-Route::post('users/profile/update/{userId}', [UserController::class, 'updateProfile'])->middleware('auth:sanctum');
+Route::post('users/verify-otp', [UserController::class, 'verifyOtp'])->middleware('auth.session');
+Route::post('users/profile/update/{userId}', [UserController::class, 'updateProfile'])->middleware('auth.session');
 
 Route::get('line-flex', function () {});
 
@@ -130,8 +131,8 @@ Route::post('manual-assign-pm', [TestingController::class, 'manualAssignPM']);
 Route::post('manual-assign-status', [TestingController::class, 'manualAssignStatus']);
 Route::get('generate-official-email', [TestingController::class, 'generateOfficialEmail']);
 
-Route::get('notification/readAll', [NotificationController::class, 'readAll'])->middleware('auth:sanctum');
-Route::get('notification/markAsRead/{id}', [NotificationController::class, 'markAsRead'])->middleware('auth:sanctum');
+Route::get('notification/readAll', [NotificationController::class, 'readAll'])->middleware('auth.session');
+Route::get('notification/markAsRead/{id}', [NotificationController::class, 'markAsRead'])->middleware('auth.session');
 
 // Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
@@ -181,21 +182,25 @@ Route::get('nasTestConnection', function (Request $request) {
 
 Route::prefix('auth')->group(function () {
     Route::post('login', [LoginController::class, 'login'])->name('login-form');
+    Route::post('refresh', [AuthTokenController::class, 'refresh']);
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
 });
 
-Route::middleware('auth:sanctum')
+// Menu tree for the access-token-authenticated user (built fresh from permissions)
+Route::middleware('jwt.auth')->get('menu', [MenuController::class, 'userMenu']);
+
+Route::middleware('auth.session')
     ->prefix('auth')
     ->group(function () {
         Route::post('logout', [LoginController::class, 'logout']);
-        Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth:sanctum');
+        Route::post('changePassword', [LoginController::class, 'changePassword'])->middleware('auth.session');
     });
 
 Route::get('users/activate/{key}', [UserController::class, 'activate']);
 
-Route::middleware('auth:sanctum')
+Route::middleware('auth.session')
     ->group(function () {
         Route::get('logs', [DashboardController::class, 'getLogs']);
         Route::post('users/bulk', [UserController::class, 'bulkDelete'])->name('api.users.bulk-delete');
@@ -337,7 +342,7 @@ Route::get('playground', function () {
             errorResponse($th)
         );
     }
-})->middleware('auth:sanctum');
+})->middleware('auth.session');
 
 Route::get('/files/{path}', function (Request $request, $path) {
     // remove app_url from $path
@@ -384,7 +389,7 @@ Route::middleware('partner')->group(function () {
 });
 
 // MCP access log monitoring (consumed by the admin frontend)
-Route::middleware('auth:sanctum')
+Route::middleware('auth.session')
     ->prefix('mcp-logs')
     ->group(function () {
         Route::get('/', [McpAccessLogController::class, 'index']);
