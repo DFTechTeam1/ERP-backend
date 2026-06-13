@@ -4458,7 +4458,7 @@ class ProjectService
 
             $currentData = $this->detailCacheAction->handle($projectUid, [
                 'boards' => FormatBoards::run($projectUid),
-            ]);
+            ], true);
 
             DB::commit();
 
