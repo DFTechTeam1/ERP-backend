@@ -16,11 +16,11 @@ use Modules\Company\Http\Controllers\CompanyController;
  *
 */
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
+Route::middleware(['auth.session'])->prefix('v1')->group(function () {
     Route::apiResource('company', CompanyController::class)->names('company');
 });
 
-Route::middleware(['auth:sanctum'])
+Route::middleware(['auth.session'])
     ->name('company.')
     ->group(function () {
         Route::get('branch/all', [BranchController::class, 'getAll'])->name('branches.get-all');
@@ -34,7 +34,7 @@ Route::middleware(['auth:sanctum'])
     });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::class)
-    ->middleware(['auth:sanctum'])
+    ->middleware(['auth.session'])
     ->group(function () {
         Route::get('positions', 'list');
         Route::get('positions/all', 'getAll');
@@ -46,7 +46,7 @@ Route::controller(\Modules\Company\Http\Controllers\Api\PositionController::clas
     });
 
 Route::controller(\Modules\Company\Http\Controllers\Api\DivisionController::class)
-    ->middleware(['auth:sanctum'])
+    ->middleware(['auth.session'])
     ->group(function () {
         Route::get('divisions', 'list');
         Route::get('divisions/all', 'allDivisions');
@@ -87,7 +87,7 @@ Route::get('projectClass/getAll', [ProjectClassController::class, 'getAll']);
 Route::resource('projectClass', ProjectClassController::class);
 Route::post('projectClass/bulk', [ProjectClassController::class, 'bulkDelete']);
 
-Route::middleware(['auth:sanctum'])
+Route::middleware(['auth.session'])
     ->group(function () {
         Route::get('religions', [CompanyController::class, 'getReligions']);
         Route::get('genders', [CompanyController::class, 'getGenders']);
