@@ -46,7 +46,7 @@ return [
     | Access token is short-lived (minutes). Refresh tokens use a sliding
     | window: default vs. "remember me" (days).
     */
-    'access_ttl' => (int) env('JWT_ACCESS_TTL', 1), // minutes
+    'access_ttl' => (int) env('JWT_ACCESS_TTL', 30), // minutes
     'refresh_ttl' => (int) env('JWT_REFRESH_TTL', 1), // days
     'refresh_ttl_remember' => (int) env('JWT_REFRESH_TTL_REMEMBER', 30), // days
 
