@@ -20,7 +20,7 @@ Route::get('addon', [\Modules\Addon\Http\Controllers\Api\AddonController::class,
 Route::get('addon/download/{id}/{type}', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'download']);
 Route::get('addon/f/getAll', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'getAll']);
 
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth.session'])->group(function () {
     Route::post('addon/nas', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'store']);
     Route::get('addon/{id}', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'show']);
     Route::post('addon/bulk', [\Modules\Addon\Http\Controllers\Api\AddonController::class, 'bulkDelete']);

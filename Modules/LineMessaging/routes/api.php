@@ -14,6 +14,6 @@ use Modules\LineMessaging\Http\Controllers\LineMessagingController;
  *
 */
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
+Route::middleware(['auth.session'])->prefix('v1')->group(function () {
     Route::apiResource('linemessaging', LineMessagingController::class)->names('linemessaging');
 });
