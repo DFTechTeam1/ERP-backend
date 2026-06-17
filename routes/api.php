@@ -433,6 +433,9 @@ Route::middleware(['mcp.log', 'mcp.auth'])
         Route::get('production/project/deals/publish/{projectDealUid}/{type}', [ProjectController::class, 'publishProjectDeal']);
         Route::get('production/project/deals', [ProjectController::class, 'listProjectDeals'])->name('mcp.project-deal.list');
 
+        // Get employees list
+        Route::get('employees/all', [EmployeeController::class, 'getAll']);
+
         // Customer management
         Route::get('production/project/customer/search', [ProjectController::class, 'searchCustomer']);
 

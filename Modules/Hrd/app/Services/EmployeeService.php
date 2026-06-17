@@ -649,6 +649,35 @@ class EmployeeService
             $where = 'status != '.\App\Enums\Employee\Status::Inactive->value;
         }
 
+        if (! empty(request('is_production'))) {
+            $positionAsProduction = \Illuminate\Support\Facades\DB::table('settings')
+                ->where('key', 'position_as_production')
+                ->first();
+
+            if ($positionAsProduction) {
+                $SanitizePositionAsProduction = str_replace(
+                    ["[", "]"],
+                    "",
+                    $positionAsProduction->value
+                );
+                $position = (new PositionRepository)->list(select: 'id', where: "uid IN ({$SanitizePositionAsProduction})");
+
+                if ($position->isNotEmpty()) {
+                    $positionIds = $position->pluck('id')->join(',');
+                    if (empty($where)) {
+                        $where = "position_id IN ({$positionIds})";
+                    } else {
+                        $where .= " and position_id IN ({$positionIds})";
+                    }
+                }
+            }
+        }
+
+        logging('where check', [
+            'where' => $where,
+            'request' => request()->all()
+        ]);
+
         $data = $this->repo->list(
             select: 'uid,id,name,email,avatar,position_id,phone',
             where: $where,
@@ -666,7 +695,7 @@ class EmployeeService
                 'avatar' => $item->avatar,
                 'position' => $item->position ? $item->position->name : '-',
             ];
-        })->toArray();
+        })->values()->toArray();
 
         return generalResponse(
             'success',
