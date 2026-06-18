@@ -234,6 +234,10 @@ class RolePermissionSetting extends Seeder
     protected function dashboardPermission()
     {
         return [
+            ['name' => 'list_authentication_logs', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dashboard_hrd', 'group' => 'dashboard', 'used' => [
                 $this->getHrdRole(),
                 $this->getDirectorRole(),
