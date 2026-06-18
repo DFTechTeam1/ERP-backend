@@ -42,7 +42,7 @@ abstract class TestCase extends BaseTestCase
         $connection = $app['config']->get('database.default');
         $database = $app['config']->get("database.connections.{$connection}.database");
 
-        if (in_array($database, $this->allowedTestDatabases, true)) {
+        if ($this->isAllowedTestDatabase($database)) {
             return;
         }
 
@@ -56,5 +56,29 @@ abstract class TestCase extends BaseTestCase
         fwrite(STDERR, $line.PHP_EOL.PHP_EOL);
 
         exit(1);
+    }
+
+    /**
+     * Allow the explicit test databases, plus the per-process databases that
+     * Pest/Laravel parallel testing derives from them (e.g. erp_testing_new
+     * becomes erp_testing_new_test_1, _test_2, ... one per paratest worker).
+     */
+    protected function isAllowedTestDatabase(?string $database): bool
+    {
+        if ($database === null) {
+            return false;
+        }
+
+        if (in_array($database, $this->allowedTestDatabases, true)) {
+            return true;
+        }
+
+        foreach ($this->allowedTestDatabases as $allowed) {
+            if ($allowed !== ':memory:' && str_starts_with($database, $allowed.'_test_')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

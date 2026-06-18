@@ -1,5 +1,5 @@
 <?php
 
-test('that true is true', function () {
+test('the test harness boots', function () {
     expect(true)->toBeTrue();
 });
