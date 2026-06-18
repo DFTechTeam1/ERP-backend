@@ -127,6 +127,9 @@ class LoginController extends Controller
                 ip: $request->ip(),
             );
 
+            // Hit laravel event
+            event(new \Illuminate\Auth\Events\Login('web', $user, $remember));
+
             return apiResponse(
                 generalResponse(
                     'Success',
@@ -169,6 +172,9 @@ class LoginController extends Controller
 
             // delete cache
             Cache::forget('userLogin'.$user->id);
+
+            // Hit laravel event
+            event(new \Illuminate\Auth\Events\Logout('web', $user));
 
             $user->tokens()->delete();
 

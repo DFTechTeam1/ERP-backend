@@ -94,6 +94,14 @@
                 { "path": "/module", "slug": "inventory-detail", "lang_id": "Inventory", "lang_en": "Inventory", "icon": "", "permission": "list_supplier" },
                 { "path": "/admin/request-equipment", "slug": "inventory-list", "lang_id": "Permintaan Barang", "lang_en": "Request Inventories", "icon": "mdiPlain:mdi-truck-fast-outline", "permission": "fetch_submission" }
             ]
+        },
+        {
+            "name": "Security",
+            "type": "regular",
+            "icon": "mdiPlain:mdi-lock-outline",
+            "childs": [
+                { "path": "/admin/security/authentication-logs", "slug": "authentication-logs", "lang_id": "Histori Login", "lang_en": "Authentication Logs", "icon": "mdiPlain:mdi-lock-percent-outline", "permission": "list_authentication_logs" }
+            ]
         }
     ],
     "new": [
