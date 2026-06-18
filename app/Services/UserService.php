@@ -489,6 +489,7 @@ class UserService
             }
 
             if (! Hash::check($payload['password'], $user->password)) {
+                event(new \Illuminate\Auth\Events\Failed('web', $user, ['email' => $user->email]));
                 return errorResponse(message: __('global.credentialDoesNotMatch'));
             }
 

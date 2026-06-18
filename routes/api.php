@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Auth\AuthTokenController;
 use App\Http\Controllers\Api\Auth\LoginController;
+use App\Http\Controllers\Api\AuthenticationLogController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\Api\Internal\ServiceTokenController;
@@ -401,6 +402,15 @@ Route::middleware('auth.session')
         Route::get('usage', [McpAccessLogController::class, 'usage']);
         Route::get('usage-by-route', [McpAccessLogController::class, 'usageByRoute']);
         Route::get('{id}', [McpAccessLogController::class, 'show'])->whereNumber('id');
+    });
+
+// Authentication log monitoring (consumed by the admin frontend; access restricted to root/director/it support inside the controller)
+Route::middleware('auth.session')
+    ->prefix('authentication-logs')
+    ->group(function () {
+        Route::get('/', [AuthenticationLogController::class, 'index']);
+        Route::get('summary', [AuthenticationLogController::class, 'summary']);
+        Route::get('{id}', [AuthenticationLogController::class, 'show'])->whereNumber('id');
     });
 
 Route::post('/generate-mcp-token', [OauthController::class, 'generateMcpBearerToken']);
