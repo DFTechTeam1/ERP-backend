@@ -1,0 +1,31 @@
+flowchart TD
+    CreateSong[Form to Create Song] --> SongList[Song List]
+    CreateTask[Create New Task] --> Type{Choose Type}
+    Type --> |JB| SongList
+    SongList --> DetailTaskForm(Insert Detail Task)
+    Type --> |Demolight| DetailTaskForm
+    Type --> |Title| DetailTaskForm
+    DetailTaskForm --> Mysql[(Database)]
+    Mysql --> QueueService(Queue job processing for notification)
+    QueueService --> |after task created| Whatsapp(Whatsapp service)
+    QueueService --> |after task created| InApp(In App service)
+    Mysql <--> Whatsapp
+    Mysql <--> InApp
+    Whatsapp --> |User Target Found| Dispatch(Dispatch Service)
+    InApp --> |User Target Found| Dispatch
+    Mysql --> Employee(PIC of Task)
+    Employee --> |Start Work| WorkState(Workstate recorded)
+    WorkState --> |User do hold task| HoldState(Hold State recorded)
+    Employee --> |Task done| ProofOfWork(Upload Proof of Work)
+    ProofOfWork --> |call queue| QueueService(Queue Service)
+    QueueService --> |After proof of work| EmployeeSchedule(Fetch employee schedule in task working time range)
+    EmployeeSchedule --> TimeWork(Record Employee working time)
+    ProofOfWork --> PMTask(Assign To PM)
+    PMTask --> PMState(Record PM working state)
+    PMState --> IsRevise{Is Revise?}
+    IsRevise --> |No| Complete[Task Complete]
+    IsRevise --> |Yes| ReviseState(Record Revise State)
+    Complete --> |call queue| QueueService
+    QueueService --> |Complete Task Job| TaskCompleteQueue(Record task completion time)
+
+    style QueueService color:#000,fill:#e6e6e6;
