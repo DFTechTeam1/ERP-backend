@@ -3,6 +3,7 @@
 use App\Http\Middleware\PermissionCheck;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\DeadlineChangeReasonController;
+use Modules\Production\Http\Controllers\Api\EntertainmentController;
 use Modules\Production\Http\Controllers\Api\InteractiveController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
@@ -255,6 +256,15 @@ Route::middleware(['auth.session'])
         Route::post('team-transfers/approve-selection/{transferUid}', [TeamTransferController::class, 'approveSelection']);
         Route::get('team-transfers/approve/{transferUid}/{deviceAction}', [TeamTransferController::class, 'approveRequest']);
         Route::get('team-transfers/{transferUid}/getMembersToLend/{employeeUid}', [TeamTransferController::class, 'getMembersToLend']);
+    });
+
+Route::middleware(['auth.session'])
+    ->prefix('entertainment')
+    ->group(function () {
+        Route::get('songs/{projectUid}', [EntertainmentController::class, 'index']);
+        Route::post('create-song/{projectUid}', [EntertainmentController::class, 'createSong']);
+        Route::put('update-song/{projectUid}/{songUid}', [EntertainmentController::class, 'updateSong']);
+        Route::delete('delete-song/{projectUid}/{songUid}', [EntertainmentController::class, 'deleteSong']);
     });
 
 Route::middleware(['internal.service'])

@@ -12,6 +12,8 @@ use App\Enums\Production\ProjectDealStatus;
 use App\Enums\System\BaseRole;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
+use App\Models\User;
+use App\Repository\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -739,5 +741,10 @@ class GeneralService
 
             return errorResponse($th);
         }
+    }
+
+    public function me(): User
+    {
+        return (new UserRepository)->detail(id: Auth::id(), select: 'id,email,employee_id');
     }
 }

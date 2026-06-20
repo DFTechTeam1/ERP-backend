@@ -195,6 +195,12 @@ return [
     'active' => 'Active',
     'waitingToDistributeToModeller' => 'Waiting Distribute',
 
+    // ENTERTAINMENT SONG LOG MESSAGES
+    'create_song' => '{user} just created a song list',
+    'update_song' => '{user} just updated a song list',
+    'delete_song' => '{user} just deleted a song list',
+    'add_more' => '{user} just added more songs to the list',
+
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',
     'credentialDoesNotMatch' => 'The credential provided does not match our database',
@@ -350,5 +356,7 @@ return [
     'rejected' => 'Rejected',
     'notAvailable' => 'Not Available',
     'available' => 'Available',
-    'partialComplete' => 'Partial Complete'
+    'partialComplete' => 'Partial Complete',
+    'unassigned' => 'Unassigned',
+    'assigned' => 'Assigned'
 ];

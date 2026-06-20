@@ -196,6 +196,12 @@ return [
     'active' => 'Aktif',
     'waitingToDistributeToModeller' => 'Menunggu di Distribusikan',
 
+    // ENTERTAINMENT SONG LOG MESSAGES
+    'create_song' => ':user baru saja membuat daftar lagu',
+    'update_song' => ':user baru saja memperbarui daftar lagu',
+    'delete_song' => ':user baru saja menghapus daftar lagu',
+    'add_more' => ':user baru saja menambahkan lagu ke daftar',
+
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validasi tidak berhasil',
     'credentialDoesNotMatch' => 'Data yang diberikan tidak cocok dengan database',
@@ -351,5 +357,7 @@ return [
     'rejected' => 'Ditolak',
     'notAvailable' => 'Tidak Tersedia',
     'available' => 'Tersedia',
-    'partialComplete' => 'Sebagian Selesai'
+    'partialComplete' => 'Sebagian Selesai',
+    'unassigned' => 'Tersedia',
+    'assigned' => 'Sudah dikerjakan'
 ];
