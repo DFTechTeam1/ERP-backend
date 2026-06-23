@@ -2,6 +2,7 @@
 
 use App\Data\Production\Entertainment\CreateSongData;
 use App\Data\Production\Entertainment\SongListData;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSong;
@@ -13,6 +14,7 @@ use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
 
 beforeEach(function () {
+    $this->actingAs(User::factory()->create());
     $this->service = app(EntertainmentService::class);
     $this->project = Project::factory()->create();
 });
