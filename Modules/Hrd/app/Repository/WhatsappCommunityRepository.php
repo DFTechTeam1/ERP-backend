@@ -39,6 +39,11 @@ class WhatsappCommunityRepository extends WhatsappCommunityInterface
         return $query->get();
     }
 
+    public function getGroups(string $communityId)
+    {
+
+    }
+
     /**
      * Paginated data for datatable
      *

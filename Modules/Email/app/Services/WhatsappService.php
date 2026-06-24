@@ -5,6 +5,7 @@ namespace Modules\Email\Services;
 use App\Data\Whatsapp\CreateCommunityServerSchemaData;
 use App\Data\Whatsapp\CreateGroupServerSchemaData;
 use App\Data\Whatsapp\GenerateInviteLinkServerData;
+use App\Data\Whatsapp\PromoteUserData;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
@@ -139,6 +140,35 @@ class WhatsappService
         return $response->json() ?? ['success' => false, 'message' => 'Failed to get invite link'];
     }
 
+    /**
+     * Update user role in group, can be promote or demote here
+     *
+     * @param PromoteUserData $payload
+     * @return array
+     */
+    public function setUserAsAdmin(PromoteUserData $payload): array
+    {
+        // promote-user
+        $endpoint = $payload->isDemote ? 'message/demote-user' : 'message/promote-user';
+        $headers = $this->buildHmacHeaders('POST', "api/{$endpoint}", $payload->toArray());
+        $url = $this->whatsappUrl."/{$endpoint}";
+        $response = $this->client($headers)->post($url, $payload->toArray());
+
+        if ($response->successful()) {
+            return ['success' => true, 'message' => 'Success update user group role', 'data' => []];
+        }
+
+        return $response->json() ?? ['success' => false, 'message' => 'Failed to update user group role'];
+    }
+
+    /**
+     * Reconcile the local `employee_whatsapp_groups` records with the live WhatsApp
+     * group membership: adds employees newly present, removes those who left, and
+     * updates the `isAdmin` flag where it changed. Matching is done by phone number.
+     *
+     * @param string $groupId
+     * @return void
+     */
     public function whatsappSync(string $groupId)
     {
         $body = ['groupId' => $groupId];

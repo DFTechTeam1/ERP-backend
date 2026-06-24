@@ -9,11 +9,14 @@ use App\Data\Whatsapp\CreateCommunityServerSchemaData;
 use App\Data\Whatsapp\CreateGroupSchemaData;
 use App\Data\Whatsapp\CreateGroupServerSchemaData;
 use App\Data\Whatsapp\GenerateInviteLinkServerData;
+use App\Data\Whatsapp\MakeAsAdminData;
+use App\Data\Whatsapp\PromoteUserData;
 use Illuminate\Support\Facades\DB;
 use Modules\Email\Services\WhatsappService;
 use Modules\Hrd\Models\EmployeeWhatsappGroup;
 use Modules\Hrd\Models\WhatsappGroup;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\EmployeeWhatsappGroupRepository;
 use Modules\Hrd\Repository\WhatsappCommunityRepository;
 
 class WhatsappGroupService
@@ -21,7 +24,8 @@ class WhatsappGroupService
     public function __construct(
         private readonly WhatsappCommunityRepository $whatsappCommunityRepo,
         private readonly WhatsappService $whatsappService,
-        private readonly EmployeeRepository $employeeRepo
+        private readonly EmployeeRepository $employeeRepo,
+        private readonly EmployeeWhatsappGroupRepository $employeeWhatsappGroupRepo
     ) {}
 
     public function list(): array
@@ -213,6 +217,14 @@ class WhatsappGroupService
         }
     }
 
+    /**
+     * Reconcile the local `employee_whatsapp_groups` records with the live WhatsApp
+     * group membership: adds employees newly present, removes those who left, and
+     * updates the `isAdmin` flag where it changed. Matching is done by phone number.
+     *
+     * @param string $groupId
+     * @return array
+     */
     public function sync(string $groupId): array
     {
         try {
@@ -287,9 +299,45 @@ class WhatsappGroupService
         }
     }
 
+    public function makeUserAsAdmin(MakeAsAdminData $payload, string $groupId): array
+    {
+        try {
+            $employee = $this->employeeRepo->show(
+                uid: $payload->employee_uid,
+                select: 'id,phone'
+            );
+
+            $action = $this->whatsappService->setUserAsAdmin(new PromoteUserData(
+                phone: "62{$employee->phone}",
+                groupId: $groupId,
+                isDemote: !$payload->is_admin ? true : false
+            ));
+
+            if (! $action['success']) return errorResponse(message: $action['message']);
+
+            $employeeGroup = $this->employeeWhatsappGroupRepo->show([
+                'where' => [
+                    'employee_id' => $employee->id
+                ]
+            ]);
+            
+            $this->employeeWhatsappGroupRepo->update(
+                $employeeGroup, 
+                ['is_admin' => $payload->is_admin]
+            );
+
+            return generalResponse(
+                message: "Success update user role"
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     public function deleteCommunity(int $id): array
     {
         try {
+
             $this->whatsappCommunityRepo->delete($id);
 
             return generalResponse(message: 'Success delete community');

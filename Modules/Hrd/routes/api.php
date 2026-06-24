@@ -118,6 +118,7 @@ Route::middleware('auth.session')
         Route::get('/{communityId}/community/groups', 'communityGroups');
         Route::post('/{groupId}/sync', 'sync');
         Route::post('/{groupId}/participants', 'addParticipant');
+        Route::patch('/{groupId}/participants/set-admin', 'makeUserAsAdmin');
     });
 
 Route::middleware('auth.session')
