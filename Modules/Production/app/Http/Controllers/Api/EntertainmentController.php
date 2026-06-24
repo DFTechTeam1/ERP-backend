@@ -3,6 +3,7 @@
 namespace Modules\Production\Http\Controllers\Api;
 
 use App\Data\Production\Entertainment\CreateSongData;
+use App\Data\Production\Entertainment\UpdateSongData;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,9 +39,29 @@ class EntertainmentController extends Controller
         
     }
 
-    public function createSong(CreateSongData $request, string $projectUid)
+    /**
+     * Create new song for selected project
+     *
+     * @param CreateSongData $request
+     * @param string $projectUid
+     * @return JsonResponse
+     */
+    public function createSong(CreateSongData $request, string $projectUid): JsonResponse
     {
         return apiResponse($this->service->createSong($request, $projectUid));
+    }
+
+    /**
+     * Update existing song for selected project
+     *
+     * @param UpdateSongData $request
+     * @param string $projectUid
+     * @param string $songUid
+     * @return JsonResponse
+     */
+    public function updateSong(UpdateSongData $request, string $projectUid, string $songUid): JsonResponse
+    {
+        return apiResponse($this->service->updateSong($request, $projectUid, $songUid));
     }
 
     /**
