@@ -111,8 +111,43 @@ class WhatsappGroupController extends Controller
         ));
     }
 
+    /**
+     * Update user role in the group
+     *
+     * @param MakeAsAdminData $request
+     * @param string $groupId
+     * @return JsonResponse
+     */
     public function makeUserAsAdmin(MakeAsAdminData $request, string $groupId): JsonResponse
     {
         return apiResponse($this->service->makeUserAsAdmin($request, $groupId));
+    }
+
+    /**
+     * Remove selected member from given group
+     *
+     * @param string $employeeUid
+     * @param string $groupId
+     * @return JsonResponse
+     */
+    public function removeMemberFromGroup(string $employeeUid, string $groupId): JsonResponse
+    {
+        return apiResponse($this->service->removeMemberFromGroup($employeeUid, $groupId));
+    }
+
+    /**
+     * Get participants of the selected group
+     *
+     * @param string $groupId
+     * @return JsonResponse
+     */
+    public function participantsGroup(string $groupId): JsonResponse
+    {
+        return apiResponse($this->service->participantsGroup($groupId));
+    }
+
+    public function getUserWhatsappGroup(string $employeeUid)
+    {
+        return apiResponse($this->service->getUserWhatsappGroup($employeeUid));
     }
 }

@@ -64,6 +64,7 @@ use Modules\Production\Jobs\DeleteSongJob;
 use Modules\Production\Jobs\Notification\NewPoolTask;
 use Modules\Production\Jobs\Notification\PickPoolJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
+use Modules\Production\Jobs\ProjectClassChangedJob;
 use Modules\Production\Jobs\RemovePicFromSong;
 use Modules\Production\Jobs\RequestDeleteSongJob;
 use Modules\Production\Jobs\RequestEditSongJob;
@@ -2344,9 +2345,21 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: 'id,project_class_id',
+                relation: [
+                    'projectClass:id,name'
+                ]
+            );
+
             $data['project_date'] = date('Y-m-d', strtotime($data['date']));
 
             $projectClass = $this->projectClassRepo->show($data['classification'], 'id,name');
+
+            $isClassChanged = $project->project_class_id != $projectClass->id ? true : false;
+            $currentClassName = $project->projectClass->name;
+            $nextClassName = $projectClass->name;
 
             $data['classification'] = $projectClass->name;
 
@@ -2383,6 +2396,10 @@ class ProjectService
             $currentData['event_class_color'] = $format['event_class_color'];
 
             storeCache('detailProject'.$projectId, $currentData);
+
+            if ($isClassChanged) {
+                ProjectClassChangedJob::dispatch($projectUid, $currentClassName, $nextClassName)->afterCommit();
+            }
 
             DB::commit();
 
