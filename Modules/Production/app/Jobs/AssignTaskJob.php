@@ -9,6 +9,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Modules\Email\Services\WhatsappService;
+use Modules\Hrd\Repository\EmployeeRepository;
 
 class AssignTaskJob implements ShouldQueue
 {
@@ -30,44 +32,73 @@ class AssignTaskJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $task = \Modules\Production\Models\ProjectTask::selectRaw('name,project_id,id,uid')
-            ->with(['project:id,name,uid'])
+        $task = \Modules\Production\Models\ProjectTask::selectRaw('id,project_id,name')
+            ->with([
+                'project:id,name,uid',
+                'project.personInCharges:id,pic_id,project_id',
+                'project.personInCharges.employee:id,uid,phone',
+                'project.personInCharges.employee.picWhatsappGroups' => function ($query) {
+                    $query->selectRaw('id,employee_id,group_id,community_id')
+                        ->whereNotNull('community_id');
+                }
+            ])
             ->find($this->taskId);
-
-        $action = 'user_has_been_assigned_to_task';
 
         $actor = (new UserRepository)->detail(id: $this->actorId, select: 'id,employee_id', relation: [
             'employee:id,nickname'
         ]);
 
-        foreach ($this->employeeIds as $employee) {
-            $data = \Modules\Hrd\Models\Employee::selectRaw('line_id,id,uid,name,email,telegram_chat_id,nickname')
-                ->find($employee);
+        $whatsappService = new WhatsappService();
+        $employeeRepo = new EmployeeRepository();
 
-            NotificationService::send(
-                recipients: $data,
-                action: $action,
-                data: [
-                    'parameter1' => $data->nickname,
-                    'parameter2' => $task->name,
-                    'parameter3' => $task->project->name,
-                    'parameter4' => $actor->employee->nickname,
-                ],
-                channels: ['database'],
-                options: [
-                    'url' => config('app.frontend_url') . '/admin/production/project/' . $task->project->uid,
-                    'database_type' => 'production'
-                ]
-            );
+        logging("task remove pic", $task->toArray());
 
-            // send pusher
-            (new \App\Services\PusherNotification)->send(
-                channel: 'my-channel-' . $this->actorId,
-                event: 'new-db-notification',
-                payload: [
-                    'update' => true
-                ],
-            );
+        if ($task?->project?->personIncharges->count() > 0) {
+            foreach ($task->project->personIncharges as $pic) {
+                if ($pic?->employee?->picWhatsappGroups->count() > 0) {
+                    foreach ($pic?->employee?->picWhatsappGroups as $group) {
+
+                        if ($group->community_id) {
+                            // Loop new assigned employees
+                            $employeeNames = [];
+                            $mentions = [];
+                            logging('employee ids', $this->employeeIds);
+                            foreach ($this->employeeIds as $employeeId) {
+                                $employee = $employeeRepo->show(
+                                    uid: '', 
+                                    where: "id = {$employeeId}",
+                                    select: 'id,nickname,phone',
+                                    relation: [
+                                        'whatsappGroups' => function ($queryGroup) use ($group) {
+                                            $queryGroup->where('group_id', $group->group_id);
+                                        }
+                                    ]
+                                );
+
+                                logging('employee target assign task', [$employee]);
+
+                                if ($employee && $employee->whatsappGroups->count() > 0) {
+                                    $employeeNames[] = $employee->nickname;
+                                    $mentions[] = "62{$employee->phone}";
+                                }
+                            }
+    
+                            // Send message per employee
+                            if (count($mentions) > 0) {
+                                $payload = [
+                                    'to' => $group->group_id,
+                                    'message' => "Halo " . collect($employeeNames)->join(',') . ", ada tugas baru nih di event {$task->project->name} - *{$task->name}*. Login di ERP untuk memulai ya!",
+                                    'isGroup' => true,
+                                    'mentions' => $mentions,
+                                    'actionType' => 'assign-pic-task',
+                                ];
+                        
+                                $whatsappService->sendWhatsappMessage($payload);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

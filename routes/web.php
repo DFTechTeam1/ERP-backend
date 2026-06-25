@@ -73,36 +73,19 @@ Route::get('trigger', function () {
 });
 
 Route::get('ilham', function () {
-    $endDate = date('Y-m-d', strtotime('+2 days'));
+    $project = (new \Modules\Production\Repository\ProjectRepository)->show(
+        uid: '7099a1ed-0e71-4921-bcec-e2d67c43a169',
+        select: 'id,name',
+        relation: [
+            'personInCharges:id,project_id,pic_id',
+            'personInCharges.employee:id,phone',
+            'personInCharges.employee.picWhatsappGroups' => function ($query) {
+                $query->selectRaw('id,employee_id,group_id')
+                    ->whereNotNull('community_id');
+            }
+        ]);
 
-    $tasks = ProjectTask::selectRaw('id,uid,project_id,name')
-        ->with([
-            'pics:id,project_task_id,employee_id',
-            'pics.employee:id,nickname,email,line_id',
-            'project:id,name',
-        ])
-        ->whereIn(
-            'status',
-            [
-                TaskStatus::WaitingApproval->value,
-                TaskStatus::OnProgress->value,
-                TaskStatus::Revise->value,
-            ]
-        )
-        ->where('end_date', $endDate)
-        ->get();
-
-    $outputData = [];
-    foreach ($tasks as $task) {
-        foreach ($task->pics as $employee) {
-            $outputData[] = [
-                'employee' => $employee,
-                'task' => $task,
-            ];
-        }
-    }
-
-    UpcomingDeadlineTaskJob::dispatch($outputData);
+    return $project;
 });
 
 Route::get('login', [LandingPageController::class, 'showLoginForm'])

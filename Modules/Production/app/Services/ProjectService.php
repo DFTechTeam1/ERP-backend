@@ -22,6 +22,7 @@ use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\Production\Entertainment\TaskSongLogType;
 use App\Enums\Production\ProjectDealStatus;
+use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskSongStatus;
 use App\Enums\Production\TaskStatus;
@@ -63,6 +64,7 @@ use Modules\Production\Jobs\ConfirmDeleteSongJob;
 use Modules\Production\Jobs\DeleteSongJob;
 use Modules\Production\Jobs\Notification\NewPoolTask;
 use Modules\Production\Jobs\Notification\PickPoolJob;
+use Modules\Production\Jobs\NotifyProjectStatusChangedJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
 use Modules\Production\Jobs\ProjectClassChangedJob;
 use Modules\Production\Jobs\RemovePicFromSong;
@@ -2269,6 +2271,15 @@ class ProjectService
             $city = \Modules\Company\Models\City::select('name')->find($data['city_id']);
             $state = \Modules\Company\Models\State::select('name')->find($data['state_id']);
 
+            $project = $this->repo->show(uid: $id, select: 'id,status');
+            $currentStatus = $project->status_text;
+            $nextStatusRaw = ProjectStatus::from($data['status']);
+            $nextStatusName = $nextStatusRaw->label();
+
+            if ($project->status !== $data['status']) {
+                NotifyProjectStatusChangedJob::dispatch($id, $currentStatus, $nextStatusName);
+            }
+
             $coordinate = $this->geocoding->getCoordinate($city->name.', '.$state->name);
             if (count($coordinate) > 0) {
                 $data['longitude'] = $coordinate['longitude'];
@@ -3230,7 +3241,10 @@ class ProjectService
             relation: [
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,phone,is_phone_verified',
-                'personInCharges.whatsappGroupPic:id,employee_id,group_id',
+                'personInCharges.whatsappGroupPic' => function ($query) {
+                    $query->selectRaw('id,employee_id,group_id')
+                        ->whereNotNull('community_id');
+                },
             ]
         );
     }
@@ -3253,7 +3267,12 @@ class ProjectService
 
             $board = $this->boardRepo->show($boardId, 'project_id,name', ['project:id,uid', 'project.personInCharges']);
 
-            $project = $this->fetchProjectForWhatsappNotification($board->project_id);
+            // $project = $this->fetchProjectForWhatsappNotification($board->project_id);
+            $project = $this->repo->show(
+                uid: '',
+                select: 'id,uid',
+                where: "id = {$board->project_id}"
+            );
 
             $taskPayload = [
                 'name' => $data['name'],
@@ -3315,7 +3334,7 @@ class ProjectService
                 $usingPic,
                 $mentions,
                 $task,
-                $project,
+                $project->uid,
                 $board->name
             )->afterCommit();
 
@@ -3373,7 +3392,12 @@ class ProjectService
                 return errorResponse(message: __('notification.taskAlreadyPicked'));
             }
 
-            $project = $this->fetchProjectForWhatsappNotification($task->project_id);
+            // $project = $this->fetchProjectForWhatsappNotification($task->project_id);
+            $project = $this->repo->show(
+                uid: '',
+                select: 'id,uid',
+                where: "id = {$task->project_id}"
+            );
 
             $actor = $this->employeeRepo->show(
                 uid: '',
@@ -3431,7 +3455,7 @@ class ProjectService
 
             // Send whatsapp notification
             PickPoolJob::dispatch(
-                $task, $project, $actor
+                $task, $project->uid, $actor
             )->afterCommit();
 
             DB::commit();
