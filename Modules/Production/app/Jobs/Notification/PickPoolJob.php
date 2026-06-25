@@ -11,6 +11,7 @@ use Modules\Email\Services\WhatsappService;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Repository\ProjectRepository;
 
 class PickPoolJob implements ShouldQueue
 {
@@ -23,7 +24,7 @@ class PickPoolJob implements ShouldQueue
      */
     public function __construct(
         private ProjectTask $task,
-        private Project $project,
+        private string $projectUid,
         private Employee $actor
     ) {
         $this->whatsappService = new WhatsappService;
@@ -35,17 +36,33 @@ class PickPoolJob implements ShouldQueue
     public function handle(): void
     {
         try {
-            foreach ($this->project->personInCharges as $pic) {
-                if ($pic->whatsappGroupPic && $pic->whatsappGroupPic->group_id) {
-                    $payload = [
-                        'to' => $pic->whatsappGroupPic->group_id,
-                        'message' => "{$this->actor->nickname} telah mengambil task {$this->task->name} di event {$this->project->name}",
-                        'isGroup' => true,
-                        'mentions' => [],
-                        'actionType' => 'pick-task',
-                    ];
+            $project = (new ProjectRepository)->show(
+                uid: $this->projectUid,
+                select: 'id,name',
+                relation: [
+                    'personInCharges:id,project_id,pic_id',
+                    'personInCharges.employee:id,phone',
+                    'personInCharges.employee.picWhatsappGroups' => function ($query) {
+                        $query->selectRaw('id,employee_id,group_id')
+                            ->whereNotNull('community_id');
+                    }
+                ]);
 
-                    $this->whatsappService->sendWhatsappMessage($payload);
+            if ($project->personInCharges->count() > 0) {
+                foreach ($project->personInCharges as $pics) {
+                    if ($pics->employee && $pics->employee->picWhatsappGroups->count() > 0) {
+                        foreach ($pics->employee->picWhatsappGroups as $group) {
+                            $payload = [
+                                'to' => $group->group_id,
+                                'message' => "{$this->actor->nickname} telah mengambil task {$this->task->name} di event {$project->name}",
+                                'isGroup' => true,
+                                'mentions' => [],
+                                'actionType' => 'pick-task',
+                            ];
+                    
+                            (new WhatsappService)->sendWhatsappMessage($payload);
+                        }
+                    }
                 }
             }
         } catch (\Throwable $th) {

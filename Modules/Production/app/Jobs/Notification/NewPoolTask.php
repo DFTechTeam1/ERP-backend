@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Email\Services\WhatsappService;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectTask;
+use Modules\Production\Repository\ProjectRepository;
 
 class NewPoolTask implements ShouldQueue
 {
@@ -24,7 +25,7 @@ class NewPoolTask implements ShouldQueue
         private bool $isUsingPic = false,
         private array $mentions = [],
         private ?ProjectTask $task = null,
-        private ?Project $project = null,
+        private string $projectUid = '',
         private string $boardName = ''
     ) {
         $this->whatsappService = new WhatsappService;
@@ -36,6 +37,20 @@ class NewPoolTask implements ShouldQueue
     public function handle(): void
     {
         try {
+            $project = (new ProjectRepository)->show(
+                uid: $this->projectUid,
+                select: 'id,name',
+                relation: [
+                    'personInCharges:id,project_id,pic_id',
+                    'personInCharges.employee:id,phone',
+                    'personInCharges.employee.picWhatsappGroups' => function ($query) {
+                        $query->selectRaw('id,employee_id,group_id')
+                            ->whereNotNull('community_id');
+                    }
+                ]);
+
+            logging('project data', $project->toArray());
+            
             $canSendMessage = true;
             $whatsappMessage = "Halo All. Ada task baru *{{taskname}}* ({$this->boardName}) di event {{eventname}} yang sudah siap diambil";
             if ($this->isUsingPic) {
@@ -43,7 +58,7 @@ class NewPoolTask implements ShouldQueue
             }
             $whatsappMessage = str_replace(
                 ['{{taskname}}', '{{eventname}}'],
-                [$this->task->name, $this->project->name],
+                [$this->task->name, $project->name],
                 $whatsappMessage
             );
 
@@ -58,19 +73,37 @@ class NewPoolTask implements ShouldQueue
                 $canSendMessage = false;
             }
 
-            foreach ($this->project->personInCharges as $picProject) {
-                if ($picProject->whatsappGroupPic && $picProject->whatsappGroupPic->group_id && $canSendMessage) {
-                    $payload = [
-                        'to' => $picProject->whatsappGroupPic->group_id,
-                        'message' => $whatsappMessage,
-                        'isGroup' => true,
-                        'mentions' => $localMentions,
-                        'actionType' => 'new-assignment-task',
-                    ];
-
-                    $this->whatsappService->sendWhatsappMessage($payload);
+            if ($project->personInCharges->count() > 0) {
+                foreach ($project->personInCharges as $pics) {
+                    if ($pics->employee && $pics->employee->picWhatsappGroups->count() > 0) {
+                        foreach ($pics->employee->picWhatsappGroups as $group) {
+                            $payload = [
+                                'to' => $group->group_id,
+                                'message' => $whatsappMessage,
+                                'isGroup' => true,
+                                'actionType' => 'new-assignment-task',
+                                'mentions' => $localMentions
+                            ];
+                    
+                            (new WhatsappService)->sendWhatsappMessage($payload);
+                        }
+                    }
                 }
             }
+
+            // foreach ($project->personInCharges as $picProject) {
+            //     if ($picProject->whatsappGroupPic && $picProject->whatsappGroupPic->group_id && $canSendMessage) {
+            //         $payload = [
+            //             'to' => $picProject->whatsappGroupPic->group_id,
+            //             'message' => $whatsappMessage,
+            //             'isGroup' => true,
+            //             'actionType' => 'new-assignment-task',
+            //             'mentionAll' => true
+            //         ];
+
+            //         $this->whatsappService->sendWhatsappMessage($payload);
+            //     }
+            // }
         } catch (\Throwable $th) {
             $this->handleError($th);
         }

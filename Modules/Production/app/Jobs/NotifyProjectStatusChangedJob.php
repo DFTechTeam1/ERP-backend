@@ -10,7 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Modules\Email\Services\WhatsappService;
 use Modules\Production\Repository\ProjectRepository;
 
-class ProjectClassChangedJob implements ShouldQueue
+class NotifyProjectStatusChangedJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -19,8 +19,8 @@ class ProjectClassChangedJob implements ShouldQueue
      */
     public function __construct(
         private string $projectUid,
-        private string $currentClassName,
-        private string $nextClassName
+        private string $currentStatusName,
+        private string $nextStatusName
     )
     {
         //
@@ -50,7 +50,7 @@ class ProjectClassChangedJob implements ShouldQueue
                     foreach ($pics->employee->picWhatsappGroups as $group) {
                         $payload = [
                             'to' => $group->group_id,
-                            'message' => "Halo semua! Class event {$project->name} telah dirubah dari {$this->currentClassName} ke {$this->nextClassName}",
+                            'message' => "Halo semua! Status event {$project->name} telah dirubah dari {$this->currentStatusName} ke **{$this->nextStatusName}**",
                             'isGroup' => true,
                             'actionType' => 'new-assignment-task',
                             'mentionAll' => true
