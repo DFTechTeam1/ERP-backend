@@ -340,6 +340,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeWhatsappGroup::class, 'employee_id');
     }
 
+    public function picWhatsappGroups(): HasMany
+    {
+        return $this->hasMany(WhatsappGroup::class, 'employee_id');
+    }
+
     public function vjs(): HasMany
     {
         return $this->hasMany(ProjectVj::class, 'employee_id');

@@ -84,10 +84,6 @@ class AuthenticateWithAccessTokenOrSanctum
             return null;
         }
 
-        logging("USER DATA", [
-            'permission' => User::find($token->claims()->get('sub'))->roles
-        ]);
-
         return User::find($token->claims()->get('sub'));
     }
 }
