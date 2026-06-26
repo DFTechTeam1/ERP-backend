@@ -9,19 +9,27 @@ use App\Data\Whatsapp\CreateCommunityServerSchemaData;
 use App\Data\Whatsapp\CreateGroupSchemaData;
 use App\Data\Whatsapp\CreateGroupServerSchemaData;
 use App\Data\Whatsapp\GenerateInviteLinkServerData;
+use App\Data\Whatsapp\MakeAsAdminData;
+use App\Data\Whatsapp\ParticipantsGroupData;
+use App\Data\Whatsapp\PromoteUserData;
+use App\Data\Whatsapp\UserWhatsappGroupData;
 use Illuminate\Support\Facades\DB;
 use Modules\Email\Services\WhatsappService;
 use Modules\Hrd\Models\EmployeeWhatsappGroup;
 use Modules\Hrd\Models\WhatsappGroup;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\EmployeeWhatsappGroupRepository;
 use Modules\Hrd\Repository\WhatsappCommunityRepository;
+use Modules\Hrd\Repository\WhatsappGroupRepository;
 
 class WhatsappGroupService
 {
     public function __construct(
         private readonly WhatsappCommunityRepository $whatsappCommunityRepo,
         private readonly WhatsappService $whatsappService,
-        private readonly EmployeeRepository $employeeRepo
+        private readonly EmployeeRepository $employeeRepo,
+        private readonly EmployeeWhatsappGroupRepository $employeeWhatsappGroupRepo,
+        private readonly WhatsappGroupRepository $whatsappGroupRepo
     ) {}
 
     public function list(): array
@@ -186,6 +194,45 @@ class WhatsappGroupService
         }
     }
 
+
+    /**
+     * Get list of particpants of the selected group
+     *
+     * @param string $groupId
+     * @return array
+     */
+    public function participantsGroup(string $groupId): array
+    {
+        try {
+            /** @var array<int, ParticipantsGroupData> */
+            $data = $this->employeeWhatsappGroupRepo->get([
+                'where' => [
+                    "group_id" => $groupId
+                ],
+                'select' => ["id", "employee_id", "group_id", "is_admin"],
+                'with' => [
+                    'employee:id,uid,name,phone',
+                    'parentGroup:id,group_name'
+                ]
+            ])->map(function ($item) {
+                return new ParticipantsGroupData(
+                    id: $item->id,
+                    employee_uid: $item->employee->uid,
+                    name: $item->employee->name,
+                    phone: $item->employee->phone,
+                    is_admin: $item->is_admin ? true : false
+                );
+            })->toArray();
+
+            return generalResponse(
+                message: "Success",
+                data: $data
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     /**
      * List all groups belonging to a specific community
      *
@@ -213,6 +260,14 @@ class WhatsappGroupService
         }
     }
 
+    /**
+     * Reconcile the local `employee_whatsapp_groups` records with the live WhatsApp
+     * group membership: adds employees newly present, removes those who left, and
+     * updates the `isAdmin` flag where it changed. Matching is done by phone number.
+     *
+     * @param string $groupId
+     * @return array
+     */
     public function sync(string $groupId): array
     {
         try {
@@ -287,9 +342,45 @@ class WhatsappGroupService
         }
     }
 
+    public function makeUserAsAdmin(MakeAsAdminData $payload, string $groupId): array
+    {
+        try {
+            $employee = $this->employeeRepo->show(
+                uid: $payload->employee_uid,
+                select: 'id,phone'
+            );
+
+            $action = $this->whatsappService->setUserAsAdmin(new PromoteUserData(
+                phone: "62{$employee->phone}",
+                groupId: $groupId,
+                isDemote: !$payload->is_admin ? true : false
+            ));
+
+            if (! $action['success']) return errorResponse(message: $action['message']);
+
+            $employeeGroup = $this->employeeWhatsappGroupRepo->show([
+                'where' => [
+                    'employee_id' => $employee->id
+                ]
+            ]);
+            
+            $this->employeeWhatsappGroupRepo->update(
+                $employeeGroup, 
+                ['is_admin' => $payload->is_admin]
+            );
+
+            return generalResponse(
+                message: "Success update user role"
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     public function deleteCommunity(int $id): array
     {
         try {
+
             $this->whatsappCommunityRepo->delete($id);
 
             return generalResponse(message: 'Success delete community');
@@ -325,6 +416,121 @@ class WhatsappGroupService
             return generalResponse(
                 message: 'Success create whatsapp community',
                 data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function deleteGroup(string $groupId)
+    {
+
+    }
+
+    public function removeMemberFromGroup(string $employeeUid, string $groupId)
+    {
+        DB::beginTransaction();
+        try {
+            $employee = $this->employeeRepo->show(uid: $employeeUid, select: 'id,phone');
+
+            // Check if selected user is the PIC of the group
+            $whatsappGroup = $this->whatsappGroupRepo->show([
+                'where' => [
+                    'group_id' => $groupId,
+                    'employee_id' => $employee->id
+                ],
+                'select' => 'id'
+            ]);
+
+            // if ($whatsappGroup->exists()) {
+            //     return errorResponse(message: "Cannot remove PIC of the group. Update the PIC first before delete");
+            // }
+
+            $employeeWhatsappGroup = $this->employeeWhatsappGroupRepo->show([
+                'where' => [
+                    'group_id' => $groupId,
+                    'employee_id' => $employee->id
+                ],
+                'select' => 'id,group_id',
+                'with' => [
+                    'parentGroup:id,group_name,group_id'
+                ]
+            ]);
+
+            if (! $employeeWhatsappGroup->exists()) {
+                return errorResponse(message: "Employee is not found in the group");
+            }
+
+            $groupName = $employeeWhatsappGroup->parentGroup->group_name;
+
+            // Remove from group
+            $remove = $this->whatsappService->removeFromWhatsappGroup([
+                'groupId' => $groupId,
+                'phones' => [
+                    "62{$employee->phone}"
+                ]
+            ]);
+
+            if (! $this->isActionSuccess($remove)) {
+                return errorResponse($remove['message'] ?? 'Failed to process the transaction');
+            }
+
+            // Remove from database
+            $this->employeeWhatsappGroupRepo->delete($employeeWhatsappGroup);
+
+            DB::commit();
+
+            return generalResponse(
+                message: "User has been removed from {$groupName}"
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    protected function isActionSuccess(array $response)
+    {
+        $output = true;
+
+        if (!isset($response['success'])) return false;
+
+        if (isset($response['success']) && ! $response['success']) return false;
+
+        return $output;
+    }
+
+    public function getUserWhatsappGroup(string $employeeUid)
+    {
+        try {
+            $employee = $this->employeeRepo->show(uid: $employeeUid, select: 'id,phone,name,uid,boss_id');
+
+            /** @var array<int, UserWhatsappGroupData> */
+            $output = [];
+
+            $general = $this->whatsappGroupRepo->getGlobalGroup();
+
+            if ($employee->boss_id) {
+                $team = $this->whatsappGroupRepo->getBossWhatsappGroup($employee->boss_id);
+            }
+
+            $merge = $general->merge($team ?? [])->map(function ($group) use ($employee) {
+                return new UserWhatsappGroupData(
+                    id: $group->id,
+                    group_id: $group->group_id,
+                    name: $group->group_name,
+                    type: $group->target_type->value,
+                    joined: collect($group->participants)->search(function ($find) use ($employee) {
+                        return $find->employee_id === $employee->id;
+                    }, true),
+                    invitation_link: $group->invitation_link
+                );
+            })->toArray();
+
+            return generalResponse(
+                message: "Success",
+                data: $merge
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

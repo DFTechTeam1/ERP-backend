@@ -115,9 +115,13 @@ Route::middleware('auth.session')
         Route::get('/community', 'indexCommunity');
         Route::post('/community', 'storeCommunity');
         Route::delete('/community/{community}', 'destroyCommunity');
+        Route::get('/{groupId}/participants', 'participantsGroup');
+        Route::get('/{employeeUid}/user-groups', 'getUserWhatsappGroup');
         Route::get('/{communityId}/community/groups', 'communityGroups');
         Route::post('/{groupId}/sync', 'sync');
         Route::post('/{groupId}/participants', 'addParticipant');
+        Route::patch('/{groupId}/participants/set-admin', 'makeUserAsAdmin');
+        Route::delete('/{employeeUid}/remove-member/{groupId}', 'removeMemberFromGroup');
     });
 
 Route::middleware('auth.session')
