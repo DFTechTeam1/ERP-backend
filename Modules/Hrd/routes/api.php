@@ -105,6 +105,11 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
     });
 
 Route::middleware('auth.session')
+    ->group(function () {
+        Route::get('whatsapp/logs', [\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class, 'logs']);
+    });
+
+Route::middleware('auth.session')
     ->controller(\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class)
     ->prefix('whatsapp-groups')
     ->group(function () {
