@@ -238,6 +238,10 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
                 $this->getRootRole(),
             ]],
+            ['name' => 'list_nas_logs', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dashboard_hrd', 'group' => 'dashboard', 'used' => [
                 $this->getHrdRole(),
                 $this->getDirectorRole(),

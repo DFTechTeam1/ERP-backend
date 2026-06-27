@@ -99,7 +99,8 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-lock-outline",
             "childs": [
-                { "path": "/admin/security/authentication-logs", "slug": "authentication-logs", "lang_id": "Histori Login", "lang_en": "Authentication Logs", "icon": "mdiPlain:mdi-lock-percent-outline", "permission": "list_authentication_logs" }
+                { "path": "/admin/security/authentication-logs", "slug": "authentication-logs", "lang_id": "Histori Login", "lang_en": "Authentication Logs", "icon": "mdiPlain:mdi-lock-percent-outline", "permission": "list_authentication_logs" },
+                { "path": "/admin/security/nas-audit-log", "slug": "nas-audit-log", "lang_id": "NAS Logs", "lang_en": "NAS Logs", "icon": "mdiPlain:mdi-lock-percent-outline", "permission": "list_nas_logs" }
             ]
         }
     ],
