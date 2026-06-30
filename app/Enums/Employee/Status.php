@@ -14,6 +14,18 @@ enum Status: int
     case WaitingHR = 7;
     case Probation = 8;
 
+    public static function determineActiveStatus()
+    {
+        return [
+            self::Permanent->value,
+            self::Contract->value,
+            self::PartTime->value,
+            self::Freelance->value,
+            self::Internship->value,
+            self::Probation->value,
+        ];
+    }
+
     public static function generateStatus(string $data)
     {
         if ($data == 'Permanent') {

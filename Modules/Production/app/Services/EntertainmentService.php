@@ -2,14 +2,19 @@
 
 namespace Modules\Production\Services;
 
+use App\Data\Production\Entertainment\CreateJumpBackData;
 use App\Data\Production\Entertainment\CreateSongData;
 use App\Data\Production\Entertainment\SongListData;
 use App\Data\Production\Entertainment\UpdateSongData;
+use App\Enums\Employee\Status;
+use App\Exceptions\DataNotFound;
 use App\Services\GeneralService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSong;
+use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongItemRepository;
 use Modules\Production\Repository\ProjectSongRepository;
 
@@ -22,7 +27,9 @@ class EntertainmentService
     public function __construct(
         private readonly ProjectSongRepository $projectSongRepo,
         private readonly ProjectSongItemRepository $projectSongItemRepo,
-        private readonly GeneralService $generalService
+        private readonly GeneralService $generalService,
+        private readonly EmployeeRepository $employeeRepo,
+        private readonly ProjectRepository $projectRepo
     ) {}
 
     /**
@@ -291,5 +298,50 @@ class EntertainmentService
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Create task for jump back -> Should have a song list here
+     *
+     * @param CreateJumpBackData $payload
+     * @return array
+     */
+    public function createJumpBackTask(CreateJumpBackData $payload, string $projectUid): array
+    {
+        try {
+            // ------------- Validation and formatting --
+            $project = $this->projectRepo->show(
+                uid: $projectUid,
+                select: 'id'
+            );
+
+            if (! $project) throw new DataNotFound(message: "Project not found");
+
+            $employeeActiveStatus = Status::determineActiveStatus();
+            $statusString = collect($employeeActiveStatus)->join(",");
+
+            $formattedUids = "'" . collect($payload->assignee_uids)->join("','") . "'";
+            $employees = $this->employeeRepo->list(
+                select: 'id',
+                where: "status IN ({$statusString}) and uid IN ({$formattedUids})"
+            );
+
+            if (count($employees) !== count($payload->assignee_uids)) {
+                throw new DataNotFound(message: "Employee not found.");
+            }
+
+            $employeeIds = $employees->pluck('id');
+
+            return generalResponse(
+                message: "Success",
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function createTask()
+    {
+
     }
 }
