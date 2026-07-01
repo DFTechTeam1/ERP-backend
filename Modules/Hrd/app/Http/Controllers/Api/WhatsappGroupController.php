@@ -160,4 +160,9 @@ class WhatsappGroupController extends Controller
 
         return apiResponse($this->service->getLogs($itemsPerPage, $page));
     }
+
+    public function sendTesting(string $groupId)
+    {
+        return apiResponse($this->service->sendTesting($groupId));
+    }
 }

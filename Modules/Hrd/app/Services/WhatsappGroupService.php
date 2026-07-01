@@ -567,4 +567,22 @@ class WhatsappGroupService
             return errorResponse($th);
         }
     }
+
+    public function sendTesting(string $groupId): array
+    {
+        try {
+            $payload = [
+                'to' => $groupId,
+                'message' => 'This is a *Test* message from the system',
+                'isGroup' => true,
+                'actionType' => 'testing',
+                'mentions' => []
+            ];
+    
+            $this->whatsappService->sendWhatsappMessage($payload);
+            return generalResponse(message: 'Success send a test message');
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }
