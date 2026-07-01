@@ -62,7 +62,6 @@ class AssignTaskJob implements ShouldQueue
                             // Loop new assigned employees
                             $employeeNames = [];
                             $mentions = [];
-                            logging('employee ids', $this->employeeIds);
                             foreach ($this->employeeIds as $employeeId) {
                                 $employee = $employeeRepo->show(
                                     uid: '', 
@@ -74,8 +73,6 @@ class AssignTaskJob implements ShouldQueue
                                         }
                                     ]
                                 );
-
-                                logging('employee target assign task', [$employee]);
 
                                 if ($employee && $employee->whatsappGroups->count() > 0) {
                                     $employeeNames[] = $employee->nickname;

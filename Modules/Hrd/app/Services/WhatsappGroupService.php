@@ -13,6 +13,7 @@ use App\Data\Whatsapp\MakeAsAdminData;
 use App\Data\Whatsapp\ParticipantsGroupData;
 use App\Data\Whatsapp\PromoteUserData;
 use App\Data\Whatsapp\UserWhatsappGroupData;
+use App\Data\Whatsapp\WhatsappLogData;
 use Illuminate\Support\Facades\DB;
 use Modules\Email\Services\WhatsappService;
 use Modules\Hrd\Models\EmployeeWhatsappGroup;
@@ -21,6 +22,7 @@ use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeWhatsappGroupRepository;
 use Modules\Hrd\Repository\WhatsappCommunityRepository;
 use Modules\Hrd\Repository\WhatsappGroupRepository;
+use Modules\Hrd\Repository\WhatsappLogRepository;
 
 class WhatsappGroupService
 {
@@ -29,7 +31,8 @@ class WhatsappGroupService
         private readonly WhatsappService $whatsappService,
         private readonly EmployeeRepository $employeeRepo,
         private readonly EmployeeWhatsappGroupRepository $employeeWhatsappGroupRepo,
-        private readonly WhatsappGroupRepository $whatsappGroupRepo
+        private readonly WhatsappGroupRepository $whatsappGroupRepo,
+        private readonly WhatsappLogRepository $whatsappLogRepo,
     ) {}
 
     public function list(): array
@@ -377,7 +380,7 @@ class WhatsappGroupService
         }
     }
 
-    public function deleteCommunity(int $id): array
+    public function deleteCommunity(string $id): array
     {
         try {
 
@@ -531,6 +534,34 @@ class WhatsappGroupService
             return generalResponse(
                 message: "Success",
                 data: $merge
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function getLogs(int $itemsPerPage, int $page): array
+    {
+        try {
+            /** @var array <int, WhatsappLogData> */
+            $data = $this->whatsappLogRepo->get([
+                'select' => '*',
+                'take' => $itemsPerPage,
+                'skip' => $page
+            ])->map(function ($item) {
+                return new WhatsappLogData(
+                    to: $item->to,
+                    text: $item->text,
+                    service_type: $item->service_type,
+                    action_type: $item->action_type,
+                    response: $item->response,
+                    created_at: $item->created_at,
+                );
+            })->toArray();
+
+            return generalResponse(
+                message: "Success",
+                data: $data
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

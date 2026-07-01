@@ -105,6 +105,11 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
     });
 
 Route::middleware('auth.session')
+    ->group(function () {
+        Route::get('whatsapp/logs', [\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class, 'logs']);
+    });
+
+Route::middleware('auth.session')
     ->controller(\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class)
     ->prefix('whatsapp-groups')
     ->group(function () {
@@ -114,7 +119,7 @@ Route::middleware('auth.session')
         Route::delete('/{whatsapp_group}', 'destroy');
         Route::get('/community', 'indexCommunity');
         Route::post('/community', 'storeCommunity');
-        Route::delete('/community/{community}', 'destroyCommunity');
+        Route::delete('/community/{communityId}', 'destroyCommunity');
         Route::get('/{groupId}/participants', 'participantsGroup');
         Route::get('/{employeeUid}/user-groups', 'getUserWhatsappGroup');
         Route::get('/{communityId}/community/groups', 'communityGroups');

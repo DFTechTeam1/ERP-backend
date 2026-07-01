@@ -70,9 +70,9 @@ class WhatsappGroupController extends Controller
      * @param integer $community
      * @return JsonResponse
      */
-    public function destroyCommunity(int $community): JsonResponse
+    public function destroyCommunity(string $communityId): JsonResponse
     {
-        return apiResponse($this->service->deleteCommunity($community));
+        return apiResponse($this->service->deleteCommunity($communityId));
     }
 
     /**
@@ -149,5 +149,15 @@ class WhatsappGroupController extends Controller
     public function getUserWhatsappGroup(string $employeeUid)
     {
         return apiResponse($this->service->getUserWhatsappGroup($employeeUid));
+    }
+
+    public function logs(): JsonResponse
+    {
+        $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+        $page = request('page') ?? 1;
+        $page = $page == 1 ? 0 : $page;
+        $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+        return apiResponse($this->service->getLogs($itemsPerPage, $page));
     }
 }
