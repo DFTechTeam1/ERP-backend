@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Http\Controllers\Api;
 
+use App\Data\Production\Entertainment\CreateJumpBackData;
 use App\Data\Production\Entertainment\CreateSongData;
 use App\Data\Production\Entertainment\UpdateSongData;
 use App\Http\Controllers\Controller;
@@ -99,5 +100,15 @@ class EntertainmentController extends Controller
     public function deleteSong(string $projectUid, string $songUid): JsonResponse
     {
         return apiResponse($this->service->deleteSong($projectUid, $songUid));
+    }
+
+    public function createJumpBackTask(CreateJumpBackData $request, string $projectUid)
+    {
+        return apiResponse($this->service->createJumpBackTask($request, $projectUid));
+    }
+
+    public function listTask(string $projectUid)
+    {
+        return apiResponse($this->service->listTask($projectUid));
     }
 }

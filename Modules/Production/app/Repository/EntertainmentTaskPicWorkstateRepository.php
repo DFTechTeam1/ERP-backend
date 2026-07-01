@@ -11,4 +11,13 @@ class EntertainmentTaskPicWorkstateRepository extends BaseRepository
     {
         return parent::__construct($model);
     }
+
+    public function getEmployeeState(int $employeeId, int $taskId): ?EntertainmentTaskPicWorkstate
+    {
+        return $this->query()
+            ->select('id')
+            ->where('employee_id', $employeeId)
+            ->where('task_id', $taskId)
+            ->first();
+    }
 }

@@ -196,10 +196,18 @@ return [
     'waitingToDistributeToModeller' => 'Waiting Distribute',
 
     // ENTERTAINMENT SONG LOG MESSAGES
-    'create_song' => '{user} just created a song list',
-    'update_song' => '{user} just updated a song list',
-    'delete_song' => '{user} just deleted a song list',
-    'add_more' => '{user} just added more songs to the list',
+    'entertainment' => [
+        'create_song' => '{user} just created a song list',
+        'update_song' => '{user} just updated a song list',
+        'delete_song' => '{user} just deleted a song list',
+        'add_more' => '{user} just added more songs to the list',
+        'create_jump_back' => '{user} created a jump back task - {task}',
+        'task_approved' => '{user} approved the task - {task}',
+        'task_rejected' => '{user} rejected the task - {task}',
+        'task_hold' => '{user} hold the task - {task}',
+        'task_reported' => '{user} reported the task - {task}',
+        'task_completed' => '{user} completed the task - {task}',
+    ],
 
     // ONLY FOR NOTIFICATION MESSAGES
     'validationCheckFailed' => 'Validation Check is Failed',

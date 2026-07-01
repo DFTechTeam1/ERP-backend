@@ -2,18 +2,27 @@
 
 namespace Modules\Production\Services;
 
+use App\Data\Production\Entertainment\CreateEntertainmentTaskData;
 use App\Data\Production\Entertainment\CreateJumpBackData;
 use App\Data\Production\Entertainment\CreateSongData;
+use App\Data\Production\Entertainment\CreateWorkStateData;
 use App\Data\Production\Entertainment\SongListData;
 use App\Data\Production\Entertainment\UpdateSongData;
 use App\Enums\Employee\Status;
+use App\Enums\Production\Entertainment\TaskStatus;
+use App\Enums\Production\Entertainment\TaskType;
 use App\Exceptions\DataNotFound;
 use App\Services\GeneralService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Production\Models\EntertainmentTask;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectSong;
+use Modules\Production\Repository\EntertainmentTaskPicRepository;
+use Modules\Production\Repository\EntertainmentTaskPicWorkstateRepository;
+use Modules\Production\Repository\EntertainmentTaskRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Repository\ProjectSongItemRepository;
 use Modules\Production\Repository\ProjectSongRepository;
@@ -29,7 +38,11 @@ class EntertainmentService
         private readonly ProjectSongItemRepository $projectSongItemRepo,
         private readonly GeneralService $generalService,
         private readonly EmployeeRepository $employeeRepo,
-        private readonly ProjectRepository $projectRepo
+        private readonly ProjectRepository $projectRepo,
+        private readonly EntertainmentTaskRepository $entertainmentTaskRepo,
+        private readonly EntertainmentTaskPicRepository $taskPicRepo,
+        private readonly EntertainmentTaskPicWorkstateRepository $workStateRepo,
+        private readonly EntertainmentLogService $logService
     ) {}
 
     /**
@@ -300,6 +313,33 @@ class EntertainmentService
         }
     }
 
+    protected function registerTask(CreateEntertainmentTaskData $payload, array $songIds = []): EntertainmentTask
+    {
+        $task = $this->entertainmentTaskRepo->store($payload->toArray());
+
+        if (! empty ($songIds)) {
+            $this->entertainmentTaskRepo->insertSongs(
+                task: $task,
+                songIds: $songIds
+            );
+        }
+
+        return $task;
+    }
+
+    protected function startWorkState(
+        array $employeeIds,
+        EntertainmentTask $task,
+        CreateWorkStateData $payload
+    ): void
+    {
+        foreach ($employeeIds as $employeeId) {
+            if (! $this->workStateRepo->getEmployeeState($employeeId, $task->id)) {
+                $this->workStateRepo->store($payload->toArray());
+            }
+        }
+    }
+    
     /**
      * Create task for jump back -> Should have a song list here
      *
@@ -308,6 +348,7 @@ class EntertainmentService
      */
     public function createJumpBackTask(CreateJumpBackData $payload, string $projectUid): array
     {
+        DB::beginTransaction();
         try {
             // ------------- Validation and formatting --
             $project = $this->projectRepo->show(
@@ -332,10 +373,42 @@ class EntertainmentService
 
             $employeeIds = $employees->pluck('id');
 
+            // -------------- Song validation and formatting
+            $songUids = "'" . collect($payload->song_uids)->join("','") . "'";
+            $songItems = $this->projectSongItemRepo->list(
+                select: 'id',
+                where: "uid IN ({$songUids})"
+            );
+            if ($songItems->count() !== count($payload->song_uids)) throw new DataNotFound("Song not found.");
+            $songIds = $songItems->pluck("id");
+
+            // ------------- process task --
+            $task = $this->registerTask(
+                new CreateEntertainmentTaskData(
+                    project_id: $project->id,
+                    type: TaskType::JumpBack,
+                    name: $payload->name,
+                    description: $payload->note ?? null,
+                    deadline: date('Y-m-d H:i:s', strtotime($payload->due)),
+                    status: TaskStatus::WaitingApproval
+                ),
+                $songIds->toArray()
+            );
+
+            // ------------ Assign employee to task --
+            $this->taskPicRepo->assignEmployees(
+                taskId: $task->id,
+                employeeIds: $employeeIds->toArray()
+            );
+
+            DB::commit();
+
             return generalResponse(
                 message: "Success",
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -343,5 +416,26 @@ class EntertainmentService
     public function createTask()
     {
 
+    }
+
+    public function listTask(string $projectUid)
+    {
+        try {
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+
+            $data = $this->entertainmentTaskRepo->get([
+                'select' => ['id'],
+                'where' => [
+                    'project_id' => $projectId
+                ]
+            ]);
+
+            return generalResponse(
+                message: 'Successsss',
+                data: $data->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

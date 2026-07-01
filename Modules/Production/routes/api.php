@@ -262,7 +262,9 @@ Route::middleware(['auth.session'])
     ->prefix('entertainment')
     ->group(function () {
         Route::get('songs/{projectUid}', [EntertainmentController::class, 'index']);
+        Route::get('{projectUid}/tasks', [EntertainmentController::class, 'listTask']);
         Route::post('create-song/{projectUid}', [EntertainmentController::class, 'createSong']);
+        Route::post('jump-back/{projectUid}', [EntertainmentController::class, 'createJumpBackTask']);
         Route::put('update-song/{projectUid}/{songUid}', [EntertainmentController::class, 'updateSong']);
         Route::delete('delete-song/{projectUid}/{songUid}', [EntertainmentController::class, 'deleteSong']);
     });

@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Models;
 
+use App\Traits\EntertainmentLogWatch;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProjectSong extends Model
 {
-    use HasFactory, ModelObserver;
+    use HasFactory, ModelObserver, EntertainmentLogWatch;
 
     protected $table = 'project_songs';
 

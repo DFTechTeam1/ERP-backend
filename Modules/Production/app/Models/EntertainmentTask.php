@@ -3,6 +3,8 @@
 namespace Modules\Production\Models;
 
 use App\Models\User;
+use App\Traits\EntertainmentLogWatch;
+use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EntertainmentTask extends Model
 {
-    use HasFactory;
+    use HasFactory, EntertainmentLogWatch, ModelObserver;
 
     protected $table = 'entertainment_tasks';
 
@@ -39,6 +41,11 @@ class EntertainmentTask extends Model
             'deadline' => 'datetime',
             'status' => 'integer',
         ];
+    }
+
+    public function pics(): HasMany
+    {
+        return $this->hasMany(EntertainmentTaskPic::class, 'task_id');
     }
 
     public function project(): BelongsTo
