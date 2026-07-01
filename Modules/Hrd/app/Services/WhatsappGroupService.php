@@ -380,7 +380,7 @@ class WhatsappGroupService
         }
     }
 
-    public function deleteCommunity(int $id): array
+    public function deleteCommunity(string $id): array
     {
         try {
 
