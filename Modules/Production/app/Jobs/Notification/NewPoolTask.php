@@ -48,8 +48,6 @@ class NewPoolTask implements ShouldQueue
                             ->whereNotNull('community_id');
                     }
                 ]);
-
-            logging('project data', $project->toArray());
             
             $canSendMessage = true;
             $whatsappMessage = "Halo All. Ada task baru *{{taskname}}* ({$this->boardName}) di event {{eventname}} yang sudah siap diambil";
