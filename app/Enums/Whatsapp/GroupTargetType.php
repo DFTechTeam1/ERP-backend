@@ -4,6 +4,6 @@ namespace App\Enums\Whatsapp;
 
 enum GroupTargetType: string
 {
-    case All = 'all';
+    case All = 'general';
     case Team = 'team';
 }

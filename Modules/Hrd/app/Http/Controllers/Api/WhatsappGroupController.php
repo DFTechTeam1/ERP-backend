@@ -70,7 +70,7 @@ class WhatsappGroupController extends Controller
      * @param integer $community
      * @return JsonResponse
      */
-    public function destroyCommunity(int $community): JsonResponse
+    public function destroyCommunity(string $community): JsonResponse
     {
         return apiResponse($this->service->deleteCommunity($community));
     }
@@ -159,5 +159,10 @@ class WhatsappGroupController extends Controller
         $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
         return apiResponse($this->service->getLogs($itemsPerPage, $page));
+    }
+
+    public function sendTesting(string $groupId)
+    {
+        return apiResponse($this->service->sendTesting($groupId));
     }
 }

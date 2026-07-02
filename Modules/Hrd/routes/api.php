@@ -117,9 +117,10 @@ Route::middleware('auth.session')
         Route::post('/', 'store');
         Route::put('/{whatsapp_group}', 'update');
         Route::delete('/{whatsapp_group}', 'destroy');
+        Route::post('/{whatsapp_group}/testing', 'sendTesting');
         Route::get('/community', 'indexCommunity');
         Route::post('/community', 'storeCommunity');
-        Route::delete('/community/{community}', 'destroyCommunity');
+        Route::delete('/community/{communityId}', 'destroyCommunity');
         Route::get('/{groupId}/participants', 'participantsGroup');
         Route::get('/{employeeUid}/user-groups', 'getUserWhatsappGroup');
         Route::get('/{communityId}/community/groups', 'communityGroups');
