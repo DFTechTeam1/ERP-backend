@@ -22,6 +22,7 @@ use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\ProjectTask;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -339,3 +340,13 @@ Route::get('/oauth/authorize', [OauthController::class, 'authorizeForm']);
 Route::post('/oauth/authorize', [OauthController::class, 'authorize']);
 Route::post('/oauth/token', [OauthController::class, 'token']);
 Route::post('/oauth/register', [OauthController::class, 'register']);
+
+Route::get('signature', function () {
+    $templateProcessor = new TemplateProcessor(public_path('NDA.docx'));
+    $variables = $templateProcessor->getVariables();
+
+    return response()->json([
+        'message' => 'Signature is valid',
+        'variables' => $variables
+    ]);
+});
