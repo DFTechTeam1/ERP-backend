@@ -80,62 +80,59 @@ if (! function_exists('successResponse')) {
     }
 }
 
-if (! function_exists('errorMessage')) {
-    function errorMessage($message)
+if (! function_exists('isDebugEnvironment')) {
+    /**
+     * Technical error details are exposed everywhere except production, so the
+     * team can debug on local / testing / staging while end users in production
+     * only ever see a human-readable message.
+     */
+    function isDebugEnvironment(): bool
     {
-        $arr = ['App\Exceptions\TemplateNotValid'];
+        return config('app.env') !== 'production';
+    }
+}
 
-        if ($message instanceof Throwable) {
-            logging('error: ', [$message]);
-            $files = scandir(app_path('Exceptions'));
+if (! function_exists('isDomainException')) {
+    /**
+     * Domain exceptions (application or module level) carry messages that were
+     * authored for end users and are therefore safe to surface in production.
+     * Everything else (framework, PDO, PHP runtime errors) is treated as
+     * technical and hidden behind a fallback message.
+     */
+    function isDomainException(Throwable $exception): bool
+    {
+        return str_contains(get_class($exception), '\\Exceptions\\');
+    }
+}
 
-            $outputFiles = [];
-            foreach ($files as $file) {
-                if ($file != '.' && $file != '..') {
-                    $name = explode('.php', $file);
+if (! function_exists('errorMessage')) {
+    /**
+     * Resolve the message shown to the API consumer for an error response.
+     *
+     * Accepts both a thrown Throwable (e.g. a caught exception) and a plain
+     * string passed directly to errorResponse(). In dev / staging the full
+     * technical detail is returned; in production only human-readable messages
+     * are exposed, with a generic fallback for unexpected technical errors.
+     *
+     * @param  Throwable|string  $message
+     */
+    function errorMessage($message): string
+    {
+        logging('error: ', [$message]);
 
-                    $path = "App\Exceptions\\".$name[0];
-                    $outputFiles[] = $path;
-                }
-            }
-
-            if (in_array(get_class($message), $outputFiles)) {
-                $out = $message->getMessage();
-            } else {
-                if (config('app.env') == 'local' || config('app.env') == 'testing') {
-                    $out = 'Error: '.$message->getMessage().', at line '.$message->getLine().'. Check file '.$message->getFile();
-                    $messageError = $out;
-                } else {
-                    $out = __('global.failedProcessingData');
-                }
-            }
-        } elseif (($message instanceof Throwable) && config('app.env') == 'local') {
-            logging('error: ', [$message]);
-            $out = 'Error: '.$message->getMessage().', at line '.$message->getLine().'. Check file '.$message->getFile();
-        } elseif (($message instanceof Throwable) && config('app.env') != 'local') {
-            logging('error: ', [$message]);
-            $out = __('global.failedProcessingData');
-        } elseif (! $message instanceof Throwable) {
-            logging('error: ', [$message]);
-            $out = $message;
+        if (! $message instanceof Throwable) {
+            return ! empty($message) ? $message : __('global.failedProcessingData');
         }
 
-        // if (file_exists(base_path('exceptions.json'))) {
-        //     $exceptions = File::get(base_path('exceptions.json'));
-        //     $exceptionArray = json_decode($exceptions, true);
-        //     $arrayKeys = array_keys($exceptionArray);
+        if (isDebugEnvironment()) {
+            return 'Error: '.$message->getMessage().', at line '.$message->getLine().'. Check file '.$message->getFile();
+        }
 
-        //     foreach ($arrayKeys as $exception) {
-        //         $check = "\\App\\Exceptions\\{$exception}";
-        //         if ($message instanceof $check) {
-        //             $out = $message->getMessage();
-        //             break;
-        //         }
-        //     }
-        // }
+        if (isDomainException($message) && ! empty($message->getMessage())) {
+            return $message->getMessage();
+        }
 
-        return $out;
-
+        return __('global.failedProcessingData');
     }
 }
 

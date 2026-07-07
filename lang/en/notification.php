@@ -193,4 +193,9 @@ return [
     'phoneNumberVerfied' => 'Phone number has been verified',
     'projectDealIsExists' => 'Project deal already exists in the database',
     'projectIsExists' => 'Project already exists in the database',
+    'successCreateDocumentType' => 'Success create document type',
+    'successDeleteDocumentType' => 'Success delete document type(s)',
+    'documentTypeNotFound' => 'Document type not found',
+    'successUpdateDocumentType' => 'Document type has been updated successfully',
+    'failedToDetectPlaceholder' => 'Failed to detect document placeholder'
 ];

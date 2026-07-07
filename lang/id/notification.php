@@ -185,4 +185,9 @@ return [
     'phoneNumberVerfied' => 'Nomor telepon berhasil di verifikasi',
     'projectDealIsExists' => 'Event ini sudah ada di database',
     'projectIsExists' => 'Event ini sudah ada di database production',
+    'successCreateDocumentType' => 'Tipe dokumen berhasil dibuat',
+    'successDeleteDocumentType' => 'Tipe dokumen berhasil di hapus',
+    'documentTypeNotFound' => 'Tipe dokumen tidak ditemukan',
+    'successUpdateDocumentType' => 'Tipe dokument telah diperbarui',
+    'failedToDetectPlaceholder' => 'Gagal untuk deteksi placeholder'
 ];
