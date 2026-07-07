@@ -190,5 +190,10 @@ return [
     'projectLeadAlreadyHaveRelation' => "Lead sudah memiliki relasi dengan data 'deals' atau production project",
     'projectLeadHaveBeenPast' => 'Tanggal Project lead sudah terlewati',
     'projectLeadAlreadyCancelled' => 'Lead sudah di cancel',
-    'projectDealInvoiceNotFound' => 'Invoice pada event tidak ditemukan'
+    'projectDealInvoiceNotFound' => 'Invoice pada event tidak ditemukan',
+    'successCreateDocumentType' => 'Tipe dokumen berhasil dibuat',
+    'successDeleteDocumentType' => 'Tipe dokumen berhasil di hapus',
+    'documentTypeNotFound' => 'Tipe dokumen tidak ditemukan',
+    'successUpdateDocumentType' => 'Tipe dokument telah diperbarui',
+    'failedToDetectPlaceholder' => 'Gagal untuk deteksi placeholder'
 ];

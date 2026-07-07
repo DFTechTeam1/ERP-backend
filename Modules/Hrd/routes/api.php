@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
+use Modules\Hrd\Http\Controllers\Api\SignatureController;
 use Modules\Hrd\Http\Controllers\HrdController;
 
 /*
@@ -74,6 +75,18 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/modeller/{projectUid?}/{taskUid?}', 'get3DModeller');
 
         Route::post('employees/import', 'import');
+
+        // Signature feature
+        Route::prefix('signatures')
+            ->group(function () {
+                Route::get('document-types', [SignatureController::class, 'listDocumentTypes']);
+                Route::post('document-types', [SignatureController::class, 'storeDocumentTypes']);
+                Route::post('document-types/bulk', [SignatureController::class, 'bulkCreateDocumentType']);
+                Route::put('document-types/bulk', [SignatureController::class, 'bulkEditDocumentType']);
+                Route::delete('document-types/bulk', [SignatureController::class, 'bulkDeleteDocumentType']);
+                Route::put('document-types/{documentId}', [SignatureController::class, 'updateDocumentType']);
+                Route::post('document-types/detect-placeholder', [SignatureController::class, 'detectPlaceholder']);
+            });
 
         Route::prefix('greatday')
             ->group(function () {

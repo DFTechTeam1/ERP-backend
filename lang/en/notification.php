@@ -198,5 +198,10 @@ return [
     'projectLeadAlreadyHaveRelation' => 'Project lead already have relation with project deal or production event',
     'projectLeadHaveBeenPast' => 'Project lead has been passed',
     'projectLeadAlreadyCancelled' => 'Project lead already cancelled',
-    'projectDealInvoiceNotFound' => 'Project deal invoice is not found'
+    'projectDealInvoiceNotFound' => 'Project deal invoice is not found',
+    'successCreateDocumentType' => 'Success create document type',
+    'successDeleteDocumentType' => 'Success delete document type(s)',
+    'documentTypeNotFound' => 'Document type not found',
+    'successUpdateDocumentType' => 'Document type has been updated successfully',
+    'failedToDetectPlaceholder' => 'Failed to detect document placeholder'
 ];

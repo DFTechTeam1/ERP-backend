@@ -1059,7 +1059,7 @@ Table "master_documents" {
   "uid" char(36) [not null, unique]
   "name" varchar(255) [not null]
   "document_type_id" bigint [ref: > document_types.id]
-  "current_active_version_text" varchar(20) [not null]
+  "current_active_version_text" varchar(20) [note: 'nullable']
   "created_at" timestamp
   "updated_at" timestamp
 }
@@ -1081,6 +1081,8 @@ Table "master_document_files" {
   "path" varchar(255) [not null]
   "file_type" varchar(30) [not null]
   "placeholder_mapping" longtext [note: '[{"type"}]']
+  "version" varchar(10) [not null, note: 'always increment']
+  "status" tinyint [not null, default: '1 active, 2 pending review, 3 rejected, 4 archived']
   "created_at" timestamp
   "updated_at" timestamp
 }
@@ -1173,7 +1175,7 @@ Table "employee_signatures" {
   "id" bigint [pk, not null, increment]
   "employee_id" bigint [not null, ref: > employees.id]
   "is_active" tinyint [note: "1 or 0"]
-  "sign_document_path" varchar(255) [not null]
+  "sign_path" varchar(255) [not null]
   "created_at" timestamp
   "updated_at" timestamp
 
