@@ -17,6 +17,7 @@ use App\Exceptions\DetectPlaceholderFailed;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Repository\DocumentTypeRepository;
 use PhpOffice\PhpWord\TemplateProcessor;
@@ -25,7 +26,8 @@ class SignatureService
 {
     public function __construct(
         private readonly DocumentTypeRepository $documentTypeRepo,
-        private readonly PositionRepository $positionRepo
+        private readonly PositionRepository $positionRepo,
+        private readonly DivisionRepository $divisionRepo
     )
     {
     }
@@ -38,14 +40,11 @@ class SignatureService
      */
     protected function parseDocumentTypePayload(CreateDocumentTypeData|UpdateDocumentTypeData $payload): array
     {
-        $signers = collect($payload->default_signers)->map(function ($sign) {
-            $divisionId = getIdFromUid($sign->division_id, new \Modules\Company\Models\DivisionBackup());
+        $divisionUids = "'" . collect($payload->default_signers)->pluck('division_id')->join("','") . "'";
+        $divisions = $this->divisionRepo->list(select: 'id,name', where: "uid IN {$divisionUids}");
 
-            return [
-                'division_id' => $divisionId,
-                'order' => $sign->order,
-            ];
-        });
+         
+
         return [
             'category' => $payload->category,
             'name' => $payload->name,

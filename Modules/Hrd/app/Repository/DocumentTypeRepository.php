@@ -31,4 +31,9 @@ class DocumentTypeRepository extends BaseRepository
             ->whereIn('id', $ids)
             ->update($payload);
     }
+
+    public function assignSigners()
+    {
+        
+    }
 }
