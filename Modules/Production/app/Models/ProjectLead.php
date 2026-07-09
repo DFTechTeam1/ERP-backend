@@ -4,6 +4,7 @@ namespace Modules\Production\Models;
 
 use App\Enums\Production\EventType;
 use App\Enums\Production\ProjectLeadStatus;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -72,9 +73,19 @@ class ProjectLead extends Model
         return $this->belongsTo(City::class);
     }
 
+    public function projectDeal(): BelongsTo
+    {
+        return $this->belongsTo(ProjectDeal::class, 'project_deal_id');
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'created_by');
+    }
+
+    public function cancelBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancel_by');
     }
 
     public function updatedBy(): BelongsTo

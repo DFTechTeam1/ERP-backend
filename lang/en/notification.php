@@ -193,4 +193,8 @@ return [
     'phoneNumberVerfied' => 'Phone number has been verified',
     'projectDealIsExists' => 'Project deal already exists in the database',
     'projectIsExists' => 'Project already exists in the database',
+    'projectLeadHasBeenCanclled' => 'Project lead has been cancelled successfully',
+    'projectLeadNotFound' => "Project lead not found",
+    'projectLeadAlreadyHaveRelation' => 'Project lead already have relation with project deal or production event',
+    'projectLeadHaveBeenPast' => 'Project lead has been passed'
 ];
