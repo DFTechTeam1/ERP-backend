@@ -63,6 +63,11 @@ class DocumentType extends Model
         return $this->hasMany(EmployeeDocument::class, 'document_type_id', 'id');
     }
 
+    public function signers(): HasMany
+    {
+        return $this->hasMany(DocumentTypeSigner::class, 'type_id');
+    }
+
     // protected static function newFactory(): DocumentTypeFactory
     // {
     //     // return DocumentTypeFactory::new();

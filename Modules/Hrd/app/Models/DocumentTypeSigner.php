@@ -18,7 +18,8 @@ class DocumentTypeSigner extends Model
      */
     protected $fillable = [
         'division_id',
-        'order'
+        'order',
+        'type_id'
     ];
 
     // protected static function newFactory(): DocumentTypeSignerFactory
