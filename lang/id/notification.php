@@ -189,5 +189,6 @@ return [
     'projectLeadNotFound' => "Data lead tidak ditemukan",
     'projectLeadAlreadyHaveRelation' => "Lead sudah memiliki relasi dengan data 'deals' atau production project",
     'projectLeadHaveBeenPast' => 'Tanggal Project lead sudah terlewati',
-    'projectLeadAlreadyCancelled' => 'Lead sudah di cancel'
+    'projectLeadAlreadyCancelled' => 'Lead sudah di cancel',
+    'projectDealInvoiceNotFound' => 'Invoice pada event tidak ditemukan'
 ];
