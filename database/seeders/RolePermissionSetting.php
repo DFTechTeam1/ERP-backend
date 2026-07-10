@@ -1122,6 +1122,10 @@ class RolePermissionSetting extends Seeder
                 $this->getRootRole(),
                 $this->getDirectorRole(),
             ]],
+            ['name' => 'cancel_leads', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'list_interactive_requests', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),

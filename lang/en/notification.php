@@ -196,5 +196,6 @@ return [
     'projectLeadHasBeenCanclled' => 'Project lead has been cancelled successfully',
     'projectLeadNotFound' => "Project lead not found",
     'projectLeadAlreadyHaveRelation' => 'Project lead already have relation with project deal or production event',
-    'projectLeadHaveBeenPast' => 'Project lead has been passed'
+    'projectLeadHaveBeenPast' => 'Project lead has been passed',
+    'projectLeadAlreadyCancelled' => 'Project lead already cancelled'
 ];
