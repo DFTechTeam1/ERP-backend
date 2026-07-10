@@ -168,6 +168,23 @@ class InvoiceController extends Controller
         return apiResponse($this->service->getInvoiceDownloadUrlBasedOnType(type: $type, payload: $payload));
     }
 
+    public function getInvoiceDownloadAsByte(string $projectDealUid)
+    {
+        $invoice = $this->service->getInvoiceDownloadAsByte($projectDealUid);
+
+        if ($invoice['error']) {
+            return apiResponse($invoice);
+        }
+
+        $file = file_get_contents(storage_path('app/public/' . $invoice['data']['invoice']));
+        $filename = $invoice['data']['project_name'];
+
+        return response($file, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'. $filename .'.pdf"',
+        ]);
+    }
+
     public function downloadGeneralInvoice()
     {
         // return $this->service->downloadGeneralInvoice();
