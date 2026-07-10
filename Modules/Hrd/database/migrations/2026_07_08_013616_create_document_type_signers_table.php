@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('division_id')
                 ->constrained('division_backups');
             $table->tinyInteger('order');
+            $table->foreignId('type_id')
+                ->constrained('document_types');
             $table->timestamps();
         });
     }
@@ -27,6 +29,7 @@ return new class extends Migration
     {
         Schema::table('document_type_signers', function (Blueprint $table) {
             $table->dropForeign(['division_id']);
+            $table->dropForeign(['type_id']);
         });
         
         Schema::dropIfExists('document_type_signers');

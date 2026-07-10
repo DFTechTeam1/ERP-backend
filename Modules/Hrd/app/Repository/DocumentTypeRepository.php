@@ -4,6 +4,7 @@ namespace Modules\Hrd\Repository;
 
 use App\Repository\BaseRepository;
 use Modules\Hrd\Models\DocumentType;
+use Modules\Hrd\Models\DocumentTypeSigner;
 
 class DocumentTypeRepository extends BaseRepository
 {
@@ -32,8 +33,28 @@ class DocumentTypeRepository extends BaseRepository
             ->update($payload);
     }
 
-    public function assignSigners()
+    /**
+     * Assign signers to document type
+     *
+     * @param array $payload
+     * @param DocumentType $type
+     */
+    public function assignSigners(array $payload, DocumentType $type): void
     {
-        
+        // Delete signers
+        $deleteSigners = $type->signers->pluck('division_id')
+            ->diff(collect($payload)->pluck('division_id')->toArray())
+            ->toArray();
+
+        DocumentTypeSigner::where('type_id', $type->id)
+            ->whereIn('division_id', $deleteSigners)
+            ->delete();
+
+        foreach ($payload as $signer) {
+            $type->signers()->updateOrCreate(
+                ['division_id' => $signer['division_id']],
+                ['order' => $signer['order']]
+            );
+        }
     }
 }

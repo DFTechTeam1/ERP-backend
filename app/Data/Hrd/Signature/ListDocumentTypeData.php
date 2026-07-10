@@ -17,7 +17,7 @@ class ListDocumentTypeData extends Data
         public readonly int $default_signers,
         public readonly bool $is_have_active_template,
         public readonly bool $is_active,
-        #[DataCollectionOf(ListDocumentTypeSignerData::class)]
-        public readonly ?array $default_signer_items
+        #[DataCollectionOf(DefaultSignerItemData::class)]
+        public readonly array $default_signer_items
     ) {}
 }

@@ -7,6 +7,7 @@ use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeItemData;
 use App\Data\Hrd\Signature\CreateDocumentTypeData;
+use App\Data\Hrd\Signature\DefaultSignerItemData;
 use App\Data\Hrd\Signature\DetectPlaceholderData;
 use App\Data\Hrd\Signature\ListDocumentTypeSignerData;
 use App\Data\Hrd\Signature\UpdateDocumentTypeData;
@@ -40,10 +41,14 @@ class SignatureService
      */
     protected function parseDocumentTypePayload(CreateDocumentTypeData|UpdateDocumentTypeData $payload): array
     {
-        $divisionUids = "'" . collect($payload->default_signers)->pluck('division_id')->join("','") . "'";
-        $divisions = $this->divisionRepo->list(select: 'id,name', where: "uid IN {$divisionUids}");
-
-         
+        $formattedDivisions = [];
+        foreach ($payload->default_signers as $signer) {
+            $division = $this->divisionRepo->show(uid: $signer->division_id, select: 'id');
+            $formattedDivisions[] = [
+                'division_id' => $division->id,
+                'order' => $signer->order
+            ];
+        }
 
         return [
             'category' => $payload->category,
@@ -52,6 +57,7 @@ class SignatureService
             'retention' => $payload->retention_years,
             'default_number_of_signers' => count($payload->default_signers),
             'status' => $payload->is_active ?? true,
+            'signers' => $formattedDivisions
         ];
     }
 
@@ -73,8 +79,22 @@ class SignatureService
             $data = $this->documentTypeRepo->get([
                 'select' => ['id', 'code', 'name', 'retention', 'default_number_of_signers', 'status', 'category'],
                 'skip' => $page,
-                'take' => $itemsPerPage
+                'take' => $itemsPerPage,
+                'with' => [
+                    'signers:id,type_id,division_id,order',
+                    'signers.division:id,uid,name'
+                ]
             ])->map(function ($item) {
+                $divisions = [];
+                foreach ($item->signers as $signer) {
+                    $divisions[] = new DefaultSignerItemData(
+                        division_id: $signer->division->uid,
+                        order: $signer->order,
+                        name: $signer->division->name,
+                        signer_id: $signer->id
+                    );
+                }
+
                 return new ListDocumentTypeData(
                     name: $item->name,
                     uid: (string)$item->id,
@@ -85,7 +105,7 @@ class SignatureService
                     default_signers: $item->default_number_of_signers,
                     is_have_active_template: true,
                     is_active: (bool)$item->status,
-                    default_signer_items: null
+                    default_signer_items: $divisions
                 );
             })->all();
 
@@ -112,16 +132,23 @@ class SignatureService
      */
     public function storeDocumentTypes(CreateDocumentTypeData $payload): array
     {
+        DB::beginTransaction();
         try {
             $parse = $this->parseDocumentTypePayload($payload);
-            $this->documentTypeRepo->store(
+            $type = $this->documentTypeRepo->store(
                 collect($parse)
+                    ->except(['signers'])
                     ->merge(['created_by' => Auth::id()])
                     ->toArray()
             );
 
+            $this->documentTypeRepo->assignSigners($parse['signers'], $type);
+
+            DB::commit();
+
             return generalResponse(message: __('notification.successCreateDocumentType'));
         } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }
@@ -184,6 +211,7 @@ class SignatureService
      */
     public function updateDocumentType(\App\Data\hrd\Signature\UpdateDocumentTypeData $request, string $documentId): array
     {
+        DB::beginTransaction();
         try {
             $documentType = $this->documentTypeRepo->show([
                 'where' => ['id' => $documentId],
@@ -194,12 +222,19 @@ class SignatureService
                 throw new DataNotFound(message: __('notification.documentTypeNotFound'));
             }
 
-            $this->documentTypeRepo->update($documentType, $this->parseDocumentTypePayload($request));
+            $parse = $this->parseDocumentTypePayload($request);
+            $this->documentTypeRepo->update($documentType, $parse);
+
+            $this->documentTypeRepo->assignSigners($parse['signers'], $documentType);
+
+            DB::commit();
 
             return generalResponse(
                 message: __('notification.successUpdateDocumentType'),
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+            
             return errorResponse($th);
         }
     }
