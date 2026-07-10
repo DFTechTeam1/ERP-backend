@@ -482,4 +482,5 @@ Route::middleware(['mcp.log', 'mcp.auth'])
 
         // Invoice download links
         Route::post('finance/invoices/download-url/{type}', [InvoiceController::class, 'getInvoiceDownloadUrlBasedOnType']);
+        Route::get('finance/invoices/{projectDealUid}/file', [InvoiceController::class, 'getInvoiceDownloadAsByte']);
     });
