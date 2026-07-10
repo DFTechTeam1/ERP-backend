@@ -185,4 +185,9 @@ return [
     'phoneNumberVerfied' => 'Nomor telepon berhasil di verifikasi',
     'projectDealIsExists' => 'Event ini sudah ada di database',
     'projectIsExists' => 'Event ini sudah ada di database production',
+    'projectLeadHasBeenCanclled' => 'Lead berhasil di batalkan',
+    'projectLeadNotFound' => "Data lead tidak ditemukan",
+    'projectLeadAlreadyHaveRelation' => "Lead sudah memiliki relasi dengan data 'deals' atau production project",
+    'projectLeadHaveBeenPast' => 'Tanggal Project lead sudah terlewati',
+    'projectLeadAlreadyCancelled' => 'Lead sudah di cancel'
 ];

@@ -7,6 +7,7 @@ use Modules\Production\Http\Controllers\Api\InteractiveController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Http\Controllers\Api\TeamTransferController;
+use Modules\Production\Http\Controllers\ProjectLeadController;
 use Modules\Production\Http\Requests\Notification\UpdateLeadPicRequest;
 use Modules\Production\Jobs\UpdatePicProjectLeadJob;
 
@@ -255,6 +256,9 @@ Route::middleware(['auth.session'])
         Route::post('team-transfers/approve-selection/{transferUid}', [TeamTransferController::class, 'approveSelection']);
         Route::get('team-transfers/approve/{transferUid}/{deviceAction}', [TeamTransferController::class, 'approveRequest']);
         Route::get('team-transfers/{transferUid}/getMembersToLend/{employeeUid}', [TeamTransferController::class, 'getMembersToLend']);
+
+        // Project leads
+        Route::post('project-leads/{projectLeadUid}/cancel', [ProjectLeadController::class, 'cancel']);
     });
 
 Route::middleware(['internal.service'])
