@@ -5,6 +5,7 @@ namespace Modules\Hrd\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Company\Models\DivisionBackup;
 use Modules\Company\Models\PositionBackup;
 
 // use Modules\Hrd\Database\Factories\MasterDocumentSignerFactory;
@@ -18,7 +19,7 @@ class MasterDocumentSigner extends Model
      */
     protected $fillable = [
         'master_document_id',
-        'position_id',
+        'division_id',
         'order',
     ];
 
@@ -34,9 +35,9 @@ class MasterDocumentSigner extends Model
         return $this->belongsTo(MasterDocument::class, 'master_document_id', 'id');
     }
 
-    public function position(): BelongsTo
+    public function division(): BelongsTo
     {
-        return $this->belongsTo(PositionBackup::class, 'position_id', 'id');
+        return $this->belongsTo(DivisionBackup::class, 'division_id', 'id');
     }
 
     // protected static function newFactory(): MasterDocumentSignerFactory
