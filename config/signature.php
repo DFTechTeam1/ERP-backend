@@ -30,6 +30,8 @@ return [
             'model' => \Modules\Hrd\Models\Employee::class,
             'relation' => 'position:id,name',
             'column' => 'name'
-        ]
-    ]
+        ],
+    ],
+    'master_fullpath' => 'app/public/documents/templates',
+    'master_path' => 'documents/templates'
 ];

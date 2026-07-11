@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Model;
  * Supported `$params` keys:
  *   - with:       array<int,string>            relations to eager-load
  *   - where:      array<string,mixed>          equality constraints (column => value)
+ *   - whereIn:    array<string,array>          IN constraints (column => values)
+ *   - select:     array<int,string>|string     columns to select
  *   - orderBy:    array<string,string>         column => 'asc'|'desc'
  *   - orderByRaw: string                        raw ORDER BY expression
  *   - scope:      Closure(Builder): void        arbitrary extra constraints
@@ -46,6 +48,14 @@ abstract class BaseRepository
 
         foreach ($params['where'] ?? [] as $column => $value) {
             $query->where($column, $value);
+        }
+
+        foreach ($params['whereIn'] ?? [] as $column => $values) {
+            $query->whereIn($column, $values);
+        }
+
+        if (isset($params['select'])) {
+            $query->select($params['select']);
         }
 
         foreach ($params['orderBy'] ?? [] as $column => $direction) {

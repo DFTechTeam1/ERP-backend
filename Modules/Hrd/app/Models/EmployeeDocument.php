@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Enums\Hrd\Signature\Template\Status;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,7 +29,7 @@ class EmployeeDocument extends Model
     protected function casts(): array
     {
         return [
-            'status' => 'integer',
+            'status' => Status::class,
             'signers_detail' => 'array',
             'total_signer' => 'integer',
             'document_snapshot' => 'array',

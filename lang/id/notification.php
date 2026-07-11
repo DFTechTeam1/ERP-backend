@@ -189,5 +189,10 @@ return [
     'successDeleteDocumentType' => 'Tipe dokumen berhasil di hapus',
     'documentTypeNotFound' => 'Tipe dokumen tidak ditemukan',
     'successUpdateDocumentType' => 'Tipe dokument telah diperbarui',
-    'failedToDetectPlaceholder' => 'Gagal untuk deteksi placeholder'
+    'failedToDetectPlaceholder' => 'Gagal untuk deteksi placeholder',
+    'successCreateDocumentTemplate' => 'Master dokumen berhasil di buat',
+    'failedToUploadFile' => 'Gagal untuk menyimpan file',
+    'successDeleteMasterDocument' => 'File master berhasil di hapus',
+    'templateStillHavePendingReviewDocument' => 'Jenis dokumen ini masih memiliki templat yang belum ditinjau',
+    'documentTypeAlreadyUsedInTemplate' => 'Jenis dokumen sudah digunakan dalam dokumen induk'
 ];

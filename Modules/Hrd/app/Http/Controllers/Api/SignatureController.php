@@ -6,6 +6,7 @@ use App\Data\Hrd\Signature\BulkCreateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateDocumentTypeData;
+use App\Data\Hrd\Signature\CreateTemplateData;
 use App\Data\Hrd\Signature\DetectPlaceholderData;
 use App\Data\Hrd\Signature\UpdateDocumentTypeData;
 use App\Http\Controllers\Controller;
@@ -66,6 +67,32 @@ class SignatureController extends Controller
     public function detectPlaceholder(DetectPlaceholderData $request): JsonResponse
     {
         return apiResponse($this->service->detectPlaceholder($request));
+    }
+
+    /**
+     * Create master document template
+     *
+     * @param CreateTemplateData $request
+     * @return JsonResponse
+     */
+    public function createTemplate(CreateTemplateData $request): JsonResponse
+    {
+        return apiResponse($this->service->createTemplate($request));
+    }
+
+    /**
+     * List of available master template documents
+     *
+     * @return JsonResponse
+     */
+    public function listTemplates(): JsonResponse
+    {
+        return apiResponse($this->service->listTemplates());
+    }
+
+    public function deleteTemplate(string $templateUid): JsonResponse
+    {
+        return apiResponse($this->service->deleteTemplate($templateUid));
     }
 
     /**

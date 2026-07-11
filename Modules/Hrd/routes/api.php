@@ -86,6 +86,11 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::delete('document-types/bulk', [SignatureController::class, 'bulkDeleteDocumentType']);
                 Route::put('document-types/{documentId}', [SignatureController::class, 'updateDocumentType']);
                 Route::post('document-types/detect-placeholder', [SignatureController::class, 'detectPlaceholder']);
+
+                // Templates
+                Route::post('templates', [SignatureController::class, 'createTemplate']);
+                Route::get('templates', [SignatureController::class, 'listTemplates']);
+                Route::delete('templates/{templateUid}', [SignatureController::class, 'deleteTemplate']);
             });
 
         Route::prefix('greatday')
