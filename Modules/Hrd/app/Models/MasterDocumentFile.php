@@ -2,6 +2,9 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Enums\Hrd\Signature\Template\DocumentFileStatus;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +14,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MasterDocumentFile extends Model
 {
     use HasFactory;
+
+    public static function booted(): void
+    {
+        static::creating(function (MasterDocumentFile $model) {
+            $current = MasterDocumentFile::select('id')
+                ->where('master_document_id', $model->master_document_id)
+                ->count();
+
+            $model->version = $current + 1;
+        });
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -22,14 +36,28 @@ class MasterDocumentFile extends Model
         'placeholder_mapping',
         'version',
         'status',
+        'created_by'
     ];
 
     protected function casts(): array
     {
         return [
             'placeholder_mapping' => 'array',
-            'status' => 'integer',
+            'status' => DocumentFileStatus::class,
         ];
+    }
+
+    public function placeholderMapping(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? json_decode($value) : [],
+            set: fn ($value) => $value ? json_encode($value) : null
+        );
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function masterDocument(): BelongsTo

@@ -203,5 +203,10 @@ return [
     'successDeleteDocumentType' => 'Success delete document type(s)',
     'documentTypeNotFound' => 'Document type not found',
     'successUpdateDocumentType' => 'Document type has been updated successfully',
-    'failedToDetectPlaceholder' => 'Failed to detect document placeholder'
+    'failedToDetectPlaceholder' => 'Failed to detect document placeholder',
+    'successCreateDocumentTemplate' => 'Success create master document template',
+    'failedToUploadFile' => 'Failed to upload file',
+    'successDeleteMasterDocument' => 'Success delete master document',
+    'templateStillHavePendingReviewDocument' => 'This document type still have pending template to review',
+    'documentTypeAlreadyUsedInTemplate' => 'Document type is already in used in master document'
 ];
