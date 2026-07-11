@@ -281,11 +281,20 @@ class SignatureService
 
             $availables = array_keys(config('signature.available_replacer_column'));
 
+            // Missing key
+            $missingKeys = [];
+            foreach ($variables as $variable) {
+                if (! in_array($variable, $availables) && ! \Illuminate\Support\Str::contains($variable, 'signature')) {
+                    $missingKeys[] = $variable;
+                }
+            }
+
             return [
                 'error' => false,
                 'data' => [
                     'availables' => $availables,
-                    'variables' => $variables
+                    'variables' => $variables,
+                    'missing' => $missingKeys
                 ]
             ];
         } catch (\Throwable $th) {
@@ -295,10 +304,29 @@ class SignatureService
         }
     }
 
+    /**
+     * What will do in this function:
+     * - validate signature placeholder -> should be match with document type signer -> done
+     * - detect all placeholder document -> done
+     * - provide available placeholder from system -> done
+     * - decide user can go to preview or note
+     * - detect missing parameters -> if there any document placeholder that is not match with available params from system
+     *
+     * @param DetectPlaceholderData $payload
+     * @return array
+     */
     public function detectPlaceholder(DetectPlaceholderData $payload): array
     {
         try {
             $file = $payload->file;
+
+            $type = $this->documentTypeRepo->show([
+                'where' => ['id' => $payload->documentTypeId],
+                'select' => ['id'],
+                'with' => [
+                    'signers:id,type_id'
+                ]
+            ]);
 
             // upload to tmp folder first
             $this->createTmpFolder();
@@ -313,12 +341,18 @@ class SignatureService
                 throw new DetectPlaceholderFailed();
             }
 
+            $isSignatureEquals = (bool) $type->signers->count() == count($placeholders['data']['variables']);
+
+            $merged = array_merge($placeholders['data'], ['is_signature_equals' => $isSignatureEquals]);
+
+            $merged['can_continue'] = (bool) count($merged['missing']) == 0 && $isSignatureEquals;
+
             // Delete tmp file
             Storage::disk('public')->delete('signature/tmp/' . $filename);
 
             return generalResponse(
                 message: "Success",
-                data: $placeholders['data']
+                data: $merged
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

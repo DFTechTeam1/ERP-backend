@@ -10,6 +10,7 @@ class DetectPlaceholderData extends Data
 {
     public function __construct(
         #[File]
-        public UploadedFile $file
+        public UploadedFile $file,
+        public string $documentTypeId
     ) {}
 }
