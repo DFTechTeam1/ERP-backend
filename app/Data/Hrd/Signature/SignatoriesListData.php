@@ -9,7 +9,7 @@ class SignatoriesListData extends Data
 {
     public function __construct(
         #[DataCollectionOf(OrgSignatoriesListData::class)]
-        public readonly array $org_singatories,
+        public readonly array $org_signatories,
         #[DataCollectionOf(SignatoriesDivisionPicData::class)]
         public readonly array $division_pics,
         #[DataCollectionOf(SelectedOrgSignatureSignerData::class)]

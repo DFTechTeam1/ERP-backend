@@ -13,6 +13,7 @@ use App\Data\Hrd\Signature\DetectPlaceholderData;
 use App\Data\Hrd\Signature\GenerateDocumentData;
 use App\Data\Hrd\Signature\ListDocumentTypeData;
 use App\Data\Hrd\Signature\OutputListDocumentTypeData;
+use App\Data\Hrd\Signature\SignatoriesListData;
 use App\Data\Hrd\Signature\TemplateListData;
 use App\Data\Hrd\Signature\UpdateDocumentTypeData;
 use App\Data\Hrd\Signatured\DocumentVersionListData;
@@ -710,6 +711,28 @@ class SignatureService
             return generalResponse(
                 message: "Success",
                 data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function listSignatories()
+    {
+        try {
+            /** @var array<SignatoriesListData> */
+            $output = [];
+
+            $orgSignatories = [];
+            $mandatoryDivisionUids = getSettingByKey('global_signatory_divisions');
+
+            $globalSignatories = $this->divisionRepo->list(
+                select: 'id,uid,name',
+                where: "uid IN "
+            );
+
+            return generalResponse(
+                message: "Success"
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
