@@ -3658,4 +3658,18 @@ class EmployeeService
             return errorResponse($th);
         }
     }
+
+    public function totalActiveEmployee(): array
+    {
+        try {
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'total' => $this->repo->getTotalActiveEmployee()
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Services;
 
+use App\Data\Hrd\Signature\ApprovalDocumentData;
 use App\Data\Hrd\Signature\BulkCreateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
@@ -9,6 +10,7 @@ use App\Data\Hrd\Signature\CreateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateTemplateData;
 use App\Data\Hrd\Signature\DefaultSignerItemData;
 use App\Data\Hrd\Signature\DetectPlaceholderData;
+use App\Data\Hrd\Signature\GenerateDocumentData;
 use App\Data\Hrd\Signature\ListDocumentTypeData;
 use App\Data\Hrd\Signature\OutputListDocumentTypeData;
 use App\Data\Hrd\Signature\TemplateListData;
@@ -27,6 +29,8 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\DocumentTypeInUse;
 use Modules\Hrd\Exceptions\TemplateStillHavePendingReview;
 use Modules\Hrd\Repository\DocumentTypeRepository;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\MasterDocumentFileRepository;
 use Modules\Hrd\Repository\MasterDocumentRepository;
 use PhpOffice\PhpWord\TemplateProcessor;
 
@@ -36,7 +40,9 @@ class SignatureService
         private readonly DocumentTypeRepository $documentTypeRepo,
         private readonly PositionRepository $positionRepo,
         private readonly DivisionRepository $divisionRepo,
-        private readonly MasterDocumentRepository $masterDocumentRepo
+        private readonly MasterDocumentRepository $masterDocumentRepo,
+        private readonly MasterDocumentFileRepository $masterFileRepo,
+        private readonly EmployeeRepository $employeeRepo
     ) {}
 
     /**
@@ -410,13 +416,13 @@ class SignatureService
             }
 
             // Stop if given document type still have pending review template
-            if ($master->isHavePendingReview) {
-                throw new TemplateStillHavePendingReview;
+            if ($master->isHavePendingReview()) {
+                throw new TemplateStillHavePendingReview();
             }
 
             // Upload files
             $this->createFolder(config('signature.master_path'));
-            $filename = 'document_master_'.$documentType->code.'_'.$master->current_active_version_text.'.'.$payload->file->getClientOriginalExtension();
+            $filename = 'document_master_'.$documentType->code.'_version'.($master->files->count() + 1).'.'.$payload->file->getClientOriginalExtension();
             $storeFile = Storage::putFileAs(config('signature.master_path'), $payload->file, $filename);
 
             if (! $storeFile) {
@@ -429,6 +435,7 @@ class SignatureService
                 'file_type' => $payload->file->getClientOriginalExtension(),
                 'placeholder_mapping' => $payload->placeholders,
                 'status' => DocumentFileStatus::PendingReview,
+                'created_by' => Auth::id()
             ]);
 
             $master->signers()->createMany($signers);
@@ -465,7 +472,9 @@ class SignatureService
                 'take' => $itemsPerPage,
                 'with' => [
                     'documentType:id,name,code',
-                    'files:id,master_document_id,placeholder_mapping,version,status,created_at',
+                    'documentType.signers:id,division_id,type_id',
+                    'documentType.signers.division:id,name',
+                    'files:id,master_document_id,placeholder_mapping,version,status,created_at,path,rejected_reason',
                     'files.author:id,employee_id,email',
                     'files.author.employee:id,nickname',
                     'activeDocument:id,master_document_id,placeholder_mapping,version,status,created_at',
@@ -478,23 +487,36 @@ class SignatureService
                     $versions[] = new DocumentVersionListData(
                         uid: (string) $file->id,
                         label: $item->name,
-                        status: $file->status->value,
-                        is_active: true,
+                        status: $file->status->label(),
+                        is_active: false,
                         placeholders: count($file->placeholder_mapping),
                         date: $file->created_at,
-                        author: ! $file->author ? 'N/A' : $file->author?->employee?->nickname ?? $file->author->email
+                        version_status_color: $file->status->color(),
+                        rejected_reason: $file->status == DocumentFileStatus::Rejected ? ($file->approval_note ?? null) : null,
+                        is_pending: $file->status === DocumentFileStatus::PendingReview,
+                        author: ! $file->author ? 'N/A' : $file->author?->employee?->nickname ?? $file->author->email,
+                        file_url: asset('storage/' . $file->path)
                     );
                 }
+
+                // Define signer chain
+                $chain = [];
+                foreach ($item->documentType->signers as $typeSigner) {
+                    $chain[] = $typeSigner->division->name;
+                }
+                $chain = array_merge($chain, ['Employee']);
 
                 return new TemplateListData(
                     uid: $item->uid,
                     name: $item->name,
+                    active_document_uid: $item?->activeDocument?->id ?? null,
                     type: $item->documentType->code,
                     latest_version_label: $item->current_active_version_text,
                     updated_at: $item->updated_at,
                     active_version_label: $item->activeDocument ? $item->current_active_version_text : '',
                     active_version_status: $item->activeDocument ? 'Active' : '',
                     active_version_status_color: '',
+                    signing_chain: $chain,
                     versions_count: $item->files->count(),
                     versions: $versions
                 );
@@ -509,6 +531,12 @@ class SignatureService
         }
     }
 
+    /**
+     * Delete selected master document
+     *
+     * @param string $templateUid
+     * @return array
+     */
     public function deleteTemplate(string $templateUid): array
     {
         try {
@@ -535,6 +563,153 @@ class SignatureService
 
             return generalResponse(
                 message: __('notification.successDeleteMasterDocument')
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function approvalMasterDocument(ApprovalDocumentData $payload, string $documentUid): array
+    {
+        try {
+            $document = $this->masterDocumentRepo->show([
+                'uid' => $documentUid,
+                'select' => ['id'],
+                'with' => [
+                    'pendingDocument:id,path,created_by,master_document_id,version'
+                ]
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound("Document not found.");
+            }
+
+            if (! $document->pendingDocument) {
+                throw new DataNotFound("No pending document found.");
+            }
+
+            $isApproved = $payload->status == 1 ? true : false;
+
+            $payloadUpdate = [
+                'status' => $isApproved ? DocumentFileStatus::Active : DocumentFileStatus::Rejected,
+                'rejected_by' => $isApproved ? null : Auth::id(),
+                'approved_by' => !$isApproved ? null : Auth::id(),
+                'approval_note' => $payload->reason ?? null
+            ];
+
+            $this->masterFileRepo->approveDocument($payloadUpdate, $document->pendingDocument);
+
+            // TODO: Notify creator about approval
+
+            return generalResponse(
+                message: "Document has been " . ($isApproved ? "approved" : "rejected") . " successfully"
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get real file path of the document to stream in frontend
+     *
+     * @param string $templateUid
+     * @param string $versionId
+     * @return array
+     */
+    public function renderTemplateDocument(string $templateUid, string $versionId): array
+    {
+        try {
+            $document = $this->masterDocumentRepo->show([
+                'where' => [
+                    'uid' => $templateUid
+                ],
+                'select' => ['id']
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound('Document is not found.');
+            }
+
+            $file = $this->masterFileRepo->show([
+                'where' => [
+                    'id' => $versionId,
+                    'master_document_id' => $document->id
+                ],
+                'select' => ['id', 'path']
+            ]);
+
+            if (! Storage::exists($file->path)) {
+                throw new DataNotFound('Version document is not found.');
+            }
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'path' => $file->path
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function generateDocument(GenerateDocumentData $payload): array
+    {
+        try {
+            $document = $this->masterDocumentRepo->show([
+                'where' => ['uid' => $payload->template_uid],
+                'select' => ['id', 'name'],
+                'with' => [
+                    'activeDocument:id,master_document_id,path,file_type',
+                    'documentType:id,document_type_id,code,name',
+                    'documentType.signers' => function ($query) {
+                        $query->selectRaw('id,type_id,division_id,order')
+                            ->orderBy('order', 'asc');
+                    }
+                ]
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound("Document not found.");
+            }
+
+            $employee = $this->employeeRepo->show(
+                uid: '',
+                select: 'id',
+                where: "uid = '{$payload->employee_id}'"
+            );
+
+            if (! $employee) {
+                throw new DataNotFound("Employee not found.");
+            }
+
+            
+
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function documentSignDetail(string $documentUid)
+    {
+        try {
+            $output = [];
+
+            $document = $this->masterDocumentRepo->show([
+                'where' => ['uid' => $documentUid],
+                'select' => ['id', 'name', 'document_type_id'],
+                'with' => [
+                    'activeDocument:id,master_document_id,created_by'
+                ]
+            ]);
+
+            return generalResponse(
+                message: "Success",
+                data: []
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

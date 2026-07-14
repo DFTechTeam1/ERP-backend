@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Http\Controllers\Api;
 
+use App\Data\Hrd\Signature\ApprovalDocumentData;
 use App\Data\Hrd\Signature\BulkCreateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Hrd\Services\SignatureService;
+use Storage;
 
 class SignatureController extends Controller
 {
@@ -56,6 +58,35 @@ class SignatureController extends Controller
     public function bulkEditDocumentType(BulkUpdateDocumentTypeData $request): JsonResponse
     {
         return apiResponse($this->service->bulkEditDocumentType($request));
+    }
+
+    public function renderTemplateDocument(string $templateUid, string $versionId)
+    {
+        $data = $this->service->renderTemplateDocument($templateUid, $versionId);
+        
+        if ($data['error']) {
+            return apiResponse($data);
+        }
+
+        $file = file_get_contents(storage_path('app/public/' . $data['data']['path']));
+        $filename = 'document';
+
+        return response($file, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="'. $filename .'.docx"',
+        ]);
+    }
+
+    /**
+     * Reject / Approve master document template
+     *
+     * @param ApprovalDocumentData $request
+     * @param string $documentUid
+     * @return JsonResponse
+     */
+    public function approvalMasterDocument(ApprovalDocumentData $request, string $documentUid): JsonResponse
+    {
+        return apiResponse($this->service->approvalMasterDocument($request, $documentUid));
     }
 
     /**
