@@ -10,6 +10,7 @@ class TemplateListData extends Data
 {
     public function __construct(
         public readonly string $uid,
+        public readonly ?string $active_document_uid,
         public readonly string $name,
         public readonly string $type,
         public readonly string $latest_version_label,
@@ -18,6 +19,8 @@ class TemplateListData extends Data
         public readonly string $active_version_status,
         public readonly string $active_version_status_color,
         public readonly int $versions_count,
+        /** @var array<int, string> */
+        public readonly array $signing_chain,
         #[DataCollectionOf(DocumentVersionListData::class)]
         public readonly array $versions
     ) {}

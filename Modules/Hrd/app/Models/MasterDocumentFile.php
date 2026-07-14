@@ -4,6 +4,7 @@ namespace Modules\Hrd\Models;
 
 use App\Enums\Hrd\Signature\Template\DocumentFileStatus;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -36,7 +37,10 @@ class MasterDocumentFile extends Model
         'placeholder_mapping',
         'version',
         'status',
-        'created_by'
+        'created_by',
+        'approved_by',
+        'rejected_by',
+        'approval_note',
     ];
 
     protected function casts(): array
@@ -63,6 +67,31 @@ class MasterDocumentFile extends Model
     public function masterDocument(): BelongsTo
     {
         return $this->belongsTo(MasterDocument::class, 'master_document_id', 'id');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
+    }
+
+    public function scopeArchived(Builder $query): void
+    {
+        $query->where('status', DocumentFileStatus::Archived);
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('status', DocumentFileStatus::Active);
+    }
+
+    public function scopeMakeArchived(Builder $query)
+    {
+        $query->update(['status' => DocumentFileStatus::Archived]);
     }
 
     // protected static function newFactory(): MasterDocumentFileFactory

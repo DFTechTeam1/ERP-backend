@@ -23,7 +23,7 @@ class MasterDocument extends Model
             $current = MasterDocument::select('id')
                 ->where('document_type_id', $model->document_type_id)
                 ->count();
-            $model->current_active_version_text = 'version' . $current + 1;
+            $model->current_active_version_text = 'v' . $current + 1;
         });
     }
 
@@ -58,9 +58,19 @@ class MasterDocument extends Model
             ->where('status', DocumentFileStatus::Active);
     }
 
-    public function isHavePendingReview(MasterDocument $model)
+    public function pendingDocument(): HasOne
     {
-        return (bool) $model->files->hasSole(fn ($item) => $item->status === DocumentFileStatus::PendingReview);
+        return $this->hasOne(MasterDocumentFile::class, 'master_document_id')
+            ->where('status', DocumentFileStatus::PendingReview);
+    }
+
+    public function isHavePendingReview(): bool
+    {
+        if ($this->files->isEmpty()) return false;
+
+        return $this->files->some(function ($item) {
+            return $item->status == DocumentFileStatus::PendingReview;
+        });
     }
 
     // protected static function newFactory(): MasterDocumentFactory

@@ -191,4 +191,11 @@ class EmployeeRepository extends EmployeeInterface
         return $this->model->whereIn($key, $ids)
             ->delete();
     }
+
+    public function getTotalActiveEmployee()
+    {
+        return $this->model
+            ->select(['id'])
+            ->activeEmployee()->count();
+    }
 }

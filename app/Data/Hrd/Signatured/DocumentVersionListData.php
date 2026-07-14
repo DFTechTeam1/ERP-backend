@@ -12,7 +12,11 @@ class DocumentVersionListData extends Data
         public readonly string $status,
         public readonly bool $is_active,
         public readonly int $placeholders,
+        public readonly string $version_status_color,
         public readonly string $date,
-        public readonly string $author
+        public readonly ?string $rejected_reason,
+        public readonly bool $is_pending,
+        public readonly string $author,
+        public readonly string $file_url,
     ) {}
 }

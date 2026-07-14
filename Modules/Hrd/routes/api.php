@@ -42,6 +42,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/all', 'getAll');
         Route::get('employees/employmentChart', 'getEmploymentChart');
         Route::get('employees/dashboardElement', 'getDashboardElement');
+        Route::get('employees/active-total', 'totalActiveEmployee');
         Route::post('employees/export', 'export');
         Route::get('employees/highesEventNumber', 'getTheHighestEventNumberInPic');
         Route::get('employees/checkEmail', 'checkEmail');
@@ -91,6 +92,10 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::post('templates', [SignatureController::class, 'createTemplate']);
                 Route::get('templates', [SignatureController::class, 'listTemplates']);
                 Route::delete('templates/{templateUid}', [SignatureController::class, 'deleteTemplate']);
+                Route::post('templates/{documentUid}/approval', [SignatureController::class, 'approvalMasterDocument']);
+
+                // Render file
+                Route::get('/file/render/{templateUid}/{versionId}', [SignatureController::class, 'renderTemplateDocument']);
             });
 
         Route::prefix('greatday')

@@ -622,4 +622,9 @@ class EmployeeController extends Controller
             'actionType' => 'assign-new-task'
         ]);
     }
+    
+    public function totalActiveEmployee(): JsonResponse
+    {
+        return apiResponse($this->employeeService->totalActiveEmployee());
+    }
 }
