@@ -20,6 +20,7 @@ use App\Data\Hrd\Signature\SignatoriesListData;
 use App\Data\Hrd\Signature\TemplateListData;
 use App\Data\Hrd\Signature\UpdateDocumentTypeData;
 use App\Data\Hrd\Signatured\DocumentVersionListData;
+use App\Data\Hrd\Signature\AssignSignatoriesData;
 use App\Enums\Hrd\Signature\Template\DocumentFileStatus;
 use App\Exceptions\DataNotFound;
 use App\Exceptions\DetectPlaceholderFailed;
@@ -28,10 +29,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Modules\Company\Models\DivisionBackup;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\DocumentTypeInUse;
 use Modules\Hrd\Exceptions\TemplateStillHavePendingReview;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\DocumentTypeRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\MasterDocumentFileRepository;
@@ -733,25 +736,25 @@ class SignatureService
             
             $globalSignatories = [];
 
-            if ($mandatoryDivisionUids) {
-                $mandatoryDivisionUids = $mandatoryDivisionUids ? json_decode($mandatoryDivisionUids, true) : [];
+            // if ($mandatoryDivisionUids) {
+            //     $mandatoryDivisionUids = $mandatoryDivisionUids ? json_decode($mandatoryDivisionUids, true) : [];
     
-                $mandatoryCondition = "'" . collect($mandatoryDivisionUids)->join("','") . "'";
+            //     $mandatoryCondition = "'" . collect($mandatoryDivisionUids)->join("','") . "'";
     
-                $globalSignatories = $this->divisionRepo->list(
-                    select: 'id,uid,name',
-                    where: "uid IN ({$mandatoryCondition})"
-                );
+            //     $globalSignatories = $this->divisionRepo->list(
+            //         select: 'id,uid,name',
+            //         where: "uid IN ({$mandatoryCondition})"
+            //     );
 
-                foreach ($globalSignatories as $global) {
-                    $orgSignatories[] = new OrgSignatoriesListData(
-                        role_key: $global->uid,
-                        role_label: $global->name,
-                        description: '',
-                        signer: null
-                    );
-                }
-            }
+            //     foreach ($globalSignatories as $global) {
+            //         $orgSignatories[] = new OrgSignatoriesListData(
+            //             role_key: $global->uid,
+            //             role_label: $global->name,
+            //             description: '',
+            //             signer: null
+            //         );
+            //     }
+            // }
 
             /** @var array<int, SignatoriesDivisionPicData> */
             $divisionPics = $this->signatoriesMappingRepo->getMappingWithHeadCount();
@@ -794,6 +797,24 @@ class SignatureService
                 }
             }
 
+            if ($mandatoryDivisionUids) {
+                foreach (json_decode($mandatoryDivisionUids, true) as $mandatoryDivisionUid) {
+                    $search = collect($divisionPics)->search(function ($itemSearch) use ($mandatoryDivisionUid) {
+                        return $itemSearch->division_uid == $mandatoryDivisionUid;
+                    });
+
+                    if (gettype($search) !== 'boolean') {
+                        $orgSignatories[] = new OrgSignatoriesListData(
+                            role_key: $divisionPics[$search]->uid,
+                            role_label: $divisionPics[$search]->division_name,
+                            description: '',
+                            signer: $divisionPics[$search]->pic,
+                            signer_options: $divisionPics[$search]->signer_options
+                        );
+                    }
+                }
+            }
+
             $output = new SignatoriesListData(
                 org_signatories: $orgSignatories,
                 division_pics: $divisionPics,
@@ -803,6 +824,47 @@ class SignatureService
             return generalResponse(
                 message: "Success",
                 data: SignatoriesListData::from($output)->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Assign PIC as signer in division signatories
+     *
+     * @param AssignSignatoriesData $payload
+     * @param string $mappingUid
+     * @return array
+     */
+    public function assignSignatories(AssignSignatoriesData $payload, string $mappingUid): array
+    {
+        try {
+            $mapping = $this->signatoriesMappingRepo->show([
+                'select' => ['id', 'main_signer_id', 'delegate_signer_id'],
+                'where' => ['uid' => $mappingUid]
+            ]);
+
+            if (! $mapping) {
+                throw new DataNotFound('Signatories division is not found.');
+            }
+
+            $payloadUpdate = [];
+
+            if ($payload->pic_uid) {
+                $signer = $this->employeeRepo->show(uid: $payload->pic_uid, select: 'id');
+                $payloadUpdate['main_signer_id'] = $signer->id;
+            }
+
+            if ($payload->delegate_uid) {
+                $delegate = $this->employeeRepo->show(uid: $payload->delegate_uid, select: 'id');
+                $payloadUpdate['delegate_signer_id'] = $delegate->id;
+            }
+
+            $this->signatoriesMappingRepo->update($mapping, $payloadUpdate);
+
+            return generalResponse(
+                message: "Success"
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

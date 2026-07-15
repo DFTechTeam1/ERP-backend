@@ -3,6 +3,7 @@
 namespace Modules\Hrd\Http\Controllers\Api;
 
 use App\Data\Hrd\Signature\ApprovalDocumentData;
+use App\Data\Hrd\Signature\AssignSignatoriesData;
 use App\Data\Hrd\Signature\BulkCreateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
@@ -119,6 +120,18 @@ class SignatureController extends Controller
     public function listTemplates(): JsonResponse
     {
         return apiResponse($this->service->listTemplates());
+    }
+
+    /**
+     * Assign people to signatories
+     *
+     * @param AssignSignatoriesData $request
+     * @param string $mappingUid
+     * @return JsonResponse
+     */
+    public function assignSignatories(AssignSignatoriesData $request, string $mappingUid): JsonResponse
+    {
+        return apiResponse($this->service->assignSignatories($request, $mappingUid));
     }
 
     public function deleteTemplate(string $templateUid): JsonResponse

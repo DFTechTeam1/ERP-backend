@@ -95,6 +95,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::post('templates/{documentUid}/approval', [SignatureController::class, 'approvalMasterDocument']);
 
                 Route::get('signatories', [SignatureController::class, 'listSignatories']);
+                Route::post('signatories/assign/{mappingUid}', [SignatureController::class, 'assignSignatories']);
 
                 // Render file
                 Route::get('/file/render/{templateUid}/{versionId}', [SignatureController::class, 'renderTemplateDocument']);
