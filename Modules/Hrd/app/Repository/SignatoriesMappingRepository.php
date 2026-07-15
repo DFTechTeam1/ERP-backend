@@ -33,19 +33,9 @@ class SignatoriesMappingRepository extends BaseRepository
                     $query->selectRaw('id,uid,name,position_id,avatar_color')
                         ->activeEmployee();
                 },
-                'mainSigner:id,name,position_id,avatar_color',
+                'mainSigner:id,uid,name,position_id,avatar_color',
                 'delegateSigner:id,uid,name,position_id,avatar_color',
             ]);
-
-        // Exclude the global signatories division
-        if ($globalDivisionSignatories) {
-            $globalDivisionIds = collect(json_decode($globalDivisionSignatories, true))
-                ->map(function ($item) {
-                    return getIdFromUid($item, new DivisionBackup());
-                })->toArray();
-
-            $model->whereNotIn('division_id', $globalDivisionIds);
-        }
 
         /** @var array<int, SignatoriesDivisionPicData> */
         $output = [];
@@ -97,6 +87,7 @@ class SignatoriesMappingRepository extends BaseRepository
                 uid: $data->uid,
                 division_name: $data->division->name,
                 division_code: '',
+                division_uid: $data->division->uid,
                 headcount: $count,
                 pic: $mainSigner,
                 delegate: $delegateSigner,
