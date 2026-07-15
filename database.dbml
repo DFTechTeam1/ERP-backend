@@ -5,6 +5,13 @@ Enum "RequestEquipmentMastersStatusEnum" {
     "cancel"
 }
 
+Enum "NasCmdType" {
+  "create"
+  "write"
+  "read"
+  "delete"
+}
+
 Enum "OutOfSyncEmployeeStatusEnum" {
   "synced"
   "out_of_sync"
@@ -2430,6 +2437,21 @@ Table "greatday_cost_centers" {
   "created_at" timestamp [default: NULL]
   "updated_at" timestamp [default: NULL]
   "deleted_at" timestamp [default: NULL]
+}
+
+Table "nas_logs" {
+  "id" bigint [pk, not null, increment]
+  "cmd_type" NasCmdType
+  "description" text
+  "filesize" varchar(20) [note: "In KB"]
+  "ip" varchar(20)
+  "is_dir" tinyint [note: "1 or 0"]
+  "log_type" varchar(100)
+  "original_log_type" varchar(200)
+  "time" timestamp
+  "username" varchar(150)
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
