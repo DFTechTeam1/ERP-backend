@@ -12,7 +12,7 @@ class SignatoriesDivisionPicData extends Data
         public readonly string $division_name,
         public readonly string $division_code,
         public readonly int $headcount,
-        public readonly SelectedOrgSignatureSignerData $pic,
+        public readonly ?SelectedOrgSignatureSignerData $pic,
         public readonly ?SelectedOrgSignatureSignerData $delegate,
         #[DataCollectionOf(SelectedOrgSignatureSignerData::class)]
         public readonly array $signer_options

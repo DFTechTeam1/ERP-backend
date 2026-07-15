@@ -12,7 +12,10 @@ use App\Data\Hrd\Signature\DefaultSignerItemData;
 use App\Data\Hrd\Signature\DetectPlaceholderData;
 use App\Data\Hrd\Signature\GenerateDocumentData;
 use App\Data\Hrd\Signature\ListDocumentTypeData;
+use App\Data\Hrd\Signature\OrgSignatoriesListData;
 use App\Data\Hrd\Signature\OutputListDocumentTypeData;
+use App\Data\Hrd\Signature\SelectedOrgSignatureSignerData;
+use App\Data\Hrd\Signature\SignatoriesDivisionPicData;
 use App\Data\Hrd\Signature\SignatoriesListData;
 use App\Data\Hrd\Signature\TemplateListData;
 use App\Data\Hrd\Signature\UpdateDocumentTypeData;
@@ -43,7 +46,7 @@ class SignatureService
         private readonly DivisionRepository $divisionRepo,
         private readonly MasterDocumentRepository $masterDocumentRepo,
         private readonly MasterDocumentFileRepository $masterFileRepo,
-        private readonly EmployeeRepository $employeeRepo
+        private readonly EmployeeRepository $employeeRepo,
     ) {}
 
     /**
@@ -717,7 +720,17 @@ class SignatureService
         }
     }
 
-    public function listSignatories()
+    protected function getInitialName(string $name): string
+    {
+        $words = explode(' ', trim($name));
+
+        $first_initial = mb_substr($words[0], 0, 1, 'UTF-8');
+        $last_initial = count($words) > 1 ? mb_substr(end($words), 0, 1, 'UTF-8') : '';
+
+        return mb_strtoupper($first_initial . $last_initial);
+    }
+
+    public function listSignatories(): array
     {
         try {
             /** @var array<SignatoriesListData> */
@@ -725,14 +738,80 @@ class SignatureService
 
             $orgSignatories = [];
             $mandatoryDivisionUids = getSettingByKey('global_signatory_divisions');
+            $globalSignatories = [];
 
-            $globalSignatories = $this->divisionRepo->list(
-                select: 'id,uid,name',
-                where: "uid IN "
+            if ($mandatoryDivisionUids) {
+                $mandatoryDivisionUids = $mandatoryDivisionUids ? json_decode($mandatoryDivisionUids, true) : [];
+    
+                $mandatoryCondition = "'" . collect($mandatoryDivisionUids)->join("','") . "'";
+    
+                $globalSignatories = $this->divisionRepo->list(
+                    select: 'id,uid,name',
+                    where: "uid IN ({$mandatoryCondition})"
+                );
+
+                foreach ($globalSignatories as $global) {
+                    $orgSignatories[] = new OrgSignatoriesListData(
+                        role_key: $global->uid,
+                        role_label: $global->name,
+                        description: '',
+                        signer: null
+                    );
+                }
+            }
+
+            /** @var array<int, SignatoriesDivisionPicData> */
+            $divisionPics = [];
+            
+            $allDivision = $this->divisionRepo->getAllWithHeadCount();
+
+            foreach ($allDivision as $division) {
+                $divisionPics[] = new SignatoriesDivisionPicData(
+                    uid: $division['uid'],
+                    division_name: $division['name'],
+                    division_code: '',
+                    headcount: $division['headcount'],
+                    pic: null,
+                    delegate: null,
+                    signer_options: []
+                );
+            }
+
+            /** @var array<int, SelectedOrgSignatureSignerData> */
+            $signerOptions = [];
+
+            $pmPosition = getSettingByKey('position_as_project_manager');
+
+            if ($pmPosition) {
+                $positionCondition = "'" . collect(json_decode($pmPosition, true))->join("','") . "'";
+                
+                $positionData = $this->positionRepo->list(
+                    select: 'id',
+                    where: "uid IN ({$positionCondition})"
+                );
+                
+                $managers = $this->employeeRepo->getActiveProjectManager($positionData->pluck('id')->toArray());
+
+                foreach ($managers as $manager) {
+                    $signerOptions[] = new SelectedOrgSignatureSignerData(
+                        uid: $manager->uid,
+                        name: $manager->name,
+                        role: $manager->position->name,
+                        initial: $this->getInitialName($manager->name),
+                        color: $manager->avatar_color
+                    );
+                }
+            }
+
+            $output = new SignatoriesListData(
+                org_signatories: $orgSignatories,
+                division_pics: $divisionPics,
+                signer_options: $signerOptions
             );
 
             return generalResponse(
-                message: "Success"
+                message: "Success",
+                data: SignatoriesListData::from($output)->toArray()
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

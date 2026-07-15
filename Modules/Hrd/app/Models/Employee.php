@@ -176,6 +176,12 @@ class Employee extends Model
         ]);
     }
 
+    public function scopeProjectManagers(Builder $query, array $positionIds)
+    {
+        $query->activeEmployee()
+            ->whereIn('position_id', $positionIds);
+    }
+
     public function humanAge(): Attribute
     {
         $output = 0;

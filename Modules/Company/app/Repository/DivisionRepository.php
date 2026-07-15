@@ -43,6 +43,32 @@ class DivisionRepository extends DivisionInterface
         return $query->get();
     }
 
+    public function getAllWithHeadCount(): array
+    {
+        $query = $this->model->query();
+        $query->select(['uid', 'id', 'name'])
+            ->with([
+                'positions:id,division_id',
+                'positions.employees:id,position_id'
+            ]);
+        
+        $output = [];
+        foreach ($query->get() as $division) {
+            $count = 0;
+            foreach ($division->positions as $position) {
+                $count += $position->employees->count();
+            }
+
+            $output[] = [
+                'uid' => $division->uid,
+                'name' => $division->name,
+                'headcount' => $count
+            ];
+        }
+
+        return $output;
+    }
+
     /**
      * Make paginated data
      *

@@ -3,6 +3,7 @@
 namespace Modules\Hrd\Repository;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\Interface\EmployeeInterface;
 
@@ -197,5 +198,16 @@ class EmployeeRepository extends EmployeeInterface
         return $this->model
             ->select(['id'])
             ->activeEmployee()->count();
+    }
+
+    public function getActiveProjectManager(array $positionIds)
+    {
+        return $this->model
+            ->select(['uid', 'name', 'position_id', 'avatar_color'])
+            ->with([
+                'position:id,name'
+            ])
+            ->projectManagers($positionIds)
+            ->get();
     }
 }
