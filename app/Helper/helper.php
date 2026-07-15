@@ -1364,3 +1364,15 @@ if (! function_exists('getProjectManagerMember')) {
             ->get();
     }
 }
+
+if (! function_exists('getInitialName')) {
+    function getInitialName(string $name): string
+    {
+        $words = explode(' ', trim($name));
+    
+        $first_initial = mb_substr($words[0], 0, 1, 'UTF-8');
+        $last_initial = count($words) > 1 ? mb_substr(end($words), 0, 1, 'UTF-8') : '';
+    
+        return mb_strtoupper($first_initial . $last_initial);
+    }
+}

@@ -10,6 +10,7 @@ use Modules\Hrd\Console\CheckTransferEntityScheduleCommand;
 use Modules\Hrd\Console\CreatePartnerUser;
 use Modules\Hrd\Console\GetGreatdayOutOfSyncEmployee;
 use Modules\Hrd\Console\InitateAvatarColor;
+use Modules\Hrd\Console\InitiateSignatories;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
@@ -72,7 +73,8 @@ class HrdServiceProvider extends ServiceProvider
             SeedGreatdayMasterData::class,
             ResyncGreatdayPosition::class,
             SyncEmployeeIdGreatdayToErp::class,
-            CheckTransferEntityScheduleCommand::class
+            CheckTransferEntityScheduleCommand::class,
+            InitiateSignatories::class
         ]);
     }
 
