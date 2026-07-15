@@ -126,6 +126,11 @@ class SignatureController extends Controller
         return apiResponse($this->service->deleteTemplate($templateUid));
     }
 
+    public function listSignatories(): JsonResponse
+    {
+        return apiResponse($this->service->listSignatories());
+    }
+
     /**
      * Show the form for creating a new resource.
      */

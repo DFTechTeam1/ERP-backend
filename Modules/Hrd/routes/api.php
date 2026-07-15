@@ -94,6 +94,8 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::delete('templates/{templateUid}', [SignatureController::class, 'deleteTemplate']);
                 Route::post('templates/{documentUid}/approval', [SignatureController::class, 'approvalMasterDocument']);
 
+                Route::get('signatories', [SignatureController::class, 'listSignatories']);
+
                 // Render file
                 Route::get('/file/render/{templateUid}/{versionId}', [SignatureController::class, 'renderTemplateDocument']);
             });
