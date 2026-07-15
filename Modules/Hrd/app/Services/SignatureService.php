@@ -36,6 +36,7 @@ use Modules\Hrd\Repository\DocumentTypeRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\MasterDocumentFileRepository;
 use Modules\Hrd\Repository\MasterDocumentRepository;
+use Modules\Hrd\Repository\SignatoriesMappingRepository;
 use PhpOffice\PhpWord\TemplateProcessor;
 
 class SignatureService
@@ -47,6 +48,7 @@ class SignatureService
         private readonly MasterDocumentRepository $masterDocumentRepo,
         private readonly MasterDocumentFileRepository $masterFileRepo,
         private readonly EmployeeRepository $employeeRepo,
+        private readonly SignatoriesMappingRepository $signatoriesMappingRepo
     ) {}
 
     /**
@@ -720,16 +722,6 @@ class SignatureService
         }
     }
 
-    protected function getInitialName(string $name): string
-    {
-        $words = explode(' ', trim($name));
-
-        $first_initial = mb_substr($words[0], 0, 1, 'UTF-8');
-        $last_initial = count($words) > 1 ? mb_substr(end($words), 0, 1, 'UTF-8') : '';
-
-        return mb_strtoupper($first_initial . $last_initial);
-    }
-
     public function listSignatories(): array
     {
         try {
@@ -738,6 +730,7 @@ class SignatureService
 
             $orgSignatories = [];
             $mandatoryDivisionUids = getSettingByKey('global_signatory_divisions');
+            
             $globalSignatories = [];
 
             if ($mandatoryDivisionUids) {
@@ -761,29 +754,27 @@ class SignatureService
             }
 
             /** @var array<int, SignatoriesDivisionPicData> */
-            $divisionPics = [];
-            
-            $allDivision = $this->divisionRepo->getAllWithHeadCount();
-
-            foreach ($allDivision as $division) {
-                $divisionPics[] = new SignatoriesDivisionPicData(
-                    uid: $division['uid'],
-                    division_name: $division['name'],
-                    division_code: '',
-                    headcount: $division['headcount'],
-                    pic: null,
-                    delegate: null,
-                    signer_options: []
-                );
-            }
+            $divisionPics = $this->signatoriesMappingRepo->getMappingWithHeadCount();
 
             /** @var array<int, SelectedOrgSignatureSignerData> */
             $signerOptions = [];
 
             $pmPosition = getSettingByKey('position_as_project_manager');
+            $directorPosition = getSettingBykey('position_as_directors');
 
             if ($pmPosition) {
                 $positionCondition = "'" . collect(json_decode($pmPosition, true))->join("','") . "'";
+
+                // Combine pm position and director position
+                $combinePosition = json_decode($pmPosition, true);
+                if ($directorPosition) {
+                    $directorDecodedPosition = json_decode($directorPosition, true);
+                    $combinePosition = array_merge($combinePosition, $directorDecodedPosition);
+
+                    // remove duplicate
+                    $combinePosition = array_values(array_unique($combinePosition));
+                    $positionCondition = "'" . collect($combinePosition)->join("','") . "'";
+                }
                 
                 $positionData = $this->positionRepo->list(
                     select: 'id',
@@ -797,7 +788,7 @@ class SignatureService
                         uid: $manager->uid,
                         name: $manager->name,
                         role: $manager->position->name,
-                        initial: $this->getInitialName($manager->name),
+                        initial: getInitialName($manager->name),
                         color: $manager->avatar_color
                     );
                 }

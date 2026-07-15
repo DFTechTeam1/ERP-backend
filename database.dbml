@@ -1041,6 +1041,17 @@ Table "employee_whatsapp_groups" {
   }
 }
 
+Table "signatories_mapping" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36)
+  "division_id" bigint [ref: > division_backups.id]
+  "main_signer_id" bigint [ref: > employees.id, note: 'nullable']
+  "delegate_signer_id" bigint [ref: > employees.id, note: "nullable"]
+  "updated_by" bigint [ref: > users.id]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
 Table "document_types" {
   "id" bigint [pk, not null, increment]
   "name" varhcar(255) [not null, unique]

@@ -11,6 +11,6 @@ class SelectedOrgSignatureSignerData extends Data
         public readonly string $name,
         public readonly string $role,
         public readonly string $initial,
-        public readonly string $color,
+        public readonly ?string $color,
     ) {}
 }
