@@ -11,4 +11,9 @@ class EmployeeDocumentRepository extends BaseRepository
     {
         return parent::__construct($model);
     }
+
+    public function assignSignTask()
+    {
+        
+    }
 }

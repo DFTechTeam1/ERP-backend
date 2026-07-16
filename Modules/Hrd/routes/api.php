@@ -2,7 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
+use Modules\Hrd\Http\Controllers\Api\PerformanceReportController;
 use Modules\Hrd\Http\Controllers\Api\SignatureController;
+use Modules\Hrd\Http\Controllers\Api\WhatsappGroupController;
 use Modules\Hrd\Http\Controllers\HrdController;
 
 /*
@@ -20,7 +22,7 @@ Route::middleware(['auth.session'])->prefix('v1')->group(function () {
     Route::apiResource('hrd', HrdController::class)->names('hrd');
 });
 
-Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
+Route::controller(EmployeeController::class)
     ->group(function () {
         Route::get('employees/activate/account', 'activateAccount')
             ->name('hrd.activate-account.nokey');
@@ -28,13 +30,13 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
             ->name('hrd.activate-account');
     });
 
-Route::get('employees/downloadTemplate', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'downloadTemplate']);
+Route::get('employees/downloadTemplate', [EmployeeController::class, 'downloadTemplate']);
 
 // Route::middleware('partner')->group(function() {
 //     Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
 // });
 
-Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
+Route::controller(EmployeeController::class)
     ->middleware(['auth.session'])
     ->group(function () {
         Route::get('employees', 'list');
@@ -93,6 +95,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::get('templates', [SignatureController::class, 'listTemplates']);
                 Route::delete('templates/{templateUid}', [SignatureController::class, 'deleteTemplate']);
                 Route::post('templates/{documentUid}/approval', [SignatureController::class, 'approvalMasterDocument']);
+                Route::post('templates/{templateUid}/generate', [SignatureController::class, 'generateDocument']);
 
                 Route::get('signatories', [SignatureController::class, 'listSignatories']);
                 Route::post('signatories/assign/{mappingUid}', [SignatureController::class, 'assignSignatories']);
@@ -132,11 +135,11 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
 
 Route::middleware('auth.session')
     ->group(function () {
-        Route::get('whatsapp/logs', [\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class, 'logs']);
+        Route::get('whatsapp/logs', [WhatsappGroupController::class, 'logs']);
     });
 
 Route::middleware('auth.session')
-    ->controller(\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class)
+    ->controller(WhatsappGroupController::class)
     ->prefix('whatsapp-groups')
     ->group(function () {
         Route::get('/', 'index');
@@ -159,9 +162,9 @@ Route::middleware('auth.session')
 Route::middleware('auth.session')
     ->prefix('performanceReport')
     ->group(function () {
-        Route::post('export', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'export']);
-        Route::get('/{employeeId}', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'performanceDetail']);
-        Route::get('getTeams', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'getTeams']);
-        Route::get('getMembers/{leaderId}', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'getMembers']);
-        Route::get('getMembers/filterMember', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'filterMember']);
+        Route::post('export', [PerformanceReportController::class, 'export']);
+        Route::get('/{employeeId}', [PerformanceReportController::class, 'performanceDetail']);
+        Route::get('getTeams', [PerformanceReportController::class, 'getTeams']);
+        Route::get('getMembers/{leaderId}', [PerformanceReportController::class, 'getMembers']);
+        Route::get('getMembers/filterMember', [PerformanceReportController::class, 'filterMember']);
     });

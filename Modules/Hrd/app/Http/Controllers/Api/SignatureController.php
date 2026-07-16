@@ -10,6 +10,7 @@ use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateTemplateData;
 use App\Data\Hrd\Signature\DetectPlaceholderData;
+use App\Data\Hrd\Signature\GenerateDocumentData;
 use App\Data\Hrd\Signature\UpdateDocumentTypeData;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -64,26 +65,22 @@ class SignatureController extends Controller
     public function renderTemplateDocument(string $templateUid, string $versionId)
     {
         $data = $this->service->renderTemplateDocument($templateUid, $versionId);
-        
+
         if ($data['error']) {
             return apiResponse($data);
         }
 
-        $file = file_get_contents(storage_path('app/public/' . $data['data']['path']));
+        $file = file_get_contents(storage_path('app/public/'.$data['data']['path']));
         $filename = 'document';
 
         return response($file, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition' => 'attachment; filename="'. $filename .'.docx"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'.docx"',
         ]);
     }
 
     /**
      * Reject / Approve master document template
-     *
-     * @param ApprovalDocumentData $request
-     * @param string $documentUid
-     * @return JsonResponse
      */
     public function approvalMasterDocument(ApprovalDocumentData $request, string $documentUid): JsonResponse
     {
@@ -92,9 +89,6 @@ class SignatureController extends Controller
 
     /**
      * Detect placeholder from document and available replacement variable
-     *
-     * @param DetectPlaceholderData $request
-     * @return JsonResponse
      */
     public function detectPlaceholder(DetectPlaceholderData $request): JsonResponse
     {
@@ -103,9 +97,6 @@ class SignatureController extends Controller
 
     /**
      * Create master document template
-     *
-     * @param CreateTemplateData $request
-     * @return JsonResponse
      */
     public function createTemplate(CreateTemplateData $request): JsonResponse
     {
@@ -114,8 +105,6 @@ class SignatureController extends Controller
 
     /**
      * List of available master template documents
-     *
-     * @return JsonResponse
      */
     public function listTemplates(): JsonResponse
     {
@@ -124,10 +113,6 @@ class SignatureController extends Controller
 
     /**
      * Assign people to signatories
-     *
-     * @param AssignSignatoriesData $request
-     * @param string $mappingUid
-     * @return JsonResponse
      */
     public function assignSignatories(AssignSignatoriesData $request, string $mappingUid): JsonResponse
     {
@@ -142,6 +127,11 @@ class SignatureController extends Controller
     public function listSignatories(): JsonResponse
     {
         return apiResponse($this->service->listSignatories());
+    }
+
+    public function generateDocument(GenerateDocumentData $payload, string $templateUid)
+    {
+        return apiResponse($this->service->generateDocument($payload, $templateUid));
     }
 
     /**

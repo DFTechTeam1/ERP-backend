@@ -1206,6 +1206,16 @@ Table "employee_documents" {
   "updated_at" timestamp
 }
 
+Table "employee_signature_tasks" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [ref: > employees.id]
+  "employee_document_id" bigint [ref: > employee_documents.id]
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  note: "This record will be delete after employee signed the document"
+}
+
 Table "employment_statuses" {
   "id" bigint [pk, not null, increment]
   "code" varchar(255) [not null]

@@ -3,9 +3,11 @@
 namespace Modules\Hrd\Models;
 
 use App\Enums\Hrd\Signature\Template\Status;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // use Modules\Hrd\Database\Factories\EmployeeDocumentFactory;
 
@@ -36,6 +38,14 @@ class EmployeeDocument extends Model
         ];
     }
 
+    public function documentSnapshot(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? json_decode($value, true) : [],
+            set: fn ($value) => $value ? json_encode($value) : null
+        );
+    }
+
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
@@ -44,6 +54,11 @@ class EmployeeDocument extends Model
     public function documentType(): BelongsTo
     {
         return $this->belongsTo(DocumentType::class, 'document_type_id', 'id');
+    }
+
+    public function signatureTasks(): HasMany
+    {
+        return $this->hasMany(EmployeeSignatureTask::class, 'employee_document_id');
     }
 
     // protected static function newFactory(): EmployeeDocumentFactory

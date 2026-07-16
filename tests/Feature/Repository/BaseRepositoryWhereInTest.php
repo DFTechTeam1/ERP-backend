@@ -42,3 +42,49 @@ it('limits columns with the select param', function () {
 
     expect(array_keys($attributes))->toEqual(['id']);
 });
+
+it('eager loads relations named in the with param', function () {
+    $city = City::factory()->create();
+
+    $result = cityRepository()->show([
+        'where' => ['id' => $city->id],
+        'with' => ['state'],
+    ]);
+
+    expect($result->relationLoaded('state'))->toBeTrue()
+        ->and($result->state->id)->toBe($city->state_id);
+});
+
+it('constrains an eager loaded relation with a closure in the with param', function () {
+    $city = City::factory()->create();
+
+    $result = cityRepository()->show([
+        'where' => ['id' => $city->id],
+        'with' => [
+            'state' => function ($query) {
+                $query->select(['id', 'name']);
+            },
+        ],
+    ]);
+
+    expect($result->relationLoaded('state'))->toBeTrue()
+        ->and(array_keys($result->state->getAttributes()))->toEqual(['id', 'name']);
+});
+
+it('mixes plain relation strings and constrained closures in the with param', function () {
+    $city = City::factory()->create();
+
+    $result = cityRepository()->show([
+        'where' => ['id' => $city->id],
+        'with' => [
+            'projectDeals',
+            'state' => function ($query) {
+                $query->select(['id', 'name']);
+            },
+        ],
+    ]);
+
+    expect($result->relationLoaded('projectDeals'))->toBeTrue()
+        ->and($result->relationLoaded('state'))->toBeTrue()
+        ->and(array_keys($result->state->getAttributes()))->toEqual(['id', 'name']);
+});

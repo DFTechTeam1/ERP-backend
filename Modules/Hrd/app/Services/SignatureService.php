@@ -3,6 +3,7 @@
 namespace Modules\Hrd\Services;
 
 use App\Data\Hrd\Signature\ApprovalDocumentData;
+use App\Data\Hrd\Signature\AssignSignatoriesData;
 use App\Data\Hrd\Signature\BulkCreateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
@@ -20,22 +21,24 @@ use App\Data\Hrd\Signature\SignatoriesListData;
 use App\Data\Hrd\Signature\TemplateListData;
 use App\Data\Hrd\Signature\UpdateDocumentTypeData;
 use App\Data\Hrd\Signatured\DocumentVersionListData;
-use App\Data\Hrd\Signature\AssignSignatoriesData;
 use App\Enums\Hrd\Signature\Template\DocumentFileStatus;
+use App\Enums\Hrd\Signature\Template\Status;
 use App\Exceptions\DataNotFound;
 use App\Exceptions\DetectPlaceholderFailed;
 use App\Exceptions\FailedToUploadFile;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Modules\Company\Models\DivisionBackup;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\DocumentTypeInUse;
 use Modules\Hrd\Exceptions\TemplateStillHavePendingReview;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\MasterDocument;
 use Modules\Hrd\Repository\DocumentTypeRepository;
+use Modules\Hrd\Repository\EmployeeDocumentRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\MasterDocumentFileRepository;
 use Modules\Hrd\Repository\MasterDocumentRepository;
@@ -51,7 +54,8 @@ class SignatureService
         private readonly MasterDocumentRepository $masterDocumentRepo,
         private readonly MasterDocumentFileRepository $masterFileRepo,
         private readonly EmployeeRepository $employeeRepo,
-        private readonly SignatoriesMappingRepository $signatoriesMappingRepo
+        private readonly SignatoriesMappingRepository $signatoriesMappingRepo,
+        private readonly EmployeeDocumentRepository $employeeDocumentRepo
     ) {}
 
     /**
@@ -305,7 +309,7 @@ class SignatureService
             // Missing key
             $missingKeys = [];
             foreach ($variables as $variable) {
-                if (! in_array($variable, $availables) && ! Str::contains($variable, 'signature')) {
+                if (! in_array($variable, $availables) && ! Str::contains(strtolower($variable), 'signature')) {
                     $missingKeys[] = $variable;
                 }
             }
@@ -426,7 +430,7 @@ class SignatureService
 
             // Stop if given document type still have pending review template
             if ($master->isHavePendingReview()) {
-                throw new TemplateStillHavePendingReview();
+                throw new TemplateStillHavePendingReview;
             }
 
             // Upload files
@@ -444,7 +448,7 @@ class SignatureService
                 'file_type' => $payload->file->getClientOriginalExtension(),
                 'placeholder_mapping' => $payload->placeholders,
                 'status' => DocumentFileStatus::PendingReview,
-                'created_by' => Auth::id()
+                'created_by' => Auth::id(),
             ]);
 
             $master->signers()->createMany($signers);
@@ -483,7 +487,7 @@ class SignatureService
                     'documentType:id,name,code',
                     'documentType.signers:id,division_id,type_id',
                     'documentType.signers.division:id,name',
-                    'files:id,master_document_id,placeholder_mapping,version,status,created_at,path,rejected_reason',
+                    'files:id,master_document_id,placeholder_mapping,version,status,created_at,path,approval_note',
                     'files.author:id,employee_id,email',
                     'files.author.employee:id,nickname',
                     'activeDocument:id,master_document_id,placeholder_mapping,version,status,created_at',
@@ -497,14 +501,14 @@ class SignatureService
                         uid: (string) $file->id,
                         label: $item->name,
                         status: $file->status->label(),
-                        is_active: false,
+                        is_active: $file->status == DocumentFileStatus::Active ? true : false,
                         placeholders: count($file->placeholder_mapping),
                         date: $file->created_at,
                         version_status_color: $file->status->color(),
                         rejected_reason: $file->status == DocumentFileStatus::Rejected ? ($file->approval_note ?? null) : null,
                         is_pending: $file->status === DocumentFileStatus::PendingReview,
                         author: ! $file->author ? 'N/A' : $file->author?->employee?->nickname ?? $file->author->email,
-                        file_url: asset('storage/' . $file->path)
+                        file_url: asset('storage/'.$file->path)
                     );
                 }
 
@@ -542,9 +546,6 @@ class SignatureService
 
     /**
      * Delete selected master document
-     *
-     * @param string $templateUid
-     * @return array
      */
     public function deleteTemplate(string $templateUid): array
     {
@@ -585,16 +586,16 @@ class SignatureService
                 'uid' => $documentUid,
                 'select' => ['id'],
                 'with' => [
-                    'pendingDocument:id,path,created_by,master_document_id,version'
-                ]
+                    'pendingDocument:id,path,created_by,master_document_id,version',
+                ],
             ]);
 
             if (! $document) {
-                throw new DataNotFound("Document not found.");
+                throw new DataNotFound('Document not found.');
             }
 
             if (! $document->pendingDocument) {
-                throw new DataNotFound("No pending document found.");
+                throw new DataNotFound('No pending document found.');
             }
 
             $isApproved = $payload->status == 1 ? true : false;
@@ -602,8 +603,8 @@ class SignatureService
             $payloadUpdate = [
                 'status' => $isApproved ? DocumentFileStatus::Active : DocumentFileStatus::Rejected,
                 'rejected_by' => $isApproved ? null : Auth::id(),
-                'approved_by' => !$isApproved ? null : Auth::id(),
-                'approval_note' => $payload->reason ?? null
+                'approved_by' => ! $isApproved ? null : Auth::id(),
+                'approval_note' => $payload->reason ?? null,
             ];
 
             $this->masterFileRepo->approveDocument($payloadUpdate, $document->pendingDocument);
@@ -611,7 +612,7 @@ class SignatureService
             // TODO: Notify creator about approval
 
             return generalResponse(
-                message: "Document has been " . ($isApproved ? "approved" : "rejected") . " successfully"
+                message: 'Document has been '.($isApproved ? 'approved' : 'rejected').' successfully'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -620,19 +621,15 @@ class SignatureService
 
     /**
      * Get real file path of the document to stream in frontend
-     *
-     * @param string $templateUid
-     * @param string $versionId
-     * @return array
      */
     public function renderTemplateDocument(string $templateUid, string $versionId): array
     {
         try {
             $document = $this->masterDocumentRepo->show([
                 'where' => [
-                    'uid' => $templateUid
+                    'uid' => $templateUid,
                 ],
-                'select' => ['id']
+                'select' => ['id'],
             ]);
 
             if (! $document) {
@@ -642,9 +639,9 @@ class SignatureService
             $file = $this->masterFileRepo->show([
                 'where' => [
                     'id' => $versionId,
-                    'master_document_id' => $document->id
+                    'master_document_id' => $document->id,
                 ],
-                'select' => ['id', 'path']
+                'select' => ['id', 'path'],
             ]);
 
             if (! Storage::exists($file->path)) {
@@ -652,9 +649,9 @@ class SignatureService
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
-                    'path' => $file->path
+                    'path' => $file->path,
                 ]
             );
         } catch (\Throwable $th) {
@@ -662,43 +659,145 @@ class SignatureService
         }
     }
 
-    public function generateDocument(GenerateDocumentData $payload): array
+    /**
+     * Copy current file to new employee directory
+     */
+    protected function copyFileToEmployeeDirectory(string $currentFilePath, Employee|Collection $employee): string
     {
+        $name = basename($currentFilePath);
+        $file = storage_path('app/public/'.$currentFilePath);
+        $target = "employees/{$employee->id}/documents/{$name}";
+        
+        Storage::disk('public')
+            ->copy($currentFilePath, $target);
+
+        return $target;
+    }
+
+    protected function replaceDocumentContent(array $placeholderMappings, string $filepath): void
+    {
+        $realPath = storage_path('app/public/' . $filepath);
+
+        $templateProcessor = new TemplateProcessor($realPath);
+        foreach ($placeholderMappings as $placeholder) {
+            $templateProcessor->setValue($placeholder['from'], $placeholder['value']);
+        }
+
+        $templateProcessor->saveAs($realPath);
+    }
+
+    protected function getDocumentColumnsReplacer(MasterDocument $document): array
+    {
+        $mappingPlaceholders = $document->activeDocument->placeholder_mapping;
+
+        $availableColumns = config('signature.available_replacer_column');
+        $columns = array_map(function ($itemColumn) {
+            return $itemColumn['column'];
+        }, array_filter($availableColumns, function ($item) use ($mappingPlaceholders) {
+            return ! isset($item['relation']) && in_array($item['key'], $mappingPlaceholders);
+        }));
+        $columns[] = 'id';
+
+        return $columns;
+    }
+
+    protected function assignDocumentToEmployee(string $employeeDocumentPath, Employee $employee)
+    {
+        $employeeDocument = $this->employeeDocumentRepo->store([
+            'employee_id' => $employee->id,
+            'status' => Status::NeedSign,
+            'total_signer' => '',
+            'document_snapshot' => '',
+            'document_path' => '',
+            'document_type_id' => ''
+        ]);
+    }
+
+    public function generateDocument(GenerateDocumentData $payload, string $templateUid): array
+    {
+        DB::beginTransaction();
         try {
             $document = $this->masterDocumentRepo->show([
-                'where' => ['uid' => $payload->template_uid],
-                'select' => ['id', 'name'],
+                'where' => ['uid' => $templateUid],
+                'select' => ['id', 'name', 'document_type_id'],
                 'with' => [
-                    'activeDocument:id,master_document_id,path,file_type',
-                    'documentType:id,document_type_id,code,name',
-                    'documentType.signers' => function ($query) {
-                        $query->selectRaw('id,type_id,division_id,order')
-                            ->orderBy('order', 'asc');
-                    }
-                ]
+                    'activeDocument:id,master_document_id,path,file_type,placeholder_mapping',
+                    'documentType' => function ($query) {
+                        $query->selectRaw('id,code,name')
+                            ->with([
+                                'signers' => function ($querySigner) {
+                                    $querySigner->select(['id', 'type_id', 'division_id', 'order'])
+                                        ->with([
+                                            'signMapping:id,division_id,main_signer_id,delegate_signer_id'
+                                        ])
+                                        ->orderBy('order', 'asc');
+                                },
+                            ]);
+                    },
+                    'signers:id,master_document_id'
+                ],
             ]);
 
             if (! $document) {
-                throw new DataNotFound("Document not found.");
+                throw new DataNotFound('Document not found.');
             }
+
+            $columns = $this->getDocumentColumnsReplacer($document);
 
             $employee = $this->employeeRepo->show(
                 uid: '',
-                select: 'id',
+                select: collect($columns)->join(','),
                 where: "uid = '{$payload->employee_id}'"
             );
 
             if (! $employee) {
-                throw new DataNotFound("Employee not found.");
+                throw new DataNotFound('Employee not found.');
             }
 
-            
+            $employeeDocumentPath = $this->copyFileToEmployeeDirectory($document->activeDocument->path, $employee);
+
+            // Mapping replacer
+            $mappingPlaceholderReplacer = [];
+            foreach ($columns as $column) {
+                $mappingPlaceholderReplacer[] = [
+                    'from' => $column,
+                    'value' => $employee->$column,
+                ];
+            }
+
+            // Replace the file content
+            $this->replaceDocumentContent($mappingPlaceholderReplacer, $employeeDocumentPath);
+
+            $fixFile = asset('storage/' . $employeeDocumentPath);
+
+            $employeeDocument = $this->employeeDocumentRepo->store([
+                'employee_id' => $employee->id,
+                'status' => Status::NeedSign,
+                'total_signer' => $document->signers->count(),
+                'document_snapshot' => $document->activeDocument->toArray(),
+                'document_path' => $employeeDocumentPath,
+                'document_type_id' => $document->document_type_id
+            ]);
+
+            $divisionSigners = [];
+            foreach ($document->documentType->signers as $documentSigner) {
+                $divisionSigners[] = [
+                    'employee_id' => $documentSigner->signMapping->main_signer_id
+                ];
+            }
+
+            $employeeDocument->signatureTasks()->createMany($divisionSigners);
+
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
-                data: []
+                message: 'Success',
+                data: [
+                    'file_path' => $fixFile
+                ]
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }
@@ -712,12 +811,12 @@ class SignatureService
                 'where' => ['uid' => $documentUid],
                 'select' => ['id', 'name', 'document_type_id'],
                 'with' => [
-                    'activeDocument:id,master_document_id,created_by'
-                ]
+                    'activeDocument:id,master_document_id,created_by',
+                ],
             ]);
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
@@ -733,28 +832,6 @@ class SignatureService
 
             $orgSignatories = [];
             $mandatoryDivisionUids = getSettingByKey('global_signatory_divisions');
-            
-            $globalSignatories = [];
-
-            // if ($mandatoryDivisionUids) {
-            //     $mandatoryDivisionUids = $mandatoryDivisionUids ? json_decode($mandatoryDivisionUids, true) : [];
-    
-            //     $mandatoryCondition = "'" . collect($mandatoryDivisionUids)->join("','") . "'";
-    
-            //     $globalSignatories = $this->divisionRepo->list(
-            //         select: 'id,uid,name',
-            //         where: "uid IN ({$mandatoryCondition})"
-            //     );
-
-            //     foreach ($globalSignatories as $global) {
-            //         $orgSignatories[] = new OrgSignatoriesListData(
-            //             role_key: $global->uid,
-            //             role_label: $global->name,
-            //             description: '',
-            //             signer: null
-            //         );
-            //     }
-            // }
 
             /** @var array<int, SignatoriesDivisionPicData> */
             $divisionPics = $this->signatoriesMappingRepo->getMappingWithHeadCount();
@@ -766,7 +843,7 @@ class SignatureService
             $directorPosition = getSettingBykey('position_as_directors');
 
             if ($pmPosition) {
-                $positionCondition = "'" . collect(json_decode($pmPosition, true))->join("','") . "'";
+                $positionCondition = "'".collect(json_decode($pmPosition, true))->join("','")."'";
 
                 // Combine pm position and director position
                 $combinePosition = json_decode($pmPosition, true);
@@ -776,14 +853,14 @@ class SignatureService
 
                     // remove duplicate
                     $combinePosition = array_values(array_unique($combinePosition));
-                    $positionCondition = "'" . collect($combinePosition)->join("','") . "'";
+                    $positionCondition = "'".collect($combinePosition)->join("','")."'";
                 }
-                
+
                 $positionData = $this->positionRepo->list(
                     select: 'id',
                     where: "uid IN ({$positionCondition})"
                 );
-                
+
                 $managers = $this->employeeRepo->getActiveProjectManager($positionData->pluck('id')->toArray());
 
                 foreach ($managers as $manager) {
@@ -798,12 +875,15 @@ class SignatureService
             }
 
             if ($mandatoryDivisionUids) {
+                $filteredKey = [];
                 foreach (json_decode($mandatoryDivisionUids, true) as $mandatoryDivisionUid) {
                     $search = collect($divisionPics)->search(function ($itemSearch) use ($mandatoryDivisionUid) {
                         return $itemSearch->division_uid == $mandatoryDivisionUid;
                     });
 
                     if (gettype($search) !== 'boolean') {
+                        $filteredKey[] = $divisionPics[$search]->uid;
+
                         $orgSignatories[] = new OrgSignatoriesListData(
                             role_key: $divisionPics[$search]->uid,
                             role_label: $divisionPics[$search]->division_name,
@@ -813,16 +893,20 @@ class SignatureService
                         );
                     }
                 }
+
+                $filteredDivisionPics = array_values(array_filter($divisionPics, function ($filter) use ($filteredKey) {
+                    return ! in_array($filter->uid, $filteredKey);
+                }));
             }
 
             $output = new SignatoriesListData(
                 org_signatories: $orgSignatories,
-                division_pics: $divisionPics,
+                division_pics: $filteredDivisionPics ?? $divisionPics,
                 signer_options: $signerOptions
             );
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: SignatoriesListData::from($output)->toArray()
             );
         } catch (\Throwable $th) {
@@ -832,17 +916,13 @@ class SignatureService
 
     /**
      * Assign PIC as signer in division signatories
-     *
-     * @param AssignSignatoriesData $payload
-     * @param string $mappingUid
-     * @return array
      */
     public function assignSignatories(AssignSignatoriesData $payload, string $mappingUid): array
     {
         try {
             $mapping = $this->signatoriesMappingRepo->show([
                 'select' => ['id', 'main_signer_id', 'delegate_signer_id'],
-                'where' => ['uid' => $mappingUid]
+                'where' => ['uid' => $mappingUid],
             ]);
 
             if (! $mapping) {
@@ -864,7 +944,7 @@ class SignatureService
             $this->signatoriesMappingRepo->update($mapping, $payloadUpdate);
 
             return generalResponse(
-                message: "Success"
+                message: 'Success'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

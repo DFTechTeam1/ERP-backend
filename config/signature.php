@@ -1,37 +1,46 @@
 <?php
 
+use Modules\Hrd\Models\Employee;
+
 return [
     'available_replacer_column' => [
         'name' => [
-            'model' => \Modules\Hrd\Models\Employee::class,
-            'column' => 'name'
+            'model' => Employee::class,
+            'column' => 'name',
+            'key' => 'name',
         ],
         'nickname' => [
-            'model' => \Modules\Hrd\Models\Employee::class,
-            'column' => 'nickname'
+            'model' => Employee::class,
+            'column' => 'nickname',
+            'key' => 'nickname',
         ],
         'email' => [
-            'model' => \Modules\Hrd\Models\Employee::class,
-            'column' => 'email'
+            'model' => Employee::class,
+            'column' => 'email',
+            'key' => 'email',
         ],
         'phone' => [
-            'model' => \Modules\Hrd\Models\Employee::class,
-            'column' => 'phone'
+            'model' => Employee::class,
+            'column' => 'phone',
+            'key' => 'phone',
         ],
         'nik' => [
-            'model' => \Modules\Hrd\Models\Employee::class,
-            'column' => 'id_number'
+            'model' => Employee::class,
+            'column' => 'id_number',
+            'key' => 'nik',
         ],
         'employee_id' => [
-            'model' => \Modules\Hrd\Models\Employee::class,
-            'column' => 'employee_id'
+            'model' => Employee::class,
+            'column' => 'employee_id',
+            'key' => 'employee_id',
         ],
         'employee_position_name' => [
-            'model' => \Modules\Hrd\Models\Employee::class,
+            'model' => Employee::class,
             'relation' => 'position:id,name',
-            'column' => 'name'
+            'column' => 'name',
+            'key' => 'name',
         ],
     ],
     'master_fullpath' => 'app/public/documents/templates',
-    'master_path' => 'documents/templates'
+    'master_path' => 'documents/templates',
 ];
