@@ -15,7 +15,9 @@ use Illuminate\Database\Eloquent\Model;
  * repository just runs the query.
  *
  * Supported `$params` keys:
- *   - with:       array<int,string>            relations to eager-load
+ *   - with:       array<int|string,string|Closure(Builder): void>|string
+ *                                              relations to eager-load; a string key
+ *                                              paired with a Closure constrains that relation
  *   - where:      array<string,mixed>          equality constraints (column => value)
  *   - whereIn:    array<string,array>          IN constraints (column => values)
  *   - select:     array<int,string>|string     columns to select
@@ -42,8 +44,8 @@ abstract class BaseRepository
      */
     protected function applyParams(Builder $query, array $params): Builder
     {
-        foreach ($params['with'] ?? [] as $relation) {
-            $query->with($relation);
+        if (isset($params['with'])) {
+            $query->with($params['with']);
         }
 
         foreach ($params['where'] ?? [] as $column => $value) {
