@@ -15,7 +15,8 @@ class PusherNotification
             config('broadcasting.connections.pusher.secret'),
             config('broadcasting.connections.pusher.app_id'),
             [
-                'cluster' => 'ap1',
+                'cluster' => config('broadcasting.connections.pusher.options.cluster', 'ap1'),
+                'useTLS' => true,
             ],
         );
     }
@@ -24,5 +25,14 @@ class PusherNotification
     {
         $payload = $compressedValue ? json_encode($payload) : $payload;
         $this->pusher->trigger($channel, $event, $payload);
+    }
+
+    /**
+     * Sign a private-channel subscription. Returns the JSON auth string
+     * ({"auth":"<key>:<signature>"}) expected by the pusher-js auth endpoint.
+     */
+    public function authorize(string $channel, string $socketId): string
+    {
+        return $this->pusher->authorizeChannel($channel, $socketId);
     }
 }

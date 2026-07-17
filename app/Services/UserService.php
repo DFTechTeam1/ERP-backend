@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Data\User\WhatsappInformationData;
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
+use App\Exceptions\DoNotHaveAppPermission;
 use App\Exceptions\UserNotFound;
 use App\Models\User;
 use App\Models\UserEncryptedToken;
@@ -12,11 +13,16 @@ use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Notifications\DatabaseNotificationCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeeWhatsappGroup;
@@ -185,7 +191,7 @@ class UserService
     /**
      * Main service to store a new user and send activation link via email
      */
-    public function mainServiceStoreUser(array $data): \App\Models\User
+    public function mainServiceStoreUser(array $data): User
     {
         $isEmployee = false;
         $isDirector = false;
@@ -489,7 +495,8 @@ class UserService
             }
 
             if (! Hash::check($payload['password'], $user->password)) {
-                event(new \Illuminate\Auth\Events\Failed('web', $user, ['email' => $user->email]));
+                event(new Failed('web', $user, ['email' => $user->email]));
+
                 return errorResponse(message: __('global.credentialDoesNotMatch'));
             }
 
@@ -565,10 +572,10 @@ class UserService
         }
 
         if (! isset($user->getRoleNames()[0])) {
-            throw new \App\Exceptions\DoNotHaveAppPermission;
+            throw new DoNotHaveAppPermission;
         }
 
-        $menuService = new \App\Services\MenuService;
+        $menuService = new MenuService;
 
         $role = $user->getRoleNames()[0];
         $roles = $user->roles;
@@ -638,7 +645,7 @@ class UserService
         }
         $user['email_show'] = $emailShow;
 
-        $employee = \Modules\Hrd\Models\Employee::select('id')
+        $employee = Employee::select('id')
             ->find($user->employee_id);
 
         $notifications = [];
@@ -700,7 +707,7 @@ class UserService
         ]);
 
         // store to cache for user device information
-        \Illuminate\Support\Facades\Cache::rememberForever('userLogin'.$user->id, function () {
+        Cache::rememberForever('userLogin'.$user->id, function () {
             return [
                 'ip' => $this->generalService->getClientIp(),
                 'browser' => $this->generalService->parseUserAgent($this->generalService->getUserAgentInfo()),
@@ -719,7 +726,7 @@ class UserService
 
     protected function authorizeReportingAccess(string $email)
     {
-        $response = \Illuminate\Support\Facades\Http::post(
+        $response = Http::post(
             url: config('app.python_endpoint').'/auth/access-token',
             data: [
                 'email' => $email,
@@ -855,7 +862,7 @@ class UserService
                 ]
             );
 
-            if ((isset($data['profile_image'])) && ($data['profile_image']) && ! \Illuminate\Support\Str::contains($data['profile_image'], 'https')) {
+            if ((isset($data['profile_image'])) && ($data['profile_image']) && ! Str::contains($data['profile_image'], 'https')) {
                 // get current image from tmp file
                 if (! Storage::disk('public')->exists($data['profile_image'])) {
                     return errorResponse(__('notification.fileNotFound'));
@@ -980,60 +987,70 @@ class UserService
         }
     }
 
-    private function formatOutputNotification(DatabaseNotificationCollection $notifications)
+    private function formatOutputNotification(DatabaseNotificationCollection $notifications): Collection
     {
-        $notifications = $notifications->map(function ($item) {
-            $item['created_at_raw'] = date('d F Y H:i', strtotime($item->created_at));
+        // toBase() guarantees a base Support collection even when empty (an empty
+        // Eloquent collection would otherwise break the later ->merge() with a
+        // "getKey() on array" error once these become plain arrays).
+        return $notifications->toBase()->map(function ($item) {
+            $data = $item['data'] ?? [];
 
             return [
-                'message' => $item['data']['message'] ?? '',
-                'title' => $item['data']['title'] ?? '',
-                'icon' => $item['data']['icon'] ?? '',
-                'url' => $item['data']['href'] ?? '',
-                'type' => $item['data']['type'] ?? '',
-                'created_at' => $item['created_at_raw'],
                 'id' => $item['id'],
+                'title' => $data['title'] ?? '',
+                'message' => $data['message'] ?? '',
+                'icon' => $data['icon'] ?? '🔔',
+                'url' => $data['url'] ?? ($data['href'] ?? ''),
+                'topic' => $data['topic'] ?? RealtimeNotificationService::TOPIC_GENERAL,
+                'division_id' => $data['division_id'] ?? null,
+                'created_at' => date('d F Y H:i', strtotime($item->created_at)),
             ];
-        })->filter(function ($item) {
-            return $item['type'] !== null && $item['type'] !== '';
         })->values();
-
-        if ($notifications->count() == 0) {
-            return collect([]);
-        }
-
-        return $notifications;
     }
 
-    private function getEmployeeNotification(int $userId)
+    private function getEmployeeNotification(int $userId): Collection
     {
-        $employee = \Modules\Hrd\Models\Employee::where('user_id', $userId)->first();
+        $employee = Employee::where('user_id', $userId)->first();
+
+        if (! $employee) {
+            return collect([]);
+        }
 
         return $this->formatOutputNotification(notifications: $employee->unreadNotifications);
     }
 
-    private function getUserNotification(int $userId)
+    private function getUserNotification(int $userId): Collection
     {
-        $user = \App\Models\User::find($userId);
+        $user = User::find($userId);
+
+        if (! $user) {
+            return collect([]);
+        }
 
         return $this->formatOutputNotification(notifications: $user->unreadNotifications);
     }
 
-    public function getApplicationNotification()
+    private function resolveDivisionName(int $userId): ?string
     {
-        $user = Auth::user();
-        $userId = $user->id;
+        $employee = Employee::where('user_id', $userId)->first();
 
-        $employeeNotifications = $this->getEmployeeNotification(userId: $userId);
-        $userNotifications = $this->getUserNotification(userId: $userId);
+        return $employee?->position?->division?->name;
+    }
 
-        $merged = $employeeNotifications->merge($userNotifications);
+    /**
+     * @return array{general: Collection, division: Collection, divisionName: ?string}
+     */
+    public function getApplicationNotification(): array
+    {
+        $userId = Auth::id();
+
+        $merged = $this->getEmployeeNotification(userId: $userId)
+            ->merge($this->getUserNotification(userId: $userId));
 
         return [
-            'production' => $merged->where('type', 'production'),
-            'finance' => $merged->where('type', 'finance'),
-            'hrd' => $merged->where('type', 'hrd'),
-            'general' => $merged->where('type', 'general'),
+            'general' => $merged->where('topic', RealtimeNotificationService::TOPIC_GENERAL)->values(),
+            'division' => $merged->where('topic', RealtimeNotificationService::TOPIC_DIVISION)->values(),
+            'divisionName' => $this->resolveDivisionName(userId: $userId),
         ];
     }
 
