@@ -18,6 +18,7 @@ class EmployeeSignatureTask extends Model
     protected $fillable = [
         'employee_id',
         'employee_document_id',
+        'order'
     ];
 
     // protected static function newFactory(): EmployeeSignatureTaskFactory
