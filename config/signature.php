@@ -40,6 +40,9 @@ return [
             'column' => 'name',
             'key' => 'name',
         ],
+        'date' => [
+            'key' => 'date'
+        ]
     ],
     'master_fullpath' => 'app/public/documents/templates',
     'master_path' => 'documents/templates',

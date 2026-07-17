@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // use Modules\Hrd\Database\Factories\MasterDocumentFileFactory;
 
@@ -77,6 +78,11 @@ class MasterDocumentFile extends Model
     public function rejectedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rejected_by');
+    }
+
+    public function signers(): HasMany
+    {
+        return $this->hasMany(MasterDocumentSigner::class, 'file_id');
     }
 
     public function scopeArchived(Builder $query): void

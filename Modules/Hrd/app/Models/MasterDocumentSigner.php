@@ -21,6 +21,7 @@ class MasterDocumentSigner extends Model
         'master_document_id',
         'division_id',
         'order',
+        'file_id'
     ];
 
     protected function casts(): array

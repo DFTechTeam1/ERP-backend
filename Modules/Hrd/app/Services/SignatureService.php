@@ -443,13 +443,19 @@ class SignatureService
             }
 
             // Record files
-            $master->files()->create([
+            $files = $master->files()->create([
                 'path' => config('signature.master_path').'/'.$filename,
                 'file_type' => $payload->file->getClientOriginalExtension(),
                 'placeholder_mapping' => $payload->placeholders,
                 'status' => DocumentFileStatus::PendingReview,
                 'created_by' => Auth::id(),
             ]);
+
+            $signers = collect($signers)->map(function ($signer) use ($files) {
+                $signer = array_merge($signer, ['file_id' => $files->id]);
+
+                return $signer;
+            })->values();
 
             $master->signers()->createMany($signers);
 
@@ -688,17 +694,27 @@ class SignatureService
 
     protected function getDocumentColumnsReplacer(MasterDocument $document): array
     {
+        $keys = [];
         $mappingPlaceholders = $document->activeDocument->placeholder_mapping;
 
         $availableColumns = config('signature.available_replacer_column');
         $columns = array_map(function ($itemColumn) {
-            return $itemColumn['column'];
+            return $itemColumn['column'] ?? null;
         }, array_filter($availableColumns, function ($item) use ($mappingPlaceholders) {
             return ! isset($item['relation']) && in_array($item['key'], $mappingPlaceholders);
         }));
-        $columns[] = 'id';
 
-        return $columns;
+        $columns['id'] = 'id';
+
+        $keys = array_keys(array_filter($columns));
+
+        // Remove null value
+        $columns = array_values(array_filter($columns));
+
+        return [
+            'columns' => $columns,
+            'keys' => $keys
+        ];
     }
 
     protected function assignDocumentToEmployee(string $employeeDocumentPath, Employee $employee)
@@ -742,7 +758,9 @@ class SignatureService
                 throw new DataNotFound('Document not found.');
             }
 
-            $columns = $this->getDocumentColumnsReplacer($document);
+            $columnReplacers = $this->getDocumentColumnsReplacer($document);
+            $columns = $columnReplacers['columns'];
+            $keys = $columnReplacers['keys'];
 
             $employee = $this->employeeRepo->show(
                 uid: '',
@@ -754,16 +772,33 @@ class SignatureService
                 throw new DataNotFound('Employee not found.');
             }
 
+            $currentEmployeeDoc = $this->employeeDocumentRepo->show([
+                'where' => [
+                    'employee_id' => $employee->id,
+                    'document_type_id' => $document->document_type_id,
+                    ],
+                'whereIn' => [
+                    'status' => [Status::Awaiting, Status::NeedSign]
+                ]
+            ]);
+
+            if ($currentEmployeeDoc) {
+                throw new DataNotFound('The employee still has the same document that has not been signed');
+            }
+
             $employeeDocumentPath = $this->copyFileToEmployeeDirectory($document->activeDocument->path, $employee);
 
             // Mapping replacer
             $mappingPlaceholderReplacer = [];
-            foreach ($columns as $column) {
+            foreach ($columns as $key => $column) {
                 $mappingPlaceholderReplacer[] = [
-                    'from' => $column,
+                    'from' => $keys[$key],
                     'value' => $employee->$column,
                 ];
             }
+
+            // Static date placeholder
+            $mappingPlaceholderReplacer[] = ['from' => 'date', 'value' => date('d F Y')];
 
             // Replace the file content
             $this->replaceDocumentContent($mappingPlaceholderReplacer, $employeeDocumentPath);
@@ -782,9 +817,13 @@ class SignatureService
             $divisionSigners = [];
             foreach ($document->documentType->signers as $documentSigner) {
                 $divisionSigners[] = [
-                    'employee_id' => $documentSigner->signMapping->main_signer_id
+                    'employee_id' => $documentSigner->signMapping->main_signer_id,
+                    'order' => $documentSigner->order
                 ];
             }
+
+            // Add a target user
+            array_push($divisionSigners, ['employee_id' => $employee->id, 'order' => count($divisionSigners) + 1]);
 
             $employeeDocument->signatureTasks()->createMany($divisionSigners);
 
