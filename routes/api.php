@@ -18,6 +18,7 @@ use App\Http\Controllers\Mcp\OauthController;
 use App\Jobs\PartnerEmailJob;
 use App\Models\User;
 use App\Services\EncryptionService;
+use App\Services\PusherNotification;
 use App\Services\UserService;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
@@ -135,6 +136,26 @@ Route::get('generate-official-email', [TestingController::class, 'generateOffici
 
 Route::get('notification/readAll', [NotificationController::class, 'readAll'])->middleware('auth.session');
 Route::get('notification/markAsRead/{id}', [NotificationController::class, 'markAsRead'])->middleware('auth.session');
+
+// Pusher private-channel auth for the realtime bell notifications. Uses the
+// Bearer-token guard (not the web session), so pusher-js sends the access token.
+// A user may only authenticate their own `private-notifications.{id}` channel.
+// NOTE: distinct path from the framework's /broadcasting/auth (which is session
+// based) to avoid a route collision.
+Route::post('notifications/channel-auth', function (Request $request) {
+    $user = $request->user();
+    $channelName = (string) $request->input('channel_name');
+    $socketId = (string) $request->input('socket_id');
+
+    abort_unless(
+        $user && $channelName === "private-notifications.{$user->id}",
+        403,
+    );
+
+    return response(
+        app(PusherNotification::class)->authorize($channelName, $socketId)
+    )->header('Content-Type', 'application/json');
+})->middleware('auth.session');
 
 // Broadcast::routes(['middleware' => ['auth.session']]);
 
