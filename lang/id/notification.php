@@ -194,5 +194,11 @@ return [
     'failedToUploadFile' => 'Gagal untuk menyimpan file',
     'successDeleteMasterDocument' => 'File master berhasil di hapus',
     'templateStillHavePendingReviewDocument' => 'Jenis dokumen ini masih memiliki templat yang belum ditinjau',
-    'documentTypeAlreadyUsedInTemplate' => 'Jenis dokumen sudah digunakan dalam dokumen induk'
+    'documentTypeAlreadyUsedInTemplate' => 'Jenis dokumen sudah digunakan dalam dokumen induk',
+    'projectLeadHasBeenCanclled' => 'Lead berhasil di batalkan',
+    'projectLeadNotFound' => "Data lead tidak ditemukan",
+    'projectLeadAlreadyHaveRelation' => "Lead sudah memiliki relasi dengan data 'deals' atau production project",
+    'projectLeadHaveBeenPast' => 'Tanggal Project lead sudah terlewati',
+    'projectLeadAlreadyCancelled' => 'Lead sudah di cancel',
+    'projectDealInvoiceNotFound' => 'Invoice pada event tidak ditemukan'
 ];

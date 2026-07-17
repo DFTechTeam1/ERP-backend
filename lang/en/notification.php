@@ -202,5 +202,11 @@ return [
     'failedToUploadFile' => 'Failed to upload file',
     'successDeleteMasterDocument' => 'Success delete master document',
     'templateStillHavePendingReviewDocument' => 'This document type still have pending template to review',
-    'documentTypeAlreadyUsedInTemplate' => 'Document type is already in used in master document'
+    'documentTypeAlreadyUsedInTemplate' => 'Document type is already in used in master document',
+    'projectLeadHasBeenCanclled' => 'Project lead has been cancelled successfully',
+    'projectLeadNotFound' => "Project lead not found",
+    'projectLeadAlreadyHaveRelation' => 'Project lead already have relation with project deal or production event',
+    'projectLeadHaveBeenPast' => 'Project lead has been passed',
+    'projectLeadAlreadyCancelled' => 'Project lead already cancelled',
+    'projectDealInvoiceNotFound' => 'Project deal invoice is not found'
 ];

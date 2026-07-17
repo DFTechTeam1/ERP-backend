@@ -9,6 +9,73 @@ Enum "allowances_period_enum" {
   "per_event"
 }
 
+Enum "NasCmdType" {
+  "create"
+  "write"
+  "read"
+  "delete"
+}
+
+Enum "OutOfSyncEmployeeStatusEnum" {
+  "synced"
+  "out_of_sync"
+}
+
+Enum "RequestEquipmentsOrderTypeEnum" {
+    "online"
+    "offline"
+}
+
+Enum "RequestEquipmentStatusHistoriesStatusEnum" {
+    "on_request"
+    "on_process"
+    "returned"
+    "arrived"
+    "canceled"
+}
+
+Enum "RequestEquipmentHistoriesStatusEnum" {
+    "need_approval"
+    "approved"
+    "rejected"
+}
+
+Enum "development_projects_status_enum" {
+  "1"
+  "2"
+  "3"
+  "4"
+}
+
+Enum "ticket_type_enum" {
+  "departure"
+  "return"
+}
+
+Enum "transportation_type_enum" {
+  "air"
+  "train"
+  "car"
+  "other"
+}
+
+Enum "project_deal_refund_status_enum" {
+  "1" // pending
+  "2" // paid
+}
+
+Enum "NasFolderCreationsStatusEnum" {
+  queue
+  completed
+  failed
+}
+
+Enum "NasFolderCreationTypeEnum" {
+  create
+  update
+  delete
+}
+
 Enum "development_project_references_type_enum" {
   "media"
   "link"
@@ -3935,6 +4002,21 @@ Table "entertainment_logs" {
   "updated_at" timestamp
 
   note: "Store all entertainment activity in each project"
+}
+
+Table "nas_logs" {
+  "id" bigint [pk, not null, increment]
+  "cmd_type" NasCmdType
+  "description" text
+  "filesize" varchar(20) [note: "In KB"]
+  "ip" varchar(20)
+  "is_dir" tinyint [note: "1 or 0"]
+  "log_type" varchar(100)
+  "original_log_type" varchar(200)
+  "time" timestamp
+  "username" varchar(150)
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]
