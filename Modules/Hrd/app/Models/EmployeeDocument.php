@@ -2,23 +2,27 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Enums\Hrd\Signature\SignatureTaskStatus;
 use App\Enums\Hrd\Signature\Template\Status;
+use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Auth;
 
 // use Modules\Hrd\Database\Factories\EmployeeDocumentFactory;
 
 class EmployeeDocument extends Model
 {
-    use HasFactory;
+    use HasFactory, ModelObserver;
 
     /**
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'uid',
         'employee_id',
         'status',
         'signers_detail',
@@ -65,4 +69,27 @@ class EmployeeDocument extends Model
     // {
     //     // return EmployeeDocumentFactory::new();
     // }
+
+    public function isMyTurnToSign(): bool
+    {
+        $output = false;
+
+        if (!$this->relationLoaded('signatureTasks')) {
+            $this->load('signatureTasks');
+        }
+
+        $employeeId = Auth::user()->employee_id ?? 0;
+        $search = $this->signatureTasks->search(function ($item) use ($employeeId) {
+            return $item->employee_id === $employeeId;
+        });
+
+        if (gettype($search) == 'integer') {
+            if ($search === 0) $output = true;
+            if ($search > 0 && $this->signatureTasks[$search]->status == SignatureTaskStatus::Waiting && $this->signatureTasks[$search - 1]->status == SignatureTaskStatus::Signed) {
+                $output = true;
+            }
+        }
+
+        return $output;
+    }
 }

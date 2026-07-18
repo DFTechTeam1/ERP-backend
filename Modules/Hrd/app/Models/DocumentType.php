@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 // use Modules\Hrd\Database\Factories\DocumentTypeFactory;
 
@@ -27,7 +28,7 @@ class DocumentType extends Model
         'status',
         'category',
         'created_by',
-        'default_signers'
+        'default_signers',
     ];
 
     protected function casts(): array
@@ -56,6 +57,11 @@ class DocumentType extends Model
     public function masterDocuments(): HasMany
     {
         return $this->hasMany(MasterDocument::class, 'document_type_id', 'id');
+    }
+
+    public function masterDocument(): HasOne
+    {
+        return $this->hasOne(MasterDocument::class, 'document_type_id', 'id');
     }
 
     public function employeeDocuments(): HasMany

@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,12 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmployeeSignature extends Model
 {
-    use HasFactory;
+    use HasFactory, ModelObserver;
 
     /**
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'uid',
         'employee_id',
         'is_active',
         'sign_path',

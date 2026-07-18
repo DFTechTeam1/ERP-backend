@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Enums\Hrd\Signature\SignatureTaskStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,8 +19,21 @@ class EmployeeSignatureTask extends Model
     protected $fillable = [
         'employee_id',
         'employee_document_id',
-        'order'
+        'order',
+        'status',
+        'signed_at',
+        'otp',
+        'otp_expired_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => SignatureTaskStatus::class,
+            'signed_at' => 'datetime',
+            'otp_expired_at' => 'datetime',
+        ];
+    }
 
     // protected static function newFactory(): EmployeeSignatureTaskFactory
     // {

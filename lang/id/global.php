@@ -351,5 +351,12 @@ return [
     'rejected' => 'Ditolak',
     'notAvailable' => 'Tidak Tersedia',
     'available' => 'Tersedia',
-    'partialComplete' => 'Sebagian Selesai'
+    'partialComplete' => 'Sebagian Selesai',
+    'awaitingSign' => 'Menunggu Tanda Tangan',
+    'needSign' => 'Perlu Tanda Tangan',
+    'otpSignDocumentSubject' => 'Kode OTP untuk Tanda Tangan Dokumen',
+    'otpSignDocumentHeading' => 'Verifikasi Tanda Tangan Dokumen',
+    'otpSignDocumentIntro' => 'Gunakan Kode Sekali Pakai (OTP) berikut untuk memverifikasi dan menandatangani dokumen Anda:',
+    'otpSignDocumentExpiry' => 'Kode ini berlaku selama :minutes menit. Jangan bagikan kepada siapa pun.',
+    'otpSignDocumentIgnore' => 'Jika Anda tidak meminta ini, silakan abaikan email ini. Dokumen Anda tidak akan ditandatangani.',
 ];

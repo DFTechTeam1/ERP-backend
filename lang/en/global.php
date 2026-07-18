@@ -350,5 +350,12 @@ return [
     'rejected' => 'Rejected',
     'notAvailable' => 'Not Available',
     'available' => 'Available',
-    'partialComplete' => 'Partial Complete'
+    'partialComplete' => 'Partial Complete',
+    'awaitingSign' => 'Awaiting Sign',
+    'needSign' => 'Need Sign',
+    'otpSignDocumentSubject' => 'Your OTP for Document Signing',
+    'otpSignDocumentHeading' => 'Document Signing Verification',
+    'otpSignDocumentIntro' => 'Use the following One-Time Password (OTP) to verify and sign your document:',
+    'otpSignDocumentExpiry' => 'This code is valid for :minutes minutes. Do not share it with anyone.',
+    'otpSignDocumentIgnore' => 'If you did not request this, please ignore this email. Your document will remain unsigned.',
 ];
