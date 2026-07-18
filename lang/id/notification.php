@@ -182,6 +182,12 @@ return [
     'employeeAlreadyHasResignationRecord' => 'Karyawan sudah memiliki catatan pengunduran diri yang ada.',
     'otpHasBeenExpired' => 'OTP sudah tidak bisa digunakan',
     'otpMismatch' => 'OTP tidak sama',
+    'notAllowedToViewDocument' => 'Anda tidak memiliki akses untuk melihat dokumen ini',
+    'successStoreEmployeeSignature' => 'Tanda tangan berhasil disimpan',
+    'successUpdateEmployeeSignature' => 'Tanda tangan aktif berhasil diperbarui',
+    'successDeleteEmployeeSignature' => 'Tanda tangan berhasil dihapus',
+    'successApplySignature' => 'Tanda tangan berhasil diterapkan ke dokumen',
+    'successMarkDocumentSigned' => 'Dokumen berhasil ditandatangani',
     'phoneNumberVerfied' => 'Nomor telepon berhasil di verifikasi',
     'projectDealIsExists' => 'Event ini sudah ada di database',
     'projectIsExists' => 'Event ini sudah ada di database production',
@@ -200,5 +206,9 @@ return [
     'failedToUploadFile' => 'Gagal untuk menyimpan file',
     'successDeleteMasterDocument' => 'File master berhasil di hapus',
     'templateStillHavePendingReviewDocument' => 'Jenis dokumen ini masih memiliki templat yang belum ditinjau',
-    'documentTypeAlreadyUsedInTemplate' => 'Jenis dokumen sudah digunakan dalam dokumen induk'
+    'documentTypeAlreadyUsedInTemplate' => 'Jenis dokumen sudah digunakan dalam dokumen induk',
+    'documentSigningTitle' => 'Dokumen siap untuk ditandatangani',
+    'documentSigningMessage' => 'Sebuah dokumen telah dibuat untuk Anda. Silakan periksa dan tandatangani dokumen tersebut.',
+    'youAlreadySignedTheDocument' => 'Kamu sudah men-tanda tangani dokumen ini',
+    'youDontHaveAccessToSignTheDocument' => 'Kamu tidak punya access untuk men-tanda tangani dokumen ini',
 ];

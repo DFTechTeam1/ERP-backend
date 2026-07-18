@@ -100,7 +100,23 @@ Route::controller(EmployeeController::class)
                 Route::get('signatories', [SignatureController::class, 'listSignatories']);
                 Route::post('signatories/assign/{mappingUid}', [SignatureController::class, 'assignSignatories']);
 
+                // Employee's own saved signatures
+                Route::get('my-signatures', [SignatureController::class, 'listEmployeeSignatures']);
+                Route::post('my-signatures', [SignatureController::class, 'storeEmployeeSignature']);
+                Route::patch('my-signatures/{signatureUid}/activate', [SignatureController::class, 'setActiveEmployeeSignature']);
+                Route::delete('my-signatures/{signatureUid}', [SignatureController::class, 'deleteEmployeeSignature']);
+
+                Route::get('documents', [SignatureController::class, 'generatedDocumentList']);
+                Route::get('documents/mine', [SignatureController::class, 'myGeneratedDocumentList']);
+                Route::get('documents/{documentUid}', [SignatureController::class, 'documentSignDetail']);
+
+                // Sign
+                Route::get('sign/otp/{employeeDocumentUId}', [SignatureController::class, 'generateSignOtp']);
+                Route::post('sign/otp/{employeeDocumentUid}/validate', [SignatureController::class, 'validateOtp']);
+                Route::post('sign/{employeeDocumentUid}/apply/{signatureUid}', [SignatureController::class, 'applySignatureToDocument']);
+
                 // Render file
+                Route::get('/file/employee/{employeeDocumentUid}/render', [SignatureController::class, 'renderEmployeeDocument']);
                 Route::get('/file/render/{templateUid}/{versionId}', [SignatureController::class, 'renderTemplateDocument']);
             });
 

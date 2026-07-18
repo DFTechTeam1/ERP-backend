@@ -20,6 +20,9 @@ use Illuminate\Database\Eloquent\Model;
  *                                              paired with a Closure constrains that relation
  *   - where:      array<string,mixed>          equality constraints (column => value)
  *   - whereIn:    array<string,array>          IN constraints (column => values)
+ *   - whereHas:   array<string,?Closure(Builder): void>
+ *                                              relation existence constraints (relation => optional
+ *                                              Closure to further constrain the related query)
  *   - select:     array<int,string>|string     columns to select
  *   - orderBy:    array<string,string>         column => 'asc'|'desc'
  *   - orderByRaw: string                        raw ORDER BY expression
@@ -54,6 +57,10 @@ abstract class BaseRepository
 
         foreach ($params['whereIn'] ?? [] as $column => $values) {
             $query->whereIn($column, $values);
+        }
+
+        foreach ($params['whereHas'] ?? [] as $relation => $callback) {
+            $query->whereHas($relation, $callback instanceof Closure ? $callback : null);
         }
 
         if (isset($params['select'])) {

@@ -106,13 +106,16 @@ class PositionService
         if ($search) {
             $where = "LOWER(name) LIKE '%{$search}%'";
         }
-        $data = $this->repo->list($select, $where);
+        $data = $this->repo->list($select, $where, [
+            'employees:id,position_id',
+        ]);
 
         $data = collect((object) $data)->map(function ($item) {
             return [
                 'title' => $item->name,
                 'value' => $item->uid,
                 'id' => $item->id,
+                'total_employee' => $item->employees->count(),
             ];
         })->toArray();
 

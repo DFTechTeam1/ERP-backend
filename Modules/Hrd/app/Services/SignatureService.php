@@ -10,22 +10,33 @@ use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateTemplateData;
 use App\Data\Hrd\Signature\DefaultSignerItemData;
+use App\Data\Hrd\Signature\DetailDocumentSignData;
 use App\Data\Hrd\Signature\DetectPlaceholderData;
+use App\Data\Hrd\Signature\EmployeeSignatureData;
+use App\Data\Hrd\Signature\GeneratedDocumentListData;
 use App\Data\Hrd\Signature\GenerateDocumentData;
 use App\Data\Hrd\Signature\ListDocumentTypeData;
+use App\Data\Hrd\Signature\MyDocumentSignerData;
+use App\Data\Hrd\Signature\MyGeneratedDocumentListData;
 use App\Data\Hrd\Signature\OrgSignatoriesListData;
 use App\Data\Hrd\Signature\OutputListDocumentTypeData;
 use App\Data\Hrd\Signature\SelectedOrgSignatureSignerData;
 use App\Data\Hrd\Signature\SignatoriesDivisionPicData;
 use App\Data\Hrd\Signature\SignatoriesListData;
+use App\Data\Hrd\Signature\StoreEmployeeSignatureData;
 use App\Data\Hrd\Signature\TemplateListData;
 use App\Data\Hrd\Signature\UpdateDocumentTypeData;
 use App\Data\Hrd\Signatured\DocumentVersionListData;
+use App\Data\Hrd\Signer\DetailDocumentSignEmployeeData;
+use App\Data\Hrd\Signer\DetailDocumentSignSignersData;
+use App\Enums\Hrd\Signature\SignatureTaskStatus;
 use App\Enums\Hrd\Signature\Template\DocumentFileStatus;
 use App\Enums\Hrd\Signature\Template\Status;
+use App\Enums\System\BaseRole;
 use App\Exceptions\DataNotFound;
 use App\Exceptions\DetectPlaceholderFailed;
 use App\Exceptions\FailedToUploadFile;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -35,11 +46,18 @@ use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
 use Modules\Hrd\Exceptions\DocumentTypeInUse;
 use Modules\Hrd\Exceptions\TemplateStillHavePendingReview;
+use Modules\Hrd\Exceptions\UserAlreadySigned;
+use Modules\Hrd\Exceptions\UserNotHaveAccessToSign;
+use Modules\Hrd\Jobs\GenerateDocumentNotificationJob;
+use Modules\Hrd\Jobs\SendOtpSignJob;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeeSignature;
 use Modules\Hrd\Models\MasterDocument;
 use Modules\Hrd\Repository\DocumentTypeRepository;
 use Modules\Hrd\Repository\EmployeeDocumentRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\EmployeeSignatureRepository;
+use Modules\Hrd\Repository\EmployeeSignatureTaskRepository;
 use Modules\Hrd\Repository\MasterDocumentFileRepository;
 use Modules\Hrd\Repository\MasterDocumentRepository;
 use Modules\Hrd\Repository\SignatoriesMappingRepository;
@@ -55,11 +73,16 @@ class SignatureService
         private readonly MasterDocumentFileRepository $masterFileRepo,
         private readonly EmployeeRepository $employeeRepo,
         private readonly SignatoriesMappingRepository $signatoriesMappingRepo,
-        private readonly EmployeeDocumentRepository $employeeDocumentRepo
+        private readonly EmployeeDocumentRepository $employeeDocumentRepo,
+        private readonly EmployeeSignatureTaskRepository $signatureTaskRepo,
+        private readonly EmployeeSignatureRepository $employeeSignatureRepo
     ) {}
 
     /**
-     * Parsing document type payload
+     * Normalize a document type payload into the columns/relations the repository expects.
+     *
+     * @param  CreateDocumentTypeData|UpdateDocumentTypeData  $payload  Incoming document type data
+     * @return array<string, mixed> Parsed attributes including the resolved `signers` list
      */
     protected function parseDocumentTypePayload(CreateDocumentTypeData|UpdateDocumentTypeData $payload): array
     {
@@ -84,7 +107,9 @@ class SignatureService
     }
 
     /**
-     * Fetch list of document types
+     * Fetch a paginated list of document types with their default signers.
+     *
+     * @return array Response envelope with `OutputListDocumentTypeData` payload
      */
     public function listDocumentTypes(): array
     {
@@ -145,7 +170,10 @@ class SignatureService
     }
 
     /**
-     * Create document type
+     * Create a single document type and assign its default signers (transactional).
+     *
+     * @param  CreateDocumentTypeData  $payload  Validated document type data
+     * @return array Response envelope with a success/error message
      */
     public function storeDocumentTypes(CreateDocumentTypeData $payload): array
     {
@@ -172,7 +200,10 @@ class SignatureService
     }
 
     /**
-     * Bulk create document type
+     * Create multiple document types in a single transaction.
+     *
+     * @param  BulkCreateDocumentTypeData  $payload  Collection of document types to create
+     * @return array Response envelope with a success/error message
      */
     public function bulkCreateDocumentType(BulkCreateDocumentTypeData $payload): array
     {
@@ -201,7 +232,12 @@ class SignatureService
     }
 
     /**
-     * Bulk delete document types
+     * Bulk delete document types, refusing any that are still referenced by a template.
+     *
+     * @param  BulkDeleteDocumentTypeData  $uids  Ids of the document types to delete
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DocumentTypeInUse
      */
     public function bulkDeleteDocumentType(BulkDeleteDocumentTypeData $uids): array
     {
@@ -226,7 +262,13 @@ class SignatureService
     }
 
     /**
-     * Update current document type
+     * Update a document type and re-sync its signers (transactional).
+     *
+     * @param  \App\Data\hrd\Signature\UpdateDocumentTypeData  $request  Validated document type data
+     * @param  string  $documentId  Id of the document type to update
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
      */
     public function updateDocumentType(\App\Data\hrd\Signature\UpdateDocumentTypeData $request, string $documentId): array
     {
@@ -259,7 +301,10 @@ class SignatureService
     }
 
     /**
-     * Bulk update document types
+     * Apply a shared set of changes (category, active flag, retention) to many document types.
+     *
+     * @param  BulkUpdateDocumentTypeData  $payload  Target ids plus the fields to change
+     * @return array Response envelope with a success/error message
      */
     public function bulkEditDocumentType(BulkUpdateDocumentTypeData $payload): array
     {
@@ -291,6 +336,11 @@ class SignatureService
         }
     }
 
+    /**
+     * Ensure a directory exists on the public disk before writing files into it.
+     *
+     * @param  string  $path  Path relative to the public disk root
+     */
     protected function createFolder($path): void
     {
         if (Storage::disk('public')->directoryExists($path)) {
@@ -298,6 +348,13 @@ class SignatureService
         }
     }
 
+    /**
+     * Extract the placeholders found in a Word template and compare them to the system's
+     * available replacement columns.
+     *
+     * @param  string  $filepath  Absolute path to the .docx template
+     * @return array{error: bool, data?: array{availables: array<int, string>, variables: array<int, string>, missing: array<int, string>}}
+     */
     protected function breakdownPlaceholder(string $filepath): array
     {
         try {
@@ -330,12 +387,19 @@ class SignatureService
     }
 
     /**
-     * What will do in this function:
-     * - validate signature placeholder -> should be match with document type signer -> done
-     * - detect all placeholder document -> done
-     * - provide available placeholder from system -> done
-     * - decide user can go to preview or note
-     * - detect missing parameters -> if there any document placeholder that is not match with available params from system
+     * Inspect an uploaded document and report its placeholders against the system's variables.
+     *
+     * Steps performed:
+     * - validate the signature placeholders match the document type's signers
+     * - detect every placeholder in the document
+     * - expose the replacement variables the system can provide
+     * - flag missing parameters (placeholders with no matching system variable)
+     * - decide whether the user can continue to preview (`can_continue`)
+     *
+     * @param  DetectPlaceholderData  $payload  Uploaded file and target document type id
+     * @return array Response envelope with the detected placeholders and continue flag
+     *
+     * @throws DetectPlaceholderFailed
      */
     public function detectPlaceholder(DetectPlaceholderData $payload): array
     {
@@ -382,7 +446,15 @@ class SignatureService
     }
 
     /**
-     * Create master template
+     * Create (or version up) a master template: upload the file, record it as pending review,
+     * and attach the document type's default signers (transactional).
+     *
+     * @param  CreateTemplateData  $payload  Template name, document type, file and placeholders
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
+     * @throws TemplateStillHavePendingReview
+     * @throws FailedToUploadFile
      */
     public function createTemplate(CreateTemplateData $payload): array
     {
@@ -472,7 +544,9 @@ class SignatureService
     }
 
     /**
-     * List of available master templates
+     * Fetch a paginated list of available master templates.
+     *
+     * @return array Response envelope with a list of `TemplateListData`
      */
     public function listTemplates(): array
     {
@@ -551,7 +625,12 @@ class SignatureService
     }
 
     /**
-     * Delete selected master document
+     * Delete a master template together with its stored files on disk.
+     *
+     * @param  string  $templateUid  Uid of the master template to delete
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
      */
     public function deleteTemplate(string $templateUid): array
     {
@@ -585,6 +664,15 @@ class SignatureService
         }
     }
 
+    /**
+     * Approve or reject the pending-review version of a master document template.
+     *
+     * @param  ApprovalDocumentData  $payload  Approval decision (status + optional reason)
+     * @param  string  $documentUid  Uid of the master document
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
+     */
     public function approvalMasterDocument(ApprovalDocumentData $payload, string $documentUid): array
     {
         try {
@@ -626,7 +714,50 @@ class SignatureService
     }
 
     /**
-     * Get real file path of the document to stream in frontend
+     * Resolve the stored file path of a generated employee document so it can be streamed.
+     *
+     * @param  string  $employeeDocumentUid  Uid of the generated employee document
+     * @return array Response envelope containing the document `path`
+     *
+     * @throws DataNotFound
+     */
+    public function renderEmployeeDocument(string $employeeDocumentUid): array
+    {
+        try {
+            $document = $this->employeeDocumentRepo->show([
+                'where' => [
+                    'uid' => $employeeDocumentUid,
+                ],
+                'select' => ['id', 'employee_id', 'document_snapshot', 'document_path'],
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound('Document not found.');
+            }
+
+            if (! Storage::exists($document->document_path)) {
+                throw new DataNotFound('File not exists.');
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'path' => $document->document_path,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Resolve the stored file path of a specific master template version for streaming.
+     *
+     * @param  string  $templateUid  Uid of the master template
+     * @param  string  $versionId  Id of the template file version
+     * @return array Response envelope containing the document `path`
+     *
+     * @throws DataNotFound
      */
     public function renderTemplateDocument(string $templateUid, string $versionId): array
     {
@@ -666,23 +797,33 @@ class SignatureService
     }
 
     /**
-     * Copy current file to new employee directory
+     * Copy a source file into the target employee's documents directory.
+     *
+     * @param  string  $currentFilePath  Source path relative to the public disk
+     * @param  Employee|Collection  $employee  Employee whose directory receives the copy
+     * @return string The new file path relative to the public disk
      */
     protected function copyFileToEmployeeDirectory(string $currentFilePath, Employee|Collection $employee): string
     {
         $name = basename($currentFilePath);
         $file = storage_path('app/public/'.$currentFilePath);
         $target = "employees/{$employee->id}/documents/{$name}";
-        
+
         Storage::disk('public')
             ->copy($currentFilePath, $target);
 
         return $target;
     }
 
+    /**
+     * Replace placeholders inside a Word document in place with their resolved values.
+     *
+     * @param  array<int, array{from: string, value: string}>  $placeholderMappings  Placeholder → value pairs
+     * @param  string  $filepath  Document path relative to the public disk
+     */
     protected function replaceDocumentContent(array $placeholderMappings, string $filepath): void
     {
-        $realPath = storage_path('app/public/' . $filepath);
+        $realPath = storage_path('app/public/'.$filepath);
 
         $templateProcessor = new TemplateProcessor($realPath);
         foreach ($placeholderMappings as $placeholder) {
@@ -692,6 +833,13 @@ class SignatureService
         $templateProcessor->saveAs($realPath);
     }
 
+    /**
+     * Build the list of employee columns to select and their keys, based on the template's
+     * active placeholder mapping and the configured replacer columns.
+     *
+     * @param  MasterDocument  $document  Master document whose active version holds the mapping
+     * @return array{columns: array<int, string>, keys: array<int, string>}
+     */
     protected function getDocumentColumnsReplacer(MasterDocument $document): array
     {
         $keys = [];
@@ -713,10 +861,16 @@ class SignatureService
 
         return [
             'columns' => $columns,
-            'keys' => $keys
+            'keys' => $keys,
         ];
     }
 
+    /**
+     * Persist a generated document record against an employee with a "need sign" status.
+     *
+     * @param  string  $employeeDocumentPath  Path of the generated document for the employee
+     * @param  Employee  $employee  Employee the document is assigned to
+     */
     protected function assignDocumentToEmployee(string $employeeDocumentPath, Employee $employee)
     {
         $employeeDocument = $this->employeeDocumentRepo->store([
@@ -725,10 +879,20 @@ class SignatureService
             'total_signer' => '',
             'document_snapshot' => '',
             'document_path' => '',
-            'document_type_id' => ''
+            'document_type_id' => '',
         ]);
     }
 
+    /**
+     * Generate a signable document from a template for one or more employees, resolving
+     * placeholders and creating the per-signer signature tasks (transactional).
+     *
+     * @param  GenerateDocumentData  $payload  Target employee id(s) and version label
+     * @param  string  $templateUid  Uid of the master template to generate from
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
+     */
     public function generateDocument(GenerateDocumentData $payload, string $templateUid): array
     {
         DB::beginTransaction();
@@ -744,13 +908,13 @@ class SignatureService
                                 'signers' => function ($querySigner) {
                                     $querySigner->select(['id', 'type_id', 'division_id', 'order'])
                                         ->with([
-                                            'signMapping:id,division_id,main_signer_id,delegate_signer_id'
+                                            'signMapping:id,division_id,main_signer_id,delegate_signer_id',
                                         ])
                                         ->orderBy('order', 'asc');
                                 },
                             ]);
                     },
-                    'signers:id,master_document_id'
+                    'signers:id,master_document_id',
                 ],
             ]);
 
@@ -765,7 +929,7 @@ class SignatureService
             $employee = $this->employeeRepo->show(
                 uid: '',
                 select: collect($columns)->join(','),
-                where: "uid = '{$payload->employee_id}'"
+                where: "employee_id = '{$payload->employee_id}'"
             );
 
             if (! $employee) {
@@ -776,10 +940,10 @@ class SignatureService
                 'where' => [
                     'employee_id' => $employee->id,
                     'document_type_id' => $document->document_type_id,
-                    ],
+                ],
                 'whereIn' => [
-                    'status' => [Status::Awaiting, Status::NeedSign]
-                ]
+                    'status' => [Status::Awaiting, Status::NeedSign],
+                ],
             ]);
 
             if ($currentEmployeeDoc) {
@@ -803,22 +967,20 @@ class SignatureService
             // Replace the file content
             $this->replaceDocumentContent($mappingPlaceholderReplacer, $employeeDocumentPath);
 
-            $fixFile = asset('storage/' . $employeeDocumentPath);
-
             $employeeDocument = $this->employeeDocumentRepo->store([
                 'employee_id' => $employee->id,
                 'status' => Status::NeedSign,
                 'total_signer' => $document->signers->count(),
                 'document_snapshot' => $document->activeDocument->toArray(),
                 'document_path' => $employeeDocumentPath,
-                'document_type_id' => $document->document_type_id
+                'document_type_id' => $document->document_type_id,
             ]);
 
             $divisionSigners = [];
             foreach ($document->documentType->signers as $documentSigner) {
                 $divisionSigners[] = [
                     'employee_id' => $documentSigner->signMapping->main_signer_id,
-                    'order' => $documentSigner->order
+                    'order' => $documentSigner->order,
                 ];
             }
 
@@ -827,42 +989,521 @@ class SignatureService
 
             $employeeDocument->signatureTasks()->createMany($divisionSigners);
 
+            // Send notification
+            GenerateDocumentNotificationJob::dispatch(
+                collect($divisionSigners)->pluck('employee_id')->toArray()
+            )->afterCommit();
+
             DB::commit();
 
             return generalResponse(
-                message: 'Success',
+                message: 'Success to generate document for employee',
                 data: [
-                    'file_path' => $fixFile
+                    'id' => $employeeDocument->uid,
                 ]
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
 
-    public function documentSignDetail(string $documentUid)
+    /**
+     * Guard that the given user is an eligible signer who has not already signed.
+     *
+     * @param  Collection  $signatureTasks  Signature tasks of the document
+     * @param  Authenticatable|null  $user  Currently authenticated user
+     *
+     * @throws UserAlreadySigned
+     * @throws UserNotHaveAccessToSign
+     */
+    protected function isSignerValid(Collection $signatureTasks, ?Authenticatable $user): void
+    {
+        $search = $signatureTasks->where('employee_id', $user->employee_id)
+            ->values();
+
+        if ($search->isNotEmpty() && $search[0]->status == SignatureTaskStatus::Signed) {
+            throw new UserAlreadySigned;
+        }
+
+        if ($search->isEmpty()) {
+            throw new UserNotHaveAccessToSign;
+        }
+    }
+
+    /**
+     * Validate the signing OTP for the authenticated signer.
+     *
+     * On success the stored OTP is cleared so it cannot be replayed; marking the task as
+     * signed happens later in the signing flow, not here.
+     *
+     * @param  string  $employeeDocumentUid  Uid of the employee document being signed
+     * @param  string  $otp  The 6-digit OTP submitted by the signer
+     * @return array Response envelope; error message when the OTP is wrong or expired
+     *
+     * @throws DataNotFound
+     */
+    public function validateOtp(string $employeeDocumentUid, string $otp): array
     {
         try {
-            $output = [];
+            $user = Auth::user();
 
-            $document = $this->masterDocumentRepo->show([
-                'where' => ['uid' => $documentUid],
-                'select' => ['id', 'name', 'document_type_id'],
-                'with' => [
-                    'activeDocument:id,master_document_id,created_by',
+            $document = $this->employeeDocumentRepo->show([
+                'where' => [
+                    'uid' => $employeeDocumentUid,
                 ],
+                'select' => ['id'],
+                'with' => ['signatureTasks'],
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound('Document not found.');
+            }
+
+            $this->isSignerValid($document->signatureTasks, $user);
+
+            $task = $document->signatureTasks
+                ->firstWhere('employee_id', $user->employee_id);
+
+            if (! $task->otp || ! hash_equals($task->otp, $otp)) {
+                return errorResponse(message: __('notification.otpMismatch'));
+            }
+
+            if (! $task->otp_expired_at || $task->otp_expired_at->isPast()) {
+                return errorResponse(message: __('notification.otpHasBeenExpired'));
+            }
+
+            $this->signatureTaskRepo->update($task, [
+                'otp' => null,
+                'otp_expired_at' => null,
             ]);
 
             return generalResponse(
-                message: 'Success',
-                data: []
+                message: 'Success'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }
 
+    /**
+     * Generate and dispatch a one-time password the signer uses to sign the document.
+     *
+     * @param  string  $employeeDocumentUid  Uid of the employee document to sign
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
+     */
+    public function generateSignOtp(string $employeeDocumentUid): array
+    {
+        try {
+            $user = Auth::user();
+
+            $document = $this->employeeDocumentRepo->show([
+                'where' => [
+                    'uid' => $employeeDocumentUid,
+                ],
+                'select' => ['id', 'document_type_id'],
+                'with' => ['signatureTasks'],
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound('Document not found.');
+            }
+
+            $this->isSignerValid($document->signatureTasks, $user);
+
+            SendOtpSignJob::dispatch($user, $document->id);
+
+            return generalResponse(
+                message: 'Please check registered email to see OTP code'
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Stamp a signature image onto a placeholder inside a Word document, in place.
+     *
+     * @param  string  $documentPath  Document path relative to the public disk
+     * @param  string  $placeholder  Placeholder name (without the `${}` wrapper)
+     * @param  string  $signaturePath  Signature image path relative to the public disk
+     */
+    protected function replaceSignaturePlaceholder(string $documentPath, string $placeholder, string $signaturePath): void
+    {
+        $realDocumentPath = storage_path('app/public/'.$documentPath);
+        $realSignaturePath = storage_path('app/public/'.$signaturePath);
+
+        $templateProcessor = new TemplateProcessor($realDocumentPath);
+        $templateProcessor->setImageValue($placeholder, [
+            'path' => $realSignaturePath,
+            'width' => 150,
+            'height' => 60,
+            'ratio' => true,
+        ]);
+        $templateProcessor->saveAs($realDocumentPath);
+    }
+
+    /**
+     * Apply the authenticated employee's saved signature onto their signature placeholder
+     * within a generated document.
+     *
+     * The placeholder is resolved from the signer's `order` in the document's signature tasks:
+     * the last order maps to the `employeeSignature` placeholder, any earlier order maps to
+     * `signature{order}` (e.g. order 2 -> `signature2`). Marking the task as signed is handled
+     * by {@see self::markDocumentAsSigned()} in a separate step.
+     *
+     * @param  string  $signatureUid  Uid of the employee's saved signature to apply
+     * @param  string  $employeeDocumentUid  Uid of the employee document being signed
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
+     */
+    public function applySignatureToDocument(string $signatureUid, string $employeeDocumentUid): array
+    {
+        try {
+            $user = Auth::user();
+            $employeeId = $user->employee_id;
+
+            $signature = $this->employeeSignatureRepo->show([
+                'where' => [
+                    'uid' => $signatureUid,
+                    'employee_id' => $employeeId,
+                ],
+                'select' => ['id', 'uid', 'employee_id', 'sign_path'],
+            ]);
+
+            if (! $signature) {
+                throw new DataNotFound('Signature not found.');
+            }
+
+            $document = $this->employeeDocumentRepo->show([
+                'where' => ['uid' => $employeeDocumentUid],
+                'select' => ['id', 'uid', 'document_path'],
+                'with' => ['signatureTasks'],
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound('Document not found.');
+            }
+
+            $this->isSignerValid($document->signatureTasks, $user);
+
+            $task = $document->signatureTasks->firstWhere('employee_id', $employeeId);
+            $lastOrder = $document->signatureTasks->max('order');
+
+            // The final signer (highest order) signs the employee placeholder; the rest
+            // fill their positional signature{order} placeholder.
+            $placeholder = $task->order == $lastOrder
+                ? 'employeeSignature'
+                : 'signature'.$task->order;
+
+            $this->replaceSignaturePlaceholder(
+                $document->document_path,
+                $placeholder,
+                $signature->sign_path,
+            );
+
+            $marked = $this->markDocumentAsSigned($employeeDocumentUid);
+
+            if ($marked['error']) {
+                return $marked;
+            }
+
+            return generalResponse(
+                message: __('notification.successApplySignature'),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Mark the authenticated signer's task on a document as signed.
+     *
+     * Called as the final step of {@see self::applySignatureToDocument()}; not exposed as a
+     * standalone endpoint.
+     *
+     * @param  string  $employeeDocumentUid  Uid of the employee document being signed
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
+     */
+    protected function markDocumentAsSigned(string $employeeDocumentUid): array
+    {
+        try {
+            $user = Auth::user();
+
+            $document = $this->employeeDocumentRepo->show([
+                'where' => ['uid' => $employeeDocumentUid],
+                'select' => ['id', 'uid'],
+                'with' => ['signatureTasks'],
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound('Document not found.');
+            }
+
+            $this->isSignerValid($document->signatureTasks, $user);
+
+            $task = $document->signatureTasks->firstWhere('employee_id', $user->employee_id);
+
+            $this->signatureTaskRepo->update($task, [
+                'status' => SignatureTaskStatus::Signed,
+                'signed_at' => now(),
+            ]);
+
+            return generalResponse(
+                message: __('notification.successMarkDocumentSigned'),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Fetch a paginated list of generated employee documents.
+     *
+     * @return array Response envelope with the paginated documents
+     */
+    public function generatedDocumentList(): array
+    {
+        try {
+            $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+            $user = Auth::user();
+            $isPrivileged = $user->hasRole([
+                BaseRole::Root->value,
+                BaseRole::Director->value,
+                BaseRole::Hrd->value,
+            ]);
+
+            if (! $isPrivileged) {
+                return errorResponse(__('notification.notAllowedToViewDocument'), [], 403);
+            }
+
+            $data = $this->employeeDocumentRepo->get([
+                'select' => ['id', 'uid', 'employee_id', 'status', 'document_type_id'],
+                'skip' => $page,
+                'take' => $itemsPerPage,
+                'with' => [
+                    'employee:id,name,email,avatar_color',
+                    'documentType:id,name',
+                    'documentType.masterDocument:id,document_type_id,name,current_active_version_text',
+                    'signatureTasks:id,employee_document_id,status',
+                ],
+            ])->map(function ($item) {
+                return new GeneratedDocumentListData(
+                    uid: $item->uid,
+                    document_name: $item->documentType->masterDocument->name,
+                    version: $item->documentType->masterDocument->current_active_version_text,
+                    type: $item->documentType->name,
+                    status: $item->status->label(),
+                    employee: new DetailDocumentSignEmployeeData(
+                        name: $item->employee->name,
+                        initials: getInitialName($item->employee->name),
+                        color: $item->employee->avatar_color ?? generateRandomColor($item->employee->email)
+                    ),
+                    signers: $item->signatureTasks->map(function ($task) {
+                        return [
+                            'status' => $task->status->value,
+                        ];
+                    })->toArray()
+                );
+            })->all();
+
+            $totalData = $this->employeeDocumentRepo->get([
+                'select' => ['id', 'status'],
+            ]);
+
+            $inProgress = $totalData->whereIn('status', [Status::NeedSign, Status::Awaiting])
+                ->count();
+            $awaiting = $totalData->where('status', Status::Awaiting)
+                ->count();
+            $completed = $totalData->where('status', Status::Completed)
+                ->count();
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $data,
+                    'totalData' => $totalData->count(),
+                    'stats' => [
+                        'inProgress' => $inProgress,
+                        'awaiting' => $awaiting,
+                        'completed' => $completed,
+                    ],
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Fetch a paginated list of generated documents the authenticated user must sign.
+     *
+     * Intended for non-privileged users (not root/director/hrd): only documents on which
+     * the current employee is a signer are returned. Each item's `signers` carry a
+     * per-signer `is_me` flag marking the current user's row.
+     *
+     * @return array Response envelope with the paginated documents
+     */
+    public function myGeneratedDocumentList(): array
+    {
+        try {
+            $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+            $page = request('page') ?? 1;
+            $page = $page == 1 ? 0 : $page;
+            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+
+            $employeeId = Auth::user()->employee_id;
+
+            $signerScope = [
+                'whereHas' => [
+                    'signatureTasks' => fn ($query) => $query->where('employee_id', $employeeId),
+                ],
+            ];
+
+            $data = $this->employeeDocumentRepo->get(array_merge($signerScope, [
+                'select' => ['id', 'uid', 'status', 'document_type_id'],
+                'skip' => $page,
+                'take' => $itemsPerPage,
+                'with' => [
+                    'documentType:id,name',
+                    'documentType.masterDocument:id,document_type_id,name,current_active_version_text',
+                    'signatureTasks' => fn ($query) => $query
+                        ->select(['id', 'employee_document_id', 'employee_id', 'status', 'order'])
+                        ->orderBy('order'),
+                    'signatureTasks.employee:id,name,position_id',
+                    'signatureTasks.employee.position:id,name',
+                ],
+            ]))->map(function ($item) use ($employeeId) {
+                return new MyGeneratedDocumentListData(
+                    uid: $item->uid,
+                    document_name: $item->documentType->masterDocument->name,
+                    version: $item->documentType->masterDocument->current_active_version_text,
+                    type: $item->documentType->name,
+                    signers: $item->signatureTasks->map(function ($task) use ($employeeId) {
+                        return new MyDocumentSignerData(
+                            role: $task->employee->position->name,
+                            name: $task->employee->name,
+                            status: $task->status->value,
+                            is_me: $task->employee_id == $employeeId,
+                        );
+                    })->all()
+                );
+            })->all();
+
+            $totalData = $this->employeeDocumentRepo->get(array_merge($signerScope, [
+                'select' => ['id'],
+            ]))->count();
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $data,
+                    'totalData' => $totalData,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Get a generated document's detail including each signer and their signing progress.
+     *
+     * @param  string  $documentUid  Uid of the generated employee document
+     * @return array Response envelope with the document sign detail
+     */
+    public function documentSignDetail(string $documentUid): array
+    {
+        try {
+            /** @var array<DetailDocumentSignData> */
+            $output = [];
+
+            $employeeDocument = $this->employeeDocumentRepo->show([
+                'where' => [
+                    'uid' => $documentUid,
+                ],
+                'select' => ['id', 'uid', 'employee_id', 'status', 'signers_detail', 'document_path', 'document_type_id', 'document_snapshot'],
+                'with' => [
+                    'documentType:id,name',
+                    'documentType.masterDocument:id,uid,document_type_id,current_active_version_text,name',
+                    'employee:id,uid,name,avatar_color,email',
+                    'signatureTasks',
+                    'signatureTasks.employee:id,email,position_id,name',
+                    'signatureTasks.employee.position:id,name',
+                ],
+            ]);
+
+            if (! $employeeDocument) {
+                throw new DataNotFound('Employee document is not found');
+            }
+
+            $user = Auth::user();
+            $isPrivileged = $user->hasRole([
+                BaseRole::Root->value,
+                BaseRole::Director->value,
+                BaseRole::Hrd->value,
+            ]);
+            $isSigner = $employeeDocument->signatureTasks
+                ->contains('employee_id', $user->employee_id);
+
+            if (! $isPrivileged && ! $isSigner) {
+                return errorResponse(__('notification.notAllowedToViewDocument'), [], 403);
+            }
+
+            /** @var array<int, DetailDocumentSignSignersData> */
+            $signers = [];
+
+            foreach ($employeeDocument->signatureTasks as $task) {
+                $signers[] = new DetailDocumentSignSignersData(
+                    role: $task->employee->position->name,
+                    name: $task->employee->name,
+                    email: $task->employee->email,
+                    status: $task->status->value,
+                    signed_at: $task->signed_at
+                );
+            }
+
+            $output = new DetailDocumentSignData(
+                uid: $employeeDocument->uid,
+                template_uid: $employeeDocument->documentType->masterDocument->uid,
+                version_id: $employeeDocument->document_snapshot['id'] ?? 0,
+                document_name: $employeeDocument->documentType->masterDocument->name,
+                version: $employeeDocument->documentType->masterDocument->current_active_version_text,
+                type: $employeeDocument->documentType->name,
+                can_sign: $employeeDocument->isMyTurnToSign(),
+                status: $employeeDocument->status->label(),
+                employee: new DetailDocumentSignEmployeeData(
+                    name: $employeeDocument->employee->name,
+                    initials: getInitialName($employeeDocument->employee->name),
+                    color: $employeeDocument->employee->avatar_color ?? generateRandomColor($employeeDocument->employee->email)
+                ),
+                signers: $signers
+            );
+
+            return generalResponse(
+                message: 'Success',
+                data: DetailDocumentSignData::from($output)->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * List the organization's signatories and each division's PIC mapping.
+     *
+     * @return array Response envelope with the signatories list
+     */
     public function listSignatories(): array
     {
         try {
@@ -954,7 +1595,11 @@ class SignatureService
     }
 
     /**
-     * Assign PIC as signer in division signatories
+     * Assign a PIC (main and/or delegate) as the signer for a division's signatory mapping.
+     *
+     * @param  AssignSignatoriesData  $payload  Signatory assignment data
+     * @param  string  $mappingUid  Uid of the signatories mapping to update
+     * @return array Response envelope with a success/error message
      */
     public function assignSignatories(AssignSignatoriesData $payload, string $mappingUid): array
     {
@@ -984,6 +1629,187 @@ class SignatureService
 
             return generalResponse(
                 message: 'Success'
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Transform an employee signature model into its API representation.
+     */
+    protected function transformEmployeeSignature(EmployeeSignature $signature): EmployeeSignatureData
+    {
+        return new EmployeeSignatureData(
+            uid: $signature->uid,
+            sign_url: asset('storage/'.$signature->sign_path),
+            is_active: (bool) $signature->is_active,
+            created_at: $signature->created_at?->format('d F Y H:i'),
+        );
+    }
+
+    /**
+     * Deactivate every currently active signature belonging to an employee.
+     */
+    protected function deactivateEmployeeSignatures(int $employeeId): void
+    {
+        $this->employeeSignatureRepo->get([
+            'where' => [
+                'employee_id' => $employeeId,
+                'is_active' => true,
+            ],
+            'select' => ['id', 'is_active'],
+        ])->each(function (EmployeeSignature $signature) {
+            $this->employeeSignatureRepo->update($signature, ['is_active' => false]);
+        });
+    }
+
+    /**
+     * List every signature the authenticated employee has saved.
+     *
+     * @return array Response envelope with a list of `EmployeeSignatureData`
+     */
+    public function listEmployeeSignatures(): array
+    {
+        try {
+            $employeeId = Auth::user()->employee_id;
+
+            $data = $this->employeeSignatureRepo->get([
+                'where' => ['employee_id' => $employeeId],
+                'select' => ['id', 'uid', 'employee_id', 'is_active', 'sign_path', 'created_at'],
+                'orderBy' => ['is_active' => 'desc', 'created_at' => 'desc'],
+            ])->map(fn (EmployeeSignature $signature) => $this->transformEmployeeSignature($signature))
+                ->all();
+
+            return generalResponse(
+                message: 'Success',
+                data: $data,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Upload a new signature image for the authenticated employee and mark it active,
+     * deactivating any previously active signature (transactional).
+     *
+     * @param  StoreEmployeeSignatureData  $payload  Uploaded signature image
+     * @return array Response envelope with the stored `EmployeeSignatureData`
+     */
+    public function storeEmployeeSignature(StoreEmployeeSignatureData $payload): array
+    {
+        DB::beginTransaction();
+        try {
+            $employeeId = Auth::user()->employee_id;
+
+            $directory = 'signatures/employees/'.$employeeId;
+            $this->createFolder($directory);
+
+            $filename = 'signature_'.$employeeId.'_'.strtotime('now').rand(100, 999).'.'.$payload->signature->getClientOriginalExtension();
+            $storedPath = Storage::disk('public')->putFileAs($directory, $payload->signature, $filename);
+
+            if (! $storedPath) {
+                throw new FailedToUploadFile;
+            }
+
+            $this->deactivateEmployeeSignatures($employeeId);
+
+            $signature = $this->employeeSignatureRepo->store([
+                'employee_id' => $employeeId,
+                'is_active' => true,
+                'sign_path' => $storedPath,
+            ]);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successStoreEmployeeSignature'),
+                data: $this->transformEmployeeSignature($signature)->toArray(),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Mark one of the authenticated employee's signatures active, deactivating the rest
+     * (transactional).
+     *
+     * @param  string  $signatureUid  Uid of the signature to activate
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
+     */
+    public function setActiveEmployeeSignature(string $signatureUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $employeeId = Auth::user()->employee_id;
+
+            $signature = $this->employeeSignatureRepo->show([
+                'where' => [
+                    'uid' => $signatureUid,
+                    'employee_id' => $employeeId,
+                ],
+                'select' => ['id', 'uid', 'employee_id', 'is_active', 'sign_path', 'created_at'],
+            ]);
+
+            if (! $signature) {
+                throw new DataNotFound('Signature not found.');
+            }
+
+            $this->deactivateEmployeeSignatures($employeeId);
+            $this->employeeSignatureRepo->update($signature, ['is_active' => true]);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successUpdateEmployeeSignature'),
+                data: $this->transformEmployeeSignature($signature->refresh())->toArray(),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete one of the authenticated employee's signatures together with its stored file.
+     *
+     * @param  string  $signatureUid  Uid of the signature to delete
+     * @return array Response envelope with a success/error message
+     *
+     * @throws DataNotFound
+     */
+    public function deleteEmployeeSignature(string $signatureUid): array
+    {
+        try {
+            $employeeId = Auth::user()->employee_id;
+
+            $signature = $this->employeeSignatureRepo->show([
+                'where' => [
+                    'uid' => $signatureUid,
+                    'employee_id' => $employeeId,
+                ],
+                'select' => ['id', 'uid', 'employee_id', 'sign_path'],
+            ]);
+
+            if (! $signature) {
+                throw new DataNotFound('Signature not found.');
+            }
+
+            if (Storage::disk('public')->exists($signature->sign_path)) {
+                Storage::disk('public')->delete($signature->sign_path);
+            }
+
+            $this->employeeSignatureRepo->delete($signature);
+
+            return generalResponse(
+                message: __('notification.successDeleteEmployeeSignature'),
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
