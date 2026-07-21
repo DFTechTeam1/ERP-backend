@@ -1339,7 +1339,10 @@ if (! function_exists('amILeadModeller')) {
             $user = \Illuminate\Support\Facades\Auth::user();
         }
         $leadModellerId = getSettingByKey('lead_3d_modeller');
-        $leadModellerId = getIdFromUid($leadModellerId, new Employee);
+
+        if ($leadModellerId) {
+            $leadModellerId = getIdFromUid($leadModellerId, new Employee);
+        }
 
         return $user->employee_id == $leadModellerId;
     }

@@ -31,7 +31,9 @@
                 { "path": "/admin/master/quotation-items", "slug": "manage-quotation-items", "lang_id": "Kelola Quotation Item", "lang_en": "Manage Quotation Item", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_quotation_items" },
                 { "path": "/admin/master/countries", "slug": "manage-countries", "lang_id": "Kelola Negara", "lang_en": "Manage Countries", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_country" },
                 { "path": "/admin/master/states", "slug": "manage-states", "lang_id": "Kelola Provinsi", "lang_en": "Manage States", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_state" },
-                { "path": "/admin/master/cities", "slug": "manage-cities", "lang_id": "Kelola Kota", "lang_en": "Manage Cities", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_city" }
+                { "path": "/admin/master/cities", "slug": "manage-cities", "lang_id": "Kelola Kota", "lang_en": "Manage Cities", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_city" },
+                { "path": "/admin/master/divisions", "slug": "manage-divisions", "lang_id": "Kelola Divisi", "lang_en": "Manage Divisions", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_division" },
+                { "path": "/admin/master/positions", "slug": "manage-positions", "lang_id": "Kelola Posisi", "lang_en": "Manage Positions", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_position" }
             ]
         },
         {
@@ -138,9 +140,7 @@
             "name": "Master",
             "type": "regular",
             "childs": [
-                { "path": "/branches", "lang_id": "Kantor", "lang_en": "Branches", "icon": "pi pi-sitemap", "permission": "list_branch" },
-                { "path": "/divisions", "lang_id": "Divisi", "lang_en": "Divisions", "icon": "pi pi-align-justify", "permission": "list_division" },
-                { "path": "/positions", "lang_id": "Posisi", "lang_en": "Positions", "icon": "pi pi-align-justify", "permission": "list_position" }
+                { "path": "/branches", "lang_id": "Kantor", "lang_en": "Branches", "icon": "pi pi-sitemap", "permission": "list_branch" }
             ]
         },
         {
