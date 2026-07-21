@@ -15,8 +15,8 @@ class DocumentTemplate extends Model
      */
     protected $fillable = [];
 
-    protected static function newFactory(): DocumentTemplateFactory
-    {
-        // return DocumentTemplateFactory::new();
-    }
+    // protected static function newFactory(): DocumentTemplateFactory
+    // {
+    //     return DocumentTemplateFactory::new();
+    // }
 }

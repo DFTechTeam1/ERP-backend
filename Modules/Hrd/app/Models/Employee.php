@@ -13,6 +13,7 @@ use App\Traits\ModelObserver;
 use Carbon\Carbon;
 use Database\Factories\Hrd\EmployeeFactory as HrdEmployeeFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -162,6 +163,24 @@ class Employee extends Model
         'length_of_service_year',
         'human_age',
     ];
+
+    public function scopeActiveEmployee(Builder $query)
+    {
+        $query->whereIn('status', [
+            Status::Permanent,
+            Status::Contract,
+            Status::PartTime,
+            Status::Freelance,
+            Status::Internship,
+            Status::Probation
+        ]);
+    }
+
+    public function scopeProjectManagers(Builder $query, array $positionIds)
+    {
+        $query->activeEmployee()
+            ->whereIn('position_id', $positionIds);
+    }
 
     public function humanAge(): Attribute
     {

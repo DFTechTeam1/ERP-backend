@@ -86,14 +86,34 @@ class DivisionService
         }
     }
 
-    public function allDivisions()
+    public function allDivisions(): array
     {
-        $data = $this->repo->list('uid as value, name as title');
+        $data = $this->repo->list(
+            select: 'uid as value, name as title, id',
+            relation: [
+                'positions:id,division_id',
+                'positions.employees:id,position_id',
+            ]
+        );
+
+        $output = [];
+        foreach ($data as $division) {
+            $count = 0;
+            foreach ($division->positions as $position) {
+                $count += $position->employees->count();
+            }
+
+            $output[] = [
+                'value' => $division->value,
+                'title' => $division->title,
+                'total_employee' => $count,
+            ];
+        }
 
         return generalResponse(
             'success',
             false,
-            $data->toArray()
+            $output
         );
     }
 

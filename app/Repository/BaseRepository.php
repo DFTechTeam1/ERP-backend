@@ -15,8 +15,15 @@ use Illuminate\Database\Eloquent\Model;
  * repository just runs the query.
  *
  * Supported `$params` keys:
- *   - with:       array<int,string>            relations to eager-load
+ *   - with:       array<int|string,string|Closure(Builder): void>|string
+ *                                              relations to eager-load; a string key
+ *                                              paired with a Closure constrains that relation
  *   - where:      array<string,mixed>          equality constraints (column => value)
+ *   - whereIn:    array<string,array>          IN constraints (column => values)
+ *   - whereHas:   array<string,?Closure(Builder): void>
+ *                                              relation existence constraints (relation => optional
+ *                                              Closure to further constrain the related query)
+ *   - select:     array<int,string>|string     columns to select
  *   - orderBy:    array<string,string>         column => 'asc'|'desc'
  *   - orderByRaw: string                        raw ORDER BY expression
  *   - scope:      Closure(Builder): void        arbitrary extra constraints
@@ -40,12 +47,24 @@ abstract class BaseRepository
      */
     protected function applyParams(Builder $query, array $params): Builder
     {
-        foreach ($params['with'] ?? [] as $relation) {
-            $query->with($relation);
+        if (isset($params['with'])) {
+            $query->with($params['with']);
         }
 
         foreach ($params['where'] ?? [] as $column => $value) {
             $query->where($column, $value);
+        }
+
+        foreach ($params['whereIn'] ?? [] as $column => $values) {
+            $query->whereIn($column, $values);
+        }
+
+        foreach ($params['whereHas'] ?? [] as $relation => $callback) {
+            $query->whereHas($relation, $callback instanceof Closure ? $callback : null);
+        }
+
+        if (isset($params['select'])) {
+            $query->select($params['select']);
         }
 
         foreach ($params['orderBy'] ?? [] as $column => $direction) {

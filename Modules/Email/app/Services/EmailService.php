@@ -38,6 +38,8 @@ class EmailService
                 throw new NotFoundError(message: 'Employee is not found');
             }
 
+            setEmailConfiguration();
+
             SendEmailJob::dispatch(
                 $recipientEmail,
                 $emailType,

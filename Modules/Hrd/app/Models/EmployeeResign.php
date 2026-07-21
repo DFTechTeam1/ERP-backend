@@ -20,6 +20,7 @@ class EmployeeResign extends Model
         'employee_id',
         'reason',
         'resign_date',
+        'greatday_resign_reason',
         'current_position_id',
         'current_employee_status',
     ];

@@ -31,7 +31,9 @@
                 { "path": "/admin/master/quotation-items", "slug": "manage-quotation-items", "lang_id": "Kelola Quotation Item", "lang_en": "Manage Quotation Item", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_quotation_items" },
                 { "path": "/admin/master/countries", "slug": "manage-countries", "lang_id": "Kelola Negara", "lang_en": "Manage Countries", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_country" },
                 { "path": "/admin/master/states", "slug": "manage-states", "lang_id": "Kelola Provinsi", "lang_en": "Manage States", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_state" },
-                { "path": "/admin/master/cities", "slug": "manage-cities", "lang_id": "Kelola Kota", "lang_en": "Manage Cities", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_city" }
+                { "path": "/admin/master/cities", "slug": "manage-cities", "lang_id": "Kelola Kota", "lang_en": "Manage Cities", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_city" },
+                { "path": "/admin/master/divisions", "slug": "manage-divisions", "lang_id": "Kelola Divisi", "lang_en": "Manage Divisions", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_division" },
+                { "path": "/admin/master/positions", "slug": "manage-positions", "lang_id": "Kelola Posisi", "lang_en": "Manage Positions", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_position" }
             ]
         },
         {
@@ -87,6 +89,18 @@
             ]
         },
         {
+            "name": "Documents",
+            "type": "regular",
+            "icon": "mdiPlain:mdi-file-document-multiple-outline",
+            "childs": [
+                { "path": "/admin/document-signing/signatories", "slug": "signatories", "lang_id": "Penandatangan", "lang_en": "Signatories", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_signatories" },
+                { "path": "/admin/document-signing/document-types", "slug": "document-types", "lang_id": "Tipe Dokumen", "lang_en": "Document Types", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_document_types" },
+                { "path": "/admin/document-signing/templates", "slug": "document-templates", "lang_id": "Master Dokumen", "lang_en": "Docuument Templates", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_document_templates" },
+                { "path": "/admin/document-signing/documents", "slug": "document-documents", "lang_id": "Dokumen telah didistribusi", "lang_en": "Generated Documents", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_generated_documents" },
+                { "path": "/admin/document-signing/my-documents", "slug": "document-my-documents", "lang_id": "Dokumen Ku", "lang_en": "My Document", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_my_documents" }
+            ]
+        },
+        {
             "name": "Inventories",
             "type": "regular",
             "icon": "mdiPlain:mdi-package-variant",
@@ -127,9 +141,7 @@
             "name": "Master",
             "type": "regular",
             "childs": [
-                { "path": "/branches", "lang_id": "Kantor", "lang_en": "Branches", "icon": "pi pi-sitemap", "permission": "list_branch" },
-                { "path": "/divisions", "lang_id": "Divisi", "lang_en": "Divisions", "icon": "pi pi-align-justify", "permission": "list_division" },
-                { "path": "/positions", "lang_id": "Posisi", "lang_en": "Positions", "icon": "pi pi-align-justify", "permission": "list_position" }
+                { "path": "/branches", "lang_id": "Kantor", "lang_en": "Branches", "icon": "pi pi-sitemap", "permission": "list_branch" }
             ]
         },
         {

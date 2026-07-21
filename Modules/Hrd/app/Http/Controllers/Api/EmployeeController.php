@@ -2,27 +2,29 @@
 
 namespace Modules\Hrd\Http\Controllers\Api;
 
-use App\Actions\Hrd\ResignScheduleAction;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Http\Controllers\Controller;
-use App\Services\WhatsappService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Modules\Email\Data\Notification\SlackTableHeaderColumnData;
-use Modules\Email\Data\Notification\SlackTablePayloadData;
-use Modules\Hrd\Data\TransferHistory\HistoryData;
-use Modules\Hrd\Data\TransferHistory\ValidEmployeeData;
+use Modules\Email\Services\WhatsappService;
+use Modules\Hrd\Data\Employee\BulkSyncEmployeeData;
+use Modules\Hrd\Data\Employee\EmployeeChangeSyncData;
+use Modules\Hrd\Data\Employee\LinkEmployeeData;
+use Modules\Hrd\Data\Resign\ResignData;
 use Modules\Hrd\Http\Requests\Employee\AddAsUser;
 use Modules\Hrd\Http\Requests\Employee\Create;
+use Modules\Hrd\Http\Requests\Employee\EmergencyContact;
+use Modules\Hrd\Http\Requests\Employee\Family;
 use Modules\Hrd\Http\Requests\Employee\Update;
 use Modules\Hrd\Http\Requests\Employee\UpdateBasicInfo;
+use Modules\Hrd\Http\Requests\Employee\UpdateEmployment;
 use Modules\Hrd\Http\Requests\Employee\UpdateIdentity;
+use Modules\Hrd\Http\Requests\ResendVerification;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Services\EmployeeService;
-use Spatie\LaravelData\DataCollection;
 
 class EmployeeController extends Controller
 {
@@ -42,7 +44,7 @@ class EmployeeController extends Controller
     /**
      * Get list of data
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function list()
     {
@@ -65,7 +67,7 @@ class EmployeeController extends Controller
             'gender',
             'martial_status',
             'user_id',
-            'nickname'
+            'nickname',
         ];
 
         return apiResponse(
@@ -86,12 +88,12 @@ class EmployeeController extends Controller
     /**
      * Get list of 3D modeller Employee
      */
-    public function get3DModeller(string $projectUid, string $taskUid): \Illuminate\Http\JsonResponse
+    public function get3DModeller(string $projectUid, string $taskUid): JsonResponse
     {
         return apiResponse($this->employeeService->get3DModeller($projectUid, $taskUid));
     }
 
-    public function generateRandomPassword(): \Illuminate\Http\JsonResponse
+    public function generateRandomPassword(): JsonResponse
     {
         return apiResponse(generalResponse(
             message: 'Success',
@@ -105,7 +107,7 @@ class EmployeeController extends Controller
     /**
      * Get all available status from enums
      */
-    public function getAllStatus(): \Illuminate\Http\JsonResponse
+    public function getAllStatus(): JsonResponse
     {
         return apiResponse($this->employeeService->getAllStatus());
     }
@@ -134,7 +136,7 @@ class EmployeeController extends Controller
     /**
      * Function to generate new Employee ID (For new user only)
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function generateEmployeeID()
     {
@@ -144,7 +146,7 @@ class EmployeeController extends Controller
     /**
      * Validate employee ID
      */
-    public function validateEmployeeID(Request $request): \Illuminate\Http\JsonResponse
+    public function validateEmployeeID(Request $request): JsonResponse
     {
         return apiResponse($this->employeeService->validateEmployeeID($request->toArray()));
     }
@@ -152,7 +154,7 @@ class EmployeeController extends Controller
     /**
      * Function to get all employees data
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getAll()
     {
@@ -162,7 +164,7 @@ class EmployeeController extends Controller
     /**
      * Function to check email
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function checkEmail()
     {
@@ -172,7 +174,7 @@ class EmployeeController extends Controller
     /**
      * Function to check id number
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function checkIdNumber()
     {
@@ -182,7 +184,7 @@ class EmployeeController extends Controller
     /**
      * Get specific data by uid
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function show(string $uid)
     {
@@ -192,7 +194,7 @@ class EmployeeController extends Controller
     /**
      * Function to assign employee to webapp user
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function addAsUser(AddAsUser $request)
     {
@@ -202,7 +204,7 @@ class EmployeeController extends Controller
     /**
      * Get project manaagers only
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getProjectManagers()
     {
@@ -229,7 +231,7 @@ class EmployeeController extends Controller
     /**
      * Update selected data
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function update(Update $request, string $uid)
     {
@@ -242,7 +244,7 @@ class EmployeeController extends Controller
      * Update selected data
      *
      * @param  Update  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function updateBasicInfo(UpdateBasicInfo $request, string $uid)
     {
@@ -253,7 +255,7 @@ class EmployeeController extends Controller
      * Update selected data
      *
      * @param  Update  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function updateIdentity(UpdateIdentity $request, string $uid)
     {
@@ -263,7 +265,7 @@ class EmployeeController extends Controller
     /**
      * Delete specific data
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function delete($uid)
     {
@@ -273,7 +275,7 @@ class EmployeeController extends Controller
     /**
      * Delete multiple data
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function bulkDelete(Request $request)
     {
@@ -286,9 +288,9 @@ class EmployeeController extends Controller
      * Store employee family member
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function storeFamily(\Modules\Hrd\Http\Requests\Employee\Family $request, string $employeeUid)
+    public function storeFamily(Family $request, string $employeeUid)
     {
         return apiResponse($this->employeeService->storeFamily($request->validated(), $employeeUid));
     }
@@ -297,9 +299,9 @@ class EmployeeController extends Controller
      * Update employee family member
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function updateFamily(\Modules\Hrd\Http\Requests\Employee\Family $request, string $familyUid)
+    public function updateFamily(Family $request, string $familyUid)
     {
         return apiResponse($this->employeeService->updateFamily($request->validated(), $familyUid));
     }
@@ -308,7 +310,7 @@ class EmployeeController extends Controller
      * Get family of each employee
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function initFamily(string $employeeUid)
     {
@@ -318,7 +320,7 @@ class EmployeeController extends Controller
     /**
      * Export employees with some conditions
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function export(Request $request)
     {
@@ -329,7 +331,7 @@ class EmployeeController extends Controller
      * Get family of each employee
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function deleteFamily(string $familyUid)
     {
@@ -340,7 +342,7 @@ class EmployeeController extends Controller
      * Get emergency contact of each employee
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function initEmergency(string $employeeUid)
     {
@@ -351,9 +353,9 @@ class EmployeeController extends Controller
      * Store employee family member
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function storeEmergency(\Modules\Hrd\Http\Requests\Employee\EmergencyContact $request, string $employeeUid)
+    public function storeEmergency(EmergencyContact $request, string $employeeUid)
     {
         return apiResponse($this->employeeService->storeEmergency($request->validated(), $employeeUid));
     }
@@ -362,9 +364,9 @@ class EmployeeController extends Controller
      * Update employee emergency contact
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function updateEmergency(\Modules\Hrd\Http\Requests\Employee\EmergencyContact $request, string $familyUid)
+    public function updateEmergency(EmergencyContact $request, string $familyUid)
     {
         return apiResponse($this->employeeService->updateEmergency($request->validated(), $familyUid));
     }
@@ -373,7 +375,7 @@ class EmployeeController extends Controller
      * delete emergency contact
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function deleteEmergency(string $emergencyUid)
     {
@@ -384,9 +386,9 @@ class EmployeeController extends Controller
      * update employment data
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function updateEmployment(\Modules\Hrd\Http\Requests\Employee\UpdateEmployment $request, string $employeeUid)
+    public function updateEmployment(UpdateEmployment $request, string $employeeUid)
     {
         return apiResponse($this->employeeService->updateEmployment($request->validated(), $employeeUid));
     }
@@ -394,15 +396,15 @@ class EmployeeController extends Controller
     /**
      * Mark selected employee as resign employee
      */
-    public function resign(\Modules\Hrd\Http\Requests\Employee\Resign $request, string $employeeUid): \Illuminate\Http\JsonResponse
+    public function resign(ResignData $request, string $employeeUid): JsonResponse
     {
-        return apiResponse($this->employeeService->resign($request->validated(), $employeeUid));
+        return apiResponse($this->employeeService->resign($request, $employeeUid));
     }
 
     /**
      * Cancel resign of selected employee
      */
-    public function cancelResign(string $employeeUid): \Illuminate\Http\JsonResponse
+    public function cancelResign(string $employeeUid): JsonResponse
     {
         return apiResponse($this->employeeService->cancelResign($employeeUid));
     }
@@ -410,7 +412,7 @@ class EmployeeController extends Controller
     /**
      * Get employment chart options for frontend
      */
-    public function getEmploymentChart(): \Illuminate\Http\JsonResponse
+    public function getEmploymentChart(): JsonResponse
     {
         $employees = $this->repo->list(
             select: 'id,name,nickname,status,join_date',
@@ -423,7 +425,7 @@ class EmployeeController extends Controller
     /**
      * Get all element for dashboard chart
      */
-    public function getDashboardElement(): \Illuminate\Http\JsonResponse
+    public function getDashboardElement(): JsonResponse
     {
         // $map = config('cache-dependencies');
 
@@ -472,6 +474,36 @@ class EmployeeController extends Controller
     public function getGreatdayResignType(): JsonResponse
     {
         return apiResponse($this->employeeService->getGreatdayResignType());
+    }
+
+    public function getOutOfSyncEmployees(): JsonResponse
+    {
+        return apiResponse($this->employeeService->getOutOfSyncEmployees());
+    }
+
+    public function syncEmployeesFromGreatday(BulkSyncEmployeeData $data): JsonResponse
+    {
+        return apiResponse($this->employeeService->syncEmployeesFromGreatday($data));
+    }
+
+    public function previewEmployeeChanges(): JsonResponse
+    {
+        return apiResponse($this->employeeService->previewEmployeeChanges());
+    }
+
+    public function applyEmployeeChanges(EmployeeChangeSyncData $data): JsonResponse
+    {
+        return apiResponse($this->employeeService->applyEmployeeChanges($data));
+    }
+
+    public function checkEmployeeGreatdayLink(string $employeeUid): JsonResponse
+    {
+        return apiResponse($this->employeeService->checkEmployeeGreatdayLink($employeeUid));
+    }
+
+    public function linkEmployeeToGreatday(LinkEmployeeData $data, string $employeeUid): JsonResponse
+    {
+        return apiResponse($this->employeeService->linkEmployeeToGreatday($employeeUid, $data));
     }
 
     public function getGreatdayResignReason(): JsonResponse
@@ -571,8 +603,6 @@ class EmployeeController extends Controller
 
     /**
      * List job statuses from Greatday
-     *
-     * @return JsonResponse
      */
     public function listJobStatuses(): JsonResponse
     {
@@ -581,8 +611,6 @@ class EmployeeController extends Controller
 
     /**
      * List nationalities from Greatday
-     *
-     * @return JsonResponse
      */
     public function listNationalities(): JsonResponse
     {
@@ -591,8 +619,6 @@ class EmployeeController extends Controller
 
     /**
      * List companies from Greatday
-     *
-     * @return JsonResponse
      */
     public function listCompanies(): JsonResponse
     {
@@ -601,25 +627,27 @@ class EmployeeController extends Controller
 
     /**
      * Resend verification email to employee's email
-     *
-     * @param \Modules\Hrd\Http\Requests\ResendVerification $request
-     * @param string $employeeId
-     * @return JsonResponse
      */
-    public function resendVerificationEmail(\Modules\Hrd\Http\Requests\ResendVerification $request, string $employeeId): JsonResponse
+    public function resendVerificationEmail(ResendVerification $request, string $employeeId): JsonResponse
     {
         return apiResponse($this->employeeService->resendVerification(payload: $request->validated(), employeeId: $employeeId));
     }
 
     public function testingData()
     {
-        $service = new \Modules\Email\Services\WhatsappService();
+        $service = new WhatsappService;
+
         return $service->sendWhatsappMessage([
             'to' => '120363427017574669',
-            'message' => "Halo team, ada task baru *<TaskName>* yang sudah bisa di ambil (board compositing) di event - Josssss",
+            'message' => 'Halo team, ada task baru *<TaskName>* yang sudah bisa di ambil (board compositing) di event - Josssss',
             'isGroup' => true,
             'mentions' => [],
-            'actionType' => 'assign-new-task'
+            'actionType' => 'assign-new-task',
         ]);
+    }
+
+    public function totalActiveEmployee(): JsonResponse
+    {
+        return apiResponse($this->employeeService->totalActiveEmployee());
     }
 }

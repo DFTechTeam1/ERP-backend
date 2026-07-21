@@ -19,6 +19,7 @@ class DivisionBackup extends Model
     protected $fillable = [
         'name',
         'parent_id',
+        'greatday_position_id',
         'uid',
         'created_by',
         'updated_by',

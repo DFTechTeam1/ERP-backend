@@ -2,12 +2,16 @@
 
 namespace Modules\Hrd\Console;
 
+use App\Enums\Employee\OutOfSyncStatus;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmploymentStatus;
+use Modules\Hrd\Models\OutOfSyncEmployee;
 use Modules\Hrd\Services\GreatdayService;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 class GetGreatdayOutOfSyncEmployee extends Command
 {
@@ -50,7 +54,8 @@ class GetGreatdayOutOfSyncEmployee extends Command
                     $keepProcess = false;
                     $this->info('Process stopped due to error or data not found');
                     $this->info('');
-                    $this->info('End syncing with round ' . $page);
+                    $this->info('End syncing with round '.$page);
+
                     return 1;
                 }
 
@@ -64,23 +69,20 @@ class GetGreatdayOutOfSyncEmployee extends Command
 
     /**
      * Process the data and store it in out_of_sync_employees table if the employee is not exist in local database but exist in Greatday API.
-     *
-     * @param array $getEmployees
-     * @param integer $page
-     * @return boolean
      */
     protected function processingData(array $getEmployees, int $page): bool
     {
-        $terminalStatus = EmploymentStatus::select("id")
+        $terminalStatus = EmploymentStatus::select('id')
             ->where('is_terminal', true)
             ->first();
 
         if (! $terminalStatus) {
             $this->error('Terminal status not found');
+
             return false;
         }
 
-        $localEmployees = \Modules\Hrd\Models\Employee::selectRaw('id,employee_id,greatday_emp_id')
+        $localEmployees = Employee::selectRaw('id,employee_id,greatday_emp_id')
             ->whereNotIn('employment_status_id', [$terminalStatus->id])
             ->whereNotNull('greatday_emp_id')
             ->get();
@@ -98,24 +100,24 @@ class GetGreatdayOutOfSyncEmployee extends Command
         $this->info('Processing data ...');
         $progress = $this->output->createProgressBar(count($outOfSyncEmpIds));
         $progress->start();
-        
+
         foreach ($outOfSyncEmpIds as $empId) {
             $employeeData = collect($greatdayEmployees->json()['data'])
                 ->where('empId', $empId)->first();
 
             $selectedEmail = $employeeData['email'];
-            
-            if (\Illuminate\Support\Str::contains($selectedEmail, 'resign')) {
+
+            if (Str::contains($selectedEmail, 'resign')) {
                 continue;
             }
 
             // Check email on database
-            $checkEmployee = \Modules\Hrd\Models\Employee::where('email', $selectedEmail)->first();
+            $checkEmployee = Employee::where('email', $selectedEmail)->first();
 
             if (! $checkEmployee) {
-                \Modules\Hrd\Models\OutOfSyncEmployee::updateOrCreate(
+                OutOfSyncEmployee::firstOrCreate(
                     [
-                        'greatday_employee_id' => $employeeData['empId']
+                        'greatday_employee_id' => $employeeData['empId'],
                     ],
                     [
                         'first_name' => $employeeData['firstName'],
@@ -137,7 +139,7 @@ class GetGreatdayOutOfSyncEmployee extends Command
                         'cost_center_code' => $employeeData['costCode'],
                         'org_unit' => $employeeData['orgUnit'],
                         'employment_start_date' => isset($employeeData['employmentStartDate']) ? now()->parse($employeeData['employmentStartDate']) : null,
-                        'status' => \App\Enums\Employee\OutOfSyncStatus::OutOfSync
+                        'status' => OutOfSyncStatus::OutOfSync,
                     ]
                 );
             }
@@ -146,17 +148,13 @@ class GetGreatdayOutOfSyncEmployee extends Command
         }
 
         $progress->finish();
-        $this->info('Processing data for round ' . $page . ' completed.');
+        $this->info('Processing data for round '.$page.' completed.');
 
         return true;
     }
 
     /**
      * Get employees data from Greatday API with pagination.
-     *
-     * @param integer $limit
-     * @param integer $page
-     * @return array
      */
     protected function getEmployees(int $limit, int $page): array
     {
@@ -165,9 +163,9 @@ class GetGreatdayOutOfSyncEmployee extends Command
 
         // Get list of employees from Greatday API
         $greatdayEmployees = Http::withToken($token)
-            ->post($greatdayService->getBaseUrl() . '/employees', [
+            ->post($greatdayService->getBaseUrl().'/employees', [
                 'page' => $page,
-                'limit' => $limit
+                'limit' => $limit,
             ]);
 
         if ($greatdayEmployees->status() < 400 && isset($greatdayEmployees->json()['data'])) {
@@ -185,7 +183,7 @@ class GetGreatdayOutOfSyncEmployee extends Command
         output:
         return [
             'isContinue' => $isContinue,
-            'data' => $greatdayEmployees
+            'data' => $greatdayEmployees,
         ];
     }
 

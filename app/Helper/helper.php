@@ -1361,7 +1361,10 @@ if (! function_exists('amILeadModeller')) {
             $user = Auth::user();
         }
         $leadModellerId = getSettingByKey('lead_3d_modeller');
-        $leadModellerId = getIdFromUid($leadModellerId, new Employee);
+
+        if ($leadModellerId) {
+            $leadModellerId = getIdFromUid($leadModellerId, new Employee);
+        }
 
         return $user->employee_id == $leadModellerId;
     }
@@ -1384,5 +1387,17 @@ if (! function_exists('getProjectManagerMember')) {
         return Employee::selectRaw('id,name')
             ->where('boss_id', $employeeId)
             ->get();
+    }
+}
+
+if (! function_exists('getInitialName')) {
+    function getInitialName(string $name): string
+    {
+        $words = explode(' ', trim($name));
+    
+        $first_initial = mb_substr($words[0], 0, 1, 'UTF-8');
+        $last_initial = count($words) > 1 ? mb_substr(end($words), 0, 1, 'UTF-8') : '';
+    
+        return mb_strtoupper($first_initial . $last_initial);
     }
 }

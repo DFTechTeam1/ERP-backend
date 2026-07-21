@@ -2,6 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
+use Modules\Hrd\Http\Controllers\Api\PerformanceReportController;
+use Modules\Hrd\Http\Controllers\Api\PositionSyncController;
+use Modules\Hrd\Http\Controllers\Api\SignatureController;
+use Modules\Hrd\Http\Controllers\Api\WhatsappGroupController;
 use Modules\Hrd\Http\Controllers\HrdController;
 
 /*
@@ -19,7 +23,7 @@ Route::middleware(['auth.session'])->prefix('v1')->group(function () {
     Route::apiResource('hrd', HrdController::class)->names('hrd');
 });
 
-Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
+Route::controller(EmployeeController::class)
     ->group(function () {
         Route::get('employees/activate/account', 'activateAccount')
             ->name('hrd.activate-account.nokey');
@@ -27,13 +31,13 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
             ->name('hrd.activate-account');
     });
 
-Route::get('employees/downloadTemplate', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'downloadTemplate']);
+Route::get('employees/downloadTemplate', [EmployeeController::class, 'downloadTemplate']);
 
 // Route::middleware('partner')->group(function() {
 //     Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
 // });
 
-Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
+Route::controller(EmployeeController::class)
     ->middleware(['auth.session'])
     ->group(function () {
         Route::get('employees', 'list');
@@ -41,6 +45,7 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
         Route::get('employees/all', 'getAll');
         Route::get('employees/employmentChart', 'getEmploymentChart');
         Route::get('employees/dashboardElement', 'getDashboardElement');
+        Route::get('employees/active-total', 'totalActiveEmployee');
         Route::post('employees/export', 'export');
         Route::get('employees/highesEventNumber', 'getTheHighestEventNumberInPic');
         Route::get('employees/checkEmail', 'checkEmail');
@@ -75,6 +80,49 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
 
         Route::post('employees/import', 'import');
 
+        // Signature feature
+        Route::prefix('signatures')
+            ->group(function () {
+                Route::get('document-types', [SignatureController::class, 'listDocumentTypes']);
+                Route::post('document-types', [SignatureController::class, 'storeDocumentTypes']);
+                Route::post('document-types/bulk', [SignatureController::class, 'bulkCreateDocumentType']);
+                Route::put('document-types/bulk', [SignatureController::class, 'bulkEditDocumentType']);
+                Route::delete('document-types/bulk', [SignatureController::class, 'bulkDeleteDocumentType']);
+                Route::put('document-types/{documentId}', [SignatureController::class, 'updateDocumentType']);
+                Route::post('document-types/detect-placeholder', [SignatureController::class, 'detectPlaceholder']);
+
+                // Templates
+                Route::post('templates', [SignatureController::class, 'createTemplate']);
+                Route::get('templates', [SignatureController::class, 'listTemplates']);
+                Route::delete('templates/{templateUid}', [SignatureController::class, 'deleteTemplate']);
+                Route::post('templates/{documentUid}/approval', [SignatureController::class, 'approvalMasterDocument']);
+                Route::post('templates/{templateUid}/generate', [SignatureController::class, 'generateDocument']);
+
+                Route::get('signatories', [SignatureController::class, 'listSignatories']);
+                Route::post('signatories/assign/{mappingUid}', [SignatureController::class, 'assignSignatories']);
+
+                // Employee's own saved signatures
+                Route::get('my-signatures', [SignatureController::class, 'listEmployeeSignatures']);
+                Route::post('my-signatures', [SignatureController::class, 'storeEmployeeSignature']);
+                Route::patch('my-signatures/{signatureUid}/activate', [SignatureController::class, 'setActiveEmployeeSignature']);
+                Route::delete('my-signatures/{signatureUid}', [SignatureController::class, 'deleteEmployeeSignature']);
+
+                Route::get('documents', [SignatureController::class, 'generatedDocumentList']);
+                Route::get('documents/mine', [SignatureController::class, 'myGeneratedDocumentList']);
+                Route::get('documents/{documentUid}', [SignatureController::class, 'documentSignDetail']);
+
+                // Sign
+                Route::get('sign/otp/{employeeDocumentUId}', [SignatureController::class, 'generateSignOtp']);
+                Route::post('sign/otp/{employeeDocumentUid}/validate', [SignatureController::class, 'validateOtp']);
+                Route::post('sign/{employeeDocumentUid}/apply/{signatureUid}', [SignatureController::class, 'applySignatureToDocument']);
+                Route::patch('sign/{employeeDocumentUid}/apply/{signatureUid}', [SignatureController::class, 'updateAppliedSignature']);
+
+                // Render file
+                Route::get('/file/employee/{employeeDocumentUid}/render', [SignatureController::class, 'renderEmployeeDocument']);
+                Route::get('/file/employee/{employeeDocumentUid}/download', [SignatureController::class, 'downloadCompletedDocument']);
+                Route::get('/file/render/{templateUid}/{versionId}', [SignatureController::class, 'renderTemplateDocument']);
+            });
+
         Route::prefix('greatday')
             ->group(function () {
                 Route::get('/timezones', 'listTimezones');
@@ -101,16 +149,30 @@ Route::controller(\Modules\Hrd\Http\Controllers\Api\EmployeeController::class)
                 Route::get('/companies/refresh', 'getGreatdayCompanies')->name('greatday.refreshCompanies');
                 Route::get('/resigntype/refresh', 'getGreatdayResignType')->name('greatday.refreshResignType');
                 Route::get('/resignreason/refresh', 'getGreatdayResignReason')->name('greatday.refreshResignReason');
+                Route::get('/out-of-sync-employees', 'getOutOfSyncEmployees')->name('greatday.outOfSyncEmployees');
+                Route::post('/employees/sync', 'syncEmployeesFromGreatday')->name('greatday.syncEmployees');
+                Route::get('/employees/changes-preview', 'previewEmployeeChanges')->name('greatday.employeeChangesPreview');
+                Route::post('/employees/apply-changes', 'applyEmployeeChanges')->name('greatday.applyEmployeeChanges');
+                Route::get('/employees/{employeeUid}/link-check', 'checkEmployeeGreatdayLink')->name('greatday.employeeLinkCheck');
+                Route::post('/employees/{employeeUid}/link', 'linkEmployeeToGreatday')->name('greatday.employeeLink');
             });
+    });
+
+Route::controller(PositionSyncController::class)
+    ->middleware(['auth.session'])
+    ->prefix('greatday/positions')
+    ->group(function () {
+        Route::get('/preview', 'preview')->name('greatday.positions.preview');
+        Route::post('/sync', 'sync')->name('greatday.positions.sync');
     });
 
 Route::middleware('auth.session')
     ->group(function () {
-        Route::get('whatsapp/logs', [\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class, 'logs']);
+        Route::get('whatsapp/logs', [WhatsappGroupController::class, 'logs']);
     });
 
 Route::middleware('auth.session')
-    ->controller(\Modules\Hrd\Http\Controllers\Api\WhatsappGroupController::class)
+    ->controller(WhatsappGroupController::class)
     ->prefix('whatsapp-groups')
     ->group(function () {
         Route::get('/', 'index');
@@ -133,9 +195,9 @@ Route::middleware('auth.session')
 Route::middleware('auth.session')
     ->prefix('performanceReport')
     ->group(function () {
-        Route::post('export', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'export']);
-        Route::get('/{employeeId}', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'performanceDetail']);
-        Route::get('getTeams', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'getTeams']);
-        Route::get('getMembers/{leaderId}', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'getMembers']);
-        Route::get('getMembers/filterMember', [\Modules\Hrd\Http\Controllers\Api\PerformanceReportController::class, 'filterMember']);
+        Route::post('export', [PerformanceReportController::class, 'export']);
+        Route::get('/{employeeId}', [PerformanceReportController::class, 'performanceDetail']);
+        Route::get('getTeams', [PerformanceReportController::class, 'getTeams']);
+        Route::get('getMembers/{leaderId}', [PerformanceReportController::class, 'getMembers']);
+        Route::get('getMembers/filterMember', [PerformanceReportController::class, 'filterMember']);
     });
