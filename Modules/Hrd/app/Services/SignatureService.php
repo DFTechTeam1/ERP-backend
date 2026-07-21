@@ -470,7 +470,7 @@ class SignatureService
                 'select' => ['id', 'code'],
                 'with' => [
                     'signers' => function ($query) {
-                        $query->selectRaw('id,type_id,division_id,order')
+                        $query->select(['id', 'type_id', 'division_id', 'order'])
                             ->orderBy('order', 'asc');
                     },
                 ],
