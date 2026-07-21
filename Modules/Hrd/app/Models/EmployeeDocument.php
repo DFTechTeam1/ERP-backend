@@ -5,14 +5,13 @@ namespace Modules\Hrd\Models;
 use App\Enums\Hrd\Signature\SignatureTaskStatus;
 use App\Enums\Hrd\Signature\Template\Status;
 use App\Traits\ModelObserver;
+use Database\Factories\Hrd\EmployeeDocumentFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
-
-// use Modules\Hrd\Database\Factories\EmployeeDocumentFactory;
 
 class EmployeeDocument extends Model
 {
@@ -65,16 +64,16 @@ class EmployeeDocument extends Model
         return $this->hasMany(EmployeeSignatureTask::class, 'employee_document_id');
     }
 
-    // protected static function newFactory(): EmployeeDocumentFactory
-    // {
-    //     // return EmployeeDocumentFactory::new();
-    // }
+    protected static function newFactory(): EmployeeDocumentFactory
+    {
+        return EmployeeDocumentFactory::new();
+    }
 
     public function isMyTurnToSign(): bool
     {
         $output = false;
 
-        if (!$this->relationLoaded('signatureTasks')) {
+        if (! $this->relationLoaded('signatureTasks')) {
             $this->load('signatureTasks');
         }
 
@@ -84,7 +83,9 @@ class EmployeeDocument extends Model
         });
 
         if (gettype($search) == 'integer') {
-            if ($search === 0) $output = true;
+            if ($search === 0 && $this->signatureTasks[$search]->status === SignatureTaskStatus::Waiting) {
+                $output = true;
+            }
             if ($search > 0 && $this->signatureTasks[$search]->status == SignatureTaskStatus::Waiting && $this->signatureTasks[$search - 1]->status == SignatureTaskStatus::Signed) {
                 $output = true;
             }

@@ -44,14 +44,19 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
+use Modules\Hrd\Exceptions\DocumentNotCompleted;
 use Modules\Hrd\Exceptions\DocumentTypeInUse;
+use Modules\Hrd\Exceptions\SignatureNotEditable;
 use Modules\Hrd\Exceptions\TemplateStillHavePendingReview;
 use Modules\Hrd\Exceptions\UserAlreadySigned;
 use Modules\Hrd\Exceptions\UserNotHaveAccessToSign;
+use Modules\Hrd\Jobs\DocumentCompletedNotificationJob;
 use Modules\Hrd\Jobs\GenerateDocumentNotificationJob;
 use Modules\Hrd\Jobs\SendOtpSignJob;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeeDocument;
 use Modules\Hrd\Models\EmployeeSignature;
+use Modules\Hrd\Models\EmployeeSignatureTask;
 use Modules\Hrd\Models\MasterDocument;
 use Modules\Hrd\Repository\DocumentTypeRepository;
 use Modules\Hrd\Repository\EmployeeDocumentRepository;
@@ -461,9 +466,9 @@ class SignatureService
         DB::beginTransaction();
         try {
             $documentType = $this->documentTypeRepo->show([
-                'id' => $payload->document_type_id,
+                'where' => ['id' => $payload->document_type_id],
                 'select' => ['id', 'code'],
-                'relation' => [
+                'with' => [
                     'signers' => function ($query) {
                         $query->selectRaw('id,type_id,division_id,order')
                             ->orderBy('order', 'asc');
@@ -677,7 +682,7 @@ class SignatureService
     {
         try {
             $document = $this->masterDocumentRepo->show([
-                'uid' => $documentUid,
+                'where' => ['uid' => $documentUid],
                 'select' => ['id'],
                 'with' => [
                     'pendingDocument:id,path,created_by,master_document_id,version',
@@ -714,14 +719,23 @@ class SignatureService
     }
 
     /**
-     * Resolve the stored file path of a generated employee document so it can be streamed.
+     * Build a renderable copy of a generated employee document.
+     *
+     * The stored document keeps its signature placeholders untouched; signatures are never
+     * baked into it. Instead each render composites the currently applied signatures onto a
+     * throwaway temp copy, leaving the base document pristine. Pass `$withSignatures = false`
+     * to preview the document before signing (placeholders, no signatures overlaid).
+     *
+     * The returned `path` points at a temporary file the caller is responsible for deleting
+     * after streaming it (see `is_temporary`).
      *
      * @param  string  $employeeDocumentUid  Uid of the generated employee document
-     * @return array Response envelope containing the document `path`
+     * @param  bool  $withSignatures  Whether to overlay applied signatures
+     * @return array Response envelope containing the temporary document `path`
      *
      * @throws DataNotFound
      */
-    public function renderEmployeeDocument(string $employeeDocumentUid): array
+    public function renderEmployeeDocument(string $employeeDocumentUid, bool $withSignatures = true): array
     {
         try {
             $document = $this->employeeDocumentRepo->show([
@@ -729,20 +743,93 @@ class SignatureService
                     'uid' => $employeeDocumentUid,
                 ],
                 'select' => ['id', 'employee_id', 'document_snapshot', 'document_path'],
+                'with' => [
+                    'signatureTasks:id,employee_document_id,employee_signature_id,order,status',
+                    'signatureTasks.employeeSignature:id,sign_path',
+                ],
             ]);
 
             if (! $document) {
                 throw new DataNotFound('Document not found.');
             }
 
-            if (! Storage::exists($document->document_path)) {
+            if (! Storage::disk('public')->exists($document->document_path)) {
                 throw new DataNotFound('File not exists.');
             }
+
+            $renderPath = $this->buildRenderableDocument($document, $withSignatures);
 
             return generalResponse(
                 message: 'Success',
                 data: [
-                    'path' => $document->document_path,
+                    'path' => $renderPath,
+                    'is_temporary' => true,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Build a downloadable copy of a generated employee document, but only once it is fully
+     * signed (completed).
+     *
+     * Access is limited to privileged roles (root/director/hrd) or a signer on the document.
+     * The document is refused while any signature task is still outstanding. The returned `path`
+     * points at a temporary file the caller is responsible for deleting after streaming it.
+     *
+     * @param  string  $employeeDocumentUid  Uid of the generated employee document
+     * @return array Response envelope containing the temporary document `path`
+     *
+     * @throws DataNotFound
+     * @throws DocumentNotCompleted
+     */
+    public function downloadCompletedDocument(string $employeeDocumentUid): array
+    {
+        try {
+            $document = $this->employeeDocumentRepo->show([
+                'where' => [
+                    'uid' => $employeeDocumentUid,
+                ],
+                'select' => ['id', 'uid', 'employee_id', 'status', 'document_path'],
+                'with' => [
+                    'signatureTasks:id,employee_document_id,employee_id,employee_signature_id,order,status',
+                    'signatureTasks.employeeSignature:id,sign_path',
+                ],
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound('Document not found.');
+            }
+
+            $user = Auth::user();
+            $isPrivileged = $user->hasRole([
+                BaseRole::Root->value,
+                BaseRole::Director->value,
+                BaseRole::Hrd->value,
+            ]);
+            $isSigner = $document->signatureTasks->contains('employee_id', $user->employee_id);
+
+            if (! $isPrivileged && ! $isSigner) {
+                return errorResponse(__('notification.notAllowedToViewDocument'), [], 403);
+            }
+
+            if ($document->status !== Status::Completed) {
+                throw new DocumentNotCompleted;
+            }
+
+            if (! Storage::disk('public')->exists($document->document_path)) {
+                throw new DataNotFound('File not exists.');
+            }
+
+            $renderPath = $this->buildRenderableDocument($document, true);
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'path' => $renderPath,
+                    'is_temporary' => true,
                 ]
             );
         } catch (\Throwable $th) {
@@ -1125,35 +1212,75 @@ class SignatureService
     }
 
     /**
-     * Stamp a signature image onto a placeholder inside a Word document, in place.
+     * Resolve the placeholder name a signer's signature occupies from their signing `order`.
      *
-     * @param  string  $documentPath  Document path relative to the public disk
-     * @param  string  $placeholder  Placeholder name (without the `${}` wrapper)
-     * @param  string  $signaturePath  Signature image path relative to the public disk
+     * The final signer (highest order) fills the `employeeSignature` placeholder; every earlier
+     * signer fills their positional `signature{order}` placeholder (e.g. order 2 -> `signature2`).
+     *
+     * @param  int  $order  The signer's order in the document
+     * @param  int  $lastOrder  The highest order among the document's signers
      */
-    protected function replaceSignaturePlaceholder(string $documentPath, string $placeholder, string $signaturePath): void
+    protected function resolveSignaturePlaceholder(int $order, int $lastOrder): string
     {
-        $realDocumentPath = storage_path('app/public/'.$documentPath);
-        $realSignaturePath = storage_path('app/public/'.$signaturePath);
-
-        $templateProcessor = new TemplateProcessor($realDocumentPath);
-        $templateProcessor->setImageValue($placeholder, [
-            'path' => $realSignaturePath,
-            'width' => 150,
-            'height' => 60,
-            'ratio' => true,
-        ]);
-        $templateProcessor->saveAs($realDocumentPath);
+        return $order == $lastOrder
+            ? 'employeeSignature'
+            : 'signature'.$order;
     }
 
     /**
-     * Apply the authenticated employee's saved signature onto their signature placeholder
-     * within a generated document.
+     * Composite the currently applied signatures onto a throwaway copy of a generated document.
      *
-     * The placeholder is resolved from the signer's `order` in the document's signature tasks:
-     * the last order maps to the `employeeSignature` placeholder, any earlier order maps to
-     * `signature{order}` (e.g. order 2 -> `signature2`). Marking the task as signed is handled
-     * by {@see self::markDocumentAsSigned()} in a separate step.
+     * The base document is never mutated: it keeps its signature placeholders so any set of
+     * signatures can be re-rendered at any time. Each render copies the base to a temp file and
+     * overlays the signatures of every already-signed task onto their placeholder. The caller is
+     * responsible for deleting the returned temp file after use.
+     *
+     * @param  EmployeeDocument  $document  Generated document with its `signatureTasks.employeeSignature` loaded
+     * @param  bool  $withSignatures  When false, produce a clean preview with no signatures overlaid
+     * @return string Path of the temporary rendered document relative to the public disk
+     */
+    protected function buildRenderableDocument(EmployeeDocument $document, bool $withSignatures = true): string
+    {
+        $this->createFolder('signature/tmp');
+
+        $tempPath = 'signature/tmp/render_'.$document->id.'_'.strtotime('now').rand(100, 999).'.docx';
+        Storage::disk('public')->copy($document->document_path, $tempPath);
+
+        $appliedTasks = $document->signatureTasks
+            ->where('status', SignatureTaskStatus::Signed)
+            ->filter(fn (EmployeeSignatureTask $task) => $task->employeeSignature !== null);
+
+        if (! $withSignatures || $appliedTasks->isEmpty()) {
+            return $tempPath;
+        }
+
+        $lastOrder = $document->signatureTasks->max('order');
+        $realTempPath = storage_path('app/public/'.$tempPath);
+
+        $templateProcessor = new TemplateProcessor($realTempPath);
+        foreach ($appliedTasks as $task) {
+            $templateProcessor->setImageValue(
+                $this->resolveSignaturePlaceholder($task->order, $lastOrder),
+                [
+                    'path' => storage_path('app/public/'.$task->employeeSignature->sign_path),
+                    'width' => 150,
+                    'height' => 60,
+                    'ratio' => true,
+                ]
+            );
+        }
+        $templateProcessor->saveAs($realTempPath);
+
+        return $tempPath;
+    }
+
+    /**
+     * Apply the authenticated employee's saved signature to their signing task on a document.
+     *
+     * The signature is recorded as a reference on the signature task ({@see EmployeeSignatureTask::employeeSignature()}),
+     * never baked into the stored document. It is composited onto the document only at render
+     * time by {@see self::buildRenderableDocument()}, which is what makes a signature editable
+     * afterwards (see {@see self::updateAppliedSignature()}). The task is then marked as signed.
      *
      * @param  string  $signatureUid  Uid of the employee's saved signature to apply
      * @param  string  $employeeDocumentUid  Uid of the employee document being signed
@@ -1163,6 +1290,7 @@ class SignatureService
      */
     public function applySignatureToDocument(string $signatureUid, string $employeeDocumentUid): array
     {
+        DB::beginTransaction();
         try {
             $user = Auth::user();
             $employeeId = $user->employee_id;
@@ -1181,7 +1309,7 @@ class SignatureService
 
             $document = $this->employeeDocumentRepo->show([
                 'where' => ['uid' => $employeeDocumentUid],
-                'select' => ['id', 'uid', 'document_path'],
+                'select' => ['id', 'uid', 'employee_id', 'status'],
                 'with' => ['signatureTasks'],
             ]);
 
@@ -1192,53 +1320,65 @@ class SignatureService
             $this->isSignerValid($document->signatureTasks, $user);
 
             $task = $document->signatureTasks->firstWhere('employee_id', $employeeId);
-            $lastOrder = $document->signatureTasks->max('order');
 
-            // The final signer (highest order) signs the employee placeholder; the rest
-            // fill their positional signature{order} placeholder.
-            $placeholder = $task->order == $lastOrder
-                ? 'employeeSignature'
-                : 'signature'.$task->order;
+            $this->signatureTaskRepo->update($task, [
+                'employee_signature_id' => $signature->id,
+                'status' => SignatureTaskStatus::Signed,
+                'signed_at' => now(),
+            ]);
 
-            $this->replaceSignaturePlaceholder(
-                $document->document_path,
-                $placeholder,
-                $signature->sign_path,
-            );
+            $this->syncDocumentCompletion($document);
 
-            $marked = $this->markDocumentAsSigned($employeeDocumentUid);
-
-            if ($marked['error']) {
-                return $marked;
-            }
+            DB::commit();
 
             return generalResponse(
                 message: __('notification.successApplySignature'),
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
 
     /**
-     * Mark the authenticated signer's task on a document as signed.
+     * Replace the signature the authenticated employee already applied to a document.
      *
-     * Called as the final step of {@see self::applySignatureToDocument()}; not exposed as a
-     * standalone endpoint.
+     * Because signatures are overlaid at render time and not baked in, replacing one only swaps
+     * the reference on the signer's task. To protect the integrity of the signing chain a signer
+     * may only change their signature while it is still the latest in the chain: it is refused
+     * once a later signer has signed or the document is fully completed.
      *
-     * @param  string  $employeeDocumentUid  Uid of the employee document being signed
+     * @param  string  $signatureUid  Uid of the replacement signature
+     * @param  string  $employeeDocumentUid  Uid of the employee document
      * @return array Response envelope with a success/error message
      *
      * @throws DataNotFound
+     * @throws UserNotHaveAccessToSign
+     * @throws SignatureNotEditable
      */
-    protected function markDocumentAsSigned(string $employeeDocumentUid): array
+    public function updateAppliedSignature(string $signatureUid, string $employeeDocumentUid): array
     {
+        DB::beginTransaction();
         try {
             $user = Auth::user();
+            $employeeId = $user->employee_id;
+
+            $signature = $this->employeeSignatureRepo->show([
+                'where' => [
+                    'uid' => $signatureUid,
+                    'employee_id' => $employeeId,
+                ],
+                'select' => ['id', 'uid', 'employee_id', 'sign_path'],
+            ]);
+
+            if (! $signature) {
+                throw new DataNotFound('Signature not found.');
+            }
 
             $document = $this->employeeDocumentRepo->show([
                 'where' => ['uid' => $employeeDocumentUid],
-                'select' => ['id', 'uid'],
+                'select' => ['id', 'uid', 'status'],
                 'with' => ['signatureTasks'],
             ]);
 
@@ -1246,21 +1386,64 @@ class SignatureService
                 throw new DataNotFound('Document not found.');
             }
 
-            $this->isSignerValid($document->signatureTasks, $user);
+            $task = $document->signatureTasks->firstWhere('employee_id', $employeeId);
 
-            $task = $document->signatureTasks->firstWhere('employee_id', $user->employee_id);
+            if (! $task) {
+                throw new UserNotHaveAccessToSign;
+            }
+
+            if ($task->status !== SignatureTaskStatus::Signed) {
+                throw new SignatureNotEditable('You have not signed this document yet.');
+            }
+
+            $hasLaterSigner = $document->signatureTasks
+                ->where('order', '>', $task->order)
+                ->contains('status', SignatureTaskStatus::Signed);
+
+            if ($hasLaterSigner || $document->status === Status::Completed) {
+                throw new SignatureNotEditable('Your signature can no longer be changed because a later signer has already signed.');
+            }
 
             $this->signatureTaskRepo->update($task, [
-                'status' => SignatureTaskStatus::Signed,
-                'signed_at' => now(),
+                'employee_signature_id' => $signature->id,
             ]);
 
+            DB::commit();
+
             return generalResponse(
-                message: __('notification.successMarkDocumentSigned'),
+                message: __('notification.successUpdateAppliedSignature'),
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Flip a document to completed once every signature task has been signed, notifying the
+     * document owner in-app when it does.
+     *
+     * The passed document must have its `signatureTasks` relation loaded and carry `employee_id`.
+     * No-op while any task is still outstanding.
+     *
+     * @param  EmployeeDocument  $document  Document whose signing progress is being evaluated
+     */
+    protected function syncDocumentCompletion(EmployeeDocument $document): void
+    {
+        $allSigned = $document->signatureTasks
+            ->every(fn (EmployeeSignatureTask $task) => $task->status === SignatureTaskStatus::Signed);
+
+        if (! $allSigned || $document->status === Status::Completed) {
+            return;
+        }
+
+        $this->employeeDocumentRepo->update($document, [
+            'status' => Status::Completed,
+        ]);
+
+        DocumentCompletedNotificationJob::dispatch($document->employee_id, $document->uid)
+            ->afterCommit();
     }
 
     /**
@@ -1469,7 +1652,7 @@ class SignatureService
                     name: $task->employee->name,
                     email: $task->employee->email,
                     status: $task->status->value,
-                    signed_at: $task->signed_at
+                    signed_at: date('d F Y, H:i', strtotime($task->signed_at))
                 );
             }
 
@@ -1482,6 +1665,7 @@ class SignatureService
                 type: $employeeDocument->documentType->name,
                 can_sign: $employeeDocument->isMyTurnToSign(),
                 status: $employeeDocument->status->label(),
+                is_completed: $employeeDocument->status === Status::Completed ? true : false,
                 employee: new DetailDocumentSignEmployeeData(
                     name: $employeeDocument->employee->name,
                     initials: getInitialName($employeeDocument->employee->name),
@@ -1800,6 +1984,15 @@ class SignatureService
 
             if (! $signature) {
                 throw new DataNotFound('Signature not found.');
+            }
+
+            $isApplied = $this->signatureTaskRepo->get([
+                'where' => ['employee_signature_id' => $signature->id],
+                'select' => ['id'],
+            ])->isNotEmpty();
+
+            if ($isApplied) {
+                throw new SignatureNotEditable('This signature is applied to a document and cannot be deleted.');
             }
 
             if (Storage::disk('public')->exists($signature->sign_path)) {

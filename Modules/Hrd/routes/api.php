@@ -114,9 +114,11 @@ Route::controller(EmployeeController::class)
                 Route::get('sign/otp/{employeeDocumentUId}', [SignatureController::class, 'generateSignOtp']);
                 Route::post('sign/otp/{employeeDocumentUid}/validate', [SignatureController::class, 'validateOtp']);
                 Route::post('sign/{employeeDocumentUid}/apply/{signatureUid}', [SignatureController::class, 'applySignatureToDocument']);
+                Route::patch('sign/{employeeDocumentUid}/apply/{signatureUid}', [SignatureController::class, 'updateAppliedSignature']);
 
                 // Render file
                 Route::get('/file/employee/{employeeDocumentUid}/render', [SignatureController::class, 'renderEmployeeDocument']);
+                Route::get('/file/employee/{employeeDocumentUid}/download', [SignatureController::class, 'downloadCompletedDocument']);
                 Route::get('/file/render/{templateUid}/{versionId}', [SignatureController::class, 'renderTemplateDocument']);
             });
 

@@ -3,11 +3,10 @@
 namespace Modules\Hrd\Models;
 
 use App\Traits\ModelObserver;
+use Database\Factories\Hrd\EmployeeSignatureFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
-// use Modules\Hrd\Database\Factories\EmployeeSignatureFactory;
 
 class EmployeeSignature extends Model
 {
@@ -35,8 +34,8 @@ class EmployeeSignature extends Model
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
 
-    // protected static function newFactory(): EmployeeSignatureFactory
-    // {
-    //     // return EmployeeSignatureFactory::new();
-    // }
+    protected static function newFactory(): EmployeeSignatureFactory
+    {
+        return EmployeeSignatureFactory::new();
+    }
 }

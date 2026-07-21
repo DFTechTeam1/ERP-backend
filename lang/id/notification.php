@@ -187,6 +187,9 @@ return [
     'successUpdateEmployeeSignature' => 'Tanda tangan aktif berhasil diperbarui',
     'successDeleteEmployeeSignature' => 'Tanda tangan berhasil dihapus',
     'successApplySignature' => 'Tanda tangan berhasil diterapkan ke dokumen',
+    'successUpdateAppliedSignature' => 'Tanda tangan Anda pada dokumen berhasil diperbarui',
+    'signatureNotEditable' => 'Tanda tangan ini tidak dapat diubah lagi',
+    'documentNotCompleted' => 'Dokumen ini belum selesai ditandatangani dan tidak dapat diunduh',
     'successMarkDocumentSigned' => 'Dokumen berhasil ditandatangani',
     'phoneNumberVerfied' => 'Nomor telepon berhasil di verifikasi',
     'projectDealIsExists' => 'Event ini sudah ada di database',
@@ -209,6 +212,8 @@ return [
     'documentTypeAlreadyUsedInTemplate' => 'Jenis dokumen sudah digunakan dalam dokumen induk',
     'documentSigningTitle' => 'Dokumen siap untuk ditandatangani',
     'documentSigningMessage' => 'Sebuah dokumen telah dibuat untuk Anda. Silakan periksa dan tandatangani dokumen tersebut.',
+    'documentCompletedTitle' => 'Dokumen telah ditandatangani lengkap',
+    'documentCompletedMessage' => 'Dokumen Anda telah ditandatangani oleh semua pihak dan siap untuk diunduh.',
     'youAlreadySignedTheDocument' => 'Kamu sudah men-tanda tangani dokumen ini',
     'youDontHaveAccessToSignTheDocument' => 'Kamu tidak punya access untuk men-tanda tangani dokumen ini',
 ];

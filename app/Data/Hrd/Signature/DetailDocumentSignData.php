@@ -17,6 +17,7 @@ class DetailDocumentSignData extends Data
         public readonly string $version,
         public readonly string $type,
         public readonly string $status,
+        public readonly bool $is_completed,
         public readonly bool $can_sign,
         public readonly DetailDocumentSignEmployeeData $employee,
         #[DataCollectionOf(DetailDocumentSignSignersData::class)]
