@@ -384,6 +384,37 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function documentPermission()
+    {
+        return [
+            ['name' => 'list_signatories', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'list_document_types', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'list_document_templates', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'list_generated_documents', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'list_my_documents', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+        ];
+    }
+
     protected function employeePermission()
     {
         return [
@@ -1447,6 +1478,7 @@ class RolePermissionSetting extends Seeder
             ->merge($this->financePermission())
             ->merge($this->projectPermission())
             ->merge($this->interactivePermission())
+            ->merge($this->documentPermission())
             ->merge($this->developmentPermission());
 
         return $permissions;

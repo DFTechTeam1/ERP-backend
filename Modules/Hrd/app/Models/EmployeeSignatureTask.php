@@ -3,11 +3,10 @@
 namespace Modules\Hrd\Models;
 
 use App\Enums\Hrd\Signature\SignatureTaskStatus;
+use Database\Factories\Hrd\EmployeeSignatureTaskFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
-// use Modules\Hrd\Database\Factories\EmployeeSignatureTaskFactory;
 
 class EmployeeSignatureTask extends Model
 {
@@ -19,6 +18,7 @@ class EmployeeSignatureTask extends Model
     protected $fillable = [
         'employee_id',
         'employee_document_id',
+        'employee_signature_id',
         'order',
         'status',
         'signed_at',
@@ -35,10 +35,10 @@ class EmployeeSignatureTask extends Model
         ];
     }
 
-    // protected static function newFactory(): EmployeeSignatureTaskFactory
-    // {
-    //     // return EmployeeSignatureTaskFactory::new();
-    // }
+    protected static function newFactory(): EmployeeSignatureTaskFactory
+    {
+        return EmployeeSignatureTaskFactory::new();
+    }
 
     public function employee(): BelongsTo
     {
@@ -48,5 +48,10 @@ class EmployeeSignatureTask extends Model
     public function employeeDocument(): BelongsTo
     {
         return $this->belongsTo(EmployeeDocument::class, 'employee_document_id');
+    }
+
+    public function employeeSignature(): BelongsTo
+    {
+        return $this->belongsTo(EmployeeSignature::class, 'employee_signature_id');
     }
 }

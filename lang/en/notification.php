@@ -195,6 +195,9 @@ return [
     'successUpdateEmployeeSignature' => 'Active signature has been updated successfully',
     'successDeleteEmployeeSignature' => 'Signature has been deleted successfully',
     'successApplySignature' => 'Signature has been applied to the document successfully',
+    'successUpdateAppliedSignature' => 'Your signature on the document has been updated successfully',
+    'signatureNotEditable' => 'This signature can no longer be changed',
+    'documentNotCompleted' => 'This document is not completed yet and cannot be downloaded',
     'successMarkDocumentSigned' => 'Document has been signed successfully',
     'phoneNumberVerfied' => 'Phone number has been verified',
     'projectDealIsExists' => 'Project deal already exists in the database',
@@ -217,6 +220,8 @@ return [
     'projectDealInvoiceNotFound' => 'Project deal invoice is not found',
     'documentSigningTitle' => 'Document ready to sign',
     'documentSigningMessage' => 'A document has been generated for you. Please review and sign it.',
+    'documentCompletedTitle' => 'Document fully signed',
+    'documentCompletedMessage' => 'Your document has been signed by everyone and is ready to download.',
     'youAlreadySignedTheDocument' => "You're already signed this document",
     'youDontHaveAccessToSignTheDocument' => "You don't have permission to sign this document",
 ];

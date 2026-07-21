@@ -113,19 +113,62 @@ class SignatureController extends Controller
     /**
      * Stream a generated employee document as a downloadable .docx file.
      *
+     * Signatures are composited on the fly. Pass `?preview=1` to stream the document with no
+     * signatures overlaid (used to preview before signing). The rendered file is temporary and
+     * is deleted once streamed.
+     *
+     * @param  Request  $request  Incoming HTTP request (reads the `preview` flag)
      * @param  string  $employeeDocumentUid  Uid of the generated employee document
      * @return Response|JsonResponse
      */
-    public function renderEmployeeDocument(string $employeeDocumentUid)
+    public function renderEmployeeDocument(Request $request, string $employeeDocumentUid)
     {
-        $data = $this->service->renderEmployeeDocument($employeeDocumentUid);
+        $withSignatures = ! $request->boolean('preview');
+
+        $data = $this->service->renderEmployeeDocument($employeeDocumentUid, $withSignatures);
 
         if ($data['error']) {
             return apiResponse($data);
         }
 
-        $file = file_get_contents(storage_path('app/public/'.$data['data']['path']));
+        $relativePath = $data['data']['path'];
+        $file = file_get_contents(storage_path('app/public/'.$relativePath));
         $filename = 'document';
+
+        if (! empty($data['data']['is_temporary'])) {
+            Storage::disk('public')->delete($relativePath);
+        }
+
+        return response($file, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'.docx"',
+        ]);
+    }
+
+    /**
+     * Stream a completed (fully signed) employee document as a downloadable .docx file.
+     *
+     * Refuses documents that are not yet completed. The rendered file is temporary and is
+     * deleted once streamed.
+     *
+     * @param  string  $employeeDocumentUid  Uid of the generated employee document
+     * @return Response|JsonResponse
+     */
+    public function downloadCompletedDocument(string $employeeDocumentUid)
+    {
+        $data = $this->service->downloadCompletedDocument($employeeDocumentUid);
+
+        if ($data['error']) {
+            return apiResponse($data);
+        }
+
+        $relativePath = $data['data']['path'];
+        $file = file_get_contents(storage_path('app/public/'.$relativePath));
+        $filename = 'document';
+
+        if (! empty($data['data']['is_temporary'])) {
+            Storage::disk('public')->delete($relativePath);
+        }
 
         return response($file, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -265,6 +308,17 @@ class SignatureController extends Controller
     public function applySignatureToDocument(string $employeeDocumentUid, string $signatureUid): JsonResponse
     {
         return apiResponse($this->service->applySignatureToDocument($signatureUid, $employeeDocumentUid));
+    }
+
+    /**
+     * Replace the signature the authenticated employee already applied to a document.
+     *
+     * @param  string  $employeeDocumentUid  Uid of the employee document
+     * @param  string  $signatureUid  Uid of the replacement signature
+     */
+    public function updateAppliedSignature(string $employeeDocumentUid, string $signatureUid): JsonResponse
+    {
+        return apiResponse($this->service->updateAppliedSignature($signatureUid, $employeeDocumentUid));
     }
 
     /**
