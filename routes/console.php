@@ -1,7 +1,11 @@
 <?php
 
 use App\Console\Commands\ClearLogSchedule;
+use App\Console\Commands\pruneInteractiveAsset;
+use App\Console\Commands\PruneRefreshTokens;
 use App\Jobs\ProjectDealSummaryJob;
+use App\Schedules\PostNotifyCompleteProject;
+use App\Schedules\UpcomingDeadlineTask;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -10,7 +14,6 @@ use Modules\Hrd\Console\CheckEmployeeResign;
 use Modules\Hrd\Console\CheckTransferEntityScheduleCommand;
 use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
-use Modules\Hrd\Jobs\CheckTransferEntityScheduleJob;
 use Modules\Production\Console\ClearAllCache;
 use Modules\Production\Console\PaymentDueReminderCommand;
 use Modules\Production\Console\ResyncNasFolderCreation;
@@ -27,19 +30,19 @@ Schedule::command(SynchronizingTalentUserId::class)->cron('1 1,2,3 * * *');
 Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 
 // prune long-expired refresh tokens
-Schedule::command(\App\Console\Commands\PruneRefreshTokens::class)->dailyAt('02:00');
+Schedule::command(PruneRefreshTokens::class)->dailyAt('02:00');
 
-\Illuminate\Support\Facades\Schedule::call(new \App\Schedules\PostNotifyCompleteProject)->dailyAt('00:01');
+Schedule::call(new PostNotifyCompleteProject)->dailyAt('00:01');
 
-\Illuminate\Support\Facades\Schedule::call(new \App\Schedules\UpcomingDeadlineTask)->dailyAt('09:00');
+Schedule::call(new UpcomingDeadlineTask)->dailyAt('09:00');
 
-\Illuminate\Support\Facades\Schedule::command(\App\Console\Commands\pruneInteractiveAsset::class)->everyMinute();
+Schedule::command(pruneInteractiveAsset::class)->everyMinute();
 
-\Illuminate\Support\Facades\Schedule::command(UpdateEmployeeActivePerMonth::class)
+Schedule::command(UpdateEmployeeActivePerMonth::class)
     ->lastDayOfMonth('23:00')
     ->runInBackground();
 
-\Illuminate\Support\Facades\Schedule::command(ResyncNasFolderCreation::class)
+Schedule::command(ResyncNasFolderCreation::class)
     ->twiceDailyAt(9, 16)
     ->runInBackground();
 
@@ -49,6 +52,11 @@ Schedule::command(\App\Console\Commands\PruneRefreshTokens::class)->dailyAt('02:
 
 Schedule::command(CheckTransferEntityScheduleCommand::class)
     ->dailyAt('00:01')
+    ->runInBackground();
+
+// deactivate employees whose resignation date is today
+Schedule::command(CheckEmployeeResign::class)
+    ->dailyAt('00:05')
     ->runInBackground();
 
 Schedule::command(PaymentDueReminderCommand::class)

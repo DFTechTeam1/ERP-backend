@@ -40,7 +40,8 @@ class PositionService
             $search = request('search');
 
             if (! empty($search)) { // array
-                $where = formatSearchConditions($search['filters'], $where);
+                // $where = formatSearchConditions($search['filters'], $where);
+                $where = "name like '%{$search}%'";
             }
 
             $sort = 'name asc';

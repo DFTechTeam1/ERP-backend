@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 use Modules\Hrd\Http\Controllers\Api\PerformanceReportController;
+use Modules\Hrd\Http\Controllers\Api\PositionSyncController;
 use Modules\Hrd\Http\Controllers\Api\SignatureController;
 use Modules\Hrd\Http\Controllers\Api\WhatsappGroupController;
 use Modules\Hrd\Http\Controllers\HrdController;
@@ -148,7 +149,21 @@ Route::controller(EmployeeController::class)
                 Route::get('/companies/refresh', 'getGreatdayCompanies')->name('greatday.refreshCompanies');
                 Route::get('/resigntype/refresh', 'getGreatdayResignType')->name('greatday.refreshResignType');
                 Route::get('/resignreason/refresh', 'getGreatdayResignReason')->name('greatday.refreshResignReason');
+                Route::get('/out-of-sync-employees', 'getOutOfSyncEmployees')->name('greatday.outOfSyncEmployees');
+                Route::post('/employees/sync', 'syncEmployeesFromGreatday')->name('greatday.syncEmployees');
+                Route::get('/employees/changes-preview', 'previewEmployeeChanges')->name('greatday.employeeChangesPreview');
+                Route::post('/employees/apply-changes', 'applyEmployeeChanges')->name('greatday.applyEmployeeChanges');
+                Route::get('/employees/{employeeUid}/link-check', 'checkEmployeeGreatdayLink')->name('greatday.employeeLinkCheck');
+                Route::post('/employees/{employeeUid}/link', 'linkEmployeeToGreatday')->name('greatday.employeeLink');
             });
+    });
+
+Route::controller(PositionSyncController::class)
+    ->middleware(['auth.session'])
+    ->prefix('greatday/positions')
+    ->group(function () {
+        Route::get('/preview', 'preview')->name('greatday.positions.preview');
+        Route::post('/sync', 'sync')->name('greatday.positions.sync');
     });
 
 Route::middleware('auth.session')
