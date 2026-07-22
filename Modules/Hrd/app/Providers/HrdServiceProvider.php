@@ -22,6 +22,8 @@ use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateBankIdInBankDetail;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Hrd\Console\UpdateTalentaUserIdToEmployeesTable;
+use Modules\Hrd\Contracts\DocumentPdfConverter;
+use Modules\Hrd\Services\Pdf\GotenbergPdfConverter;
 
 class HrdServiceProvider extends ServiceProvider
 {
@@ -49,6 +51,13 @@ class HrdServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(RouteServiceProvider::class);
+
+        $this->app->bind(DocumentPdfConverter::class, function (): GotenbergPdfConverter {
+            return new GotenbergPdfConverter(
+                baseUrl: config('services.gotenberg.url'),
+                timeout: (int) config('services.gotenberg.timeout', 120),
+            );
+        });
     }
 
     /**
@@ -74,7 +83,7 @@ class HrdServiceProvider extends ServiceProvider
             ResyncGreatdayPosition::class,
             SyncEmployeeIdGreatdayToErp::class,
             CheckTransferEntityScheduleCommand::class,
-            InitiateSignatories::class
+            InitiateSignatories::class,
         ]);
     }
 

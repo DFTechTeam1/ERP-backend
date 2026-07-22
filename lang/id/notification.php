@@ -203,6 +203,7 @@ return [
     'successApplySignature' => 'Tanda tangan berhasil diterapkan ke dokumen',
     'successUpdateAppliedSignature' => 'Tanda tangan Anda pada dokumen berhasil diperbarui',
     'signatureNotEditable' => 'Tanda tangan ini tidak dapat diubah lagi',
+    'pdfConversionFailed' => 'Gagal mengonversi dokumen ke PDF. Silakan coba lagi.',
     'documentNotCompleted' => 'Dokumen ini belum selesai ditandatangani dan tidak dapat diunduh',
     'successMarkDocumentSigned' => 'Dokumen berhasil ditandatangani',
     'successDisburseDocument' => 'Dokumen berhasil dibagikan ke karyawan yang dipilih',
