@@ -211,6 +211,7 @@ return [
     'successApplySignature' => 'Signature has been applied to the document successfully',
     'successUpdateAppliedSignature' => 'Your signature on the document has been updated successfully',
     'signatureNotEditable' => 'This signature can no longer be changed',
+    'pdfConversionFailed' => 'Failed to convert the document to PDF. Please try again.',
     'documentNotCompleted' => 'This document is not completed yet and cannot be downloaded',
     'successMarkDocumentSigned' => 'Document has been signed successfully',
     'successDisburseDocument' => 'Documents have been disbursed to the selected employees successfully',

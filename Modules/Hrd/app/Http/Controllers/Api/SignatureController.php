@@ -148,7 +148,7 @@ class SignatureController extends Controller
     }
 
     /**
-     * Stream a completed (fully signed) employee document as a downloadable .docx file.
+     * Stream a completed (fully signed) employee document as a downloadable PDF file.
      *
      * Refuses documents that are not yet completed. The rendered file is temporary and is
      * deleted once streamed.
@@ -167,14 +167,16 @@ class SignatureController extends Controller
         $relativePath = $data['data']['path'];
         $file = file_get_contents(storage_path('app/public/'.$relativePath));
         $filename = 'document';
+        $mime = $data['data']['mime'] ?? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        $extension = $data['data']['extension'] ?? 'docx';
 
         if (! empty($data['data']['is_temporary'])) {
             Storage::disk('public')->delete($relativePath);
         }
 
         return response($file, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'.docx"',
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'attachment; filename="'.$filename.'.'.$extension.'"',
         ]);
     }
 

@@ -47,9 +47,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
+use Modules\Hrd\Contracts\DocumentPdfConverter;
 use Modules\Hrd\Exceptions\CompletedDocumentNotDeletable;
 use Modules\Hrd\Exceptions\DocumentNotCompleted;
 use Modules\Hrd\Exceptions\DocumentTypeInUse;
+use Modules\Hrd\Exceptions\PdfConversionFailed;
 use Modules\Hrd\Exceptions\SignatureNotEditable;
 use Modules\Hrd\Exceptions\TemplateStillHavePendingReview;
 use Modules\Hrd\Exceptions\UserAlreadySigned;
@@ -85,7 +87,8 @@ class SignatureService
         private readonly SignatoriesMappingRepository $signatoriesMappingRepo,
         private readonly EmployeeDocumentRepository $employeeDocumentRepo,
         private readonly EmployeeSignatureTaskRepository $signatureTaskRepo,
-        private readonly EmployeeSignatureRepository $employeeSignatureRepo
+        private readonly EmployeeSignatureRepository $employeeSignatureRepo,
+        private readonly DocumentPdfConverter $pdfConverter
     ) {}
 
     /**
@@ -829,17 +832,41 @@ class SignatureService
             }
 
             $renderPath = $this->buildRenderableDocument($document, true);
+            $pdfPath = $this->renderCompletedDocumentAsPdf($renderPath);
 
             return generalResponse(
                 message: 'Success',
                 data: [
-                    'path' => $renderPath,
+                    'path' => $pdfPath,
                     'is_temporary' => true,
+                    'mime' => 'application/pdf',
+                    'extension' => 'pdf',
                 ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Convert a rendered (signatures overlaid) .docx into a PDF for final download and drop the
+     * intermediate .docx. Delivering the completed document as PDF guarantees the signature image
+     * renders identically across every viewer (Word, LibreOffice, Google Docs mobile), which the
+     * .docx does not because PhpWord embeds the signature as legacy VML.
+     *
+     * @param  string  $docxRenderPath  Path of the rendered .docx relative to the public disk
+     * @return string Path of the generated PDF relative to the public disk
+     *
+     * @throws PdfConversionFailed
+     */
+    protected function renderCompletedDocumentAsPdf(string $docxRenderPath): string
+    {
+        $absoluteDocx = storage_path('app/public/'.$docxRenderPath);
+        $absolutePdf = $this->pdfConverter->toPdf($absoluteDocx);
+
+        Storage::disk('public')->delete($docxRenderPath);
+
+        return dirname($docxRenderPath).'/'.basename($absolutePdf);
     }
 
     /**
