@@ -9,18 +9,19 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Notification;
-use Modules\Hrd\Notifications\DocumentReadyToSign;
+use Modules\Hrd\Notifications\DocumentDeleted;
 use Modules\Hrd\Repository\EmployeeRepository;
 
-class GenerateDocumentNotificationJob implements ShouldQueue
+class DocumentDeletedNotificationJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * Create a new job instance.
+     *
+     * @param  array<int, int>  $employeeIds  Owners of the deleted documents to notify
      */
     public function __construct(
-        /** @var array<int, int> */
         private readonly array $employeeIds
     ) {
         //
@@ -45,21 +46,19 @@ class GenerateDocumentNotificationJob implements ShouldQueue
         $service = app(RealtimeNotificationService::class);
 
         foreach ($employees as $employee) {
-            $title = __('notification.documentSigningTitle');
-            $message = __('notification.documentSigningMessage');
             $service->send(
                 recipients: $employee,
                 topic: RealtimeNotificationService::TOPIC_GENERAL,
                 payload: [
-                    'title' => $title,
-                    'message' => $message,
-                    'icon' => '📝',
-                    'action' => 'document_ready_to_sign',
+                    'title' => __('notification.documentDeletedTitle'),
+                    'message' => __('notification.documentDeletedMessage'),
+                    'icon' => '🗑️',
+                    'action' => 'document_deleted',
                 ],
             );
 
             if ($employee->email) {
-                Notification::send($employee, new DocumentReadyToSign($employee->name));
+                Notification::send($employee, new DocumentDeleted($employee->name));
             }
         }
     }

@@ -6,6 +6,8 @@ use App\Data\Hrd\Signature\ApprovalDocumentData;
 use App\Data\Hrd\Signature\AssignSignatoriesData;
 use App\Data\Hrd\Signature\BulkCreateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
+use App\Data\Hrd\Signature\BulkDeleteGeneratedDocumentData;
+use App\Data\Hrd\Signature\BulkGenerateDocumentData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateTemplateData;
@@ -29,6 +31,7 @@ use App\Data\Hrd\Signature\UpdateDocumentTypeData;
 use App\Data\Hrd\Signatured\DocumentVersionListData;
 use App\Data\Hrd\Signer\DetailDocumentSignEmployeeData;
 use App\Data\Hrd\Signer\DetailDocumentSignSignersData;
+use App\Enums\Hrd\Signature\GenerateDocument\AssignTo;
 use App\Enums\Hrd\Signature\SignatureTaskStatus;
 use App\Enums\Hrd\Signature\Template\DocumentFileStatus;
 use App\Enums\Hrd\Signature\Template\Status;
@@ -44,6 +47,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Company\Repository\DivisionRepository;
 use Modules\Company\Repository\PositionRepository;
+use Modules\Hrd\Exceptions\CompletedDocumentNotDeletable;
 use Modules\Hrd\Exceptions\DocumentNotCompleted;
 use Modules\Hrd\Exceptions\DocumentTypeInUse;
 use Modules\Hrd\Exceptions\SignatureNotEditable;
@@ -51,6 +55,7 @@ use Modules\Hrd\Exceptions\TemplateStillHavePendingReview;
 use Modules\Hrd\Exceptions\UserAlreadySigned;
 use Modules\Hrd\Exceptions\UserNotHaveAccessToSign;
 use Modules\Hrd\Jobs\DocumentCompletedNotificationJob;
+use Modules\Hrd\Jobs\DocumentDeletedNotificationJob;
 use Modules\Hrd\Jobs\GenerateDocumentNotificationJob;
 use Modules\Hrd\Jobs\SendOtpSignJob;
 use Modules\Hrd\Models\Employee;
@@ -982,32 +987,8 @@ class SignatureService
      */
     public function generateDocument(GenerateDocumentData $payload, string $templateUid): array
     {
-        DB::beginTransaction();
         try {
-            $document = $this->masterDocumentRepo->show([
-                'where' => ['uid' => $templateUid],
-                'select' => ['id', 'name', 'document_type_id'],
-                'with' => [
-                    'activeDocument:id,master_document_id,path,file_type,placeholder_mapping',
-                    'documentType' => function ($query) {
-                        $query->selectRaw('id,code,name')
-                            ->with([
-                                'signers' => function ($querySigner) {
-                                    $querySigner->select(['id', 'type_id', 'division_id', 'order'])
-                                        ->with([
-                                            'signMapping:id,division_id,main_signer_id,delegate_signer_id',
-                                        ])
-                                        ->orderBy('order', 'asc');
-                                },
-                            ]);
-                    },
-                    'signers:id,master_document_id',
-                ],
-            ]);
-
-            if (! $document) {
-                throw new DataNotFound('Document not found.');
-            }
+            $document = $this->loadTemplateForGeneration($templateUid);
 
             $columnReplacers = $this->getDocumentColumnsReplacer($document);
             $columns = $columnReplacers['columns'];
@@ -1023,6 +1004,336 @@ class SignatureService
                 throw new DataNotFound('Employee not found.');
             }
 
+            $result = $this->createEmployeeDocument(
+                $document,
+                $employee,
+                $columns,
+                $keys,
+                $this->buildDivisionSigners($document)
+            );
+
+            if ($result === null) {
+                throw new DataNotFound('The employee still has the same document that has not been signed');
+            }
+
+            GenerateDocumentNotificationJob::dispatch($result['signer_ids'])->afterCommit();
+
+            return generalResponse(
+                message: 'Success to generate document for employee',
+                data: [
+                    'id' => $result['document']->uid,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Generate a signable document from a template for a whole audience of employees at once:
+     * every active employee, everyone in a division, or everyone holding a position.
+     *
+     * Each employee is processed in its own transaction so one failure never aborts the batch.
+     * Employees who already hold an unsigned document of the same type are skipped rather than
+     * failed. Signer notifications are dispatched once for the whole run.
+     *
+     * @param  BulkGenerateDocumentData  $payload  Audience selection plus the source template
+     * @return array Response envelope with a per-run summary (`total`, `generated`, `skipped`, `failed`)
+     *
+     * @throws DataNotFound
+     */
+    public function bulkGenerateDocument(BulkGenerateDocumentData $payload): array
+    {
+        try {
+            $assignTo = AssignTo::from($payload->assign_to);
+
+            $document = $this->loadTemplateForGeneration($payload->template_uid);
+
+            $columnReplacers = $this->getDocumentColumnsReplacer($document);
+            $columns = $columnReplacers['columns'];
+            $keys = $columnReplacers['keys'];
+
+            $divisionId = null;
+            $positionId = null;
+
+            if ($assignTo === AssignTo::Division) {
+                $division = $this->divisionRepo->show(uid: $payload->division_id, select: 'id');
+
+                if (! $division) {
+                    throw new DataNotFound('Division not found.');
+                }
+
+                $divisionId = $division->id;
+            }
+
+            if ($assignTo === AssignTo::Position) {
+                $position = $this->positionRepo->show(uid: $payload->position_id, select: 'id');
+
+                if (! $position) {
+                    throw new DataNotFound('Position not found.');
+                }
+
+                $positionId = $position->id;
+            }
+
+            $employees = $this->employeeRepo->getForSignatureDisbursement(
+                select: $columns,
+                assignTo: $assignTo,
+                divisionId: $divisionId,
+                positionId: $positionId
+            )->unique('id')->values();
+
+            $divisionSigners = $this->buildDivisionSigners($document);
+
+            $generated = 0;
+            $skipped = 0;
+            $failed = 0;
+            $signerIds = [];
+
+            foreach ($employees as $employee) {
+                try {
+                    $result = $this->createEmployeeDocument($document, $employee, $columns, $keys, $divisionSigners);
+
+                    if ($result === null) {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    $generated++;
+                    $signerIds = array_merge($signerIds, $result['signer_ids']);
+                } catch (\Throwable $th) {
+                    $failed++;
+                    logging('bulkGenerateDocument error: ', [$th->getMessage()]);
+                }
+            }
+
+            if (! empty($signerIds)) {
+                GenerateDocumentNotificationJob::dispatch(array_values(array_unique($signerIds)))->afterCommit();
+            }
+
+            return generalResponse(
+                message: __('notification.successDisburseDocument'),
+                data: [
+                    'total' => $employees->count(),
+                    'generated' => $generated,
+                    'skipped' => $skipped,
+                    'failed' => $failed,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Soft delete a single generated employee document, provided it is not yet completed, and
+     * notify its target employee.
+     *
+     * Only privileged roles (root/director/hrd) may delete. Because the delete is soft and the
+     * duplicate guard ignores soft-deleted rows, this frees the employee to have a fresh document
+     * of the same type generated again.
+     *
+     * @param  string  $employeeDocumentUid  Uid of the generated document to delete
+     * @return array Response envelope with the deleted document uid
+     *
+     * @throws DataNotFound
+     * @throws CompletedDocumentNotDeletable
+     */
+    public function deleteGeneratedDocument(string $employeeDocumentUid): array
+    {
+        if (! $this->isDocumentManager()) {
+            return errorResponse(__('notification.notAllowedToViewDocument'), [], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            $document = $this->employeeDocumentRepo->show([
+                'where' => ['uid' => $employeeDocumentUid],
+                'select' => ['id', 'uid', 'employee_id', 'status'],
+            ]);
+
+            if (! $document) {
+                throw new DataNotFound('Document not found.');
+            }
+
+            if ($document->status === Status::Completed) {
+                throw new CompletedDocumentNotDeletable;
+            }
+
+            $this->employeeDocumentRepo->delete($document);
+
+            DocumentDeletedNotificationJob::dispatch([$document->employee_id])->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successDeleteGeneratedDocument'),
+                data: [
+                    'uid' => $document->uid,
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Soft delete many generated employee documents at once, skipping any that are already
+     * completed or no longer exist, and notify each affected target employee.
+     *
+     * Only privileged roles (root/director/hrd) may delete.
+     *
+     * @param  BulkDeleteGeneratedDocumentData  $payload  Uids of the generated documents to delete
+     * @return array Response envelope with a per-run summary (`requested`, `deleted`, `skipped`)
+     */
+    public function bulkDeleteGeneratedDocument(BulkDeleteGeneratedDocumentData $payload): array
+    {
+        if (! $this->isDocumentManager()) {
+            return errorResponse(__('notification.notAllowedToViewDocument'), [], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            $documents = $this->employeeDocumentRepo->get([
+                'whereIn' => ['uid' => $payload->uids],
+                'select' => ['id', 'uid', 'employee_id', 'status'],
+            ]);
+
+            $deletable = $documents->filter(fn (EmployeeDocument $document) => $document->status !== Status::Completed);
+
+            foreach ($deletable as $document) {
+                $this->employeeDocumentRepo->delete($document);
+            }
+
+            $employeeIds = $deletable->pluck('employee_id')->unique()->values()->all();
+
+            if (! empty($employeeIds)) {
+                DocumentDeletedNotificationJob::dispatch($employeeIds)->afterCommit();
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successDeleteGeneratedDocument'),
+                data: [
+                    'requested' => count($payload->uids),
+                    'deleted' => $deletable->count(),
+                    'skipped' => count($payload->uids) - $deletable->count(),
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Whether the authenticated user may manage (view/delete) generated documents.
+     */
+    protected function isDocumentManager(): bool
+    {
+        return Auth::user()->hasRole([
+            BaseRole::Root->value,
+            BaseRole::Director->value,
+            BaseRole::Hrd->value,
+        ]);
+    }
+
+    /**
+     * Load a master template with everything a document generation needs: its active version,
+     * the document type's ordered signers and each signer's PIC mapping.
+     *
+     * @param  string  $templateUid  Uid of the master template
+     *
+     * @throws DataNotFound
+     */
+    protected function loadTemplateForGeneration(string $templateUid): MasterDocument
+    {
+        $document = $this->masterDocumentRepo->show([
+            'where' => ['uid' => $templateUid],
+            'select' => ['id', 'name', 'document_type_id'],
+            'with' => [
+                'activeDocument:id,master_document_id,path,file_type,placeholder_mapping',
+                'documentType' => function ($query) {
+                    $query->selectRaw('id,code,name')
+                        ->with([
+                            'signers' => function ($querySigner) {
+                                $querySigner->select(['id', 'type_id', 'division_id', 'order'])
+                                    ->with([
+                                        'signMapping:id,division_id,main_signer_id,delegate_signer_id',
+                                    ])
+                                    ->orderBy('order', 'asc');
+                            },
+                        ]);
+                },
+                'signers:id,master_document_id',
+            ],
+        ]);
+
+        if (! $document) {
+            throw new DataNotFound('Document not found.');
+        }
+
+        return $document;
+    }
+
+    /**
+     * Build the fixed portion of a document's signing chain: the division PIC signers, in order.
+     * The target employee is appended per-document by {@see self::createEmployeeDocument()}.
+     *
+     * @param  MasterDocument  $document  Template with its `documentType.signers.signMapping` loaded
+     * @return array<int, array{employee_id: int, order: int}>
+     */
+    protected function buildDivisionSigners(MasterDocument $document): array
+    {
+        $divisionSigners = [];
+        foreach ($document->documentType->signers as $documentSigner) {
+            $divisionSigners[] = [
+                'employee_id' => $documentSigner->signMapping->main_signer_id,
+                'order' => $documentSigner->order,
+            ];
+        }
+
+        return $divisionSigners;
+    }
+
+    /**
+     * Generate a single employee's signable document: copy the active template, resolve its
+     * placeholders from the employee's data, persist the document and create its signature tasks
+     * (division PICs plus the employee).
+     *
+     * The whole operation runs in its own transaction and takes a row lock on the employee first,
+     * so two concurrent or double-submitted requests for the same employee serialize: the second
+     * one sees the document the first created and returns `null` instead of generating a duplicate.
+     * Returns `null` whenever the employee already holds an unsigned document of the same type, so
+     * the caller can decide whether that is an error (single generate) or a skip (bulk disburse).
+     *
+     * @param  MasterDocument  $document  Template loaded via {@see self::loadTemplateForGeneration()}
+     * @param  Employee|Collection  $employee  Employee the document is generated for
+     * @param  array<int, string>  $columns  Employee columns to inject
+     * @param  array<int, string>  $keys  Placeholder keys aligned to `$columns`
+     * @param  array<int, array{employee_id: int, order: int}>  $divisionSigners  Fixed signer chain
+     * @return array{document: EmployeeDocument, signer_ids: array<int, int>}|null
+     */
+    protected function createEmployeeDocument(
+        MasterDocument $document,
+        Employee|Collection $employee,
+        array $columns,
+        array $keys,
+        array $divisionSigners
+    ): ?array {
+        return DB::transaction(function () use ($document, $employee, $columns, $keys, $divisionSigners) {
+            // Serialize concurrent generations for this employee. Locking the employee row makes
+            // the duplicate check below reliable even when a competing request is mid-flight.
+            Employee::query()
+                ->whereKey($employee->id)
+                ->lockForUpdate()
+                ->first(['id']);
+
             $currentEmployeeDoc = $this->employeeDocumentRepo->show([
                 'where' => [
                     'employee_id' => $employee->id,
@@ -1034,7 +1345,7 @@ class SignatureService
             ]);
 
             if ($currentEmployeeDoc) {
-                throw new DataNotFound('The employee still has the same document that has not been signed');
+                return null;
             }
 
             $employeeDocumentPath = $this->copyFileToEmployeeDirectory($document->activeDocument->path, $employee);
@@ -1063,37 +1374,17 @@ class SignatureService
                 'document_type_id' => $document->document_type_id,
             ]);
 
-            $divisionSigners = [];
-            foreach ($document->documentType->signers as $documentSigner) {
-                $divisionSigners[] = [
-                    'employee_id' => $documentSigner->signMapping->main_signer_id,
-                    'order' => $documentSigner->order,
-                ];
-            }
+            // Add the target employee as the final signer
+            $signers = $divisionSigners;
+            $signers[] = ['employee_id' => $employee->id, 'order' => count($signers) + 1];
 
-            // Add a target user
-            array_push($divisionSigners, ['employee_id' => $employee->id, 'order' => count($divisionSigners) + 1]);
+            $employeeDocument->signatureTasks()->createMany($signers);
 
-            $employeeDocument->signatureTasks()->createMany($divisionSigners);
-
-            // Send notification
-            GenerateDocumentNotificationJob::dispatch(
-                collect($divisionSigners)->pluck('employee_id')->toArray()
-            )->afterCommit();
-
-            DB::commit();
-
-            return generalResponse(
-                message: 'Success to generate document for employee',
-                data: [
-                    'id' => $employeeDocument->uid,
-                ]
-            );
-        } catch (\Throwable $th) {
-            DB::rollBack();
-
-            return errorResponse($th);
-        }
+            return [
+                'document' => $employeeDocument,
+                'signer_ids' => collect($signers)->pluck('employee_id')->toArray(),
+            ];
+        });
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Repository;
 
+use App\Enums\Hrd\Signature\GenerateDocument\AssignTo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Modules\Hrd\Models\Employee;
@@ -26,7 +27,7 @@ class EmployeeRepository extends EmployeeInterface
     /**
      * Get All Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function list(
         string $select = '*',
@@ -80,7 +81,7 @@ class EmployeeRepository extends EmployeeInterface
     /**
      * Make paginated data
      *
-     * @return \Illuminate\Database\Eloquent\Builder[]|\Illuminate\Database\Eloquent\Collection
+     * @return Builder[]|Collection
      */
     public function pagination(
         string $select,
@@ -115,7 +116,7 @@ class EmployeeRepository extends EmployeeInterface
     /**
      * Get Detail Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
@@ -139,7 +140,7 @@ class EmployeeRepository extends EmployeeInterface
     /**
      * Store Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function store(array $data)
     {
@@ -149,7 +150,7 @@ class EmployeeRepository extends EmployeeInterface
     /**
      * Update Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function update(array $data, string $uid = '', string $where = '')
     {
@@ -171,7 +172,7 @@ class EmployeeRepository extends EmployeeInterface
     /**
      * Delete Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function delete(string $uid)
     {
@@ -181,7 +182,7 @@ class EmployeeRepository extends EmployeeInterface
     /**
      * Bulk Delete Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function bulkDelete(array $ids, string $key = '')
     {
@@ -205,9 +206,44 @@ class EmployeeRepository extends EmployeeInterface
         return $this->model
             ->select(['uid', 'name', 'position_id', 'avatar_color'])
             ->with([
-                'position:id,name'
+                'position:id,name',
             ])
             ->projectManagers($positionIds)
             ->get();
+    }
+
+    /**
+     * Fetch the active employees a signature document should be disbursed to.
+     *
+     * The audience is derived from the {@see AssignTo} target: every active employee,
+     * every active employee whose position belongs to a division, or every active
+     * employee holding a specific position.
+     *
+     * @param  array<int, string>  $select  Columns to select (must include `id`)
+     * @param  int|null  $divisionId  Internal division id, required when targeting a division
+     * @param  int|null  $positionId  Internal position id, required when targeting a position
+     * @return Collection<int, Employee>
+     */
+    public function getForSignatureDisbursement(
+        array $select,
+        AssignTo $assignTo,
+        ?int $divisionId = null,
+        ?int $positionId = null
+    ): Collection {
+        $query = $this->model->newQuery()
+            ->select($select)
+            ->activeEmployee();
+
+        if ($assignTo === AssignTo::Position) {
+            $query->where('position_id', $positionId);
+        }
+
+        if ($assignTo === AssignTo::Division) {
+            $query->whereHas('position', function (Builder $subQuery) use ($divisionId) {
+                $subQuery->where('division_id', $divisionId);
+            });
+        }
+
+        return $query->get();
     }
 }
