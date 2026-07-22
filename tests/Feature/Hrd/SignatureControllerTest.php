@@ -48,6 +48,8 @@ it('validates the payload', function (string $method, string $path) use ($base) 
     'create template' => ['post', '/templates'],
     'approval master document' => ['post', '/templates/some-uid/approval'],
     'generate document' => ['post', '/templates/some-uid/generate'],
+    'bulk generate document' => ['post', '/documents/disburse'],
+    'bulk delete generated document' => ['delete', '/documents/bulk'],
     'assign signatories' => ['post', '/signatories/assign/some-uid'],
     'store employee signature' => ['post', '/my-signatures'],
     'validate otp' => ['post', '/sign/otp/some-uid/validate'],
@@ -92,6 +94,42 @@ it('returns a handled error for an unknown uid', function (string $method, strin
     'set active signature' => ['patch', '/my-signatures/unknown-uid/activate'],
     'delete signature' => ['delete', '/my-signatures/unknown-uid'],
 ]);
+
+// ---------------------------------------------------------------------------
+// Bulk disburse: audience selection validation and graceful template errors
+// ---------------------------------------------------------------------------
+it('rejects an unknown disburse target', function () use ($base) {
+    actAsEmployeeUser();
+
+    $this->postJson($base.'/documents/disburse', [
+        'assign_to' => 'everyone',
+    ])->assertStatus(422);
+});
+
+it('requires a division id when disbursing to a division', function () use ($base) {
+    actAsEmployeeUser();
+
+    $this->postJson($base.'/documents/disburse', [
+        'assign_to' => 'division',
+    ])->assertStatus(422);
+});
+
+it('requires a position id when disbursing to a position', function () use ($base) {
+    actAsEmployeeUser();
+
+    $this->postJson($base.'/documents/disburse', [
+        'assign_to' => 'position',
+    ])->assertStatus(422);
+});
+
+it('returns a handled error when disbursing from an unknown template', function () use ($base) {
+    actAsEmployeeUser();
+
+    $this->postJson($base.'/documents/disburse', [
+        'assign_to' => 'all',
+        'template_uid' => 'unknown-template',
+    ])->assertStatus(400);
+});
 
 // ---------------------------------------------------------------------------
 // File render endpoints: unknown uid returns a JSON error (not a file)

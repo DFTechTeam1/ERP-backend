@@ -213,6 +213,9 @@ return [
     'signatureNotEditable' => 'This signature can no longer be changed',
     'documentNotCompleted' => 'This document is not completed yet and cannot be downloaded',
     'successMarkDocumentSigned' => 'Document has been signed successfully',
+    'successDisburseDocument' => 'Documents have been disbursed to the selected employees successfully',
+    'successDeleteGeneratedDocument' => 'Generated document has been deleted successfully',
+    'completedDocumentNotDeletable' => 'A completed document can no longer be deleted',
     'phoneNumberVerfied' => 'Phone number has been verified',
     'projectDealIsExists' => 'Project deal already exists in the database',
     'projectIsExists' => 'Project already exists in the database',
@@ -236,6 +239,8 @@ return [
     'documentSigningMessage' => 'A document has been generated for you. Please review and sign it.',
     'documentCompletedTitle' => 'Document fully signed',
     'documentCompletedMessage' => 'Your document has been signed by everyone and is ready to download.',
+    'documentDeletedTitle' => 'Document removed',
+    'documentDeletedMessage' => 'A document that was generated for you has been removed.',
     'youAlreadySignedTheDocument' => "You're already signed this document",
     'youDontHaveAccessToSignTheDocument' => "You don't have permission to sign this document",
 ];
