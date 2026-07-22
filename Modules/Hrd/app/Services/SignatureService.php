@@ -2279,6 +2279,7 @@ class SignatureService
 
             $isApplied = $this->signatureTaskRepo->get([
                 'where' => ['employee_signature_id' => $signature->id],
+                'whereHas' => ['employeeDocument' => null],
                 'select' => ['id'],
             ])->isNotEmpty();
 
