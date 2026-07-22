@@ -6,6 +6,8 @@ use App\Data\Hrd\Signature\ApprovalDocumentData;
 use App\Data\Hrd\Signature\AssignSignatoriesData;
 use App\Data\Hrd\Signature\BulkCreateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
+use App\Data\Hrd\Signature\BulkDeleteGeneratedDocumentData;
+use App\Data\Hrd\Signature\BulkGenerateDocumentData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateTemplateData;
@@ -211,6 +213,26 @@ class SignatureController extends Controller
     }
 
     /**
+     * Soft delete a single generated document (privileged, non-completed only).
+     *
+     * @param  string  $documentUid  Uid of the generated document to delete
+     */
+    public function deleteGeneratedDocument(string $documentUid): JsonResponse
+    {
+        return apiResponse($this->service->deleteGeneratedDocument($documentUid));
+    }
+
+    /**
+     * Soft delete many generated documents at once (privileged, non-completed only).
+     *
+     * @param  BulkDeleteGeneratedDocumentData  $payload  Uids of the generated documents to delete
+     */
+    public function bulkDeleteGeneratedDocument(BulkDeleteGeneratedDocumentData $payload): JsonResponse
+    {
+        return apiResponse($this->service->bulkDeleteGeneratedDocument($payload));
+    }
+
+    /**
      * Verify the signing OTP for the authenticated signer and mark their task as signed.
      *
      * @param  ValidateOtpData  $request  Validated 6-digit OTP payload
@@ -369,6 +391,17 @@ class SignatureController extends Controller
     public function generateDocument(GenerateDocumentData $payload, string $templateUid)
     {
         return apiResponse($this->service->generateDocument($payload, $templateUid));
+    }
+
+    /**
+     * Disburse a signable document from a master template to a whole audience of employees:
+     * every active employee, everyone in a division, or everyone holding a position.
+     *
+     * @param  BulkGenerateDocumentData  $payload  Audience selection plus the source template
+     */
+    public function bulkGenerateDocument(BulkGenerateDocumentData $payload): JsonResponse
+    {
+        return apiResponse($this->service->bulkGenerateDocument($payload));
     }
 
     /**

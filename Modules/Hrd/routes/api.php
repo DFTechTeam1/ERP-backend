@@ -97,6 +97,7 @@ Route::controller(EmployeeController::class)
                 Route::delete('templates/{templateUid}', [SignatureController::class, 'deleteTemplate']);
                 Route::post('templates/{documentUid}/approval', [SignatureController::class, 'approvalMasterDocument']);
                 Route::post('templates/{templateUid}/generate', [SignatureController::class, 'generateDocument']);
+                Route::post('documents/disburse', [SignatureController::class, 'bulkGenerateDocument']);
 
                 Route::get('signatories', [SignatureController::class, 'listSignatories']);
                 Route::post('signatories/assign/{mappingUid}', [SignatureController::class, 'assignSignatories']);
@@ -109,7 +110,9 @@ Route::controller(EmployeeController::class)
 
                 Route::get('documents', [SignatureController::class, 'generatedDocumentList']);
                 Route::get('documents/mine', [SignatureController::class, 'myGeneratedDocumentList']);
+                Route::delete('documents/bulk', [SignatureController::class, 'bulkDeleteGeneratedDocument']);
                 Route::get('documents/{documentUid}', [SignatureController::class, 'documentSignDetail']);
+                Route::delete('documents/{documentUid}', [SignatureController::class, 'deleteGeneratedDocument']);
 
                 // Sign
                 Route::get('sign/otp/{employeeDocumentUId}', [SignatureController::class, 'generateSignOtp']);
