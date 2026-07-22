@@ -32,7 +32,7 @@ class GenerateDocumentNotificationJob implements ShouldQueue
     public function handle(): void
     {
         $employees = app(EmployeeRepository::class)->list(
-            select: 'id,name,email,position_id',
+            select: 'id,name,email,position_id,user_id',
             whereIn: [
                 'key' => 'id',
                 'value' => $this->employeeIds,
@@ -54,7 +54,9 @@ class GenerateDocumentNotificationJob implements ShouldQueue
                     'title' => $title,
                     'message' => $message,
                     'icon' => '📝',
+                    'url' => '',
                     'action' => 'document_ready_to_sign',
+                    'data' => []
                 ],
             );
 
