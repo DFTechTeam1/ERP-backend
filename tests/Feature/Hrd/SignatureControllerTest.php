@@ -1,10 +1,15 @@
 <?php
 
+use App\Enums\Hrd\Signature\Template\Status;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
+use Modules\Hrd\Contracts\DocumentPdfConverter;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeeDocument;
 use Modules\Hrd\Models\EmployeeSignature;
 use Modules\Hrd\Models\EmployeeSignatureTask;
+use PhpOffice\PhpWord\IOFactory;
+use PhpOffice\PhpWord\PhpWord;
 
 use function Pest\Laravel\actingAs;
 
@@ -21,6 +26,27 @@ function actAsEmployeeUser(): User
     actingAs($user);
 
     return $user;
+}
+
+function writeSignableDocxFixture(string $relativePath): void
+{
+    $absolute = storage_path('app/public/'.$relativePath);
+    @mkdir(dirname($absolute), 0775, true);
+
+    $phpWord = new PhpWord;
+    $section = $phpWord->addSection();
+    $section->addText('Signature: ${employeeSignature}');
+    IOFactory::createWriter($phpWord, 'Word2007')->save($absolute);
+}
+
+function writeSignaturePngFixture(string $relativePath): void
+{
+    $absolute = storage_path('app/public/'.$relativePath);
+    @mkdir(dirname($absolute), 0775, true);
+
+    $image = imagecreatetruecolor(4, 4);
+    imagepng($image, $absolute);
+    imagedestroy($image);
 }
 
 $base = '/api/signatures';
@@ -170,6 +196,58 @@ it('refuses to delete a signature still applied to a live document', function ()
     $this->deleteJson($base.'/my-signatures/'.$signature->uid)->assertStatus(400);
 
     expect(EmployeeSignature::find($signature->id))->not->toBeNull();
+});
+
+// ---------------------------------------------------------------------------
+// Completed download: rendered docx is converted to PDF before streaming
+// ---------------------------------------------------------------------------
+it('streams a completed document as a PDF', function () use ($base) {
+    $user = actAsEmployeeUser();
+
+    // Minimal real .docx carrying the signature placeholder, plus a real signature image,
+    // so buildRenderableDocument runs for real; only the PDF engine is faked.
+    $docxPath = 'employees/documents/test_'.uniqid().'.docx';
+    $signPath = 'signatures/employees/test_'.uniqid().'.png';
+    writeSignableDocxFixture($docxPath);
+    writeSignaturePngFixture($signPath);
+
+    $signature = EmployeeSignature::factory()->create([
+        'employee_id' => $user->employee_id,
+        'sign_path' => $signPath,
+    ]);
+
+    $document = EmployeeDocument::factory()->create([
+        'employee_id' => $user->employee_id,
+        'status' => Status::Completed,
+        'total_signer' => 1,
+        'document_path' => $docxPath,
+    ]);
+    EmployeeSignatureTask::factory()->signed()->create([
+        'employee_id' => $user->employee_id,
+        'employee_document_id' => $document->id,
+        'employee_signature_id' => $signature->id,
+        'order' => 1,
+    ]);
+
+    // Fake converter: writes a sibling .pdf and returns its absolute path (no LibreOffice needed).
+    app()->bind(DocumentPdfConverter::class, fn () => new class implements DocumentPdfConverter
+    {
+        public function toPdf(string $absoluteDocxPath): string
+        {
+            $pdf = preg_replace('/\.docx$/i', '.pdf', $absoluteDocxPath);
+            file_put_contents($pdf, '%PDF-1.4 fake');
+
+            return $pdf;
+        }
+    });
+
+    $response = $this->get($base.'/file/employee/'.$document->uid.'/download');
+
+    $response->assertOk();
+    expect($response->headers->get('Content-Type'))->toContain('application/pdf');
+    expect($response->headers->get('Content-Disposition'))->toContain('document.pdf');
+
+    Storage::disk('public')->delete([$docxPath, $signPath]);
 });
 
 // ---------------------------------------------------------------------------
