@@ -2,6 +2,9 @@
 
 use App\Models\User;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeeDocument;
+use Modules\Hrd\Models\EmployeeSignature;
+use Modules\Hrd\Models\EmployeeSignatureTask;
 
 use function Pest\Laravel\actingAs;
 
@@ -129,6 +132,44 @@ it('returns a handled error when disbursing from an unknown template', function 
         'assign_to' => 'all',
         'template_uid' => 'unknown-template',
     ])->assertStatus(400);
+});
+
+// ---------------------------------------------------------------------------
+// Delete signature: the "already applied" guard must ignore soft-deleted documents
+// ---------------------------------------------------------------------------
+it('deletes a signature whose only applied task belongs to a soft-deleted document', function () use ($base) {
+    $user = actAsEmployeeUser();
+
+    $signature = EmployeeSignature::factory()->create(['employee_id' => $user->employee_id]);
+
+    $document = EmployeeDocument::factory()->create(['employee_id' => $user->employee_id]);
+    EmployeeSignatureTask::factory()->signed()->create([
+        'employee_id' => $user->employee_id,
+        'employee_document_id' => $document->id,
+        'employee_signature_id' => $signature->id,
+    ]);
+    $document->delete();
+
+    $this->deleteJson($base.'/my-signatures/'.$signature->uid)->assertStatus(201);
+
+    expect(EmployeeSignature::find($signature->id))->toBeNull();
+});
+
+it('refuses to delete a signature still applied to a live document', function () use ($base) {
+    $user = actAsEmployeeUser();
+
+    $signature = EmployeeSignature::factory()->create(['employee_id' => $user->employee_id]);
+
+    $document = EmployeeDocument::factory()->create(['employee_id' => $user->employee_id]);
+    EmployeeSignatureTask::factory()->signed()->create([
+        'employee_id' => $user->employee_id,
+        'employee_document_id' => $document->id,
+        'employee_signature_id' => $signature->id,
+    ]);
+
+    $this->deleteJson($base.'/my-signatures/'.$signature->uid)->assertStatus(400);
+
+    expect(EmployeeSignature::find($signature->id))->not->toBeNull();
 });
 
 // ---------------------------------------------------------------------------
