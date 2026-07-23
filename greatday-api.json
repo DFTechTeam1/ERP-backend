@@ -1,0 +1,364 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Greatday API",
+    "version": "1.0.0",
+    "description": "Official API documentation for the Greatday HR system."
+  },
+  "servers": [
+    {
+      "url": "https://dev.greatdayhr.com/api",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Access token (valid for 24 hours). Obtain via /Token."
+      }
+    },
+    "schemas": {
+      "AddEmployeeRequestItem": {
+        "type": "object",
+        "required": [
+          "employeeNo",
+          "companyId",
+          "userName",
+          "email",
+          "employeeNameFirst",
+          "nationality",
+          "position",
+          "joinDate",
+          "gender",
+          "birthDay",
+          "grade",
+          "costCenter",
+          "status",
+          "workLocation",
+          "birthPlace",
+          "religion",
+          "maritalStatus",
+          "address",
+          "timezoneId",
+          "mobilePhone",
+          "supervisor",
+          "manager",
+          "shiftPattern",
+          "allowCreateNewMaster"
+        ],
+        "properties": {
+          "employeeNo": { "type": "string", "description": "Employee Number" },
+          "companyId": { "type": "number", "description": "Company ID" },
+          "userName": { "type": "string", "description": "Username for Login" },
+          "email": { "type": "string", "description": "Employee Email" },
+          "employeeNameFirst": { "type": "string", "description": "Employee First Name" },
+          "nationality": { "type": "string", "description": "Nationality, using Nationality Code" },
+          "position": { "type": "string", "description": "Position Code" },
+          "joinDate": { "type": "string", "format": "date", "description": "Join Date (ex: 2019-01-01)" },
+          "gender": { "type": "number", "description": "Gender, 1 = Male; 0 = Female" },
+          "birthDay": { "type": "string", "format": "date", "description": "Birth Date (ex: 2019-01-01)" },
+          "grade": { "type": "string", "description": "Grade, using Grade Code" },
+          "costCenter": { "type": "string", "description": "Cost Center, using Cost Center Code" },
+          "status": { "type": "string", "description": "Employment Status, using Employment Status Code" },
+          "workLocation": { "type": "string", "description": "Work Location, using Work Location Code" },
+          "birthPlace": { "type": "string", "description": "Birth Place" },
+          "religion": { "type": "string", "description": "Religion, using Religion Code" },
+          "maritalStatus": { "type": "string", "description": "Marital Status, 0 = Single, 1 = Married, 2 = Widow, 3 = Widower" },
+          "address": { "type": "string", "description": "Address" },
+          "timezoneId": { "type": "number", "description": "Timezone ID, see timezone master data" },
+          "mobilePhone": { "type": "string", "description": "Phone number" },
+          "supervisor": { "type": "string", "description": "Supervisor Employee number" },
+          "manager": { "type": "string", "description": "Manager Employee number" },
+          "shiftPattern": { "type": "string", "description": "Shift Pattern Code" },
+          "allowCreateNewMaster": { "type": "boolean", "description": "Greatday will automatically added new master if master data not found in Greatday" },
+          "employeeNameMiddle": { "type": "string", "description": "Employee Middle Name" },
+          "employeeNameLast": { "type": "string", "description": "Employee Last Name" },
+          "orgUnit": { "type": "string", "description": "Organization Unit Code" },
+          "jobStatus": { "type": "string", "description": "Job Status Code" },
+          "employmentEndDate": { "type": "string", "format": "date", "description": "Employment End Date" },
+          "idCardNumber": { "type": "string", "description": "ID Card Number" },
+          "taxfilenumber": { "type": "string", "description": "Tax File Number" },
+          "taxregisteredname": { "type": "string", "description": "Tax Registered Name" },
+          "bankCode": { "type": "string", "description": "Bank Code" },
+          "bankAccount": { "type": "string", "description": "Bank Account" },
+          "bankAccountName": { "type": "string", "description": "Bank Account Name" },
+          "currencyCode": { "type": "string", "description": "Currency Code" },
+          "customField1": { "type": "string", "description": "Custom Field 1" },
+          "customField2": { "type": "string", "description": "Custom Field 2" },
+          "customField3": { "type": "string", "description": "Custom Field 3" },
+          "customField4": { "type": "string", "description": "Custom Field 4" },
+          "customField5": { "type": "string", "description": "Custom Field 5" },
+          "customField6": { "type": "string", "description": "Custom Field 6" },
+          "customField7": { "type": "string", "description": "Custom Field 7" },
+          "customField8": { "type": "string", "description": "Custom Field 8" },
+          "customField9": { "type": "string", "description": "Custom Field 9" },
+          "customField10": { "type": "string", "description": "Custom Field 10" }
+        }
+      },
+      "UpdateEmployeeRequestItem": {
+        "type": "object",
+        "required": [
+          "transactionType",
+          "transactionEffectiveDate",
+          "empNo"
+        ],
+        "properties": {
+          "transactionType": {
+            "type": "string",
+            "enum": ["MUTATION", "REHIRE", "TERMINATION", "PROMOTION", "DEMOTION", "PERSONALUPDATE"],
+            "description": "Type of employee transaction."
+          },
+          "transactionEffectiveDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Effective date of the transaction. Not required for PERSONALUPDATE."
+          },
+          "empNo": { "type": "string", "description": "Unique employee number to update." },
+          "companyId": { "type": "string", "description": "Company identifier." },
+          "employeeName": { "type": "string", "description": "Full name of the employee." },
+          "orgUnit": { "type": "string", "description": "Organizational unit." },
+          "position": { "type": "string", "description": "Job position/title." },
+          "status": { "type": "string", "description": "Employment status." },
+          "email": { "type": "string", "format": "email", "description": "Employee email address." },
+          "bankCode": { "type": "string", "description": "Bank code for payroll." },
+          "customField1": { "type": "string" },
+          "customField2": { "type": "string" },
+          "customField3": { "type": "string" },
+          "customField4": { "type": "string" },
+          "customField5": { "type": "string" },
+          "customField6": { "type": "string" },
+          "customField7": { "type": "string" },
+          "customField8": { "type": "string" },
+          "customField9": { "type": "string" },
+          "customField10": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/Token": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Get Access Token",
+        "description": "Obtain an access token using your API credentials.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["accessKey", "accessSecret"],
+                "properties": {
+                  "accessKey": { "type": "string", "description": "Your API access key." },
+                  "accessSecret": { "type": "string", "description": "Your API access secret." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Token generated successfully." }
+        }
+      }
+    },
+    "/RefreshToken": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh Access Token",
+        "description": "Refresh the access token using a refresh token (valid for 24 hours).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string", "description": "The refresh token obtained during initial authentication." }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Employee": {
+      "post": {
+        "tags": ["Employee"],
+        "summary": "Add Employee",
+        "description": "This API is used to add new employee(s).",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Bearer access token. Format: 'Bearer {your_token}'"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/AddEmployeeRequestItem" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "empNo": { "type": "string", "description": "Employee Number" },
+                      "success": { "type": "boolean", "description": "Indicates if the operation succeeded" },
+                      "message": { "type": "string", "description": "Result message" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Employee"],
+        "summary": "Update Employee",
+        "description": "Updates existing employee data and career information for one or multiple employees.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Bearer access token. Format: 'Bearer {your_token}'"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/UpdateEmployeeRequestItem" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful update operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "empNo": { "type": "string", "description": "Employee number processed." },
+                      "success": { "type": "boolean", "description": "Indicates if the update succeeded." },
+                      "message": { "type": "string", "description": "Result message (success or error details)." }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/EmploymentStatus": {
+      "get": {
+        "tags": ["Employment Status"],
+        "summary": "Get Employment Status List",
+        "description": "Retrieves a paginated list of employment statuses.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 },
+            "description": "Page number for pagination."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 10 },
+            "description": "Number of records per page."
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of employment statuses." }
+        }
+      }
+    },
+    "/OrganizationLevel": {
+      "get": {
+        "tags": ["Organization Level"],
+        "summary": "Get Organization Level List",
+        "description": "Retrieves a paginated list of organization levels.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 },
+            "description": "Page number for pagination."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 10 },
+            "description": "Number of records per page."
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of organization levels." }
+        }
+      }
+    },
+    "/BankList": {
+      "get": {
+        "tags": ["Bank List"],
+        "summary": "Get Bank List",
+        "description": "Retrieves a paginated list of available banks.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 },
+            "description": "Page number for pagination."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 10 },
+            "description": "Number of records per page."
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of banks." }
+        }
+      }
+    }
+  }
+}

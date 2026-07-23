@@ -187,6 +187,8 @@ return [
     'positionNotLinkedToGreatday' => "Posisi ':position' belum terhubung ke Greatday. Hubungkan melalui Sinkronisasi Posisi terlebih dahulu.",
     'greatdayAddEmployeeFailed' => 'Greatday tidak dapat membuat karyawan.',
     'greatdayAddEmployeeUnresolved' => 'Karyawan telah dibuat di Greatday tetapi id-nya tidak dapat ditemukan; silakan coba lagi.',
+    'greatdayUpdateEmployeeFailed' => 'Greatday tidak dapat memperbarui karyawan. Perubahan di ERP tidak disimpan.',
+    'greatdayUpdateMissingEmpNo' => 'Karyawan ini belum memiliki nomor karyawan, sehingga pembaruan tidak dapat dikirim ke Greatday.',
     'resignationEmailSubject' => 'Pemberitahuan Pengunduran Diri: :name',
     'resignationEmailGreeting' => 'Halo,',
     'resignationEmailBody' => ':name telah ditandai mengundurkan diri, berlaku efektif :date.',
