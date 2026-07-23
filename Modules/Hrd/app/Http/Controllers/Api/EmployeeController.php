@@ -19,6 +19,7 @@ use Modules\Hrd\Http\Requests\Employee\EmergencyContact;
 use Modules\Hrd\Http\Requests\Employee\Family;
 use Modules\Hrd\Http\Requests\Employee\Update;
 use Modules\Hrd\Http\Requests\Employee\UpdateBasicInfo;
+use Modules\Hrd\Http\Requests\Employee\UpdateEmployeeV2;
 use Modules\Hrd\Http\Requests\Employee\UpdateEmployment;
 use Modules\Hrd\Http\Requests\Employee\UpdateIdentity;
 use Modules\Hrd\Http\Requests\ResendVerification;
@@ -391,6 +392,14 @@ class EmployeeController extends Controller
     public function updateEmployment(UpdateEmployment $request, string $employeeUid)
     {
         return apiResponse($this->employeeService->updateEmployment($request->validated(), $employeeUid));
+    }
+
+    /**
+     * Update employee data from the V2 form, optionally mirroring the change to Greatday.
+     */
+    public function updateEmployeeV2(UpdateEmployeeV2 $request, string $employeeUid): JsonResponse
+    {
+        return apiResponse($this->employeeService->updateEmployeeV2($request->validated(), $employeeUid));
     }
 
     /**

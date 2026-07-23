@@ -192,6 +192,8 @@ return [
     'positionNotLinkedToGreatday' => "Position ':position' is not linked to Greatday yet. Link it via Position Sync first.",
     'greatdayAddEmployeeFailed' => 'Greatday could not create the employee.',
     'greatdayAddEmployeeUnresolved' => 'The employee was created in Greatday but its id could not be resolved; please retry.',
+    'greatdayUpdateEmployeeFailed' => 'Greatday could not update the employee. The ERP changes were not saved.',
+    'greatdayUpdateMissingEmpNo' => 'This employee has no employee number, so the update cannot be sent to Greatday.',
     'resignationEmailSubject' => 'Resignation Notice: :name',
     'resignationEmailGreeting' => 'Hello,',
     'resignationEmailBody' => ':name has been marked as resigned, effective :date.',

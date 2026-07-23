@@ -1166,6 +1166,266 @@ class EmployeeService
     }
 
     /**
+     * Update an employee from the V2 HR form payload, optionally mirroring the change to Greatday.
+     *
+     * The Greatday push runs inside the transaction and is built from the already-updated employee,
+     * so what we send is exactly what was stored. A Greatday rejection aborts the whole thing —
+     * the local write is rolled back rather than leaving the two systems disagreeing. This is the
+     * opposite of the resignation flow, where a Greatday outage must never block the ERP: here the
+     * user explicitly asked for the Greatday update, so a silent failure would be misleading.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function updateEmployeeV2(array $payload, string $employeeUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $employee = $this->repo->show(uid: $employeeUid, select: 'id,uid,employee_id');
+
+            if (! $employee) {
+                DB::rollBack();
+
+                return errorResponse(__('notification.employeeNotFound'));
+            }
+
+            $attributes = $this->buildEmployeeUpdateAttributes($payload);
+
+            if (! empty($attributes)) {
+                $this->repo->update($attributes, $employeeUid);
+            }
+
+            if ($this->isGreatdayUpdateRequested($payload)) {
+                $this->pushEmployeeUpdateToGreatday($employeeUid);
+            }
+
+            Cache::forget('maximumProjectPerPM');
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('global.successUpdateEmployee'),
+                error: false,
+                data: $this->getDetailEmployee($employeeUid, '*')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Whether the form asked us to mirror this update to Greatday. The flag arrives as 1/"1"/true.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function isGreatdayUpdateRequested(array $payload): bool
+    {
+        return filter_var($payload['update_on_greatday'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Map the V2 form payload onto employee columns.
+     *
+     * Only keys actually present in the payload are touched, so a partial form never blanks out
+     * stored data. `end_date` is the one column allowed to be set back to null (un-resigning).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function buildEmployeeUpdateAttributes(array $payload): array
+    {
+        $attributes = [];
+
+        foreach ($this->employeeV2ColumnMap() as $key => $column) {
+            if (! array_key_exists($key, $payload)) {
+                continue;
+            }
+
+            // a null only ever means "clear it" for end_date; elsewhere it means "not supplied"
+            if ($payload[$key] === null && $column !== 'end_date') {
+                continue;
+            }
+
+            $attributes[$column] = $payload[$key];
+        }
+
+        $name = $this->composeEmployeeName($payload);
+        if ($name !== null) {
+            $attributes['name'] = $name;
+        }
+
+        if (isset($payload['gender']) && $payload['gender'] !== '') {
+            $attributes['gender'] = (int) $payload['gender'] === 1
+                ? Gender::Male->value
+                : Gender::Female->value;
+        }
+
+        // Greatday marital codes are 0=Single, 1=Married, 2=Widow, 3=Widower. The ERP enum only
+        // models single/married, so widow(er) keeps the raw Greatday code and leaves the ERP
+        // column untouched rather than being forced into a wrong value.
+        if (isset($payload['marital_status']) && $payload['marital_status'] !== '') {
+            $maritalStatus = match ((int) $payload['marital_status']) {
+                0 => MartialStatus::Single->value,
+                1 => MartialStatus::Married->value,
+                default => null,
+            };
+
+            if ($maritalStatus !== null) {
+                $attributes['martial_status'] = $maritalStatus;
+            }
+        }
+
+        if (! empty($payload['position'])) {
+            $positionId = $this->generalService->getIdFromUid($payload['position'], new PositionBackup);
+
+            if ($positionId) {
+                $attributes['position_id'] = $positionId;
+            }
+        }
+
+        if (! empty($payload['supervisor'])) {
+            $bossId = $this->generalService->getIdFromUid($payload['supervisor'], new Employee);
+
+            if ($bossId) {
+                $attributes['boss_id'] = $bossId;
+            }
+        }
+
+        $bankDetail = $this->composeBankDetail($payload);
+        if ($bankDetail !== null) {
+            $attributes['bank_detail'] = $bankDetail;
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Payload key => employee column, for the values that map across without transformation.
+     *
+     * @return array<string, string>
+     */
+    protected function employeeV2ColumnMap(): array
+    {
+        return [
+            'nickname' => 'nickname',
+            'id_number' => 'id_number',
+            'email' => 'email',
+            'birth_day' => 'date_of_birth',
+            'birth_place' => 'place_of_birth',
+            'address' => 'address',
+            'mobile_phone' => 'phone',
+            'employee_no' => 'employee_id',
+            'join_date' => 'join_date',
+            'end_date' => 'end_date',
+            'company_id' => 'greatday_company',
+            'job_grade' => 'greatday_job_grade',
+            'cost_center' => 'greatday_cost_center',
+            'employment_status' => 'greatday_employment_status',
+            'work_location' => 'greatday_work_location',
+            'shift_pattern' => 'greatday_shift_pattern',
+            'job_status' => 'greatday_job_status',
+            'nationality' => 'greatday_nationality',
+            'religion' => 'greatday_religion',
+            'marital_status' => 'greatday_marital_status',
+            'timezone_id' => 'greatday_timezone',
+        ];
+    }
+
+    /**
+     * Rebuild the single ERP `name` from the split name fields the V2 form sends.
+     * Returns null when the form did not send a first name, so the stored name is left alone.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function composeEmployeeName(array $payload): ?string
+    {
+        if (empty($payload['first_name'])) {
+            return null;
+        }
+
+        $parts = array_filter([
+            trim((string) $payload['first_name']),
+            trim((string) ($payload['middle_name'] ?? '')),
+            trim((string) ($payload['last_name'] ?? '')),
+        ]);
+
+        return implode(' ', $parts);
+    }
+
+    /**
+     * Build the stored bank_detail JSON from the flat bank fields, or null when the form sent none.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function composeBankDetail(array $payload): ?string
+    {
+        if (empty($payload['bank_name']) && empty($payload['bank_account_number'])) {
+            return null;
+        }
+
+        return json_encode([
+            [
+                'bank_name' => $payload['bank_name'] ?? null,
+                'account_number' => $payload['bank_account_number'] ?? null,
+                'account_holder_name' => $payload['bank_account_holder_name'] ?? null,
+                'is_active' => true,
+            ],
+        ]);
+    }
+
+    /**
+     * Mirror the stored employee to Greatday via a PERSONALUPDATE transaction.
+     * Throws on any failure so the caller's transaction rolls the local update back.
+     *
+     * @throws EmployeeException
+     */
+    protected function pushEmployeeUpdateToGreatday(string $employeeUid): void
+    {
+        $employee = $this->loadEmployeeForLink($employeeUid);
+
+        if (empty($employee->employee_id)) {
+            throw new EmployeeException(__('notification.greatdayUpdateMissingEmpNo'));
+        }
+
+        $response = $this->greatdayService->updateEmployee($this->buildGreatdayUpdatePayload($employee));
+        $result = $response->json()[0] ?? null;
+
+        if ($response->failed() || ! ($result['success'] ?? false)) {
+            throw new EmployeeException($result['message'] ?? __('notification.greatdayUpdateEmployeeFailed'));
+        }
+    }
+
+    /**
+     * Build one UpdateEmployeeRequestItem from the stored employee.
+     *
+     * PERSONALUPDATE is the transaction type for a plain data edit, and it is the one type that
+     * needs no transactionEffectiveDate. The Update API accepts a much narrower field set than the
+     * Add API — anything not listed here simply cannot be pushed through it.
+     *
+     * @return array<string, mixed>
+     *
+     * @see docs/greatday-api.json — UpdateEmployeeRequestItem
+     */
+    protected function buildGreatdayUpdatePayload(Employee $employee): array
+    {
+        $bank = $this->firstBankDetail($employee);
+        $companyId = $this->resolveGreatdayCompanyId($employee->greatday_company);
+
+        return array_filter([
+            'transactionType' => 'PERSONALUPDATE',
+            'empNo' => $employee->employee_id,
+            'companyId' => $companyId !== null ? (string) $companyId : null,
+            'employeeName' => $employee->name,
+            'position' => $employee->position?->greatday_code,
+            'status' => $employee->greatday_employment_status,
+            'email' => $employee->email,
+            'bankCode' => $bank['bank_name'] ?? null,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
      * Delete selected data
      */
     public function delete(string $uid): array

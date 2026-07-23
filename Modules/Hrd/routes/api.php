@@ -66,6 +66,7 @@ Route::controller(EmployeeController::class)
         Route::get('employees/{employeeUid}/cancelResign', 'cancelResign')->name('employees.cancelResign');
         Route::put('employees/{uid}/basicInfo', 'updateBasicInfo')->name('employees.updateBasicInfo');
         Route::put('employees/{uid}/identity', 'updateIdentity')->name('employees.updateIdentity');
+        Route::put('employees/{employeeUid}/v2', 'updateEmployeeV2')->name('employees.updateEmployeeV2');
         Route::post('employees/{employeeUid}/storeFamily', 'storeFamily')->name('employees.storeFamily');
         Route::post('employee/resendVerification/{employeeId}', 'resendVerificationEmail');
         Route::put('employees/{familyUid}/updateFamily', 'updateFamily')->name('employees.updateFamily');

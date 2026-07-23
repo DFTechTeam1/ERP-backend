@@ -75,6 +75,24 @@ class GreatdayService
     }
 
     /**
+     * Send an authenticated PUT to Greatday, transparently re-authenticating once if the cached
+     * token is rejected. Same self-healing rationale as authedPost.
+     *
+     * @param  array<int, array<string, mixed>>  $body
+     */
+    public function authedPut(string $path, array $body): Response
+    {
+        $response = Http::withToken($this->login())->put($this->baseUrl.$path, $body);
+
+        if ($response->status() === 401) {
+            Cache::forget($this->getCacheTokenKey());
+            $response = Http::withToken($this->login())->put($this->baseUrl.$path, $body);
+        }
+
+        return $response;
+    }
+
+    /**
      * Create a new employee in Greatday (POST /Employee accepts an array of employee items).
      * Self-heals a rejected token via authedPost.
      *
@@ -85,6 +103,19 @@ class GreatdayService
     public function addEmployee(array $employee): Response
     {
         return $this->authedPost('/employees/add', [$employee]);
+    }
+
+    /**
+     * Update an existing employee in Greatday (PUT /Employee accepts an array of transaction items).
+     * Self-heals a rejected token via authedPut.
+     *
+     * @param  array<string, mixed>  $employee  One UpdateEmployeeRequestItem
+     *
+     * @see docs/greatday-api.json — PUT /Employee
+     */
+    public function updateEmployee(array $employee): Response
+    {
+        return $this->authedPut('/Employee', [$employee]);
     }
 
     /**
