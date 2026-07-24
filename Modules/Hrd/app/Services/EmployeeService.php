@@ -1359,20 +1359,20 @@ class EmployeeService
      *
      * @param  array<string, mixed>  $payload
      */
-    protected function composeBankDetail(array $payload): ?string
+    protected function composeBankDetail(array $payload): ?array
     {
         if (empty($payload['bank_name']) && empty($payload['bank_account_number'])) {
             return null;
         }
 
-        return json_encode([
+        return [
             [
                 'bank_name' => $payload['bank_name'] ?? null,
                 'account_number' => $payload['bank_account_number'] ?? null,
                 'account_holder_name' => $payload['bank_account_holder_name'] ?? null,
                 'is_active' => true,
             ],
-        ]);
+        ];
     }
 
     /**
