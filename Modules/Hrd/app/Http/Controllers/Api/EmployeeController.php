@@ -490,6 +490,11 @@ class EmployeeController extends Controller
         return apiResponse($this->employeeService->getOutOfSyncEmployees());
     }
 
+    public function listOutOfSyncEmployees(): JsonResponse
+    {
+        return apiResponse($this->employeeService->listOutOfSyncEmployees());
+    }
+
     public function syncEmployeesFromGreatday(BulkSyncEmployeeData $data): JsonResponse
     {
         return apiResponse($this->employeeService->syncEmployeesFromGreatday($data));

@@ -188,6 +188,8 @@ return [
     'positionNotFound' => 'The selected position (for :email) is not registered in the ERP. Sync positions first.',
     'greatdayEmployeeNotFound' => 'Employee :id was not found in Greatday or the ERP; refresh the preview and try again.',
     'employeeActiveTaskDivisionBlock' => ':name still has active tasks (waiting approval or in progress). Their division or supervisor change cannot be applied until those tasks are completed.',
+    'resignSyncedFromGreatday' => 'Resignation synced from Greatday.',
+    'employeeResignSyncFailed' => 'The resignation for :name could not be applied, so no employee was updated.',
     'greatdayLinkMissingFields' => 'Some required Greatday fields are still missing. Fill them in and try again.',
     'positionNotLinkedToGreatday' => "Position ':position' is not linked to Greatday yet. Link it via Position Sync first.",
     'greatdayAddEmployeeFailed' => 'Greatday could not create the employee.',

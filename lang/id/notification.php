@@ -183,6 +183,8 @@ return [
     'positionNotFound' => 'Posisi yang dipilih (untuk :email) belum terdaftar di ERP. Sinkronkan posisi terlebih dahulu.',
     'greatdayEmployeeNotFound' => 'Karyawan :id tidak ditemukan di Greatday atau ERP; muat ulang pratinjau lalu coba lagi.',
     'employeeActiveTaskDivisionBlock' => ':name masih memiliki tugas aktif (menunggu persetujuan atau sedang berjalan). Perubahan divisi atau atasan tidak dapat diterapkan hingga tugas tersebut selesai.',
+    'resignSyncedFromGreatday' => 'Pengunduran diri disinkronkan dari Greatday.',
+    'employeeResignSyncFailed' => 'Pengunduran diri untuk :name tidak dapat diterapkan, sehingga tidak ada karyawan yang diperbarui.',
     'greatdayLinkMissingFields' => 'Beberapa data Greatday yang wajib masih kosong. Lengkapi lalu coba lagi.',
     'positionNotLinkedToGreatday' => "Posisi ':position' belum terhubung ke Greatday. Hubungkan melalui Sinkronisasi Posisi terlebih dahulu.",
     'greatdayAddEmployeeFailed' => 'Greatday tidak dapat membuat karyawan.',
