@@ -1,12 +1,15 @@
 <?php
 
+use App\Enums\Employee\Status;
 use App\Enums\Production\TaskPicStatus;
+use App\Enums\Production\TaskStatus;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Modules\Company\Models\DivisionBackup;
 use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeeResign;
 use Modules\Hrd\Models\EmploymentStatus;
 use Modules\Hrd\Models\GreatdayCompany;
 use Modules\Hrd\Models\GreatdayCostCenter;
@@ -296,4 +299,202 @@ it('resolves greatday master-data codes to human-readable names in the diff', fu
     expect($to('work_location'))->toBe('Kantor KCP');
     expect($to('job_status'))->toBe('5 Working Days');
     expect($to('company'))->toBe('DFactory Visual');
+});
+
+/**
+ * ERP stores either the numeric company_id or the company CODE in greatday_company,
+ * while Greatday always sends the numeric id.
+ */
+function seedGreatdayCompanies(): void
+{
+    GreatdayCompany::create(['code' => 'sfgo11677', 'name' => 'DFactory Visual', 'company_id' => '35532', 'nickname' => 'DFV', 'is_base_office' => 1, 'address' => 'Surabaya']);
+    GreatdayCompany::create(['code' => 'sfgo22788', 'name' => 'DFactory Entertainment', 'company_id' => '35533', 'nickname' => 'DFE', 'is_base_office' => 0, 'address' => 'Surabaya']);
+}
+
+it('does not flag a stored company code against the same company id', function () {
+    seedGreatdayCompanies();
+    Employee::where('id', $this->employee->id)->update(['greatday_company' => 'sfgo11677']);
+
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['companyId' => 35532])]);
+
+    $row = collect($this->getJson(route('api.greatday.employeeChangesPreview'))->json('data.changed'))
+        ->firstWhere('greatday_emp_id', 'DO260077');
+
+    // other fields still differ, but company must NOT be reported as a change
+    expect(collect($row['changes'])->firstWhere('field', 'company'))->toBeNull();
+});
+
+it('shows a stored company code as its name on both sides of a real company change', function () {
+    seedGreatdayCompanies();
+    Employee::where('id', $this->employee->id)->update(['greatday_company' => 'sfgo11677']);
+
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['companyId' => 35533])]);
+
+    $row = collect($this->getJson(route('api.greatday.employeeChangesPreview'))->json('data.changed'))
+        ->firstWhere('greatday_emp_id', 'DO260077');
+
+    $company = collect($row['changes'])->firstWhere('field', 'company');
+    expect($company['from'])->toBe('DFactory Visual');
+    expect($company['to'])->toBe('DFactory Entertainment');
+});
+
+/**
+ * ---------------------------------------------------------------------------
+ * Resigned in Greatday, still active in the ERP
+ * ---------------------------------------------------------------------------
+ */
+
+/** The status turnOffEmployee moves the employee onto. */
+function terminalEmploymentStatus(): EmploymentStatus
+{
+    return EmploymentStatus::factory()->create(['code' => 'RESIGN', 'name' => 'Resign', 'is_terminal' => 1]);
+}
+
+/**
+ * @return array<string, mixed> the preview row for the seeded employee
+ */
+function previewRowForEmployee(): array
+{
+    return collect(test()->getJson(route('api.greatday.employeeChangesPreview'))->json('data.changed'))
+        ->firstWhere('greatday_emp_id', 'DO260077') ?? [];
+}
+
+it('flags an employee whose Greatday employment ended while the ERP still has them active', function () {
+    terminalEmploymentStatus();
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['endDate' => '2026-04-30T00:00:00.000Z'])]);
+
+    $row = previewRowForEmployee();
+
+    expect($row['resigning'])->toBeTrue();
+    expect($row['resign_date'])->toBe('2026-04-30');
+    expect($row['blocked'])->toBeFalse();
+});
+
+it('flags a resignation from a terminal employment status even without an end date', function () {
+    $terminal = terminalEmploymentStatus();
+    fakeGreatdayEmployeeList([greatdayEmpRecord([
+        'endDate' => null,
+        'employmentStatusCode' => $terminal->code,
+        'employmentStatus' => $terminal->name,
+    ])]);
+
+    $row = previewRowForEmployee();
+
+    expect($row['resigning'])->toBeTrue();
+    expect($row['resign_date'])->toBe(Carbon::now()->format('Y-m-d'));
+});
+
+it('does not flag an employee the ERP already marked inactive', function () {
+    terminalEmploymentStatus();
+    Employee::where('id', $this->employee->id)->update(['status' => Status::Inactive->value]);
+
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['endDate' => '2026-04-30T00:00:00.000Z'])]);
+
+    expect(previewRowForEmployee()['resigning'])->toBeFalse();
+});
+
+it('does not flag an employee who already has a resignation record', function () {
+    terminalEmploymentStatus();
+    EmployeeResign::create([
+        'employee_id' => $this->employee->id,
+        'resign_date' => '2026-04-30',
+        'reason' => 'already filed',
+    ]);
+
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['endDate' => '2026-04-30T00:00:00.000Z'])]);
+
+    expect(previewRowForEmployee()['resigning'])->toBeFalse();
+});
+
+it('surfaces a resigning employee even when no other field differs', function () {
+    terminalEmploymentStatus();
+
+    // mirror every ERP value back so the only thing left to report is the resignation
+    $employee = $this->employee->fresh();
+    fakeGreatdayEmployeeList([greatdayEmpRecord([
+        'endDate' => '2026-04-30T00:00:00.000Z',
+        'firstName' => $employee->name, 'middleName' => null, 'lastName' => null,
+        'nickName' => $employee->nickname, 'identityNo' => $employee->id_number,
+        'phone' => $employee->phone, 'address' => $employee->address,
+        'birthPlace' => $employee->place_of_birth, 'empNo' => $employee->employee_id,
+        'gradeCode' => null, 'costCode' => null, 'worklocationCode' => null, 'jobStatus' => null,
+        'companyId' => null, 'birthDate' => null, 'startDate' => null, 'gender' => null,
+        'posCode' => 'POSOLD', 'posNameEn' => 'Visual Operator',
+        'employmentStatusCode' => null, 'employmentStatus' => null,
+        'bankCode' => null, 'bankAccount' => null, 'bankAccountName' => null,
+    ])]);
+
+    $row = previewRowForEmployee();
+
+    expect($row)->not->toBeEmpty();
+    expect($row['resigning'])->toBeTrue();
+});
+
+it('blocks the resignation while the employee still has an on-progress task', function () {
+    terminalEmploymentStatus();
+
+    $task = ProjectTask::factory()->create(['status' => TaskStatus::OnProgress->value]);
+    ProjectTaskPic::create(['project_task_id' => $task->id, 'employee_id' => $this->employee->id, 'status' => TaskPicStatus::Approved->value]);
+
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['endDate' => '2026-04-30T00:00:00.000Z'])]);
+
+    $row = previewRowForEmployee();
+
+    expect($row['resigning'])->toBeTrue();
+    expect($row['blocked'])->toBeTrue();
+    expect($row['blocked_reason'])->not->toBeEmpty();
+});
+
+it('resigns the employee in the ERP when their Greatday-ended record is applied', function () {
+    $terminal = terminalEmploymentStatus();
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['endDate' => '2026-04-30T00:00:00.000Z'])]);
+
+    $response = $this->postJson(route('api.greatday.applyEmployeeChanges'), [
+        'employees' => ['DO260077'],
+    ]);
+
+    $response->assertSuccessful();
+    expect($response->json('data.total_resigned'))->toBe(1);
+    expect($response->json('data.resigned'))->toBe(['DO260077']);
+
+    // the resignation record itself
+    $this->assertDatabaseHas('employee_resigns', [
+        'employee_id' => $this->employee->id,
+        'resign_date' => '2026-04-30',
+    ]);
+
+    // resign date is in the past, so the employee is deactivated immediately
+    $employee = $this->employee->fresh();
+    expect($employee->status->value)->toBe(Status::Inactive->value);
+    expect($employee->employment_status_id)->toBe($terminal->id);
+    expect(Carbon::parse($employee->end_date)->format('Y-m-d'))->toBe('2026-04-30');
+});
+
+it('never pushes the resignation back to the Greatday it came from', function () {
+    terminalEmploymentStatus();
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['endDate' => '2026-04-30T00:00:00.000Z'])]);
+
+    $this->postJson(route('api.greatday.applyEmployeeChanges'), ['employees' => ['DO260077']])
+        ->assertSuccessful();
+
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), 'transaction'));
+});
+
+it('applies nothing at all when the resignation is refused', function () {
+    terminalEmploymentStatus();
+
+    // an on-progress task makes mainResignLogic refuse — the whole batch must roll back
+    $task = ProjectTask::factory()->create(['status' => TaskStatus::OnProgress->value]);
+    ProjectTaskPic::create(['project_task_id' => $task->id, 'employee_id' => $this->employee->id, 'status' => TaskPicStatus::Approved->value]);
+
+    $originalAddress = $this->employee->address;
+    fakeGreatdayEmployeeList([greatdayEmpRecord(['endDate' => '2026-04-30T00:00:00.000Z'])]);
+
+    $this->postJson(route('api.greatday.applyEmployeeChanges'), ['employees' => ['DO260077']])
+        ->assertStatus(400);
+
+    $employee = $this->employee->fresh();
+    expect($employee->address)->toBe($originalAddress);
+    expect($employee->status->value)->not->toBe(Status::Inactive->value);
+    $this->assertDatabaseMissing('employee_resigns', ['employee_id' => $this->employee->id]);
 });
