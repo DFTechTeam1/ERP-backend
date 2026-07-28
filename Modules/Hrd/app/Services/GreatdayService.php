@@ -125,16 +125,13 @@ class GreatdayService
      */
     public function terminateEmployee(string $empNo, string $effectiveDate): Response
     {
-        $token = $this->login();
-
-        return Http::withToken($token)
-            ->put($this->baseUrl.'/Employee', [
-                [
-                    'transactionType' => 'TERMINATION',
-                    'transactionEffectiveDate' => $effectiveDate,
-                    'empNo' => $empNo,
-                ],
-            ]);
+        return $this->authedPut('/Employee', [
+            [
+                'transactionType' => 'TERMINATION',
+                'transactionEffectiveDate' => $effectiveDate,
+                'empNo' => $empNo,
+            ],
+        ]);
     }
 
     /**
