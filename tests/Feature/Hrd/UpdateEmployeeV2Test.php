@@ -122,7 +122,7 @@ it('updates the employee columns from the v2 payload', function () {
         'greatday_marital_status' => '0',
     ]);
 
-    $bank = json_decode($employee->fresh()->bank_detail, true);
+    $bank = $employee->fresh()->bank_detail;
     expect($bank[0]['bank_name'])->toBe('CIMB');
     expect($bank[0]['account_number'])->toBe('764226807500');
     expect($bank[0]['account_holder_name'])->toBe('Fahrul Hidayat');
