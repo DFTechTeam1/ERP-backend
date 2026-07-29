@@ -259,6 +259,9 @@ Route::middleware(['auth.session'])
 
         // Project leads
         Route::post('project-leads/{projectLeadUid}/cancel', [ProjectLeadController::class, 'cancel']);
+
+        Route::get('project/deal/w/approve/{projectDetailChangesUid}', [ProjectController::class, 'approveChangesProjectDeal']);
+        Route::get('project/deal/w/reject/{projectDetailChangesUid}', [ProjectController::class, 'rejectChangesProjectDeal']);
     });
 
 Route::middleware(['internal.service'])
