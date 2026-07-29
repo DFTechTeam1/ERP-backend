@@ -34,6 +34,11 @@ return [
             'column' => 'employee_id',
             'key' => 'employee_id',
         ],
+        'join_date' => [
+            'model' => Employee::class,
+            'column' => 'join_date',
+            'key' => 'join_date',
+        ],
         'employee_position_name' => [
             'model' => Employee::class,
             'relation' => 'position:id,name',
@@ -41,8 +46,8 @@ return [
             'key' => 'name',
         ],
         'date' => [
-            'key' => 'date'
-        ]
+            'key' => 'date',
+        ],
     ],
     'master_fullpath' => 'app/public/documents/templates',
     'master_path' => 'documents/templates',

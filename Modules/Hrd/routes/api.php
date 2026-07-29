@@ -66,6 +66,7 @@ Route::controller(EmployeeController::class)
         Route::get('employees/{employeeUid}/cancelResign', 'cancelResign')->name('employees.cancelResign');
         Route::put('employees/{uid}/basicInfo', 'updateBasicInfo')->name('employees.updateBasicInfo');
         Route::put('employees/{uid}/identity', 'updateIdentity')->name('employees.updateIdentity');
+        Route::put('employees/{employeeUid}/v2', 'updateEmployeeV2')->name('employees.updateEmployeeV2');
         Route::post('employees/{employeeUid}/storeFamily', 'storeFamily')->name('employees.storeFamily');
         Route::post('employee/resendVerification/{employeeId}', 'resendVerificationEmail');
         Route::put('employees/{familyUid}/updateFamily', 'updateFamily')->name('employees.updateFamily');
@@ -152,6 +153,7 @@ Route::controller(EmployeeController::class)
                 Route::get('/companies/refresh', 'getGreatdayCompanies')->name('greatday.refreshCompanies');
                 Route::get('/resigntype/refresh', 'getGreatdayResignType')->name('greatday.refreshResignType');
                 Route::get('/resignreason/refresh', 'getGreatdayResignReason')->name('greatday.refreshResignReason');
+                Route::get('/out-of-sync-employees/list', 'listOutOfSyncEmployees')->name('greatday.listOutOfSyncEmployees');
                 Route::get('/out-of-sync-employees', 'getOutOfSyncEmployees')->name('greatday.outOfSyncEmployees');
                 Route::post('/employees/sync', 'syncEmployeesFromGreatday')->name('greatday.syncEmployees');
                 Route::get('/employees/changes-preview', 'previewEmployeeChanges')->name('greatday.employeeChangesPreview');

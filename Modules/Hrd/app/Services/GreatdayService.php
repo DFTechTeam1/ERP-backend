@@ -75,6 +75,24 @@ class GreatdayService
     }
 
     /**
+     * Send an authenticated PUT to Greatday, transparently re-authenticating once if the cached
+     * token is rejected. Same self-healing rationale as authedPost.
+     *
+     * @param  array<int, array<string, mixed>>  $body
+     */
+    public function authedPut(string $path, array $body): Response
+    {
+        $response = Http::withToken($this->login())->put($this->baseUrl.$path, $body);
+
+        if ($response->status() === 401) {
+            Cache::forget($this->getCacheTokenKey());
+            $response = Http::withToken($this->login())->put($this->baseUrl.$path, $body);
+        }
+
+        return $response;
+    }
+
+    /**
      * Create a new employee in Greatday (POST /Employee accepts an array of employee items).
      * Self-heals a rejected token via authedPost.
      *
@@ -88,22 +106,32 @@ class GreatdayService
     }
 
     /**
+     * Update an existing employee in Greatday (PUT /Employee accepts an array of transaction items).
+     * Self-heals a rejected token via authedPut.
+     *
+     * @param  array<string, mixed>  $employee  One UpdateEmployeeRequestItem
+     *
+     * @see docs/greatday-api.json — PUT /Employee
+     */
+    public function updateEmployee(array $employee): Response
+    {
+        return $this->authedPut('/Employee', [$employee]);
+    }
+
+    /**
      * Push a TERMINATION transaction to Greatday for the given employee number.
      *
      * @see docs/greatday-api.json — PUT /Employee accepts an array of transaction items.
      */
     public function terminateEmployee(string $empNo, string $effectiveDate): Response
     {
-        $token = $this->login();
-
-        return Http::withToken($token)
-            ->put($this->baseUrl.'/Employee', [
-                [
-                    'transactionType' => 'TERMINATION',
-                    'transactionEffectiveDate' => $effectiveDate,
-                    'empNo' => $empNo,
-                ],
-            ]);
+        return $this->authedPut('/Employee', [
+            [
+                'transactionType' => 'TERMINATION',
+                'transactionEffectiveDate' => $effectiveDate,
+                'empNo' => $empNo,
+            ],
+        ]);
     }
 
     /**
