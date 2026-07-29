@@ -64,6 +64,7 @@ use Modules\Hrd\Jobs\GenerateDocumentNotificationJob;
 use Modules\Hrd\Jobs\NotifyApprovalDocumentJob;
 use Modules\Hrd\Jobs\NotifyGeneratedDocumentJob;
 use Modules\Hrd\Jobs\SendOtpSignJob;
+use Modules\Hrd\Models\DocumentTypeSigner;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeeDocument;
 use Modules\Hrd\Models\EmployeeSignature;
@@ -252,6 +253,11 @@ class SignatureService
     /**
      * Bulk delete document types, refusing any that are still referenced by a template.
      *
+     * The default signers a type carries are part of the type itself, so they go with it.
+     * They are removed explicitly because `document_type_signers.type_id` restricts on delete,
+     * and both steps share one transaction so a failing type delete cannot leave a surviving
+     * type stripped of its signers.
+     *
      * @param  BulkDeleteDocumentTypeData  $uids  Ids of the document types to delete
      * @return array Response envelope with a success/error message
      *
@@ -259,6 +265,7 @@ class SignatureService
      */
     public function bulkDeleteDocumentType(BulkDeleteDocumentTypeData $uids): array
     {
+        DB::beginTransaction();
         try {
             // Validation each uid. Check to document template relation
             $types = $this->documentTypeRepo->get([
@@ -271,10 +278,18 @@ class SignatureService
                 throw new DocumentTypeInUse;
             }
 
+            DocumentTypeSigner::query()
+                ->whereIn('type_id', $uids->uids)
+                ->delete();
+
             $this->documentTypeRepo->bulkDelete($uids->uids);
+
+            DB::commit();
 
             return generalResponse(message: __('notification.successDeleteDocumentType'));
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }
