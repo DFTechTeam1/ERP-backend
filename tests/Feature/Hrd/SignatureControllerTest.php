@@ -7,16 +7,19 @@ use Database\Seeders\RolePermissionSetting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use Modules\Company\Models\DivisionBackup;
 use Modules\Hrd\Contracts\DocumentPdfConverter;
 use Modules\Hrd\Jobs\NotifyApprovalDocumentJob;
 use Modules\Hrd\Jobs\NotifyGeneratedDocumentJob;
 use Modules\Hrd\Models\DocumentType;
+use Modules\Hrd\Models\DocumentTypeSigner;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeeDocument;
 use Modules\Hrd\Models\EmployeeSignature;
 use Modules\Hrd\Models\EmployeeSignatureTask;
 use Modules\Hrd\Models\MasterDocument;
 use Modules\Hrd\Models\MasterDocumentFile;
+use Modules\Hrd\Models\MasterDocumentSigner;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use Spatie\Permission\Models\Permission;
@@ -288,6 +291,48 @@ it('streams a completed document as a PDF', function () use ($base) {
 });
 
 // ---------------------------------------------------------------------------
+// Document type deletion: the type's own default signers go with it
+// ---------------------------------------------------------------------------
+it('deletes a document type together with its default signers', function () use ($base) {
+    actAsEmployeeUser();
+
+    $type = templateDocumentType();
+    $division = DivisionBackup::create(['name' => 'Legal '.fake()->unique()->numerify('###')]);
+    $signer = DocumentTypeSigner::create([
+        'type_id' => $type->id,
+        'division_id' => $division->id,
+        'order' => 1,
+    ]);
+
+    $this->deleteJson($base.'/document-types/bulk', ['uids' => [$type->id]])->assertStatus(201);
+
+    expect(DocumentType::find($type->id))->toBeNull()
+        ->and(DocumentTypeSigner::find($signer->id))->toBeNull();
+});
+
+it('keeps a document type and its signers when a template still uses it', function () use ($base) {
+    actAsEmployeeUser();
+
+    $type = templateDocumentType();
+    $division = DivisionBackup::create(['name' => 'Legal '.fake()->unique()->numerify('###')]);
+    $signer = DocumentTypeSigner::create([
+        'type_id' => $type->id,
+        'division_id' => $division->id,
+        'order' => 1,
+    ]);
+    MasterDocument::create([
+        'name' => 'Employment Contract',
+        'document_type_id' => $type->id,
+    ]);
+
+    $this->deleteJson($base.'/document-types/bulk', ['uids' => [$type->id]])->assertStatus(400);
+
+    // The signer delete runs before the type delete, so the refusal has to roll it back too.
+    expect(DocumentType::find($type->id))->not->toBeNull()
+        ->and(DocumentTypeSigner::find($signer->id))->not->toBeNull();
+});
+
+// ---------------------------------------------------------------------------
 // Template creation: the new version lands in review and the approvers hear about it
 // ---------------------------------------------------------------------------
 function templateDocumentType(): DocumentType
@@ -354,6 +399,68 @@ it('notifies nobody when the document type already has a version under review', 
     ])->assertStatus(400);
 
     Bus::assertNotDispatched(NotifyGeneratedDocumentJob::class);
+});
+
+// ---------------------------------------------------------------------------
+// Template deletion: every version goes, on disk and in the database
+// ---------------------------------------------------------------------------
+it('deletes a template with all of its versions, signers and stored files', function () use ($base) {
+    Storage::fake(config('filesystems.default'));
+    actAsEmployeeUser();
+
+    $document = MasterDocument::create([
+        'name' => 'Employment Contract',
+        'document_type_id' => templateDocumentType()->id,
+    ]);
+
+    $paths = collect([DocumentFileStatus::Archived, DocumentFileStatus::Active])
+        ->map(function (DocumentFileStatus $status) use ($document) {
+            $path = config('signature.master_path').'/'.uniqid().'.docx';
+            Storage::put($path, 'docx');
+
+            $version = MasterDocumentFile::create([
+                'master_document_id' => $document->id,
+                'path' => $path,
+                'file_type' => 'docx',
+                'status' => $status,
+            ]);
+
+            MasterDocumentSigner::create([
+                'master_document_id' => $document->id,
+                'file_id' => $version->id,
+                'order' => 1,
+            ]);
+
+            return $path;
+        });
+
+    $this->deleteJson($base.'/templates/'.$document->uid)->assertStatus(201);
+
+    expect(MasterDocument::find($document->id))->toBeNull()
+        ->and(MasterDocumentFile::where('master_document_id', $document->id)->count())->toBe(0)
+        ->and(MasterDocumentSigner::where('master_document_id', $document->id)->count())->toBe(0);
+
+    $paths->each(fn (string $path) => expect(Storage::exists($path))->toBeFalse());
+});
+
+it('deletes a template whose stored file is already gone from disk', function () use ($base) {
+    Storage::fake(config('filesystems.default'));
+    actAsEmployeeUser();
+
+    $document = MasterDocument::create([
+        'name' => 'Employment Contract',
+        'document_type_id' => templateDocumentType()->id,
+    ]);
+    MasterDocumentFile::create([
+        'master_document_id' => $document->id,
+        'path' => config('signature.master_path').'/missing.docx',
+        'file_type' => 'docx',
+        'status' => DocumentFileStatus::Active,
+    ]);
+
+    $this->deleteJson($base.'/templates/'.$document->uid)->assertStatus(201);
+
+    expect(MasterDocument::find($document->id))->toBeNull();
 });
 
 // ---------------------------------------------------------------------------
