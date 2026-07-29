@@ -18,5 +18,6 @@ class DocumentVersionListData extends Data
         public readonly bool $is_pending,
         public readonly string $author,
         public readonly string $file_url,
+        public readonly bool $can_approve_version
     ) {}
 }

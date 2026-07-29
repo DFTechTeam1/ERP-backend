@@ -22,6 +22,7 @@ class TemplateListData extends Data
         /** @var array<int, string> */
         public readonly array $signing_chain,
         #[DataCollectionOf(DocumentVersionListData::class)]
-        public readonly array $versions
+        public readonly array $versions,
+        public readonly bool $can_approve
     ) {}
 }

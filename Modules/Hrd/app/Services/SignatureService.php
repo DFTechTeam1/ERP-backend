@@ -39,6 +39,8 @@ use App\Enums\System\BaseRole;
 use App\Exceptions\DataNotFound;
 use App\Exceptions\DetectPlaceholderFailed;
 use App\Exceptions\FailedToUploadFile;
+use App\Models\User;
+use App\Repository\UserRepository;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -59,6 +61,8 @@ use Modules\Hrd\Exceptions\UserNotHaveAccessToSign;
 use Modules\Hrd\Jobs\DocumentCompletedNotificationJob;
 use Modules\Hrd\Jobs\DocumentDeletedNotificationJob;
 use Modules\Hrd\Jobs\GenerateDocumentNotificationJob;
+use Modules\Hrd\Jobs\NotifyApprovalDocumentJob;
+use Modules\Hrd\Jobs\NotifyGeneratedDocumentJob;
 use Modules\Hrd\Jobs\SendOtpSignJob;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeeDocument;
@@ -88,7 +92,8 @@ class SignatureService
         private readonly EmployeeDocumentRepository $employeeDocumentRepo,
         private readonly EmployeeSignatureTaskRepository $signatureTaskRepo,
         private readonly EmployeeSignatureRepository $employeeSignatureRepo,
-        private readonly DocumentPdfConverter $pdfConverter
+        private readonly DocumentPdfConverter $pdfConverter,
+        private readonly UserRepository $userRepository,
     ) {}
 
     /**
@@ -544,6 +549,8 @@ class SignatureService
 
             $master->signers()->createMany($signers);
 
+            NotifyGeneratedDocumentJob::dispatch($master)->afterCommit();
+
             DB::commit();
 
             return generalResponse(
@@ -554,6 +561,34 @@ class SignatureService
 
             return errorResponse($th);
         }
+    }
+
+    protected function isSuperPowerRole(User $user): bool
+    {
+        $output = false;
+
+        $roles = [
+            BaseRole::Root->value,
+            BaseRole::Director->value,
+        ];
+        $userRole = $user->roles->first();
+
+        if ($userRole && in_array($userRole->name, $roles)) {
+            return true;
+        }
+
+        return $output;
+    }
+
+    protected function canApprovedTemplate(): bool
+    {
+        $user = $this->userRepository->detail(id: Auth::id(), select: 'id,email');
+
+        if ($user->hasPermissionTo('approve_document_templates') || $this->isSuperPowerRole($user)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -572,6 +607,8 @@ class SignatureService
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
+            $canApprove = $this->canApprovedTemplate();
+
             $data = $this->masterDocumentRepo->get([
                 'select' => ['id', 'uid', 'name', 'document_type_id', 'current_active_version_text', 'updated_at'],
                 'skip' => $page,
@@ -587,7 +624,7 @@ class SignatureService
                     'activeDocument.author:id,employee_id,email',
                     'activeDocument.author.employee:id,nickname',
                 ],
-            ])->map(function ($item) {
+            ])->map(function ($item) use ($canApprove) {
                 $versions = [];
                 foreach ($item->files as $file) {
                     $versions[] = new DocumentVersionListData(
@@ -601,7 +638,8 @@ class SignatureService
                         rejected_reason: $file->status == DocumentFileStatus::Rejected ? ($file->approval_note ?? null) : null,
                         is_pending: $file->status === DocumentFileStatus::PendingReview,
                         author: ! $file->author ? 'N/A' : $file->author?->employee?->nickname ?? $file->author->email,
-                        file_url: asset('storage/'.$file->path)
+                        file_url: asset('storage/'.$file->path),
+                        can_approve_version: $canApprove
                     );
                 }
 
@@ -624,7 +662,8 @@ class SignatureService
                     active_version_status_color: '',
                     signing_chain: $chain,
                     versions_count: $item->files->count(),
-                    versions: $versions
+                    versions: $versions,
+                    can_approve: $canApprove
                 );
             })->toArray();
 
@@ -716,7 +755,7 @@ class SignatureService
 
             $this->masterFileRepo->approveDocument($payloadUpdate, $document->pendingDocument);
 
-            // TODO: Notify creator about approval
+            NotifyApprovalDocumentJob::dispatch($document->pendingDocument->refresh());
 
             return generalResponse(
                 message: 'Document has been '.($isApproved ? 'approved' : 'rejected').' successfully'
