@@ -1,19 +1,22 @@
 <?php
 
-use App\Enums\Production\TaskStatus;
+use App\Enums\System\BaseRole;
 use App\Http\Controllers\Api\InteractiveController;
+use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\Mcp\OauthController;
 use App\Imports\SummaryInventoryReport;
-use App\Jobs\UpcomingDeadlineTaskJob;
 use App\Models\User;
 use App\Notifications\DummyNotification;
+use App\Services\EncryptionService;
+use App\Services\PusherNotification;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
 use Illuminate\Notifications\Slack\SlackMessage;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
@@ -21,11 +24,19 @@ use Modules\Company\Notifications\SlackNotification;
 use Modules\Email\Emails\InviteToErpMail;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
+use Modules\Hrd\Http\Controllers\Api\EmployeeController;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeePointProject;
+use Modules\Hrd\Models\EmploymentStatus;
+use Modules\Hrd\Notifications\UserEmailActivation;
+use Modules\Hrd\Services\GreatdayService;
+use Modules\Inventory\Services\InventoryService;
 use Modules\Production\Http\Controllers\Api\QuotationController;
-use Modules\Production\Models\ProjectTask;
+use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Services\ProjectService;
 use PhpOffice\PhpWord\TemplateProcessor;
+use Picqer\Barcode\Renderers\PngRenderer;
+use Picqer\Barcode\Types\TypeCode128;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
@@ -39,10 +50,10 @@ Route::get('send-email-testing', function () {
     $user = User::latest()->first();
     $password = generateRandomPassword(length: 20);
 
-    $service = new \App\Services\EncryptionService;
+    $service = new EncryptionService;
     $encrypt = $service->encrypt($user->email, env('SALT_KEY'));
 
-    Notification::send($user, new \Modules\Hrd\Notifications\UserEmailActivation($user, $encrypt, $password));
+    Notification::send($user, new UserEmailActivation($user, $encrypt, $password));
 });
 
 Route::get('quotation/{quotationId}/{token}', function (string $quotationId, string $token) {});
@@ -58,8 +69,8 @@ Route::get('barcode', function () {
     //
     //    return view('barcode', compact('data'));
     $colorRed = [255, 0, 0];
-    $barcode = (new \Picqer\Barcode\Types\TypeCode128)->getBarcode('https://google.com');
-    $renderer = new \Picqer\Barcode\Renderers\PngRenderer;
+    $barcode = (new TypeCode128)->getBarcode('https://google.com');
+    $renderer = new PngRenderer;
     $renderer->setForegroundColor($colorRed);
     file_put_contents('barcode.png', $renderer->render($barcode, 300, 80));
 
@@ -68,16 +79,16 @@ Route::get('barcode', function () {
     return view('testing_barcode', compact('image'));
 });
 
-Route::get('generate-official-email', [\App\Http\Controllers\Api\TestingController::class, 'generateOfficialEmail']);
+Route::get('generate-official-email', [TestingController::class, 'generateOfficialEmail']);
 
 Route::get('trigger', function () {
-    $pusher = new \App\Services\PusherNotification;
+    $pusher = new PusherNotification;
 
     $pusher->send('channel-interactive-new', 'notification-event', ['message' => 'Hello']);
 });
 
 Route::get('ilham', function () {
-    $project = (new \Modules\Production\Repository\ProjectRepository)->show(
+    $project = (new ProjectRepository)->show(
         uid: '7099a1ed-0e71-4921-bcec-e2d67c43a169',
         select: 'id,name',
         relation: [
@@ -86,7 +97,7 @@ Route::get('ilham', function () {
             'personInCharges.employee.picWhatsappGroups' => function ($query) {
                 $query->selectRaw('id,employee_id,group_id')
                     ->whereNotNull('community_id');
-            }
+            },
         ]);
 
     return $project;
@@ -130,7 +141,7 @@ Route::get('dummy-send-email', function () {
 Route::get('check', function () {});
 
 Route::get('inventory-check', function () {
-    $service = app(\Modules\Inventory\Services\InventoryService::class);
+    $service = app(InventoryService::class);
 
     $data = $service->getInventoriesTree();
 
@@ -139,7 +150,7 @@ Route::get('inventory-check', function () {
 });
 
 Route::get('pusher-check', function () {
-    (new \App\Services\PusherNotification)->send(
+    (new PusherNotification)->send(
         channel: 'my-channel-42',
         event: 'handle-export-import-notification-new',
         payload: [
@@ -179,12 +190,12 @@ Route::get('trying', function () {
     abort(400);
 });
 Route::get('test', function () {
-    $resignStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Resign')->first();
-    $permanentStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Tetap')->first();
-    $partimeStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Paruh Waktu')->first();
-    $contractStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Kontrak Pertama')->first();
-    $internshipStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Karyawan Magang')->first();
-    $probationStatusId = \Modules\Hrd\Models\EmploymentStatus::select('id')->where('name', 'Percobaan')->first();
+    $resignStatusId = EmploymentStatus::select('id')->where('name', 'Resign')->first();
+    $permanentStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Tetap')->first();
+    $partimeStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Paruh Waktu')->first();
+    $contractStatusId = EmploymentStatus::select('id')->where('name', 'Kontrak Pertama')->first();
+    $internshipStatusId = EmploymentStatus::select('id')->where('name', 'Karyawan Magang')->first();
+    $probationStatusId = EmploymentStatus::select('id')->where('name', 'Percobaan')->first();
 
     return [
         'resignStatusId' => $resignStatusId,
@@ -287,7 +298,7 @@ Route::get('manual-add', function () {
             'status' => 'success',
             'message' => 'Processed '.$inputProcessed.' of '.$total.' data successfully.',
         ];
-    } catch (\Throwable $th) {
+    } catch (Throwable $th) {
         return [
             'status' => 'failed',
             'message' => $th->getMessage(),
@@ -298,24 +309,24 @@ Route::get('manual-add', function () {
 });
 
 Route::get('migrate-duration', function () {
-    $service = app(\Modules\Production\Services\ProjectService::class);
+    $service = app(ProjectService::class);
 
     return $service->migrateTaskDuration();
 });
 
 Route::get('sync-greatday', function () {
-    $service = app(\Modules\Hrd\Services\GreatdayService::class);
+    $service = app(GreatdayService::class);
 
     $accessToken = $service->login();
 
-    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($service->getBaseUrl().'/employees', [
+    $response = Http::withToken($accessToken)->post($service->getBaseUrl().'/employees', [
         'page' => 1,
         'limit' => 100,
     ]);
 
     if ($response->status() < 300) {
         foreach ($response->json()['data'] as $employee) {
-            \Modules\Hrd\Models\Employee::where('employee_id', $employee['empNo'])
+            Employee::where('employee_id', $employee['empNo'])
                 ->update([
                     'greatday_emp_id' => $employee['empId'],
                 ]);
@@ -335,7 +346,7 @@ Route::get('sync-greatday', function () {
 //     ))->render();
 // })->middleware('allow-iframe');
 
-Route::get('preview-data', [\Modules\Hrd\Http\Controllers\Api\EmployeeController::class, 'testingData']);
+Route::get('preview-data', [EmployeeController::class, 'testingData']);
 
 Route::get('/.well-known/oauth-authorization-server', [OauthController::class, 'authorizationServerMetadata']);
 Route::get('/.well-known/jwks.json', [OauthController::class, 'jwks']);
@@ -350,24 +361,27 @@ Route::get('signature', function () {
 
     return response()->json([
         'message' => 'Signature is valid',
-        'variables' => $variables
+        'variables' => $variables,
     ]);
 });
-Route::get('slack-testing', function() {
-    $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
-    logging('slack developer', [
-        'dev' => $developer,
-        'log' => config('services.slack')
-    ]);
-    if ($developer) {
-        // build block and content
-        $block = (new SlackMessage)
-            ->text('testing')
-            ->headerBlock('testing header')
-            ->sectionBlock(function (SectionBlock $block) {
-                $block->text('testng')->markdown();
-            });
+Route::get('slack-testing', function () {
+    // $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
+    // logging('slack developer', [
+    //     'dev' => $developer,
+    //     'log' => config('services.slack')
+    // ]);
+    // if ($developer) {
+    //     // build block and content
+    //     $block = (new SlackMessage)
+    //         ->text('testing')
+    //         ->headerBlock('testing header')
+    //         ->sectionBlock(function (SectionBlock $block) {
+    //             $block->text('testng')->markdown();
+    //         });
 
-        $developer->notify(new SlackNotification($block));
-    }
+    //     $developer->notify(new SlackNotification($block));
+    // }
+    return User::select(['id', 'email'])
+        ->role(BaseRole::Director->value)
+        ->get();
 });

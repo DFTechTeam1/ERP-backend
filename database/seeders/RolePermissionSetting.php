@@ -412,6 +412,11 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
                 $this->getHrdRole(),
             ]],
+            ['name' => 'approve_document_templates', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
         ];
     }
 
