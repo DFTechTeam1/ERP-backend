@@ -1,6 +1,6 @@
 <?php
 
-use App\Console\Commands\ProjectDuplicateCleanup;
+use App\Console\Commands\Cleanup\ProjectDuplicateCleanup;
 use App\Enums\Production\ProjectStatus;
 use Illuminate\Support\Collection;
 use Modules\Production\Models\Project;
