@@ -7,6 +7,7 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Modules\Production\Models\ProjectLead;
 use Modules\Production\Models\ProjectLeadFollowUp;
 use Modules\Production\Models\ProjectLeadQueue;
@@ -256,6 +257,12 @@ class DeleteDuplicateProjectLead extends Command
      * share one transaction: a failing delete must not leave a surviving lead
      * stripped of its follow up history.
      *
+     * project_lead_queue is owned by the FastAPI service's migrations, not this
+     * application, so it is only cleaned when the connection actually carries
+     * it - a Laravel-only database (a fresh one, or the test database) never
+     * does. Its foreign key is ON DELETE NO ACTION, so where the table does
+     * exist the queue rows must go first or the lead delete is refused.
+     *
      * @param  Collection<int, ProjectLead>  $leads
      */
     protected function deleteLeads(Collection $leads): void
@@ -267,9 +274,11 @@ class DeleteDuplicateProjectLead extends Command
                 ->whereIn('project_lead_id', $ids)
                 ->delete();
 
-            ProjectLeadQueue::query()
-                ->whereIn('lead_id', $ids)
-                ->delete();
+            if (Schema::hasTable((new ProjectLeadQueue)->getTable())) {
+                ProjectLeadQueue::query()
+                    ->whereIn('lead_id', $ids)
+                    ->delete();
+            }
 
             app(ProjectLeadRepository::class)->bulkDelete($ids, 'id');
         });

@@ -506,24 +506,24 @@ Route::middleware(['mcp.log', 'mcp.auth'])
         Route::get('finance/invoices/{projectDealUid}/file', [InvoiceController::class, 'getInvoiceDownloadAsByte']);
     });
 Route::get('check-notif', function () {
-    $auth = \Illuminate\Support\Facades\Auth::user();
-    $user = \App\Models\User::find($auth->id);
+    $auth = Auth::user();
+    $user = User::find($auth->id);
 
-    app(\App\Services\RealtimeNotificationService::class)->send(
-        recipients: $user,
-        topic: \App\Services\RealtimeNotificationService::TOPIC_DIVISION,
-        payload: [
-            'title' => 'Testing title',
-            'message' => 'Testing message. lorem ipsum data',
-            'icon' => '',
-            'url' => '/admin/production/project/48ac96c3-7904-4bc5-88b0-a91b3607324e',
-            'action' => 'user_testing',
-            'data' => [
-                'project_id' => '48ac96c3-7904-4bc5-88b0-a91b3607324e'
-            ]
-        ],
-        divisionId: 8
-    );
+    // app(\App\Services\RealtimeNotificationService::class)->send(
+    //     recipients: $user,
+    //     topic: \App\Services\RealtimeNotificationService::TOPIC_DIVISION,
+    //     payload: [
+    //         'title' => 'Testing title',
+    //         'message' => 'Testing message. lorem ipsum data',
+    //         'icon' => '',
+    //         'url' => '/admin/production/project/48ac96c3-7904-4bc5-88b0-a91b3607324e',
+    //         'action' => 'user_testing',
+    //         'data' => [
+    //             'project_id' => '48ac96c3-7904-4bc5-88b0-a91b3607324e'
+    //         ]
+    //     ],
+    //     divisionId: 8
+    // );
 
-    return $auth;
+    return $user->roles->first();
 })->middleware('auth.session');
