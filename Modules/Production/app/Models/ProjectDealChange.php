@@ -4,6 +4,7 @@ namespace Modules\Production\Models;
 
 use App\Enums\Production\ProjectDealChangeStatus;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -39,6 +40,11 @@ class ProjectDealChange extends Model
         return [
             'status' => ProjectDealChangeStatus::class,
         ];
+    }
+
+    public function scopeGetPending(Builder $query)
+    {
+        $query->where('status', ProjectDealChangeStatus::Pending);
     }
 
     public function detailChanges(): Attribute

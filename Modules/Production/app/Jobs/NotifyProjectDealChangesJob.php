@@ -3,11 +3,13 @@
 namespace Modules\Production\Jobs;
 
 use App\Services\GeneralService;
+use App\Services\RealtimeNotificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Crypt;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\ProjectDealChange;
 use Modules\Production\Notifications\NotifyProjectDealChangesNotification;
@@ -44,7 +46,43 @@ class NotifyProjectDealChangesJob implements ShouldQueue
             ])
                 ->find($this->changesId);
 
+            if (! $changes) {
+                return;
+            }
+
+            $realtimeNotifService = app(RealtimeNotificationService::class);
+
+            $changeUid = Crypt::encryptString($changes->id);
+            $requesterName = $changes->requester?->employee?->nickname ?? '-';
+            $changedFields = collect($changes->detail_changes)
+                ->pluck('label')
+                ->filter()
+                ->implode(', ');
+
             foreach ($employees as $employee) {
+                $realtimeNotifService->send(
+                    recipients: $employee,
+                    topic: RealtimeNotificationService::TOPIC_GENERAL,
+                    payload: [
+                        'title' => __('notification.requestDealChangesInAppTitle'),
+                        'message' => __('notification.requestDealChangesInAppMessage', [
+                            'name' => $requesterName,
+                            'deal' => $changes->projectDeal->name,
+                            'fields' => $changedFields,
+                        ]),
+                        'icon' => '📝',
+                        'url' => '/admin/deals/changes',
+                        'action' => 'request_project_deal_changes',
+                        'data' => [
+                            'deal_change_id' => $changes->id,
+                            'deal_change_uid' => $changeUid,
+                            'project_deal_id' => $changes->project_deal_id,
+                            'project_date' => $changes->projectDeal->project_date,
+                            'detail_changes' => $changes->detail_changes,
+                        ],
+                    ],
+                );
+
                 // create approval url
                 $approvalUrl = (new GeneralService)->generateApprovalUrlForProjectDealChanges(user: $employee->user, changeDeal: $changes, type: 'approved');
                 $rejectionUrl = (new GeneralService)->generateApprovalUrlForProjectDealChanges(user: $employee->user, changeDeal: $changes, type: 'rejected');
