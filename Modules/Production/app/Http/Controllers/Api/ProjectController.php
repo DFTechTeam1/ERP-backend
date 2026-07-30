@@ -1220,4 +1220,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->searchCustomer($request));
     }
+
+    public function listProjectDealChanges(): JsonResponse
+    {
+        return apiResponse($this->projectDealService->listProjectDealChanges());
+    }
 }

@@ -4,6 +4,7 @@ namespace Modules\Finance\Models;
 
 use App\Enums\Production\ProjectDealChangePriceStatus;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -53,6 +54,11 @@ class ProjectDealPriceChange extends Model
         return [
             'status' => ProjectDealChangePriceStatus::class,
         ];
+    }
+
+    public function scopeGetPending(Builder $query)
+    {
+        $query->where('status', ProjectDealChangePriceStatus::Pending);
     }
 
     public function realReason(): Attribute
