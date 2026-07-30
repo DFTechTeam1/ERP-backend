@@ -56,6 +56,7 @@ Route::middleware(['auth.session'])
         Route::get('project/deals', [ProjectController::class, 'listProjectDeals'])->name('project-deal.list');
         Route::get('project/interactive-requests', [ProjectController::class, 'listInteractiveRequests'])->name('interactive-request.list');
         Route::get('project/deals/price-changes', [ProjectController::class, 'requestChangesList'])->name('project-deal.requestChangesList');
+        Route::get('project/deals/deal-changes', [ProjectController::class, 'listProjectDealChanges'])->name('project-deal.listProjectDealChanges');
         Route::get('project/deals/selection', [ProjectController::class, 'requestProjectDealSelectionList'])->name('project-deal.requestSelectionList');
         Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);

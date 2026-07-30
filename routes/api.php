@@ -18,6 +18,7 @@ use App\Http\Controllers\Mcp\OauthController;
 use App\Jobs\PartnerEmailJob;
 use App\Models\User;
 use App\Services\EncryptionService;
+use App\Services\GeneralService;
 use App\Services\PusherNotification;
 use App\Services\UserService;
 use Illuminate\Http\File;
@@ -225,6 +226,13 @@ Route::get('users/activate/{key}', [UserController::class, 'activate']);
 
 Route::middleware('auth.session')
     ->group(function () {
+        // Menu badges
+        Route::get('menu-badges', function () {
+            $service = app(GeneralService::class);
+
+            return apiResponse($service->getMenuBadges());
+        });
+
         Route::get('logs', [DashboardController::class, 'getLogs']);
         Route::post('users/bulk', [UserController::class, 'bulkDelete'])->name('api.users.bulk-delete');
         Route::post('users/resendActivationEmail/{userUid}', [UserController::class, 'resendActivationEmail'])->name('api.users.resend-activation-email');
