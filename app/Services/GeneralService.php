@@ -516,7 +516,8 @@ class GeneralService
         $encryptedPayload = $this->getEncryptedPayloadData(tokenizer: $tokenizer);
 
         // Generate reporting token
-        $reportingToken = $this->authorizeReportingAccess(email: $user->email);
+        $reportingToken = 'not used';
+        // $reportingToken = $this->authorizeReportingAccess(email: $user->email);
 
         // Generate express token
         $expressToken = $this->authorizeExpressAccess(email: $user->email);
