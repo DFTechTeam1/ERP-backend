@@ -51,10 +51,11 @@ class NasFolderCreationService
 
         
         try {
-            $response = Http::withBody(
-                json_encode($payload, JSON_UNESCAPED_SLASHES),
-                'application/json'
-            )->$method($fullUrl);
+            $response = Http::withToken(request()->bearerToken())
+                ->withBody(
+                    json_encode($payload, JSON_UNESCAPED_SLASHES),
+                    'application/json'
+                )->$method($fullUrl);
             
             $logData = [
                 'timestamp' => now()->toDateTimeString(),
