@@ -2,9 +2,12 @@
 
 namespace Modules\Finance\Providers;
 
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Finance\Console\MigrateSourceableInTransaction;
+use Modules\Finance\Console\SyncRecapTransactionsCommand;
+use Modules\Finance\Models\Transaction;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -28,6 +31,21 @@ class FinanceServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->registerMorphAliases();
+    }
+
+    /**
+     * Aliases used in transactions.sourceable_type that aren't real class names.
+     *
+     * `recap_import` is written by finance:sync-recap with sourceable_id = 0.
+     * We map it to Transaction::class so `->with('sourceable')` resolves to
+     * `find(0)` (returns null) instead of throwing "Class not found".
+     */
+    protected function registerMorphAliases(): void
+    {
+        Relation::morphMap([
+            'recap_import' => Transaction::class,
+        ]);
     }
 
     /**
@@ -46,6 +64,7 @@ class FinanceServiceProvider extends ServiceProvider
     {
         $this->commands([
             MigrateSourceableInTransaction::class,
+            SyncRecapTransactionsCommand::class,
         ]);
     }
 
