@@ -6,6 +6,7 @@ use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Company\Database\Factories\PositionFactory;
 use Modules\Hrd\Models\Employee;
@@ -23,6 +24,7 @@ class PositionBackup extends Model
         'name',
         'division_id',
         'greatday_code',
+        'greatday_position_id',
         'uid',
         'created_by',
         'updated_by',
@@ -44,7 +46,7 @@ class PositionBackup extends Model
     /**
      * Position has many employees
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany
      */
     public function employees()
     {

@@ -33,6 +33,7 @@ class SlackNotificationJob implements ShouldQueue
     public function handle(): void
     {
         $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
+        
         if ($developer) {
             // build block and content
             $block = (new SlackMessage)

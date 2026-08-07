@@ -6,6 +6,8 @@ use App\Enums\Employee\Status;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
+use Illuminate\Translation\PotentiallyTranslatedString;
 
 class UniqueLowerRule implements ValidationRule
 {
@@ -31,12 +33,10 @@ class UniqueLowerRule implements ValidationRule
     /**
      * Run the validation rule.
      *
-     * @param  \Closure(string): \Illuminate\Translation\PotentiallyTranslatedString  $fail
+     * @param  Closure(string): PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        logging('uid', [$this->uid]);
-
         $column = $this->column;
 
         $query = $this->model->query();
@@ -49,7 +49,7 @@ class UniqueLowerRule implements ValidationRule
             }
         }
 
-        if (\Illuminate\Support\Str::contains(Route::current()->uri(), 'employees')) {
+        if (Str::contains(Route::current()->uri(), 'employees')) {
             $query->where('status', '!=', Status::Deleted->value);
         }
         $query->whereRaw("lower({$column}) = '".strtolower($value)."'");

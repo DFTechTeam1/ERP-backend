@@ -6,50 +6,31 @@ use Modules\Finance\Repository\ProjectDealPriceChangeRepository;
 
 class ProjectDealPriceChangeService
 {
-    private $repo;
-
     /**
      * Construction Data
      */
-    public function __construct()
-    {
-        $this->repo = new ProjectDealPriceChangeRepository;
-    }
+    public function __construct(
+        private readonly ProjectDealPriceChangeRepository $repo
+    ) {}
 
     /**
      * Get list of data
+     *
+     * @param  array<string,mixed>  $params  See BaseRepository for the supported keys
      */
-    public function list(
-        string $select = '*',
-        string $where = '',
-        array $relation = []
-    ): array {
+    public function list(array $params = []): array
+    {
         try {
-            $itemsPerPage = request('itemsPerPage') ?? 2;
-            $page = request('page') ?? 1;
-            $page = $page == 1 ? 0 : $page;
-            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $search = request('search');
+            $itemsPerPage = (int) (request('itemsPerPage') ?? config('app.pagination_length'));
 
-            if (! empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
-            }
-
-            $paginated = $this->repo->pagination(
-                $select,
-                $where,
-                $relation,
-                $itemsPerPage,
-                $page
-            );
-            $totalData = $this->repo->list('id', $where)->count();
+            $paginated = $this->repo->paginate($params, $itemsPerPage);
 
             return generalResponse(
                 'Success',
                 false,
                 [
-                    'paginated' => $paginated,
-                    'totalData' => $totalData,
+                    'paginated' => $paginated->items(),
+                    'totalData' => $paginated->total(),
                 ],
             );
         } catch (\Throwable $th) {
@@ -68,7 +49,13 @@ class ProjectDealPriceChangeService
     public function show(string $uid): array
     {
         try {
-            $data = $this->repo->show($uid, 'name,uid,id');
+            $data = $this->repo->show([
+                'where' => ['id' => $uid],
+            ]);
+
+            if (! $data) {
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
 
             return generalResponse(
                 'success',
@@ -82,6 +69,8 @@ class ProjectDealPriceChangeService
 
     /**
      * Store data
+     *
+     * @param  array<string,mixed>  $data
      */
     public function store(array $data): array
     {
@@ -99,14 +88,21 @@ class ProjectDealPriceChangeService
 
     /**
      * Update selected data
+     *
+     * @param  array<string,mixed>  $data
      */
-    public function update(
-        array $data,
-        string $id,
-        string $where = ''
-    ): array {
+    public function update(array $data, string $id): array
+    {
         try {
-            $this->repo->update($data, $id);
+            $model = $this->repo->show([
+                'where' => ['id' => $id],
+            ]);
+
+            if (! $model) {
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
+
+            $this->repo->update($model, $data);
 
             return generalResponse(
                 'success',
@@ -119,17 +115,23 @@ class ProjectDealPriceChangeService
 
     /**
      * Delete selected data
-     *
-     *
-     * @return void
      */
     public function delete(int $id): array
     {
         try {
+            $model = $this->repo->show([
+                'where' => ['id' => $id],
+            ]);
+
+            if (! $model) {
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
+
+            $this->repo->delete($model);
+
             return generalResponse(
                 'Success',
                 false,
-                $this->repo->delete($id)->toArray(),
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -138,11 +140,17 @@ class ProjectDealPriceChangeService
 
     /**
      * Delete bulk data
+     *
+     * @param  array<int,int|string>  $ids
      */
     public function bulkDelete(array $ids): array
     {
         try {
-            $this->repo->bulkDelete($ids, 'uid');
+            $this->repo->get([
+                'whereIn' => ['id' => $ids],
+            ])->each(function ($model) {
+                $this->repo->delete($model);
+            });
 
             return generalResponse(
                 'success',

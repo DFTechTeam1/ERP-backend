@@ -42,7 +42,7 @@ Route::middleware(['auth.session'])->group(function () {
                 ->name('finance.requestPriceChanges');
 
             // url for apprrove price changes
-            Route::get('price/approve/{changeId}', [ApiFinanceController::class, 'approvePriceChanges'])
+            Route::post('price/approve/{changeId}', [ApiFinanceController::class, 'approvePriceChanges'])
                 ->name('finance.approvePriceChanges');
 
             // url for reject price changes

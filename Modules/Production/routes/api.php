@@ -8,6 +8,7 @@ use Modules\Production\Http\Controllers\Api\InteractiveController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Http\Controllers\Api\TeamTransferController;
+use Modules\Production\Http\Controllers\ProjectLeadController;
 use Modules\Production\Http\Requests\Notification\UpdateLeadPicRequest;
 use Modules\Production\Jobs\UpdatePicProjectLeadJob;
 
@@ -56,6 +57,7 @@ Route::middleware(['auth.session'])
         Route::get('project/deals', [ProjectController::class, 'listProjectDeals'])->name('project-deal.list');
         Route::get('project/interactive-requests', [ProjectController::class, 'listInteractiveRequests'])->name('interactive-request.list');
         Route::get('project/deals/price-changes', [ProjectController::class, 'requestChangesList'])->name('project-deal.requestChangesList');
+        Route::get('project/deals/deal-changes', [ProjectController::class, 'listProjectDealChanges'])->name('project-deal.listProjectDealChanges');
         Route::get('project/deals/selection', [ProjectController::class, 'requestProjectDealSelectionList'])->name('project-deal.requestSelectionList');
         Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
@@ -256,6 +258,12 @@ Route::middleware(['auth.session'])
         Route::post('team-transfers/approve-selection/{transferUid}', [TeamTransferController::class, 'approveSelection']);
         Route::get('team-transfers/approve/{transferUid}/{deviceAction}', [TeamTransferController::class, 'approveRequest']);
         Route::get('team-transfers/{transferUid}/getMembersToLend/{employeeUid}', [TeamTransferController::class, 'getMembersToLend']);
+
+        // Project leads
+        Route::post('project-leads/{projectLeadUid}/cancel', [ProjectLeadController::class, 'cancel']);
+
+        Route::get('project/deal/w/approve/{projectDetailChangesUid}', [ProjectController::class, 'approveChangesProjectDeal']);
+        Route::get('project/deal/w/reject/{projectDetailChangesUid}', [ProjectController::class, 'rejectChangesProjectDeal']);
     });
 
 Route::middleware(['auth.session'])

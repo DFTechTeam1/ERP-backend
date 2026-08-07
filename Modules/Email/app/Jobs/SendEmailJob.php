@@ -50,8 +50,6 @@ class SendEmailJob implements ShouldQueue
             throw new NotFoundError('Email template is not found');
         }
 
-        setEmailConfiguration();
-
         $dataMailable = $this->emailType->getTypeData($this->payload);
 
         if ($this->emailType === EmailType::InviteToErp) {

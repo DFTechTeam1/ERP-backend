@@ -14,7 +14,7 @@ abstract class WhatsappCommunityInterface
 
     abstract public function update(array $data, string $id = '', string $where = '');
 
-    abstract public function delete(int $id);
+    abstract public function delete(string $id);
 
     abstract public function bulkDelete(array $ids, string $key = '');
 }

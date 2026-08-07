@@ -9,6 +9,18 @@ Enum "allowances_period_enum" {
   "per_event"
 }
 
+Enum "NasCmdType" {
+  "create"
+  "write"
+  "read"
+  "delete"
+}
+
+Enum "allowances_period_enum" {
+  "per_day"
+  "per_event"
+}
+
 Enum "development_project_references_type_enum" {
   "media"
   "link"
@@ -1041,6 +1053,63 @@ Table "employee_whatsapp_groups" {
   }
 }
 
+Table "signatories_mapping" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36)
+  "division_id" bigint [ref: > division_backups.id]
+  "main_signer_id" bigint [ref: > employees.id, note: 'nullable']
+  "delegate_signer_id" bigint [ref: > employees.id, note: "nullable"]
+  "updated_by" bigint [ref: > users.id]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
+Table "document_types" {
+  "id" bigint [pk, not null, increment]
+  "name" varhcar(255) [not null, unique]
+  "code" varchar(100) [not null, unique]
+  "retention" tinyint [not null, default: 1, note: "in years"]
+  "default_number_of_signers" tinyint [not null, default: 1]
+  "status" tinyint [not null, default: 1]
+  "caregory" varchar(100) [not null, note: "hr, legal, finance, compliance"]
+  "created_at" timestamp
+  "updated_at" timestamp
+  "created_by" bigint [not null, ref: > users.id]
+}
+
+Table "master_documents" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null, unique]
+  "name" varchar(255) [not null]
+  "document_type_id" bigint [ref: > document_types.id]
+  "current_active_version_text" varchar(20) [note: 'nullable']
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
+Table "master_document_signers" {
+  "id" bigint [pk, not null, increment]
+  "master_document_id" bigint [ref: > master_documents.id]
+  "position_id" bigint [ref: > position_backups.id]
+  "order" tinyint [not null, note: "To define the orders"]
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  note "The order in which to sign the documents"
+}
+
+Table "master_document_files" {
+  "id" bigint [pk, not null, increment]
+  "master_document_id" bigint [ref: > master_documents.id]
+  "path" varchar(255) [not null]
+  "file_type" varchar(30) [not null]
+  "placeholder_mapping" longtext [note: '[{"type"}]']
+  "version" varchar(10) [not null, note: 'always increment']
+  "status" tinyint [not null, default: '1 active, 2 pending review, 3 rejected, 4 archived']
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
 Table "employees" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]
@@ -1123,6 +1192,40 @@ Table "employees" {
     position_id [name: "employees_position_id_foreign"]
     employment_status_id [name: "employees_employment_status_id_foreign"]
   }
+}
+
+Table "employee_signatures" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [not null, ref: > employees.id]
+  "is_active" tinyint [note: "1 or 0"]
+  "sign_path" varchar(255) [not null]
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  note "to store all employee signature histories"
+}
+
+Table "employee_documents" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [ref: > employees.id]
+  "status" tinyint [not null, note: "1 completed, 2 awaiting sign, 3 need to sign"]
+  "signers_detail" json [note: '[{"signer_id": 1, "signer_name": "wesley", "signed_at": "2025-01-01 10:00:00"}]']
+  "total_signer" tinyint [note: "Expected total signers in this document"]
+  "document_snapshot" json [note: "nullable, to catch all document configuration"]
+  "document_path" varchar(255) [not null, note: "Document that already attach to employee"]
+  "document_type_id" bigint [ref: > document_types.id]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
+Table "employee_signature_tasks" {
+  "id" bigint [pk, not null, increment]
+  "employee_id" bigint [ref: > employees.id]
+  "employee_document_id" bigint [ref: > employee_documents.id]
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  note: "This record will be delete after employee signed the document"
 }
 
 Table "employment_statuses" {
@@ -3733,6 +3836,14 @@ Table "entertainment_task_proof_of_works" {
   "updated_at" timestamp
 }
 
+Table "entertainment_task_pics" {
+  "id" bigint [pk, not null, increment]
+  "task_id" bigint [ref: > entertainment_tasks.id]
+  "employee_id" bigint [ref: > employees.id]
+  "created_at" timestamp
+  "updated_at" timestamp
+}
+
 Table "entertainment_task_pic_workstates" {
   "id" bigint [pk, not null, increment]
   "started_at" timestamp [not null]
@@ -3836,6 +3947,21 @@ Table "entertainment_logs" {
   "updated_at" timestamp
 
   note: "Store all entertainment activity in each project"
+}
+
+Table "nas_logs" {
+  "id" bigint [pk, not null, increment]
+  "cmd_type" NasCmdType
+  "description" text
+  "filesize" varchar(20) [note: "In KB"]
+  "ip" varchar(20)
+  "is_dir" tinyint [note: "1 or 0"]
+  "log_type" varchar(100)
+  "original_log_type" varchar(200)
+  "time" timestamp
+  "username" varchar(150)
+  "created_at" timestamp [default: NULL]
+  "updated_at" timestamp [default: NULL]
 }
 
 Ref "custom_inventory_details_custom_inventory_id_foreign":"custom_inventories"."id" < "custom_inventory_details"."custom_inventory_id" [delete: cascade]

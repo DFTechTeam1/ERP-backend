@@ -10,6 +10,7 @@ use Modules\Hrd\Console\CheckTransferEntityScheduleCommand;
 use Modules\Hrd\Console\CreatePartnerUser;
 use Modules\Hrd\Console\GetGreatdayOutOfSyncEmployee;
 use Modules\Hrd\Console\InitateAvatarColor;
+use Modules\Hrd\Console\InitiateSignatories;
 use Modules\Hrd\Console\MakeEmployeeAsSync;
 use Modules\Hrd\Console\ManualExportPerformanceReport;
 use Modules\Hrd\Console\MigrationEmployeePointToNewSchema;
@@ -21,6 +22,8 @@ use Modules\Hrd\Console\SynchronizingTalentUserId;
 use Modules\Hrd\Console\UpdateBankIdInBankDetail;
 use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Hrd\Console\UpdateTalentaUserIdToEmployeesTable;
+use Modules\Hrd\Contracts\DocumentPdfConverter;
+use Modules\Hrd\Services\Pdf\GotenbergPdfConverter;
 
 class HrdServiceProvider extends ServiceProvider
 {
@@ -48,6 +51,13 @@ class HrdServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(RouteServiceProvider::class);
+
+        $this->app->bind(DocumentPdfConverter::class, function (): GotenbergPdfConverter {
+            return new GotenbergPdfConverter(
+                baseUrl: config('services.gotenberg.url'),
+                timeout: (int) config('services.gotenberg.timeout', 120),
+            );
+        });
     }
 
     /**
@@ -72,7 +82,8 @@ class HrdServiceProvider extends ServiceProvider
             SeedGreatdayMasterData::class,
             ResyncGreatdayPosition::class,
             SyncEmployeeIdGreatdayToErp::class,
-            CheckTransferEntityScheduleCommand::class
+            CheckTransferEntityScheduleCommand::class,
+            InitiateSignatories::class,
         ]);
     }
 

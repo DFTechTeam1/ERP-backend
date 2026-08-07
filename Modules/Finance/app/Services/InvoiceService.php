@@ -5,6 +5,7 @@ namespace Modules\Finance\Services;
 use App\Actions\Finance\GenerateInvoiceContent;
 use App\Enums\Finance\InvoiceRequestUpdateStatus;
 use App\Enums\Transaction\InvoiceStatus;
+use App\Exceptions\DataNotFound;
 use App\Exports\SummaryFinanceExport;
 use App\Models\User;
 use App\Services\GeneralService;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Modules\Finance\Exceptions\InvoiceNotFound;
 use Modules\Finance\Jobs\ApproveInvoiceChangesJob;
 use Modules\Finance\Jobs\InvoiceHasBeenCreatedJob;
 use Modules\Finance\Jobs\InvoiceHasBeenDeletedJob;
@@ -518,9 +520,12 @@ class InvoiceService
     /**
      * Download the invoice based on invoice id
      */
-    public function downloadInvoice()
+    public function downloadInvoice(bool $isSaveLocally = false, string|null $invoiceUid = null): string|\Illuminate\Http\Response
     {
         $invoiceId = request('n');
+        if ($invoiceUid) {
+            $invoiceId = $invoiceUid;
+        }
         $invoice = $this->repo->show(uid: $invoiceId, select: 'id,raw_data,parent_number,number,sequence,project_deal_id', relation: [
             'projectDeal:id,name,project_date,customer_id',
             'projectDeal.customer:id,name',
@@ -539,15 +544,15 @@ class InvoiceService
         $rawData['description'] = $description;
 
         // set the amount and transaction date based on user input when invoice type is downpayment
-        if ($invoiceType == 'downPayment') {
-            $rawData['amountRequest'] = 'Rp'.number_format(num: $invoice->amount, decimal_separator: ',');
-            $rawData['transactionDateRequest'] = date('d F Y', strtotime($invoice->payment_date));
-            $rawData['transactions'] = [];
-            $remaining = (float) $rawData['fixPrice'] - (float) $invoice->amount;
-            $rawData['remainingPayment'] = 'Rp'.number_format(num: $remaining, decimal_separator: ',');
-        }
+        // if ($invoiceType == 'downPayment') {
+        //     $rawData['amountRequest'] = 'Rp'.number_format(num: $invoice->amount, decimal_separator: ',');
+        //     $rawData['transactionDateRequest'] = date('d F Y', strtotime($invoice->payment_date));
+        //     $rawData['transactions'] = [];
+        //     $remaining = (float) $rawData['fixPrice'] - (float) $invoice->amount;
+        //     $rawData['remainingPayment'] = 'Rp'.number_format(num: $remaining, decimal_separator: ',');
+        // }
 
-        $pdf = Pdf::loadView($view, $rawData)
+        $pdf = Pdf::loadView('invoices.invoice', $rawData)
             ->setPaper('A4')
             ->setOption([
                 'isPhpEnabled' => true,
@@ -558,6 +563,13 @@ class InvoiceService
             ]);
 
         $filename = "Inv {$invoiceNumber} - {$invoice->projectDeal->customer->name} - {$invoice->projectDeal->project_date}.pdf";
+
+        if ($isSaveLocally) {
+            $invoicePath = "invoices/{$invoice->projectDeal->customer->name}/" . $filename;
+            $pdf->save(filename: $invoicePath, disk: 'public');
+
+            return $invoicePath;
+        }
 
         return $pdf->download(filename: $filename);
     }
@@ -928,6 +940,44 @@ class InvoiceService
                 message: "Your data is being processed. You'll rerceive a notification when the process is complete. You can check your inbox periodically to see the results",
                 data: [
                     'report' => $data,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function getInvoiceDownloadAsByte(string $encryptedUid)
+    {
+        try {
+            $projectDealUid = Crypt::decryptString($encryptedUid);
+
+            $deal = $this->projectDealRepo->show(
+                uid: $projectDealUid,
+                select: 'id,name',
+                relation: [
+                    'mainInvoice'
+                ]
+            );
+
+            if (! $deal) {
+                throw new DataNotFound("Project deal not found");
+            }
+
+            if (! $deal->mainInvoice) {
+                throw new InvoiceNotFound();
+            }
+
+            $invoice = $this->downloadInvoice(
+                isSaveLocally: true,
+                invoiceUid: $deal->mainInvoice->uid
+            );
+
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'invoice' => $invoice,
+                    'project_name' => $deal->name
                 ]
             );
         } catch (\Throwable $th) {

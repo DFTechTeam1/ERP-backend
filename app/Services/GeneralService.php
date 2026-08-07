@@ -19,8 +19,10 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Modules\Finance\Models\ProjectDealPriceChange;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Production\Jobs\AddInteractiveProjectJob;
+use Modules\Production\Models\ProjectDealChange;
 use Modules\Production\Repository\ProjectDealRepository;
 use Modules\Production\Repository\ProjectRepository;
 use Vinkla\Hashids\Facades\Hashids;
@@ -516,7 +518,8 @@ class GeneralService
         $encryptedPayload = $this->getEncryptedPayloadData(tokenizer: $tokenizer);
 
         // Generate reporting token
-        $reportingToken = $this->authorizeReportingAccess(email: $user->email);
+        $reportingToken = 'not used';
+        // $reportingToken = $this->authorizeReportingAccess(email: $user->email);
 
         // Generate express token
         $expressToken = $this->authorizeExpressAccess(email: $user->email);
@@ -746,5 +749,40 @@ class GeneralService
     public function me(): User
     {
         return (new UserRepository)->detail(id: Auth::id(), select: 'id,email,employee_id');
+    }
+    
+    protected function getPriceChangesBadgeCount(): int
+    {
+        // return ProjectDealPriceChange::select(['id'])
+        //     ->getPending()
+        //     ->count();
+
+        return 0;
+    }
+
+    protected function getDealChangesBadgeCount(): int
+    {
+        // return ProjectDealChange::select(['id'])
+        //     ->getPending()
+        //     ->count();
+
+        return 0;
+    }
+
+    public function getMenuBadges()
+    {
+        try {
+            return generalResponse(
+                message: "Success",
+                data: [
+                    'badges' => [
+                        'projectDealPriceChanges' => $this->getPriceChangesBadgeCount(),
+                        'projectDealChanges' => $this->getDealChangesBadgeCount()
+                    ]
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
     }
 }

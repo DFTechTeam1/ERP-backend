@@ -28,6 +28,11 @@ class EmployeeWhatsappGroup extends Model
 
     public function parentGroup(): BelongsTo
     {
-        return $this->belongsTo(WhatsappGroup::class, 'group_id');
+        return $this->belongsTo(WhatsappGroup::class, 'group_id', 'group_id');
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
     }
 }

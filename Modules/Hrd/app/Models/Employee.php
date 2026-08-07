@@ -2,17 +2,20 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Enums\Employee\BloodType;
 use App\Enums\Employee\Gender;
 use App\Enums\Employee\MartialStatus;
 use App\Enums\Employee\PtkpStatus;
 use App\Enums\Employee\Religion;
 use App\Enums\Employee\Status;
+use App\Models\User;
 use App\Traits\FlushCacheOnModelChange;
 use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Carbon\Carbon;
 use Database\Factories\Hrd\EmployeeFactory as HrdEmployeeFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
+use KodePandai\Indonesia\Models\City;
+use KodePandai\Indonesia\Models\District;
 use KodePandai\Indonesia\Models\Village;
 use Modules\Company\Models\Branch;
 use Modules\Company\Models\IndonesiaCity;
@@ -32,6 +37,7 @@ use Modules\Company\Models\Province;
 use Modules\Hrd\Observers\EmployeeObserver;
 use Modules\Inventory\Models\InventoryRequest;
 use Modules\Production\Models\EntertainmentTaskSong;
+use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectTaskPic;
 use Modules\Production\Models\ProjectVj;
 
@@ -163,6 +169,24 @@ class Employee extends Model
         'human_age',
     ];
 
+    public function scopeActiveEmployee(Builder $query)
+    {
+        $query->whereIn('status', [
+            Status::Permanent,
+            Status::Contract,
+            Status::PartTime,
+            Status::Freelance,
+            Status::Internship,
+            Status::Probation,
+        ]);
+    }
+
+    public function scopeProjectManagers(Builder $query, array $positionIds)
+    {
+        $query->activeEmployee()
+            ->whereIn('position_id', $positionIds);
+    }
+
     public function humanAge(): Attribute
     {
         $output = 0;
@@ -201,7 +225,7 @@ class Employee extends Model
     {
         $out = '-';
         if (isset($this->attributes['blood_type'])) {
-            $cases = \App\Enums\Employee\BloodType::cases();
+            $cases = BloodType::cases();
             foreach ($cases as $case) {
                 if ($case->value == $this->attributes['blood_type']) {
                     $out = $case->value;
@@ -219,7 +243,7 @@ class Employee extends Model
     {
         $out = '-';
         if (isset($this->attributes['religion'])) {
-            $cases = \App\Enums\Employee\Religion::cases();
+            $cases = Religion::cases();
             foreach ($cases as $case) {
                 if ($case->value == $this->attributes['religion']) {
                     $out = Religion::getReligion($this->attributes['religion']);
@@ -237,7 +261,7 @@ class Employee extends Model
     {
         $out = '-';
         if (isset($this->attributes['gender'])) {
-            $cases = \App\Enums\Employee\Gender::cases();
+            $cases = Gender::cases();
             foreach ($cases as $case) {
                 if ($case->value == $this->attributes['gender']) {
                     $out = $case->label();
@@ -256,7 +280,7 @@ class Employee extends Model
         $out = '-';
 
         if (isset($this->attributes['martial_status'])) {
-            $cases = \App\Enums\Employee\MartialStatus::cases();
+            $cases = MartialStatus::cases();
             foreach ($cases as $case) {
                 if ($case->value == $this->attributes['martial_status']) {
                     $out = $case->label();
@@ -287,7 +311,7 @@ class Employee extends Model
 
     public function statusText(): Attribute
     {
-        $statuses = \App\Enums\Employee\Status::cases();
+        $statuses = Status::cases();
 
         $out = '-';
 
@@ -307,7 +331,7 @@ class Employee extends Model
 
     public function statusColor(): Attribute
     {
-        $statuses = \App\Enums\Employee\Status::cases();
+        $statuses = Status::cases();
 
         $out = '-';
 
@@ -330,6 +354,11 @@ class Employee extends Model
         return $this->hasMany(ProjectTaskPic::class, 'employee_id', 'id');
     }
 
+    public function employmentStatus(): BelongsTo
+    {
+        return $this->belongsTo(EmploymentStatus::class, 'employment_status_id');
+    }
+
     public function resignData(): HasOne
     {
         return $this->hasOne(EmployeeResign::class, 'employee_id');
@@ -338,6 +367,11 @@ class Employee extends Model
     public function whatsappGroups(): HasMany
     {
         return $this->hasMany(EmployeeWhatsappGroup::class, 'employee_id');
+    }
+
+    public function picWhatsappGroups(): HasMany
+    {
+        return $this->hasMany(WhatsappGroup::class, 'employee_id');
     }
 
     public function vjs(): HasMany
@@ -362,7 +396,7 @@ class Employee extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function branch(): BelongsTo
@@ -377,7 +411,7 @@ class Employee extends Model
 
     public function projects(): HasMany
     {
-        return $this->hasMany(\Modules\Production\Models\ProjectPersonInCharge::class, 'pic_id');
+        return $this->hasMany(ProjectPersonInCharge::class, 'pic_id');
     }
 
     public function province(): BelongsTo
@@ -424,14 +458,14 @@ class Employee extends Model
             }
 
             if ($this->district_id) {
-                $district = \KodePandai\Indonesia\Models\District::select('name')
+                $district = District::select('name')
                     ->find($this->district_id);
 
                 $out .= ', '.$district->name;
             }
 
             if ($this->city_id) {
-                $city = \KodePandai\Indonesia\Models\City::select('name')
+                $city = City::select('name')
                     ->find($this->city_id);
 
                 $out .= ', '.$city->name;

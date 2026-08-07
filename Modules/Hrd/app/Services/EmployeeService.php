@@ -3,34 +3,66 @@
 namespace Modules\Hrd\Services;
 
 use App\Enums\Cache\CacheKey;
+use App\Enums\Employee\Education;
 use App\Enums\Employee\Gender;
+use App\Enums\Employee\LevelStaff;
 use App\Enums\Employee\MartialStatus;
+use App\Enums\Employee\OutOfSyncStatus;
+use App\Enums\Employee\ProbationStatus;
 use App\Enums\Employee\Religion;
+use App\Enums\Employee\SalaryType;
 use App\Enums\Employee\Status;
 use App\Enums\ErrorCode\Code;
+use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
+use App\Exceptions\DataNotFound;
 use App\Exceptions\EmployeeException;
 use App\Exports\EmployeeExport;
+use App\Imports\EmployeeImport;
 use App\Models\User;
 use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Services\ChartService;
+use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\UserService;
 use Carbon\Carbon;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Company\Models\JobLevel;
+use Modules\Company\Models\Position;
 use Modules\Company\Models\PositionBackup;
+use Modules\Company\Notifications\ResignationNotification;
 use Modules\Company\Repository\JobLevelRepository;
 use Modules\Company\Repository\PositionRepository;
+use Modules\Hrd\Data\Employee\BulkSyncEmployeeData;
+use Modules\Hrd\Data\Employee\EmployeeChangeSyncData;
+use Modules\Hrd\Data\Employee\LinkEmployeeData;
+use Modules\Hrd\Data\Resign\ResignData;
 use Modules\Hrd\Exceptions\EmployeeNotFound;
 use Modules\Hrd\Jobs\DeleteOfficeEmailJob;
 use Modules\Hrd\Jobs\SendEmailActivationJob;
+use Modules\Hrd\Jobs\SendResignationNotificationJob;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmploymentStatus;
+use Modules\Hrd\Models\GreatdayCompany;
+use Modules\Hrd\Models\GreatdayCostCenter;
+use Modules\Hrd\Models\GreatdayEmploymentStatus;
+use Modules\Hrd\Models\GreatdayJobGrade;
+use Modules\Hrd\Models\GreatdayJobStatus;
+use Modules\Hrd\Models\GreatdayNationality;
+use Modules\Hrd\Models\GreatdayTimezone;
+use Modules\Hrd\Models\GreatdayWorkLocation;
+use Modules\Hrd\Models\OutOfSyncEmployee;
 use Modules\Hrd\Repository\DeleteOfficeEmailQueueRepository;
 use Modules\Hrd\Repository\EmployeeActiveReportRepository;
 use Modules\Hrd\Repository\EmployeeEmergencyContactRepository;
@@ -38,11 +70,19 @@ use Modules\Hrd\Repository\EmployeeFamilyRepository;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeResignRepository;
 use Modules\Hrd\Repository\EmployeeTimeoffRepository;
+use Modules\Hrd\Repository\EmploymentStatusRepository;
+use Modules\Hrd\Repository\GreatdayCompanyRepository;
+use Modules\Hrd\Repository\GreatdayCostCenterRepository;
+use Modules\Hrd\Repository\GreatdayEmploymentStatusRepository;
 use Modules\Hrd\Repository\GreatdayJobGradeRepository;
+use Modules\Hrd\Repository\GreatdayJobStatusRepository;
+use Modules\Hrd\Repository\GreatdayNationalityRepository;
 use Modules\Hrd\Repository\GreatdayReligionRepository;
 use Modules\Hrd\Repository\GreatdayResignReasonRepository;
 use Modules\Hrd\Repository\GreatdayResignTypeRepository;
+use Modules\Hrd\Repository\GreatdayShiftPatternRepository;
 use Modules\Hrd\Repository\GreatdayTimezoneRepository;
+use Modules\Hrd\Repository\GreatdayWorkLocationRepository;
 use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
@@ -51,9 +91,25 @@ use Modules\Production\Repository\ProjectTaskPicHistoryRepository;
 use Modules\Production\Repository\ProjectTaskPicRepository;
 use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Repository\ProjectVjRepository;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
 
 class EmployeeService
 {
+    /**
+     * Change-sync fields that cannot be applied while the employee still has active tasks,
+     * because they move the employee's division or approval line mid-work.
+     *
+     * @var array<int, string>
+     */
+    private const TASK_GUARDED_CHANGE_FIELDS = ['division', 'boss'];
+
+    /**
+     * Reason code stored on a resignation raised by the Greatday change sync. Greatday's
+     * /employees payload carries no resign reason, so the ERP records the closest master
+     * code ("Resign") — nothing is pushed back to Greatday for these, it is reference only.
+     */
+    private const GREATDAY_SYNC_RESIGN_REASON = 'MOVE';
+
     private $repo;
 
     private $positionRepo;
@@ -128,6 +184,8 @@ class EmployeeService
 
     private GreatdayResignReasonRepository $greatdayResignReasonRepo;
 
+    private EmploymentStatusRepository $employmentStatusRepo;
+
     public function __construct(
         EmployeeRepository $employeeRepo,
         PositionRepository $positionRepo,
@@ -151,17 +209,18 @@ class EmployeeService
         ProjectTaskPicRepository $projectTaskPicRepo,
         GreatdayService $greatdayService,
         GreatdayTimezoneRepository $greatdayTimezoneRepo,
-        \Modules\Hrd\Repository\GreatdayCostCenterRepository $greatdayCostCenterRepo,
+        GreatdayCostCenterRepository $greatdayCostCenterRepo,
         GreatdayReligionRepository $greatdayReligionRepo,
         GreatdayJobGradeRepository $greatdayJobGradeRepo,
-        \Modules\Hrd\Repository\GreatdayEmploymentStatusRepository $greatdayEmploymentStatusRepo,
-        \Modules\Hrd\Repository\GreatdayWorkLocationRepository $greatdayWorkLocationRepo,
-        \Modules\Hrd\Repository\GreatdayShiftPatternRepository $greatdayShiftPatternRepo,
-        \Modules\Hrd\Repository\GreatdayJobStatusRepository $greatdayJobStatusRepo,
-        \Modules\Hrd\Repository\GreatdayNationalityRepository $greatdayNationalityRepo,
-        \Modules\Hrd\Repository\GreatdayCompanyRepository $greatdayCompanyRepo,
+        GreatdayEmploymentStatusRepository $greatdayEmploymentStatusRepo,
+        GreatdayWorkLocationRepository $greatdayWorkLocationRepo,
+        GreatdayShiftPatternRepository $greatdayShiftPatternRepo,
+        GreatdayJobStatusRepository $greatdayJobStatusRepo,
+        GreatdayNationalityRepository $greatdayNationalityRepo,
+        GreatdayCompanyRepository $greatdayCompanyRepo,
         GreatdayResignTypeRepository $greatdayResignTypeRepo,
-        GreatdayResignReasonRepository $greatdayResignReasonRepo
+        GreatdayResignReasonRepository $greatdayResignReasonRepo,
+        EmploymentStatusRepository $employmentStatusRepo
     ) {
         $this->greatdayResignTypeRepo = $greatdayResignTypeRepo;
 
@@ -228,6 +287,8 @@ class EmployeeService
         $this->greatdayNationalityRepo = $greatdayNationalityRepo;
 
         $this->greatdayCompanyRepo = $greatdayCompanyRepo;
+
+        $this->employmentStatusRepo = $employmentStatusRepo;
     }
 
     /**
@@ -269,7 +330,7 @@ class EmployeeService
 
                 // $where = formatSearchConditions($search['filters'], $where);
 
-                $where = "name like '%{$search}%' and status != " . Status::Inactive->value . " and status != " . Status::Deleted->value;
+                $where = "name like '%{$search}%' and status != ".Status::Inactive->value.' and status != '.Status::Deleted->value;
             } else {
                 $where = 'status != '.Status::Deleted->value.' and status != '.Status::Inactive->value;
             }
@@ -335,7 +396,7 @@ class EmployeeService
                     'user' => $item->user,
                     'is_resign' => $item->resignData ? true : false,
                     'can_cancel_resign' => $canCancelResign,
-                    'nickname' => $item->nickname
+                    'nickname' => $item->nickname,
                 ];
             })->toArray();
 
@@ -525,16 +586,16 @@ class EmployeeService
 
         if ($positionAsVJ) {
             $positionAsVJ = collect($positionAsVJ)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
+                return getIdFromUid($item, new PositionBackup);
             })->toArray();
 
-            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
+            $projectId = getIdFromUid($projectUid, new Project);
 
             $project = $this->projectRepo->show($projectUid, 'id,project_date');
 
             $position = implode(',', $positionAsVJ);
 
-            $where = 'position_id IN ('.$position.') and status != '.\App\Enums\Employee\Status::Inactive->value;
+            $where = 'position_id IN ('.$position.') and status != '.Status::Inactive->value;
 
             // add position project manager entertainment
             $projectManagerEntertainment = User::role(BaseRole::ProjectManagerEntertainment->value)->first();
@@ -644,20 +705,20 @@ class EmployeeService
         }
 
         if (! empty($where)) {
-            $where .= ' and status != '.\App\Enums\Employee\Status::Inactive->value;
+            $where .= ' and status != '.Status::Inactive->value;
         } else {
-            $where = 'status != '.\App\Enums\Employee\Status::Inactive->value;
+            $where = 'status != '.Status::Inactive->value;
         }
 
         if (! empty(request('is_production'))) {
-            $positionAsProduction = \Illuminate\Support\Facades\DB::table('settings')
+            $positionAsProduction = DB::table('settings')
                 ->where('key', 'position_as_production')
                 ->first();
 
             if ($positionAsProduction) {
                 $SanitizePositionAsProduction = str_replace(
-                    ["[", "]"],
-                    "",
+                    ['[', ']'],
+                    '',
                     $positionAsProduction->value
                 );
                 $position = (new PositionRepository)->list(select: 'id', where: "uid IN ({$SanitizePositionAsProduction})");
@@ -673,16 +734,11 @@ class EmployeeService
             }
         }
 
-        logging('where check', [
-            'where' => $where,
-            'request' => request()->all()
-        ]);
-
         $data = $this->repo->list(
             select: 'uid,id,name,email,avatar,position_id,phone',
             where: $where,
             relation: [
-                'position:id,name'
+                'position:id,name',
             ]
         );
 
@@ -706,12 +762,12 @@ class EmployeeService
 
     public function activateAccount(string $key)
     {
-        $encrypter = new \App\Services\EncryptionService;
+        $encrypter = new EncryptionService;
 
         $email = $encrypter->decrypt($key, env('SALT_KEY'));
 
         $this->userRepo->update([
-            'email_verified_at' => \Carbon\Carbon::now(),
+            'email_verified_at' => Carbon::now(),
         ], 'email', $email);
 
         return generalResponse(
@@ -765,7 +821,7 @@ class EmployeeService
             $role = $roleRepo->show($payload['role_id']);
             $userData->assignRole($role);
 
-            \Modules\Hrd\Jobs\SendEmailActivationJob::dispatch($userData, $payload['password'])->afterCommit();
+            SendEmailActivationJob::dispatch($userData, $payload['password'])->afterCommit();
 
             DB::commit();
 
@@ -882,7 +938,7 @@ class EmployeeService
         $data['join_date_format'] = date('d F Y', strtotime($data->join_date));
         $data['length_of_service'] = getLengthOfService($data->join_date);
 
-        $data['level_staff_text'] = \App\Enums\Employee\LevelStaff::generateLabel('staff');
+        $data['level_staff_text'] = LevelStaff::generateLabel('staff');
 
         $data['basic_salary'] = number_format($data->basic_salary, 0, '', '');
 
@@ -920,7 +976,7 @@ class EmployeeService
         try {
             // validate permission
             $user = auth()->user();
-            $employeeId = getIdFromUid($uid, new \Modules\Hrd\Models\Employee);
+            $employeeId = getIdFromUid($uid, new Employee);
 
             if (! $employeeId) {
                 throw new EmployeeNotFound;
@@ -1107,7 +1163,7 @@ class EmployeeService
                 $uid
             );
 
-            \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
+            Cache::forget('maximumProjectPerPM');
 
             DB::commit();
 
@@ -1125,6 +1181,266 @@ class EmployeeService
                 Code::BadRequest->value,
             );
         }
+    }
+
+    /**
+     * Update an employee from the V2 HR form payload, optionally mirroring the change to Greatday.
+     *
+     * The Greatday push runs inside the transaction and is built from the already-updated employee,
+     * so what we send is exactly what was stored. A Greatday rejection aborts the whole thing —
+     * the local write is rolled back rather than leaving the two systems disagreeing. This is the
+     * opposite of the resignation flow, where a Greatday outage must never block the ERP: here the
+     * user explicitly asked for the Greatday update, so a silent failure would be misleading.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function updateEmployeeV2(array $payload, string $employeeUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $employee = $this->repo->show(uid: $employeeUid, select: 'id,uid,employee_id');
+
+            if (! $employee) {
+                DB::rollBack();
+
+                return errorResponse(__('notification.employeeNotFound'));
+            }
+
+            $attributes = $this->buildEmployeeUpdateAttributes($payload);
+
+            if (! empty($attributes)) {
+                $this->repo->update($attributes, $employeeUid);
+            }
+
+            if ($this->isGreatdayUpdateRequested($payload)) {
+                $this->pushEmployeeUpdateToGreatday($employeeUid);
+            }
+
+            Cache::forget('maximumProjectPerPM');
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('global.successUpdateEmployee'),
+                error: false,
+                data: $this->getDetailEmployee($employeeUid, '*')
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Whether the form asked us to mirror this update to Greatday. The flag arrives as 1/"1"/true.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function isGreatdayUpdateRequested(array $payload): bool
+    {
+        return filter_var($payload['update_on_greatday'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Map the V2 form payload onto employee columns.
+     *
+     * Only keys actually present in the payload are touched, so a partial form never blanks out
+     * stored data. `end_date` is the one column allowed to be set back to null (un-resigning).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function buildEmployeeUpdateAttributes(array $payload): array
+    {
+        $attributes = [];
+
+        foreach ($this->employeeV2ColumnMap() as $key => $column) {
+            if (! array_key_exists($key, $payload)) {
+                continue;
+            }
+
+            // a null only ever means "clear it" for end_date; elsewhere it means "not supplied"
+            if ($payload[$key] === null && $column !== 'end_date') {
+                continue;
+            }
+
+            $attributes[$column] = $payload[$key];
+        }
+
+        $name = $this->composeEmployeeName($payload);
+        if ($name !== null) {
+            $attributes['name'] = $name;
+        }
+
+        if (isset($payload['gender']) && $payload['gender'] !== '') {
+            $attributes['gender'] = (int) $payload['gender'] === 1
+                ? Gender::Male->value
+                : Gender::Female->value;
+        }
+
+        // Greatday marital codes are 0=Single, 1=Married, 2=Widow, 3=Widower. The ERP enum only
+        // models single/married, so widow(er) keeps the raw Greatday code and leaves the ERP
+        // column untouched rather than being forced into a wrong value.
+        if (isset($payload['marital_status']) && $payload['marital_status'] !== '') {
+            $maritalStatus = match ((int) $payload['marital_status']) {
+                0 => MartialStatus::Single->value,
+                1 => MartialStatus::Married->value,
+                default => null,
+            };
+
+            if ($maritalStatus !== null) {
+                $attributes['martial_status'] = $maritalStatus;
+            }
+        }
+
+        if (! empty($payload['position'])) {
+            $positionId = $this->generalService->getIdFromUid($payload['position'], new PositionBackup);
+
+            if ($positionId) {
+                $attributes['position_id'] = $positionId;
+            }
+        }
+
+        if (! empty($payload['supervisor'])) {
+            $bossId = $this->generalService->getIdFromUid($payload['supervisor'], new Employee);
+
+            if ($bossId) {
+                $attributes['boss_id'] = $bossId;
+            }
+        }
+
+        $bankDetail = $this->composeBankDetail($payload);
+        if ($bankDetail !== null) {
+            $attributes['bank_detail'] = $bankDetail;
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Payload key => employee column, for the values that map across without transformation.
+     *
+     * @return array<string, string>
+     */
+    protected function employeeV2ColumnMap(): array
+    {
+        return [
+            'nickname' => 'nickname',
+            'id_number' => 'id_number',
+            'email' => 'email',
+            'birth_day' => 'date_of_birth',
+            'birth_place' => 'place_of_birth',
+            'address' => 'address',
+            'mobile_phone' => 'phone',
+            'employee_no' => 'employee_id',
+            'join_date' => 'join_date',
+            'end_date' => 'end_date',
+            'company_id' => 'greatday_company',
+            'job_grade' => 'greatday_job_grade',
+            'cost_center' => 'greatday_cost_center',
+            'employment_status' => 'greatday_employment_status',
+            'work_location' => 'greatday_work_location',
+            'shift_pattern' => 'greatday_shift_pattern',
+            'job_status' => 'greatday_job_status',
+            'nationality' => 'greatday_nationality',
+            'religion' => 'greatday_religion',
+            'marital_status' => 'greatday_marital_status',
+            'timezone_id' => 'greatday_timezone',
+        ];
+    }
+
+    /**
+     * Rebuild the single ERP `name` from the split name fields the V2 form sends.
+     * Returns null when the form did not send a first name, so the stored name is left alone.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function composeEmployeeName(array $payload): ?string
+    {
+        if (empty($payload['first_name'])) {
+            return null;
+        }
+
+        $parts = array_filter([
+            trim((string) $payload['first_name']),
+            trim((string) ($payload['middle_name'] ?? '')),
+            trim((string) ($payload['last_name'] ?? '')),
+        ]);
+
+        return implode(' ', $parts);
+    }
+
+    /**
+     * Build the stored bank_detail JSON from the flat bank fields, or null when the form sent none.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function composeBankDetail(array $payload): ?array
+    {
+        if (empty($payload['bank_name']) && empty($payload['bank_account_number'])) {
+            return null;
+        }
+
+        return [
+            [
+                'bank_name' => $payload['bank_name'] ?? null,
+                'account_number' => $payload['bank_account_number'] ?? null,
+                'account_holder_name' => $payload['bank_account_holder_name'] ?? null,
+                'is_active' => true,
+            ],
+        ];
+    }
+
+    /**
+     * Mirror the stored employee to Greatday via a PERSONALUPDATE transaction.
+     * Throws on any failure so the caller's transaction rolls the local update back.
+     *
+     * @throws EmployeeException
+     */
+    protected function pushEmployeeUpdateToGreatday(string $employeeUid): void
+    {
+        $employee = $this->loadEmployeeForLink($employeeUid);
+
+        if (empty($employee->employee_id)) {
+            throw new EmployeeException(__('notification.greatdayUpdateMissingEmpNo'));
+        }
+
+        $response = $this->greatdayService->updateEmployee($this->buildGreatdayUpdatePayload($employee));
+        $result = $response->json()[0] ?? null;
+
+        if ($response->failed() || ! ($result['success'] ?? false)) {
+            throw new EmployeeException($result['message'] ?? __('notification.greatdayUpdateEmployeeFailed'));
+        }
+    }
+
+    /**
+     * Build one UpdateEmployeeRequestItem from the stored employee.
+     *
+     * PERSONALUPDATE is the transaction type for a plain data edit, and it is the one type that
+     * needs no transactionEffectiveDate. The Update API accepts a much narrower field set than the
+     * Add API — anything not listed here simply cannot be pushed through it.
+     *
+     * @return array<string, mixed>
+     *
+     * @see docs/greatday-api.json — UpdateEmployeeRequestItem
+     */
+    protected function buildGreatdayUpdatePayload(Employee $employee): array
+    {
+        $bank = $this->firstBankDetail($employee);
+        $companyId = $this->resolveGreatdayCompanyId($employee->greatday_company);
+
+        return array_filter([
+            'transactionType' => 'PERSONALUPDATE',
+            'empNo' => $employee->employee_id,
+            'companyId' => $companyId !== null ? (string) $companyId : null,
+            'employeeName' => $employee->name,
+            'position' => $employee->position?->greatday_code,
+            'status' => $employee->greatday_employment_status,
+            'email' => $employee->email,
+            'bankCode' => $bank['bank_name'] ?? null,
+        ], fn ($v) => $v !== null && $v !== '');
     }
 
     /**
@@ -1153,7 +1469,7 @@ class EmployeeService
 
             $this->repo->delete($uid);
 
-            \Illuminate\Support\Facades\Cache::forget('maximumProjectPerPM');
+            Cache::forget('maximumProjectPerPM');
 
             return generalResponse(
                 __('global.successDeletePosition'),
@@ -1233,13 +1549,13 @@ class EmployeeService
      */
     protected function getMaximumProjectPerPM()
     {
-        $data = \Illuminate\Support\Facades\Cache::get('maximumProjectPerPM');
+        $data = Cache::get('maximumProjectPerPM');
 
         if (! $data) {
             $projectManagerPosition = json_decode(getSettingByKey('position_as_project_manager'), true);
 
             $projectManagerPosition = collect($projectManagerPosition)->map(function ($item) {
-                return getIdFromUid($item, new \Modules\Company\Models\PositionBackup);
+                return getIdFromUid($item, new PositionBackup);
             })->toArray();
 
             $condition = implode("','", $projectManagerPosition);
@@ -1247,7 +1563,7 @@ class EmployeeService
 
             $employees = $this->repo->list('id,name', 'position_id in '.$condition);
 
-            $data = \Illuminate\Support\Facades\Cache::rememberForever('maximumProjectPerPM', function () use ($employees) {
+            $data = Cache::rememberForever('maximumProjectPerPM', function () use ($employees) {
                 return count($employees);
             });
         }
@@ -1299,7 +1615,7 @@ class EmployeeService
             ];
         }
 
-        $whereEmployee = 'status != '.\App\Enums\Employee\Status::Inactive->value.' and status != '.\App\Enums\Employee\Status::Deleted->value;
+        $whereEmployee = 'status != '.Status::Inactive->value.' and status != '.Status::Deleted->value;
 
         $data = $this->repo->list(
             select: 'id, uid as value, name as title',
@@ -1354,7 +1670,7 @@ class EmployeeService
 
     public function readFile($file)
     {
-        $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\EmployeeImport, $file);
+        $data = Excel::toArray(new EmployeeImport, $file);
 
         $response = $data['Fulltime Compile'];
 
@@ -1372,7 +1688,7 @@ class EmployeeService
         $employees = [];
         foreach ($response as $key => $row) {
             $jobName = ltrim(rtrim($row[$jobNameKey]));
-            $positionData = \Modules\Company\Models\Position::select('id')
+            $positionData = Position::select('id')
                 ->whereRaw("lower(name) = '".strtolower($jobName)."'")
                 ->first();
 
@@ -1384,18 +1700,18 @@ class EmployeeService
                 'phone' => $row[$phoneKey] ?? 0,
                 'id_number' => $row[$idNumberKey] ?? 0,
                 'religion_raw' => $row[$religionKey],
-                'religion' => $row[$religionKey] ? \App\Enums\Employee\Religion::generateReligion($row[$religionKey]) : \App\Enums\Employee\Religion::Islam->value,
+                'religion' => $row[$religionKey] ? Religion::generateReligion($row[$religionKey]) : Religion::Islam->value,
                 'martial_status_raw' => $row[$martialKey],
-                'martial_status' => $row[$martialKey] ? \App\Enums\Employee\MartialStatus::generateMartial($row[$martialKey]) : null,
+                'martial_status' => $row[$martialKey] ? MartialStatus::generateMartial($row[$martialKey]) : null,
                 'address' => $row[$addressKey] ?? 'belum diisi',
                 'postal_code' => $row[$postalCodeKey] ?? 0,
                 'current_address' => $row[$currentAddressKey],
                 'blood_type' => $row[$bloodTypeKey],
-                'date_of_birth' => $row[$dobKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$dobKey])->format('Y-m-d') : '1970-01-01',
+                'date_of_birth' => $row[$dobKey] ? Date::excelToDateTimeObject((int) $row[$dobKey])->format('Y-m-d') : '1970-01-01',
                 'place_of_birth' => $row[$pobKey] ?? 'belum diisi',
                 'dependant' => '',
                 'gender_raw' => $row[$genderKey],
-                'gender' => $row[$genderKey] ? \App\Enums\Employee\Gender::generateGender($row[$genderKey]) : null,
+                'gender' => $row[$genderKey] ? Gender::generateGender($row[$genderKey]) : null,
                 'bank_detail' => [
                     [
                         'bank_name' => $row[$bankNameKey],
@@ -1410,7 +1726,7 @@ class EmployeeService
                     'relation' => $row[$contactRelationKey],
                 ],
                 'education_raw' => $row[$educationKey],
-                'education' => $row[$educationKey] ? \App\Enums\Employee\Education::generateEducation($row[$educationKey]) : null,
+                'education' => $row[$educationKey] ? Education::generateEducation($row[$educationKey]) : null,
                 'education_name' => $row[$schoolNameKey],
                 'education_major' => $row[$majorKey],
                 'education_year' => $row[$graduationYearKey],
@@ -1418,15 +1734,15 @@ class EmployeeService
                 'position_id' => $positionData->id ?? 0,
                 'boss_id' => $row[$bossIdKey],
                 'level_staff_raw' => $row[$levelKey],
-                'level_staff' => $row[$levelKey] ? \App\Enums\Employee\LevelStaff::generateLevel($row[$levelKey]) : null,
+                'level_staff' => $row[$levelKey] ? LevelStaff::generateLevel($row[$levelKey]) : null,
                 'status_raw' => $row[$statusKey],
-                'status' => $row[$statusKey] ? \App\Enums\Employee\Status::generateStatus($row[$statusKey]) : null,
+                'status' => $row[$statusKey] ? Status::generateStatus($row[$statusKey]) : null,
                 'placement' => $row[$placementKey],
-                'join_date' => $row[$joinDateKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$joinDateKey])->format('Y-m-d') : null,
-                'start_review_probation_date' => $row[$startReviewProbationKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$startReviewProbationKey])->format('Y-m-d') : null,
+                'join_date' => $row[$joinDateKey] ? Date::excelToDateTimeObject((int) $row[$joinDateKey])->format('Y-m-d') : null,
+                'start_review_probation_date' => $row[$startReviewProbationKey] ? Date::excelToDateTimeObject((int) $row[$startReviewProbationKey])->format('Y-m-d') : null,
                 'probation_status_raw' => $row[$probationStatusKey],
-                'probation_status' => $row[$probationStatusKey] ? \App\Enums\Employee\ProbationStatus::generateStatus($row[$probationStatusKey]) : null,
-                'end_probation_date' => $row[$endProbationKey] ? \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((int) $row[$endProbationKey])->format('Y-m-d') : null,
+                'probation_status' => $row[$probationStatusKey] ? ProbationStatus::generateStatus($row[$probationStatusKey]) : null,
+                'end_probation_date' => $row[$endProbationKey] ? Date::excelToDateTimeObject((int) $row[$endProbationKey])->format('Y-m-d') : null,
                 'company_name' => $row[$companyKey],
             ];
         }
@@ -1471,7 +1787,7 @@ class EmployeeService
      */
     public function submitImport(array $response): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $response = collect($response)->map(function ($item) {
                 $item['bank_detail'] = json_encode($item['bank_detail']);
@@ -1519,14 +1835,14 @@ class EmployeeService
                 }
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
                 __('global.successImportData'),
                 false,
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -1616,7 +1932,7 @@ class EmployeeService
     public function downloadTemplate()
     {
         try {
-            return \Illuminate\Support\Facades\Storage::download('static-file/employee.xlsx');
+            return Storage::download('static-file/employee.xlsx');
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
@@ -1629,7 +1945,7 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
-            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee);
+            $employeeId = getIdFromUid($employeeUid, new Employee);
 
             $payload['employee_id'] = $employeeId;
 
@@ -1727,7 +2043,7 @@ class EmployeeService
      */
     public function initEmergency(string $employeeUid): array
     {
-        $data = $this->employeeEmergencyRepo->list('*', 'employee_id = '.getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee));
+        $data = $this->employeeEmergencyRepo->list('*', 'employee_id = '.getIdFromUid($employeeUid, new Employee));
 
         $output = collect((object) $data)->map(function ($item) {
             return [
@@ -1752,7 +2068,7 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
-            $employeeId = getIdFromUid($employeeUid, new \Modules\Hrd\Models\Employee);
+            $employeeId = getIdFromUid($employeeUid, new Employee);
 
             $payload['employee_id'] = $employeeId;
             $this->employeeEmergencyRepo->store($payload);
@@ -1821,12 +2137,12 @@ class EmployeeService
     public function updateEmployment(array $payload, string $employeeUid): array
     {
         try {
-            $payload['position_id'] = getIdFromUid($payload['position_id'], new \Modules\Company\Models\PositionBackup);
+            $payload['position_id'] = getIdFromUid($payload['position_id'], new PositionBackup);
             if (
                 (isset($payload['boss_id'])) &&
                 ($payload['boss_id'])
             ) {
-                $payload['boss_id'] = getIdFromUid($payload['boss_id'], new \Modules\Hrd\Models\Employee);
+                $payload['boss_id'] = getIdFromUid($payload['boss_id'], new Employee);
             }
 
             $this->repo->update(collect($payload)->except(['level'])->toArray(), $employeeUid);
@@ -1854,7 +2170,7 @@ class EmployeeService
         try {
             $data = $this->employeeResignRepo->list(
                 select: 'id,employee_id',
-                where: 'resign_date = NOW()',
+                where: 'resign_date = CURDATE()',
                 relation: [
                     'employee:id,uid',
                 ]
@@ -1888,10 +2204,23 @@ class EmployeeService
     ): void {
         $employee = $this->repo->show(uid: $employeeUid, select: 'email');
 
+        // Get greatday employment status terminal
+        $terminalEmploymentStatus = $this->employmentStatusRepo->show([
+            'where' => [
+                'is_terminal' => true,
+            ],
+            'select' => ['id'],
+        ]);
+
+        if (! $terminalEmploymentStatus) {
+            throw new DataNotFound('Internal Employment Status is not found');
+        }
+
         $this->repo->update(
             data: [
                 'status' => Status::Inactive->value,
                 'end_date' => $resignDate,
+                'employment_status_id' => $terminalEmploymentStatus->id,
             ],
             uid: $employeeUid
         );
@@ -1904,6 +2233,9 @@ class EmployeeService
             key: 'employee_id',
             value: $employeeId
         );
+
+        // remove the employee's login access entirely (soft delete the user record)
+        $this->userRepo->bulkDelete([$employeeId], 'employee_id');
 
         // notify root user to delete office email in the server
         $this->deleteOfficeEmailQueueRepo->store(data: [
@@ -1919,16 +2251,20 @@ class EmployeeService
     }
 
     /**
-     * Main logic for employee resignation
+     * Main logic for employee resignation.
      *
-     * @param  array  $data  With these following structure
-     *                       - string $reason
-     *                       - string $resign_date
-     *                       - string $severance
-     *                       - string $employee_uid
+     * Flow:
+     * 1. Guard: block if the employee still has on-progress production tasks or already has a resignation record.
+     * 2. Persist the resignation record (maps the Greatday reason code + remark).
+     * 3. Optionally push a TERMINATION transaction to Greatday. A Greatday failure never blocks the ERP
+     *    resignation — we proceed and flag the developer via Slack instead.
+     * 4. If the resign date is today or in the past, deactivate the employee immediately; otherwise the
+     *    scheduled command (hrd:check-resign-employee) picks it up on the resign date.
+     * 5. Notify the employee, their boss (if any) and the HR team via email + realtime in-app notification.
      */
     public function mainResignLogic(
-        array $data,
+        ResignData $data,
+        string $employeeUid,
         bool $useTransaction = false,
         bool $notifyAfterCommit = false
     ): array {
@@ -1937,9 +2273,14 @@ class EmployeeService
         }
 
         try {
-            $employeeId = $this->generalService->getIdFromUid($data['employee_uid'], new Employee);
+            $employee = $this->repo->show(
+                uid: $employeeUid,
+                select: 'id,uid,name,email,position_id,status,employee_id'
+            );
 
-            $employee = $this->repo->show(uid: $data['employee_uid'], select: 'id,position_id,status,name');
+            if (! $employee) {
+                return errorResponse(message: __('notification.employeeNotFound'));
+            }
 
             // validate employee work, check relation to the production task
             $tasks = $this->taskRepo->list(
@@ -1957,43 +2298,55 @@ class EmployeeService
                 return errorResponse(message: __('notification.employeeHasOngoingTasks'));
             }
 
-            // Check if current employee id is exists or not
+            // Check if current employee already has a resignation record
             $check = $this->employeeResignRepo->show(
                 uid: '',
                 select: 'id',
-                where: "employee_id = {$employeeId}"
+                where: "employee_id = {$employee->id}"
             );
 
             if ($check) {
                 return errorResponse(message: __('notification.employeeAlreadyHasResignationRecord'));
             }
 
+            $resignDate = date('Y-m-d', strtotime($data->resign_date));
+
             $this->employeeResignRepo->store(data: [
-                'employee_id' => $employeeId,
-                'reason' => $data['reason'],
-                'resign_date' => date('Y-m-d', strtotime($data['resign_date'])),
-                'severance' => $data['severance'],
+                'created_by' => auth()->id(),
+                'employee_id' => $employee->id,
+                'reason' => $data->remark,
+                'resign_date' => $resignDate,
+                'greatday_resign_reason' => $data->resign_reason_code,
                 'current_position_id' => $employee->position_id,
                 'current_employee_status' => $employee->status,
             ]);
 
-            // if today date is the same with resign_date, change employee status otherwise do not change anything in employee model
-            $resignDate = Carbon::parse($data['resign_date']);
-            $now = Carbon::now();
-            $diff = $now->diffInDays($resignDate, false);
+            // push the termination to the Greatday third party (non-blocking)
+            if ($data->sync_greatday) {
+                $this->syncResignToGreatday($employee, $resignDate);
+            }
 
-            // define proper message
+            // if today date is the same with resign_date (or earlier), change employee status,
+            // otherwise the cron job will handle it on the resign date
+            $diff = Carbon::now()->diffInDays(Carbon::parse($data->resign_date), false);
+
             $message = __('notification.resignHasBeenOnScheduled');
 
             if ($diff <= 0) {
                 $this->turnOffEmployee(
-                    resignDate: date('Y-m-d', strtotime($data['resign_date'])),
-                    employeeUid: $data['employee_uid'],
-                    employeeId: $employeeId,
+                    resignDate: $resignDate,
+                    employeeUid: $employee->uid,
+                    employeeId: $employee->id,
                     afterCommit: $notifyAfterCommit
                 );
 
                 $message = __('notification.successResign', ['name' => $employee->name]);
+            }
+
+            // notify the employee, their boss and the HR team (email + in-app)
+            $notification = SendResignationNotificationJob::dispatch($employee->id, $resignDate, $data->remark);
+            if ($notifyAfterCommit) {
+                $notification->afterCommit();
             }
 
             if ($useTransaction) {
@@ -2013,19 +2366,66 @@ class EmployeeService
     }
 
     /**
+     * Push a TERMINATION transaction to Greatday. Any failure is swallowed and reported to the
+     * developer via Slack so it never blocks the ERP resignation.
+     */
+    protected function syncResignToGreatday(object $employee, string $resignDate): void
+    {
+        try {
+            if (empty($employee->employee_id)) {
+                throw new \RuntimeException('Employee has no Greatday employee number (empNo).');
+            }
+
+            $response = $this->greatdayService->terminateEmployee(
+                empNo: $employee->employee_id,
+                effectiveDate: $resignDate,
+            );
+
+            if ($response->failed()) {
+                throw new \RuntimeException('Greatday responded with status '.$response->status().': '.$response->body());
+            }
+
+            $this->notifyDeveloperResignResult($employee, true);
+        } catch (\Throwable $th) {
+            logging('Greatday resign sync failed', [$th->getMessage()]);
+
+            $this->notifyDeveloperResignResult($employee, false, $th->getMessage());
+        }
+    }
+
+    /**
+     * Flag the developer via Slack about the outcome of the Greatday resignation push.
+     */
+    protected function notifyDeveloperResignResult(object $employee, bool $success, ?string $errorMessage = null): void
+    {
+        $developer = User::where('email', config('app.developer_email'))->first();
+
+        if (! $developer) {
+            return;
+        }
+
+        $developer->notify(new ResignationNotification(
+            success: $success,
+            employeeName: $employee->name,
+            employeeEmail: $employee->email,
+            errorMessage: $errorMessage,
+        ));
+    }
+
+    /**
      * Employee is resign
      *
-     * @param  array<string, string>  $data
-     * @param string employeeUid
-     * @return array
+     * @return array<string, mixed>
      */
-    public function resign(array $data, string $employeeUid)
+    public function resign(ResignData $data, string $employeeUid): array
     {
         DB::beginTransaction();
         try {
-            $data['employee_uid'] = $employeeUid;
-
-            $resign = $this->mainResignLogic(data: $data, notifyAfterCommit: true); // will return message
+            $resign = $this->mainResignLogic(
+                data: $data,
+                employeeUid: $employeeUid,
+                notifyAfterCommit: true
+            ); // will return message
 
             DB::commit();
 
@@ -2495,7 +2895,7 @@ class EmployeeService
         }
     }
 
-    protected function isGreatdayResponseSuccess(\Illuminate\Http\Client\Response $response): bool
+    protected function isGreatdayResponseSuccess(Response $response): bool
     {
         return $response->status() < 300 && isset($response->json()['data']);
     }
@@ -2503,6 +2903,7 @@ class EmployeeService
     protected function getGreatdayRepositoryData(string $type)
     {
         $type = ucfirst($type);
+
         return "greatday{$type}Repo";
     }
 
@@ -2541,20 +2942,18 @@ class EmployeeService
 
             return [
                 'data' => $data,
-                'totalData' => $totalData
+                'totalData' => $totalData,
             ];
         } catch (\Throwable $th) {
             return [
                 'data' => collect([]),
-                'totalData' => 0
+                'totalData' => 0,
             ];
         }
     }
 
     /**
      * Get list cost centers
-     * 
-     * @return array
      */
     public function listCostCenter(): array
     {
@@ -2569,21 +2968,21 @@ class EmployeeService
             $totalData = $data['totalData'];
 
             $output = [];
-            $currentLocale = \Illuminate\Support\Facades\App::currentLocale();
+            $currentLocale = App::currentLocale();
             foreach ($costCenters as $costCenter) {
                 $name = "name_{$currentLocale}";
                 $output[] = [
                     'code' => $costCenter['code'],
                     'display_name' => $costCenter[$name],
-                    'updated_at' => date('d F Y, H:i', strtotime($costCenter['updated_at']))
+                    'updated_at' => date('d F Y, H:i', strtotime($costCenter['updated_at'])),
                 ];
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2593,8 +2992,6 @@ class EmployeeService
 
     /**
      * Get timezones
-     * 
-     * @return array
      */
     public function listTimezones(): array
     {
@@ -2612,7 +3009,7 @@ class EmployeeService
                 $output[] = [
                     'name' => "(GMT{$timezone->gmt_plus_min}{$timezone->gmt_ref_hour}:{$timezone->gmt_ref_minute}) {$timezone->name}",
                     'updated_at' => date('d F Y, H:i', strtotime($timezone->updated_at)),
-                    'timezone_id' => $timezone->timezone_id
+                    'timezone_id' => $timezone->timezone_id,
                 ];
             }
 
@@ -2620,7 +3017,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2630,8 +3027,6 @@ class EmployeeService
 
     /**
      * Get timezones
-     * 
-     * @return array
      */
     public function listReligions(): array
     {
@@ -2649,7 +3044,7 @@ class EmployeeService
                 $output[] = [
                     'religion_code' => $religion->code,
                     'name' => $religion->name,
-                    'updated_at' => date('d F Y, H:i', strtotime($religion->updated_at))
+                    'updated_at' => date('d F Y, H:i', strtotime($religion->updated_at)),
                 ];
             }
 
@@ -2657,7 +3052,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2667,8 +3062,6 @@ class EmployeeService
 
     /**
      * Get job grades
-     * 
-     * @return array
      */
     public function listJobGrades(): array
     {
@@ -2686,7 +3079,7 @@ class EmployeeService
                 $output[] = [
                     'job_grade_code' => $religion->code,
                     'name' => $religion->name,
-                    'updated_at' => date('d F Y, H:i', strtotime($religion->updated_at))
+                    'updated_at' => date('d F Y, H:i', strtotime($religion->updated_at)),
                 ];
             }
 
@@ -2694,7 +3087,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2704,8 +3097,6 @@ class EmployeeService
 
     /**
      * Get Employment status
-     * 
-     * @return array
      */
     public function listEmploymentStatuses(): array
     {
@@ -2724,7 +3115,7 @@ class EmployeeService
                     'employment_status_code' => $status->code,
                     'name' => $status->name,
                     'need_employment_date' => $status->need_employment_date,
-                    'updated_at' => date('d F Y, H:i', strtotime($status->updated_at))
+                    'updated_at' => date('d F Y, H:i', strtotime($status->updated_at)),
                 ];
             }
 
@@ -2732,7 +3123,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2742,8 +3133,6 @@ class EmployeeService
 
     /**
      * Get Work Location
-     * 
-     * @return array
      */
     public function listWorkLocations(): array
     {
@@ -2763,7 +3152,7 @@ class EmployeeService
                     'name' => $location->name,
                     'address' => $location->address,
                     'max_radius' => $location->max_radius,
-                    'updated_at' => date('d F Y, H:i', strtotime($location->updated_at))
+                    'updated_at' => date('d F Y, H:i', strtotime($location->updated_at)),
                 ];
             }
 
@@ -2771,7 +3160,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2781,8 +3170,6 @@ class EmployeeService
 
     /**
      * Get Shift Pattern
-     * 
-     * @return array
      */
     public function listShiftPatterns(): array
     {
@@ -2803,7 +3190,7 @@ class EmployeeService
                     'total_working_hour_per_day' => $pattern->total_working_hour_per_day,
                     'total_day_off_per_week' => $pattern->total_day_off_per_week,
                     'note' => $pattern->note,
-                    'updated_at' => date('d F Y, H:i', strtotime($pattern->updated_at))
+                    'updated_at' => date('d F Y, H:i', strtotime($pattern->updated_at)),
                 ];
             }
 
@@ -2811,7 +3198,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2821,8 +3208,6 @@ class EmployeeService
 
     /**
      * Get Job Status
-     * 
-     * @return array
      */
     public function listJobStatuses(): array
     {
@@ -2840,7 +3225,7 @@ class EmployeeService
                 $output[] = [
                     'job_status_code' => $status->code,
                     'name' => $status->name,
-                    'updated_at' => date('d F Y, H:i', strtotime($status->updated_at))
+                    'updated_at' => date('d F Y, H:i', strtotime($status->updated_at)),
                 ];
             }
 
@@ -2848,7 +3233,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2858,8 +3243,6 @@ class EmployeeService
 
     /**
      * Get Nationality
-     * 
-     * @return array
      */
     public function listNationalities(): array
     {
@@ -2877,7 +3260,7 @@ class EmployeeService
                 $output[] = [
                     'nationality_code' => $nationality->code,
                     'name' => $nationality->name,
-                    'updated_at' => date('d F Y, H:i', strtotime($nationality->updated_at))
+                    'updated_at' => date('d F Y, H:i', strtotime($nationality->updated_at)),
                 ];
             }
 
@@ -2885,7 +3268,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2895,8 +3278,6 @@ class EmployeeService
 
     /**
      * Get Companies
-     * 
-     * @return array
      */
     public function listCompanies(): array
     {
@@ -2915,7 +3296,7 @@ class EmployeeService
                     'company_code' => $company->code,
                     'name' => $company->name,
                     'company_id' => $company->company_id,
-                    'updated_at' => date('d F Y, H:i', strtotime($company->updated_at))
+                    'updated_at' => date('d F Y, H:i', strtotime($company->updated_at)),
                 ];
             }
 
@@ -2923,7 +3304,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -2933,18 +3314,16 @@ class EmployeeService
 
     /**
      * Get greatday timezone and store in the database, this function is used to sync timezone data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayTimezones(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/timezone', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/timezone', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -2958,8 +3337,8 @@ class EmployeeService
                         'gmt_ref_hour' => $costCenter['gmtrefhour'],
                         'gmt_ref_minute' => $costCenter['gmtrefminute'],
                         'gmt_plus_min' => $costCenter['gmtplusmin'],
-                        'created_at' => \Carbon\Carbon::now(),
-                        'updated_at' => \Carbon\Carbon::now(),
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
                     ];
                 }
 
@@ -2970,14 +3349,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -2985,18 +3364,16 @@ class EmployeeService
 
     /**
      * Get greatday cost center and store in the database, this function is used to sync cost center data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayCostCenter(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/costcenter', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/costcenter', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3009,8 +3386,8 @@ class EmployeeService
                             'code' => $costCenter['costcenterCode'],
                             'name_en' => $costCenter['costcenterNameEn'],
                             'name_id' => $costCenter['costcenterNameId'],
-                            'created_at' => \Carbon\Carbon::now(),
-                            'updated_at' => \Carbon\Carbon::now(),
+                            'created_at' => Carbon::now(),
+                            'updated_at' => Carbon::now(),
                         ];
                     }
                 }
@@ -3022,14 +3399,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3037,18 +3414,16 @@ class EmployeeService
 
     /**
      * Get greatday religion and store in the database, this function is used to sync religion data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayReligion(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/religion', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/religion', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3069,14 +3444,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3084,18 +3459,16 @@ class EmployeeService
 
     /**
      * Get greatday job grade and store in the database, this function is used to sync job grade data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayJobGrade(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/jobgrade', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/jobgrade', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3116,14 +3489,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3131,18 +3504,16 @@ class EmployeeService
 
     /**
      * Get greatday employment status and store in the database, this function is used to sync employment status data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayEmploymentStatus(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/employmentstatus', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/employmentstatus', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3153,7 +3524,7 @@ class EmployeeService
                     $payload[] = [
                         'code' => $employmentStatus['employmentstatusCode'],
                         'name' => $employmentStatus['employmentstatusNameEn'],
-                        'need_employment_date' => $employmentStatus['reqEmploymentdate']
+                        'need_employment_date' => $employmentStatus['reqEmploymentdate'],
                     ];
                 }
 
@@ -3164,14 +3535,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3179,18 +3550,16 @@ class EmployeeService
 
     /**
      * Get greatday work location and store in the database, this function is used to sync work location data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayWorkLocation(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/worklocation', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/worklocation', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3202,7 +3571,7 @@ class EmployeeService
                         'code' => $workLocation['worklocationCode'],
                         'name' => $workLocation['worklocationName'],
                         'address' => $workLocation['worklocationAddress'] ?? null,
-                        'max_radius' => (float) $workLocation['maxRadius']
+                        'max_radius' => (float) $workLocation['maxRadius'],
                     ];
                 }
 
@@ -3213,14 +3582,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3228,18 +3597,16 @@ class EmployeeService
 
     /**
      * Get greatday shift pattern and store in the database, this function is used to sync shift pattern data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayShiftPattern(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/attendances/shift-pattern', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/attendances/shift-pattern', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3259,7 +3626,7 @@ class EmployeeService
                         'name' => $shift['shiftgroupname'],
                         'total_working_hour_per_day' => 0,
                         'total_day_off_per_week' => $totalOff,
-                        'note' => $remark
+                        'note' => $remark,
                     ];
                 }
 
@@ -3270,14 +3637,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3285,18 +3652,16 @@ class EmployeeService
 
     /**
      * Get greatday job status and store in the database, this function is used to sync job status data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayJobStatus(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/jobstatus', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/jobstatus', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3317,14 +3682,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3332,18 +3697,16 @@ class EmployeeService
 
     /**
      * Get greatday nationality and store in the database, this function is used to sync nationality data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayNationality(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/nationality', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/nationality', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3364,14 +3727,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3379,18 +3742,16 @@ class EmployeeService
 
     /**
      * Get greatday companies and store in the database, this function is used to sync companies data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayCompanies(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/company', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/company', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3416,14 +3777,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3431,10 +3792,8 @@ class EmployeeService
 
     /**
      * Resend email verification to unverified employee
-     * 
-     * @param array<string, string> $payload            -> will be ['email', 'note']
-     * @param string $employeeId
-     * 
+     *
+     * @param  array<string, string>  $payload  -> will be ['email', 'note']
      * @return array
      */
     public function resendVerification(array $payload, string $employeeId)
@@ -3446,7 +3805,7 @@ class EmployeeService
                 select: 'id,email,user_id',
                 where: "employee_id = '{$employeeId}' and email = '{$requestEmail}'",
                 relation: [
-                    'user:id,email,email_verified_at,employee_id'
+                    'user:id,email,email_verified_at,employee_id',
                 ]
             );
 
@@ -3466,8 +3825,8 @@ class EmployeeService
             $newPassword = generateRandomPassword(10);
             $this->userRepo->update(
                 data: [
-                        'password' => Hash::make($newPassword)
-                    ],
+                    'password' => Hash::make($newPassword),
+                ],
                 key: 'id',
                 value: $employee->user_id
             );
@@ -3489,8 +3848,6 @@ class EmployeeService
 
     /**
      * Get timezones
-     * 
-     * @return array
      */
     public function listResignTypes(): array
     {
@@ -3507,7 +3864,7 @@ class EmployeeService
             foreach ($resignTypes as $resignType) {
                 $output[] = [
                     'name' => $resignType->name,
-                    'code' => $resignType->code
+                    'code' => $resignType->code,
                 ];
             }
 
@@ -3515,7 +3872,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -3525,8 +3882,6 @@ class EmployeeService
 
     /**
      * Get resign reasons
-     * 
-     * @return array
      */
     public function listResignReasons(): array
     {
@@ -3544,7 +3899,7 @@ class EmployeeService
                 $output[] = [
                     'name' => $resignReason->name,
                     'code' => $resignReason->code,
-                    'resign_type' => $resignReason->resign_type
+                    'resign_type' => $resignReason->resign_type,
                 ];
             }
 
@@ -3552,7 +3907,7 @@ class EmployeeService
                 message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -3562,18 +3917,16 @@ class EmployeeService
 
     /**
      * Get greatday resign types and store in the database, this function is used to sync resign type data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayResignType(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/resigntype', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/resigntype', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3584,8 +3937,8 @@ class EmployeeService
                     $payload[] = [
                         'code' => $resignType['code'],
                         'name' => $resignType['nameEn'],
-                        'created_at' => \Carbon\Carbon::now(),
-                        'updated_at' => \Carbon\Carbon::now(),
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
                     ];
                 }
 
@@ -3596,14 +3949,14 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
             return errorResponse($th);
         }
@@ -3611,18 +3964,16 @@ class EmployeeService
 
     /**
      * Get greatday resign reasons and store in the database, this function is used to sync resign reasons data from greatday to our database, so we can use it later when we want to integrate with greatday for attendance feature
-     *
-     * @return array
      */
     public function getGreatdayResignReason(): array
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $accessToken = $this->greatdayService->login();
 
-            $response = \Illuminate\Support\Facades\Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/resignreason', [
+            $response = Http::withToken($accessToken)->post($this->greatdayService->getBaseUrl().'/company/resignreason', [
                 'page' => 1,
-                'limit' => 100
+                'limit' => 100,
             ]);
 
             if ($this->isGreatdayResponseSuccess($response)) {
@@ -3634,8 +3985,8 @@ class EmployeeService
                         'code' => $resignReason['reasonCode'],
                         'name' => $resignReason['reasonDescEn'],
                         'resign_type' => $resignReason['resignation'],
-                        'created_at' => \Carbon\Carbon::now(),
-                        'updated_at' => \Carbon\Carbon::now(),
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
                     ];
                 }
 
@@ -3646,15 +3997,1757 @@ class EmployeeService
                 );
             }
 
-            \Illuminate\Support\Facades\DB::commit();
+            DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: []
             );
         } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
 
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Reconcile the out_of_sync_employees staging table against Greatday.
+     *
+     * This is the API counterpart of the app:out-of-sync-employee console command.
+     * Two directions are handled:
+     *  1. ADD    — an employee that exists in Greatday but has no matching greatday_emp_id
+     *              (nor email) on a non-terminal local employee is stored as out of sync.
+     *  2. PRUNE  — an existing out_of_sync_employees row whose Greatday employee is no longer
+     *              returned by Greatday at all is removed: it is neither a real ERP employee
+     *              nor present in Greatday anymore, so it is no longer "out of sync".
+     *
+     * Pruning only runs once every Greatday page has been collected (a partial fetch would
+     * make present employees look missing) and never runs on an empty Greatday set, so a
+     * failed/empty fetch can never wipe the whole staging table.
+     *
+     * @return array<string, mixed>
+     */
+    public function getOutOfSyncEmployees(): array
+    {
+        try {
+            $terminalStatus = EmploymentStatus::select('id')
+                ->where('is_terminal', true)
+                ->first();
+
+            if (! $terminalStatus) {
+                return errorResponse('Terminal status not found');
+            }
+
+            $limit = 100;
+            $page = 1;
+            $totalOutOfSync = 0;
+            $greatdayEmpIds = [];
+
+            while (true) {
+                $greatdayEmployees = $this->fetchGreatdayEmployees($limit, $page);
+
+                if (empty($greatdayEmployees)) {
+                    break;
+                }
+
+                $greatdayEmpIds = array_merge(
+                    $greatdayEmpIds,
+                    collect($greatdayEmployees)->pluck('empId')->all()
+                );
+
+                $totalOutOfSync += $this->storeOutOfSyncEmployees($greatdayEmployees, (int) $terminalStatus->id);
+
+                $page++;
+            }
+
+            $totalRemoved = $this->pruneMissingOutOfSyncEmployees($greatdayEmpIds);
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'total_out_of_sync' => $totalOutOfSync,
+                    'total_removed' => $totalRemoved,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Remove out_of_sync_employees rows whose Greatday employee is no longer present in Greatday.
+     *
+     * Guarded: an empty Greatday set (e.g. a failed or empty fetch) prunes nothing, so the whole
+     * staging table can never be wiped by a transient Greatday outage.
+     *
+     * @param  array<int, mixed>  $greatdayEmpIds  Every empId returned by Greatday this run
+     * @return int Number of staging rows removed
+     */
+    protected function pruneMissingOutOfSyncEmployees(array $greatdayEmpIds): int
+    {
+        if (empty($greatdayEmpIds)) {
+            return 0;
+        }
+
+        return OutOfSyncEmployee::whereNotIn('greatday_employee_id', $greatdayEmpIds)->delete();
+    }
+
+    /**
+     * Paginated staging list for the "Sync work information" dialog.
+     *
+     * Read-only: it never talks to Greatday, it only reads what the refresh
+     * (getOutOfSyncEmployees) already staged. Every row carries both the employee's own
+     * Greatday values and the office-wide defaults, so the dialog can pre-fill a field from
+     * the real value first and fall back to the default only when Greatday has nothing.
+     *
+     * @return array<string, mixed>
+     */
+    public function listOutOfSyncEmployees(): array
+    {
+        try {
+            $itemsPerPage = (int) (request('limit') ?? request('itemsPerPage') ?? config('app.pagination_length'));
+            $page = max((int) (request('page') ?? 1), 1);
+            $search = request('search');
+
+            $query = OutOfSyncEmployee::query()
+                ->with(['position.division:id,name'])
+                ->where('status', OutOfSyncStatus::OutOfSync);
+
+            if (filled($search)) {
+                $query->where(function ($builder) use ($search) {
+                    $builder->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('middle_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            }
+
+            $totalData = (clone $query)->count();
+
+            $employees = $query->orderBy('first_name')
+                ->skip(($page - 1) * $itemsPerPage)
+                ->take($itemsPerPage)
+                ->get();
+
+            $defaultData = $this->getDefaultGreatdayData();
+            $companies = GreatdayCompany::select('code', 'company_id')->get();
+
+            $output = $employees
+                ->map(fn (OutOfSyncEmployee $employee) => $this->formatOutOfSyncEmployee($employee, $companies, $defaultData))
+                ->all();
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Shape one staging row for the sync dialog.
+     *
+     * Keys stay snake_case to match the payload the dialog posts back to
+     * syncEmployeesFromGreatday — the form round-trips these names unchanged.
+     *
+     * @param  Collection<int, GreatdayCompany>  $companies
+     * @param  array<string, mixed>|null  $defaultData
+     * @return array<string, mixed>
+     */
+    protected function formatOutOfSyncEmployee(
+        OutOfSyncEmployee $employee,
+        Collection $companies,
+        ?array $defaultData
+    ): array {
+        $name = $this->buildFullName(
+            (string) $employee->first_name,
+            $employee->middle_name,
+            $employee->last_name
+        );
+
+        return [
+            'uid' => (string) $employee->id,
+            'employee_id' => $employee->employee_id,
+            'greatday_employee_id' => $employee->greatday_employee_id,
+            'name' => $name,
+            'email' => $employee->email,
+            'phone' => $employee->phone ?? '',
+            'department' => $employee->position?->division?->name ?? '',
+            'position' => $employee->position_name ?? '',
+            'position_code' => $employee->position_code ?? '',
+            'position_uid_database' => $employee->position?->uid ?? '',
+
+            // Display copies for the preview table and the dialog summary header.
+            'join_date' => $this->toReadableDate($employee->employment_start_date),
+            'end_working_date' => $this->toReadableDate($employee->end_working_date),
+
+            // <date-picker> copies. 'Y, F d' is the only format that component round-trips.
+            'defaut_format_join_date' => $this->toPickerDate($employee->employment_start_date),
+            'default_format_end_date' => $this->toPickerDate($employee->end_working_date),
+            'birth_day' => $this->toPickerDate($employee->birth_date),
+
+            // Personal fields Greatday does send.
+            'nickname' => $employee->nickname ?? '',
+            'id_number' => $employee->id_number ?? '',
+            'gender' => $employee->gender !== null ? (string) $employee->gender : '',
+            'birth_place' => $employee->birth_place ?? '',
+            'address' => $employee->address ?? '',
+
+            // Work fields — the employee's own values, not the office default.
+            'job_status' => $employee->job_status ?? '',
+            'company_code' => $companies->firstWhere('company_id', $employee->company_id)?->code ?? '',
+            'cost_center_code' => $employee->cost_center_code ?? '',
+            'grade_code' => $employee->grade_code ?? '',
+            'employment_status_code' => $employee->employment_status_code ?? '',
+            'work_location_code' => $employee->work_location_code ?? '',
+
+            // Bank. Greatday's account holder is authoritative; the full name is the fallback.
+            'bank_name' => $employee->bank_code ?? '',
+            'bank_account_number' => $employee->bank_account ?? '',
+            'bank_account_holder_name' => $employee->bank_account_name ?: $name,
+
+            // Office-wide fallbacks for everything Greatday never sends.
+            'default_data' => $defaultData,
+        ];
+    }
+
+    /**
+     * Office-wide employee defaults from the `employee_variable` setting.
+     *
+     * Greatday's /employees payload has no nationality, religion, marital status or timezone,
+     * and no supervisor/manager/shift pattern the ERP can use — those can only come from here.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function getDefaultGreatdayData(): ?array
+    {
+        $setting = $this->generalService->getSettingByKey('employee_variable');
+
+        if (empty($setting)) {
+            return null;
+        }
+
+        $decoded = json_decode($setting, true);
+
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        if (! empty($decoded['employment_status'])) {
+            $employmentStatus = GreatdayEmploymentStatus::where('code', $decoded['employment_status'])->first();
+
+            if ($employmentStatus) {
+                // The form's employment status field binds the whole object, not the code.
+                $decoded['employment_status_format'] = [
+                    'name' => $employmentStatus->name,
+                    'employment_status_code' => $decoded['employment_status'],
+                    'need_employment_date' => $employmentStatus->need_employment_date ?? '',
+                ];
+            }
+        }
+
+        // Timezone and nationality are lazy-loaded pickers: the default may sit on a page the
+        // dialog has not fetched, so the matching option travels with the default itself.
+        if (! empty($decoded['timezone_id'])) {
+            $timezone = GreatdayTimezone::where('timezone_id', $decoded['timezone_id'])->first();
+
+            if ($timezone) {
+                $decoded['timezone_data'] = [
+                    'timezone_id' => $timezone->timezone_id,
+                    'name' => "(GMT{$timezone->gmt_plus_min}{$timezone->gmt_ref_hour}:{$timezone->gmt_ref_minute}) {$timezone->name}",
+                ];
+            }
+        }
+
+        if (! empty($decoded['nationality'])) {
+            $nationality = GreatdayNationality::where('code', $decoded['nationality'])->first();
+
+            if ($nationality) {
+                $decoded['nationality_data'] = [
+                    'nationality_code' => $nationality->code,
+                    'name' => $nationality->name,
+                ];
+            }
+        }
+
+        // The supervisor/manager pickers are lazy-loaded, so they need the option itself —
+        // not just the uid — to be able to show the pre-selected employee.
+        foreach (['supervisor', 'manager'] as $key) {
+            if (empty($decoded[$key])) {
+                continue;
+            }
+
+            $employee = Employee::select('uid', 'name')->where('uid', $decoded[$key])->first();
+
+            if ($employee) {
+                $decoded["{$key}_data"] = [
+                    'name' => $employee->name,
+                    'uid' => $employee->uid,
+                ];
+            }
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * Human-readable date for read-only display, e.g. "25 March 2024".
+     */
+    protected function toReadableDate(?Carbon $date): string
+    {
+        return $date ? $date->format('d F Y') : '';
+    }
+
+    /**
+     * Date in the only format the shared <date-picker> component round-trips, e.g. "2024, March 25".
+     */
+    protected function toPickerDate(?Carbon $date): string
+    {
+        return $date ? $date->format('Y, F d') : '';
+    }
+
+    /**
+     * Bulk-register out-of-sync Greatday employees into the ERP.
+     *
+     * For each selected employee this creates the ERP Employee record, creates the linked User
+     * account (with role + activation email via UserService::mainServiceStoreUser), and flips the
+     * source out_of_sync_employees row to Synced.
+     *
+     * The whole batch is all-or-nothing: any failure (e.g. an unresolved position code) rolls back
+     * every employee. An employee that already exists in the ERP (by email, employee_id or Greatday
+     * id) is skipped — not recreated — but its out_of_sync row is still marked Synced.
+     *
+     * @return array<string, mixed>
+     */
+    public function syncEmployeesFromGreatday(BulkSyncEmployeeData $data): array
+    {
+        DB::beginTransaction();
+        try {
+            $synced = [];
+            $skipped = [];
+
+            foreach ($data->employees as $item) {
+                $existing = Employee::where('email', $item->email)
+                    ->orWhere('employee_id', $item->employee_no)
+                    ->orWhere('greatday_emp_id', $item->greatday_employee_id)
+                    ->first();
+
+                if ($existing) {
+                    $this->markOutOfSyncAsSynced($item->out_of_sync_id);
+                    $skipped[] = $item->email;
+
+                    continue;
+                }
+
+                $position = PositionBackup::where('uid', $item->position)->first();
+
+                if (! $position) {
+                    throw new EmployeeException(__('notification.positionNotFound', [
+                        'position' => $item->position,
+                        'email' => $item->email,
+                    ]));
+                }
+
+                $employmentStatus = EmploymentStatus::where('code', $item->employment_status)->first();
+                $boss = Employee::where('uid', $item->supervisor)->first();
+
+                $employee = $this->repo->store([
+                    'name' => $this->buildFullName($item->first_name, $item->middle_name, $item->last_name),
+                    'nickname' => $item->nickname,
+                    'email' => $item->email,
+                    'employee_id' => $item->employee_no,
+                    'id_number' => $item->id_number,
+                    'phone' => $this->normalizePhone($item->mobile_phone),
+                    'address' => $item->address,
+                    'date_of_birth' => $this->parseFormDate($item->birth_day),
+                    'place_of_birth' => $item->birth_place,
+                    'gender' => $this->mapGender($item->gender),
+                    'religion' => $this->resolveReligion($item->religion),
+                    'martial_status' => $this->mapMaritalStatus($item->marital_status),
+                    'position_id' => $position->id,
+                    'employment_status_id' => $employmentStatus?->id,
+                    'boss_id' => $boss?->id,
+                    'status' => Status::Permanent->value,
+                    'salary_type' => SalaryType::Monthly->value,
+                    'join_date' => $this->parseFormDate($item->join_date),
+                    'end_date' => ! empty($item->end_date) ? $this->parseFormDate($item->end_date) : null,
+                    'bank_detail' => [
+                        [
+                            'bank_name' => $item->bank_name,
+                            'account_number' => $item->bank_account_number,
+                            'account_holder_name' => $item->bank_account_holder_name,
+                            'is_active' => true,
+                        ],
+                    ],
+                    'avatar_color' => $this->generalService->generateRandomColor($item->email),
+
+                    // greatday raw values
+                    'greatday_emp_id' => $item->greatday_employee_id,
+                    'greatday_nationality' => $item->nationality,
+                    'greatday_job_grade' => $item->job_grade,
+                    'greatday_cost_center' => $item->cost_center,
+                    'greatday_employment_status' => $item->employment_status,
+                    'greatday_work_location' => $item->work_location,
+                    'greatday_religion' => $item->religion,
+                    'greatday_timezone' => $item->timezone_id,
+                    'greatday_shift_pattern' => $item->shift_pattern,
+                    'greatday_job_status' => $item->job_status,
+                    'greatday_company' => $item->company_id,
+                    'greatday_marital_status' => $item->marital_status,
+                ]);
+
+                // create the linked user account, assign the role and send the activation email
+                $this->userService->mainServiceStoreUser([
+                    'email' => $item->email,
+                    'password' => generateRandomPassword(10),
+                    'is_external_user' => 0,
+                    'employee_id' => $employee->uid,
+                    'role_id' => $item->role,
+                ]);
+
+                $this->markOutOfSyncAsSynced($item->out_of_sync_id);
+
+                $synced[] = $item->email;
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'total_synced' => count($synced),
+                    'total_skipped' => count($skipped),
+                    'synced' => $synced,
+                    'skipped' => $skipped,
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Flag an out_of_sync_employees row as resolved once its employee exists in the ERP.
+     */
+    protected function markOutOfSyncAsSynced(int $outOfSyncId): void
+    {
+        OutOfSyncEmployee::where('id', $outOfSyncId)->update([
+            'status' => OutOfSyncStatus::Synced,
+        ]);
+    }
+
+    /**
+     * Parse a date coming from the sync form into Y-m-d.
+     *
+     * The shared <date-picker> emits "1996, May 24". PHP's parser silently drops the leading
+     * year in that shape — Carbon::parse('1996, May 24') resolves to the CURRENT year — so the
+     * picker format is matched explicitly first, before falling back to the loose parser that
+     * still handles the read-only display copies such as "25 March 2024".
+     */
+    protected function parseFormDate(string $value): string
+    {
+        foreach (['Y, F d', 'Y, F j'] as $format) {
+            try {
+                return Carbon::createFromFormat($format, $value)->format('Y-m-d');
+            } catch (\Throwable $th) {
+                continue;
+            }
+        }
+
+        return Carbon::parse($value)->format('Y-m-d');
+    }
+
+    /**
+     * Join the Greatday name parts into a single ERP employee name.
+     */
+    protected function buildFullName(string $firstName, ?string $middleName, ?string $lastName): string
+    {
+        return trim(preg_replace('/\s+/', ' ', implode(' ', array_filter([$firstName, $middleName, $lastName]))));
+    }
+
+    /**
+     * Map the Greatday gender code to an ERP gender value (1 = Male, 0 = Female).
+     */
+    protected function mapGender(string $code): ?string
+    {
+        return match ($code) {
+            '1' => Gender::Male->value,
+            '0' => Gender::Female->value,
+            default => null,
+        };
+    }
+
+    /**
+     * Map the Greatday marital code to an ERP marital status (0 = Single, 1 = Married,
+     * 2 = Widow, 3 = Widower). The ERP only models single/married, so widow/widower —
+     * who are not currently married — are recorded as single.
+     */
+    protected function mapMaritalStatus(string $code): string
+    {
+        return $code === '1' ? MartialStatus::Married->value : MartialStatus::Single->value;
+    }
+
+    /**
+     * Map a religion name (any case, e.g. "ISLAM") to an ERP religion value, defaulting to
+     * Islam when unknown. Religion::generateReligion() returns the string '-' (not null) for
+     * unrecognised values.
+     */
+    protected function resolveReligion(string $religion): string
+    {
+        $resolved = Religion::generateReligion(ucfirst(strtolower(trim($religion))));
+
+        return $resolved instanceof Religion ? $resolved->value : Religion::Islam->value;
+    }
+
+    /**
+     * Preview field-level changes for employees that exist in both Greatday and the ERP.
+     *
+     * Read-only: matches by greatday_emp_id and returns, per employee, only the fields whose
+     * incoming Greatday value differs from the ERP value (as display strings). Mutates nothing.
+     *
+     * @return array<string, mixed>
+     */
+    public function previewEmployeeChanges(): array
+    {
+        try {
+            $greatdayEmployees = $this->fetchAllGreatdayEmployees();
+            $maps = $this->buildChangeSyncMaps();
+            $specs = $this->changeSyncFieldSpecs($maps);
+
+            $erpEmployees = Employee::with('resignData:id,employee_id,resign_date')
+                ->whereNotNull('greatday_emp_id')
+                ->get()
+                ->keyBy('greatday_emp_id');
+
+            $changed = [];
+
+            foreach ($greatdayEmployees as $greatday) {
+                $empId = $greatday['empId'] ?? null;
+                $employee = $empId ? $erpEmployees->get($empId) : null;
+
+                if (! $employee) {
+                    continue;
+                }
+
+                $changes = $this->collectEmployeeChanges($employee, $greatday, $specs);
+
+                // Greatday has ended their employment but the ERP still has them working —
+                // applying this employee also files the ERP resignation.
+                $resignDate = $this->isActiveInErp($employee)
+                    ? $this->greatdayResignDate($greatday, $maps)
+                    : null;
+                $resigning = $resignDate !== null;
+
+                // A resignation is worth surfacing on its own, even when no field differs.
+                if (empty($changes) && ! $resigning) {
+                    continue;
+                }
+
+                // A division or supervisor move is blocked while the employee still holds active tasks.
+                $guardedChange = collect($changes)->contains(
+                    fn ($change) => in_array($change['field'], self::TASK_GUARDED_CHANGE_FIELDS, true)
+                );
+                $blocked = $guardedChange && $this->hasActiveProductionTasks($employee);
+                $blockedReason = $blocked
+                    ? __('notification.employeeActiveTaskDivisionBlock', ['name' => $employee->name])
+                    : null;
+
+                // Resigning someone mid-task is refused by mainResignLogic, so block it here
+                // rather than letting the whole all-or-nothing batch fail at write time.
+                if (! $blocked && $resigning && $this->hasOngoingTasksBlockingResign($employee)) {
+                    $blocked = true;
+                    $blockedReason = __('notification.employeeHasOngoingTasks');
+                }
+
+                $changed[] = [
+                    'employee_uid' => $employee->uid,
+                    'greatday_emp_id' => $empId,
+                    'name' => $employee->name,
+                    'blocked' => $blocked,
+                    'blocked_reason' => $blockedReason,
+                    'resigning' => $resigning,
+                    'resign_date' => $resignDate,
+                    'changes' => $changes,
+                ];
+            }
+
+            return generalResponse(
+                message: 'Success',
+                data: ['changed' => $changed]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Apply the confirmed Greatday → ERP employee changes.
+     *
+     * All-or-nothing: re-fetches Greatday as the source of truth and, for each confirmed empId,
+     * writes every changed field. Any failure rolls back the whole batch. The linked User email
+     * is intentionally NOT touched here (email is out of this feature's scope).
+     *
+     * @return array<string, mixed>
+     */
+    public function applyEmployeeChanges(EmployeeChangeSyncData $data): array
+    {
+        try {
+            // Fetch external data + build lookups BEFORE opening the transaction, so the DB
+            // transaction is never held open during the (slow) Greatday HTTP call.
+            $greatdayEmployees = collect($this->fetchAllGreatdayEmployees())->keyBy('empId');
+            $maps = $this->buildChangeSyncMaps();
+            $specs = $this->changeSyncFieldSpecs($maps);
+
+            // Preload every confirmed employee in a single query (no per-row lookup).
+            $employees = Employee::with('resignData:id,employee_id,resign_date')
+                ->whereIn('greatday_emp_id', $data->employees)
+                ->get()
+                ->keyBy('greatday_emp_id');
+
+            $updated = DB::transaction(function () use ($data, $greatdayEmployees, $employees, $specs, $maps) {
+                $done = [];
+                $resigned = [];
+
+                foreach ($data->employees as $empId) {
+                    $greatday = $greatdayEmployees->get($empId);
+                    $employee = $employees->get($empId);
+
+                    if (! $greatday || ! $employee) {
+                        throw new EmployeeException(__('notification.greatdayEmployeeNotFound', ['id' => $empId]));
+                    }
+
+                    $update = [];
+                    $guardedChange = false;
+                    foreach ($specs as $spec) {
+                        if (($spec['changed'])($employee, $greatday)) {
+                            if (in_array($spec['field'], self::TASK_GUARDED_CHANGE_FIELDS, true)) {
+                                $guardedChange = true;
+                            }
+                            $update = array_merge($update, ($spec['columns'])($greatday));
+                        }
+                    }
+
+                    // guard: a division / supervisor move cannot be applied while the employee has active tasks
+                    if ($guardedChange && $this->hasActiveProductionTasks($employee)) {
+                        throw new EmployeeException(__('notification.employeeActiveTaskDivisionBlock', ['name' => $employee->name]));
+                    }
+
+                    if (! empty($update)) {
+                        $this->repo->update($update, $employee->uid);
+                    }
+
+                    // Greatday ended their employment: file the ERP resignation too. Runs AFTER
+                    // the field writes so turnOffEmployee's terminal status and end date win over
+                    // whatever employment status Greatday still reports.
+                    $resignDate = $this->isActiveInErp($employee)
+                        ? $this->greatdayResignDate($greatday, $maps)
+                        : null;
+
+                    if ($resignDate !== null) {
+                        $this->resignFromGreatdaySync($employee, $resignDate);
+                        $resigned[] = $empId;
+                    }
+
+                    $done[] = $empId;
+                }
+
+                return ['done' => $done, 'resigned' => $resigned];
+            });
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'total_updated' => count($updated['done']),
+                    'updated' => $updated['done'],
+                    'total_resigned' => count($updated['resigned']),
+                    'resigned' => $updated['resigned'],
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * File an ERP resignation raised by the Greatday change sync.
+     *
+     * Goes through mainResignLogic so the whole resignation path is honoured — the resignation
+     * row, the terminal employment status, the withdrawn login, the office-email queue and the
+     * notifications — rather than just flipping columns. sync_greatday stays false: Greatday is
+     * where this resignation came from, pushing it back would be an echo.
+     *
+     * mainResignLogic reports business refusals (ongoing tasks, an existing resignation record)
+     * as a return value instead of an exception, so it is converted into one here — otherwise a
+     * refusal would pass silently and break the all-or-nothing contract of the batch.
+     *
+     * @throws EmployeeException
+     */
+    protected function resignFromGreatdaySync(Employee $employee, string $resignDate): void
+    {
+        $result = $this->mainResignLogic(
+            data: new ResignData(
+                resign_reason_code: self::GREATDAY_SYNC_RESIGN_REASON,
+                resign_date: $resignDate,
+                remark: __('notification.resignSyncedFromGreatday'),
+                sync_greatday: false,
+            ),
+            employeeUid: $employee->uid,
+            notifyAfterCommit: true
+        );
+
+        if (! empty($result['error'])) {
+            throw new EmployeeException(
+                $result['message'] ?? __('notification.employeeResignSyncFailed', ['name' => $employee->name])
+            );
+        }
+    }
+
+    /**
+     * The date Greatday says this employee left, or null when Greatday still shows them working.
+     *
+     * Two independent signals count as "left": an employment end date, or an employment status
+     * flagged terminal in the ERP's Greatday status master. The end date wins when both are
+     * present; a terminal status with no date resigns them as of today.
+     *
+     * @param  array<string, mixed>  $greatday
+     * @param  array<string, mixed>  $maps
+     */
+    protected function greatdayResignDate(array $greatday, array $maps): ?string
+    {
+        $endDate = $this->greatdayDate($greatday['endDate'] ?? null)
+            ?? $this->greatdayDate($greatday['employmentEndDate'] ?? null);
+
+        if ($endDate !== null) {
+            return $endDate;
+        }
+
+        $statusId = $maps['employmentByCode'][$greatday['employmentStatusCode'] ?? ''] ?? null;
+
+        if ($statusId !== null && in_array($statusId, $maps['terminalEmploymentStatusIds'] ?? [], true)) {
+            return Carbon::now()->format('Y-m-d');
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether the ERP still treats this employee as working, i.e. the resignation has not been
+     * recorded yet. An employee already flagged inactive or already holding a resignation row is
+     * not re-resigned — mainResignLogic would reject the duplicate anyway.
+     */
+    protected function isActiveInErp(Employee $employee): bool
+    {
+        return $employee->status !== Status::Inactive
+            && $employee->resignData === null;
+    }
+
+    /**
+     * Mirror of the ongoing-task guard inside mainResignLogic, so the preview can block an
+     * employee up front instead of letting the whole apply batch fail at write time.
+     */
+    protected function hasOngoingTasksBlockingResign(Employee $employee): bool
+    {
+        return $this->taskRepo->list(
+            select: 'id',
+            whereHas: [
+                [
+                    'relation' => 'pics',
+                    'query' => "employee_id = {$employee->id}",
+                ],
+            ],
+            where: 'status = '.TaskStatus::OnProgress->value
+        )->isNotEmpty();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $specs
+     * @return array<int, array<string, mixed>>
+     */
+    protected function collectEmployeeChanges(Employee $employee, array $greatday, array $specs): array
+    {
+        $changes = [];
+
+        foreach ($specs as $spec) {
+            if (($spec['changed'])($employee, $greatday)) {
+                $changes[] = [
+                    'field' => $spec['field'],
+                    'label' => $spec['label'],
+                    'sensitive' => $spec['sensitive'] ?? false,
+                    'from' => ($spec['from'])($employee),
+                    'to' => ($spec['to'])($greatday),
+                ];
+            }
+        }
+
+        return $changes;
+    }
+
+    /**
+     * Fetch every Greatday employee across all pages (stops on the first empty page).
+     *
+     * @return array<int, array<string, mixed>>
+     *
+     * @throws \RuntimeException when any page fails to load
+     */
+    protected function fetchAllGreatdayEmployees(): array
+    {
+        $page = 1;
+        $all = [];
+
+        while (true) {
+            $response = $this->greatdayService->authedPost('/employees', [
+                'page' => $page,
+                'limit' => 100,
+            ]);
+
+            if ($response->failed() || ! isset($response->json()['data'])) {
+                throw new \RuntimeException("Greatday employee fetch failed on page {$page}.");
+            }
+
+            $data = $response->json()['data'];
+
+            if (empty($data)) {
+                break;
+            }
+
+            $all = array_merge($all, $data);
+            $page++;
+        }
+
+        return $all;
+    }
+
+    /**
+     * Preload the lookup maps used to resolve/display relational fields during a change sync.
+     *
+     * @return array<string, array<int|string, mixed>>
+     */
+    protected function buildChangeSyncMaps(): array
+    {
+        $positions = PositionBackup::with('division:id,name')->select('id', 'name', 'greatday_code', 'division_id')->get();
+        $employmentStatuses = EmploymentStatus::select('id', 'name', 'code', 'is_terminal')->get();
+        $employees = Employee::select('id', 'name', 'greatday_emp_id')->get();
+        $companies = GreatdayCompany::select('company_id', 'code', 'name')->get();
+
+        return [
+            'positionsByCode' => $positions->whereNotNull('greatday_code')->keyBy('greatday_code')->map->id->toArray(),
+            'positionsById' => $positions->keyBy('id')->map->name->toArray(),
+            'divisionByPositionId' => $positions->keyBy('id')->map(fn ($p) => $p->division?->name)->toArray(),
+            'employmentByCode' => $employmentStatuses->whereNotNull('code')->keyBy('code')->map->id->toArray(),
+            'employmentById' => $employmentStatuses->keyBy('id')->map->name->toArray(),
+            'terminalEmploymentStatusIds' => $employmentStatuses->where('is_terminal', true)->pluck('id')->all(),
+            'employeesByGreatdayEmpId' => $employees->whereNotNull('greatday_emp_id')->keyBy('greatday_emp_id')->map->id->toArray(),
+            'employeesById' => $employees->keyBy('id')->map->name->toArray(),
+
+            // Greatday master data (code -> human readable name) for display
+            'jobGradeByCode' => GreatdayJobGrade::pluck('name', 'code')->toArray(),
+            'costCenterByCode' => GreatdayCostCenter::pluck('name_en', 'code')->toArray(),
+            'workLocationByCode' => GreatdayWorkLocation::pluck('name', 'code')->toArray(),
+            'jobStatusByCode' => GreatdayJobStatus::pluck('name', 'code')->toArray(),
+
+            // employees.greatday_company holds either the numeric company_id (35532) or the
+            // company code ("sfgo11677"), so both forms must resolve to the same name / canonical id.
+            'companyNameByKey' => $companies->reduce(function (array $carry, GreatdayCompany $company): array {
+                $carry[(string) $company->company_id] = $company->name;
+
+                if (! empty($company->code)) {
+                    $carry[(string) $company->code] = $company->name;
+                }
+
+                return $carry;
+            }, []),
+            'companyIdByCode' => $companies->whereNotNull('code')
+                ->mapWithKeys(fn ($company) => [(string) $company->code => (string) $company->company_id])
+                ->toArray(),
+        ];
+    }
+
+    /**
+     * The field specs that drive both the change diff and the update payload.
+     *
+     * Each spec: changed(emp, gd):bool | from(emp):string | to(gd):string | columns(gd):array.
+     * A field is only ever offered when Greatday provides a non-null incoming value, so a missing
+     * Greatday value never clears an existing ERP value.
+     *
+     * @param  array<string, array<int|string, mixed>>  $maps
+     * @return array<int, array<string, mixed>>
+     */
+    protected function changeSyncFieldSpecs(array $maps): array
+    {
+        $specs = [];
+
+        // simple 1:1 fields: [field, label, erp column, greatday key, code->name map (optional)].
+        // The comparison + stored value stays on the raw code; only display is resolved to a name.
+        $simple = [
+            ['nickname', 'Nickname', 'nickname', 'nickName', null],
+            ['id_number', 'ID Number', 'id_number', 'identityNo', null],
+            ['address', 'Address', 'address', 'address', null],
+            ['place_of_birth', 'Place of Birth', 'place_of_birth', 'birthPlace', null],
+            ['employee_id', 'Employee No', 'employee_id', 'empNo', null],
+            ['job_grade', 'Job Grade', 'greatday_job_grade', 'gradeCode', $maps['jobGradeByCode']],
+            ['cost_center', 'Cost Center', 'greatday_cost_center', 'costCode', $maps['costCenterByCode']],
+            ['work_location', 'Work Location', 'greatday_work_location', 'worklocationCode', $maps['workLocationByCode']],
+            ['job_status', 'Job Status', 'greatday_job_status', 'jobStatus', $maps['jobStatusByCode']],
+        ];
+
+        foreach ($simple as [$field, $label, $column, $key, $displayMap]) {
+            $specs[] = [
+                'field' => $field,
+                'label' => $label,
+                'sensitive' => false,
+                'changed' => fn (Employee $e, array $gd): bool => $this->normalizeValue($gd[$key] ?? null) !== null
+                    && $this->normalizeValue($gd[$key] ?? null) !== $this->normalizeValue($e->{$column}),
+                'from' => fn (Employee $e): string => $this->displayCode($e->{$column}, $displayMap),
+                'to' => fn (array $gd): string => $this->displayCode($gd[$key] ?? null, $displayMap),
+                'columns' => fn (array $gd): array => [$column => $this->normalizeValue($gd[$key] ?? null)],
+            ];
+        }
+
+        // company: the ERP column may hold the company code while Greatday always sends the numeric
+        // company_id, so both sides are canonicalized to the id before comparing and resolved to the
+        // company name for display.
+        $specs[] = [
+            'field' => 'company',
+            'label' => 'Company',
+            'sensitive' => false,
+            'changed' => fn (Employee $e, array $gd): bool => ($to = $this->canonicalCompanyId($gd['companyId'] ?? null, $maps)) !== null
+                && $to !== $this->canonicalCompanyId($e->greatday_company, $maps),
+            'from' => fn (Employee $e): string => $this->displayCode($e->greatday_company, $maps['companyNameByKey']),
+            'to' => fn (array $gd): string => $this->displayCode($gd['companyId'] ?? null, $maps['companyNameByKey']),
+            'columns' => fn (array $gd): array => ['greatday_company' => $this->normalizeValue($gd['companyId'] ?? null)],
+        ];
+
+        // date fields: [field, label, column, greatday key]
+        $dates = [
+            ['date_of_birth', 'Date of Birth', 'date_of_birth', 'birthDate'],
+            ['join_date', 'Join Date', 'join_date', 'startDate'],
+            ['end_date', 'End Date', 'end_date', 'endDate'],
+        ];
+
+        foreach ($dates as [$field, $label, $column, $key]) {
+            $specs[] = [
+                'field' => $field,
+                'label' => $label,
+                'sensitive' => false,
+                'changed' => fn (Employee $e, array $gd): bool => $this->greatdayDate($gd[$key] ?? null) !== null
+                    && $this->greatdayDate($gd[$key] ?? null) !== ($e->{$column} ? Carbon::parse($e->{$column})->format('Y-m-d') : null),
+                'from' => fn (Employee $e): string => $e->{$column} ? Carbon::parse($e->{$column})->format('Y-m-d') : '-',
+                'to' => fn (array $gd): string => $this->greatdayDate($gd[$key] ?? null) ?? '-',
+                'columns' => fn (array $gd): array => [$column => $this->greatdayDate($gd[$key] ?? null)],
+            ];
+        }
+
+        // phone (normalized to the ERP format: no leading 0, no country code)
+        $specs[] = [
+            'field' => 'phone',
+            'label' => 'Phone',
+            'sensitive' => true,
+            'changed' => fn (Employee $e, array $gd): bool => ($to = $this->normalizePhone($gd['phone'] ?? null)) !== null
+                && $to !== $this->normalizePhone($e->phone),
+            'from' => fn (Employee $e): string => (string) ($this->normalizePhone($e->phone) ?? '-'),
+            'to' => fn (array $gd): string => (string) ($this->normalizePhone($gd['phone'] ?? null) ?? '-'),
+            'columns' => fn (array $gd): array => ['phone' => $this->normalizePhone($gd['phone'] ?? null)],
+        ];
+
+        // name (concatenated)
+        $specs[] = [
+            'field' => 'name',
+            'label' => 'Name',
+            'sensitive' => false,
+            'changed' => fn (Employee $e, array $gd): bool => $this->normalizeValue($this->greatdayFullName($gd)) !== null
+                && $this->normalizeValue($this->greatdayFullName($gd)) !== $this->normalizeValue($e->name),
+            'from' => fn (Employee $e): string => (string) ($e->name ?? '-'),
+            'to' => fn (array $gd): string => $this->greatdayFullName($gd) ?: '-',
+            'columns' => fn (array $gd): array => ['name' => $this->greatdayFullName($gd)],
+        ];
+
+        // gender (coded -> enum, displayed as label)
+        $specs[] = [
+            'field' => 'gender',
+            'label' => 'Gender',
+            'sensitive' => false,
+            'changed' => fn (Employee $e, array $gd): bool => ($to = $this->mapGender((string) ($gd['gender'] ?? ''))) !== null
+                && $to !== $e->gender?->value,
+            'from' => fn (Employee $e): string => $e->gender ? Gender::getGender($e->gender->value) : '-',
+            'to' => fn (array $gd): string => Gender::getGender($this->mapGender((string) ($gd['gender'] ?? '')) ?? ''),
+            'columns' => fn (array $gd): array => ['gender' => $this->mapGender((string) ($gd['gender'] ?? ''))],
+        ];
+
+        // position (posCode -> PositionBackup)
+        $specs[] = [
+            'field' => 'position',
+            'label' => 'Position',
+            'sensitive' => true,
+            'changed' => fn (Employee $e, array $gd): bool => ($to = $maps['positionsByCode'][$gd['posCode'] ?? ''] ?? null) !== null
+                && $to !== $e->position_id,
+            'from' => fn (Employee $e): string => $maps['positionsById'][$e->position_id] ?? '-',
+            'to' => fn (array $gd): string => (string) ($gd['posNameEn'] ?? '-'),
+            'columns' => fn (array $gd): array => ['position_id' => $maps['positionsByCode'][$gd['posCode'] ?? ''] ?? null],
+        ];
+
+        // division (derived from the position's division; no own column — position_id carries it).
+        // Display + guard only: a division move is blocked when the employee has active tasks.
+        $specs[] = [
+            'field' => 'division',
+            'label' => 'Division',
+            'sensitive' => true,
+            'changed' => function (Employee $e, array $gd) use ($maps): bool {
+                $to = $this->greatdayDivisionName($gd, $maps);
+
+                return $to !== null && $to !== ($maps['divisionByPositionId'][$e->position_id] ?? null);
+            },
+            'from' => fn (Employee $e): string => $maps['divisionByPositionId'][$e->position_id] ?? '-',
+            'to' => fn (array $gd): string => $this->greatdayDivisionName($gd, $maps) ?? '-',
+            'columns' => fn (array $gd): array => [], // derived from position_id; nothing to write directly
+        ];
+
+        // boss (spvParent -> employee.greatday_emp_id); never cleared when unresolved
+        $specs[] = [
+            'field' => 'boss',
+            'label' => 'Supervisor',
+            'sensitive' => true,
+            'changed' => function (Employee $e, array $gd) use ($maps): bool {
+                $spv = $gd['spvParent'] ?? null;
+                if (empty($spv)) {
+                    return false;
+                }
+                $to = $maps['employeesByGreatdayEmpId'][$spv] ?? null;
+
+                return $to !== null && $to !== $e->boss_id;
+            },
+            'from' => fn (Employee $e): string => $e->boss_id ? ($maps['employeesById'][$e->boss_id] ?? '-') : '-',
+            'to' => function (array $gd) use ($maps): string {
+                $bossId = $maps['employeesByGreatdayEmpId'][$gd['spvParent'] ?? ''] ?? null;
+
+                return $bossId ? ($maps['employeesById'][$bossId] ?? '-') : (string) ($gd['spvParent'] ?? '-');
+            },
+            'columns' => fn (array $gd): array => ['boss_id' => $maps['employeesByGreatdayEmpId'][$gd['spvParent'] ?? ''] ?? null],
+        ];
+
+        // employment status (code -> EmploymentStatus, also stores the raw code)
+        $specs[] = [
+            'field' => 'employment_status',
+            'label' => 'Employment Status',
+            'sensitive' => false,
+            'changed' => function (Employee $e, array $gd) use ($maps): bool {
+                $code = $gd['employmentStatusCode'] ?? null;
+                if (empty($code)) {
+                    return false;
+                }
+                $to = $maps['employmentByCode'][$code] ?? null;
+
+                return $to !== null && $to !== $e->employment_status_id;
+            },
+            'from' => fn (Employee $e): string => $e->employment_status_id ? ($maps['employmentById'][$e->employment_status_id] ?? '-') : '-',
+            'to' => fn (array $gd): string => (string) ($gd['employmentStatus'] ?? $gd['employmentStatusCode'] ?? '-'),
+            'columns' => fn (array $gd): array => [
+                'employment_status_id' => $maps['employmentByCode'][$gd['employmentStatusCode'] ?? ''] ?? null,
+                'greatday_employment_status' => $gd['employmentStatusCode'] ?? null,
+            ],
+        ];
+
+        // bank account (bankCode/bankAccount/bankAccountName -> bank_detail json)
+        $specs[] = [
+            'field' => 'bank',
+            'label' => 'Bank Account',
+            'sensitive' => false,
+            'changed' => function (Employee $e, array $gd): bool {
+                $to = $this->greatdayBankAccount($gd);
+                if ($to === null) {
+                    return false;
+                }
+
+                return $this->bankSignature($this->firstBankDetail($e)) !== $this->bankSignature($to);
+            },
+            'from' => fn (Employee $e): string => $this->bankDisplay($this->firstBankDetail($e)),
+            'to' => fn (array $gd): string => $this->bankDisplay($this->greatdayBankAccount($gd)),
+            'columns' => fn (array $gd): array => ['bank_detail' => [$this->greatdayBankAccount($gd)]],
+        ];
+
+        return $specs;
+    }
+
+    protected function greatdayFullName(array $greatday): string
+    {
+        return $this->buildFullName(
+            $greatday['firstName'] ?? '',
+            $greatday['middleName'] ?? null,
+            $greatday['lastName'] ?? null
+        );
+    }
+
+    /**
+     * The division name the Greatday position (posCode) maps to, or null when unresolvable.
+     *
+     * @param  array<string, mixed>  $greatday
+     * @param  array<string, array<int|string, mixed>>  $maps
+     */
+    protected function greatdayDivisionName(array $greatday, array $maps): ?string
+    {
+        $positionId = $maps['positionsByCode'][$greatday['posCode'] ?? ''] ?? null;
+
+        return $positionId !== null ? ($maps['divisionByPositionId'][$positionId] ?? null) : null;
+    }
+
+    /**
+     * Whether the employee currently holds a production task that is waiting approval or in
+     * progress. Used to block a division move that would strand active work.
+     */
+    protected function hasActiveProductionTasks(Employee $employee): bool
+    {
+        return $employee->tasks()
+            ->whereIn('status', [
+                TaskPicStatus::Approved->value,
+                TaskPicStatus::WaitingApproval->value,
+                TaskPicStatus::Revise->value,
+            ])
+            ->exists();
+    }
+
+    /**
+     * Build an ERP bank_detail row from the Greatday bank fields, or null when Greatday has none.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function greatdayBankAccount(array $greatday): ?array
+    {
+        if (empty($greatday['bankAccount']) && empty($greatday['bankCode'])) {
+            return null;
+        }
+
+        return [
+            'bank_name' => $greatday['bankCode'] ?? null,
+            'account_number' => $greatday['bankAccount'] ?? null,
+            'account_holder_name' => $greatday['bankAccountName'] ?? null,
+            'is_active' => true,
+        ];
+    }
+
+    /**
+     * The employee's first bank_detail row as an array, tolerant of a stored value that is a
+     * JSON string (or double-encoded JSON) rather than an already-cast array.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function firstBankDetail(Employee $employee): ?array
+    {
+        $detail = $employee->bank_detail;
+
+        while (is_string($detail)) {
+            $detail = json_decode($detail, true);
+        }
+
+        return is_array($detail) ? ($detail[0] ?? null) : null;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $bank
+     */
+    protected function bankSignature(?array $bank): ?string
+    {
+        if (empty($bank)) {
+            return null;
+        }
+
+        return ($bank['bank_name'] ?? '').'|'.($bank['account_number'] ?? '');
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $bank
+     */
+    protected function bankDisplay(?array $bank): string
+    {
+        if (empty($bank)) {
+            return '-';
+        }
+
+        return trim(($bank['bank_name'] ?? '').' '.($bank['account_number'] ?? ''));
+    }
+
+    /**
+     * Normalize a phone number to the ERP canonical format: digits only, with the leading
+     * zero(s) and the Indonesian country code (62) stripped.
+     * e.g. "08579333333", "+628579333333", "628579333333" all become "8579333333".
+     */
+    protected function normalizePhone(?string $phone): ?string
+    {
+        if ($phone === null) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $phone);
+
+        // Strip leading zero(s) and the 62 country code repeatedly — source data is sometimes
+        // double/triple prefixed (e.g. "+626285795327357" = +62 + 62 + 85795327357).
+        do {
+            $before = $digits;
+            $digits = ltrim($digits, '0');
+
+            if (str_starts_with($digits, '62')) {
+                $digits = substr($digits, 2);
+            }
+        } while ($digits !== $before);
+
+        return $digits === '' ? null : $digits;
+    }
+
+    /**
+     * Resolve a code to its human-readable name via a code->name map for display, falling back
+     * to the raw code when the master data has no match, and to '-' when empty.
+     *
+     * @param  array<string, string>|null  $map
+     */
+    protected function displayCode(mixed $value, ?array $map): string
+    {
+        if ($value === null || $value === '') {
+            return '-';
+        }
+
+        $value = (string) $value;
+
+        return $map[$value] ?? $value;
+    }
+
+    /**
+     * Canonicalize a company reference to its numeric company_id, so a stored company code and the
+     * id Greatday sends for the same company never look like a change.
+     *
+     * @param  array<string, array<int|string, mixed>>  $maps
+     */
+    protected function canonicalCompanyId(mixed $value, array $maps): ?string
+    {
+        $value = $this->normalizeValue($value);
+
+        if ($value === null) {
+            return null;
+        }
+
+        return (string) ($maps['companyIdByCode'][$value] ?? $value);
+    }
+
+    /**
+     * Normalize a scalar for comparison: trim, and treat empty string as null.
+     */
+    protected function normalizeValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * Format a Greatday date string to Y-m-d, or null when empty.
+     */
+    protected function greatdayDate(?string $value): ?string
+    {
+        return ! empty($value) ? Carbon::parse($value)->format('Y-m-d') : null;
+    }
+
+    /**
+     * Fetch a single page of employees from the Greatday API.
+     *
+     * @return array<int, array<string, mixed>> Empty array when there is no more data to process.
+     */
+    protected function fetchGreatdayEmployees(int $limit, int $page): array
+    {
+        $response = $this->greatdayService->authedPost('/employees', [
+            'page' => $page,
+            'limit' => $limit,
+        ]);
+
+        if (! $this->isGreatdayResponseSuccess($response)) {
+            return [];
+        }
+
+        return $response->json()['data'];
+    }
+
+    /**
+     * Store the Greatday employees that are missing from the local database into out_of_sync_employees.
+     *
+     * @param  array<int, array<string, mixed>>  $greatdayEmployees
+     * @return int Number of out of sync records processed on this page.
+     */
+    protected function storeOutOfSyncEmployees(array $greatdayEmployees, int $terminalStatusId): int
+    {
+        $localGreatdayEmpId = Employee::selectRaw('id,employee_id,greatday_emp_id')
+            ->whereNotIn('employment_status_id', [$terminalStatusId])
+            ->whereNotNull('greatday_emp_id')
+            ->pluck('greatday_emp_id')
+            ->toArray();
+
+        $greatdayEmployeesResult = collect($greatdayEmployees)->pluck('empId')->toArray();
+
+        $outOfSyncEmpIds = array_diff($greatdayEmployeesResult, $localGreatdayEmpId);
+
+        $processed = 0;
+
+        foreach ($outOfSyncEmpIds as $empId) {
+            $employeeData = collect($greatdayEmployees)->where('empId', $empId)->first();
+
+            if (Str::contains($employeeData['email'], 'resign')) {
+                continue;
+            }
+
+            $checkEmployee = Employee::where('email', $employeeData['email'])->first();
+
+            if ($checkEmployee) {
+                continue;
+            }
+
+            $this->upsertOutOfSyncEmployee($employeeData);
+
+            $processed++;
+        }
+
+        return $processed;
+    }
+
+    /**
+     * Write one Greatday employee into the out_of_sync_employees staging row.
+     *
+     * updateOrCreate (not firstOrCreate) so an existing row is refreshed with the latest
+     * Greatday values on every sync — e.g. an endDate that Greatday added after the row was
+     * first created, or the personal/bank columns on a row that predates them.
+     *
+     * A value Greatday leaves empty is dropped from the update payload, so a refresh can
+     * never blank out a column that already holds data. On create the payload is written
+     * as-is (empty stays null — there is nothing to preserve yet).
+     *
+     * @param  array<string, mixed>  $employeeData  One entry of the Greatday /employees response
+     */
+    protected function upsertOutOfSyncEmployee(array $employeeData): void
+    {
+        $values = $this->mapGreatdayOutOfSyncAttributes($employeeData);
+
+        $exists = OutOfSyncEmployee::where('greatday_employee_id', $employeeData['empId'])->exists();
+
+        if ($exists) {
+            $values = array_filter($values, fn ($value) => $value !== null && $value !== '');
+        }
+
+        OutOfSyncEmployee::updateOrCreate(
+            ['greatday_employee_id' => $employeeData['empId']],
+            $values
+        );
+    }
+
+    /**
+     * Map a Greatday /employees entry onto out_of_sync_employees columns.
+     *
+     * Greatday sends '' for unset text fields and never sends nationality, religion, marital
+     * status or timezone at all — those stay defaults-only and are resolved when the list is
+     * read, not here. Everything empty is normalised to null so the caller can tell "Greatday
+     * has no value" from "Greatday says empty string".
+     *
+     * @param  array<string, mixed>  $employeeData
+     * @return array<string, mixed>
+     */
+    protected function mapGreatdayOutOfSyncAttributes(array $employeeData): array
+    {
+        $value = fn (string $key) => filled($employeeData[$key] ?? null) ? $employeeData[$key] : null;
+        $date = fn (string $key) => filled($employeeData[$key] ?? null) ? Carbon::parse($employeeData[$key]) : null;
+
+        return [
+            'first_name' => $value('firstName'),
+            'middle_name' => $value('middleName'),
+            'last_name' => $value('lastName'),
+            // userName, not nickName: Greatday's nickName holds the full name
+            // ("Ilham Meru Gumilang"), while userName is the actual short name ("Ilham").
+            'nickname' => $value('userName'),
+            'id_number' => $value('identityNo'),
+            'gender' => isset($employeeData['gender']) && $employeeData['gender'] !== '' ? (int) $employeeData['gender'] : null,
+            'birth_date' => $date('birthDate'),
+            'birth_place' => $value('birthPlace'),
+            'email' => $value('email'),
+            'employee_id' => $value('empNo'),
+            'position_code' => $value('posCode'),
+            'position_name' => $value('posNameEn'),
+            'employment_status' => $value('employmentStatus'),
+            'employment_status_code' => $value('employmentStatusCode'),
+            'start_working_date' => $date('startDate'),
+            'end_working_date' => $date('endDate'),
+            'company_id' => $value('companyId'),
+            'address' => $value('address'),
+            'phone' => $value('phone'),
+            'job_status' => $value('jobStatus'),
+            'work_location_code' => $value('worklocationCode'),
+            'cost_center_code' => $value('costCode'),
+            'grade_code' => $value('gradeCode'),
+            'bank_code' => $value('bankCode'),
+            'bank_account' => $value('bankAccount'),
+            'bank_account_name' => $value('bankAccountName'),
+            'org_unit' => $value('orgUnit'),
+            'employment_start_date' => $date('employmentStartDate'),
+            'status' => OutOfSyncStatus::OutOfSync,
+        ];
+    }
+
+    /**
+     * Preflight for linking an ERP employee to Greatday. Read-only.
+     *
+     * Returns one of three states: already_linked; a MATCH exists (needs_create = false, no
+     * form); or the employee must be created and some required create-fields are missing.
+     *
+     * @return array<string, mixed>
+     */
+    public function checkEmployeeGreatdayLink(string $employeeUid): array
+    {
+        try {
+            $employee = $this->loadEmployeeForLink($employeeUid);
+
+            if (! $employee) {
+                return errorResponse(__('notification.employeeNotFound'));
+            }
+
+            if (! empty($employee->greatday_emp_id)) {
+                return generalResponse(message: 'Success', data: [
+                    'already_linked' => true,
+                    'greatday_emp_id' => $employee->greatday_emp_id,
+                ]);
+            }
+
+            $match = $this->matchGreatdayEmployee($employee, $this->fetchAllGreatdayEmployees());
+
+            if ($match) {
+                return generalResponse(message: 'Success', data: [
+                    'already_linked' => false,
+                    'needs_create' => false,
+                    'ready' => true,
+                    'missing' => [],
+                    'match' => [
+                        'greatday_emp_id' => $match['empId'] ?? null,
+                        'email' => $match['email'] ?? null,
+                        'emp_no' => $match['empNo'] ?? null,
+                    ],
+                ]);
+            }
+
+            $missing = $this->detectMissingCreateFields($employee, []);
+
+            return generalResponse(message: 'Success', data: [
+                'already_linked' => false,
+                'needs_create' => true,
+                'ready' => empty($missing),
+                'missing' => $missing,
+            ]);
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Link an ERP employee to Greatday: reuse an existing Greatday record (match on email or
+     * empNo) or create one, then store greatday_emp_id locally.
+     *
+     * Filled create-fields from the form are persisted onto the employee. External calls happen
+     * before the local write, which is atomic — no half-linked local state on failure.
+     *
+     * @return array<string, mixed>
+     */
+    public function linkEmployeeToGreatday(string $employeeUid, LinkEmployeeData $data): array
+    {
+        try {
+            $employee = $this->loadEmployeeForLink($employeeUid);
+
+            if (! $employee) {
+                return errorResponse(__('notification.employeeNotFound'));
+            }
+
+            if (! empty($employee->greatday_emp_id)) {
+                return generalResponse(message: 'Success', data: [
+                    'linked' => true,
+                    'created' => false,
+                    'greatday_emp_id' => $employee->greatday_emp_id,
+                ]);
+            }
+
+            $provided = $data->filled();
+
+            $match = $this->matchGreatdayEmployee($employee, $this->fetchAllGreatdayEmployees());
+
+            if ($match) {
+                $greatdayEmpId = $match['empId'];
+                $created = false;
+            } else {
+                $missing = $this->detectMissingCreateFields($employee, $provided);
+
+                if (! empty($missing)) {
+                    return errorResponse(__('notification.greatdayLinkMissingFields'), ['missing' => $missing], Code::BadRequest->value);
+                }
+
+                $response = $this->greatdayService->addEmployee($this->buildGreatdayAddPayload($employee, $provided));
+                $result = $response->json()[0] ?? null;
+
+                if ($response->failed() || ! ($result['success'] ?? false)) {
+                    throw new EmployeeException($result['message'] ?? __('notification.greatdayAddEmployeeFailed'));
+                }
+
+                // the add response has no empId; re-fetch and resolve it by empNo
+                $newMatch = collect($this->fetchAllGreatdayEmployees())->firstWhere('empNo', $employee->employee_id);
+
+                if (! $newMatch) {
+                    throw new EmployeeException(__('notification.greatdayAddEmployeeUnresolved'));
+                }
+
+                $greatdayEmpId = $newMatch['empId'];
+                $created = true;
+            }
+
+            DB::transaction(function () use ($employee, $provided, $greatdayEmpId) {
+                $update = ['greatday_emp_id' => $greatdayEmpId];
+
+                foreach ($provided as $column => $value) {
+                    if ($column === 'boss_id') {
+                        $bossId = Employee::where('uid', $value)->value('id');
+                        if ($bossId) {
+                            $update['boss_id'] = $bossId;
+                        }
+                    } else {
+                        $update[$column] = $value;
+                    }
+                }
+
+                $this->repo->update($update, $employee->uid);
+            });
+
+            return generalResponse(message: 'Success', data: [
+                'linked' => true,
+                'created' => $created,
+                'greatday_emp_id' => $greatdayEmpId,
+            ]);
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    protected function loadEmployeeForLink(string $employeeUid): ?Employee
+    {
+        return $this->repo->show(
+            uid: $employeeUid,
+            select: '*',
+            relation: [
+                'user:id,employee_id,username',
+                'position:id,name,greatday_code',
+                'boss:id,employee_id',
+            ]
+        );
+    }
+
+    /**
+     * Find the Greatday employee that represents this ERP employee, matched on email or empNo.
+     *
+     * @param  array<int, array<string, mixed>>  $greatdayEmployees
+     * @return array<string, mixed>|null
+     */
+    protected function matchGreatdayEmployee(Employee $employee, array $greatdayEmployees): ?array
+    {
+        foreach ($greatdayEmployees as $greatday) {
+            $emailMatch = ! empty($greatday['email']) && ! empty($employee->email)
+                && strcasecmp($greatday['email'], $employee->email) === 0;
+            $empNoMatch = ! empty($greatday['empNo']) && ! empty($employee->employee_id)
+                && $greatday['empNo'] === $employee->employee_id;
+
+            if ($emailMatch || $empNoMatch) {
+                return $greatday;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Required Greatday create-fields that may be empty on the employee: [column, label, source].
+     *
+     * @return array<int, array{0: string, 1: string, 2: string}>
+     */
+    protected function greatdayCreateRequiredFields(): array
+    {
+        return [
+            ['greatday_nationality', 'Nationality', 'nationality'],
+            ['greatday_company', 'Company', 'company'],
+            ['greatday_job_grade', 'Job Grade', 'job_grade'],
+            ['greatday_cost_center', 'Cost Center', 'cost_center'],
+            ['greatday_employment_status', 'Employment Status', 'employment_status'],
+            ['greatday_work_location', 'Work Location', 'work_location'],
+            ['greatday_religion', 'Religion', 'religion'],
+            ['greatday_timezone', 'Timezone', 'timezone'],
+            ['greatday_shift_pattern', 'Shift Pattern', 'shift_pattern'],
+            ['boss_id', 'Supervisor', 'employee'],
+            ['position', 'Position', 'position'],
+        ];
+    }
+
+    /**
+     * Which required create-fields are still empty, considering both the employee and any values
+     * provided in the link form.
+     *
+     * @param  array<string, mixed>  $provided
+     * @return array<int, array<string, string>>
+     */
+    protected function detectMissingCreateFields(Employee $employee, array $provided): array
+    {
+        $missing = [];
+
+        foreach ($this->greatdayCreateRequiredFields() as [$field, $label, $source]) {
+            $present = match ($field) {
+                'position' => ! empty($employee->position?->greatday_code),
+                'boss_id' => ! empty($employee->boss_id) || ! empty($provided['boss_id']),
+                default => ! empty($employee->{$field}) || ! empty($provided[$field]),
+            };
+
+            if ($present) {
+                continue;
+            }
+
+            // `fixable` = can be supplied by the link form. `position` cannot — it needs the
+            // position to be linked to Greatday first (Position Sync), so it's a blocker.
+            $item = [
+                'field' => $field,
+                'label' => $label,
+                'source' => $source,
+                'fixable' => $field !== 'position',
+                'hint' => null,
+            ];
+
+            if ($field === 'position') {
+                $item['hint'] = __('notification.positionNotLinkedToGreatday', [
+                    'position' => $employee->position?->name ?? '-',
+                ]);
+            }
+
+            $missing[] = $item;
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Build the Greatday AddEmployeeRequestItem from the ERP employee, with form values overriding.
+     *
+     * @param  array<string, mixed>  $provided
+     * @return array<string, mixed>
+     */
+    protected function buildGreatdayAddPayload(Employee $employee, array $provided): array
+    {
+        $value = fn (string $column) => $provided[$column] ?? $employee->{$column};
+        [$first, $middle, $last] = $this->splitName((string) $employee->name);
+        $supervisorEmpNo = $this->greatdaySupervisorEmpNo($employee, $provided);
+        $bank = $this->firstBankDetail($employee);
+
+        return array_filter([
+            'employeeNo' => $employee->employee_id,
+            'companyId' => $this->resolveGreatdayCompanyId($value('greatday_company')),
+            'userName' => $employee->user?->username ?? $employee->employee_id,
+            'email' => $employee->email,
+            'employeeNameFirst' => $first,
+            'employeeNameMiddle' => $middle ?: null,
+            'employeeNameLast' => $last ?: null,
+            'nationality' => $value('greatday_nationality'),
+            'position' => $employee->position?->greatday_code,
+            'joinDate' => $employee->join_date ? Carbon::parse($employee->join_date)->format('Y-m-d') : null,
+            'gender' => $employee->gender?->value === Gender::Male->value ? 1 : 0,
+            'birthDay' => $employee->date_of_birth ? Carbon::parse($employee->date_of_birth)->format('Y-m-d') : null,
+            'grade' => $value('greatday_job_grade'),
+            'costCenter' => $value('greatday_cost_center'),
+            'status' => $value('greatday_employment_status'),
+            'workLocation' => $value('greatday_work_location'),
+            'birthPlace' => $employee->place_of_birth,
+            'religion' => $value('greatday_religion'),
+            'maritalStatus' => (string) ($employee->martial_status?->value === MartialStatus::Married->value ? 1 : 0),
+            'address' => $employee->address,
+            'timezoneId' => (int) $value('greatday_timezone'),
+            'mobilePhone' => $employee->phone,
+            'supervisor' => $supervisorEmpNo,
+            'manager' => $supervisorEmpNo,
+            'shiftPattern' => $value('greatday_shift_pattern'),
+            'allowCreateNewMaster' => true,
+
+            // optional extras
+            'idCardNumber' => $employee->id_number,
+            'jobStatus' => $employee->greatday_job_status,
+            'bankCode' => $bank['bank_name'] ?? null,
+            'bankAccount' => $bank['account_number'] ?? null,
+            'bankAccountName' => $bank['account_holder_name'] ?? null,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * Resolve Greatday's numeric companyId. The employee's greatday_company usually holds the
+     * company CODE (e.g. "sfgo11677"), while the Add Employee API needs the numeric id (35532),
+     * so we look it up in the greatday_companies master. A value that is already numeric is used
+     * as-is; an unresolvable value returns null (create then fails clearly, rather than sending 0).
+     */
+    protected function resolveGreatdayCompanyId(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        $company = GreatdayCompany::where('code', $value)->first();
+
+        return $company ? (int) $company->company_id : null;
+    }
+
+    /**
+     * The supervisor's employee number (empNo) — from the chosen supervisor uid, else the boss.
+     *
+     * @param  array<string, mixed>  $provided
+     */
+    protected function greatdaySupervisorEmpNo(Employee $employee, array $provided): ?string
+    {
+        if (! empty($provided['boss_id'])) {
+            return Employee::where('uid', $provided['boss_id'])->value('employee_id');
+        }
+
+        return $employee->boss?->employee_id;
+    }
+
+    /**
+     * Split a single ERP name into [first, middle, last].
+     *
+     * @return array{0: string, 1: string, 2: string}
+     */
+    protected function splitName(string $name): array
+    {
+        $parts = array_values(array_filter(preg_split('/\s+/', trim($name)) ?: []));
+
+        if (empty($parts)) {
+            return ['', '', ''];
+        }
+
+        $first = array_shift($parts);
+        $last = count($parts) > 0 ? array_pop($parts) : '';
+        $middle = implode(' ', $parts);
+
+        return [$first, $middle, $last];
+    }
+
+    public function totalActiveEmployee(): array
+    {
+        try {
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'total' => $this->repo->getTotalActiveEmployee(),
+                ]
+            );
+        } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }

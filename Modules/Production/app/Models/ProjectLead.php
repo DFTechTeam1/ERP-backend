@@ -4,14 +4,15 @@ namespace Modules\Production\Models;
 
 use App\Enums\Production\EventType;
 use App\Enums\Production\ProjectLeadStatus;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Company\Models\City;
 use Modules\Hrd\Models\Employee;
-
-// use Modules\Production\Database\Factories\ProjectLeadFactory;
+use Modules\Production\Database\Factories\ProjectLeadFactory;
 
 class ProjectLead extends Model
 {
@@ -46,10 +47,10 @@ class ProjectLead extends Model
         'cancel_by',
     ];
 
-    // protected static function newFactory(): ProjectLeadFactory
-    // {
-    //     // return ProjectLeadFactory::new();
-    // }
+    protected static function newFactory(): ProjectLeadFactory
+    {
+        return ProjectLeadFactory::new();
+    }
 
     protected function casts()
     {
@@ -72,9 +73,24 @@ class ProjectLead extends Model
         return $this->belongsTo(City::class);
     }
 
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(ProjectLeadFollowUp::class, 'project_lead_id');
+    }
+
+    public function projectDeal(): BelongsTo
+    {
+        return $this->belongsTo(ProjectDeal::class, 'project_deal_id');
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'created_by');
+    }
+
+    public function cancelBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancel_by');
     }
 
     public function updatedBy(): BelongsTo

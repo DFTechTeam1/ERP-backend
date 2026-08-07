@@ -238,6 +238,10 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
                 $this->getRootRole(),
             ]],
+            ['name' => 'list_nas_logs', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dashboard_hrd', 'group' => 'dashboard', 'used' => [
                 $this->getHrdRole(),
                 $this->getDirectorRole(),
@@ -380,6 +384,42 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function documentPermission()
+    {
+        return [
+            ['name' => 'list_signatories', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'list_document_types', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'list_document_templates', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'list_generated_documents', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'list_my_documents', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+            ['name' => 'approve_document_templates', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
+        ];
+    }
+
     protected function employeePermission()
     {
         return [
@@ -485,6 +525,11 @@ class RolePermissionSetting extends Seeder
                 $this->getFinanceRole(),
             ]],
             ['name' => 'list_deal_price_changes', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'list_deal_changes', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
                 $this->getFinanceRole(),
@@ -1118,6 +1163,10 @@ class RolePermissionSetting extends Seeder
                 $this->getRootRole(),
                 $this->getDirectorRole(),
             ]],
+            ['name' => 'cancel_leads', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+            ]],
             ['name' => 'list_interactive_requests', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
@@ -1439,6 +1488,7 @@ class RolePermissionSetting extends Seeder
             ->merge($this->financePermission())
             ->merge($this->projectPermission())
             ->merge($this->interactivePermission())
+            ->merge($this->documentPermission())
             ->merge($this->developmentPermission());
 
         return $permissions;

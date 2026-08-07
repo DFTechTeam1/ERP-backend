@@ -39,6 +39,11 @@ class WhatsappCommunityRepository extends WhatsappCommunityInterface
         return $query->get();
     }
 
+    public function getGroups(string $communityId)
+    {
+
+    }
+
     /**
      * Paginated data for datatable
      *
@@ -129,9 +134,9 @@ class WhatsappCommunityRepository extends WhatsappCommunityInterface
      * @param  int|string  $id
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function delete(int $id)
+    public function delete(string $id)
     {
-        return $this->model->where('id', $id)
+        return $this->model->where('community_id', $id)
             ->delete();
     }
 

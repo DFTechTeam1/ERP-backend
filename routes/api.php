@@ -18,6 +18,8 @@ use App\Http\Controllers\Mcp\OauthController;
 use App\Jobs\PartnerEmailJob;
 use App\Models\User;
 use App\Services\EncryptionService;
+use App\Services\GeneralService;
+use App\Services\PusherNotification;
 use App\Services\UserService;
 use Illuminate\Http\File;
 use Illuminate\Http\Request;
@@ -136,6 +138,26 @@ Route::get('generate-official-email', [TestingController::class, 'generateOffici
 Route::get('notification/readAll', [NotificationController::class, 'readAll'])->middleware('auth.session');
 Route::get('notification/markAsRead/{id}', [NotificationController::class, 'markAsRead'])->middleware('auth.session');
 
+// Pusher private-channel auth for the realtime bell notifications. Uses the
+// Bearer-token guard (not the web session), so pusher-js sends the access token.
+// A user may only authenticate their own `private-notifications.{id}` channel.
+// NOTE: distinct path from the framework's /broadcasting/auth (which is session
+// based) to avoid a route collision.
+Route::post('notifications/channel-auth', function (Request $request) {
+    $user = $request->user();
+    $channelName = (string) $request->input('channel_name');
+    $socketId = (string) $request->input('socket_id');
+
+    abort_unless(
+        $user && $channelName === "private-notifications.{$user->id}",
+        403,
+    );
+
+    return response(
+        app(PusherNotification::class)->authorize($channelName, $socketId)
+    )->header('Content-Type', 'application/json');
+})->middleware('auth.session');
+
 // Broadcast::routes(['middleware' => ['auth.session']]);
 
 Route::get('nasTestConnection', function (Request $request) {
@@ -204,6 +226,13 @@ Route::get('users/activate/{key}', [UserController::class, 'activate']);
 
 Route::middleware('auth.session')
     ->group(function () {
+        // Menu badges
+        Route::get('menu-badges', function () {
+            $service = app(GeneralService::class);
+
+            return apiResponse($service->getMenuBadges());
+        });
+
         Route::get('logs', [DashboardController::class, 'getLogs']);
         Route::post('users/bulk', [UserController::class, 'bulkDelete'])->name('api.users.bulk-delete');
         Route::post('users/resendActivationEmail/{userUid}', [UserController::class, 'resendActivationEmail'])->name('api.users.resend-activation-email');
@@ -482,4 +511,27 @@ Route::middleware(['mcp.log', 'mcp.auth'])
 
         // Invoice download links
         Route::post('finance/invoices/download-url/{type}', [InvoiceController::class, 'getInvoiceDownloadUrlBasedOnType']);
+        Route::get('finance/invoices/{projectDealUid}/file', [InvoiceController::class, 'getInvoiceDownloadAsByte']);
     });
+Route::get('check-notif', function () {
+    $auth = Auth::user();
+    $user = User::find($auth->id);
+
+    // app(\App\Services\RealtimeNotificationService::class)->send(
+    //     recipients: $user,
+    //     topic: \App\Services\RealtimeNotificationService::TOPIC_DIVISION,
+    //     payload: [
+    //         'title' => 'Testing title',
+    //         'message' => 'Testing message. lorem ipsum data',
+    //         'icon' => '',
+    //         'url' => '/admin/production/project/48ac96c3-7904-4bc5-88b0-a91b3607324e',
+    //         'action' => 'user_testing',
+    //         'data' => [
+    //             'project_id' => '48ac96c3-7904-4bc5-88b0-a91b3607324e'
+    //         ]
+    //     ],
+    //     divisionId: 8
+    // );
+
+    return $user->roles->first();
+})->middleware('auth.session');
