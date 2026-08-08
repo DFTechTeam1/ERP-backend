@@ -274,7 +274,7 @@ Route::middleware(['auth.session'])
         Route::post('create-song/{projectUid}', [EntertainmentController::class, 'createSong']);
         Route::post('jump-back/{projectUid}', [EntertainmentController::class, 'createJumpBackTask']);
         Route::put('update-song/{projectUid}/{songUid}', [EntertainmentController::class, 'updateSong']);
-        Route::delete('delete-song/{projectUid}/{songUid}', [EntertainmentController::class, 'deleteSong']);
+        Route::delete('delete-song/{projectUid}/{groupUid}/{songUid}', [EntertainmentController::class, 'deleteSong']);
     });
 
 Route::middleware(['internal.service'])

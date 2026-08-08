@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Http\Controllers\Api;
 
+use App\Data\Production\Entertainment\BulkUpdateGroupSongData;
 use App\Data\Production\Entertainment\CreateJumpBackData;
 use App\Data\Production\Entertainment\CreateSongData;
 use App\Data\Production\Entertainment\UpdateSongData;
@@ -35,17 +36,10 @@ class EntertainmentController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
-    {
-        
-    }
+    public function store(Request $request) {}
 
     /**
      * Create new song for selected project
-     *
-     * @param CreateSongData $request
-     * @param string $projectUid
-     * @return JsonResponse
      */
     public function createSong(CreateSongData $request, string $projectUid): JsonResponse
     {
@@ -54,15 +48,20 @@ class EntertainmentController extends Controller
 
     /**
      * Update existing song for selected project
-     *
-     * @param UpdateSongData $request
-     * @param string $projectUid
-     * @param string $songUid
-     * @return JsonResponse
      */
     public function updateSong(UpdateSongData $request, string $projectUid, string $songUid): JsonResponse
     {
         return apiResponse($this->service->updateSong($request, $projectUid, $songUid));
+    }
+
+    public function bulkUpdateGroupSong(BulkUpdateGroupSongData $request, string $projectUid): JsonResponse
+    {
+        return apiResponse($this->service->bulkUpdateGroupSong($request, $projectUid));
+    }
+
+    public function deleteSingleSong(string $projectUid, string $groupUid, string $songUid): JsonResponse
+    {
+        return apiResponse($this->service->deleteSingleSong($projectUid, $groupUid, $songUid));
     }
 
     /**
@@ -97,9 +96,9 @@ class EntertainmentController extends Controller
         //
     }
 
-    public function deleteSong(string $projectUid, string $songUid): JsonResponse
+    public function deleteSong(string $projectUid, string $groupUid, string $songUid): JsonResponse
     {
-        return apiResponse($this->service->deleteSong($projectUid, $songUid));
+        return apiResponse($this->service->deleteSingleSong($projectUid, $groupUid, $songUid));
     }
 
     public function createJumpBackTask(CreateJumpBackData $request, string $projectUid)

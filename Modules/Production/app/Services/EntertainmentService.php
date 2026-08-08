@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Data\Production\Entertainment\BulkUpdateGroupSongData;
 use App\Data\Production\Entertainment\CreateEntertainmentTaskData;
 use App\Data\Production\Entertainment\CreateJumpBackData;
 use App\Data\Production\Entertainment\CreateSongData;
@@ -13,7 +14,7 @@ use App\Enums\Production\Entertainment\TaskStatus;
 use App\Enums\Production\Entertainment\TaskType;
 use App\Exceptions\DataNotFound;
 use App\Services\GeneralService;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Hrd\Repository\EmployeeRepository;
@@ -103,15 +104,14 @@ class EntertainmentService
      */
     protected function fetchSongList(int $projectId): ?ProjectSong
     {
-        return $this->projectSongRepo->show(
-            uid: '',
-            select: 'id,group_name,uid,project_id',
-            relation: [
+        return $this->projectSongRepo->show([
+            'select' => ['id', 'group_name', 'uid', 'project_id'],
+            'with' => [
                 'items:id,song_name,project_song_id,uid',
                 'items.latestTask:entertainment_task_song_items.id,entertainment_task_song_items.song_item_id',
             ],
-            where: "project_id = {$projectId}"
-        );
+            'where' => ['project_id' => $projectId],
+        ]);
     }
 
     /**
@@ -178,11 +178,10 @@ class EntertainmentService
 
             collect($payload->groups)->each(function ($item) use ($projectId, $actor) {
                 $groupName = strtolower($item->name);
-                $group = $this->projectSongRepo->show(
-                    uid: '',
-                    select: 'id',
-                    where: "lower(group_name) = '{$groupName}'"
-                );
+                $group = $this->projectSongRepo->show([
+                    'select' => ['id'],
+                    'scope' => fn (Builder $query) => $query->whereRaw('LOWER(group_name) = ?', [$groupName]),
+                ]);
 
                 if (! $group) {
                     $group = $this->projectSongRepo->store([
@@ -249,18 +248,132 @@ class EntertainmentService
         }
     }
 
+    protected function bulkDeleteSongsInGroup(array $deletedIds): void
+    {
+        $toBeDeletedSongs = $this->projectSongItemRepo->get([
+            'whereIn' => ['uid' => $deletedIds],
+            'doesntHave' => ['latestTask'],
+        ]);
+
+        if ($toBeDeletedSongs->count() !== count($deletedIds)) {
+            throw new DataNotFound('Some songs cannot be deleted because they are assigned to a task.');
+        }
+
+        // Do delete here
+        if ($toBeDeletedSongs->isNotEmpty()) {
+            $toBeDeletedSongs->each(function ($song) {
+                $song->delete();
+            });
+        }
+    }
+
+    protected function getProject(string $projectUid)
+    {
+        $project = $this->projectRepo->show(
+            uid: $projectUid,
+            select: 'id'
+        );
+
+        if (! $project) {
+            throw new DataNotFound('Project not found');
+        }
+
+        return $project;
+    }
+
+    protected function getGroupSong(string $groupUid, int $projectId)
+    {
+        $groupSong = $this->projectSongRepo->show([
+            'where' => ['uid' => $groupUid, 'project_id' => $projectId],
+            'select' => ['id'],
+        ]);
+
+        if (! $groupSong) {
+            throw new DataNotFound('Group not found');
+        }
+
+        return $groupSong;
+    }
+
+    public function bulkUpdateGroupSong(BulkUpdateGroupSongData $payload, string $projectUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $project = $this->getProject($projectUid);
+
+            $groupSong = $this->getGroupSong($payload->group_uid, $project->id);
+
+            $this->projectSongRepo->update($groupSong, [
+                'group_name' => $payload->name,
+            ]);
+
+            foreach ($payload->songs as $song) {
+                $songItem = $this->projectSongItemRepo->show([
+                    'where' => ['uid' => $song->uid],
+                    'select' => ['id'],
+                ]);
+
+                if ($songItem) {
+                    $this->projectSongItemRepo->update($songItem, [
+                        'song_name' => $song->name,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            // Reset songs cache - a bulk save can rename the group, rename songs and
+            // delete songs at once, so the cached list is rebuilt from scratch rather
+            // than patched entry by entry the way updateSong() does.
+            $this->resetSongListCache($projectUid);
+
+            return generalResponse(message: 'Success');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function deleteSingleSong(string $projectUid, string $groupUid, string $songUid): array
+    {
+        try {
+            $project = $this->getProject($projectUid);
+
+            $groupSong = $this->getGroupSong($groupUid, $project->id);
+
+            // TODO: validate active task
+
+            $this->projectSongItemRepo->deleteWhere([
+                'uid' => $songUid,
+                'project_song_id' => $groupSong->id,
+            ]);
+
+            $this->deleteSongFromCache($projectUid, $songUid);
+
+            return generalResponse(message: 'Success delete song');
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     /**
      * Update selected songe
      */
     public function updateSong(UpdateSongData $payload, string $projectUid, string $songUid): array
     {
         try {
-            $this->projectSongItemRepo->update(
-                data: [
-                    'song_name' => $payload->song,
-                ],
-                id: $songUid,
-            );
+            $song = $this->projectSongItemRepo->show([
+                'where' => ['uid' => $songUid],
+            ]);
+
+            if (! $song) {
+                return errorResponse(message: 'Song not found');
+            }
+
+            $this->projectSongItemRepo->update($song, [
+                'song_name' => $payload->song,
+            ]);
 
             // Update cache name
             $this->updateSongNameInCache(
@@ -277,47 +390,11 @@ class EntertainmentService
         }
     }
 
-    /**
-     * Delete selected song
-     */
-    public function deleteSong(string $projectUid, string $songUid): array
-    {
-        try {
-            $song = $this->projectSongItemRepo->show(
-                uid: $songUid,
-                select: 'id',
-                relation: [
-                    'latestTask',
-                ]
-            );
-
-            if (! $song) {
-                return errorResponse(message: 'Song not found');
-            }
-
-            if ($song->latestTask) {
-                return errorResponse(message: 'Failed to delete song. Please delete task related with this song.');
-            }
-
-            // No task here
-            $song->delete();
-
-            // Delete song from cache list
-            $this->deleteSongFromCache($projectUid, $songUid);
-
-            return generalResponse(
-                message: 'Success delete song list'
-            );
-        } catch (\Throwable $th) {
-            return errorResponse($th);
-        }
-    }
-
     protected function registerTask(CreateEntertainmentTaskData $payload, array $songIds = []): EntertainmentTask
     {
         $task = $this->entertainmentTaskRepo->store($payload->toArray());
 
-        if (! empty ($songIds)) {
+        if (! empty($songIds)) {
             $this->entertainmentTaskRepo->insertSongs(
                 task: $task,
                 songIds: $songIds
@@ -331,56 +408,48 @@ class EntertainmentService
         array $employeeIds,
         EntertainmentTask $task,
         CreateWorkStateData $payload
-    ): void
-    {
+    ): void {
         foreach ($employeeIds as $employeeId) {
             if (! $this->workStateRepo->getEmployeeState($employeeId, $task->id)) {
                 $this->workStateRepo->store($payload->toArray());
             }
         }
     }
-    
+
     /**
      * Create task for jump back -> Should have a song list here
-     *
-     * @param CreateJumpBackData $payload
-     * @return array
      */
     public function createJumpBackTask(CreateJumpBackData $payload, string $projectUid): array
     {
         DB::beginTransaction();
         try {
             // ------------- Validation and formatting --
-            $project = $this->projectRepo->show(
-                uid: $projectUid,
-                select: 'id'
-            );
-
-            if (! $project) throw new DataNotFound(message: "Project not found");
+            $project = $this->getProject($projectUid);
 
             $employeeActiveStatus = Status::determineActiveStatus();
-            $statusString = collect($employeeActiveStatus)->join(",");
+            $statusString = collect($employeeActiveStatus)->join(',');
 
-            $formattedUids = "'" . collect($payload->assignee_uids)->join("','") . "'";
+            $formattedUids = "'".collect($payload->assignee_uids)->join("','")."'";
             $employees = $this->employeeRepo->list(
                 select: 'id',
                 where: "status IN ({$statusString}) and uid IN ({$formattedUids})"
             );
 
             if (count($employees) !== count($payload->assignee_uids)) {
-                throw new DataNotFound(message: "Employee not found.");
+                throw new DataNotFound(message: 'Employee not found.');
             }
 
             $employeeIds = $employees->pluck('id');
 
             // -------------- Song validation and formatting
-            $songUids = "'" . collect($payload->song_uids)->join("','") . "'";
-            $songItems = $this->projectSongItemRepo->list(
-                select: 'id',
-                where: "uid IN ({$songUids})"
-            );
-            if ($songItems->count() !== count($payload->song_uids)) throw new DataNotFound("Song not found.");
-            $songIds = $songItems->pluck("id");
+            $songItems = $this->projectSongItemRepo->get([
+                'select' => ['id'],
+                'whereIn' => ['uid' => $payload->song_uids],
+            ]);
+            if ($songItems->count() !== count($payload->song_uids)) {
+                throw new DataNotFound('Song not found.');
+            }
+            $songIds = $songItems->pluck('id');
 
             // ------------- process task --
             $task = $this->registerTask(
@@ -404,7 +473,7 @@ class EntertainmentService
             DB::commit();
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -413,21 +482,18 @@ class EntertainmentService
         }
     }
 
-    public function createTask()
-    {
-
-    }
+    public function createTask() {}
 
     public function listTask(string $projectUid)
     {
         try {
-            $projectId = $this->generalService->getIdFromUid($projectUid, new Project());
+            $projectId = $this->generalService->getIdFromUid($projectUid, new Project);
 
             $data = $this->entertainmentTaskRepo->get([
                 'select' => ['id'],
                 'where' => [
-                    'project_id' => $projectId
-                ]
+                    'project_id' => $projectId,
+                ],
             ]);
 
             return generalResponse(

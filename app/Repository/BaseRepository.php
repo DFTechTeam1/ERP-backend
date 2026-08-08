@@ -20,6 +20,10 @@ use Illuminate\Database\Eloquent\Model;
  *                                              paired with a Closure constrains that relation
  *   - where:      array<string,mixed>          equality constraints (column => value)
  *   - whereIn:    array<string,array>          IN constraints (column => values)
+ *   - has:        array<int|string,string|int|array{0:string,1:int}|null>
+ *                                              relation COUNT constraints; see
+ *                                              normalizeCountConstraint() for the accepted shapes
+ *   - doesntHave: array<int,string>            relations that must NOT exist
  *   - whereHas:   array<int|string,string|Closure(Builder): void|null>
  *                                              relation existence constraints; see
  *                                              normalizeRelationConstraint() for the accepted shapes
@@ -62,6 +66,16 @@ abstract class BaseRepository
 
         foreach ($params['whereIn'] ?? [] as $column => $values) {
             $query->whereIn($column, $values);
+        }
+
+        foreach ($params['has'] ?? [] as $key => $value) {
+            [$relation, $operator, $count] = $this->normalizeCountConstraint($key, $value);
+
+            $query->has($relation, $operator, $count);
+        }
+
+        foreach ($params['doesntHave'] ?? [] as $relation) {
+            $query->doesntHave($relation);
         }
 
         foreach ($params['whereHas'] ?? [] as $key => $value) {
@@ -128,6 +142,33 @@ abstract class BaseRepository
         }
 
         return [$key, $value instanceof Closure ? $value : null];
+    }
+
+    /**
+     * Translate one count-constraint entry into a [relation, operator, count] triple.
+     *
+     * Unlike whereHas(), which constrains the RELATED rows, `has` constrains HOW
+     * MANY of them there are. Every shape below is accepted so callers can mix
+     * plain existence checks and count thresholds in a single array:
+     *   ['items']                 → has('items')             at least one
+     *   ['items' => null]         → has('items')             at least one
+     *   ['items' => 3]            → has('items', '>=', 3)    at least three
+     *   ['items' => ['>', 3]]     → has('items', '>', 3)     more than three
+     *
+     * @param  string|int|array{0:string,1:int}|null  $value
+     * @return array{0:string,1:string,2:int}
+     */
+    protected function normalizeCountConstraint(int|string $key, string|int|array|null $value): array
+    {
+        if (is_int($key)) {
+            return [$value, '>=', 1];
+        }
+
+        if (is_array($value)) {
+            return [$key, $value[0], (int) $value[1]];
+        }
+
+        return [$key, '>=', $value === null ? 1 : (int) $value];
     }
 
     /**

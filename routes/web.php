@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\System\BaseRole;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\LandingPageController;
@@ -11,8 +10,6 @@ use App\Notifications\DummyNotification;
 use App\Services\EncryptionService;
 use App\Services\PusherNotification;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
-use Illuminate\Notifications\Slack\SlackMessage;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +17,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
-use Modules\Company\Notifications\SlackNotification;
 use Modules\Email\Emails\InviteToErpMail;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
@@ -33,6 +29,7 @@ use Modules\Hrd\Services\GreatdayService;
 use Modules\Inventory\Services\InventoryService;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Repository\ProjectSongItemRepository;
 use Modules\Production\Services\ProjectService;
 use PhpOffice\PhpWord\TemplateProcessor;
 use Picqer\Barcode\Renderers\PngRenderer;
@@ -365,23 +362,12 @@ Route::get('signature', function () {
     ]);
 });
 Route::get('slack-testing', function () {
-    // $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
-    // logging('slack developer', [
-    //     'dev' => $developer,
-    //     'log' => config('services.slack')
-    // ]);
-    // if ($developer) {
-    //     // build block and content
-    //     $block = (new SlackMessage)
-    //         ->text('testing')
-    //         ->headerBlock('testing header')
-    //         ->sectionBlock(function (SectionBlock $block) {
-    //             $block->text('testng')->markdown();
-    //         });
+    $repo = app(ProjectSongItemRepository::class);
 
-    //     $developer->notify(new SlackNotification($block));
-    // }
-    return User::select(['id', 'email'])
-        ->role(BaseRole::Director->value)
-        ->get();
+    return $repo->get([
+        'where' => [
+            'project_song_id' => 1,
+        ],
+        'doesntHave' => ['latestTask'],
+    ]);
 });
