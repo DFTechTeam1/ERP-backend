@@ -8,6 +8,7 @@ class SongListData extends Data
 {
     public function __construct(
         public readonly string $uid,
+        public readonly string $group_uid,
         public string $name,
         public string $group,
         public string $status,

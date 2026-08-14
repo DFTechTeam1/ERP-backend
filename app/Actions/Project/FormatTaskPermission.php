@@ -3,13 +3,17 @@
 namespace App\Actions\Project;
 
 use App\Actions\DefineDetailProjectPermission;
+use App\Enums\Production\ProjectStatus;
+use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
+use Modules\Production\Services\EntertainmentService;
 
 class FormatTaskPermission
 {
@@ -39,7 +43,7 @@ class FormatTaskPermission
         $this->fetchSpecialPosition();
         $projectPicRepository = new ProjectPersonInChargeRepository;
 
-        $this->user = Auth::user()->load('employee');
+        $this->user = User::with('employee')->find(Auth::id());
         $this->employeeId = $this->user->employee_id;
         $this->isDirector = isDirector();
 
@@ -84,17 +88,17 @@ class FormatTaskPermission
         $project['is_time_to_complete_project'] = false;
         if (
             (
-                $project['status_raw'] == \App\Enums\Production\ProjectStatus::OnGoing->value ||
-                $project['status_raw'] == \App\Enums\Production\ProjectStatus::Draft->value ||
-                $project['status_raw'] == \App\Enums\Production\ProjectStatus::ReadyToGo->value ||
-                $project['status_raw'] == \App\Enums\Production\ProjectStatus::PartialComplete->value
+                $project['status_raw'] == ProjectStatus::OnGoing->value ||
+                $project['status_raw'] == ProjectStatus::Draft->value ||
+                $project['status_raw'] == ProjectStatus::ReadyToGo->value ||
+                $project['status_raw'] == ProjectStatus::PartialComplete->value
             ) &&
             $diff <= 7
         ) {
             $project['is_time_to_complete_project'] = true;
         }
 
-        $project['project_is_complete'] = $project['status_raw'] == \App\Enums\Production\ProjectStatus::Completed->value ? true : false;
+        $project['project_is_complete'] = $project['status_raw'] == ProjectStatus::Completed->value ? true : false;
 
         // define show alert coming soon
         $now = time(); // or your date as well
@@ -109,7 +113,7 @@ class FormatTaskPermission
                 $d <= $targetRaiseDeadlineAlert &&
                 $d >= 0
             ) &&
-            $project['status_raw'] != \App\Enums\Production\ProjectStatus::Completed->value
+            $project['status_raw'] != ProjectStatus::Completed->value
         ) {
             $project['show_alert_coming_soon'] = true;
         }
@@ -190,8 +194,8 @@ class FormatTaskPermission
                 $outputTask[$keyTask]['can_add_description'] = $canAddDescription && $canModify;
                 $outputTask[$keyTask]['can_delete_description'] = $canDeleteDescription && $canModify;
                 $outputTask[$keyTask]['can_delete_attachment'] = $canModify;
-                $outputTask[$keyTask]['show_hold_button'] = $task['status'] == \App\Enums\Production\TaskStatus::OnProgress->value || $task['status'] == \App\Enums\Production\TaskStatus::Revise->value;
-                $outputTask[$keyTask]['is_hold'] = $task['status'] == \App\Enums\Production\TaskStatus::OnHold->value;
+                $outputTask[$keyTask]['show_hold_button'] = $task['status'] == TaskStatus::OnProgress->value || $task['status'] == TaskStatus::Revise->value;
+                $outputTask[$keyTask]['is_hold'] = $task['status'] == TaskStatus::OnHold->value;
                 $outputTask[$keyTask]['have_permission_to_move_board'] = $havePermissionToMoveBoard;
             }
 
@@ -223,6 +227,9 @@ class FormatTaskPermission
             $isMyFeedbackExists = true;
         }
         $project['is_my_feedback_exists'] = $isMyFeedbackExists;
+
+        $entertainmentService = app(EntertainmentService::class);
+        $project['entertainment_action'] = $entertainmentService->defineSongManagementAction($project, $this->user);
 
         return $project;
     }

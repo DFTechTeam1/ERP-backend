@@ -12,8 +12,13 @@ use App\Data\Production\Entertainment\UpdateSongData;
 use App\Enums\Employee\Status;
 use App\Enums\Production\Entertainment\TaskStatus;
 use App\Enums\Production\Entertainment\TaskType;
+use App\Enums\Production\ProjectStatus;
+use App\Enums\System\BaseRole;
 use App\Exceptions\DataNotFound;
+use App\Models\User;
+use App\Repository\UserRepository;
 use App\Services\GeneralService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +48,7 @@ class EntertainmentService
         private readonly EntertainmentTaskRepository $entertainmentTaskRepo,
         private readonly EntertainmentTaskPicRepository $taskPicRepo,
         private readonly EntertainmentTaskPicWorkstateRepository $workStateRepo,
+        private readonly UserRepository $userRepo,
         private readonly EntertainmentLogService $logService
     ) {}
 
@@ -69,6 +75,59 @@ class EntertainmentService
         }
     }
 
+    protected function getActiveProjectStatuses(): array
+    {
+        return [
+            ProjectStatus::OnGoing->value,
+            ProjectStatus::Revise->value,
+            ProjectStatus::WaitingApprovalClient->value,
+            ProjectStatus::PartialComplete->value,
+        ];
+    }
+
+    protected function isProjectActive(array $project): bool
+    {
+        return in_array($project['status_raw'], $this->getActiveProjectStatuses());
+    }
+
+    protected function canAddSong(array $project, ?User $user): bool
+    {
+        if ($this->isProjectActive($project) && $user && $user->hasPermissionTo('create_request_song')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function canCreateJumpBack(array $project, ?User $user): bool
+    {
+        if ($this->isProjectActive($project) && $user && $user->hasPermissionTo('create_jumpback_task')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function canCreateEntertainmentTask(array $project, ?User $user): bool
+    {
+        if ($this->isProjectActive($project) && $user && $user->hasPermissionTo('create_entertainment_task')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function defineSongManagementAction(array $project, ?User $user): array
+    {
+        $output = [
+            'add_song' => $this->canAddSong($project, $user),
+            'create_jump_back' => $this->canCreateJumpBack($project, $user),
+            'add_task' => $this->canCreateEntertainmentTask($project, $user),
+        ];
+
+        return $output;
+    }
+
     /**
      * Get task cache identifier
      */
@@ -82,18 +141,21 @@ class EntertainmentService
     /**
      * Format project song list to serve API response
      */
-    protected function formatSongList(ProjectSong $data): array
+    protected function formatSongList(\Illuminate\Database\Eloquent\Collection $data): array
     {
         /** @var SongListData[] */
         $output = [];
-        foreach ($data->items as $songList) {
-            $output[] = new SongListData(
-                uid: $songList->uid,
-                name: $songList->song_name,
-                group: $data->group_name,
-                status: ! $songList->latestTask ? __('global.unassigned') : __('global.assigned'),
-                status_color: ! $songList->latestTask ? 'grey' : 'green'
-            );
+        foreach ($data as $group) {
+            foreach ($group->items as $songList) {
+                $output[] = new SongListData(
+                    uid: $songList->uid,
+                    group_uid: $group->uid,
+                    name: $songList->song_name,
+                    group: $group->group_name,
+                    status: ! $songList->latestTask ? __('global.unassigned') : __('global.assigned'),
+                    status_color: ! $songList->latestTask ? 'grey' : 'green'
+                );
+            }
         }
 
         return $output;
@@ -102,9 +164,9 @@ class EntertainmentService
     /**
      * Fetch main data for project song list
      */
-    protected function fetchSongList(int $projectId): ?ProjectSong
+    protected function fetchSongList(int $projectId): ?\Illuminate\Database\Eloquent\Collection
     {
-        return $this->projectSongRepo->show([
+        return $this->projectSongRepo->get([
             'select' => ['id', 'group_name', 'uid', 'project_id'],
             'with' => [
                 'items:id,song_name,project_song_id,uid',
@@ -136,6 +198,20 @@ class EntertainmentService
                 return $output;
             }
         );
+    }
+
+    public function getEntertainmentTeams(array $project)
+    {
+        $users = $this->userRepo->list(
+            select: 'id,email,employee_id',
+            whereRole: [BaseRole::Entertainment->value, BaseRole::ProjectManagerEntertainment->value],
+            relation: [
+                'employee:id,uid,name,position_id',
+                'employee.position:id,name'
+            ]
+        );
+
+        
     }
 
     /**
@@ -172,9 +248,14 @@ class EntertainmentService
     {
         DB::beginTransaction();
         try {
-            $projectId = getIdFromUid($projectUid, new Project);
+            $project = $this->getProject($projectUid);
+            $projectId = $project->id;
 
             $actor = $this->generalService->me();
+
+            if (! $this->canAddSong($project->toArray(), $actor)) {
+                throw new AuthorizationException(message: "You're not allowed to create song", code: 400);
+            }
 
             collect($payload->groups)->each(function ($item) use ($projectId, $actor) {
                 $groupName = strtolower($item->name);
@@ -271,7 +352,7 @@ class EntertainmentService
     {
         $project = $this->projectRepo->show(
             uid: $projectUid,
-            select: 'id'
+            select: 'id,status as status_raw'
         );
 
         if (! $project) {
@@ -348,6 +429,12 @@ class EntertainmentService
                 'uid' => $songUid,
                 'project_song_id' => $groupSong->id,
             ]);
+
+            $groupSong->refresh();
+
+            if ($groupSong->items->count() === 0) {
+                $this->projectSongRepo->delete($groupSong);
+            }
 
             $this->deleteSongFromCache($projectUid, $songUid);
 

@@ -1256,6 +1256,18 @@ class RolePermissionSetting extends Seeder
                 $this->getProjectManagerRole(),
                 $this->getProjectManagerAdminRole(),
             ]],
+            ['name' => 'create_entertainment_task', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+            ]],
+            ['name' => 'create_jumpback_task', 'group' => 'production', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getProjectManagerRole(),
+                $this->getProjectManagerAdminRole(),
+            ]],
             ['name' => 'approve_request_song', 'group' => 'production', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),

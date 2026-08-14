@@ -6,6 +6,7 @@ use App\Data\Production\Entertainment\CreateSongData;
 use App\Data\Production\Entertainment\SongListData;
 use App\Data\Production\Entertainment\UpdateSongData;
 use App\Enums\Employee\Status;
+use App\Enums\Production\ProjectStatus;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -17,6 +18,7 @@ use Modules\Production\Models\ProjectSong;
 use Modules\Production\Models\ProjectSongItem;
 use Modules\Production\Repository\ProjectSongRepository;
 use Modules\Production\Services\EntertainmentService;
+use Spatie\Permission\Models\Permission;
 
 use function Pest\Laravel\assertDatabaseCount;
 use function Pest\Laravel\assertDatabaseHas;
@@ -26,10 +28,19 @@ beforeEach(function () {
     // createSong() resolves the acting user via GeneralService::me(), which reads
     // Auth::id() and returns a non-nullable User. Without an authenticated user the
     // service throws and rolls back, so every createSong/list test must be authenticated.
-    $this->actingAs(User::factory()->create());
+    // It also gates on canAddSong(), so the actor needs create_request_song.
+    $this->user = User::factory()->create();
+    $this->user->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'create_request_song',
+        'guard_name' => 'sanctum',
+    ]));
+    $this->actingAs($this->user);
 
     $this->service = app(EntertainmentService::class);
-    $this->project = Project::factory()->create();
+
+    // The factory picks a random status, but canAddSong() only lets an ACTIVE
+    // project take new songs - pin it so the suite does not flake.
+    $this->project = Project::factory()->create(['status' => ProjectStatus::OnGoing->value]);
 });
 
 function songPayload(array $groups): CreateSongData
@@ -134,6 +145,35 @@ describe('createSong', function () {
         expect($response['error'])->toBeFalse();
         assertDatabaseCount('project_songs', 2);
         assertDatabaseCount('project_song_items', 2);
+    });
+
+    it('refuses an actor without the create_request_song permission', function () {
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->service->createSong(
+            songPayload([['name' => 'Denied', 'songs' => ['Ghost Song']]]),
+            $this->project->uid,
+        );
+
+        expect($response['error'])->toBeTrue()
+            ->and($response['message'])->toContain("You're not allowed to create song");
+
+        assertDatabaseMissing('project_songs', ['group_name' => 'Denied']);
+        assertDatabaseCount('project_song_items', 0);
+    });
+
+    it('refuses a project that is not in an active status', function () {
+        $closed = Project::factory()->create(['status' => ProjectStatus::Completed->value]);
+
+        $response = $this->service->createSong(
+            songPayload([['name' => 'Too Late', 'songs' => ['Ghost Song']]]),
+            $closed->uid,
+        );
+
+        expect($response['error'])->toBeTrue()
+            ->and($response['message'])->toContain("You're not allowed to create song");
+
+        assertDatabaseMissing('project_songs', ['group_name' => 'Too Late']);
     });
 
     it('rolls back and returns an error when the project does not exist', function () {
@@ -363,6 +403,67 @@ describe('deleteSingleSong', function () {
 
         expect($response['error'])->toBeFalse();
         assertDatabaseHas('project_song_items', ['song_name' => 'Elsewhere']);
+    });
+
+    /**
+     * A group only exists to hold songs, so deleting the last one takes the group
+     * with it instead of leaving an empty group behind in the list.
+     */
+    it('deletes the group once its last song is removed', function () {
+        $elsewhere = ($this->songByName)('Elsewhere');
+
+        $response = ($this->deleteSingle)($elsewhere->uid, $this->sibling->uid);
+
+        expect($response['error'])->toBeFalse();
+        assertDatabaseMissing('project_song_items', ['song_name' => 'Elsewhere']);
+        assertDatabaseMissing('project_songs', ['id' => $this->sibling->id]);
+    });
+
+    it('keeps the group while it still holds other songs', function () {
+        ($this->deleteSingle)(($this->songByName)('Doomed')->uid);
+
+        assertDatabaseHas('project_songs', ['id' => $this->group->id, 'group_name' => 'Set']);
+    });
+
+    it('deletes the group only after every one of its songs is gone', function () {
+        ($this->deleteSingle)(($this->songByName)('Doomed')->uid);
+        assertDatabaseHas('project_songs', ['id' => $this->group->id]);
+
+        ($this->deleteSingle)(($this->songByName)('Survivor')->uid);
+
+        assertDatabaseMissing('project_songs', ['id' => $this->group->id]);
+    });
+
+    it('leaves the other groups of the project intact when one group empties out', function () {
+        ($this->deleteSingle)(($this->songByName)('Elsewhere')->uid, $this->sibling->uid);
+
+        assertDatabaseHas('project_songs', ['id' => $this->group->id, 'group_name' => 'Set']);
+        assertDatabaseHas('project_songs', ['id' => $this->foreignGroup->id, 'group_name' => 'Foreign']);
+    });
+
+    /**
+     * The emptiness check runs off a refreshed group, so a delete that matched
+     * nothing must leave the group alone - here the song uid belongs to another
+     * group, so the single-song sibling keeps its item and its row.
+     */
+    it('keeps the group when the delete matched no song', function () {
+        $doomed = ($this->songByName)('Doomed');
+
+        $response = ($this->deleteSingle)($doomed->uid, $this->sibling->uid);
+
+        expect($response['error'])->toBeFalse();
+        assertDatabaseHas('project_songs', ['id' => $this->sibling->id]);
+        assertDatabaseHas('project_song_items', ['song_name' => 'Elsewhere']);
+        assertDatabaseHas('project_song_items', ['song_name' => 'Doomed']);
+    });
+
+    it('does not touch the group of another project', function () {
+        $notMine = ($this->songByName)('Not Mine');
+
+        ($this->deleteSingle)($notMine->uid);
+
+        assertDatabaseHas('project_songs', ['id' => $this->foreignGroup->id]);
+        assertDatabaseHas('project_song_items', ['song_name' => 'Not Mine']);
     });
 
     it('drops the song from the cached list', function () {
