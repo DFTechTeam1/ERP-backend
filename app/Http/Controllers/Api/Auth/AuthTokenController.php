@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Data\Auth\WhoamiData;
 use App\Exceptions\Auth\RefreshTokenInvalid;
 use App\Http\Controllers\Controller;
 use App\Services\Auth\RefreshTokenService;
@@ -57,5 +58,28 @@ class AuthTokenController extends Controller
     private function unauthenticated(): JsonResponse
     {
         return response()->json(['message' => 'Unauthenticated'], 401);
+    }
+
+    /**
+     * Whoami — validity probe for the bearer access token.
+     *
+     * Reached at GET /api/whoami through the jwt.auth middleware, which has
+     * already verified the RS256 signature, issuer, audience, expiry, and
+     * loaded the user by the `sub` claim. Reaching this method proves the
+     * token is currently valid; the response body identifies the user for
+     * the caller's UI chrome.
+     *
+     * Called on every dfengine boot and on the client-side heartbeat, so
+     * keep it cheap — no eager-loaded relations.
+     */
+    public function me(Request $request): JsonResponse
+    {
+        return apiResponse(
+            generalResponse(
+                'Success',
+                false,
+                WhoamiData::fromUser($request->user())->toArray(),
+            ),
+        );
     }
 }

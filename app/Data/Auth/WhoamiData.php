@@ -2,7 +2,6 @@
 
 namespace App\Data\Auth;
 
-use App\Enums\System\BaseRole;
 use App\Models\User;
 use Spatie\LaravelData\Data;
 
@@ -23,7 +22,6 @@ class WhoamiData extends Data
         public bool $isEmployee,
         public bool $isDirector,
         public bool $isProjectManager,
-        public ?bool $isRoot
     ) {}
 
     public static function fromUser(User $user): self
@@ -36,7 +34,6 @@ class WhoamiData extends Data
             isEmployee: (bool) $user->is_employee,
             isDirector: (bool) $user->is_director,
             isProjectManager: (bool) $user->is_project_manager,
-            isRoot: (bool) $user->hasRole(BaseRole::Root->value)
         );
     }
 }

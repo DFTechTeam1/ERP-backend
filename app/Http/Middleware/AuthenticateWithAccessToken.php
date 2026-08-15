@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\Auth\AccessTokenRevocationService;
 use App\Services\Auth\TokenService;
 use Closure;
 use Illuminate\Http\Request;
@@ -20,7 +21,10 @@ use Psr\Clock\ClockInterface;
  */
 class AuthenticateWithAccessToken
 {
-    public function __construct(private TokenService $tokenService) {}
+    public function __construct(
+        private TokenService $tokenService,
+        private AccessTokenRevocationService $revocationService,
+    ) {}
 
     public function handle(Request $request, Closure $next): mixed
     {
@@ -60,6 +64,14 @@ class AuthenticateWithAccessToken
 
         if (! $user) {
             return response()->json(['message' => 'User not found'], 401);
+        }
+
+        // Server-side revocation gate: even a cryptographically valid,
+        // unexpired token is rejected if the user has logged out since it
+        // was issued. Makes logout instant across every live session.
+        $issuedAt = $token->claims()->get('iat');
+        if ($issuedAt && $this->revocationService->wasIssuedBeforeRevocation((int) $user->id, $issuedAt)) {
+            return response()->json(['message' => 'Session revoked'], 401);
         }
 
         Auth::setUser($user);

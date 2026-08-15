@@ -215,6 +215,11 @@ Route::prefix('auth')->group(function () {
 // Menu tree for the access-token-authenticated user (built fresh from permissions)
 Route::middleware('jwt.auth')->get('menu', [MenuController::class, 'userMenu']);
 
+// Whoami — bearer token validity probe. Every dfengine boot + heartbeat
+// hits this; the middleware does the actual verification, so a 200 response
+// alone is proof the token is live. Body identifies the caller for the UI.
+Route::middleware('jwt.auth')->get('whoami', [AuthTokenController::class, 'me']);
+
 Route::middleware('auth.session')
     ->prefix('auth')
     ->group(function () {
