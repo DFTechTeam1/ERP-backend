@@ -370,4 +370,11 @@ return [
     'documentDeletedIntro' => 'A document that was generated for your signature has been removed.',
     'documentDeletedBody' => 'You no longer need to take any action on it. If you believe this was a mistake, please contact HR.',
     'documentDeletedClosing' => 'Thank you.',
+
+    // Marketing dashboard - pipeline funnel stages
+    'notFound' => 'Not found',
+    'leadsCreated' => 'Leads',
+    'dealsCreated' => 'Deals created',
+    'dealsFinalized' => 'Deals finalized',
+    'dealsFullyPaid' => 'Fully paid',
 ];

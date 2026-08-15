@@ -534,6 +534,11 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
                 $this->getFinanceRole(),
             ]],
+            ['name' => 'list_invoice_changes', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
             ['name' => 'approve_invoice_changes', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),

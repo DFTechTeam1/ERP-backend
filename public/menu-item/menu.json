@@ -43,7 +43,8 @@
             "childs": [
                 { "path": "/admin/deals/price-changes", "slug": "projectDealPriceChanges", "lang_id": "Perubahan Harga", "lang_en": "Price Changes", "icon": "mdiPlain:mdi-cash-edit", "permission": "list_deal_price_changes" },
                 { "path": "/admin/deals/changes", "slug": "projectDealChanges", "lang_id": "Perubahan Event Detil", "lang_en": "Deal Changes", "icon": "mdiPlain:mdi-cash-edit", "permission": "list_deal_changes" },
-                { "path": "/admin/deals/interactive-requests", "slug": "interactiveRequest", "lang_id": "Permintaan Interaktif", "lang_en": "Interactive Request", "icon": "mdiPlain:mdi-folder-question-outline", "permission": "list_interactive_requests" }
+                { "path": "/admin/deals/interactive-requests", "slug": "interactiveRequest", "lang_id": "Permintaan Interaktif", "lang_en": "Interactive Request", "icon": "mdiPlain:mdi-folder-question-outline", "permission": "list_interactive_requests" },
+                { "path": "/admin/finance/invoice-changes", "slug": "invoiceChanges", "lang_id": "Perubahan Invoice", "lang_en": "Invoice Changes", "icon": "mdiPlain:mdi-file-edit-outline", "permission": "list_invoice_changes" }
             ]
         },
         {

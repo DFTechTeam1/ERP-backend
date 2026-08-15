@@ -2,7 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Finance\Http\Controllers\Api\FinanceController as ApiFinanceController;
+use Modules\Finance\Http\Controllers\Api\FinanceDashboardController;
+use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
+use Modules\Finance\Http\Controllers\Api\MarketingDashboardController;
 
 /*
  *--------------------------------------------------------------------------
@@ -56,6 +59,52 @@ Route::middleware(['auth.session'])->group(function () {
     });
 
     Route::post('finance/report/global', [ApiFinanceController::class, 'exportFinanceData']);
+
+    // Sales dashboard - role-scoped. Sales users see own deals; Director/Root
+    // see company-wide unless narrowed via `?sales_employee_id=`.
+    Route::prefix('finance/marketing-dashboard')->group(function () {
+        Route::get('pipeline', [MarketingDashboardController::class, 'pipeline'])
+            ->name('finance.marketing.pipeline');
+        Route::get('deals', [MarketingDashboardController::class, 'deals'])
+            ->name('finance.marketing.deals');
+        Route::get('sales-people', [MarketingDashboardController::class, 'salesPeople'])
+            ->name('finance.marketing.salesPeople');
+    });
+
+    // Invoice change requests menu (Request → Invoice Changes).
+    // Permissions gate each verb; list_invoice_changes gates the page load.
+    Route::prefix('finance/invoice-changes')->group(function () {
+        Route::get('', [InvoiceChangeRequestController::class, 'index'])
+            ->middleware('can:list_invoice_changes')
+            ->name('finance.invoiceChanges.index');
+        Route::post('{id}/approve', [InvoiceChangeRequestController::class, 'approve'])
+            ->whereNumber('id')
+            ->middleware('can:approve_invoice_changes')
+            ->name('finance.invoiceChanges.approve');
+        Route::post('{id}/reject', [InvoiceChangeRequestController::class, 'reject'])
+            ->whereNumber('id')
+            ->middleware('can:reject_invoice_changes')
+            ->name('finance.invoiceChanges.reject');
+    });
+
+    // Finance dashboard - pending queue endpoints (Finance / Director / Root).
+    Route::prefix('finance/dashboard')->group(function () {
+        Route::get('pending-invoice-updates', [FinanceDashboardController::class, 'pendingInvoiceUpdates'])
+            ->name('finance.dashboard.pendingInvoiceUpdates');
+        Route::get('pending-price-changes', [FinanceDashboardController::class, 'pendingPriceChanges'])
+            ->name('finance.dashboard.pendingPriceChanges');
+    });
+
+    // Finance insight bundle - same handlers as the MCP versions, but session-auth
+    // so the SPA can consume them. Role gating happens inside FinanceInsightService.
+    Route::get('finance/insight', [ApiFinanceController::class, 'getFinanceInsight'])
+        ->name('finance.insight');
+    Route::get('finance/insight/receivables', [ApiFinanceController::class, 'getFinanceReceivables'])
+        ->name('finance.insight.receivables');
+    Route::get('finance/insight/marketing-performance', [ApiFinanceController::class, 'getMarketingPerformance'])
+        ->name('finance.insight.marketingPerformance');
+    Route::get('finance/insight/top-deals', [ApiFinanceController::class, 'getTopDeals'])
+        ->name('finance.insight.topDeals');
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])

@@ -1150,7 +1150,9 @@ class ProjectDealService
                 $trx['customer'] = [
                     'name' => $data->customer->name,
                 ];
-                $trx['invoice_date'] = date('d F Y', strtotime($trx->invoice->payment_date));
+                $trx['invoice_date'] = $trx->invoice && $trx->invoice->payment_date
+                    ? date('d F Y', strtotime($trx->invoice->payment_date))
+                    : '-';
                 $trx['payment_date'] = date('d F Y', strtotime($trx->created_at));
 
                 return $trx;

@@ -371,4 +371,11 @@ return [
     'documentDeletedIntro' => 'Sebuah dokumen yang dibuat untuk Anda tanda tangani telah dihapus.',
     'documentDeletedBody' => 'Anda tidak perlu melakukan tindakan apa pun terhadap dokumen tersebut. Jika Anda merasa ini keliru, silakan hubungi HR.',
     'documentDeletedClosing' => 'Terima kasih.',
+
+    // Marketing dashboard - pipeline funnel stages
+    'notFound' => 'Data tidak ditemukan',
+    'leadsCreated' => 'Leads',
+    'dealsCreated' => 'Deal dibuat',
+    'dealsFinalized' => 'Deal difinalisasi',
+    'dealsFullyPaid' => 'Lunas',
 ];

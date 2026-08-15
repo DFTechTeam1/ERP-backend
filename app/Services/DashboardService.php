@@ -631,7 +631,17 @@ class DashboardService
         $where = '';
 
         $user = \Illuminate\Support\Facades\Auth::user();
-        if ($user->hasRole([BaseRole::Marketing->value, BaseRole::Director->value, BaseRole::Root->value])) {
+        // Roles that plan/close deals see the "prospect" calendar - every
+        // project regardless of status (Draft, Temporary, ongoing, interactive).
+        // This is what a salesperson needs to decide a venue date; the
+        // task-based branch below is scoped to whoever executes the project.
+        if ($user->hasRole([
+            BaseRole::Marketing->value,
+            BaseRole::Sales->value,
+            BaseRole::Finance->value,
+            BaseRole::Director->value,
+            BaseRole::Root->value,
+        ])) {
             return $this->getProjectCalendarForProspectEvent();
         }
         $month = request('month') == 0 ? date('m') : request('month');
