@@ -47,6 +47,7 @@ class FinanceInsightService
         ],
         self::TIER_FINANCE => [
             'overview',
+            'profitability',
             'monthly_trend',
             'receivables',
             'refunds',
@@ -55,6 +56,7 @@ class FinanceInsightService
         ],
         self::TIER_MARKETING => [
             'overview',
+            'profitability',
             'monthly_trend',
             'top_deals',
             'payment_status',
@@ -76,11 +78,18 @@ class FinanceInsightService
         }
 
         if ($user->hasRole([BaseRole::Director->value, BaseRole::Root->value])) {
+            // Executive callers may narrow the whole insight bundle to a single
+            // salesperson via `?sales_employee_id=`. Sections are unchanged
+            // (they still see everything the exec tier is allowed to see) -
+            // only the deal-id scope is overridden.
+            $filterId = (int) request('sales_employee_id');
+            $overrideScope = $filterId > 0 ? $this->marketingDealIds($filterId) : null;
+
             return [
                 'tier' => self::TIER_EXECUTIVE,
                 'role' => $user->getRoleNames()->first() ?? BaseRole::Director->value,
-                'scope_deal_ids' => null,
-                'scope_label' => 'company_wide',
+                'scope_deal_ids' => $overrideScope,
+                'scope_label' => $overrideScope !== null ? 'sales_person_filter' : 'company_wide',
                 'sections' => self::TIER_SECTIONS[self::TIER_EXECUTIVE],
             ];
         }
@@ -95,10 +104,10 @@ class FinanceInsightService
             ];
         }
 
-        if ($user->hasRole(BaseRole::Marketing->value)) {
+        if ($user->hasRole(BaseRole::Sales->value)) {
             return [
                 'tier' => self::TIER_MARKETING,
-                'role' => BaseRole::Marketing->value,
+                'role' => BaseRole::Sales->value,
                 'scope_deal_ids' => $this->marketingDealIds((int) $user->employee_id),
                 'scope_label' => 'own_deals',
                 'sections' => self::TIER_SECTIONS[self::TIER_MARKETING],
