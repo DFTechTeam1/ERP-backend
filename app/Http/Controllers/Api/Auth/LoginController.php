@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\UserEncryptedToken;
 use App\Notifications\ForgotPasswordNotification;
 use App\Repository\UserLoginHistoryRepository;
+use App\Services\Auth\AccessTokenRevocationService;
 use App\Services\Auth\RefreshTokenService;
 use App\Services\Auth\TokenService;
 use App\Services\EncryptionService;
@@ -38,12 +39,15 @@ class LoginController extends Controller
 
     private RefreshTokenService $refreshTokenService;
 
+    private AccessTokenRevocationService $accessTokenRevocationService;
+
     public function __construct(
         UserService $userService,
         EncryptionService $encryptionService,
         UserLoginHistoryRepository $userLoginHistoryRepo,
         TokenService $tokenService,
-        RefreshTokenService $refreshTokenService
+        RefreshTokenService $refreshTokenService,
+        AccessTokenRevocationService $accessTokenRevocationService
     ) {
         $this->service = $encryptionService;
 
@@ -54,6 +58,8 @@ class LoginController extends Controller
         $this->tokenService = $tokenService;
 
         $this->refreshTokenService = $refreshTokenService;
+
+        $this->accessTokenRevocationService = $accessTokenRevocationService;
     }
 
     /**
@@ -184,6 +190,13 @@ class LoginController extends Controller
             if ($raw) {
                 $this->refreshTokenService->revoke($raw);
             }
+
+            // Kill every access token this user was issued before now.
+            // RS256 tokens are unforgeable but not deletable — this records a
+            // "sessions killed at" moment that the jwt.auth middleware checks
+            // on every request, so logout takes effect on the next call from
+            // any device or tab (including dfengine on a separate origin).
+            $this->accessTokenRevocationService->revokeAllForUser((int) $user->id);
 
             return apiResponse(
                 generalResponse(
