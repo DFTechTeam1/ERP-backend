@@ -412,6 +412,11 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
                 $this->getHrdRole(),
             ]],
+            ['name' => 'approve_document_templates', 'group' => 'documents', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getHrdRole(),
+            ]],
         ];
     }
 
@@ -520,6 +525,16 @@ class RolePermissionSetting extends Seeder
                 $this->getFinanceRole(),
             ]],
             ['name' => 'list_deal_price_changes', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'list_deal_changes', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'list_invoice_changes', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
                 $this->getFinanceRole(),

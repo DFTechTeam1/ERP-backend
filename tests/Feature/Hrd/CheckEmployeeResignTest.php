@@ -4,12 +4,17 @@ use App\Enums\Employee\Status;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmploymentStatus;
 use Modules\Hrd\Services\EmployeeService;
 
 beforeEach(function () {
     $this->actingAs(User::factory()->create());
 
     Queue::fake();
+
+    // turnOffEmployee moves the employee onto the terminal employment status and refuses to
+    // run without one, so every deactivating resignation needs it seeded.
+    EmploymentStatus::factory()->create(['code' => 'RESIGN', 'name' => 'Resign', 'is_terminal' => 1]);
 });
 
 /**

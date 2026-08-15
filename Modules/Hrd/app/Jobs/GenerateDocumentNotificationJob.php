@@ -8,6 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Notification;
+use Modules\Hrd\Notifications\DocumentReadyToSign;
 use Modules\Hrd\Repository\EmployeeRepository;
 
 class GenerateDocumentNotificationJob implements ShouldQueue
@@ -30,7 +32,7 @@ class GenerateDocumentNotificationJob implements ShouldQueue
     public function handle(): void
     {
         $employees = app(EmployeeRepository::class)->list(
-            select: 'id,name,position_id',
+            select: 'id,name,email,position_id,user_id',
             whereIn: [
                 'key' => 'id',
                 'value' => $this->employeeIds,
@@ -52,9 +54,15 @@ class GenerateDocumentNotificationJob implements ShouldQueue
                     'title' => $title,
                     'message' => $message,
                     'icon' => '📝',
+                    'url' => '',
                     'action' => 'document_ready_to_sign',
+                    'data' => []
                 ],
             );
+
+            if ($employee->email) {
+                Notification::send($employee, new DocumentReadyToSign($employee->name));
+            }
         }
     }
 }

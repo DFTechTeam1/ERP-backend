@@ -6,6 +6,8 @@ use App\Actions\CopyDealToProject;
 use App\Actions\CreateInteractiveProject;
 use App\Actions\CreateQuotation;
 use App\Actions\Finance\CreateMasterInvoice;
+use App\Data\Production\Lead\DealChange\ListDealChangesData;
+use App\Data\Production\Lead\PriceChanges\ListPriceChangesData;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Finance\RefundStatus;
 use App\Enums\Interactive\InteractiveRequestStatus;
@@ -16,12 +18,14 @@ use App\Enums\Production\ProjectLeadStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
+use App\Exceptions\DataNotFound;
 use App\Repository\UserRepository;
 use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\Geocoding;
 use App\Services\NasFolderCreationService;
 use Carbon\Carbon;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -31,6 +35,7 @@ use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesHasBeenApproved;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesJob;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Finance\Models\ProjectDealPriceChange;
 use Modules\Finance\Models\ProjectDealRefund;
 use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Finance\Repository\PriceChangeReasonRepository;
@@ -44,6 +49,7 @@ use Modules\Production\Jobs\NotifyApprovalRecipientWhenInteractiveHasBeenDelete;
 use Modules\Production\Jobs\NotifyProjectDealChangesJob;
 use Modules\Production\Jobs\ProjectDealCanceledJob;
 use Modules\Production\Models\InteractiveProject;
+use Modules\Production\Models\ProjectDealChange;
 use Modules\Production\Repository\InteractiveProjectPicRepository;
 use Modules\Production\Repository\InteractiveProjectRepository;
 use Modules\Production\Repository\InteractiveRequestRepository;
@@ -68,9 +74,9 @@ class ProjectDealService
 
     private $geocoding;
 
-    private $projectDealChangeRepo;
+    private ProjectDealChangeRepository $projectDealChangeRepo;
 
-    private $projectDealPriceChangeRepo;
+    private ProjectDealPriceChangeRepository $projectDealPriceChangeRepo;
 
     private InvoiceRepository $invoiceRepo;
 
@@ -94,6 +100,25 @@ class ProjectDealService
 
     /**
      * Construction Data
+     *
+     * @param  ProjectDealRepository  $repo  Primary repository for project_deals
+     * @param  ProjectDealMarketingRepository  $marketingRepo  Marketing staff attached to a deal
+     * @param  GeneralService  $generalService  Shared helpers: settings, cache, interactive, summaries
+     * @param  ProjectQuotationRepository  $projectQuotationRepo  Quotations belonging to a deal
+     * @param  ProjectRepository  $projectRepo  Production projects created from a deal
+     * @param  Geocoding  $geocoding  Resolves venue coordinates
+     * @param  ProjectDealChangeRepository  $projectDealChangeRepo  Requested edits to a final deal
+     * @param  ProjectDealPriceChangeRepository  $projectDealPriceChangeRepo  Requested fix-price edits
+     * @param  InvoiceRepository  $invoiceRepo  Invoices raised against a deal
+     * @param  PriceChangeReasonRepository  $priceChangeReasonRepo  Master list of price-change reasons
+     * @param  EmployeeRepository  $employeeRepo  Employee lookups (PIC, marketing, approvers)
+     * @param  InteractiveRequestRepository  $interactiveRequestRepo  Interactive add-on requests
+     * @param  InteractiveProjectRepository  $interactiveProjectRepo  Interactive projects spawned on approval
+     * @param  NasFolderCreationService  $nasFolderCreationService  Creates/renames/deletes the NAS folder
+     * @param  ProjectDealRefundRepository  $projectDealRefundRepo  Refund requests and their payments
+     * @param  TransactionRepository  $transactionRepo  Financial transactions on a deal
+     * @param  InteractiveProjectPicRepository  $interactiveProjectPicRepo  PICs on an interactive project
+     * @param  ProjectLeadRepository  $projectLeadRepo  Leads a deal may have originated from
      */
     public function __construct(
         ProjectDealRepository $repo,
@@ -162,6 +187,14 @@ class ProjectDealService
      * - multiple status
      * - range price
      * - multiple marketing
+     *
+     * Filters, paging and sorting are read from the current request, not from the
+     * arguments: itemsPerPage, page, search, sortBy, and the filter keys above.
+     *
+     * @param  string  $select  Raw column list passed straight to the repository
+     * @param  string  $where  Extra raw WHERE clause ANDed onto the request filters
+     * @param  array<int, string>  $relation  Relations to eager-load
+     * @return array<string, mixed> Response envelope; data holds `paginated` and `totalData`
      */
     public function list(
         string $select = '*',
@@ -419,6 +452,12 @@ class ProjectDealService
         }
     }
 
+    /**
+     * Unimplemented datatable endpoint.
+     *
+     * Kept as a stub for parity with the other services; nothing calls it and it
+     * has no body.
+     */
     public function datatable()
     {
         //
@@ -426,6 +465,9 @@ class ProjectDealService
 
     /**
      * Get detail data
+     *
+     * @param  string  $uid  Plain project deal id (not encrypted)
+     * @return array<string, mixed> Response envelope; data holds the deal name, uid and id
      */
     public function show(string $uid): array
     {
@@ -444,6 +486,9 @@ class ProjectDealService
 
     /**
      * Store data
+     *
+     * @param  array<string, mixed>  $data  Column => value pairs for the new project deal
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function store(array $data): array
     {
@@ -461,6 +506,11 @@ class ProjectDealService
 
     /**
      * Update selected data
+     *
+     * @param  array<string, mixed>  $data  Column => value pairs to write
+     * @param  string  $id  Project deal id to update
+     * @param  string  $where  Raw WHERE clause used instead of $id when given
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function update(
         array $data,
@@ -481,6 +531,13 @@ class ProjectDealService
 
     /**
      * Delete selected data
+     *
+     * A finalized deal can never be deleted. Deleting a draft also removes its
+     * quotations and marketing rows, cancels the originating lead, drops the NAS
+     * folder and tears down any non-rejected interactive request.
+     *
+     * @param  string  $id  Crypt-encrypted project deal id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function delete(string $id): array
     {
@@ -581,6 +638,9 @@ class ProjectDealService
 
     /**
      * Delete bulk data
+     *
+     * @param  array<int, string>  $ids  Project deal uids to delete
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function bulkDelete(array $ids): array
     {
@@ -596,6 +656,12 @@ class ProjectDealService
         }
     }
 
+    /**
+     * Unfinished price formula reader.
+     *
+     * Reads the `area_guide_price` setting and builds an $output array that is
+     * never returned, so the method always yields null. Nothing calls it.
+     */
     public function getPriceFormula()
     {
         $setting = $this->generalService->getSettingByKey(param: 'area_guide_price');
@@ -629,6 +695,13 @@ class ProjectDealService
 
     /**
      * Create new quotation data in existing deal
+     *
+     * Refused once the deal already has a final quotation.
+     *
+     * @param  array<string, mixed>  $payload  With these following structure
+     *                                         - array $quotation                                  Quotation columns, plus `items`
+     * @param  string  $projectDealId  Plain project deal id
+     * @return array<string, mixed> Response envelope; data holds the quotation download `url`
      */
     public function createNewQuotation(array $payload, string $projectDealId): array
     {
@@ -667,6 +740,10 @@ class ProjectDealService
 
     /**
      * Publish project deal
+     *
+     * @param  string  $projectDealId  Crypt-encrypted project deal id
+     * @param  string  $type  `publish` for a temporary deal, anything else finalizes it
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function publishProjectDeal(string $projectDealId, string $type): array
     {
@@ -750,6 +827,15 @@ class ProjectDealService
         }
     }
 
+    /**
+     * Get a project deal shaped for the edit form.
+     *
+     * Adds `quotation_items` (the latest quotation items as value/title options)
+     * and an `is_final` flag on top of the deal columns.
+     *
+     * @param  string  $quotationId  Crypt-encrypted project deal id
+     * @return array<string, mixed> Response envelope; data holds the deal for editing
+     */
     public function detailProjectDealForEdit(string $quotationId): array
     {
         $data = $this->repo->show(
@@ -784,6 +870,9 @@ class ProjectDealService
      * Build the quotation PDF download link for a quotation_id.
      *
      * Mirrors the URL produced in {@see CreateQuotation}.
+     *
+     * @param  string  $quotationId  Human-readable quotation id; a leading `#` is stripped
+     * @return string Absolute download URL carrying the encrypted quotation id
      */
     protected function buildQuotationDownloadUrl(string $quotationId): string
     {
@@ -798,6 +887,7 @@ class ProjectDealService
      * Returns the latest quotation link (always present when a quotation exists)
      * and the final quotation link (null until the deal is published as final).
      *
+     * @param  string  $projectDealUid  Crypt-encrypted project deal id
      * @return array{error: bool, message: string, data: array{latest_quotation: ?array{quotation_id: string, download_url: string}, final_quotation: ?array{quotation_id: string, download_url: string}}}
      */
     public function getQuotationDownloadLink(string $projectDealUid): array
@@ -843,7 +933,12 @@ class ProjectDealService
     /**
      * Get detail of project deal
      *
-     * @param  string  $quotationId
+     * Assembles the full deal view: quotations and their items, marketing staff,
+     * invoices and transactions, interactive state, refunds and the permission
+     * flags the frontend uses to decide which actions to offer.
+     *
+     * @param  string  $projectDealUid  Crypt-encrypted project deal id
+     * @return array<string, mixed> Response envelope; data holds the assembled deal detail
      */
     public function detailProjectDeal(string $projectDealUid): array
     {
@@ -1055,7 +1150,9 @@ class ProjectDealService
                 $trx['customer'] = [
                     'name' => $data->customer->name,
                 ];
-                $trx['invoice_date'] = date('d F Y', strtotime($trx->invoice->payment_date));
+                $trx['invoice_date'] = $trx->invoice && $trx->invoice->payment_date
+                    ? date('d F Y', strtotime($trx->invoice->payment_date))
+                    : '-';
                 $trx['payment_date'] = date('d F Y', strtotime($trx->created_at));
 
                 return $trx;
@@ -1169,6 +1266,11 @@ class ProjectDealService
 
     /**
      * Adding more quotation in the selected project deal
+     *
+     * @param  array<string, mixed>  $payload  With these following structure
+     *                                         - array $quotation                                  Quotation columns, plus `items` (item ids)
+     * @param  string  $projectDealUid  Crypt-encrypted project deal id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function addMoreQuotation(array $payload, string $projectDealUid): array
     {
@@ -1202,6 +1304,10 @@ class ProjectDealService
 
     /**
      * Get design job number
+     *
+     * The next number is simply the current project count plus one.
+     *
+     * @return array<string, mixed> Response envelope; data holds `designJob`
      */
     public function getDesignJob(): array
     {
@@ -1224,6 +1330,13 @@ class ProjectDealService
         }
     }
 
+    /**
+     * Get the project deal summary for the dashboard.
+     *
+     * Delegates to GeneralService with a hard-coded year of 2025.
+     *
+     * @return array<string, mixed> Response envelope holding the summary figures
+     */
     public function getProjectDealSummary(): array
     {
         return $this->generalService->getProjectDealSummary(2025);
@@ -1238,6 +1351,8 @@ class ProjectDealService
      *
      * @param  array  $payload  With this following structure
      *                          - string $reason
+     * @param  string  $projectDealUid  Crypt-encrypted project deal id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function cancelProjectDeal(array $payload, string $projectDealUid): array
     {
@@ -1291,11 +1406,16 @@ class ProjectDealService
     /**
      * Here we request changes on final project deal
      *
+     * Nothing is applied here - the request is recorded as pending and the
+     * approvers are notified.
+     *
      * @param  array  $payload  With these following structure
      *                          - array $detail_changes                              With these following structure
      *                          - string $old_value
      *                          - string $new_value
      *                          - string $label
+     * @param  string  $projectDealUid  Crypt-encrypted project deal id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function updateFinalDeal(array $payload, string $projectDealUid): array
     {
@@ -1304,7 +1424,7 @@ class ProjectDealService
             $user = Auth::user();
             $projectDealId = Crypt::decryptString($projectDealUid);
 
-            $changes = $this->projectDealChangeRepo->store(data: [
+            $changes = $this->projectDealChangeRepo->store([
                 'requested_by' => $user->id,
                 'requested_at' => Carbon::now(),
                 'detail_changes' => $payload['detail_changes'],
@@ -1328,6 +1448,17 @@ class ProjectDealService
 
     /**
      * Approve project deal changes
+     *
+     * Only a pending change may be approved. On approval the recorded edits are
+     * written onto the deal, its quotation and its project, the project cache is
+     * cleared and the requester is notified.
+     *
+     * @param  string  $projectDetailChangesUid  Crypt-encrypted project_deal_changes id
+     * @param  array  $payload  Empty for an ERP request (the actor comes from the session and
+     *                          must hold `approve_project_deal_change`); from the emailed link
+     *                          it carries
+     *                          - int $approval_id                                   Approving user id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function approveChangesProjectDeal(string $projectDetailChangesUid, array $payload = []): array
     {
@@ -1336,16 +1467,30 @@ class ProjectDealService
             $projectDetailChangesId = Crypt::decryptString($projectDetailChangesUid);
 
             // get detail project deal
-            $change = $this->projectDealChangeRepo->show(uid: $projectDetailChangesId, relation: [
-                'projectDeal:id,name,project_date,status',
-                'projectDeal.project:id,uid,project_deal_id',
-                'requester:id,email,employee_id',
-                'requester.employee:id,name',
+            $change = $this->projectDealChangeRepo->show([
+                'where' => ['id' => $projectDetailChangesId],
+                'with' => [
+                    'projectDeal:id,name,project_date,status',
+                    'projectDeal.project:id,uid,project_deal_id',
+                    'requester:id,email,employee_id',
+                    'requester.employee:id,name',
+                ],
             ]);
 
-            // return a specific message if changes has been already approved
-            if ($change->status == ProjectDealChangeStatus::Approved) {
-                return errorResponse(message: 'Changes has already approved');
+            if (! $change) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
+
+            // only a pending change may be decided. Re-approving would apply the
+            // edit to the deal a second time and re-notify the requester
+            if (! $this->canApprovalDealChanges($change)) {
+                DB::rollBack();
+
+                return errorResponse(message: $change->status == ProjectDealChangeStatus::Approved
+                    ? 'Changes has already approved'
+                    : 'Changes has already rejected');
             }
 
             if (! empty($payload)) { // this request came from email
@@ -1356,19 +1501,18 @@ class ProjectDealService
 
                 // validate permission
                 if (! $user->hasPermissionTo('approve_project_deal_change')) {
+                    DB::rollBack();
+
                     return errorResponse(message: "You don't have permission to take this action", code: 403);
                 }
             }
 
             // update project deal table
-            $this->projectDealChangeRepo->update(
-                data: [
-                    'approval_at' => Carbon::now(),
-                    'approval_by' => $userId,
-                    'status' => ProjectDealChangeStatus::Approved,
-                ],
-                id: $projectDetailChangesId
-            );
+            $this->projectDealChangeRepo->update($change, [
+                'approval_at' => Carbon::now(),
+                'approval_by' => $userId,
+                'status' => ProjectDealChangeStatus::Approved,
+            ]);
 
             $changes = $change->detail_changes;
             // build payload to update the main data
@@ -1489,12 +1633,40 @@ class ProjectDealService
 
     /**
      * Here we reject the the changes
+     *
+     * Only a pending change may be rejected; the deal itself is never touched.
+     *
+     * @param  string  $projectDetailChangesUid  Crypt-encrypted project_deal_changes id
+     * @param  array  $payload  Empty for an ERP request (the actor comes from the session);
+     *                          from the emailed link it carries
+     *                          - int $approval_id                                   Rejecting user id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function rejectChangesProjectDeal(string $projectDetailChangesUid, array $payload = []): array
     {
         DB::beginTransaction();
         try {
             $projectDetailChangesId = Crypt::decryptString($projectDetailChangesUid);
+
+            $change = $this->projectDealChangeRepo->show([
+                'where' => ['id' => $projectDetailChangesId],
+            ]);
+
+            if (! $change) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
+
+            // rejecting an already-approved change would flip the status after the
+            // deal has been edited, leaving the two permanently out of sync
+            if (! $this->canApprovalDealChanges($change)) {
+                DB::rollBack();
+
+                return errorResponse(message: $change->status == ProjectDealChangeStatus::Approved
+                    ? 'Changes has already approved'
+                    : 'Changes has already rejected');
+            }
 
             if (empty($payload)) {
                 $user = Auth::user();
@@ -1503,14 +1675,11 @@ class ProjectDealService
                 $userId = $payload['approval_id'];
             }
 
-            $this->projectDealChangeRepo->update(
-                data: [
-                    'status' => ProjectDealChangeStatus::Rejected,
-                    'rejected_at' => Carbon::now(),
-                    'rejected_by' => $userId,
-                ],
-                id: $projectDetailChangesId
-            );
+            $this->projectDealChangeRepo->update($change, [
+                'status' => ProjectDealChangeStatus::Rejected,
+                'rejected_at' => Carbon::now(),
+                'rejected_by' => $userId,
+            ]);
 
             DB::commit();
 
@@ -1531,6 +1700,8 @@ class ProjectDealService
      * @param  array  $payload  With these following structure
      *                          - string $price
      *                          - string $reason
+     * @param  string  $projectDealUid  Crypt-encrypted project deal id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function requestPriceChanges(array $payload, string $projectDealUid): array
     {
@@ -1555,7 +1726,7 @@ class ProjectDealService
             // }
 
             // record price changes. old price came from finalQuotation->fix_price
-            $changes = $this->projectDealPriceChangeRepo->store(data: [
+            $changes = $this->projectDealPriceChangeRepo->store([
                 'project_deal_id' => $projectDealId,
                 'requested_by' => Auth::id(),
                 'requested_at' => Carbon::now(),
@@ -1586,13 +1757,37 @@ class ProjectDealService
     /**
      * Approve price changes
      * Change price on quotation and raw data on invoice
+     *
+     * Only a pending request may be approved. The actor is taken from the
+     * `approvalId` query parameter when the emailed link is used, otherwise from
+     * the session.
+     *
+     * @param  string  $priceChangeId  Price change id, plain or Crypt-encrypted
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function approvePriceChanges(string $priceChangeId): array
     {
         DB::beginTransaction();
         try {
-            $priceChangeId = Crypt::decryptString($priceChangeId);
-            $changes = $this->projectDealPriceChangeRepo->show(uid: $priceChangeId);
+            $priceChangeId = $this->resolvePriceChangeId($priceChangeId);
+
+            $changes = $this->projectDealPriceChangeRepo->show([
+                'where' => ['id' => $priceChangeId],
+            ]);
+
+            if (! $changes) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
+
+            // only a pending request may be approved. Approving twice would push the
+            // price onto the quotation and invoice again and re-notify the requester
+            if (! $this->canApprovalPriceChanges($changes)) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.priceChangesAlreadyDecided'));
+            }
 
             // here we will change quotation fix price and raw_data on parent invoice
             $this->projectQuotationRepo->update(
@@ -1608,6 +1803,13 @@ class ProjectDealService
                 select: 'id,raw_data,uid',
                 where: "project_deal_id = {$changes->project_deal_id} and is_main = 1"
             );
+
+            if (! $currentInvoice) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.mainInvoiceNotFound'));
+            }
+
             $raw = $currentInvoice->raw_data;
             $raw['fixPrice'] = 'Rp'.number_format($changes->new_price, 0, ',', '.');
             $raw['remainingPayment'] = 'Rp'.number_format($changes->new_price, 0, ',', '.');
@@ -1629,14 +1831,11 @@ class ProjectDealService
                 $userId = $user->id;
             }
 
-            $this->projectDealPriceChangeRepo->update(
-                data: [
-                    'status' => ProjectDealChangePriceStatus::Approved,
-                    'approved_at' => Carbon::now(),
-                    'approved_by' => $userId,
-                ],
-                id: $priceChangeId
-            );
+            $this->projectDealPriceChangeRepo->update($changes, [
+                'status' => ProjectDealChangePriceStatus::Approved,
+                'approved_at' => Carbon::now(),
+                'approved_by' => $userId,
+            ]);
 
             NotifyRequestPriceChangesHasBeenApproved::dispatch(changeId: $priceChangeId)->afterCommit();
 
@@ -1654,12 +1853,37 @@ class ProjectDealService
 
     /**
      * Reject price changes
+     *
+     * Only a pending request may be rejected; the quotation and invoice keep the
+     * current price.
+     *
+     * @param  string  $priceChangeId  Price change id, plain or Crypt-encrypted
+     * @param  string|null  $reason  Rejection note; falls back to "No reason provided"
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function rejectPriceChanges(string $priceChangeId, ?string $reason = null): array
     {
         DB::beginTransaction();
         try {
-            $priceChangeId = Crypt::decryptString($priceChangeId);
+            $priceChangeId = $this->resolvePriceChangeId($priceChangeId);
+
+            $changes = $this->projectDealPriceChangeRepo->show([
+                'where' => ['id' => $priceChangeId],
+            ]);
+
+            if (! $changes) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
+
+            // only a pending request may be rejected, otherwise an approved price
+            // change would be flipped to rejected after the price was already applied
+            if (! $this->canApprovalPriceChanges($changes)) {
+                DB::rollBack();
+
+                return errorResponse(message: __('notification.priceChangesAlreadyDecided'));
+            }
 
             // this action can take by user on the erp or from email
             // if this action came from email, we will use payload to get the user id
@@ -1670,15 +1894,12 @@ class ProjectDealService
                 $userId = $user->id;
             }
 
-            $this->projectDealPriceChangeRepo->update(
-                data: [
-                    'status' => ProjectDealChangePriceStatus::Rejected->value,
-                    'rejected_at' => Carbon::now(),
-                    'rejected_by' => $userId,
-                    'rejected_reason' => $reason ?? 'No reason provided',
-                ],
-                id: $priceChangeId
-            );
+            $this->projectDealPriceChangeRepo->update($changes, [
+                'status' => ProjectDealChangePriceStatus::Rejected->value,
+                'rejected_at' => Carbon::now(),
+                'rejected_by' => $userId,
+                'rejected_reason' => $reason ?? 'No reason provided',
+            ]);
 
             NotifyRequestPriceChangesHasBeenApproved::dispatch(changeId: $priceChangeId, type: 'rejected')->afterCommit();
 
@@ -1695,7 +1916,43 @@ class ProjectDealService
     }
 
     /**
+     * Delete a price change request.
+     *
+     * @param  string  $changeId  Plain price change id
+     * @return array<string, mixed> Response envelope with a success/error message
+     *
+     * @throws DataNotFound Caught internally and returned as an error response
+     */
+    public function deletePriceChangesRequest(string $changeId)
+    {
+        try {
+            $changes = $this->projectDealPriceChangeRepo->show([
+                'where' => [
+                    'id' => $changeId,
+                ],
+                'select' => ['id'],
+            ]);
+
+            if (! $changes) {
+                throw new DataNotFound('Request is not found');
+            }
+
+            $changes->delete();
+
+            return generalResponse(
+                message: 'Success delete price changes request'
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Get price change reasons
+     *
+     * Cached for seven days under CacheKey::PriceChangeReasons.
+     *
+     * @return array<string, mixed> Response envelope; data holds value/title options
      */
     public function getPriceChangeReasons(): array
     {
@@ -1725,55 +1982,227 @@ class ProjectDealService
     }
 
     /**
+     * A price change request may only be withdrawn while it is still pending.
+     *
+     * @param  ProjectDealPriceChange  $deal  The price change request to test
+     * @return bool True when the request can still be deleted
+     */
+    protected function canDeletePriceChanges(ProjectDealPriceChange $deal): bool
+    {
+        if ($deal->status === ProjectDealChangePriceStatus::Pending) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * A price change request is only actionable while it is still pending.
+     *
+     * Approving or rejecting a decided request would push the price onto the
+     * quotation and invoice a second time, so the API and the list flags both
+     * gate on this.
+     *
+     * @param  ProjectDealPriceChange  $deal  The price change request to test
+     * @return bool True when the request can still be approved or rejected
+     */
+    protected function canApprovalPriceChanges(ProjectDealPriceChange $deal): bool
+    {
+        if ($deal->status === ProjectDealChangePriceStatus::Pending) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * A deal change is only actionable while it is still pending. Approving or
+     * rejecting an already-decided change would re-apply the edit to the deal
+     * and re-notify the requester, so both the API and the list flags gate on
+     * this.
+     *
+     * @param  ProjectDealChange  $deal  The deal change to test
+     * @return bool True when the change can still be approved or rejected
+     */
+    protected function canApprovalDealChanges(ProjectDealChange $deal): bool
+    {
+        return $deal->status === ProjectDealChangeStatus::Pending;
+    }
+
+    /**
+     * The price change id reaches this service in two shapes: the approve and
+     * reject links mailed to the directors carry the Crypt-encrypted id, while
+     * the ERP calls the API routes with the plain id. Accept both rather than
+     * making one of the two callers fail to resolve the record.
+     *
+     * @param  string  $priceChangeId  Price change id, plain or Crypt-encrypted
+     * @return string The plain price change id
+     */
+    protected function resolvePriceChangeId(string $priceChangeId): string
+    {
+        try {
+            return Crypt::decryptString($priceChangeId);
+        } catch (DecryptException) {
+            return $priceChangeId;
+        }
+    }
+
+    /**
+     * Get list of requested changes on project deal details.
+     *
+     * Paging comes from the request (`itemsPerPage`, `page`) and an optional
+     * `status` of pending/approved/rejected narrows the list. Rows carry the
+     * can_approve/can_reject/can_delete flags derived from their status.
+     *
+     * @return array<string, mixed> Response envelope; data holds `paginated`
+     *                              (ListDealChangesData) and `totalData`
+     */
+    public function listProjectDealChanges(): array
+    {
+        try {
+            /** @var array<int, ListDealChangesData> */
+            $output = [];
+
+            $itemsPerPage = (int) (request('itemsPerPage') ?? 10);
+
+            $params = [
+                'select' => [
+                    'id',
+                    'project_deal_id',
+                    'detail_changes',
+                    'requested_by',
+                    'requested_at',
+                    'approval_by',
+                    'approval_at',
+                    'rejected_by',
+                    'rejected_at',
+                    'status',
+                ],
+                'with' => [
+                    'projectDeal:id,name,project_date',
+                    'requester:id,employee_id',
+                    'requester.employee:id,name',
+                    'approval:id,employee_id',
+                    'approval.employee:id,name',
+                ],
+                'whereHas' => ['projectDeal'],
+            ];
+
+            $statusValue = match (request('status')) {
+                'pending' => ProjectDealChangeStatus::Pending->value,
+                'approved' => ProjectDealChangeStatus::Approved->value,
+                'rejected' => ProjectDealChangeStatus::Rejected->value,
+                default => null,
+            };
+
+            if ($statusValue !== null) {
+                $params['where'] = ['status' => $statusValue];
+            }
+
+            $data = $this->projectDealChangeRepo->paginate($params, $itemsPerPage);
+
+            $output = $data->getCollection()->map(function ($item) {
+                return new ListDealChangesData(
+                    uid: Crypt::encryptString($item->id),
+                    project_deal_id: $item->projectDeal->id,
+                    project_deal_uid: Crypt::encryptString($item->projectDeal->id),
+                    event_name: $item->projectDeal->name,
+                    project_date: $item->projectDeal->project_date,
+                    request_by: $item->requester?->employee?->name ?? '-',
+                    requested_at: $item->requested_at,
+                    status: $item->status->label(),
+                    detail_changes: $item->detail_changes,
+                    approved_at: $item->approval_at,
+                    rejected_at: $item->rejected_at,
+                    can_approve: $this->canApprovalDealChanges($item),
+                    can_reject: $this->canApprovalDealChanges($item),
+                    can_delete: $this->canApprovalDealChanges($item),
+                );
+            });
+            $totalData = $data->total();
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
      * Get list of request changes on project deal price
+     *
+     * Paging comes from the request (`itemsPerPage`, `page`) and an optional
+     * `status` of pending/approved/rejected narrows the list.
+     *
+     * @return array<string, mixed> Response envelope; data holds `paginated`
+     *                              (ListPriceChangesData) and `totalData`
      */
     public function requestChangesList(): array
     {
         try {
-            $user = Auth::user();
+            $itemsPerPage = (int) (request('itemsPerPage') ?? 10);
 
-            $itemsPerPage = request('itemsPerPage') ?? 10;
-            $page = request('page') ?? 1;
-            $page = $page == 1 ? 0 : $page;
-            $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
-            $where = 'id > 0';
-
-            if (request('status')) {
-                $statuses = [
-                    'pending' => ProjectDealChangePriceStatus::Pending->value,
-                    'approved' => ProjectDealChangePriceStatus::Approved->value,
-                    'rejected' => ProjectDealChangePriceStatus::Rejected->value,
-                ];
-
-                $where .= ' and status = '.$statuses[request('status')];
-            }
-
-            $data = $this->projectDealPriceChangeRepo->pagination(
-                select: 'id,project_deal_id,old_price,new_price,status,requested_by,requested_at,reason_id,custom_reason,rejected_at,approved_at',
-                relation: [
+            $params = [
+                'select' => [
+                    'id',
+                    'project_deal_id',
+                    'old_price',
+                    'new_price',
+                    'status',
+                    'requested_by',
+                    'requested_at',
+                    'reason_id',
+                    'custom_reason',
+                    'rejected_at',
+                    'approved_at',
+                ],
+                'with' => [
                     'projectDeal:id,name,project_date',
                     'requesterBy:id,employee_id',
                     'requesterBy.employee:id,name',
                     'reason:id,name',
                 ],
-                page: $page,
-                itemsPerPage: $itemsPerPage,
-                where: $where
-            );
-            $totalData = $this->projectDealPriceChangeRepo->list(select: 'id', where: $where)->count();
+                'whereHas' => ['projectDeal'],
+            ];
 
-            $output = $data->map(function ($item) {
-                return [
-                    'uid' => Crypt::encryptString($item->id),
-                    'event_name' => $item->projectDeal?->name ?? '-',
-                    'project_date' => $item->projectDeal ? date('d F Y', strtotime($item->projectDeal->project_date)) : '-',
-                    'request_by' => $item->requesterBy->employee->name,
-                    'old_price' => 'Rp'.number_format($item->old_price, 0, ',', '.'),
-                    'new_price' => 'Rp'.number_format($item->new_price, 0, ',', '.'),
-                    'reason' => $item->real_reason,
-                    'approved_at' => $item->approved_at ? date('d F Y, H:i', strtotime($item->approved_at)) : null,
-                    'rejected_at' => $item->rejected_at ? date('d F Y, H:i', strtotime($item->rejected_at)) : null,
-                ];
+            $statusValue = match (request('status')) {
+                'pending' => ProjectDealChangePriceStatus::Pending->value,
+                'approved' => ProjectDealChangePriceStatus::Approved->value,
+                'rejected' => ProjectDealChangePriceStatus::Rejected->value,
+                default => null,
+            };
+
+            if ($statusValue !== null) {
+                $params['where'] = ['status' => $statusValue];
+            }
+
+            $data = $this->projectDealPriceChangeRepo->paginate($params, $itemsPerPage);
+            $totalData = $data->total();
+
+            $output = $data->getCollection()->map(function ($item) {
+                return new ListPriceChangesData(
+                    uid: $item->id,
+                    project_deal_id: $item->projectDeal->id,
+                    project_deal_uid: Crypt::encryptString($item->projectDeal->id),
+                    event_name: $item->projectDeal->name,
+                    project_date: $item->projectDeal->project_date,
+                    request_by: $item->requesterBy->employee->name,
+                    old_price: $item->old_price,
+                    new_price: $item->new_price,
+                    difference: $item->new_price - $item->old_price,
+                    reason: $item->real_reason,
+                    status: $item->status->label(),
+                    approved_at: null,
+                    rejected_at: null,
+                    can_approve: $this->canApprovalPriceChanges($item),
+                    can_reject: $this->canApprovalPriceChanges($item),
+                    can_delete: $this->canDeletePriceChanges($item),
+                );
             });
 
             return generalResponse(
@@ -1792,12 +2221,14 @@ class ProjectDealService
      * Adding interactive to project deal
      * Here we just create interactive request, and wait for approval from director
      *
+     * @param  string  $projectDealUid  Crypt-encrypted project deal id
      * @param  array  $payload  With these following structure
      *                          - string|int $interactive_area
      *                          - array $interactive_detail
      *                          - string $interactive_note
      *                          - string $interactive_fee
      *                          - string $fix_price
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function addInteractive(string $projectDealUid, array $payload): array
     {
@@ -1811,6 +2242,12 @@ class ProjectDealService
     /**
      * Adding interactive to project deal
      * Here we update interactive detail in the project_deals table and price in the project_quotations table
+     *
+     * Only a pending request may be approved. The actor is taken from the `actorId`
+     * request parameter when present, otherwise from the session.
+     *
+     * @param  string  $requestId  Crypt-encrypted interactive request id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function approveInteractiveRequest(string $requestId): array
     {
@@ -1943,6 +2380,9 @@ class ProjectDealService
 
     /**
      * Reject interactive request
+     *
+     * @param  string  $requestId  Crypt-encrypted interactive request id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function rejectInteractiveRequest(string $requestId): array
     {
@@ -1991,6 +2431,10 @@ class ProjectDealService
 
     /**
      * Get list of interactive requests
+     *
+     * Paging and filters are read from the current request.
+     *
+     * @return array<string, mixed> Response envelope; data holds `paginated` and `totalData`
      */
     public function listInteractiveRequests(): array
     {
@@ -2067,7 +2511,7 @@ class ProjectDealService
      * Request project deal selection list
      * This function is used to get project deal list for selection purpose
      *
-     * @return array<mixed>
+     * @return array<mixed> Response envelope; data holds value/title options
      */
     public function requestProjectDealSelectionList(): array
     {
@@ -2118,7 +2562,8 @@ class ProjectDealService
      *                          - string|int $refund_percentage
      *                          - string $refund_type
      *                          - string $refund_reason
-     * @return array<string, mixed>
+     * @param  string  $projectDealUid  Crypt-encrypted project deal id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function storeRefund(array $payload, string $projectDealUid): array
     {
@@ -2157,7 +2602,9 @@ class ProjectDealService
     /**
      * List project deal refunds
      *
-     * @return array<string, mixed>
+     * Paging and filters are read from the current request.
+     *
+     * @return array<string, mixed> Response envelope; data holds `paginated` and `totalData`
      */
     public function listRefunds(): array
     {
@@ -2240,7 +2687,8 @@ class ProjectDealService
     /**
      * Detail project deal refund
      *
-     * @return array<string, mixed>
+     * @param  string  $refundUid  Crypt-encrypted refund id
+     * @return array<string, mixed> Response envelope; data holds the refund with its payments
      */
     public function detailRefund(string $refundUid): array
     {
@@ -2310,7 +2758,8 @@ class ProjectDealService
      *                          - string $payment_method
      *                          - string|null $payment_notes
      *                          - file|null $payment_proof
-     * @return array<string, mixed>
+     * @param  string  $refundUid  Crypt-encrypted refund id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function makeRefundPayment(array $payload, string $refundUid): array
     {
@@ -2396,7 +2845,8 @@ class ProjectDealService
     /**
      * Delete project deal refund
      *
-     * @return array<string, mixed>
+     * @param  string  $refundUid  Crypt-encrypted refund id
+     * @return array<string, mixed> Response envelope with a success/error message
      */
     public function deleteRefund(string $refundUid): array
     {
@@ -2427,7 +2877,8 @@ class ProjectDealService
     /**
      * Get all available PIC and current PIC to show in dialog Subtitute PIC
      *
-     * @param  string  $projectUId
+     * @param  string  $interactiveUid  Crypt-encrypted interactive project id
+     * @return array<string, mixed> Response envelope; data holds the current and available PICs
      */
     public function getPicForSubtitute(string $interactiveUid): array
     {

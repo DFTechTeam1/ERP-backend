@@ -9,10 +9,10 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Company\Models\City;
 use Modules\Hrd\Models\Employee;
-
-// use Modules\Production\Database\Factories\ProjectLeadFactory;
+use Modules\Production\Database\Factories\ProjectLeadFactory;
 
 class ProjectLead extends Model
 {
@@ -47,10 +47,10 @@ class ProjectLead extends Model
         'cancel_by',
     ];
 
-    // protected static function newFactory(): ProjectLeadFactory
-    // {
-    //     // return ProjectLeadFactory::new();
-    // }
+    protected static function newFactory(): ProjectLeadFactory
+    {
+        return ProjectLeadFactory::new();
+    }
 
     protected function casts()
     {
@@ -71,6 +71,11 @@ class ProjectLead extends Model
     public function city(): BelongsTo
     {
         return $this->belongsTo(City::class);
+    }
+
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(ProjectLeadFollowUp::class, 'project_lead_id');
     }
 
     public function projectDeal(): BelongsTo

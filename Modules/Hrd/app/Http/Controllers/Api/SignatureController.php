@@ -6,6 +6,8 @@ use App\Data\Hrd\Signature\ApprovalDocumentData;
 use App\Data\Hrd\Signature\AssignSignatoriesData;
 use App\Data\Hrd\Signature\BulkCreateDocumentTypeData;
 use App\Data\Hrd\Signature\BulkDeleteDocumentTypeData;
+use App\Data\Hrd\Signature\BulkDeleteGeneratedDocumentData;
+use App\Data\Hrd\Signature\BulkGenerateDocumentData;
 use App\Data\Hrd\Signature\BulkUpdateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateDocumentTypeData;
 use App\Data\Hrd\Signature\CreateTemplateData;
@@ -146,7 +148,7 @@ class SignatureController extends Controller
     }
 
     /**
-     * Stream a completed (fully signed) employee document as a downloadable .docx file.
+     * Stream a completed (fully signed) employee document as a downloadable PDF file.
      *
      * Refuses documents that are not yet completed. The rendered file is temporary and is
      * deleted once streamed.
@@ -165,14 +167,16 @@ class SignatureController extends Controller
         $relativePath = $data['data']['path'];
         $file = file_get_contents(storage_path('app/public/'.$relativePath));
         $filename = 'document';
+        $mime = $data['data']['mime'] ?? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        $extension = $data['data']['extension'] ?? 'docx';
 
         if (! empty($data['data']['is_temporary'])) {
             Storage::disk('public')->delete($relativePath);
         }
 
         return response($file, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'.docx"',
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'attachment; filename="'.$filename.'.'.$extension.'"',
         ]);
     }
 
@@ -208,6 +212,26 @@ class SignatureController extends Controller
     public function documentSignDetail(string $documentUid): JsonResponse
     {
         return apiResponse($this->service->documentSignDetail($documentUid));
+    }
+
+    /**
+     * Soft delete a single generated document (privileged, non-completed only).
+     *
+     * @param  string  $documentUid  Uid of the generated document to delete
+     */
+    public function deleteGeneratedDocument(string $documentUid): JsonResponse
+    {
+        return apiResponse($this->service->deleteGeneratedDocument($documentUid));
+    }
+
+    /**
+     * Soft delete many generated documents at once (privileged, non-completed only).
+     *
+     * @param  BulkDeleteGeneratedDocumentData  $payload  Uids of the generated documents to delete
+     */
+    public function bulkDeleteGeneratedDocument(BulkDeleteGeneratedDocumentData $payload): JsonResponse
+    {
+        return apiResponse($this->service->bulkDeleteGeneratedDocument($payload));
     }
 
     /**
@@ -369,6 +393,17 @@ class SignatureController extends Controller
     public function generateDocument(GenerateDocumentData $payload, string $templateUid)
     {
         return apiResponse($this->service->generateDocument($payload, $templateUid));
+    }
+
+    /**
+     * Disburse a signable document from a master template to a whole audience of employees:
+     * every active employee, everyone in a division, or everyone holding a position.
+     *
+     * @param  BulkGenerateDocumentData  $payload  Audience selection plus the source template
+     */
+    public function bulkGenerateDocument(BulkGenerateDocumentData $payload): JsonResponse
+    {
+        return apiResponse($this->service->bulkGenerateDocument($payload));
     }
 
     /**

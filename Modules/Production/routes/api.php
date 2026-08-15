@@ -4,7 +4,9 @@ use App\Http\Middleware\PermissionCheck;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\DeadlineChangeReasonController;
 use Modules\Production\Http\Controllers\Api\InteractiveController;
+use Modules\Production\Http\Controllers\Api\ProductionEmployeeDashboardController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
+use Modules\Production\Http\Controllers\Api\ProjectManagerDashboardController;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Http\Controllers\Api\TeamTransferController;
 use Modules\Production\Http\Controllers\ProjectLeadController;
@@ -34,6 +36,29 @@ Route::middleware(['auth.session'])
         Route::get('classList', [ProjectController::class, 'getClassList']);
         Route::get('status', [ProjectController::class, 'getProjectStatus']);
 
+        // Production employee dashboard - self-scoped via Auth::user()->employee_id.
+        Route::prefix('dashboard/me')->group(function () {
+            Route::get('kpi', [ProductionEmployeeDashboardController::class, 'kpi'])
+                ->name('dashboard.me.kpi');
+            Route::get('tasks', [ProductionEmployeeDashboardController::class, 'myTasks'])
+                ->name('dashboard.me.tasks');
+            Route::get('pool-tasks', [ProductionEmployeeDashboardController::class, 'poolTasks'])
+                ->name('dashboard.me.poolTasks');
+        });
+
+        // Project Manager dashboard - scoped to projects the PM is on via
+        // ProjectPersonInCharge. PM Admin / Director / Root see all projects.
+        Route::prefix('dashboard/pm')->group(function () {
+            Route::get('kpi', [ProjectManagerDashboardController::class, 'kpi'])
+                ->name('dashboard.pm.kpi');
+            Route::get('my-projects', [ProjectManagerDashboardController::class, 'myProjects'])
+                ->name('dashboard.pm.myProjects');
+            Route::get('team-workload', [ProjectManagerDashboardController::class, 'teamWorkload'])
+                ->name('dashboard.pm.teamWorkload');
+            Route::get('at-risk-projects', [ProjectManagerDashboardController::class, 'atRiskProjects'])
+                ->name('dashboard.pm.atRiskProjects');
+        });
+
         Route::get('deadlineReason/getAll', [DeadlineChangeReasonController::class, 'getAll']);
         Route::resource('deadlineReason', DeadlineChangeReasonController::class);
 
@@ -56,6 +81,7 @@ Route::middleware(['auth.session'])
         Route::get('project/deals', [ProjectController::class, 'listProjectDeals'])->name('project-deal.list');
         Route::get('project/interactive-requests', [ProjectController::class, 'listInteractiveRequests'])->name('interactive-request.list');
         Route::get('project/deals/price-changes', [ProjectController::class, 'requestChangesList'])->name('project-deal.requestChangesList');
+        Route::get('project/deals/deal-changes', [ProjectController::class, 'listProjectDealChanges'])->name('project-deal.listProjectDealChanges');
         Route::get('project/deals/selection', [ProjectController::class, 'requestProjectDealSelectionList'])->name('project-deal.requestSelectionList');
         Route::get('project/initProjectCount', [ProjectController::class, 'initProjectCount']);
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
@@ -259,6 +285,9 @@ Route::middleware(['auth.session'])
 
         // Project leads
         Route::post('project-leads/{projectLeadUid}/cancel', [ProjectLeadController::class, 'cancel']);
+
+        Route::get('project/deal/w/approve/{projectDetailChangesUid}', [ProjectController::class, 'approveChangesProjectDeal']);
+        Route::get('project/deal/w/reject/{projectDetailChangesUid}', [ProjectController::class, 'rejectChangesProjectDeal']);
     });
 
 Route::middleware(['internal.service'])

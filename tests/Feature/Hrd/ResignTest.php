@@ -6,12 +6,17 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmploymentStatus;
 
 beforeEach(function () {
     $this->actingAs(User::factory()->create());
 
     Queue::fake();
     Notification::fake();
+
+    // turnOffEmployee moves the employee onto the terminal employment status and refuses to
+    // run without one, so every deactivating resignation needs it seeded.
+    EmploymentStatus::factory()->create(['code' => 'RESIGN', 'name' => 'Resign', 'is_terminal' => 1]);
 
     config(['app.greatday.base_url' => 'https://greatday.test/api']);
 
