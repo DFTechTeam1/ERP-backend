@@ -34,6 +34,12 @@ class SyncRecapTransactionsCommand extends Command
 
     private const SOURCEABLE_TYPE = 'recap_import';
 
+    public const OUTCOME_SYNCED = 'synced';
+
+    public const OUTCOME_NOT_SYNCED = 'not_synced';
+
+    public const OUTCOME_DRY_RUN = 'dry_run';
+
     private int $syncUserId = 0;
 
     /** @var array<string> */
@@ -174,6 +180,7 @@ class SyncRecapTransactionsCommand extends Command
             $bar->finish();
             $this->newLine(2);
             $this->error('Aborted: '.$e->getMessage());
+            $this->error('NOT SYNCED — the database transaction was rolled back, no rows were written.');
 
             return self::FAILURE;
         }
@@ -188,11 +195,100 @@ class SyncRecapTransactionsCommand extends Command
 
         $this->writeComparisonReport($stats, $matchedLog, $unmatchedLog, $ambiguousLog, $overpaidLog, $dryRun);
 
-        if ($dryRun) {
-            $this->warn('DRY RUN — no rows were written.');
-        }
+        $this->reportSyncOutcome($stats, $dryRun);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Print the post-commit verdict. The stats table above says what happened
+     * to each row; this says the one thing the operator actually needs —
+     * whether the data is now in the database or not.
+     *
+     * @param  array<string, int>  $stats
+     */
+    private function reportSyncOutcome(array $stats, bool $dryRun): void
+    {
+        $outcome = self::syncOutcome($stats, $dryRun);
+
+        $this->newLine();
+        if ($outcome['status'] === self::OUTCOME_SYNCED) {
+            $this->info($outcome['headline']);
+        } else {
+            $this->warn($outcome['headline']);
+        }
+        foreach ($outcome['details'] as $detail) {
+            $this->line('  '.$detail);
+        }
+    }
+
+    /**
+     * Turn the run counters into a plain-language verdict.
+     *
+     * @param  array<string, int>  $stats
+     * @return array{status: string, headline: string, details: array<int, string>}
+     */
+    public static function syncOutcome(array $stats, bool $dryRun): array
+    {
+        $count = fn (string $key): int => (int) ($stats[$key] ?? 0);
+
+        $writes = $count('inserted_dp')
+            + $count('inserted_pel')
+            + $count('refunds_inserted')
+            + $count('fully_paid_flipped')
+            + $count('invoices_marked_paid');
+
+        $breakdown = sprintf(
+            'transactions: %d DP + %d pelunasan | refunds: %d | invoices marked paid: %d | deals flipped to fully paid: %d',
+            $count('inserted_dp'),
+            $count('inserted_pel'),
+            $count('refunds_inserted'),
+            $count('invoices_marked_paid'),
+            $count('fully_paid_flipped')
+        );
+
+        if ($dryRun) {
+            $status = self::OUTCOME_DRY_RUN;
+            $headline = 'DRY RUN — NOT SYNCED. The database transaction was rolled back, no rows were written.';
+            $details = $writes > 0
+                ? [
+                    "{$writes} change(s) would be applied — {$breakdown}",
+                    'Re-run without --dry-run to sync for real.',
+                ]
+                : ['No change would be applied — the database already matches the recap.'];
+        } elseif ($writes > 0) {
+            $status = self::OUTCOME_SYNCED;
+            $headline = "DATA SYNCED — {$writes} change(s) committed to the database.";
+            $details = [$breakdown];
+        } else {
+            $status = self::OUTCOME_NOT_SYNCED;
+            $headline = 'NOT SYNCED — the run committed, but there was nothing to write.';
+            $details = [
+                $count('matched') > 0
+                    ? "All {$count('matched')} matched row(s) were already up to date."
+                    : 'No Excel row matched a project deal.',
+            ];
+        }
+
+        if ($count('skipped_existing') > 0) {
+            $details[] = "{$count('skipped_existing')} payment(s) skipped — a transaction of that type already exists on the deal.";
+        }
+
+        $needsAttention = $count('unmatched') + $count('ambiguous');
+        if ($needsAttention > 0) {
+            $details[] = sprintf(
+                '%d row(s) need attention: %d unmatched, %d ambiguous — see the Unmatched / Ambiguous sheets in the comparison report.',
+                $needsAttention,
+                $count('unmatched'),
+                $count('ambiguous')
+            );
+        }
+
+        if ($count('skipped_cancel') > 0) {
+            $details[] = "{$count('skipped_cancel')} row(s) skipped because their status is Cancel.";
+        }
+
+        return ['status' => $status, 'headline' => $headline, 'details' => $details];
     }
 
     /**
