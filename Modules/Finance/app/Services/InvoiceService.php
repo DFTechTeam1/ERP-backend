@@ -266,6 +266,20 @@ class InvoiceService
             // send notification to director
             RequestInvoiceChangeJob::dispatch($updateData);
 
+            // Realtime bell notification to configured approvers so the new
+            // Request → Invoice Changes menu lights up without a refresh.
+            try {
+                app(InvoiceChangeRequestService::class)
+                    ->notifyApproversOfNewRequest($updateData->loadMissing([
+                        'invoice:id,uid,number,project_deal_id',
+                        'invoice.projectDeal:id,name,identifier_number',
+                        'user:id,employee_id',
+                        'user.employee:id,name',
+                    ]));
+            } catch (\Throwable $notifError) {
+                logging('realtime notify failed on invoice change request create', [$notifError]);
+            }
+
             DB::commit();
 
             return generalResponse(
