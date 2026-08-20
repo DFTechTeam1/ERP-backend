@@ -172,12 +172,13 @@ class TestingService
 
             $sorts = rtrim($sorts, ',');
         } else {
-            $sorts = 'project_date ASC';
+            $sorts = 'project_date DESC';
         }
 
         logging('WHERE ENTERTAINMENT', [
             'where' => $where,
             'whereHas' => $whereHas,
+            'sorts' => $sorts
         ]);
 
         $paginated = $this->projectGroupRepo->projectRepo->pagination(
