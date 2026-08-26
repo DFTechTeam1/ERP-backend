@@ -290,6 +290,124 @@ class ProductionEmployeeDashboardService
         }
     }
 
+    /**
+     * Compact "what needs me" summary for the dashboard.
+     *
+     * Two independent pieces, both scoped to the acting employee:
+     *   - status_breakdown: my in-play tasks (I'm a PIC, not Completed)
+     *     counted by task status - powers the ongoing-status tiles.
+     *   - approvals: tasks where MY pic row is still WaitingApproval and the
+     *     task itself sits in WaitingApproval. These are the rows the employee
+     *     can accept straight from the dashboard (POST-less GET approve),
+     *     saving a trip into the project detail page.
+     *
+     * The waiting-approval tile is derived from the approvals set (not the
+     * status loop) so the number on the tile always matches the list length.
+     *
+     * @return array{error:bool, message:string, data:array{status_breakdown:array<string,int>, open_total:int, approvals:array{items:array<int,array<string,mixed>>, total:int}}, code:int}
+     */
+    public function getWorkSummary(int $approvalLimit = 20): array
+    {
+        try {
+            $user = $this->authorizedUser();
+            if (! $user) {
+                return errorResponse(__('global.forbidden'), code: 403);
+            }
+            $employeeId = $this->employeeId($user);
+            if ($employeeId === 0) {
+                return errorResponse(__('global.forbidden'), code: 403);
+            }
+
+            $approvalLimit = max(1, min($approvalLimit, 100));
+
+            // All my PIC rows in one read - id + status is enough to split the
+            // tasks I've already engaged from the ones still awaiting me.
+            $myPics = ProjectTaskPic::query()
+                ->where('employee_id', $employeeId)
+                ->get(['project_task_id', 'status']);
+
+            $allTaskIds = $myPics->pluck('project_task_id')->unique();
+
+            // A task no longer waits on me once I've Approved it, or when it's
+            // a lead-modeller distribution row (WaitingToDistribute) - that
+            // goes through the distribute flow, not a plain approve. A freshly
+            // assigned member's pic row has a NULL status; the assign code only
+            // stamps a status for the PM / revise / lead-modeller cases. So
+            // "waiting for my approval" is driven by the TASK status, minus the
+            // tasks my own pic row has already settled - mirroring the detail
+            // page's need_user_approval gate.
+            $settledTaskIds = $myPics
+                ->whereIn('status', [
+                    TaskPicStatus::Approved->value,
+                    TaskPicStatus::WaitingToDistribute->value,
+                ])
+                ->pluck('project_task_id')
+                ->unique();
+
+            $tasks = ProjectTask::query()
+                ->with([
+                    'project:id,uid,name,project_deal_id,project_date',
+                    'project.projectDeal:id,name,identifier_number',
+                    'board:id,name',
+                ])
+                ->whereIn('id', $allTaskIds)
+                ->where('status', '!=', TaskStatus::Completed->value)
+                ->get();
+
+            $breakdown = [
+                'onprogress' => 0,
+                'checkbypm' => 0,
+                'revise' => 0,
+                'onhold' => 0,
+                'waitingdistribute' => 0,
+            ];
+            foreach ($tasks as $task) {
+                $key = $this->statusKey((int) $task->status);
+                if ($key !== null && array_key_exists($key, $breakdown)) {
+                    $breakdown[$key]++;
+                }
+            }
+
+            $approvalTasks = $tasks
+                ->filter(fn (ProjectTask $t) => (int) $t->status === TaskStatus::WaitingApproval->value
+                    && ! $settledTaskIds->contains($t->id))
+                ->sortBy(fn (ProjectTask $t) => optional($t->created_at)->timestamp ?? PHP_INT_MAX)
+                ->values();
+
+            $breakdown['waitingapproval'] = $approvalTasks->count();
+            $openTotal = $tasks->count();
+
+            $approvalItems = $approvalTasks
+                ->take($approvalLimit)
+                ->map(fn (ProjectTask $task) => [
+                    'id' => (int) $task->id,
+                    'uid' => (string) ($task->uid ?? $task->id),
+                    'name' => $task->name,
+                    'project_uid' => optional($task->project)->uid,
+                    'project_name' => optional($task->project)->name ?? '-',
+                    'project_deal_identifier' => optional(optional($task->project)->projectDeal)->identifier_number,
+                    'board' => optional($task->board)->name,
+                    'assigned_at' => optional($task->created_at)?->toDateTimeString(),
+                ])
+                ->values()
+                ->all();
+
+            return generalResponse(
+                message: 'Success',
+                data: [
+                    'status_breakdown' => $breakdown,
+                    'open_total' => $openTotal,
+                    'approvals' => [
+                        'items' => $approvalItems,
+                        'total' => $approvalTasks->count(),
+                    ],
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     private function authorizedUser(): ?User
     {
         return Auth::user();
@@ -340,7 +458,7 @@ class ProductionEmployeeDashboardService
      * The `deadlines` relation MUST already be eager-loaded scoped to the
      * caller's employee_id (see getKpi/getMyTasks call sites).
      *
-     * @return array{date: ?Carbon, source: ?string}  source ∈ {personal, event, null}
+     * @return array{date: ?Carbon, source: ?string} source ∈ {personal, event, null}
      */
     private function effectiveDeadline(ProjectTask $task): array
     {

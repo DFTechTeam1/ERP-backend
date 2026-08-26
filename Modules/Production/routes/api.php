@@ -44,6 +44,8 @@ Route::middleware(['auth.session'])
                 ->name('dashboard.me.tasks');
             Route::get('pool-tasks', [ProductionEmployeeDashboardController::class, 'poolTasks'])
                 ->name('dashboard.me.poolTasks');
+            Route::get('work-summary', [ProductionEmployeeDashboardController::class, 'workSummary'])
+                ->name('dashboard.me.workSummary');
         });
 
         // Project Manager dashboard - scoped to projects the PM is on via

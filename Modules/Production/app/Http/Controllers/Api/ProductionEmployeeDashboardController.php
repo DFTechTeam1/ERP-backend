@@ -42,4 +42,12 @@ class ProductionEmployeeDashboardController extends Controller
             limit: $request->integer('limit') ?: 20,
         ));
     }
+
+    /** Ongoing-status counts + the tasks waiting for my approval. */
+    public function workSummary(Request $request): JsonResponse
+    {
+        return apiResponse($this->service->getWorkSummary(
+            approvalLimit: $request->integer('limit') ?: 20,
+        ));
+    }
 }
