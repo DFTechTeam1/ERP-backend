@@ -28,12 +28,35 @@ use function Pest\Laravel\actingAs;
  *     nearest deadline first, with revise_count + is_heavy_revise (>= 3).
  *   - Pool-tasks lists is_pool_task=true rows that don't yet have any pic.
  */
-
 function mkDashProject(): Project
 {
     // The Project factory has withBoards() etc; a bare project + one deal
     // is enough for the dashboard to render project_name/identifier fields.
     return Project::factory()->withBoards()->create();
+}
+
+/**
+ * Assign $employee to a task at an arbitrary task status + pic status. A
+ * regular member assignment leaves the pic status NULL (the DB column is
+ * nullable with no default; the assign code only stamps a status for the
+ * PM / revise / lead-modeller cases) - pass null to reproduce that.
+ */
+function mkDashTaskWithPic(Employee $employee, int $taskStatus, ?int $picStatus = null): ProjectTask
+{
+    $project = mkDashProject();
+    $task = ProjectTask::factory()->create([
+        'project_id' => $project->id,
+        'project_board_id' => $project->boards->first()->id,
+        'status' => $taskStatus,
+    ]);
+    ProjectTaskPic::create([
+        'project_task_id' => $task->id,
+        'employee_id' => $employee->id,
+        'status' => $picStatus,
+        'assigned_at' => now(),
+    ]);
+
+    return $task;
 }
 
 function mkDashTaskFor(Employee $employee, int $status, ?string $deadline = null): ProjectTask
@@ -357,6 +380,73 @@ it('exposes days_to_event on pool tasks and does not emit deadline fields', func
         ->and($row['days_to_event'])->toBe(3)
         ->and($row)->not->toHaveKey('deadline')
         ->and($row)->not->toHaveKey('days_to_deadline');
+});
+
+// ---- Work summary (status breakdown + approvals) -----------------------
+
+it('breaks my open tasks down by status and excludes completed', function () {
+    $employee = Employee::factory()->withUser()->create();
+    $user = User::where('employee_id', $employee->id)->first();
+
+    mkDashTaskFor($employee, TaskStatus::OnProgress->value);
+    mkDashTaskFor($employee, TaskStatus::OnProgress->value);
+    mkDashTaskFor($employee, TaskStatus::CheckByPm->value);
+    mkDashTaskFor($employee, TaskStatus::Revise->value);
+    mkDashTaskFor($employee, TaskStatus::OnHold->value);
+    // Completed is never "ongoing".
+    mkDashTaskFor($employee, TaskStatus::Completed->value);
+    // Freshly assigned (pic status NULL) task waiting for my approval -
+    // counted via the approvals set, not the status loop.
+    mkDashTaskWithPic($employee, TaskStatus::WaitingApproval->value);
+    // Someone else's task must never leak into my summary.
+    mkDashTaskFor(Employee::factory()->create(), TaskStatus::OnProgress->value);
+
+    actingAs($user);
+
+    $result = $this->service->getWorkSummary();
+    $breakdown = $result['data']['status_breakdown'];
+
+    expect($breakdown['onprogress'])->toBe(2)
+        ->and($breakdown['checkbypm'])->toBe(1)
+        ->and($breakdown['revise'])->toBe(1)
+        ->and($breakdown['onhold'])->toBe(1)
+        ->and($breakdown['waitingapproval'])->toBe(1)
+        ->and($result['data']['open_total'])->toBe(6);
+});
+
+it('lists only the tasks that are waiting for my approval', function () {
+    $employee = Employee::factory()->withUser()->create();
+    $user = User::where('employee_id', $employee->id)->first();
+
+    // Regular assignment: pic status NULL, task WaitingApproval → actionable.
+    $mine = mkDashTaskWithPic($employee, TaskStatus::WaitingApproval->value);
+    // Already approved by me (pic Approved) - not actionable.
+    mkDashTaskWithPic($employee, TaskStatus::OnProgress->value, TaskPicStatus::Approved->value);
+    // Task still WaitingApproval but MY pic row is already Approved (waiting on
+    // another collaborator) - I've done my part, so it must not surface.
+    mkDashTaskWithPic($employee, TaskStatus::WaitingApproval->value, TaskPicStatus::Approved->value);
+    // Lead-modeller distribution row - handled by the distribute flow, not a
+    // plain approve.
+    mkDashTaskWithPic($employee, TaskStatus::WaitingApproval->value, TaskPicStatus::WaitingToDistribute->value);
+    // Waiting approval, but assigned to someone else.
+    mkDashTaskWithPic(Employee::factory()->create(), TaskStatus::WaitingApproval->value);
+
+    actingAs($user);
+
+    $result = $this->service->getWorkSummary();
+    $approvals = $result['data']['approvals'];
+
+    expect($approvals['total'])->toBe(1)
+        ->and(count($approvals['items']))->toBe(1)
+        ->and($approvals['items'][0]['id'])->toBe($mine->id)
+        ->and($approvals['items'][0])->toHaveKey('project_uid')
+        ->and($approvals['items'][0])->toHaveKey('uid');
+});
+
+it('rejects an unauthenticated caller asking for the work summary with 403', function () {
+    $result = $this->service->getWorkSummary();
+
+    expect($result['code'])->toBe(403);
 });
 
 it('lists pool tasks that have no picker yet', function () {
