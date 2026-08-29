@@ -4,6 +4,7 @@ namespace Modules\Production\Services;
 
 use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskStatus;
+use App\Enums\System\BaseRole;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -304,7 +305,12 @@ class ProductionEmployeeDashboardService
      * The waiting-approval tile is derived from the approvals set (not the
      * status loop) so the number on the tile always matches the list length.
      *
-     * @return array{error:bool, message:string, data:array{status_breakdown:array<string,int>, open_total:int, approvals:array{items:array<int,array<string,mixed>>, total:int}}, code:int}
+     * For the lead 3D modeller (role "lead modeller" OR the employee set in the
+     * `lead_3d_modeller` setting) a `distribute` block lists the WaitingDistribute
+     * tasks they still have to fan out to the modelling team. It's an empty
+     * shape for everyone else.
+     *
+     * @return array{error:bool, message:string, data:array{status_breakdown:array<string,int>, open_total:int, is_lead_modeller:bool, approvals:array{items:array<int,array<string,mixed>>, total:int}, distribute:array{items:array<int,array<string,mixed>>, total:int}}, code:int}
      */
     public function getWorkSummary(int $approvalLimit = 20): array
     {
@@ -379,33 +385,73 @@ class ProductionEmployeeDashboardService
 
             $approvalItems = $approvalTasks
                 ->take($approvalLimit)
-                ->map(fn (ProjectTask $task) => [
-                    'id' => (int) $task->id,
-                    'uid' => (string) ($task->uid ?? $task->id),
-                    'name' => $task->name,
-                    'project_uid' => optional($task->project)->uid,
-                    'project_name' => optional($task->project)->name ?? '-',
-                    'project_deal_identifier' => optional(optional($task->project)->projectDeal)->identifier_number,
-                    'board' => optional($task->board)->name,
-                    'assigned_at' => optional($task->created_at)?->toDateTimeString(),
-                ])
+                ->map(fn (ProjectTask $task) => $this->summaryTaskRow($task))
                 ->values()
                 ->all();
+
+            // Lead 3D modeller queue: tasks sitting in WaitingDistribute that
+            // this user must fan out to the modelling team. Only the lead
+            // modeller ever holds these (the assign flow routes distribute rows
+            // solely to them), but we still gate the block so the field is an
+            // empty, predictable shape for everyone else.
+            $isLeadModeller = amILeadModeller($user)
+                || $user->hasRole(BaseRole::LeadModeller->value);
+
+            $distributeItems = [];
+            $distributeTotal = 0;
+            if ($isLeadModeller) {
+                $distributeTasks = $tasks
+                    ->filter(fn (ProjectTask $t) => (int) $t->status === TaskStatus::WaitingDistribute->value)
+                    ->sortBy(fn (ProjectTask $t) => optional($t->created_at)->timestamp ?? PHP_INT_MAX)
+                    ->values();
+
+                $distributeTotal = $distributeTasks->count();
+                $distributeItems = $distributeTasks
+                    ->take($approvalLimit)
+                    ->map(fn (ProjectTask $task) => $this->summaryTaskRow($task))
+                    ->values()
+                    ->all();
+            }
 
             return generalResponse(
                 message: 'Success',
                 data: [
                     'status_breakdown' => $breakdown,
                     'open_total' => $openTotal,
+                    'is_lead_modeller' => $isLeadModeller,
                     'approvals' => [
                         'items' => $approvalItems,
                         'total' => $approvalTasks->count(),
+                    ],
+                    'distribute' => [
+                        'items' => $distributeItems,
+                        'total' => $distributeTotal,
                     ],
                 ],
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Shared row shape for the work-summary lists (approvals + distribute).
+     * The parent project / deal / board relations must already be eager-loaded.
+     *
+     * @return array<string,mixed>
+     */
+    private function summaryTaskRow(ProjectTask $task): array
+    {
+        return [
+            'id' => (int) $task->id,
+            'uid' => (string) ($task->uid ?? $task->id),
+            'name' => $task->name,
+            'project_uid' => optional($task->project)->uid,
+            'project_name' => optional($task->project)->name ?? '-',
+            'project_deal_identifier' => optional(optional($task->project)->projectDeal)->identifier_number,
+            'board' => optional($task->board)->name,
+            'assigned_at' => optional($task->created_at)?->toDateTimeString(),
+        ];
     }
 
     private function authorizedUser(): ?User
