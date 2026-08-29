@@ -2,8 +2,11 @@
 
 use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskStatus;
+use App\Enums\System\BaseRole;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Modules\Company\Models\Setting;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Models\EmployeePointProject;
@@ -13,6 +16,8 @@ use Modules\Production\Models\ProjectTaskDeadline;
 use Modules\Production\Models\ProjectTaskPic;
 use Modules\Production\Models\ProjectTaskReviseHistory;
 use Modules\Production\Services\ProductionEmployeeDashboardService;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 use function Pest\Laravel\actingAs;
 
@@ -95,6 +100,17 @@ function mkDashTaskFor(Employee $employee, int $status, ?string $deadline = null
     }
 
     return $task;
+}
+
+function makeLeadModellerSetting(Employee $employee): void
+{
+    Setting::create(['key' => 'lead_3d_modeller', 'value' => $employee->uid]);
+    Cache::forget('setting');
+}
+
+function ensureDashRole(string $name): Role
+{
+    return Role::firstOrCreate(['name' => $name, 'guard_name' => 'sanctum']);
 }
 
 beforeEach(function () {
@@ -447,6 +463,78 @@ it('rejects an unauthenticated caller asking for the work summary with 403', fun
     $result = $this->service->getWorkSummary();
 
     expect($result['code'])->toBe(403);
+});
+
+// ---- Lead 3D modeller: waiting-distribute queue ------------------------
+
+it('surfaces waiting-distribute tasks for the lead modeller set via the lead_3d_modeller setting', function () {
+    $employee = Employee::factory()->withUser()->create();
+    $user = User::where('employee_id', $employee->id)->first();
+    makeLeadModellerSetting($employee);
+
+    // A task routed to the lead modeller sits WaitingDistribute with the pic
+    // row WaitingToDistribute.
+    $task = mkDashTaskWithPic(
+        $employee,
+        TaskStatus::WaitingDistribute->value,
+        TaskPicStatus::WaitingToDistribute->value,
+    );
+    // Their own ongoing task must not leak into the distribute list.
+    mkDashTaskFor($employee, TaskStatus::OnProgress->value);
+
+    actingAs($user);
+
+    $result = $this->service->getWorkSummary();
+
+    expect($result['data']['is_lead_modeller'])->toBeTrue()
+        ->and($result['data']['distribute']['total'])->toBe(1)
+        ->and(count($result['data']['distribute']['items']))->toBe(1)
+        ->and($result['data']['distribute']['items'][0]['id'])->toBe($task->id)
+        ->and($result['data']['status_breakdown']['waitingdistribute'])->toBe(1)
+        ->and($result['data']['status_breakdown']['onprogress'])->toBe(1);
+});
+
+it('surfaces the distribute queue when the user holds the lead modeller role', function () {
+    ensureDashRole(BaseRole::LeadModeller->value);
+    $employee = Employee::factory()->create();
+    $user = User::factory()->create(['employee_id' => $employee->id]);
+    $user->assignRole(BaseRole::LeadModeller->value);
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    mkDashTaskWithPic(
+        $employee,
+        TaskStatus::WaitingDistribute->value,
+        TaskPicStatus::WaitingToDistribute->value,
+    );
+
+    actingAs($user);
+
+    $result = $this->service->getWorkSummary();
+
+    expect($result['data']['is_lead_modeller'])->toBeTrue()
+        ->and($result['data']['distribute']['total'])->toBe(1);
+});
+
+it('hides the distribute queue from a non lead modeller', function () {
+    $employee = Employee::factory()->withUser()->create();
+    $user = User::where('employee_id', $employee->id)->first();
+
+    // Even with a WaitingDistribute task present, a non-lead-modeller gets an
+    // empty distribute block (the task still counts in the status breakdown).
+    mkDashTaskWithPic(
+        $employee,
+        TaskStatus::WaitingDistribute->value,
+        TaskPicStatus::WaitingToDistribute->value,
+    );
+
+    actingAs($user);
+
+    $result = $this->service->getWorkSummary();
+
+    expect($result['data']['is_lead_modeller'])->toBeFalse()
+        ->and($result['data']['distribute']['total'])->toBe(0)
+        ->and($result['data']['distribute']['items'])->toBe([])
+        ->and($result['data']['status_breakdown']['waitingdistribute'])->toBe(1);
 });
 
 it('lists pool tasks that have no picker yet', function () {
