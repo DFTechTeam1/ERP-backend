@@ -90,6 +90,7 @@ Route::middleware(['auth.session'])
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);
         Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
         Route::post('project/deals/{projectDealUid}/refund', [ProjectController::class, 'storeRefund'])->name('project-deal.refund');
+        Route::get('project/deals/{projectDealUid}/assignLead', [ProjectController::class, 'registerOnLead'])->name('project-deal.registerOnLead');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
         Route::post('project/deals/{projectDealUid}/update', [ProjectController::class, 'updateFinalDeal'])->name('project-deal.updateFinal');
         Route::post('project/deals/{projectDealUid}/interactives', [InteractiveController::class, 'store'])->name('project-deal.addInteractive');
@@ -117,62 +118,62 @@ Route::middleware(['auth.session'])
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
         Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])
-            ->middleware(PermissionCheck::class.':create_interactive_task')
+            ->middleware(PermissionCheck::class . ':create_interactive_task')
             ->name('interactives.storeTask');
 
         Route::get('interactives/{interactiveUid}/getPicForSubtitute', [InteractiveController::class, 'getPicForSubtitute']);
         Route::post('interactives/status/{interactiveUid}', [InteractiveController::class, 'changeStatus'])
-            ->middleware(PermissionCheck::class.':change_interactive_status')
+            ->middleware(PermissionCheck::class . ':change_interactive_status')
             ->name('interactives.changeStatus');
         Route::get('interactives/cancel/{interactiveUid}', [InteractiveController::class, 'cancelProject'])->name('interactives.cancel');
         Route::get('interactives/picScheduler/{interactiveUid}', [InteractiveController::class, 'getPicScheduler'])
-            ->middleware(PermissionCheck::class.':assign_interactive_pic')
+            ->middleware(PermissionCheck::class . ':assign_interactive_pic')
             ->name('interactives.getPicScheduler');
         Route::post('interactives/assignPic/{interactiveUid}', [InteractiveController::class, 'assignPicToProject'])
-            ->middleware(PermissionCheck::class.':assign_interactive_pic')
+            ->middleware(PermissionCheck::class . ':assign_interactive_pic')
             ->name('interactives.assignPic');
         Route::post('interactives/substitute/{interactiveUid}', [InteractiveController::class, 'substitutePicInProject'])
-            ->middleware(PermissionCheck::class.':assign_interactive_pic')
+            ->middleware(PermissionCheck::class . ':assign_interactive_pic')
             ->name('interactives.substitutePic');
         Route::post('interactives/tasks/{taskUid}/members', [InteractiveController::class, 'addTaskMember'])
-            ->middleware(PermissionCheck::class.':assign_interactive_task_member')
+            ->middleware(PermissionCheck::class . ':assign_interactive_task_member')
             ->name('interactives.tasks.members.store');
         Route::get('interactives/tasks/{taskUid}/approved', [InteractiveController::class, 'approveTask'])
-            ->middleware(PermissionCheck::class.':approve_interactive_task')
+            ->middleware(PermissionCheck::class . ':approve_interactive_task')
             ->name('interactives.tasks.approved');
         Route::post('interactives/tasks/{taskUid}/proof', [InteractiveController::class, 'submitTaskProofs'])
-            ->middleware(PermissionCheck::class.':submit_interactive_task')
+            ->middleware(PermissionCheck::class . ':submit_interactive_task')
             ->name('interactives.tasks.proof.store');
         Route::get('interactives/tasks/{taskUid}/completeTask', [InteractiveController::class, 'completeTask'])
-            ->middleware(PermissionCheck::class.':complete_interactive_task')
+            ->middleware(PermissionCheck::class . ':complete_interactive_task')
             ->name('interactives.tasks.completed');
         Route::delete('interactives/tasks/{taskUid}', [InteractiveController::class, 'deleteTask'])
-            ->middleware(PermissionCheck::class.':delete_interactive_task')
+            ->middleware(PermissionCheck::class . ':delete_interactive_task')
             ->name('interactives.tasks.destroy');
         Route::post('interactives/tasks/{taskUid}/reviseTask', [InteractiveController::class, 'reviseTask'])
-            ->middleware(PermissionCheck::class.':revise_interactive_task')
+            ->middleware(PermissionCheck::class . ':revise_interactive_task')
             ->name('interactives.tasks.revised');
         Route::post('interactives/tasks/{taskUid}/description', [InteractiveController::class, 'storeDescription'])
-            ->middleware(PermissionCheck::class.':update_description_interactive_task')
+            ->middleware(PermissionCheck::class . ':update_description_interactive_task')
             ->name('interactives.tasks.description.store');
         Route::post('interactives/tasks/{taskUid}/holded', [InteractiveController::class, 'holdTask'])
-            ->middleware(PermissionCheck::class.':hold_interactive_task')
+            ->middleware(PermissionCheck::class . ':hold_interactive_task')
             ->name('interactives.tasks.holded');
         Route::get('interactives/tasks/{taskUid}/start', [InteractiveController::class, 'startTaskAfterHold'])
-            ->middleware(PermissionCheck::class.':hold_interactive_task')
+            ->middleware(PermissionCheck::class . ':hold_interactive_task')
             ->name('interactives.tasks.start');
         Route::post('interactives/tasks/{projectUid}/references', [InteractiveController::class, 'storeReferences'])
-            ->middleware(PermissionCheck::class.':create_interactive_task_attachment')
+            ->middleware(PermissionCheck::class . ':create_interactive_task_attachment')
             ->name('interactives.tasks.references.store');
         Route::delete('interactives/{projectUid}/references/{referenceId}', [InteractiveController::class, 'deleteReference'])
-            ->middleware(PermissionCheck::class.':delete_interactive_reference')
+            ->middleware(PermissionCheck::class . ':delete_interactive_reference')
             ->name('interactives.references.destroy');
         Route::post('interactives/tasks/{taskUid}/deadline', [InteractiveController::class, 'updateTaskDeadline'])
-            ->middleware(PermissionCheck::class.':update_deadline_interactive_task')
+            ->middleware(PermissionCheck::class . ':update_deadline_interactive_task')
             ->name('interactives.tasks.deadline.update');
         Route::post('interactives/{interactiveUid}/tasks/filter', [InteractiveController::class, 'filterTasks'])->name('interactives.tasks.filter');
         Route::delete('interactives/{interactiveUid}/tasks/{taskUid}/attachments/{imageId}', [InteractiveController::class, 'deleteTaskAttachment'])
-            ->middleware(PermissionCheck::class.':delete_interactive_task_attachment')
+            ->middleware(PermissionCheck::class . ':delete_interactive_task_attachment')
             ->name('interactives.tasks.attachments.destroy');
         Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
         Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');

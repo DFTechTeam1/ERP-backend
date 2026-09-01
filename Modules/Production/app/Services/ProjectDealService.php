@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Modules\Finance\Jobs\NotifyRequestPriceChangesHasBeenApproved;
@@ -233,15 +234,15 @@ class ProjectDealService
                 $statusIds = collect($status)->implode(',');
                 $where .= " AND status IN ({$statusIds})";
             } else {
-                $where .= ' AND status != '.ProjectDealStatus::Canceled->value;
+                $where .= ' AND status != ' . ProjectDealStatus::Canceled->value;
             }
 
             if (request('date')) {
                 $dateSplit = explode(' - ', request('date'));
                 if (isset($dateSplit[1])) {
-                    $where .= " AND project_date BETWEEN '".$dateSplit[0]."' AND '".$dateSplit[1]."'";
+                    $where .= " AND project_date BETWEEN '" . $dateSplit[0] . "' AND '" . $dateSplit[1] . "'";
                 } elseif (! isset($dateSplite[1]) && isset($dateSplit[0])) {
-                    $where .= " AND project_date = '".$dateSplit[0]."'";
+                    $where .= " AND project_date = '" . $dateSplit[0] . "'";
                 }
             }
 
@@ -249,7 +250,7 @@ class ProjectDealService
                 $price = request('price');
                 $whereHas[] = [
                     'relation' => 'latestQuotation',
-                    'query' => 'fix_price BETWEEN '.$price[0].' AND '.$price[1],
+                    'query' => 'fix_price BETWEEN ' . $price[0] . ' AND ' . $price[1],
                 ];
             }
 
@@ -276,7 +277,7 @@ class ProjectDealService
                         $sort['key'] = 'name';
                     }
                     if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
-                        $sorts .= $sort['key'].' '.$sort['order'].',';
+                        $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
                     }
                 }
 
@@ -319,7 +320,7 @@ class ProjectDealService
                 $finalPrice = $item->getFinalPrice(formatPrice: true);
                 $newPrice = $isHaveRequestPriceChanges ? $item->activeProjectDealPriceChange->new_price : 0;
                 if ($newPrice > 0) {
-                    $newPrice = 'Rp'.number_format(num: $newPrice, decimal_separator: ',');
+                    $newPrice = 'Rp' . number_format(num: $newPrice, decimal_separator: ',');
                 }
 
                 // define refund permission
@@ -373,6 +374,7 @@ class ProjectDealService
                     'status' => $item->status->value,
                     'status_color' => $item->status->color(),
                     'status_icon' => $item->status->icon(),
+                    'is_have_project_lead' => $item->projectLead && $user->can('assign_deal_to_lead') ? true : false,
                     'marketing' => $marketing,
                     'down_payment' => $item->getDownPaymentAmount(formatPrice: true),
                     'remaining_payment' => $item->getRemainingPayment(formatPrice: true),
@@ -401,12 +403,12 @@ class ProjectDealService
                     'is_final' => $item->status == ProjectDealStatus::Final ? true : false,
                     'quotation' => [
                         'id' => $item->latestQuotation->quotation_id,
-                        'fix_price' => 'Rp'.number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
-                        'main_ballroom' => 'Rp'.number_format(num: $item->latestQuotation->main_ballroom, decimal_separator: ','),
-                        'prefunction' => 'Rp'.number_format(num: $item->latestQuotation->prefunction, decimal_separator: ','),
-                        'high_season_fee' => 'Rp'.number_format(num: $item->latestQuotation->high_season_fee, decimal_separator: ','),
-                        'equipment_fee' => 'Rp'.number_format(num: $item->latestQuotation->equipment_fee, decimal_separator: ','),
-                        'sub_total' => 'Rp'.number_format(num: $item->latestQuotation->sub_total, decimal_separator: ','),
+                        'fix_price' => 'Rp' . number_format(num: $item->latestQuotation->fix_price, decimal_separator: ','),
+                        'main_ballroom' => 'Rp' . number_format(num: $item->latestQuotation->main_ballroom, decimal_separator: ','),
+                        'prefunction' => 'Rp' . number_format(num: $item->latestQuotation->prefunction, decimal_separator: ','),
+                        'high_season_fee' => 'Rp' . number_format(num: $item->latestQuotation->high_season_fee, decimal_separator: ','),
+                        'equipment_fee' => 'Rp' . number_format(num: $item->latestQuotation->equipment_fee, decimal_separator: ','),
+                        'sub_total' => 'Rp' . number_format(num: $item->latestQuotation->sub_total, decimal_separator: ','),
                         'sub_total_raw' => $item->latestQuotation->sub_total,
                         'fix_price_raw' => $item->latestQuotation->fix_price,
                     ],
@@ -679,7 +681,6 @@ class ProjectDealService
             ];
             foreach ($master['area'] as $area) {
                 if (in_array($area['area'], $keys)) {
-
                 }
             }
 
@@ -1021,7 +1022,7 @@ class ProjectDealService
                     'design_job' => $item->design_job,
                     'detail' => [
                         'office' => [
-                            'logo' => asset('storage/settings/'.$this->generalService->getSettingByKey('company_logo')),
+                            'logo' => asset('storage/settings/' . $this->generalService->getSettingByKey('company_logo')),
                             'address' => $this->generalService->getSettingByKey('company_address'),
                             'phone' => $this->generalService->getSettingByKey('company_phone'),
                             'email' => $this->generalService->getSettingByKey('company_email'),
@@ -1070,7 +1071,7 @@ class ProjectDealService
             $main = [];
             $prefunction = [];
             if ($data->finalQuotation) {
-                $finalQuotation = $data->quotations->filter(fn ($value) => $value->is_final)->values()[0];
+                $finalQuotation = $data->quotations->filter(fn($value) => $value->is_final)->values()[0];
 
                 $finalQuotation['quotation_id'] = Crypt::encryptString($finalQuotation->quotation_id);
 
@@ -1082,7 +1083,7 @@ class ProjectDealService
             if (isset($outputLed['main'])) {
                 $main = [
                     'product' => 'Main Stage',
-                    'description' => collect($outputLed['main'])->sum('totalRaw').' m<sup>2</sup>',
+                    'description' => collect($outputLed['main'])->sum('totalRaw') . ' m<sup>2</sup>',
                     'amount' => $data->latestQuotation->main_ballroom,
                 ];
 
@@ -1092,7 +1093,7 @@ class ProjectDealService
             if (isset($outputLed['prefunction'])) {
                 $prefunction = [
                     'product' => 'Prefunction',
-                    'description' => collect($outputLed['prefunction'])->sum('totalRaw').' m<sup>2</sup>',
+                    'description' => collect($outputLed['prefunction'])->sum('totalRaw') . ' m<sup>2</sup>',
                     'amount' => $data->latestQuotation->prefunction,
                 ];
 
@@ -1110,7 +1111,7 @@ class ProjectDealService
             if ($data->activeInteractiveRequest) {
                 $products[] = [
                     'product' => 'Interactive',
-                    'description' => $data->activeInteractiveRequest->interactive_area.' m<sup>2</sup>',
+                    'description' => $data->activeInteractiveRequest->interactive_area . ' m<sup>2</sup>',
                     'amount' => $data->activeInteractiveRequest->interactive_fee,
                 ];
             }
@@ -1575,7 +1576,6 @@ class ProjectDealService
                             $haveNameChanges = true;
                         }
                     }
-
                 }
             }
 
@@ -1600,7 +1600,7 @@ class ProjectDealService
 
             // delete project cache
             if ($change->projectDeal->project) {
-                (new GeneralService)->clearCache('detailProject'.$change->projectDeal->project->id);
+                (new GeneralService)->clearCache('detailProject' . $change->projectDeal->project->id);
             }
 
             NotifyApprovalProjectDealChangeJob::dispatch(changeId: $projectDetailChangesId, type: 'approved')->afterCommit();
@@ -1794,7 +1794,7 @@ class ProjectDealService
                 data: [
                     'fix_price' => $changes->new_price,
                 ],
-                where: 'project_deal_id = '.$changes->project_deal_id,
+                where: 'project_deal_id = ' . $changes->project_deal_id,
             );
 
             // change raw data on invoices
@@ -1811,8 +1811,8 @@ class ProjectDealService
             }
 
             $raw = $currentInvoice->raw_data;
-            $raw['fixPrice'] = 'Rp'.number_format($changes->new_price, 0, ',', '.');
-            $raw['remainingPayment'] = 'Rp'.number_format($changes->new_price, 0, ',', '.');
+            $raw['fixPrice'] = 'Rp' . number_format($changes->new_price, 0, ',', '.');
+            $raw['remainingPayment'] = 'Rp' . number_format($changes->new_price, 0, ',', '.');
 
             $this->invoiceRepo->update(
                 data: [
@@ -2313,8 +2313,8 @@ class ProjectDealService
 
                 $remainingPayment = $fixPrice - (! empty($currentTransactions) ? $currentTransactions->sum() : 0);
 
-                $fixPriceFormatted = 'Rp'.number_format($fixPrice, 0, '.', ',');
-                $remainingPayment = 'Rp'.number_format($remainingPayment, 0, '.', ',');
+                $fixPriceFormatted = 'Rp' . number_format($fixPrice, 0, '.', ',');
+                $remainingPayment = 'Rp' . number_format($remainingPayment, 0, '.', ',');
                 $rawData['remainingPayment'] = $remainingPayment;
                 $rawData['fixPrice'] = $fixPriceFormatted;
 
@@ -2446,10 +2446,10 @@ class ProjectDealService
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
 
-            $where = 'status = '.InteractiveRequestStatus::Pending->value;
+            $where = 'status = ' . InteractiveRequestStatus::Pending->value;
 
             if (request('status')) {
-                $where = 'status = '.request('status');
+                $where = 'status = ' . request('status');
             }
 
             $orderBy = 'id desc';
@@ -2486,9 +2486,9 @@ class ProjectDealService
                     'requester' => $item->requester->employee->name,
                     'status' => $item->status->label(),
                     'status_color' => $item->status->color(),
-                    'interactive_area' => $item->interactive_area.'m<sup>2</sup>',
-                    'interactive_fee' => 'Rp'.number_format($item->interactive_fee, 0, ',', '.'),
-                    'fix_price' => 'Rp'.number_format($item->fix_price, 0, ',', '.'),
+                    'interactive_area' => $item->interactive_area . 'm<sup>2</sup>',
+                    'interactive_fee' => 'Rp' . number_format($item->interactive_fee, 0, ',', '.'),
+                    'fix_price' => 'Rp' . number_format($item->fix_price, 0, ',', '.'),
                     'interactive_detail' => $item->interactive_detail,
                     'approved_at' => $item->approved_at ? date('d F Y', strtotime($item->approved_at)) : null,
                     'rejected_at' => $item->rejected_at ? date('d F Y', strtotime($item->rejected_at)) : null,
@@ -2620,7 +2620,7 @@ class ProjectDealService
         if (request('name')) {
             $whereHas[] = [
                 'relation' => 'projectDeal',
-                'query' => "name like '%".request('name')."%'",
+                'query' => "name like '%" . request('name') . "%'",
             ];
         }
 
@@ -2636,7 +2636,7 @@ class ProjectDealService
                     $sort['key'] = 'name';
                 }
                 if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
-                    $sorts .= $sort['key'].' '.$sort['order'].',';
+                    $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
                 }
             }
 
@@ -2709,7 +2709,7 @@ class ProjectDealService
 
             $imageProof = null;
             if (($detail->transaction) && ($detail->transaction->attachments->count() > 0)) {
-                $imageProof = asset('storage/transactions/refunds/'.$detail->transaction->attachments[0]->image);
+                $imageProof = asset('storage/transactions/refunds/' . $detail->transaction->attachments[0]->image);
             }
 
             $output = [
@@ -2794,7 +2794,7 @@ class ProjectDealService
                 'customer_id' => $refund->projectDeal->customer_id,
                 'payment_amount' => $payload['payment_amount'],
                 'note' => $payload['payment_notes'] ?? null,
-                'trx_id' => "TRX - {$refund->projectDeal->identifier_number} - RFN -".now()->format('Y'),
+                'trx_id' => "TRX - {$refund->projectDeal->identifier_number} - RFN -" . now()->format('Y'),
                 'transaction_date' => date('Y-m-d H:i:s', strtotime($payload['payment_date'])),
                 'transaction_type' => TransactionType::Refund->value,
                 'sourceable_type' => ProjectDealRefund::class,
@@ -2832,8 +2832,8 @@ class ProjectDealService
             // delete image
             if (count($tmpImage) > 0) {
                 foreach ($tmpImage as $tmpFile) {
-                    if (Storage::exists('transactions/refunds/'.$tmpFile)) {
-                        Storage::delete('transactions/refunds/'.$tmpFile);
+                    if (Storage::exists('transactions/refunds/' . $tmpFile)) {
+                        Storage::delete('transactions/refunds/' . $tmpFile);
                     }
                 }
             }
@@ -2928,6 +2928,58 @@ class ProjectDealService
             );
         } catch (\Throwable $e) {
             return errorResponse($e);
+        }
+    }
+
+    public function registerOnLead(string $projectDealUid): array
+    {
+        try {
+            $uid = Crypt::decryptString($projectDealUid);
+
+            $deals = $this->repo->show(uid: $uid, relation: ['customer:id,name,phone']);
+
+            if (! $deals) {
+                throw new DataNotFound('Project deal is not found');
+            }
+
+            $token = request()->bearerToken();
+            $payloadLead = [
+                'name' => $deals->name,
+                'customerPhone' => $deals->customer ? ($deals->customer?->phone ?? null) : null,
+                'projectDate' => $deals->project_date,
+                'eventType' => $deals->event_type->value,
+                'venue' => $deals->venue,
+                'cityId' => $deals->city_id,
+                'collaboration' => $deals->collaboration,
+                'note' => $deals->note,
+                'totalLed' => $deals->led_area,
+                'projectClassId' => $deals->project_class_id,
+                'createdBy' => $deals->marketings->count() > 0 ? $deals->marketings->first()->employee_id : Auth::user()->employee_id,
+                'is_final' => 1,
+                'ledDetail' => $deals->led_detail ? json_encode($deals->led_detail) : null,
+                'projectDealId' => $deals->id,
+            ];
+
+            try {
+                $responseExpress = Http::withToken($token)->post(config('app.express_endpoint') . '/production/project-leads', $payloadLead);
+                logging('response create leads', [
+                    'status' => $responseExpress->status(),
+                    'response' => $responseExpress->json(),
+                    'payload' => $payloadLead
+                ]);
+
+                if ($responseExpress->status() >= 400) {
+                    throw new DataNotFound('Failed to create project leads');
+                }
+            } catch (\Throwable $th) {
+                throw new DataNotFound('Cannot create project leads');
+            }
+
+            return generalResponse(
+                message: 'Success create leads',
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
         }
     }
 }
