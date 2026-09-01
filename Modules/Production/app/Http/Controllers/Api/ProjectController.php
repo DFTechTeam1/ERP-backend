@@ -971,6 +971,7 @@ class ProjectController extends Controller
                 'lastInteractiveRequest',
                 'project:id,project_deal_id,status',
                 'project.interactiveProject:id,parent_project',
+                'projectLead:id,project_deal_id'
             ]
         ));
     }
@@ -1057,7 +1058,7 @@ class ProjectController extends Controller
         $response = $this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
         if (! $response['error'] && request('aid')) {
-            return redirect(route('invoices.approved').'?type=deal');
+            return redirect(route('invoices.approved') . '?type=deal');
         }
 
         return apiResponse($response);
@@ -1078,7 +1079,7 @@ class ProjectController extends Controller
         $response = $this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
         if (! $response['error'] && request('aid')) {
-            return redirect(route('invoices.rejected').'?type=deal');
+            return redirect(route('invoices.rejected') . '?type=deal');
         }
 
         return apiResponse($response);
@@ -1224,5 +1225,10 @@ class ProjectController extends Controller
     public function listProjectDealChanges(): JsonResponse
     {
         return apiResponse($this->projectDealService->listProjectDealChanges());
+    }
+
+    public function registerOnLead(string $projectDealUid): JsonResponse
+    {
+        return apiResponse($this->projectDealService->registerOnLead($projectDealUid));
     }
 }
