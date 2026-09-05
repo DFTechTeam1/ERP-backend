@@ -2,7 +2,9 @@
 
 namespace Modules\Company\Http\Controllers\Api;
 
+use App\Data\Company\ProjectClass\UpdateStatusData;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Company\Http\Requests\ProjectClass\Create;
 use Modules\Company\Http\Requests\ProjectClass\Update;
@@ -53,7 +55,7 @@ class ProjectClassController extends Controller
      */
     public function update(Update $request, $id)
     {
-        return apiResponse($this->service->update($request->validated(), 'dummy', 'id = '.$id));
+        return apiResponse($this->service->update($request->validated(), 'dummy', 'id = ' . $id));
     }
 
     /**
@@ -76,5 +78,10 @@ class ProjectClassController extends Controller
                 return gettype($item['uid']) == 'array' ? $item['uid']['uid'] : $item['uid'];
             })->toArray()
         ));
+    }
+
+    public function updateStatus(UpdateStatusData $payload, int $projectClassId): JsonResponse
+    {
+        return apiResponse($this->service->updateStatus($payload, $projectClassId));
     }
 }

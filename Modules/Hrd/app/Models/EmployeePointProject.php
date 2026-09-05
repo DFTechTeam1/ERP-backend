@@ -23,8 +23,8 @@ class EmployeePointProject extends Model
         'project_id',
         'total_point', // total point per project -> point + additional_point
         'additional_point',
-        'prorate_point',
-        'calculated_prorate_point',
+        'prorate_point', // Legacy
+        'calculated_prorate_point', // Legacy
         'original_point',
     ];
 
@@ -47,13 +47,18 @@ class EmployeePointProject extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output
+            get: fn() => $output
         );
     }
 
     public function details(): HasMany
     {
         return $this->hasMany(EmployeePointProjectDetail::class, 'point_id');
+    }
+
+    public function rewards(): HasMany
+    {
+        return $this->hasMany(EmployeeReward::class, 'employee_point_project_id');
     }
 
     public function project(): BelongsTo

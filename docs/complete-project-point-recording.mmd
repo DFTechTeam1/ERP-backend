@@ -1,0 +1,128 @@
+%% ============================================================
+%% Point recording flow when a project is completed
+%% Source: Modules/Production/app/Services/ProjectService.php  -> completeProject()
+%%         App/Actions/Hrd/PointRecord.php                      -> run() / handlers
+%% ============================================================
+
+flowchart TD
+
+    %% ─────────────────────────────────────────
+    %% completeProject(data, projectUid)
+    %% ─────────────────────────────────────────
+
+    START(["completeProject(data, projectUid)"]) --> TX["DB::beginTransaction"]
+    TX --> RESOLVE["Auth::user()\nresolve projectId from projectUid"]
+    RESOLVE --> DEFAULT["payloadProject.status = PartialComplete"]
+    DEFAULT --> HASPOINTS{"data['points'] not empty?"}
+
+    HASPOINTS -- "No (nothing to record)" --> UPDATE
+    HASPOINTS -- Yes --> SPLIT["Split points by is_special_employee\n→ specialEmployees[]\n→ regularEmployees[]"]
+
+    %% ---- Special employees first ----
+    SPLIT --> HASSPECIAL{"specialEmployees not empty?"}
+    HASSPECIAL -- Yes --> RUNSPECIAL["PointRecord::run(special, projectUid,\n'production', isRegular = false)"]
+    RUNSPECIAL --> SPEC_OK{"returned true?"}
+    SPEC_OK -- "No" --> ERRPOINTS["return errorResponse\n('Failed to record points')"]
+    SPEC_OK -- Yes --> HASREGULAR
+    HASSPECIAL -- No --> HASREGULAR{"regularEmployees not empty?"}
+
+    %% ---- Regular employees ----
+    HASREGULAR -- Yes --> RUNREGULAR["PointRecord::run(regular, projectUid,\n'production', isRegular = true)"]
+    RUNREGULAR --> REG_OK{"returned true?"}
+    REG_OK -- "No" --> ERRPOINTS
+    REG_OK -- Yes --> FEEDBACK
+    HASREGULAR -- No --> FEEDBACK["RecordProjectFeedback::run(data, projectUid, user)"]
+
+    FEEDBACK --> ALLREC{"all feedback recorded?"}
+    ALLREC -- Yes --> COMPLETED["payloadProject.status = Completed"]
+    ALLREC -- "No (stays PartialComplete)" --> UPDATE
+    COMPLETED --> UPDATE
+
+    %% ---- Persist + cache + commit ----
+    UPDATE["repo->update(payloadProject, projectUid)"] --> CACHE["Rebuild project detail cache\n(detailCacheAction, forceUpdateAll = true)"]
+    CACHE --> NEEDCACHE["Remove this projectUid from\n'ProjectNeedToBeComplete' cache (per user)"]
+    NEEDCACHE --> COMMIT["DB::commit"]
+    COMMIT --> SUCCESS(["return success\nglobal.projectIsCompleted + full_detail"])
+
+    %% ---- Error handling ----
+    ERRPOINTS --> ERR(["Response: error"])
+    TX -. "any Throwable in try" .-> CATCH["catch: DB::rollBack()\nreturn errorResponse(th)"]
+    CATCH --> ERR
+
+    %% =========================================================
+    %% PointRecord::run  → dispatch by isRegularEmployee
+    %% =========================================================
+    RUNREGULAR -.-> REG
+    RUNSPECIAL -.-> SPE
+
+    %% ─────────────────────────────────────────
+    %% handleRegularEmployeePoints (loop per point)
+    %% ─────────────────────────────────────────
+    subgraph REG["PointRecord::handleRegularEmployeePoints — loop per point"]
+        direction TB
+        R1["Resolve employeeId from point.uid"] --> R2{"EmployeePoint exists\nfor employee?"}
+        R2 -- No --> R3["Create EmployeePoint\n(total_point = 0, type)"]
+        R2 -- Yes --> R4
+        R3 --> R4{"EmployeePointProject exists\nfor (employee_point, project)?"}
+        R4 -- No --> R5["Create EmployeePointProject\n(total/additional/prorate/\noriginal/calculated)"]
+        R4 -- "Yes (skip create)" --> R6
+        R5 --> R6["Create EmployeePointProjectDetail\nfor each task"]
+        R6 --> R7["Recalculate total_point =\nSUM(project total_point);\nupdate EmployeePoint"]
+        R7 --> RNEXT["next point"]
+        RNEXT --> RTRUE(["return true"])
+        R1 -. "on Throwable" .-> RFALSE(["log + return false"])
+    end
+    RTRUE -.-> REG_OK
+    RFALSE -.-> REG_OK
+
+    %% ─────────────────────────────────────────
+    %% handleSpecialEmployeePoints (loop per point, with accumulation)
+    %% ─────────────────────────────────────────
+    subgraph SPE["PointRecord::handleSpecialEmployeePoints — loop per point"]
+        direction TB
+        S0{"is_special_employee == 1?"}
+        S0 -- "No" --> SSKIP["skip point (continue)"]
+        S0 -- Yes --> S1["Resolve employeeId from point.uid"]
+        S1 --> S2{"Existing EmployeePointProject\nfor this project?\n(checkExistingSpecialEmployeePoint)"}
+
+        %% accumulate branch
+        S2 -- "Yes — accumulate" --> S3["additional_point =\nold_additional + new_additional\ntotal_point = original_point + additional_point"]
+        S3 --> S4["Update EmployeePointProject\n(additional/total/prorate/calculated)"]
+        S4 --> S5["Add task details\n(skip duplicates)"]
+        S5 --> S6["updateEmployeeTotalPoint(employee)"]
+        S6 --> SNEXT["next point"]
+
+        %% create branch
+        S2 -- "No — create" --> S7{"EmployeePoint exists\nfor employee?"}
+        S7 -- No --> S8["Create EmployeePoint\n(total_point = 0, type)"]
+        S7 -- Yes --> S9
+        S8 --> S9["Create EmployeePointProject\n(initial points)"]
+        S9 --> S10["Create task details"]
+        S10 --> S11["updateEmployeeTotalPoint(employee)"]
+        S11 --> SNEXT
+
+        SSKIP --> SNEXT
+        SNEXT --> STRUE(["return true"])
+        S1 -. "on Throwable" .-> SFALSE(["log + return false"])
+    end
+    STRUE -.-> SPEC_OK
+    SFALSE -.-> SPEC_OK
+
+    %% ─────────────────────────────────────────
+    %% STYLES
+    %% ─────────────────────────────────────────
+    classDef entry fill:#2C3E50,stroke:#1A252F,color:#fff
+    classDef success fill:#27AE60,stroke:#1A7A42,color:#fff
+    classDef error fill:#C0392B,stroke:#7B241C,color:#fff
+    classDef decision fill:#FAD7A0,stroke:#F39C12,color:#2C3E50
+    classDef action fill:#AED6F1,stroke:#4A90D9,color:#2C3E50
+    classDef pointRec fill:#D5F5E3,stroke:#27AE60,color:#2C3E50
+    classDef special fill:#D2B4DE,stroke:#8E44AD,color:#2C3E50
+
+    class START entry
+    class SUCCESS success
+    class ERR,ERRPOINTS,CATCH,RFALSE,SFALSE error
+    class HASPOINTS,HASSPECIAL,HASREGULAR,SPEC_OK,REG_OK,ALLREC,R2,R4,S0,S2,S7 decision
+    class TX,RESOLVE,DEFAULT,SPLIT,RUNSPECIAL,RUNREGULAR,FEEDBACK,COMPLETED,UPDATE,CACHE,NEEDCACHE,COMMIT action
+    class R1,R3,R5,R6,R7,RNEXT,RTRUE pointRec
+    class S1,S3,S4,S5,S6,S8,S9,S10,S11,SNEXT,SSKIP,STRUE special

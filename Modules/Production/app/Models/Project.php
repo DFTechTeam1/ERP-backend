@@ -203,6 +203,11 @@ class Project extends Model
         return $this->hasMany(ProjectTask::class, 'project_id');
     }
 
+    public function taskPicHistories(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicHistory::class, 'project_id');
+    }
+
     public function teamTransfer(): HasMany
     {
         return $this->hasMany(TransferTeamMember::class, 'project_id');
@@ -248,7 +253,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -266,7 +271,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -275,11 +280,11 @@ class Project extends Model
         $output = '';
 
         if (isset($this->attributes['showreels'])) {
-            $output = asset('storage/projects/'.$this->attributes['id'].'/showreels/'.$this->attributes['showreels']);
+            $output = asset('storage/projects/' . $this->attributes['id'] . '/showreels/' . $this->attributes['showreels']);
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -297,7 +302,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -315,7 +320,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -333,7 +338,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -344,7 +349,7 @@ class Project extends Model
 
     public function scopeIsDuplicate(Builder $builder, string $name, string $projectDate)
     {
-        $builder->whereLike('name', '%'. $name. '%')
+        $builder->whereLike('name', '%' . $name . '%')
             ->whereDate('project_date', $projectDate);
     }
 

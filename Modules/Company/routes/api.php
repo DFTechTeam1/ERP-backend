@@ -84,6 +84,7 @@ Route::get('world/cities', [\Modules\Company\Http\Controllers\Api\RegionControll
 
 // project class
 Route::get('projectClass/getAll', [ProjectClassController::class, 'getAll']);
+Route::put('projectClass/{projectClassId}/status', [ProjectClassController::class, 'updateStatus']);
 Route::resource('projectClass', ProjectClassController::class);
 Route::post('projectClass/bulk', [ProjectClassController::class, 'bulkDelete']);
 

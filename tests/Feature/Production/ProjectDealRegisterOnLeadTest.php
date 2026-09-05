@@ -121,7 +121,8 @@ describe('registerOnLead', function () {
             return $request['totalLed'] !== null
                 && (float) $request['totalLed'] === (float) $deal->led_area
                 && $request['ledDetail'] !== null
-                && $request['ledDetail'] == $deal->led_detail;
+                // ledDetail is forwarded to Express as a JSON string, not a raw array
+                && $request['ledDetail'] === json_encode($deal->led_detail);
         });
     });
 

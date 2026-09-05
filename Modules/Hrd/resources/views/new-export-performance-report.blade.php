@@ -1,60 +1,60 @@
+@php
+    // Defensive: keep the export working even if the period is not supplied (e.g. an old
+    // queued job rendering this template after a deploy).
+    $startDate = $startDate ?? null;
+    $endDate = $endDate ?? null;
+    $periodLabel = ($startDate && $endDate)
+        ? ' — '.date('d M Y', strtotime($startDate)).' s/d '.date('d M Y', strtotime($endDate))
+        : '';
+@endphp
 <table>
     <thead>
+        <tr>
+            <th colspan="11" style="font-weight: bold;">
+                LAPORAN PERFORMA KARYAWAN{{ $periodLabel }}
+            </th>
+        </tr>
         <tr>
             <th style="font-weight: bold;">No</th>
             <th style="font-weight: bold;">Nama Event / Klien</th>
             <th style="font-weight: bold;">Nama PM / PIC</th>
             <th style="font-weight: bold;">Nama Karyawan</th>
+            <th style="font-weight: bold;">Posisi</th>
             <th style="font-weight: bold;">Tugas</th>
-            <th style="font-weight: bold;">Poin</th>
-            <th style="font-weight: bold;">Detail Pekerjaan</th>
-            <th></th>
-            <th>Point Breakdown</th>
-            <th>Feedbacks</th>
+            <th style="font-weight: bold;">Jumlah Tugas</th>
+            <th style="font-weight: bold;">Poin Dasar</th>
+            <th style="font-weight: bold;">Poin Tambahan</th>
+            <th style="font-weight: bold;">Total Poin</th>
+            <th style="font-weight: bold;">Feedback</th>
         </tr>
     </thead>
     <tbody>
-        @php $key = 0; @endphp
-        @foreach($points as $projectName => $points)
-            @foreach($points as $keyPoint => $point)
+        @php $projectNumber = 0; @endphp
+        @foreach($points as $projectName => $projectRows)
+            @foreach($projectRows as $rowIndex => $row)
             <tr>
-                @if($keyPoint == 0)
-                <td rowspan="{{ count($points) }}">{{ $key + 1 }}</td>
+                @if($rowIndex === 0)
+                <td rowspan="{{ count($projectRows) }}">{{ $projectNumber + 1 }}</td>
+                <td rowspan="{{ count($projectRows) }}">{{ $projectName }}</td>
+                <td rowspan="{{ count($projectRows) }}">{{ $row['pics'] }}</td>
                 @endif
-                @if($keyPoint == 0)
-                <td rowspan="{{ count($points) }}">{{ $projectName }}</td>
-                @endif
-                <td>{{ $point['pics'] }}</td>
-                <td>{{ $point['employee_name'] }}</td>
-                <td>{{ $point['position'] }}</td>
-                <td>{{ $point['total_point'] }}</td>
-                <td>{{ $point['tasks'] }}</td>
-                <td></td>
-                <td>
-                    <div>
-                        <p>Is Prorate: ✅</p>
-                        <p>Prorate Point: {{ $point['prorate_point'] }}</p>
-                        <p>Original Point: {{ $point['original_point'] }}</p>
-                        <p>Additional Point: {{ $point['additional_point'] }}</p>
-                        <p>Calculated Prorate Point: {{ $point['calculated_prorate_point'] }}</p>
-                        <p>Total Point: {{ $point['total_point'] }}</p>
-                        <p>Total Tasks: {{ $point['total_tasks'] }}</p>
-                    </div>
-                </td>
-
-                {{-- only put in the first line, then do rowspan --}}
-                @if ($keyPoint == 0)
-                <td rowspan="{{ count($points) }}">
-                    <div>
-                        @foreach($point['feedbacks'] as $feedback)
-                            <p>{{ $feedback }}</p>
-                        @endforeach
-                    </div>
+                <td>{{ $row['employee_name'] }}</td>
+                <td>{{ $row['position'] }}</td>
+                <td>{{ $row['tasks'] }}</td>
+                <td>{{ $row['total_tasks'] }}</td>
+                <td>{{ $row['original_point'] }}</td>
+                <td>{{ $row['additional_point'] }}</td>
+                <td>{{ $row['total_point'] }}</td>
+                @if($rowIndex === 0)
+                <td rowspan="{{ count($projectRows) }}">
+                    @foreach($row['feedbacks'] as $feedback)
+                        {{ $feedback }}@if(! $loop->last)<br>@endif
+                    @endforeach
                 </td>
                 @endif
             </tr>
             @endforeach
-        @php $key++ @endphp
+        @php $projectNumber++; @endphp
         @endforeach
     </tbody>
 </table>
