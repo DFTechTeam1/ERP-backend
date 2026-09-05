@@ -13,13 +13,14 @@ class Create extends FormRequest
     {
         return [
             'name' => 'required|unique:project_classes,name',
-            'maximal_point' => 'required',
+            // 'maximal_point' => 'required',
             'color' => 'required',
-            'base_point' => 'required|integer|min:0',
-            'point_2_team' => 'required|integer|min:0',
-            'point_3_team' => 'required|integer|min:0',
-            'point_4_team' => 'required|integer|min:0',
-            'point_5_team' => 'required|integer|min:0',
+            'reward' => 'required',
+            // 'base_point' => 'required|integer|min:0',
+            // 'point_2_team' => 'required|integer|min:0',
+            // 'point_3_team' => 'required|integer|min:0',
+            // 'point_4_team' => 'required|integer|min:0',
+            // 'point_5_team' => 'required|integer|min:0',
         ];
     }
 

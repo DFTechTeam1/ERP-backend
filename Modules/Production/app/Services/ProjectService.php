@@ -7,6 +7,7 @@ use App\Actions\CreateQuotation;
 use App\Actions\DefineTaskAction;
 use App\Actions\GenerateQuotationNumber;
 use App\Actions\Hrd\PointRecord;
+use App\Actions\Hrd\PointRecordBasedOnReward;
 use App\Actions\PartialTaskPermissionCheck;
 use App\Actions\Production\SummarizeTaskTimeline;
 use App\Actions\Project\DetailCache;
@@ -1091,6 +1092,7 @@ class ProjectService
     {
         $data = $this->projectClassRepo->list(
             select: 'id,name',
+            where: "is_active = 1"
         );
 
         $out = [];
@@ -6041,7 +6043,7 @@ class ProjectService
 
     public function getProjectStatusses(string $projectUid): array
     {
-        $project = $this->repo->show($projectUid, 'status');
+        $project = $this->repo->show(uid: $projectUid, select: 'status');
 
         $data = \App\Enums\Production\ProjectStatus::cases();
 
@@ -6591,43 +6593,45 @@ class ProjectService
             ];
             if (! empty($data['points'])) {
                 // Separate special and regular employees
-                $specialEmployees = [];
-                $regularEmployees = [];
+                // $specialEmployees = [];
+                // $regularEmployees = [];
+                //
+                // foreach ($data['points'] as $point) {
+                //     if (isset($point['is_special_employee']) && $point['is_special_employee'] == 1) {
+                //         $specialEmployees[] = $point;
+                //     } else {
+                //         $regularEmployees[] = $point;
+                //     }
+                // }
+                //
+                // // Handle special employees (with accumulation)
+                // if (! empty($specialEmployees)) {
+                //     $recordPoint = PointRecord::run(
+                //         ['points' => $specialEmployees],
+                //         $projectUid,
+                //         'production',
+                //         false
+                //     );
+                //
+                //     if (! $recordPoint) {
+                //         return errorResponse('Failed to record points');
+                //     }
+                // }
+                //
+                // // Handle regular employees (normal flow)
+                // if (! empty($regularEmployees)) {
+                //     $recordPoint = PointRecord::run(
+                //         ['points' => $regularEmployees],
+                //         $projectUid,
+                //         'production'
+                //     );
+                //
+                //     if (! $recordPoint) {
+                //         return errorResponse('Failed to record points');
+                //     }
+                // }
 
-                foreach ($data['points'] as $point) {
-                    if (isset($point['is_special_employee']) && $point['is_special_employee'] == 1) {
-                        $specialEmployees[] = $point;
-                    } else {
-                        $regularEmployees[] = $point;
-                    }
-                }
-
-                // Handle special employees (with accumulation)
-                if (! empty($specialEmployees)) {
-                    $recordPoint = PointRecord::run(
-                        ['points' => $specialEmployees],
-                        $projectUid,
-                        'production',
-                        false
-                    );
-
-                    if (! $recordPoint) {
-                        return errorResponse('Failed to record points');
-                    }
-                }
-
-                // Handle regular employees (normal flow)
-                if (! empty($regularEmployees)) {
-                    $recordPoint = PointRecord::run(
-                        ['points' => $regularEmployees],
-                        $projectUid,
-                        'production'
-                    );
-
-                    if (! $recordPoint) {
-                        return errorResponse('Failed to record points');
-                    }
-                }
+                PointRecordBasedOnReward::run($projectId, $data['points']);
 
                 // record project feedback
                 $isAllRecorded = \App\Actions\Production\RecordProjectFeedback::run(payload: $data, projectUid: $projectUid, user: $user);

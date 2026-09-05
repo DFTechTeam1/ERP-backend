@@ -3,11 +3,14 @@
 namespace Modules\Hrd\Services;
 
 use App\Enums\Employee\Status;
+use App\Enums\Production\WorkType;
 use App\Exports\NewTemplatePerformanceReportExport;
+use App\Services\ExcelService;
 use App\Services\GeneralService;
 use Carbon\Carbon;
 use DateTime;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeePointRepository;
@@ -113,7 +116,7 @@ class PerformanceReportService
                     'taskLog' => function ($logQuery) {
                         $logQuery
                             ->with('task:id,name')
-                            ->where('work_type', \App\Enums\Production\WorkType::Assigned->value);
+                            ->where('work_type', WorkType::Assigned->value);
                     },
                 ]
             );
@@ -151,7 +154,7 @@ class PerformanceReportService
             $start = new DateTime(request('start_date'));
             $end = new DateTime(request('end_date'));
             $diff = date_diff($end, $start);
-            $daysInMonth = \Carbon\Carbon::parse(request('start_date'))->daysInMonth;
+            $daysInMonth = Carbon::parse(request('start_date'))->daysInMonth;
 
             if ($diff->days > $daysInMonth) {
                 return errorResponse(__('global.oneMonthMaxDateFilter'));
@@ -202,7 +205,18 @@ class PerformanceReportService
         //     });
         // }
 
-        $picLog = $this->taskPicLogRepo->list('*', 'employee_id = '.$employee->id);
+        // Scope the work summary to the selected period (via the task's project date) and only
+        // select the columns it needs. Previously this pulled EVERY pic log for the employee with
+        // `*` and no date filter, so the chart showed all-time totals - inconsistent with the
+        // period-scoped points above - and loaded far more rows than necessary.
+        $picLog = $this->taskPicLogRepo->list(
+            select: 'id,project_task_id,work_type',
+            where: 'employee_id = '.$employee->id,
+            orderBy: 'id asc',
+            whereHas: [
+                ['relation' => 'task.project', 'query' => "project_date BETWEEN '{$this->startDate}' AND '{$this->endDate}'"],
+            ]
+        );
         $picLog = collect($picLog)->groupBy('project_task_id')->toArray();
         $log = [];
         foreach ($picLog as $projectTaskId => $taskLog) {
@@ -213,10 +227,10 @@ class PerformanceReportService
 
         $log = collect($log)->groupBy('work_type')->toArray();
 
-        $completed = isset($log[\App\Enums\Production\WorkType::Finish->value]) ? count($log[\App\Enums\Production\WorkType::Finish->value]) : 0;
-        $revise = isset($log[\App\Enums\Production\WorkType::Revise->value]) ? count($log[\App\Enums\Production\WorkType::Revise->value]) : 0;
-        $waiting = isset($log[\App\Enums\Production\WorkType::Assigned->value]) ? count($log[\App\Enums\Production\WorkType::Assigned->value]) : 0;
-        $progress = isset($log[\App\Enums\Production\WorkType::OnProgress->value]) ? count($log[\App\Enums\Production\WorkType::OnProgress->value]) : 0;
+        $completed = isset($log[WorkType::Finish->value]) ? count($log[WorkType::Finish->value]) : 0;
+        $revise = isset($log[WorkType::Revise->value]) ? count($log[WorkType::Revise->value]) : 0;
+        $waiting = isset($log[WorkType::Assigned->value]) ? count($log[WorkType::Assigned->value]) : 0;
+        $progress = isset($log[WorkType::OnProgress->value]) ? count($log[WorkType::OnProgress->value]) : 0;
 
         $series = [$completed, $revise, $waiting, $progress];
 
@@ -321,7 +335,7 @@ class PerformanceReportService
                 $points[] = $pointResult ? $pointResult->total_point : 0;
             }
 
-            $excel = new \App\Services\ExcelService;
+            $excel = new ExcelService;
 
             $excel->createSheet('Report', 0);
             $excel->setActiveSheet('Report');
@@ -439,7 +453,7 @@ class PerformanceReportService
             }
 
             $filename = "hrd/performance_report_{$startDate}_{$endDate}.xlsx";
-            $downloadPath = \Illuminate\Support\Facades\URL::signedRoute(
+            $downloadPath = URL::signedRoute(
                 name: 'hrd.download.export.performanceReport',
                 parameters: [
                     'fp' => $filename,
