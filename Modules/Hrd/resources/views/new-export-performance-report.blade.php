@@ -10,14 +10,16 @@
 <table>
     <thead>
         <tr>
-            <th colspan="11" style="font-weight: bold;">
+            <th colspan="13" style="font-weight: bold;">
                 LAPORAN PERFORMA KARYAWAN{{ $periodLabel }}
             </th>
         </tr>
         <tr>
             <th style="font-weight: bold;">No</th>
             <th style="font-weight: bold;">Nama Event / Klien</th>
+            <th style="font-weight: bold;">Kelas Proyek</th>
             <th style="font-weight: bold;">Nama PM / PIC</th>
+            <th style="font-weight: bold;">ID Karyawan</th>
             <th style="font-weight: bold;">Nama Karyawan</th>
             <th style="font-weight: bold;">Posisi</th>
             <th style="font-weight: bold;">Tugas</th>
@@ -36,8 +38,10 @@
                 @if($rowIndex === 0)
                 <td rowspan="{{ count($projectRows) }}">{{ $projectNumber + 1 }}</td>
                 <td rowspan="{{ count($projectRows) }}">{{ $projectName }}</td>
+                <td rowspan="{{ count($projectRows) }}">{{ $row['project_class'] ?? '-' }}</td>
                 <td rowspan="{{ count($projectRows) }}">{{ $row['pics'] }}</td>
                 @endif
+                <td>{{ $row['employee_id'] }}</td>
                 <td>{{ $row['employee_name'] }}</td>
                 <td>{{ $row['position'] }}</td>
                 <td>{{ $row['tasks'] }}</td>

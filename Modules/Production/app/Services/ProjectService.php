@@ -20,6 +20,8 @@ use App\Actions\Project\Entertainment\SwitchSongWorker;
 use App\Actions\Project\FormatBoards;
 use App\Actions\Project\FormatTaskPermission;
 use App\Actions\Project\SaveTaskState;
+use App\Data\Production\Cost\EmployeeRewardListData;
+use App\Data\Production\CostEstimationListData;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\Production\Entertainment\TaskSongLogType;
@@ -6622,6 +6624,8 @@ class ProjectService
                 }
             }
 
+            // dd('check');
+
             $this->repo->update($payloadProject, $projectUid);
 
             // update project equipment
@@ -10080,6 +10084,56 @@ class ProjectService
             return generalResponse(
                 message: 'Success',
                 data: $response->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function getProjectCostEstimation(string $projectUid): array
+    {
+        try {
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: 'id,name,venue,project_date,client_portal,status,project_deal_id',
+                relation: [
+                    'projectDeal:id',
+                    'projectDeal.finalQuotation:id,project_deal_id,fix_price',
+                    'rewards.employee:id,name,avatar'
+                ]
+            );
+
+            $fixPrice = $project?->projectDeal?->finalQuotation?->fix_price ?? 0;
+
+            /** @var array<int, EmployeeRewardListData> */
+            $employeeRewards = [];
+
+            foreach ($project->rewards as $reward) {
+                $employeeRewards[] = new EmployeeRewardListData(
+                    id: $reward->id,
+                    name: $reward->employee->name,
+                    avatar: $reward->employee->avatar,
+                    total_point: $reward->total_point,
+                    total_reward: $reward->total_reward
+                );
+            }
+
+            $output = new CostEstimationListData(
+                project_id: $projectUid,
+                client_portal: $project->client_portal,
+                project_name: $project->name,
+                event_date: date('d F Y', strtotime($project->project_date)),
+                venue: $project->venue,
+                total_employees: 0,
+                meal_allowances: [],
+                transport_allowances: [],
+                project_price: $fixPrice,
+                employee_rewards: $employeeRewards
+            );
+
+            return generalResponse(
+                message: "Success",
+                data: $output->toArray()
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

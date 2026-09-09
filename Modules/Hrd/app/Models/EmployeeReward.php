@@ -4,6 +4,10 @@ namespace Modules\Hrd\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Production\Models\Project;
+
 // use Modules\Hrd\Database\Factories\EmployeeRewardFactory;
 
 class EmployeeReward extends Model
@@ -29,4 +33,14 @@ class EmployeeReward extends Model
     // {
     //     // return EmployeeRewardFactory::new();
     // }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id');
+    }
 }

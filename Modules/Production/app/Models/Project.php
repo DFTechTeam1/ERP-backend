@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Hrd\Models\EmployeePointProject;
+use Modules\Hrd\Models\EmployeeReward;
 use Modules\Production\Database\Factories\ProjectFactory;
 
 class Project extends Model
@@ -108,6 +110,16 @@ class Project extends Model
     public function interactiveProject(): HasOne
     {
         return $this->hasOne(InteractiveProject::class, 'parent_project', 'id');
+    }
+
+    public function projectPointEmployees(): HasMany
+    {
+        return $this->hasMany(EmployeePointProject::class, 'project_id');
+    }
+
+    public function rewards(): HasMany
+    {
+        return $this->hasMany(EmployeeReward::class, 'project_id');
     }
 
     public function activities(): HasMany

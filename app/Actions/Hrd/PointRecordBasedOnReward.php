@@ -92,6 +92,8 @@ class PointRecordBasedOnReward
         });
 
         DB::transaction(function () use ($mapping, $employeePointProjectRepo, $employeePointRepo, $project, $pointData) {
+            $totalTask = $project->tasks->count();
+
             foreach ($mapping as $data) {
                 $employeePoint = $employeePointRepo->show(uid: '', where: 'employee_id = '.$data['employee_id']);
                 if (! $employeePoint) {
@@ -106,6 +108,7 @@ class PointRecordBasedOnReward
                 $point = count($data['tasks_detail']);
                 $additionalPoint = $pointData->firstWhere('employee_id', $data['employee_id'])['additional_point'] ?? 0;
                 $totalPoint = $point + $additionalPoint;
+                $percentageContribution = ceil($totalTask / $point * 100);
 
                 // Link to the employee_point row we just fetched/created (buildMapping captured the
                 // id from singlePoint BEFORE it existed, so first-timers would store 0 and fail the
@@ -124,9 +127,10 @@ class PointRecordBasedOnReward
                 // One detail row per task; tasks_detail is a Collection, so createMany(array).
                 $pointProject->details()->createMany(collect($data['tasks_detail'])->toArray());
 
-                // Record rewards
+                // Record rewards. round() guarantees a whole-number reward - base * pct / 100
+                // can otherwise land on a fraction when the class reward is not divisible by 100.
                 $baseReward = $project->projectClass->reward;
-                $totalReward = $baseReward * $totalPoint;
+                $totalReward = $totalPoint == 0 ? 0 : round($baseReward * $percentageContribution / 100);
 
                 $pointProject->rewards()->create([
                     'employee_id' => $data['employee_id'],
@@ -137,6 +141,14 @@ class PointRecordBasedOnReward
                     'additional_point' => $additionalPoint,
                     'total_reward' => $totalReward,
                     'project_class_name' => $project->projectClass->name,
+                ]);
+
+                logging('cost reward data', [
+                    'totalTask' => $totalTask,
+                    'totalPoint' => $totalPoint,
+                    'point' => $point,
+                    'additionalPoint' => $additionalPoint,
+                    'percentage' => $percentageContribution,
                 ]);
 
                 // Update employee total point

@@ -1231,4 +1231,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->projectDealService->registerOnLead($projectDealUid));
     }
+
+    public function getProjectCostEstimation(string $projectUid): JsonResponse
+    {
+        return apiResponse($this->service->getProjectCostEstimation($projectUid));
+    }
 }
