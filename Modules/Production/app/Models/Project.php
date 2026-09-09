@@ -110,6 +110,11 @@ class Project extends Model
         return $this->hasOne(InteractiveProject::class, 'parent_project', 'id');
     }
 
+    public function activities(): HasMany
+    {
+        return $this->hasMany(ProjectActivity::class, 'project_id');
+    }
+
     public function feedbacks(): HasMany
     {
         return $this->hasMany(ProjectFeedback::class, 'project_id');
