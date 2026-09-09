@@ -53,20 +53,21 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
             select: 'id,employee_point_id,project_id,total_point,additional_point,calculated_prorate_point,prorate_point,original_point',
             relation: [
                 'project' => function ($queryProject) {
-                    $queryProject->selectRaw('id,name,project_date')
+                    $queryProject->selectRaw('id,name,project_date,project_class_id')
                         ->with([
                             'personInCharges:id,project_id,pic_id',
                             'personInCharges.employee:id,name',
                             'entertainmentTaskSong.song:id,name',
-                            'entertainmentTaskSong.employee:id,name,position_id',
+                            'entertainmentTaskSong.employee:id,name,position_id,employee_id',
                             'entertainmentTaskSong.employee.position:id,name',
                             'feedbacks:id,project_id,pic_id,feedback',
                             'feedbacks.pic:id,nickname',
+                            'projectClass:id,name',
                         ]);
                 },
                 'details:id,point_id,task_id',
                 'employeePoint:id,type,employee_id',
-                'employeePoint.employee:id,name,position_id',
+                'employeePoint.employee:id,name,position_id,employee_id',
                 'employeePoint.employee.position:id,name',
                 'details.productionTask:id,name,project_id',
                 'details.entertainmentTask:id,project_song_list_id,project_id',
@@ -122,6 +123,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
                             'total_point' => 0,
                             'project_name' => $item->first()->project->name,
                             'employee_name' => $item->first()->employee->name,
+                            'employee_id' => $item->first()->employee->employee_id,
                             'pics' => implode(',', $pics),
                             'position' => $item->first()->employee->position ? $item->first()->employee->position->name : '-',
                             'feedbacks' => $item->first()->project->feedbacks->map(function ($feedback) {
@@ -142,6 +144,8 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
                 'total_point' => $project->total_point,
                 'project_name' => $project->project->name,
                 'employee_name' => $project->employeePoint->employee->name,
+                'employee_id' => $project->employeePoint->employee->employee_id,
+                'project_class' => $project->project->projectClass?->name ?? '-',
                 'pics' => implode(',', $pics),
                 'position' => $project->employeePoint->employee->position ? $project->employeePoint->employee->position->name : '-',
                 'feedbacks' => $project->project->feedbacks->map(function ($feedback) {
@@ -190,7 +194,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
      */
     protected function applySheetStyling(Worksheet $sheet): void
     {
-        $lastColumn = 'K';
+        $lastColumn = 'L';
         $headerRow = 2;
         $firstDataRow = 3;
         $lastRow = $sheet->getHighestRow();
@@ -230,12 +234,12 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
 
             // No + the point/count columns read best centered
             $sheet->getStyle("A{$firstDataRow}:A{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("G{$firstDataRow}:J{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("G{$firstDataRow}:J{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER);
+            $sheet->getStyle("H{$firstDataRow}:K{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("H{$firstDataRow}:K{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER);
 
             // long-text columns wrap instead of overflowing
-            $sheet->getStyle("F{$firstDataRow}:F{$lastRow}")->getAlignment()->setWrapText(true);
-            $sheet->getStyle("K{$firstDataRow}:K{$lastRow}")->getAlignment()->setWrapText(true);
+            $sheet->getStyle("G{$firstDataRow}:G{$lastRow}")->getAlignment()->setWrapText(true);
+            $sheet->getStyle("L{$firstDataRow}:L{$lastRow}")->getAlignment()->setWrapText(true);
 
             // zebra striping
             for ($row = $firstDataRow; $row <= $lastRow; $row++) {
@@ -249,8 +253,8 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
 
         // ---- Column widths (autosize is off; text columns need room to wrap) ----
         $widths = [
-            'A' => 6, 'B' => 28, 'C' => 20, 'D' => 24, 'E' => 18, 'F' => 46,
-            'G' => 12, 'H' => 11, 'I' => 13, 'J' => 11, 'K' => 34,
+            'A' => 6, 'B' => 28, 'C' => 18, 'D' => 20, 'E' => 24, 'F' => 18,
+            'G' => 46, 'H' => 12, 'I' => 11, 'J' => 13, 'K' => 11, 'L' => 34,
         ];
         foreach ($widths as $column => $width) {
             $sheet->getColumnDimension($column)->setAutoSize(false)->setWidth($width);

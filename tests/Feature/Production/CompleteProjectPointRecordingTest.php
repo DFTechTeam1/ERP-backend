@@ -156,7 +156,10 @@ describe('completeProject point recording', function () {
         expect((int) $employeePoint->total_point)->toBe($sum)
             ->and((int) $employeePoint->total_point)->toBe(2);
 
-        // (5) reward recorded
+        // (5) reward recorded.
+        // total_reward = base * percentageContribution / 100, where
+        // percentageContribution = ceil(totalTask / point * 100). Here the worker did both of
+        // the project's 2 tasks (totalTask = 2, point = 2) -> 100% -> 50000 * 100 / 100 = 50000.
         assertDatabaseHas('employee_rewards', [
             'employee_id' => $worker->id,
             'project_id' => $project->id,
@@ -165,7 +168,7 @@ describe('completeProject point recording', function () {
             'point' => 2,
             'additional_point' => 0,
             'total_point' => 2,
-            'total_reward' => 100000,
+            'total_reward' => 50000,
             'project_class_name' => 'Class A',
         ]);
     });
@@ -236,7 +239,9 @@ describe('completeProject point recording', function () {
             'points' => [['uid' => $worker->uid, 'additional_point' => 3]],
         ], $project->uid);
 
-        // reward: point=2, additional=3, total_point=5, total_reward = 50000 * 5
+        // reward is driven by percentageContribution (totalTask=2, point=2 -> 100%), NOT by
+        // additional_point: total_reward = 50000 * 100 / 100 = 50000. additional_point still
+        // flows into total_point (2 + 3 = 5) but no longer into the reward.
         assertDatabaseHas('employee_rewards', [
             'employee_id' => $worker->id,
             'project_id' => $project->id,
@@ -244,7 +249,7 @@ describe('completeProject point recording', function () {
             'point' => 2,
             'additional_point' => 3,
             'total_point' => 5,
-            'total_reward' => 250000,
+            'total_reward' => 50000,
         ]);
 
         // employee_point_projects.total_point is the FULL per-project total (regular + additional)
@@ -259,6 +264,36 @@ describe('completeProject point recording', function () {
         $projectSum = (int) EmployeePointProject::where('employee_point_id', $employeePoint->id)->sum('total_point');
         expect((int) $employeePoint->total_point)->toBe(5)
             ->and($projectSum)->toBe(5);
+    });
+
+    it('scales the reward by percentage contribution and keeps it a whole number', function () {
+        // base reward deliberately NOT divisible by 100 so the raw base * pct / 100 would be
+        // fractional (33333 * 150 / 100 = 49999.5) - the reward must still be a whole number.
+        $class = ProjectClass::factory()->create(['reward' => 33333]);
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+
+        $worker = cpEmployeeWithRole($this->productionRole);
+        $pm = cpEmployeeWithRole($this->pmRole);
+
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $worker->id]);
+        cpAssignTasks($project, $worker, 2); // worker does 2 of the project's 3 tasks
+        cpAssignTasks($project, $pm, 1);     // PM does the 3rd (excluded from rewards)
+
+        actingAs(User::where('employee_id', $worker->id)->firstOrFail());
+
+        cpService()->completeProject([
+            'feedback' => 'ok',
+            'points' => [
+                ['uid' => $worker->uid, 'additional_point' => 0],
+                ['uid' => $pm->uid, 'additional_point' => 0],
+            ],
+        ], $project->uid);
+
+        // percentageContribution = ceil(3 / 2 * 100) = 150, reward = round(33333 * 150 / 100) = 50000
+        $reward = EmployeeReward::where('employee_id', $worker->id)->first();
+        expect($reward)->not->toBeNull()
+            ->and((float) $reward->total_reward)->toBe(50000.0)
+            ->and(fmod((float) $reward->total_reward, 1))->toBe(0.0); // no decimal part
     });
 
     it('leaves the project PartialComplete when not all PICs have submitted feedback', function () {

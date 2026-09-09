@@ -94,6 +94,9 @@ Route::middleware(['auth.session'])
                 ->name('dashboard.me.workSummary');
         });
 
+        // Cost Estimation per project
+        Route::get('cost-estimation/{projectUid}', [ProjectController::class, 'getProjectCostEstimation']);
+
         // Project Manager dashboard - scoped to projects the PM is on via
         // ProjectPersonInCharge. PM Admin / Director / Root see all projects.
         Route::prefix('dashboard/pm')->group(function () {

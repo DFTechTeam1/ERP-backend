@@ -1245,4 +1245,9 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->revertToDistribute($projectUid, $taskUid));
     }
+    
+    public function getProjectCostEstimation(string $projectUid): JsonResponse
+    {
+        return apiResponse($this->service->getProjectCostEstimation($projectUid));
+    }
 }
