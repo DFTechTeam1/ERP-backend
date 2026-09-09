@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\PermissionCheck;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\DeadlineChangeReasonController;
 use Modules\Production\Http\Controllers\Api\InteractiveController;
@@ -35,6 +37,47 @@ Route::middleware(['auth.session'])
         Route::get('eventTypes', [ProjectController::class, 'getEventTypes']);
         Route::get('classList', [ProjectController::class, 'getClassList']);
         Route::get('status', [ProjectController::class, 'getProjectStatus']);
+
+        // Download AI search image result.
+        // The frontend posts the full file URL (e.g. https://tunnel.dfactory.pro/storage/nas/...png);
+        // we fetch it and stream it back with an attachment disposition so the browser downloads it.
+        Route::post('ai-search/download', function (Request $request) {
+            $url = trim((string) $request->input('url'));
+
+            abort_if($url === '' || ! filter_var($url, FILTER_VALIDATE_URL), 422, 'A valid url is required.');
+
+            // SSRF guard: the client supplies the URL, so only allow files hosted on the company
+            // domain (its tunnel / storage subdomains) - never arbitrary or internal hosts.
+            $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+            $allowedDomain = 'dfactory.pro';
+            abort_unless(
+                $host === $allowedDomain || str_ends_with($host, '.'.$allowedDomain),
+                403,
+                'Downloading from this host is not allowed.'
+            );
+
+            try {
+                $response = Http::timeout(60)->get($url);
+            } catch (Throwable $th) {
+                abort(502, 'Failed to fetch the file.');
+            }
+
+            abort_unless($response->successful(), 404, 'File not found.');
+
+            // This endpoint only serves images, capped at 20 MB - reject anything larger.
+            $maxBytes = 20 * 1024 * 1024;
+            $size = max((int) $response->header('Content-Length'), strlen($response->body()));
+            abort_if($size > $maxBytes, 413, 'File exceeds the 20 MB limit.');
+
+            $filename = urldecode(basename((string) parse_url($url, PHP_URL_PATH)));
+            $filename = $filename !== '' ? $filename : 'download';
+
+            return response($response->body(), 200, [
+                'Content-Type' => $response->header('Content-Type') ?: 'application/octet-stream',
+                'Content-Disposition' => 'attachment; filename="'.addslashes($filename).'"',
+                'Content-Length' => (string) strlen($response->body()),
+            ]);
+        })->name('ai-search.download');
 
         // Production employee dashboard - self-scoped via Auth::user()->employee_id.
         Route::prefix('dashboard/me')->group(function () {
@@ -118,62 +161,62 @@ Route::middleware(['auth.session'])
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
         Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])
-            ->middleware(PermissionCheck::class . ':create_interactive_task')
+            ->middleware(PermissionCheck::class.':create_interactive_task')
             ->name('interactives.storeTask');
 
         Route::get('interactives/{interactiveUid}/getPicForSubtitute', [InteractiveController::class, 'getPicForSubtitute']);
         Route::post('interactives/status/{interactiveUid}', [InteractiveController::class, 'changeStatus'])
-            ->middleware(PermissionCheck::class . ':change_interactive_status')
+            ->middleware(PermissionCheck::class.':change_interactive_status')
             ->name('interactives.changeStatus');
         Route::get('interactives/cancel/{interactiveUid}', [InteractiveController::class, 'cancelProject'])->name('interactives.cancel');
         Route::get('interactives/picScheduler/{interactiveUid}', [InteractiveController::class, 'getPicScheduler'])
-            ->middleware(PermissionCheck::class . ':assign_interactive_pic')
+            ->middleware(PermissionCheck::class.':assign_interactive_pic')
             ->name('interactives.getPicScheduler');
         Route::post('interactives/assignPic/{interactiveUid}', [InteractiveController::class, 'assignPicToProject'])
-            ->middleware(PermissionCheck::class . ':assign_interactive_pic')
+            ->middleware(PermissionCheck::class.':assign_interactive_pic')
             ->name('interactives.assignPic');
         Route::post('interactives/substitute/{interactiveUid}', [InteractiveController::class, 'substitutePicInProject'])
-            ->middleware(PermissionCheck::class . ':assign_interactive_pic')
+            ->middleware(PermissionCheck::class.':assign_interactive_pic')
             ->name('interactives.substitutePic');
         Route::post('interactives/tasks/{taskUid}/members', [InteractiveController::class, 'addTaskMember'])
-            ->middleware(PermissionCheck::class . ':assign_interactive_task_member')
+            ->middleware(PermissionCheck::class.':assign_interactive_task_member')
             ->name('interactives.tasks.members.store');
         Route::get('interactives/tasks/{taskUid}/approved', [InteractiveController::class, 'approveTask'])
-            ->middleware(PermissionCheck::class . ':approve_interactive_task')
+            ->middleware(PermissionCheck::class.':approve_interactive_task')
             ->name('interactives.tasks.approved');
         Route::post('interactives/tasks/{taskUid}/proof', [InteractiveController::class, 'submitTaskProofs'])
-            ->middleware(PermissionCheck::class . ':submit_interactive_task')
+            ->middleware(PermissionCheck::class.':submit_interactive_task')
             ->name('interactives.tasks.proof.store');
         Route::get('interactives/tasks/{taskUid}/completeTask', [InteractiveController::class, 'completeTask'])
-            ->middleware(PermissionCheck::class . ':complete_interactive_task')
+            ->middleware(PermissionCheck::class.':complete_interactive_task')
             ->name('interactives.tasks.completed');
         Route::delete('interactives/tasks/{taskUid}', [InteractiveController::class, 'deleteTask'])
-            ->middleware(PermissionCheck::class . ':delete_interactive_task')
+            ->middleware(PermissionCheck::class.':delete_interactive_task')
             ->name('interactives.tasks.destroy');
         Route::post('interactives/tasks/{taskUid}/reviseTask', [InteractiveController::class, 'reviseTask'])
-            ->middleware(PermissionCheck::class . ':revise_interactive_task')
+            ->middleware(PermissionCheck::class.':revise_interactive_task')
             ->name('interactives.tasks.revised');
         Route::post('interactives/tasks/{taskUid}/description', [InteractiveController::class, 'storeDescription'])
-            ->middleware(PermissionCheck::class . ':update_description_interactive_task')
+            ->middleware(PermissionCheck::class.':update_description_interactive_task')
             ->name('interactives.tasks.description.store');
         Route::post('interactives/tasks/{taskUid}/holded', [InteractiveController::class, 'holdTask'])
-            ->middleware(PermissionCheck::class . ':hold_interactive_task')
+            ->middleware(PermissionCheck::class.':hold_interactive_task')
             ->name('interactives.tasks.holded');
         Route::get('interactives/tasks/{taskUid}/start', [InteractiveController::class, 'startTaskAfterHold'])
-            ->middleware(PermissionCheck::class . ':hold_interactive_task')
+            ->middleware(PermissionCheck::class.':hold_interactive_task')
             ->name('interactives.tasks.start');
         Route::post('interactives/tasks/{projectUid}/references', [InteractiveController::class, 'storeReferences'])
-            ->middleware(PermissionCheck::class . ':create_interactive_task_attachment')
+            ->middleware(PermissionCheck::class.':create_interactive_task_attachment')
             ->name('interactives.tasks.references.store');
         Route::delete('interactives/{projectUid}/references/{referenceId}', [InteractiveController::class, 'deleteReference'])
-            ->middleware(PermissionCheck::class . ':delete_interactive_reference')
+            ->middleware(PermissionCheck::class.':delete_interactive_reference')
             ->name('interactives.references.destroy');
         Route::post('interactives/tasks/{taskUid}/deadline', [InteractiveController::class, 'updateTaskDeadline'])
-            ->middleware(PermissionCheck::class . ':update_deadline_interactive_task')
+            ->middleware(PermissionCheck::class.':update_deadline_interactive_task')
             ->name('interactives.tasks.deadline.update');
         Route::post('interactives/{interactiveUid}/tasks/filter', [InteractiveController::class, 'filterTasks'])->name('interactives.tasks.filter');
         Route::delete('interactives/{interactiveUid}/tasks/{taskUid}/attachments/{imageId}', [InteractiveController::class, 'deleteTaskAttachment'])
-            ->middleware(PermissionCheck::class . ':delete_interactive_task_attachment')
+            ->middleware(PermissionCheck::class.':delete_interactive_task_attachment')
             ->name('interactives.tasks.attachments.destroy');
         Route::get('interactives/approve/{requestId}', [InteractiveController::class, 'approveInteractive'])->name('interactives.approve');
         Route::get('interactives/reject/{requestId}', [InteractiveController::class, 'rejectInteractiveRequest'])->name('interactives.reject');

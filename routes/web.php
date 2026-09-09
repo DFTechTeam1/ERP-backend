@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\System\BaseRole;
 use App\Http\Controllers\Api\InteractiveController;
 use App\Http\Controllers\Api\TestingController;
 use App\Http\Controllers\LandingPageController;
@@ -381,9 +380,6 @@ Route::get('slack-testing', function () {
 
     //     $developer->notify(new SlackNotification($block));
     // }
-    return User::select(['id', 'email'])
-        ->role(BaseRole::Director->value)
-        ->get();
 });
 Route::get('signature', function () {
     $templateProcessor = new TemplateProcessor(public_path('NDA.docx'));
