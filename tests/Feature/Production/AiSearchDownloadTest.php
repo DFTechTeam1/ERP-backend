@@ -64,11 +64,11 @@ it('returns 404 when the remote file cannot be fetched', function () {
     ])->assertStatus(404);
 });
 
-it('rejects a file larger than the 20 MB image cap', function () {
+it('rejects a file larger than the 50 MB image cap', function () {
     Http::fake([
         'https://tunnel.dfactory.pro/*' => Http::response('x', 200, [
             'Content-Type' => 'image/png',
-            'Content-Length' => (string) (21 * 1024 * 1024), // 21 MB
+            'Content-Length' => (string) (51 * 1024 * 1024), // 21 MB
         ]),
     ]);
 
