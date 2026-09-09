@@ -377,4 +377,10 @@ return [
     'dealsCreated' => 'Deals created',
     'dealsFinalized' => 'Deals finalized',
     'dealsFullyPaid' => 'Fully paid',
+
+    // Project activity log
+    'projectActivityChangeStatusTitle' => 'Change Status',
+    'projectActivityChangeStatusDescription' => 'Status changed from :from to :to',
+    'projectActivityChangeProjectClassTitle' => 'Change project class',
+    'projectActivityChangeProjectClassDescription' => 'Project class changed from :from to :to',
 ];

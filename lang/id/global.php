@@ -378,4 +378,10 @@ return [
     'dealsCreated' => 'Deal dibuat',
     'dealsFinalized' => 'Deal difinalisasi',
     'dealsFullyPaid' => 'Lunas',
+
+    // Project activity log
+    'projectActivityChangeStatusTitle' => 'Ubah Status',
+    'projectActivityChangeStatusDescription' => 'Status diubah dari :from ke :to',
+    'projectActivityChangeProjectClassTitle' => 'Ubah kelas proyek',
+    'projectActivityChangeProjectClassDescription' => 'Kelas proyek diubah dari :from ke :to',
 ];

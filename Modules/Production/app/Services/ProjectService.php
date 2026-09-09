@@ -9,6 +9,7 @@ use App\Actions\GenerateQuotationNumber;
 use App\Actions\Hrd\PointRecord;
 use App\Actions\Hrd\PointRecordBasedOnReward;
 use App\Actions\PartialTaskPermissionCheck;
+use App\Actions\Production\ProjectActivityRecord;
 use App\Actions\Production\SummarizeTaskTimeline;
 use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
@@ -22,6 +23,7 @@ use App\Actions\Project\SaveTaskState;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\Production\Entertainment\TaskSongLogType;
+use App\Enums\Production\ProjectActivityItem;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskPicStatus;
@@ -84,6 +86,7 @@ use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultImageRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
 use Modules\Production\Repository\EntertainmentTaskSongReviseRepository;
+use Modules\Production\Repository\ProjectActivityRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectLeadRepository;
@@ -205,6 +208,8 @@ class ProjectService
 
     private CustomerRepository $customerRepo;
 
+    private ProjectActivityRepository $projectActivityRepo;
+
     /**
      * Construction Data
      */
@@ -256,8 +261,11 @@ class ProjectService
         \App\Services\NasFolderCreationService $nasFolderCreationService,
         ProjectTaskDeadlineRepository $projectTaskDeadlineRepo,
         ProjectLeadRepository $projectLeadRepo,
-        CustomerRepository $customerRepo
+        CustomerRepository $customerRepo,
+        ProjectActivityRepository $projectActivityRepo
     ) {
+        $this->projectActivityRepo = $projectActivityRepo;
+
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
         $this->entertainmentTaskSongResultImageRepo = $entertainmentTaskSongResultImageRepo;
@@ -2378,6 +2386,10 @@ class ProjectService
                 collect($data)->except(['date'])->toArray(),
                 $projectUid
             );
+
+            if ($isClassChanged) {
+                ProjectActivityRecord::run(Auth::id(), ProjectActivityItem::ChangeProjectClass, $projectUid, $currentClassName, $nextClassName);
+            }
 
             // manually fire the event
             Event::dispatch('eloquent.updated: ' . get_class(new \Modules\Production\Models\Project), $update);
@@ -6059,6 +6071,11 @@ class ProjectService
                     }
                 }
             }
+
+            $fromStatus = ProjectStatus::tryFrom((int) ($data['base_status'] ?? 0))?->label() ?? '-';
+            $toStatus = ProjectStatus::tryFrom((int) $data['status'])?->label() ?? '-';
+
+            ProjectActivityRecord::run(Auth::id(), ProjectActivityItem::ChangeStatus, $projectUid, $fromStatus, $toStatus);
 
             $project = $this->repo->show($projectUid, 'id,status,uid');
 
