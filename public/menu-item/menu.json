@@ -5,11 +5,46 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-monitor-dashboard",
             "childs": [
-                { "path": "/admin/dashboard", "slug": "dashboard", "lang_id": "Dashboard", "lang_en": "Dashboard", "icon": "mdiPlain:mdi-chart-bar", "permission": "dashboard_access" },
-                { "path": "/admin/dashboard/report", "slug": "dashboardReport", "lang_id": "Report", "lang_en": "Report", "icon": "mdiPlain:mdi-chart-box", "permission": "dashboard_report_access" },
-                { "path": "/admin/setting", "slug": "setting", "lang_id": "Pengaturan", "lang_en": "Settings", "icon": "mdiPlain:mdi-cog", "permission": "list_setting" },
-                { "path": "/admin/setting/logs", "slug": "systemLogs", "lang_id": "Log Sistem", "lang_en": "System Logs", "icon": "mdiPlain:mdi-file-document", "permission": "list_setting" },
-                { "path": "/admin/dashboard/mcp-logs", "slug": "mcp-logs", "lang_id": "MCP Logs", "lang_en": "MCP Logs", "icon": "mdiPlain:mdi-file-document", "permission": "list_setting" }
+                {
+                    "path": "/admin/dashboard",
+                    "slug": "dashboard",
+                    "lang_id": "Dashboard",
+                    "lang_en": "Dashboard",
+                    "icon": "mdiPlain:mdi-chart-bar",
+                    "permission": "dashboard_access"
+                },
+                {
+                    "path": "/admin/dashboard/report",
+                    "slug": "dashboardReport",
+                    "lang_id": "Report",
+                    "lang_en": "Report",
+                    "icon": "mdiPlain:mdi-chart-box",
+                    "permission": "dashboard_report_access"
+                },
+                {
+                    "path": "/admin/setting",
+                    "slug": "setting",
+                    "lang_id": "Pengaturan",
+                    "lang_en": "Settings",
+                    "icon": "mdiPlain:mdi-cog",
+                    "permission": "list_setting"
+                },
+                {
+                    "path": "/admin/setting/logs",
+                    "slug": "systemLogs",
+                    "lang_id": "Log Sistem",
+                    "lang_en": "System Logs",
+                    "icon": "mdiPlain:mdi-file-document",
+                    "permission": "list_setting"
+                },
+                {
+                    "path": "/admin/dashboard/mcp-logs",
+                    "slug": "mcp-logs",
+                    "lang_id": "MCP Logs",
+                    "lang_en": "MCP Logs",
+                    "icon": "mdiPlain:mdi-file-document",
+                    "permission": "list_setting"
+                }
             ]
         },
         {
@@ -17,7 +52,14 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-office-building-cog-outline",
             "childs": [
-                { "path": "/admin/development/tasks", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "mdiPlain:mdi-folder", "permission": "list_project" }
+                {
+                    "path": "/admin/development/tasks",
+                    "slug": "project",
+                    "lang_id": "Event",
+                    "lang_en": "Project",
+                    "icon": "mdiPlain:mdi-folder",
+                    "permission": "list_project"
+                }
             ]
         },
         {
@@ -25,15 +67,78 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-database-outline",
             "childs": [
-                { "path": "/admin/master/projectClass", "slug": "projectClass", "lang_id": "Event Class", "lang_en": "Event class", "icon": "mdiPlain:mdi-bulletin-board", "permission": "list_division" },
-                { "path": "/admin/master/notification-management", "slug": "notificationManagement", "lang_id": "Manajemen Notifikasi", "lang_en": "Notification Management", "icon": "mdiPlain:mdi-bell", "permission": "notification_template_list" },
-                { "path": "/admin/master/deadline-change-reason", "slug": "deadline-change-reason", "lang_id": "Kelola Alasan Deadline", "lang_en": "Manage Deadline Reason", "icon": "mdiPlain:mdi-timer-sand", "permission": "list_deadline_reasons" },
-                { "path": "/admin/master/quotation-items", "slug": "manage-quotation-items", "lang_id": "Kelola Quotation Item", "lang_en": "Manage Quotation Item", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_quotation_items" },
-                { "path": "/admin/master/countries", "slug": "manage-countries", "lang_id": "Kelola Negara", "lang_en": "Manage Countries", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_country" },
-                { "path": "/admin/master/states", "slug": "manage-states", "lang_id": "Kelola Provinsi", "lang_en": "Manage States", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_state" },
-                { "path": "/admin/master/cities", "slug": "manage-cities", "lang_id": "Kelola Kota", "lang_en": "Manage Cities", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_city" },
-                { "path": "/admin/master/divisions", "slug": "manage-divisions", "lang_id": "Kelola Divisi", "lang_en": "Manage Divisions", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_division" },
-                { "path": "/admin/master/positions", "slug": "manage-positions", "lang_id": "Kelola Posisi", "lang_en": "Manage Positions", "icon": "mdiPlain:mdi-clipboard-list-outline", "permission": "list_position" }
+                {
+                    "path": "/admin/master/projectClass",
+                    "slug": "projectClass",
+                    "lang_id": "Event Class",
+                    "lang_en": "Event class",
+                    "icon": "mdiPlain:mdi-bulletin-board",
+                    "permission": "list_division"
+                },
+                {
+                    "path": "/admin/master/notification-management",
+                    "slug": "notificationManagement",
+                    "lang_id": "Manajemen Notifikasi",
+                    "lang_en": "Notification Management",
+                    "icon": "mdiPlain:mdi-bell",
+                    "permission": "notification_template_list"
+                },
+                {
+                    "path": "/admin/master/deadline-change-reason",
+                    "slug": "deadline-change-reason",
+                    "lang_id": "Kelola Alasan Deadline",
+                    "lang_en": "Manage Deadline Reason",
+                    "icon": "mdiPlain:mdi-timer-sand",
+                    "permission": "list_deadline_reasons"
+                },
+                {
+                    "path": "/admin/master/quotation-items",
+                    "slug": "manage-quotation-items",
+                    "lang_id": "Kelola Quotation Item",
+                    "lang_en": "Manage Quotation Item",
+                    "icon": "mdiPlain:mdi-clipboard-list-outline",
+                    "permission": "list_quotation_items"
+                },
+                {
+                    "path": "/admin/master/countries",
+                    "slug": "manage-countries",
+                    "lang_id": "Kelola Negara",
+                    "lang_en": "Manage Countries",
+                    "icon": "mdiPlain:mdi-clipboard-list-outline",
+                    "permission": "list_country"
+                },
+                {
+                    "path": "/admin/master/states",
+                    "slug": "manage-states",
+                    "lang_id": "Kelola Provinsi",
+                    "lang_en": "Manage States",
+                    "icon": "mdiPlain:mdi-clipboard-list-outline",
+                    "permission": "list_state"
+                },
+                {
+                    "path": "/admin/master/cities",
+                    "slug": "manage-cities",
+                    "lang_id": "Kelola Kota",
+                    "lang_en": "Manage Cities",
+                    "icon": "mdiPlain:mdi-clipboard-list-outline",
+                    "permission": "list_city"
+                },
+                {
+                    "path": "/admin/master/divisions",
+                    "slug": "manage-divisions",
+                    "lang_id": "Kelola Divisi",
+                    "lang_en": "Manage Divisions",
+                    "icon": "mdiPlain:mdi-clipboard-list-outline",
+                    "permission": "list_division"
+                },
+                {
+                    "path": "/admin/master/positions",
+                    "slug": "manage-positions",
+                    "lang_id": "Kelola Posisi",
+                    "lang_en": "Manage Positions",
+                    "icon": "mdiPlain:mdi-clipboard-list-outline",
+                    "permission": "list_position"
+                }
             ]
         },
         {
@@ -41,10 +146,38 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-inbox-arrow-down",
             "childs": [
-                { "path": "/admin/deals/price-changes", "slug": "projectDealPriceChanges", "lang_id": "Perubahan Harga", "lang_en": "Price Changes", "icon": "mdiPlain:mdi-cash-edit", "permission": "list_deal_price_changes" },
-                { "path": "/admin/deals/changes", "slug": "projectDealChanges", "lang_id": "Perubahan Event Detil", "lang_en": "Deal Changes", "icon": "mdiPlain:mdi-cash-edit", "permission": "list_deal_changes" },
-                { "path": "/admin/deals/interactive-requests", "slug": "interactiveRequest", "lang_id": "Permintaan Interaktif", "lang_en": "Interactive Request", "icon": "mdiPlain:mdi-folder-question-outline", "permission": "list_interactive_requests" },
-                { "path": "/admin/finance/invoice-changes", "slug": "invoiceChanges", "lang_id": "Perubahan Invoice", "lang_en": "Invoice Changes", "icon": "mdiPlain:mdi-file-edit-outline", "permission": "list_invoice_changes" }
+                {
+                    "path": "/admin/deals/price-changes",
+                    "slug": "projectDealPriceChanges",
+                    "lang_id": "Perubahan Harga",
+                    "lang_en": "Price Changes",
+                    "icon": "mdiPlain:mdi-cash-edit",
+                    "permission": "list_deal_price_changes"
+                },
+                {
+                    "path": "/admin/deals/changes",
+                    "slug": "projectDealChanges",
+                    "lang_id": "Perubahan Event Detil",
+                    "lang_en": "Deal Changes",
+                    "icon": "mdiPlain:mdi-cash-edit",
+                    "permission": "list_deal_changes"
+                },
+                {
+                    "path": "/admin/deals/interactive-requests",
+                    "slug": "interactiveRequest",
+                    "lang_id": "Permintaan Interaktif",
+                    "lang_en": "Interactive Request",
+                    "icon": "mdiPlain:mdi-folder-question-outline",
+                    "permission": "list_interactive_requests"
+                },
+                {
+                    "path": "/admin/accounting/invoice-changes",
+                    "slug": "invoiceChanges",
+                    "lang_id": "Perubahan Invoice",
+                    "lang_en": "Invoice Changes",
+                    "icon": "mdiPlain:mdi-file-edit-outline",
+                    "permission": "list_invoice_changes"
+                }
             ]
         },
         {
@@ -52,13 +185,62 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-factory",
             "childs": [
-                { "path": "/admin/production/projects", "slug": "project", "lang_id": "Event", "lang_en": "Project", "icon": "mdiPlain:mdi-briefcase-account-outline", "permission": "list_project" },
-                { "path": "/admin/production/interactives", "slug": "interactiveProject", "lang_id": "Interactive Event", "lang_en": "Interactive Event", "icon": "mdiPlain:mdi-application-braces-outline", "permission": "list_interactive_project" },
-                { "path": "/admin/production/incharges", "slug": "incharges", "lang_id": "Karyawan Bertugas", "lang_en": "On Duty", "icon": "mdiPlain:mdi-account-check-outline", "permission": "on_duty_list" },
-                { "path": "/admin/production/files", "slug": "files", "lang_id": "Files", "lang_en": "Files", "icon": "mdiPlain:mdi-file-multiple-outline", "permission": "list_file_manager" },
-                { "path": "/admin/production/tasks", "slug": "task", "lang_id": "Tugas", "lang_en": "Tasks", "icon": "mdiPlain:mdi-format-list-checks", "permission": "list_task" },
-                { "path": "/admin/production/team-transfer", "slug": "team-transfer", "lang_id": "Team Transfer", "lang_en": "Team Transfer", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_team_transfer" },
-                { "path": "/admin/production/ai-search", "slug": "ai-search", "lang_id": "AI Search", "lang_en": "AI Search", "icon": "mdiPlain:mdi-magnify", "permission": "ai_search" }
+                {
+                    "path": "/admin/production/projects",
+                    "slug": "project",
+                    "lang_id": "Event",
+                    "lang_en": "Project",
+                    "icon": "mdiPlain:mdi-briefcase-account-outline",
+                    "permission": "list_project"
+                },
+                {
+                    "path": "/admin/production/interactives",
+                    "slug": "interactiveProject",
+                    "lang_id": "Interactive Event",
+                    "lang_en": "Interactive Event",
+                    "icon": "mdiPlain:mdi-application-braces-outline",
+                    "permission": "list_interactive_project"
+                },
+                {
+                    "path": "/admin/production/incharges",
+                    "slug": "incharges",
+                    "lang_id": "Karyawan Bertugas",
+                    "lang_en": "On Duty",
+                    "icon": "mdiPlain:mdi-account-check-outline",
+                    "permission": "on_duty_list"
+                },
+                {
+                    "path": "/admin/production/files",
+                    "slug": "files",
+                    "lang_id": "Files",
+                    "lang_en": "Files",
+                    "icon": "mdiPlain:mdi-file-multiple-outline",
+                    "permission": "list_file_manager"
+                },
+                {
+                    "path": "/admin/production/tasks",
+                    "slug": "task",
+                    "lang_id": "Tugas",
+                    "lang_en": "Tasks",
+                    "icon": "mdiPlain:mdi-format-list-checks",
+                    "permission": "list_task"
+                },
+                {
+                    "path": "/admin/production/team-transfer",
+                    "slug": "team-transfer",
+                    "lang_id": "Team Transfer",
+                    "lang_en": "Team Transfer",
+                    "icon": "mdiPlain:mdi-account-switch-outline",
+                    "permission": "list_team_transfer"
+                },
+                {
+                    "path": "/admin/production/ai-search",
+                    "slug": "ai-search",
+                    "lang_id": "AI Search",
+                    "lang_en": "AI Search",
+                    "icon": "mdiPlain:mdi-magnify",
+                    "permission": "ai_search"
+                }
             ]
         },
         {
@@ -66,10 +248,144 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-calculator-variant-outline",
             "childs": [
-                { "path": "/admin/finance/leads", "slug": "leads", "lang_id": "Leads", "lang_en": "Leads", "icon": "mdiPlain:mdi-account-switch-outline", "permission": "list_leads" },
-                { "path": "/admin/finance/deals", "slug": "projectDeals", "lang_id": "Deals", "lang_en": "Deals", "icon": "mdiPlain:mdi-calendar-check", "permission": "list_deals" },
-                { "path": "/admin/finance/transactions", "slug": "transactions", "lang_id": "Transaksi", "lang_en": "Transactions", "icon": "mdiPlain:mdi-receipt-text", "permission": "list_transaction" },
-                { "path": "/admin/finance/refund", "slug": "refund", "lang_id": "Refund", "lang_en": "Refund", "icon": "mdiPlain:mdi-cash-refund", "permission": "list_refund" }
+                {
+                    "path": "/admin/accounting/leads",
+                    "slug": "leads",
+                    "lang_id": "Leads",
+                    "lang_en": "Leads",
+                    "icon": "mdiPlain:mdi-account-switch-outline",
+                    "permission": "list_leads"
+                },
+                {
+                    "path": "/admin/accounting/deals",
+                    "slug": "projectDeals",
+                    "lang_id": "Deals",
+                    "lang_en": "Deals",
+                    "icon": "mdiPlain:mdi-calendar-check",
+                    "permission": "list_deals"
+                },
+                {
+                    "path": "/admin/accounting/transactions",
+                    "slug": "transactions",
+                    "lang_id": "Transaksi",
+                    "lang_en": "Transactions",
+                    "icon": "mdiPlain:mdi-receipt-text",
+                    "permission": "list_transaction"
+                },
+                {
+                    "path": "/admin/accounting/refund",
+                    "slug": "refund",
+                    "lang_id": "Refund",
+                    "lang_en": "Refund",
+                    "icon": "mdiPlain:mdi-cash-refund",
+                    "permission": "list_refund"
+                },
+                {
+                    "path": "/admin/accounting/chart-of-accounts",
+                    "slug": "coa",
+                    "lang_id": "Akun",
+                    "lang_en": "COA",
+                    "icon": "mdiPlain:mdi-cash-refund",
+                    "permission": "list_coa"
+                },
+                {
+                    "path": "/admin/accounting/journals",
+                    "slug": "journals",
+                    "lang_id": "Jurnal",
+                    "lang_en": "Journal",
+                    "icon": "mdiPlain:mdi-cash-refund",
+                    "permission": "list_journals"
+                },
+                {
+                    "path": "/admin/accounting/general-ledger",
+                    "slug": "generalLedger",
+                    "lang_id": "Buku Besar",
+                    "lang_en": "General Legder",
+                    "icon": "mdiPlain:mdi-cash-refund",
+                    "permission": "list_general_ledgers"
+                },
+                {
+                    "path": "/admin/accounting/trial-balance",
+                    "slug": "trialBalance",
+                    "lang_id": "Neraca",
+                    "lang_en": "Trial and Balance",
+                    "icon": "mdiPlain:mdi-cash-refund",
+                    "permission": "list_trial_balance"
+                },
+                {
+                    "path": "/admin/accounting/recurring-journals",
+                    "slug": "recurringJournal",
+                    "lang_id": "Jurnal Berulang",
+                    "lang_en": "Recurring Journal",
+                    "icon": "mdiPlain:mdi-cash-refund",
+                    "permission": "list_recurring_journal"
+                },
+                {
+                    "path": "/admin/accounting/opening-balances",
+                    "slug": "openingBalances",
+                    "lang_id": "Saldo Pembuka",
+                    "lang_en": "Opening Balance",
+                    "icon": "mdiPlain:mdi-cash-refund",
+                    "permission": "list_opening_balance"
+                },
+                {
+                    "path": "/admin/accounting/settings",
+                    "slug": "accounting-setting",
+                    "lang_id": "Setting",
+                    "lang_en": "Setting",
+                    "icon": "mdiPlain:mdi-cog",
+                    "permission": "list_accounting_setting",
+                    "childs": [
+                        {
+                            "path": "/admin/accounting/settings/fiscal-years",
+                            "slug": "settingFiscalYear",
+                            "lang_id": "Tahun Fiskal",
+                            "lang_en": "Fiscal Year",
+                            "icon": "mdiPlain:mdi-cash-refund",
+                            "permission": "list_fiscal_year"
+                        },
+                        {
+                            "path": "/admin/accounting/settings/cost-centers",
+                            "slug": "settingCostCenter",
+                            "lang_id": "Cost Center",
+                            "lang_en": "Cost Center",
+                            "icon": "mdiPlain:mdi-cash-refund",
+                            "permission": "list_cost_center"
+                        },
+                        {
+                            "path": "/admin/accounting/settings/account-mapping",
+                            "slug": "settingAccountMapping",
+                            "lang_id": "Pemetaan Akun",
+                            "lang_en": "Account Mapping",
+                            "icon": "mdiPlain:mdi-cash-refund",
+                            "permission": "list_account_mapping"
+                        },
+                        {
+                            "path": "/admin/accounting/settings/currencies",
+                            "slug": "settingCurrency",
+                            "lang_id": "Mata Uang & Nilai Tukar",
+                            "lang_en": "Currencies & Exchange Rate",
+                            "icon": "mdiPlain:mdi-cash-refund",
+                            "permission": "list_currencies"
+                        },
+                        {
+                            "path": "/admin/accounting/settings/payment-methods",
+                            "slug": "settingPaymentMethod",
+                            "lang_id": "Metode Pembayaran",
+                            "lang_en": "Payment Methods",
+                            "icon": "mdiPlain:mdi-cash-refund",
+                            "permission": "list_payment_method"
+                        },
+                        {
+                            "path": "/admin/accounting/settings/audit-log",
+                            "slug": "settingAuditLog",
+                            "lang_id": "Audit Log",
+                            "lang_en": "Audit Log",
+                            "icon": "mdiPlain:mdi-cash-refund",
+                            "permission": "list_audit_log"
+                        }
+                    ]
+                }
             ]
         },
         {
@@ -77,17 +393,88 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-account-group-outline",
             "childs": [
-                { "path": "/module", "slug": "hrd-detail", "lang_id": "HRD", "lang_en": "HRD", "icon": "mdiPlain:mdi-account-group", "permission": "list_performance_report" },
-                { "path": "/admin/roles/list", "slug": "roles-list", "lang_id": "Daftar Role", "lang_en": "Roles List", "icon": "mdiPlain:mdi-shield-account", "permission": "list_role" },
-                { "path": "/admin/users/list", "slug": "users-list", "lang_id": "Daftar Pengguna", "lang_en": "Users List", "icon": "mdiPlain:mdi-account", "permission": "list_user" },
-                { "path": "/admin/employees/list", "slug": "employee-list", "lang_id": "Daftar Karyawan", "lang_en": "Employee List", "icon": "mdiPlain:mdi-account-group", "permission": "list_employee" },
-                { "path": "/admin/employees/performanceReport", "slug": "performance-report", "lang_id": "Performance Report", "lang_en": "Performance Report", "icon": "mdiPlain:mdi-trending-up", "permission": "list_performance_report" },
-                { "path": "/admin/employees/master", "slug": "employee-master-data", "lang_id": "Employee Master", "lang_en": "Employee Master", "icon": "mdiPlain:mdi-cog", "permission": "list_performance_report", "childs": [
-                    { "path": "/admin/employees/master/timezone", "slug": "timezone-setting", "lang_id": "Timezone master", "lang_en": "Timezone Master", "icon": "mdiPlain:mdi-map-clock-outline", "permission": "list_timezone" },
-                    { "path": "/admin/employees/master/costcenter", "slug": "costcenter-setting", "lang_id": "Cost Center master", "lang_en": "Cost Center Master", "icon": "mdiPlain:mdi-cash-multiple", "permission": "list_costcenter" },
-                    { "path": "/admin/employees/master/jobstatus", "slug": "jobstatus-setting", "lang_id": "Job Status master", "lang_en": "Job Status Master", "icon": "mdiPlain:mdi-account-cog", "permission": "list_jobstatus" },
-                    { "path": "/admin/employees/master/employmentstatus", "slug": "employmentstatus-setting", "lang_id": "Employment Status master", "lang_en": "Employment Status Master", "icon": "mdiPlain:mdi-account-check-outline", "permission": "list_employmentstatus" }
-                ] }
+                {
+                    "path": "/module",
+                    "slug": "hrd-detail",
+                    "lang_id": "HRD",
+                    "lang_en": "HRD",
+                    "icon": "mdiPlain:mdi-account-group",
+                    "permission": "list_performance_report"
+                },
+                {
+                    "path": "/admin/roles/list",
+                    "slug": "roles-list",
+                    "lang_id": "Daftar Role",
+                    "lang_en": "Roles List",
+                    "icon": "mdiPlain:mdi-shield-account",
+                    "permission": "list_role"
+                },
+                {
+                    "path": "/admin/users/list",
+                    "slug": "users-list",
+                    "lang_id": "Daftar Pengguna",
+                    "lang_en": "Users List",
+                    "icon": "mdiPlain:mdi-account",
+                    "permission": "list_user"
+                },
+                {
+                    "path": "/admin/employees/list",
+                    "slug": "employee-list",
+                    "lang_id": "Daftar Karyawan",
+                    "lang_en": "Employee List",
+                    "icon": "mdiPlain:mdi-account-group",
+                    "permission": "list_employee"
+                },
+                {
+                    "path": "/admin/employees/performanceReport",
+                    "slug": "performance-report",
+                    "lang_id": "Performance Report",
+                    "lang_en": "Performance Report",
+                    "icon": "mdiPlain:mdi-trending-up",
+                    "permission": "list_performance_report"
+                },
+                {
+                    "path": "/admin/employees/master",
+                    "slug": "employee-master-data",
+                    "lang_id": "Employee Master",
+                    "lang_en": "Employee Master",
+                    "icon": "mdiPlain:mdi-cog",
+                    "permission": "list_performance_report",
+                    "childs": [
+                        {
+                            "path": "/admin/employees/master/timezone",
+                            "slug": "timezone-setting",
+                            "lang_id": "Timezone master",
+                            "lang_en": "Timezone Master",
+                            "icon": "mdiPlain:mdi-map-clock-outline",
+                            "permission": "list_timezone"
+                        },
+                        {
+                            "path": "/admin/employees/master/costcenter",
+                            "slug": "costcenter-setting",
+                            "lang_id": "Cost Center master",
+                            "lang_en": "Cost Center Master",
+                            "icon": "mdiPlain:mdi-cash-multiple",
+                            "permission": "list_costcenter"
+                        },
+                        {
+                            "path": "/admin/employees/master/jobstatus",
+                            "slug": "jobstatus-setting",
+                            "lang_id": "Job Status master",
+                            "lang_en": "Job Status Master",
+                            "icon": "mdiPlain:mdi-account-cog",
+                            "permission": "list_jobstatus"
+                        },
+                        {
+                            "path": "/admin/employees/master/employmentstatus",
+                            "slug": "employmentstatus-setting",
+                            "lang_id": "Employment Status master",
+                            "lang_en": "Employment Status Master",
+                            "icon": "mdiPlain:mdi-account-check-outline",
+                            "permission": "list_employmentstatus"
+                        }
+                    ]
+                }
             ]
         },
         {
@@ -95,11 +482,46 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-file-document-multiple-outline",
             "childs": [
-                { "path": "/admin/document-signing/signatories", "slug": "signatories", "lang_id": "Penandatangan", "lang_en": "Signatories", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_signatories" },
-                { "path": "/admin/document-signing/document-types", "slug": "document-types", "lang_id": "Tipe Dokumen", "lang_en": "Document Types", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_document_types" },
-                { "path": "/admin/document-signing/templates", "slug": "document-templates", "lang_id": "Master Dokumen", "lang_en": "Docuument Templates", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_document_templates" },
-                { "path": "/admin/document-signing/documents", "slug": "document-documents", "lang_id": "Dokumen telah didistribusi", "lang_en": "Generated Documents", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_generated_documents" },
-                { "path": "/admin/document-signing/my-documents", "slug": "document-my-documents", "lang_id": "Dokumen Ku", "lang_en": "My Document", "icon": "mdiPlain:mdi-circle-outline", "permission": "list_my_documents" }
+                {
+                    "path": "/admin/document-signing/signatories",
+                    "slug": "signatories",
+                    "lang_id": "Penandatangan",
+                    "lang_en": "Signatories",
+                    "icon": "mdiPlain:mdi-circle-outline",
+                    "permission": "list_signatories"
+                },
+                {
+                    "path": "/admin/document-signing/document-types",
+                    "slug": "document-types",
+                    "lang_id": "Tipe Dokumen",
+                    "lang_en": "Document Types",
+                    "icon": "mdiPlain:mdi-circle-outline",
+                    "permission": "list_document_types"
+                },
+                {
+                    "path": "/admin/document-signing/templates",
+                    "slug": "document-templates",
+                    "lang_id": "Master Dokumen",
+                    "lang_en": "Docuument Templates",
+                    "icon": "mdiPlain:mdi-circle-outline",
+                    "permission": "list_document_templates"
+                },
+                {
+                    "path": "/admin/document-signing/documents",
+                    "slug": "document-documents",
+                    "lang_id": "Dokumen telah didistribusi",
+                    "lang_en": "Generated Documents",
+                    "icon": "mdiPlain:mdi-circle-outline",
+                    "permission": "list_generated_documents"
+                },
+                {
+                    "path": "/admin/document-signing/my-documents",
+                    "slug": "document-my-documents",
+                    "lang_id": "Dokumen Ku",
+                    "lang_en": "My Document",
+                    "icon": "mdiPlain:mdi-circle-outline",
+                    "permission": "list_my_documents"
+                }
             ]
         },
         {
@@ -107,8 +529,22 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-package-variant",
             "childs": [
-                { "path": "/module", "slug": "inventory-detail", "lang_id": "Inventory", "lang_en": "Inventory", "icon": "", "permission": "list_supplier" },
-                { "path": "/admin/request-equipment", "slug": "inventory-list", "lang_id": "Permintaan Barang", "lang_en": "Request Inventories", "icon": "mdiPlain:mdi-truck-fast-outline", "permission": "fetch_submission" }
+                {
+                    "path": "/module",
+                    "slug": "inventory-detail",
+                    "lang_id": "Inventory",
+                    "lang_en": "Inventory",
+                    "icon": "",
+                    "permission": "list_supplier"
+                },
+                {
+                    "path": "/admin/request-equipment",
+                    "slug": "inventory-list",
+                    "lang_id": "Permintaan Barang",
+                    "lang_en": "Request Inventories",
+                    "icon": "mdiPlain:mdi-truck-fast-outline",
+                    "permission": "fetch_submission"
+                }
             ]
         },
         {
@@ -116,8 +552,22 @@
             "type": "regular",
             "icon": "mdiPlain:mdi-lock-outline",
             "childs": [
-                { "path": "/admin/security/authentication-logs", "slug": "authentication-logs", "lang_id": "Histori Login", "lang_en": "Authentication Logs", "icon": "mdiPlain:mdi-lock-percent-outline", "permission": "list_authentication_logs" },
-                { "path": "/admin/security/nas-audit-log", "slug": "nas-audit-log", "lang_id": "NAS Logs", "lang_en": "NAS Logs", "icon": "mdiPlain:mdi-lock-percent-outline", "permission": "list_nas_logs" }
+                {
+                    "path": "/admin/security/authentication-logs",
+                    "slug": "authentication-logs",
+                    "lang_id": "Histori Login",
+                    "lang_en": "Authentication Logs",
+                    "icon": "mdiPlain:mdi-lock-percent-outline",
+                    "permission": "list_authentication_logs"
+                },
+                {
+                    "path": "/admin/security/nas-audit-log",
+                    "slug": "nas-audit-log",
+                    "lang_id": "NAS Logs",
+                    "lang_en": "NAS Logs",
+                    "icon": "mdiPlain:mdi-lock-percent-outline",
+                    "permission": "list_nas_logs"
+                }
             ]
         }
     ],
@@ -126,37 +576,115 @@
             "name": "Dashboard",
             "type": "regular",
             "childs": [
-                { "path": "/dashboard", "lang_id": "Dashboard", "lang_en": "Dashboard", "icon": "pi pi-chart-line", "permission": "dashboard_hrd" },
-                { "path": "/logs", "lang_id": "Logs", "lang_en": "Logs", "icon": "pi pi-microchip", "permission": "list_logs" }
+                {
+                    "path": "/dashboard",
+                    "lang_id": "Dashboard",
+                    "lang_en": "Dashboard",
+                    "icon": "pi pi-chart-line",
+                    "permission": "dashboard_hrd"
+                },
+                {
+                    "path": "/logs",
+                    "lang_id": "Logs",
+                    "lang_en": "Logs",
+                    "icon": "pi pi-microchip",
+                    "permission": "list_logs"
+                }
             ]
         },
         {
             "name": "HRD",
             "type": "regular",
             "childs": [
-                { "path": "/employees", "lang_id": "Karyawan", "lang_en": "Employees", "icon": "pi pi-users", "permission": "list_employee" },
-                { "path": "/roles", "lang_id": "Hak Akses", "lang_en": "Roles", "icon": "pi pi-cloud", "permission": "list_role" },
-                { "path": "/users", "lang_id": "User", "lang_en": "Users", "icon": "pi pi-user", "permission": "list_user" }
+                {
+                    "path": "/employees",
+                    "lang_id": "Karyawan",
+                    "lang_en": "Employees",
+                    "icon": "pi pi-users",
+                    "permission": "list_employee"
+                },
+                {
+                    "path": "/roles",
+                    "lang_id": "Hak Akses",
+                    "lang_en": "Roles",
+                    "icon": "pi pi-cloud",
+                    "permission": "list_role"
+                },
+                {
+                    "path": "/users",
+                    "lang_id": "User",
+                    "lang_en": "Users",
+                    "icon": "pi pi-user",
+                    "permission": "list_user"
+                }
             ]
         },
         {
             "name": "Master",
             "type": "regular",
             "childs": [
-                { "path": "/branches", "lang_id": "Kantor", "lang_en": "Branches", "icon": "pi pi-sitemap", "permission": "list_branch" }
+                {
+                    "path": "/branches",
+                    "lang_id": "Kantor",
+                    "lang_en": "Branches",
+                    "icon": "pi pi-sitemap",
+                    "permission": "list_branch"
+                }
             ]
         },
         {
             "name": "Inventory",
             "type": "regular",
             "childs": [
-                { "path": "/suppliers", "lang_id": "Pemasok", "lang_en": "Suppliers", "icon": "pi pi-truck", "permission": "list_supplier" },
-                { "path": "/brands", "lang_id": "Merek", "lang_en": "Brands", "icon": "pi pi-file", "permission": "list_branch" },
-                { "path": "/units", "lang_id": "Units", "lang_en": "Units", "icon": "pi pi-briefcase", "permission": "list_unit" },
-                { "path": "/inventory-types", "lang_id": "Tipe Inventori", "lang_en": "Inventory Types", "icon": "pi pi-briefcase", "permission": "list_inventory_type" },
-                { "path": "/inventories", "lang_id": "Inventori", "lang_en": "Inventories", "icon": "pi pi-box", "permission": "list_inventory" },
-                { "path": "/custom-inventories", "lang_id": "Custom Inventories", "lang_en": "Custom Inventories", "icon": "pi pi-gift", "permission": "list_inventory" },
-                { "path": "/request-inventories", "lang_id": "Request Inventories", "lang_en": "Request Inventories", "icon": "pi pi-inbox", "permission": "list_inventory" }
+                {
+                    "path": "/suppliers",
+                    "lang_id": "Pemasok",
+                    "lang_en": "Suppliers",
+                    "icon": "pi pi-truck",
+                    "permission": "list_supplier"
+                },
+                {
+                    "path": "/brands",
+                    "lang_id": "Merek",
+                    "lang_en": "Brands",
+                    "icon": "pi pi-file",
+                    "permission": "list_branch"
+                },
+                {
+                    "path": "/units",
+                    "lang_id": "Units",
+                    "lang_en": "Units",
+                    "icon": "pi pi-briefcase",
+                    "permission": "list_unit"
+                },
+                {
+                    "path": "/inventory-types",
+                    "lang_id": "Tipe Inventori",
+                    "lang_en": "Inventory Types",
+                    "icon": "pi pi-briefcase",
+                    "permission": "list_inventory_type"
+                },
+                {
+                    "path": "/inventories",
+                    "lang_id": "Inventori",
+                    "lang_en": "Inventories",
+                    "icon": "pi pi-box",
+                    "permission": "list_inventory"
+                },
+                {
+                    "path": "/custom-inventories",
+                    "lang_id": "Custom Inventories",
+                    "lang_en": "Custom Inventories",
+                    "icon": "pi pi-gift",
+                    "permission": "list_inventory"
+                },
+                {
+                    "path": "/request-inventories",
+                    "lang_id": "Request Inventories",
+                    "lang_en": "Request Inventories",
+                    "icon": "pi pi-inbox",
+                    "permission": "list_inventory"
+                }
             ]
         }
     ]
