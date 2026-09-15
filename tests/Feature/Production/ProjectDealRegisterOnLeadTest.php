@@ -117,11 +117,14 @@ describe('registerOnLead', function () {
 
         registerLeadService()->registerOnLead(Crypt::encryptString((string) $deal->id));
 
+        // The service sends ledDetail as a JSON string (json_encode of the deal's led_detail),
+        // while the ledDetail accessor exposes $deal->led_detail as an array - so decode the
+        // payload back before comparing.
         Http::assertSent(function (Request $request) use ($deal) {
             return $request['totalLed'] !== null
                 && (float) $request['totalLed'] === (float) $deal->led_area
                 && $request['ledDetail'] !== null
-                && $request['ledDetail'] == $deal->led_detail;
+                && json_decode($request['ledDetail'], true) == $deal->led_detail;
         });
     });
 
