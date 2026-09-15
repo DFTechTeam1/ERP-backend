@@ -32,6 +32,7 @@ use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskSongStatus;
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
+use App\Exceptions\DataNotFound;
 use App\Exceptions\failedToProcess;
 use App\Exceptions\NotRegisteredAsUser;
 use App\Exceptions\SongHaveNoTask;
@@ -61,6 +62,7 @@ use Modules\Hrd\Repository\EmployeeTaskPointRepository;
 use Modules\Hrd\Repository\EmployeeTaskStateRepository;
 use Modules\Inventory\Repository\CustomInventoryRepository;
 use Modules\Inventory\Repository\InventoryItemRepository;
+use Modules\Production\Exceptions\CannotRewindStatusWhenTaskActive;
 use Modules\Production\Exceptions\FailedModifyWaitingApprovalSong;
 use Modules\Production\Exceptions\ProjectNotFound;
 use Modules\Production\Exceptions\SongNotFound;
@@ -2585,7 +2587,7 @@ class ProjectService
 
             $currentData = $this->detailCacheAction->handle($task->project->uid, [
                 'boards' => FormatBoards::run($task->project->uid),
-            ]);
+            ], true);
 
             DB::commit();
 
@@ -2763,6 +2765,11 @@ class ProjectService
                     $payloadStatus['status'] = TaskStatus::WaitingApproval->value;
                 }
 
+                // is for lead modeller
+                if ($isForLeadModeller) {
+                    $payloadStatus['status'] = TaskStatus::WaitingDistribute->value;
+                }
+
                 // if for manager, change to check by pm
                 if ($isForProjectManager) {
                     $payloadStatus['status'] = TaskStatus::CheckByPm->value;
@@ -2772,6 +2779,39 @@ class ProjectService
 
                 if (! empty($payloadStatus)) {
                     $this->taskRepo->update($payloadStatus, $taskUid);
+                }
+            }
+
+            // Lead-modeller rule: when the lead modeller removes the last member and the task
+            // becomes empty, hand it back to the lead modeller as the sole pic (WaitingToDistribute)
+            // with the task set to WaitingDistribute, instead of leaving it empty. Only applies when
+            // the acting user is the lead modeller on a pure removal (no new members assigned).
+            if (
+                ! $isRevise &&
+                $needChangeTaskStatus &&
+                empty($data['users']) &&
+                ! empty($data['removed']) &&
+                amILeadModeller()
+            ) {
+                $remainingPics = $this->taskPicRepo->list(select: 'id', where: "project_task_id = '{$taskId}'");
+
+                if ($remainingPics->count() == 0) {
+                    $leadModellerEmployeeId = $this->generalService->getIdFromUid($leadModeller, new \Modules\Hrd\Models\Employee);
+
+                    if ($leadModellerEmployeeId) {
+                        $this->taskPicHistory->store([
+                            'project_id' => $currentTask->project_id,
+                            'project_task_id' => $taskId,
+                            'employee_id' => $leadModellerEmployeeId,
+                        ]);
+                        $this->taskPicRepo->store([
+                            'employee_id' => $leadModellerEmployeeId,
+                            'project_task_id' => $taskId,
+                            'assigned_at' => Carbon::now(),
+                            'status' => TaskPicStatus::WaitingToDistribute->value,
+                        ]);
+                        $this->taskRepo->update(['status' => TaskStatus::WaitingDistribute->value], $taskUid);
+                    }
                 }
             }
 
@@ -3548,7 +3588,7 @@ class ProjectService
             $task = $this->formattedDetailTask($taskUid);
             $currentData = $this->detailCacheAction->handle($projectUid, [
                 'boards' => FormatBoards::run($projectUid),
-            ]);
+            ], true);
 
             return generalResponse(
                 message: __('notification.taskHasBeenDistribute'),
@@ -4112,7 +4152,7 @@ class ProjectService
 
             $currentData = $this->detailCacheAction->handle($projectUid, [
                 'boards' => FormatBoards::run($projectUid),
-            ]);
+            ], true);
 
             DB::commit();
 
@@ -4187,7 +4227,7 @@ class ProjectService
 
         $currentData = $this->detailCacheAction->handle($projectUid, [
             'boards' => FormatBoards::run($projectUid),
-        ]);
+        ], true);
 
         return generalResponse(
             __('global.successUploadAttachment'),
@@ -4215,7 +4255,7 @@ class ProjectService
 
         $currentData = $this->detailCacheAction->handle($projectUid, [
             'boards' => FormatBoards::run($projectUid),
-        ]);
+        ], true);
 
         return generalResponse(
             __('global.successUploadAttachment'),
@@ -4277,7 +4317,7 @@ class ProjectService
 
         $currentData = $this->detailCacheAction->handle($projectUid, [
             'boards' => FormatBoards::run($projectUid),
-        ]);
+        ], true);
 
         return generalResponse(
             __('global.successUploadAttachment'),
@@ -4728,14 +4768,9 @@ class ProjectService
 
             $task = $this->formattedDetailTask($taskId);
 
-            $cache = $this->getDetailProjectCache($projectUid);
-            $currentData = $cache['cache'];
-            $projectId = $cache['projectId'];
-
-            $boards = $this->formattedBoards($projectUid);
-            $currentData['boards'] = $boards;
-
-            storeCache('detailProject' . $projectId, $currentData);
+            $currentData = $this->detailCacheAction->handle($task->project->uid, [
+                'boards' => FormatBoards::run($task->project->uid),
+            ], true);
 
             DB::commit();
 
@@ -10245,6 +10280,96 @@ class ProjectService
                 data: $output->toArray()
             );
         } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+  
+    /**
+     * Revert a task from WaitingApproval back to WaitingDistribute.
+     *
+     * Loads the project by uid and the task scoped to that project, then rewinds it
+     * only while the task is in WaitingApproval. Any other status throws
+     * CannotRewindStatusWhenTaskActive and nothing is changed. On success the task status
+     * becomes WaitingDistribute, its current pics are detached (removed from project_task_pics
+     * and project_task_pic_histories), the configured 3D lead modeller is assigned as the sole
+     * pic with status WaitingToDistribute, and the project detail cache is force rebuilt. Fails
+     * when no lead modeller is configured.
+     *
+     * @param  string  $projectUid  Uid of the project that owns the task.
+     * @param  string  $taskUid  Uid of the task to revert.
+     * @return array{error: bool, message: string, data: array, code: int} generalResponse payload on success, errorResponse payload on failure.
+     */
+    public function revertToDistribute(string $projectUid, string $taskUid): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $project = $this->repo->show(uid: $projectUid, select: 'id,name,project_date,status');
+            if (! $project) {
+                throw new DataNotFound('Project is not found');
+            }
+
+            $targetTask = $this->taskRepo->show(uid: '', select: "id,name,project_id,status", where: "project_id = {$project->id} and uid = '{$taskUid}'", relation: ['pics']);
+
+            if (! $targetTask) {
+                throw new DataNotFound('Task is not found');
+            }
+
+            if ($targetTask->status != TaskStatus::WaitingApproval->value) {
+                throw new CannotRewindStatusWhenTaskActive();
+            }
+
+            // Resolve the configured 3D lead modeller to hand the task back to.
+            $leadModellerUid = $this->generalService->getSettingByKey('lead_3d_modeller');
+            if (! $leadModellerUid) {
+                throw new DataNotFound('Lead modeller is not set');
+            }
+
+            $leadModellerId = $this->generalService->getIdFromUid($leadModellerUid, new \Modules\Hrd\Models\Employee);
+            if (! $leadModellerId) {
+                throw new DataNotFound('Lead modeller is not found');
+            }
+
+            // Get current task pics
+            $taskPics = $targetTask->pics->pluck('employee_id')->toArray();
+
+            $this->taskRepo->update(
+                data: [
+                    'status' => TaskStatus::WaitingDistribute->value,
+                ],
+                id: $taskUid
+            );
+
+            // remove current user from pic
+            $this->detachTaskPic(ids: $taskPics, taskId: $targetTask->id, isEmployeeUid: false, removeFromHistory: true, doLogging: true);
+
+            // assign the task to the current lead modeller as the sole pic
+            $this->taskPicHistory->store([
+                'project_id' => $targetTask->project_id,
+                'project_task_id' => $targetTask->id,
+                'employee_id' => $leadModellerId,
+            ]);
+            $this->taskPicRepo->store([
+                'employee_id' => $leadModellerId,
+                'project_task_id' => $targetTask->id,
+                'assigned_at' => Carbon::now(),
+                'status' => TaskPicStatus::WaitingToDistribute->value,
+            ]);
+
+            $currentData = $this->detailCacheAction->handle($projectUid, [
+                'boards' => FormatBoards::run($projectUid),
+            ], true);
+
+            DB::commit();
+
+            return generalResponse(
+                message: "Success revert status to distribute",
+                data: [
+                    'full_detail' => $currentData
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }

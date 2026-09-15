@@ -18,4 +18,5 @@ return [
     'revise' => 'Revise',
     'delete' => 'Hapus',
     'pickTask' => 'Ambil Task',
+    'revertDistribute' => 'Ubah ke Distribusi',
 ];

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\PermissionCheck;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\DeadlineChangeReasonController;
 use Modules\Production\Http\Controllers\Api\InteractiveController;
@@ -35,6 +37,50 @@ Route::middleware(['auth.session'])
         Route::get('eventTypes', [ProjectController::class, 'getEventTypes']);
         Route::get('classList', [ProjectController::class, 'getClassList']);
         Route::get('status', [ProjectController::class, 'getProjectStatus']);
+
+        // Download AI search image result.
+        // The frontend posts the full file URL (e.g. https://tunnel.dfactory.pro/storage/nas/...png);
+        // we fetch it and stream it back with an attachment disposition so the browser downloads it.
+        Route::post('ai-search/download', function (Request $request) {
+            $url = trim((string) $request->input('url'));
+
+            abort_if($url === '' || ! filter_var($url, FILTER_VALIDATE_URL), 422, 'A valid url is required.');
+
+            // SSRF guard: the client supplies the URL, so only allow files hosted on the company
+            // domain (its tunnel / storage subdomains) - never arbitrary or internal hosts.
+            $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+            $allowedDomain = 'dfactory.pro';
+            abort_unless(
+                $host === $allowedDomain || str_ends_with($host, '.' . $allowedDomain),
+                403,
+                'Downloading from this host is not allowed.'
+            );
+
+            try {
+                $response = Http::timeout(60)->get($url);
+            } catch (Throwable $th) {
+                abort(502, 'Failed to fetch the file.');
+            }
+
+            abort_unless($response->successful(), 404, 'File not found.');
+
+            // This endpoint only serves images, capped at 20 MB - reject anything larger.
+            $maxBytes = 50 * 1024 * 1024;
+            $size = max((int) $response->header('Content-Length'), strlen($response->body()));
+            if ($size > $maxBytes) {
+                logging('Failed to download AI Search image', ['file exceeds the 50 MB limit.']);
+                abort(413, 'File exceeds the 50 MB limit.');
+            }
+
+            $filename = urldecode(basename((string) parse_url($url, PHP_URL_PATH)));
+            $filename = $filename !== '' ? $filename : 'download';
+
+            return response($response->body(), 200, [
+                'Content-Type' => $response->header('Content-Type') ?: 'application/octet-stream',
+                'Content-Disposition' => 'attachment; filename="' . addslashes($filename) . '"',
+                'Content-Length' => (string) strlen($response->body()),
+            ]);
+        })->name('ai-search.download');
 
         // Production employee dashboard - self-scoped via Auth::user()->employee_id.
         Route::prefix('dashboard/me')->group(function () {
@@ -266,6 +312,8 @@ Route::middleware(['auth.session'])
         Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask'])->name('task.hold');
         Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask'])->name('task.state');
         Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
+        Route::get('project/{projectUid}/task/{taskUid}/revertToDistribute', [ProjectController::class, 'revertToDistribute'])
+            ->middleware('role:root|director|lead modeller|project manager|project manager admin');
         Route::delete('project/{projectUid}/task/{taskUid}/deletAettachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 
         // incharges

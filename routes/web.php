@@ -360,4 +360,21 @@ Route::get('signature', function () {
         'variables' => $variables,
     ]);
 });
-Route::get('slack-testing', function () {});
+Route::get('slack-testing', function () {
+    // $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
+    // logging('slack developer', [
+    //     'dev' => $developer,
+    //     'log' => config('services.slack')
+    // ]);
+    // if ($developer) {
+    //     // build block and content
+    //     $block = (new SlackMessage)
+    //         ->text('testing')
+    //         ->headerBlock('testing header')
+    //         ->sectionBlock(function (SectionBlock $block) {
+    //             $block->text('testng')->markdown();
+    //         });
+
+    //     $developer->notify(new SlackNotification($block));
+    // }
+});
