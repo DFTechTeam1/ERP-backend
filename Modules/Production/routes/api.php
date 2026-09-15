@@ -308,6 +308,8 @@ Route::middleware(['auth.session'])
         Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask'])->name('task.hold');
         Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask'])->name('task.state');
         Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
+        Route::get('project/{projectUid}/task/{taskUid}/revertToDistribute', [ProjectController::class, 'revertToDistribute'])
+            ->middleware('role:root|director|lead modeller|project manager|project manager admin');
         Route::delete('project/{projectUid}/task/{taskUid}/deletAettachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 
         // incharges

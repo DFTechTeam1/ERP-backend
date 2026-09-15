@@ -1231,4 +1231,18 @@ class ProjectController extends Controller
     {
         return apiResponse($this->projectDealService->registerOnLead($projectDealUid));
     }
+
+    /**
+     * Revert a project task from WaitingApproval status back to WaitingDistribute.
+     *
+     * Restricted to the root role via the route middleware.
+     *
+     * @param  string  $projectUid  Uid of the project that owns the task.
+     * @param  string  $taskUid  Uid of the task to revert.
+     * @return JsonResponse  Wraps the service result (HTTP 201 on success, 400 on failure).
+     */
+    public function revertToDistribute(string $projectUid, string $taskUid): JsonResponse
+    {
+        return apiResponse($this->service->revertToDistribute($projectUid, $taskUid));
+    }
 }

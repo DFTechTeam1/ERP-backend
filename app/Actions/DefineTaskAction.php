@@ -7,7 +7,9 @@ use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
 use Illuminate\Support\Facades\Auth;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
+use Modules\Production\Models\ProjectTask;
 
 class DefineTaskAction
 {
@@ -136,6 +138,12 @@ class DefineTaskAction
                 'color' => 'primary',
                 'action' => 'pickTaskAction',
             ],
+            'revertDistribute' => [
+                'icon' => asset('images/taskAction/undo-white.png'),
+                'group' => 'bottom',
+                'color' => 'primary',
+                'action' => 'revertDistributeAction',
+            ],
         ];
     }
 
@@ -160,7 +168,7 @@ class DefineTaskAction
     /**
      * This action will define which button should be appear in the selected task
      */
-    public function handle(\Modules\Production\Models\ProjectTask $task, ?object $user = null, ?int $projectStatus = null, int $specialPositionId = 0, ?bool $isProjectPic = null): array
+    public function handle(ProjectTask $task, ?object $user = null, ?int $projectStatus = null, int $specialPositionId = 0, ?bool $isProjectPic = null): array
     {
         $this->specialPositionId = $specialPositionId;
         $this->user = !$user ? Auth::user() : $user;
@@ -202,6 +210,61 @@ class DefineTaskAction
         return $this->user->hasRole(BaseRole::Entertainment->value) ? true : false;
     }
 
+    /**
+     * True when the acting user is the configured 3D lead modeller ('lead_3d_modeller' setting).
+     */
+    protected function isLeadModeller(): bool
+    {
+        return $this->leadModelerUid !== null && $this->user->employee_id == $this->leadModelerUid;
+    }
+
+    protected function getRevertDistributeButton(object $task, string $key, array $detail)
+    {
+        $userRole = $this->user->roles->count() ? $this->user->roles->first()->name : null;
+
+        if (! in_array($userRole, [BaseRole::Root->value, BaseRole::ProjectManager->value, BaseRole::Director->value, BaseRole::ProjectManagerAdmin->value, BaseRole::LeadModeller->value])) {
+            return null;
+        }
+
+        if ($task->status != TaskStatus::WaitingApproval->value) {
+            return null;
+        }
+
+        // Only show when a current PIC of the task belongs to the 3D modeller team.
+        if (! $this->taskHasModellerPic($task)) {
+            return null;
+        }
+
+        return $this->buildOutput($key, false, $detail);
+    }
+
+    /**
+     * True when at least one current PIC of the task belongs to the 3D modeller team, i.e. their
+     * position matches the 'special_production_position' setting. This mirrors how
+     * getProject3DMember() in ProjectService resolves the modeller team.
+     */
+    protected function taskHasModellerPic(object $task): bool
+    {
+        $specialPositionUid = getSettingByKey('special_production_position');
+        if (! $specialPositionUid) {
+            return false;
+        }
+
+        $modellerPositionId = getIdFromUid($specialPositionUid, new PositionBackup);
+        if (! $modellerPositionId) {
+            return false;
+        }
+
+        $picIds = collect($task->pics)->pluck('employee_id')->toArray();
+        if (empty($picIds)) {
+            return false;
+        }
+
+        return Employee::whereIn('id', $picIds)
+            ->where('position_id', $modellerPositionId)
+            ->exists();
+    }
+
     protected function getDatesButton(object $task, string $key, array $detail): ?array
     {
         $dates = null;
@@ -233,6 +296,12 @@ class DefineTaskAction
     {
         $complete = null;
 
+        // The lead modeller must not complete a task that is in progress (their team is working on
+        // it) when they are not its PIC.
+        if ($this->isLeadModeller() && ! $this->isMyTask && $task->status == TaskStatus::OnProgress->value) {
+            return null;
+        }
+
         if (($task->status == TaskStatus::OnProgress->value || $task->status == TaskStatus::Revise->value) && ($this->isMyTask || $this->hasSuperPower())) {
             $complete = $this->buildOutput($key, false, $detail);
         }
@@ -244,13 +313,15 @@ class DefineTaskAction
     {
         $members = null;
 
-        if (
+        $canManageMembers =
             ($this->hasSuperPower() || $this->showForLeadModeler) ||  // If superpower and for lead modeler
-            ($task->is_pool_task && ($this->user->can('create_pool_task')) ?? false) // if is pool task and user can create pool task
-        ) {
+            ($task->is_pool_task && ($this->user->can('create_pool_task')) ?? false); // if is pool task and user can create pool task
+
+        // The members button must never appear alongside the distribute button.
+        if ($canManageMembers && ! $this->getDistributeTaskButton($task, $key, $detail)) {
             $members = $this->buildOutput(
                 key: $key,
-                disabled: $task->status == \App\Enums\Production\TaskStatus::CheckByPm->value ? true : false,
+                disabled: $task->status == TaskStatus::CheckByPm->value ? true : false,
                 detail: $detail
             );
         }
@@ -395,6 +466,12 @@ class DefineTaskAction
     protected function getHoldTaskButton(object $task, string $key, array $detail): ?array
     {
         $hold = null;
+
+        // The lead modeller must not hold a task that is in progress (their team is working on it)
+        // when they are not its PIC.
+        if ($this->isLeadModeller() && ! $this->isMyTask && $task->status == TaskStatus::OnProgress->value) {
+            return null;
+        }
 
         if (($this->hasSuperPower() || $this->isMyTask) && ($task->status == TaskStatus::OnProgress->value || $task->status == TaskStatus::Revise->value)) {
             $hold = $this->buildOutput($key, false, $detail);
