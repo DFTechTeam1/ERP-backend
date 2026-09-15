@@ -1,4 +1,3 @@
-
 Enum "allowances_status_enum" {
   "active"
   "inactive"
@@ -90,13 +89,6 @@ Enum "development_project_tasks_status_enum" {
   "5"
   "6"
   "7"
-}
-
-Enum "development_projects_status_enum" {
-  "1"
-  "2"
-  "3"
-  "4"
 }
 
 Enum "division_allowances_allowance_type_enum" {
@@ -2471,6 +2463,8 @@ Table "project_classes" {
   "point_3_team" tinyint [not null, default: '0']
   "point_4_team" tinyint [not null, default: '0']
   "point_5_team" tinyint [not null, default: '0']
+  "reward" decimal(24, 2) [not null, default: 0]
+  "is_active" tinyint [default: true]
   "created_at" timestamp
   "updated_at" timestamp
   "color" varchar(20)
@@ -4502,3 +4496,868 @@ Ref "user_inventory_masters_employee_id_foreign":"employees"."id" < "user_invent
 Ref "whatsapp_groups_community_id_foreign":"whatsapp_communities"."community_id" < "whatsapp_groups"."community_id" [delete: set null]
 
 Ref "whatsapp_otps_employee_id_foreign":"employees"."id" < "whatsapp_otps"."employee_id" [delete: cascade]
+
+// ============================================================================
+// ACCOUNTING MODULE
+// ----------------------------------------------------------------------------
+// Standard double-entry accounting: Chart of Accounts, fiscal calendar,
+// general journal / general ledger, Indonesian tax (PPN / PPh), vendors &
+// accounts payable, purchases, expenses (tiered approval), and cash/bank
+// accounts with reconciliation.
+//
+// Integration with the existing (accounts-receivable) finance tables:
+//   - `invoices`, `transactions` (customer receipts), `project_deal_refunds`
+//     and the AP/expense documents below all AUTO-POST into `journal_entries`
+//     via the polymorphic (source_type, source_id) link. The GL is the single
+//     system of record; manual adjusting / closing entries are also allowed.
+//   - Money = decimal(24,2), uid = char(36), currency reserved for future
+//     multi-currency (single currency IDR today).
+// ============================================================================
+
+// ---- Enums -----------------------------------------------------------------
+Enum "coa_account_type_enum" {
+  "asset"
+  "liability"
+  "equity"
+  "revenue"
+  "expense"
+}
+
+Enum "coa_normal_balance_enum" {
+  "debit"
+  "credit"
+}
+
+Enum "fiscal_year_status_enum" {
+  "open"
+  "closed"
+}
+
+Enum "accounting_period_status_enum" {
+  "open"
+  "closed"   // period-end closed, no new postings without reopening
+  "locked"   // permanently locked (audited / filed)
+}
+
+Enum "journal_type_enum" {
+  "general"
+  "sales"
+  "purchase"
+  "cash_receipt"
+  "cash_disbursement"
+  "bank"
+}
+
+Enum "journal_entry_status_enum" {
+  "draft"
+  "posted"
+  "reversed"
+  "void"
+}
+
+Enum "tax_type_enum" {
+  "ppn_output"   // VAT collected on sales
+  "ppn_input"    // VAT paid on purchases (creditable)
+  "pph_21"       // withholding - employment
+  "pph_23"       // withholding - services
+  "pph_26"       // withholding - foreign
+  "pph_final"    // final income tax
+  "other"
+}
+
+Enum "tax_computation_enum" {
+  "percentage"
+  "fixed"
+}
+
+Enum "tax_direction_enum" {
+  "input"
+  "output"
+}
+
+Enum "bill_status_enum" {
+  "draft"
+  "awaiting_approval"
+  "approved"
+  "partially_paid"
+  "paid"
+  "void"
+}
+
+Enum "purchase_order_status_enum" {
+  "draft"
+  "sent"
+  "partially_received"
+  "received"
+  "closed"
+  "cancelled"
+}
+
+Enum "expense_status_enum" {
+  "draft"
+  "submitted"
+  "approved"
+  "rejected"
+  "paid"
+  "void"
+}
+
+Enum "approval_status_enum" {
+  "pending"
+  "approved"
+  "rejected"
+}
+
+Enum "payment_method_enum" {
+  "cash"
+  "bank_transfer"
+  "petty_cash"
+  "employee_reimbursement"
+  "card"
+  "other"
+}
+
+Enum "financial_account_type_enum" {
+  "bank"
+  "cash"
+  "petty_cash"
+  "e_wallet"
+}
+
+Enum "bank_statement_status_enum" {
+  "imported"
+  "reconciling"
+  "reconciled"
+}
+
+Enum "reconciliation_status_enum" {
+  "in_progress"
+  "completed"
+}
+
+Enum "payment_flow_enum" {
+  "received"   // money in
+  "paid"       // money out
+}
+
+Enum "payment_status_enum" {
+  "draft"
+  "posted"
+  "void"
+}
+
+// ---- 1. Chart of Accounts & settings ---------------------------------------
+Table "chart_of_accounts" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "code" varchar(50) [not null, note: 'Account number, e.g. 1-10001']
+  "name" varchar(255) [not null]
+  "type" coa_account_type_enum [not null]
+  "subtype" varchar(100) [note: 'Finer grouping: current_asset, fixed_asset, cash_bank, accounts_receivable, accounts_payable, tax_payable, cogs, operating_expense, ...']
+  "normal_balance" coa_normal_balance_enum [not null]
+  "parent_id" bigint [note: 'self-reference for the account hierarchy']
+  "is_group" tinyint(1) [not null, default: '0', note: 'Header/summary account - cannot be posted to directly']
+  "is_system" tinyint(1) [not null, default: '0', note: 'Control/system account (AR, AP, tax payable, retained earnings) - cannot be deleted']
+  "is_active" tinyint(1) [not null, default: '1']
+  "currency" varchar(3) [not null, default: 'IDR']
+  "opening_balance" decimal(24,2) [not null, default: '0.00']
+  "description" text
+  "branch_id" bigint [note: 'nullable - set only for branch-scoped accounts']
+  "created_by" bigint
+  "updated_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+  "deleted_at" timestamp
+
+  Indexes {
+    code [unique, name: "chart_of_accounts_code_unique"]
+    uid [unique, name: "chart_of_accounts_uid_unique"]
+    parent_id [name: "chart_of_accounts_parent_id_foreign"]
+    branch_id [name: "chart_of_accounts_branch_id_foreign"]
+  }
+}
+Ref: "chart_of_accounts"."id" < "chart_of_accounts"."parent_id"
+Ref: "branches"."id" < "chart_of_accounts"."branch_id"
+Ref: "users"."id" < "chart_of_accounts"."created_by"
+
+Table "accounting_settings" {
+  "id" bigint [pk, not null, increment]
+  "key" varchar(100) [not null, note: 'e.g. default_ar_account, default_ap_account, ppn_output_account, ppn_input_account, retained_earnings_account, current_year_earnings_account, rounding_account, bank_fee_account']
+  "account_id" bigint [note: 'default GL account for this mapping']
+  "value" varchar(255) [note: 'free-form value for non-account settings']
+  "description" varchar(255)
+  "branch_id" bigint [note: 'nullable - allows per-branch overrides']
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    (key, branch_id) [unique, name: "accounting_settings_key_branch_unique"]
+    account_id [name: "accounting_settings_account_id_foreign"]
+  }
+}
+Ref: "chart_of_accounts"."id" < "accounting_settings"."account_id"
+Ref: "branches"."id" < "accounting_settings"."branch_id"
+
+// ---- 2. Fiscal calendar ----------------------------------------------------
+Table "fiscal_years" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(50) [not null, note: 'e.g. FY2026']
+  "start_date" date [not null]
+  "end_date" date [not null]
+  "status" fiscal_year_status_enum [not null, default: 'open']
+  "closed_at" timestamp
+  "closed_by" bigint
+  "created_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    name [unique, name: "fiscal_years_name_unique"]
+  }
+}
+Ref: "users"."id" < "fiscal_years"."created_by"
+
+Table "accounting_periods" {
+  "id" bigint [pk, not null, increment]
+  "fiscal_year_id" bigint [not null]
+  "name" varchar(50) [not null, note: 'e.g. 2026-01']
+  "period_number" tinyint [not null, note: '1-12 (or 13 for adjustment period)']
+  "start_date" date [not null]
+  "end_date" date [not null]
+  "status" accounting_period_status_enum [not null, default: 'open']
+  "closed_at" timestamp
+  "closed_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    (fiscal_year_id, period_number) [unique, name: "accounting_periods_year_number_unique"]
+    fiscal_year_id [name: "accounting_periods_fiscal_year_id_foreign"]
+  }
+}
+Ref: "fiscal_years"."id" < "accounting_periods"."fiscal_year_id"
+
+// ---- 3. Journals & General Ledger ------------------------------------------
+Table "journals" {
+  "id" bigint [pk, not null, increment]
+  "code" varchar(50) [not null]
+  "name" varchar(255) [not null]
+  "type" journal_type_enum [not null, default: 'general']
+  "description" varchar(255)
+  "is_system" tinyint(1) [not null, default: '0']
+  "is_active" tinyint(1) [not null, default: '1']
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    code [unique, name: "journals_code_unique"]
+  }
+}
+
+Table "journal_entries" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "entry_number" varchar(50) [not null, note: 'e.g. JV-2026-00001']
+  "journal_id" bigint [note: 'which journal book this entry belongs to']
+  "accounting_period_id" bigint [not null, note: 'posting is only allowed into an open period']
+  "entry_date" date [not null]
+  "reference" varchar(255) [note: 'external reference / document number']
+  "description" text
+  "status" journal_entry_status_enum [not null, default: 'draft']
+  "source_type" varchar(255) [note: 'polymorphic source: Invoice, Transaction, Bill, Expense, Payment, ProjectDealRefund (null for manual entries)']
+  "source_id" bigint
+  "is_manual" tinyint(1) [not null, default: '0', note: '1 = hand-written journal, 0 = auto-posted from a source document']
+  "is_adjusting" tinyint(1) [not null, default: '0', note: 'adjusting / closing entry']
+  "total_debit" decimal(24,2) [not null, default: '0.00', note: 'must equal total_credit before posting']
+  "total_credit" decimal(24,2) [not null, default: '0.00']
+  "currency" varchar(3) [not null, default: 'IDR']
+  "branch_id" bigint
+  "reversal_of_entry_id" bigint [note: 'set when this entry reverses another entry']
+  "posted_at" timestamp
+  "posted_by" bigint
+  "reversed_at" timestamp
+  "reversed_by" bigint
+  "created_by" bigint
+  "updated_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+  "deleted_at" timestamp
+
+  Indexes {
+    uid [unique, name: "journal_entries_uid_unique"]
+    entry_number [unique, name: "journal_entries_entry_number_unique"]
+    journal_id [name: "journal_entries_journal_id_foreign"]
+    accounting_period_id [name: "journal_entries_accounting_period_id_foreign"]
+    reversal_of_entry_id [name: "journal_entries_reversal_of_entry_id_foreign"]
+    (source_type, source_id) [name: "journal_entries_source_index"]
+  }
+}
+Ref: "journals"."id" < "journal_entries"."journal_id"
+Ref: "accounting_periods"."id" < "journal_entries"."accounting_period_id"
+Ref: "journal_entries"."id" < "journal_entries"."reversal_of_entry_id"
+Ref: "branches"."id" < "journal_entries"."branch_id"
+Ref: "users"."id" < "journal_entries"."created_by"
+Ref: "users"."id" < "journal_entries"."posted_by"
+
+Table "journal_entry_lines" {
+  "id" bigint [pk, not null, increment]
+  "journal_entry_id" bigint [not null]
+  "account_id" bigint [not null, note: 'the GL account being debited/credited']
+  "description" varchar(255)
+  "debit" decimal(24,2) [not null, default: '0.00']
+  "credit" decimal(24,2) [not null, default: '0.00']
+  "currency" varchar(3) [not null, default: 'IDR']
+  "exchange_rate" decimal(18,6) [not null, default: '1.000000', note: 'reserved for future multi-currency']
+  "partner_type" varchar(255) [note: 'polymorphic sub-ledger partner: Customer or Vendor (for AR/AP aging)']
+  "partner_id" bigint
+  "cost_center_id" bigint [note: 'ref greatday_cost_centers.id - segment reporting']
+  "branch_id" bigint
+  "project_deal_id" bigint [note: 'nullable - link back to a project for project P&L']
+  "tax_id" bigint [note: 'set when this line represents a tax amount']
+  "line_number" int [note: 'display order within the entry']
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    journal_entry_id [name: "journal_entry_lines_journal_entry_id_foreign"]
+    account_id [name: "journal_entry_lines_account_id_foreign"]
+    project_deal_id [name: "journal_entry_lines_project_deal_id_foreign"]
+    cost_center_id [name: "journal_entry_lines_cost_center_id_foreign"]
+    (partner_type, partner_id) [name: "journal_entry_lines_partner_index"]
+  }
+}
+Ref: "journal_entries"."id" < "journal_entry_lines"."journal_entry_id" [delete: cascade]
+Ref: "chart_of_accounts"."id" < "journal_entry_lines"."account_id"
+Ref: "greatday_cost_centers"."id" < "journal_entry_lines"."cost_center_id"
+Ref: "branches"."id" < "journal_entry_lines"."branch_id"
+Ref: "project_deals"."id" < "journal_entry_lines"."project_deal_id"
+Ref: "tax_codes"."id" < "journal_entry_lines"."tax_id"
+
+Table "account_period_balances" {
+  "id" bigint [pk, not null, increment]
+  "account_id" bigint [not null]
+  "accounting_period_id" bigint [not null]
+  "opening_debit" decimal(24,2) [not null, default: '0.00']
+  "opening_credit" decimal(24,2) [not null, default: '0.00']
+  "period_debit" decimal(24,2) [not null, default: '0.00']
+  "period_credit" decimal(24,2) [not null, default: '0.00']
+  "closing_debit" decimal(24,2) [not null, default: '0.00']
+  "closing_credit" decimal(24,2) [not null, default: '0.00']
+  "currency" varchar(3) [not null, default: 'IDR']
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    (account_id, accounting_period_id) [unique, name: "account_period_balances_account_period_unique"]
+    accounting_period_id [name: "account_period_balances_accounting_period_id_foreign"]
+  }
+}
+Ref: "chart_of_accounts"."id" < "account_period_balances"."account_id"
+Ref: "accounting_periods"."id" < "account_period_balances"."accounting_period_id"
+
+// ---- 4. Tax (generic base + Indonesian PPN / PPh) --------------------------
+Table "tax_codes" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "code" varchar(50) [not null, note: 'e.g. PPN-OUT, PPN-IN, PPH23']
+  "name" varchar(255) [not null]
+  "tax_type" tax_type_enum [not null]
+  "computation" tax_computation_enum [not null, default: 'percentage']
+  "rate" decimal(8,4) [not null, default: '0.0000', note: 'percentage (e.g. 11.0000) or fixed amount depending on computation']
+  "is_withholding" tinyint(1) [not null, default: '0', note: 'PPh types are withholding taxes']
+  "account_id" bigint [note: 'GL account for the tax payable / creditable balance']
+  "effective_date" date
+  "is_active" tinyint(1) [not null, default: '1']
+  "created_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    code [unique, name: "tax_codes_code_unique"]
+    account_id [name: "tax_codes_account_id_foreign"]
+  }
+}
+Ref: "chart_of_accounts"."id" < "tax_codes"."account_id"
+
+Table "tax_transactions" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "tax_code_id" bigint [not null]
+  "taxable_type" varchar(255) [note: 'polymorphic document: Invoice, Bill, Expense, JournalEntry']
+  "taxable_id" bigint
+  "direction" tax_direction_enum [not null]
+  "base_amount" decimal(24,2) [not null, default: '0.00', note: 'DPP - dasar pengenaan pajak']
+  "tax_amount" decimal(24,2) [not null, default: '0.00']
+  "partner_type" varchar(255) [note: 'Customer or Vendor']
+  "partner_id" bigint
+  "npwp" varchar(30) [note: 'counterparty tax id']
+  "faktur_number" varchar(50) [note: 'nomor faktur pajak']
+  "faktur_date" date
+  "tax_period" date [note: 'reporting period (masa pajak)']
+  "is_reported" tinyint(1) [not null, default: '0', note: 'included in a filed SPT']
+  "journal_entry_id" bigint [note: 'the GL posting for this tax']
+  "created_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    uid [unique, name: "tax_transactions_uid_unique"]
+    tax_code_id [name: "tax_transactions_tax_code_id_foreign"]
+    journal_entry_id [name: "tax_transactions_journal_entry_id_foreign"]
+    (taxable_type, taxable_id) [name: "tax_transactions_taxable_index"]
+    (partner_type, partner_id) [name: "tax_transactions_partner_index"]
+  }
+}
+Ref: "tax_codes"."id" < "tax_transactions"."tax_code_id"
+Ref: "journal_entries"."id" < "tax_transactions"."journal_entry_id"
+
+// ---- 5. Vendors & Accounts Payable -----------------------------------------
+Table "vendors" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "code" varchar(50) [not null]
+  "name" varchar(255) [not null]
+  "npwp" varchar(30) [note: 'tax id']
+  "email" varchar(255)
+  "phone" varchar(30)
+  "address" varchar(255)
+  "contact_person" varchar(255)
+  "bank_id" bigint [note: 'ref banks.id']
+  "bank_account_number" varchar(50)
+  "bank_account_holder" varchar(255)
+  "payable_account_id" bigint [note: 'AP control account - defaults from accounting_settings']
+  "payment_term_days" int [not null, default: '0']
+  "is_active" tinyint(1) [not null, default: '1']
+  "created_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+  "deleted_at" timestamp
+
+  Indexes {
+    code [unique, name: "vendors_code_unique"]
+    uid [unique, name: "vendors_uid_unique"]
+    bank_id [name: "vendors_bank_id_foreign"]
+    payable_account_id [name: "vendors_payable_account_id_foreign"]
+  }
+}
+Ref: "banks"."id" < "vendors"."bank_id"
+Ref: "chart_of_accounts"."id" < "vendors"."payable_account_id"
+Ref: "users"."id" < "vendors"."created_by"
+
+Table "bills" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "bill_number" varchar(50) [not null, note: 'internal number']
+  "vendor_invoice_number" varchar(100) [note: "vendor's own invoice number"]
+  "vendor_id" bigint [not null]
+  "purchase_order_id" bigint [note: 'set when generated from a PO']
+  "accounting_period_id" bigint
+  "bill_date" date [not null]
+  "due_date" date
+  "currency" varchar(3) [not null, default: 'IDR']
+  "subtotal" decimal(24,2) [not null, default: '0.00']
+  "tax_amount" decimal(24,2) [not null, default: '0.00']
+  "total_amount" decimal(24,2) [not null, default: '0.00']
+  "paid_amount" decimal(24,2) [not null, default: '0.00']
+  "balance_due" decimal(24,2) [not null, default: '0.00']
+  "status" bill_status_enum [not null, default: 'draft']
+  "note" text
+  "journal_entry_id" bigint [note: 'the GL posting for this bill']
+  "branch_id" bigint
+  "approved_by" bigint
+  "approved_at" timestamp
+  "created_by" bigint
+  "updated_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+  "deleted_at" timestamp
+
+  Indexes {
+    bill_number [unique, name: "bills_bill_number_unique"]
+    uid [unique, name: "bills_uid_unique"]
+    vendor_id [name: "bills_vendor_id_foreign"]
+    purchase_order_id [name: "bills_purchase_order_id_foreign"]
+    accounting_period_id [name: "bills_accounting_period_id_foreign"]
+    journal_entry_id [name: "bills_journal_entry_id_foreign"]
+  }
+}
+Ref: "vendors"."id" < "bills"."vendor_id"
+Ref: "purchase_orders"."id" < "bills"."purchase_order_id"
+Ref: "accounting_periods"."id" < "bills"."accounting_period_id"
+Ref: "journal_entries"."id" < "bills"."journal_entry_id"
+Ref: "branches"."id" < "bills"."branch_id"
+Ref: "users"."id" < "bills"."created_by"
+
+Table "bill_items" {
+  "id" bigint [pk, not null, increment]
+  "bill_id" bigint [not null]
+  "account_id" bigint [not null, note: 'expense / asset account to debit']
+  "description" varchar(255)
+  "quantity" decimal(15,2) [not null, default: '1.00']
+  "unit_price" decimal(24,2) [not null, default: '0.00']
+  "amount" decimal(24,2) [not null, default: '0.00']
+  "tax_code_id" bigint
+  "tax_amount" decimal(24,2) [not null, default: '0.00']
+  "cost_center_id" bigint
+  "project_deal_id" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    bill_id [name: "bill_items_bill_id_foreign"]
+    account_id [name: "bill_items_account_id_foreign"]
+    tax_code_id [name: "bill_items_tax_code_id_foreign"]
+    project_deal_id [name: "bill_items_project_deal_id_foreign"]
+  }
+}
+Ref: "bills"."id" < "bill_items"."bill_id" [delete: cascade]
+Ref: "chart_of_accounts"."id" < "bill_items"."account_id"
+Ref: "tax_codes"."id" < "bill_items"."tax_code_id"
+Ref: "greatday_cost_centers"."id" < "bill_items"."cost_center_id"
+Ref: "project_deals"."id" < "bill_items"."project_deal_id"
+
+// ---- 6. Purchases (procurement) --------------------------------------------
+Table "purchase_orders" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "po_number" varchar(50) [not null]
+  "vendor_id" bigint [not null]
+  "order_date" date [not null]
+  "expected_date" date
+  "status" purchase_order_status_enum [not null, default: 'draft']
+  "currency" varchar(3) [not null, default: 'IDR']
+  "subtotal" decimal(24,2) [not null, default: '0.00']
+  "tax_amount" decimal(24,2) [not null, default: '0.00']
+  "total_amount" decimal(24,2) [not null, default: '0.00']
+  "note" text
+  "branch_id" bigint
+  "approved_by" bigint
+  "approved_at" timestamp
+  "created_by" bigint
+  "updated_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+  "deleted_at" timestamp
+
+  Indexes {
+    po_number [unique, name: "purchase_orders_po_number_unique"]
+    uid [unique, name: "purchase_orders_uid_unique"]
+    vendor_id [name: "purchase_orders_vendor_id_foreign"]
+  }
+}
+Ref: "vendors"."id" < "purchase_orders"."vendor_id"
+Ref: "branches"."id" < "purchase_orders"."branch_id"
+Ref: "users"."id" < "purchase_orders"."created_by"
+
+Table "purchase_order_items" {
+  "id" bigint [pk, not null, increment]
+  "purchase_order_id" bigint [not null]
+  "item_name" varchar(255) [not null]
+  "inventory_id" bigint [note: 'ref inventories.id when purchasing a tracked item']
+  "account_id" bigint [note: 'expense / asset account this line maps to']
+  "description" varchar(255)
+  "quantity" decimal(15,2) [not null, default: '1.00']
+  "received_quantity" decimal(15,2) [not null, default: '0.00']
+  "unit_price" decimal(24,2) [not null, default: '0.00']
+  "amount" decimal(24,2) [not null, default: '0.00']
+  "tax_code_id" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    purchase_order_id [name: "purchase_order_items_purchase_order_id_foreign"]
+    inventory_id [name: "purchase_order_items_inventory_id_foreign"]
+    account_id [name: "purchase_order_items_account_id_foreign"]
+    tax_code_id [name: "purchase_order_items_tax_code_id_foreign"]
+  }
+}
+Ref: "purchase_orders"."id" < "purchase_order_items"."purchase_order_id" [delete: cascade]
+Ref: "inventories"."id" < "purchase_order_items"."inventory_id"
+Ref: "chart_of_accounts"."id" < "purchase_order_items"."account_id"
+Ref: "tax_codes"."id" < "purchase_order_items"."tax_code_id"
+
+// ---- 7. Expenses (tiered approval) -----------------------------------------
+Table "expense_categories" {
+  "id" bigint [pk, not null, increment]
+  "name" varchar(255) [not null]
+  "account_id" bigint [not null, note: 'default expense account for this category']
+  "is_active" tinyint(1) [not null, default: '1']
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    account_id [name: "expense_categories_account_id_foreign"]
+  }
+}
+Ref: "chart_of_accounts"."id" < "expense_categories"."account_id"
+
+Table "expenses" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "expense_number" varchar(50) [not null]
+  "expense_date" date [not null]
+  "requested_by" bigint [note: 'ref employees.id - the claimant']
+  "vendor_id" bigint [note: 'nullable - payee when the expense is to a vendor']
+  "payment_method" payment_method_enum [not null, default: 'cash']
+  "financial_account_id" bigint [note: 'source of funds (bank / cash / petty cash)']
+  "currency" varchar(3) [not null, default: 'IDR']
+  "subtotal" decimal(24,2) [not null, default: '0.00']
+  "tax_amount" decimal(24,2) [not null, default: '0.00']
+  "total_amount" decimal(24,2) [not null, default: '0.00']
+  "status" expense_status_enum [not null, default: 'draft']
+  "description" text
+  "accounting_period_id" bigint
+  "journal_entry_id" bigint
+  "project_deal_id" bigint [note: 'nullable - charge the expense to a project']
+  "cost_center_id" bigint
+  "branch_id" bigint
+  "created_by" bigint
+  "updated_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+  "deleted_at" timestamp
+
+  Indexes {
+    expense_number [unique, name: "expenses_expense_number_unique"]
+    uid [unique, name: "expenses_uid_unique"]
+    requested_by [name: "expenses_requested_by_foreign"]
+    vendor_id [name: "expenses_vendor_id_foreign"]
+    financial_account_id [name: "expenses_financial_account_id_foreign"]
+    journal_entry_id [name: "expenses_journal_entry_id_foreign"]
+    project_deal_id [name: "expenses_project_deal_id_foreign"]
+  }
+}
+Ref: "employees"."id" < "expenses"."requested_by"
+Ref: "vendors"."id" < "expenses"."vendor_id"
+Ref: "financial_accounts"."id" < "expenses"."financial_account_id"
+Ref: "accounting_periods"."id" < "expenses"."accounting_period_id"
+Ref: "journal_entries"."id" < "expenses"."journal_entry_id"
+Ref: "project_deals"."id" < "expenses"."project_deal_id"
+Ref: "greatday_cost_centers"."id" < "expenses"."cost_center_id"
+Ref: "branches"."id" < "expenses"."branch_id"
+
+Table "expense_items" {
+  "id" bigint [pk, not null, increment]
+  "expense_id" bigint [not null]
+  "expense_category_id" bigint
+  "account_id" bigint [not null, note: 'expense account to debit']
+  "description" varchar(255)
+  "amount" decimal(24,2) [not null, default: '0.00']
+  "tax_code_id" bigint
+  "tax_amount" decimal(24,2) [not null, default: '0.00']
+  "receipt_path" varchar(255) [note: 'uploaded receipt image']
+  "project_deal_id" bigint
+  "cost_center_id" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    expense_id [name: "expense_items_expense_id_foreign"]
+    expense_category_id [name: "expense_items_expense_category_id_foreign"]
+    account_id [name: "expense_items_account_id_foreign"]
+    tax_code_id [name: "expense_items_tax_code_id_foreign"]
+  }
+}
+Ref: "expenses"."id" < "expense_items"."expense_id" [delete: cascade]
+Ref: "expense_categories"."id" < "expense_items"."expense_category_id"
+Ref: "chart_of_accounts"."id" < "expense_items"."account_id"
+Ref: "tax_codes"."id" < "expense_items"."tax_code_id"
+Ref: "project_deals"."id" < "expense_items"."project_deal_id"
+
+Table "expense_approvals" {
+  "id" bigint [pk, not null, increment]
+  "expense_id" bigint [not null]
+  "approver_id" bigint [not null, note: 'ref users.id']
+  "level" tinyint [not null, default: '1', note: 'tier in the approval chain']
+  "status" approval_status_enum [not null, default: 'pending']
+  "note" varchar(255)
+  "acted_at" timestamp
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    expense_id [name: "expense_approvals_expense_id_foreign"]
+    approver_id [name: "expense_approvals_approver_id_foreign"]
+  }
+}
+Ref: "expenses"."id" < "expense_approvals"."expense_id" [delete: cascade]
+Ref: "users"."id" < "expense_approvals"."approver_id"
+
+// ---- 8. Cash / Bank accounts & reconciliation ------------------------------
+Table "financial_accounts" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "name" varchar(255) [not null, note: 'e.g. BCA 188-060-1225']
+  "account_type" financial_account_type_enum [not null, default: 'bank']
+  "account_id" bigint [not null, note: 'the GL cash/bank account this maps to']
+  "bank_id" bigint [note: 'ref banks.id']
+  "bank_name" varchar(255)
+  "account_number" varchar(50)
+  "account_holder" varchar(255)
+  "currency" varchar(3) [not null, default: 'IDR']
+  "opening_balance" decimal(24,2) [not null, default: '0.00']
+  "current_balance" decimal(24,2) [not null, default: '0.00']
+  "branch_id" bigint
+  "is_active" tinyint(1) [not null, default: '1']
+  "created_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    uid [unique, name: "financial_accounts_uid_unique"]
+    account_id [name: "financial_accounts_account_id_foreign"]
+    bank_id [name: "financial_accounts_bank_id_foreign"]
+  }
+}
+Ref: "chart_of_accounts"."id" < "financial_accounts"."account_id"
+Ref: "banks"."id" < "financial_accounts"."bank_id"
+Ref: "branches"."id" < "financial_accounts"."branch_id"
+
+Table "bank_statements" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "financial_account_id" bigint [not null]
+  "statement_date" date [not null]
+  "start_date" date
+  "end_date" date
+  "opening_balance" decimal(24,2) [not null, default: '0.00']
+  "closing_balance" decimal(24,2) [not null, default: '0.00']
+  "status" bank_statement_status_enum [not null, default: 'imported']
+  "imported_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    financial_account_id [name: "bank_statements_financial_account_id_foreign"]
+  }
+}
+Ref: "financial_accounts"."id" < "bank_statements"."financial_account_id"
+Ref: "users"."id" < "bank_statements"."imported_by"
+
+Table "bank_statement_lines" {
+  "id" bigint [pk, not null, increment]
+  "bank_statement_id" bigint [not null]
+  "transaction_date" date [not null]
+  "description" varchar(255)
+  "reference" varchar(255)
+  "debit" decimal(24,2) [not null, default: '0.00', note: 'money out of the bank account']
+  "credit" decimal(24,2) [not null, default: '0.00', note: 'money into the bank account']
+  "balance" decimal(24,2)
+  "is_reconciled" tinyint(1) [not null, default: '0']
+  "bank_reconciliation_id" bigint
+  "matched_journal_entry_line_id" bigint [note: 'the GL line this statement line was matched to']
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    bank_statement_id [name: "bank_statement_lines_bank_statement_id_foreign"]
+    bank_reconciliation_id [name: "bank_statement_lines_bank_reconciliation_id_foreign"]
+    matched_journal_entry_line_id [name: "bank_statement_lines_matched_jel_id_foreign"]
+  }
+}
+Ref: "bank_statements"."id" < "bank_statement_lines"."bank_statement_id" [delete: cascade]
+Ref: "bank_reconciliations"."id" < "bank_statement_lines"."bank_reconciliation_id"
+Ref: "journal_entry_lines"."id" < "bank_statement_lines"."matched_journal_entry_line_id"
+
+Table "bank_reconciliations" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "financial_account_id" bigint [not null]
+  "accounting_period_id" bigint
+  "bank_statement_id" bigint
+  "reconciliation_date" date [not null]
+  "statement_ending_balance" decimal(24,2) [not null, default: '0.00']
+  "book_ending_balance" decimal(24,2) [not null, default: '0.00']
+  "difference" decimal(24,2) [not null, default: '0.00', note: 'must be 0 to complete']
+  "status" reconciliation_status_enum [not null, default: 'in_progress']
+  "note" varchar(255)
+  "reconciled_by" bigint
+  "reconciled_at" timestamp
+  "created_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    financial_account_id [name: "bank_reconciliations_financial_account_id_foreign"]
+    accounting_period_id [name: "bank_reconciliations_accounting_period_id_foreign"]
+    bank_statement_id [name: "bank_reconciliations_bank_statement_id_foreign"]
+  }
+}
+Ref: "financial_accounts"."id" < "bank_reconciliations"."financial_account_id"
+Ref: "accounting_periods"."id" < "bank_reconciliations"."accounting_period_id"
+Ref: "bank_statements"."id" < "bank_reconciliations"."bank_statement_id"
+Ref: "users"."id" < "bank_reconciliations"."created_by"
+
+Table "bank_reconciliation_lines" {
+  "id" bigint [pk, not null, increment]
+  "bank_reconciliation_id" bigint [not null]
+  "bank_statement_line_id" bigint [note: 'the statement side of the match']
+  "journal_entry_line_id" bigint [note: 'the book side of the match']
+  "is_matched" tinyint(1) [not null, default: '0']
+  "note" varchar(255)
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    bank_reconciliation_id [name: "bank_reconciliation_lines_reconciliation_id_foreign"]
+    bank_statement_line_id [name: "bank_reconciliation_lines_statement_line_id_foreign"]
+    journal_entry_line_id [name: "bank_reconciliation_lines_jel_id_foreign"]
+  }
+}
+Ref: "bank_reconciliations"."id" < "bank_reconciliation_lines"."bank_reconciliation_id" [delete: cascade]
+Ref: "bank_statement_lines"."id" < "bank_reconciliation_lines"."bank_statement_line_id"
+Ref: "journal_entry_lines"."id" < "bank_reconciliation_lines"."journal_entry_line_id"
+
+// ---- 9. Payments & allocations ---------------------------------------------
+// Settles bills / expenses (money out) and records general receipts (money in).
+// Complements the existing `transactions` table, which stays the record of
+// customer receipts against project-deal `invoices`.
+Table "payments" {
+  "id" bigint [pk, not null, increment]
+  "uid" char(36) [not null]
+  "payment_number" varchar(50) [not null]
+  "payment_flow" payment_flow_enum [not null, note: 'received (in) or paid (out)']
+  "payment_date" date [not null]
+  "financial_account_id" bigint [not null, note: 'bank / cash account used']
+  "partner_type" varchar(255) [note: 'Customer or Vendor']
+  "partner_id" bigint
+  "amount" decimal(24,2) [not null, default: '0.00']
+  "payment_method" payment_method_enum [not null, default: 'bank_transfer']
+  "reference" varchar(255)
+  "note" varchar(255)
+  "status" payment_status_enum [not null, default: 'draft']
+  "accounting_period_id" bigint
+  "journal_entry_id" bigint
+  "created_by" bigint
+  "created_at" timestamp
+  "updated_at" timestamp
+  "deleted_at" timestamp
+
+  Indexes {
+    payment_number [unique, name: "payments_payment_number_unique"]
+    uid [unique, name: "payments_uid_unique"]
+    financial_account_id [name: "payments_financial_account_id_foreign"]
+    journal_entry_id [name: "payments_journal_entry_id_foreign"]
+    (partner_type, partner_id) [name: "payments_partner_index"]
+  }
+}
+Ref: "financial_accounts"."id" < "payments"."financial_account_id"
+Ref: "accounting_periods"."id" < "payments"."accounting_period_id"
+Ref: "journal_entries"."id" < "payments"."journal_entry_id"
+Ref: "users"."id" < "payments"."created_by"
+
+Table "payment_allocations" {
+  "id" bigint [pk, not null, increment]
+  "payment_id" bigint [not null]
+  "allocatable_type" varchar(255) [not null, note: 'polymorphic target: Bill, Invoice, Expense']
+  "allocatable_id" bigint [not null]
+  "amount" decimal(24,2) [not null, default: '0.00']
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    payment_id [name: "payment_allocations_payment_id_foreign"]
+    (allocatable_type, allocatable_id) [name: "payment_allocations_allocatable_index"]
+  }
+}
+Ref: "payments"."id" < "payment_allocations"."payment_id" [delete: cascade]

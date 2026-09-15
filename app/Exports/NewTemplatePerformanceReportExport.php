@@ -5,9 +5,9 @@ namespace App\Exports;
 use App\Services\ExportImportService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromView;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
@@ -15,8 +15,10 @@ use Modules\Hrd\Repository\EmployeeRepository;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, WithEvents, ShouldQueue
+class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithEvents
 {
     use Exportable;
 
@@ -28,7 +30,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
 
     protected $filepath;
 
-    public function __construct(string $startDate = '', string $endDate = '', int $userId, string $filepath)
+    public function __construct(string $startDate, string $endDate, int $userId, string $filepath)
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
@@ -37,7 +39,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
     }
 
     /**
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function view(): View
     {
@@ -51,20 +53,21 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
             select: 'id,employee_point_id,project_id,total_point,additional_point,calculated_prorate_point,prorate_point,original_point',
             relation: [
                 'project' => function ($queryProject) {
-                    $queryProject->selectRaw('id,name,project_date')
+                    $queryProject->selectRaw('id,name,project_date,project_class_id')
                         ->with([
                             'personInCharges:id,project_id,pic_id',
                             'personInCharges.employee:id,name',
                             'entertainmentTaskSong.song:id,name',
-                            'entertainmentTaskSong.employee:id,name,position_id',
+                            'entertainmentTaskSong.employee:id,name,position_id,employee_id',
                             'entertainmentTaskSong.employee.position:id,name',
                             'feedbacks:id,project_id,pic_id,feedback',
-                            'feedbacks.pic:id,nickname'
+                            'feedbacks.pic:id,nickname',
+                            'projectClass:id,name',
                         ]);
                 },
                 'details:id,point_id,task_id',
                 'employeePoint:id,type,employee_id',
-                'employeePoint.employee:id,name,position_id',
+                'employeePoint.employee:id,name,position_id,employee_id',
                 'employeePoint.employee.position:id,name',
                 'details.productionTask:id,name',
                 'details.entertainmentTask:id,project_song_list_id',
@@ -106,10 +109,11 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
                             'total_point' => 0,
                             'project_name' => $item->first()->project->name,
                             'employee_name' => $item->first()->employee->name,
+                            'employee_id' => $item->first()->employee->employee_id,
                             'pics' => implode(',', $pics),
                             'position' => $item->first()->employee->position ? $item->first()->employee->position->name : '-',
                             'feedbacks' => $item->first()->project->feedbacks->map(function ($feedback) {
-                                return $feedback->pic->nickname . ': ' . $feedback->feedback;
+                                return $feedback->pic->nickname.': '.$feedback->feedback;
                             }),
                         ];
                     })->toArray();
@@ -126,10 +130,12 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
                 'total_point' => $project->total_point,
                 'project_name' => $project->project->name,
                 'employee_name' => $project->employeePoint->employee->name,
+                'employee_id' => $project->employeePoint->employee->employee_id,
+                'project_class' => $project->project->projectClass?->name ?? '-',
                 'pics' => implode(',', $pics),
                 'position' => $project->employeePoint->employee->position ? $project->employeePoint->employee->position->name : '-',
                 'feedbacks' => $project->project->feedbacks->map(function ($feedback) {
-                    return $feedback->pic->nickname . ': ' . $feedback->feedback;
+                    return $feedback->pic->nickname.': '.$feedback->feedback;
                 }),
             ];
         }
@@ -143,56 +149,21 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
             }
         }
 
-        logging('output', $entertainmentList);
-        logging('project output', $output);
-
-        return view('hrd::new-export-performance-report', ['points' => $output]);
+        return view('hrd::new-export-performance-report', [
+            'points' => $output,
+            'startDate' => $this->startDate,
+            'endDate' => $this->endDate,
+        ]);
     }
 
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                // freeze first column
-                $event->sheet->getDelegate()->freezePane('C1');
-
-                // set filter
-                $event->sheet->getDelegate()->setAutoFilter('A1:J1');
-
-                // set borders
-                $lastRow = $event->sheet->getDelegate()->getHighestRow();
-                $event->sheet->getDelegate()->getStyle("A1:J{$lastRow}")->applyFromArray([
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000'],
-                        ],
-                    ],
-                ]);
-
-                // set header to bold
-                $event->sheet->getDelegate()->getStyle('A1:J2')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                    ],
-                ]);
-
-                // set column A vertical alignment to center
-                $event->sheet->getDelegate()->getStyle("A1:B{$lastRow}")->applyFromArray([
-                    'alignment' => [
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                ]);
-
-                // set column J vertical alignment to center
-                $event->sheet->getDelegate()->getStyle("J1:J{$lastRow}")->applyFromArray([
-                    'alignment' => [
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                ]);
+                $this->applySheetStyling($event->sheet->getDelegate());
 
                 // notify user
-                (new \App\Services\ExportImportService)->handleSuccessProcessing(payload: [
+                (new ExportImportService)->handleSuccessProcessing(payload: [
                     'description' => 'Your performance report file is ready. Please check your inbox to download the file.',
                     'message' => '<p>Click <a href="'.$this->filepath.'" target="__blank">here</a> to download your performance report</p>',
                     'area' => 'finance',
@@ -200,6 +171,84 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldAutoSize, Wi
                 ]);
             },
         ];
+    }
+
+    /**
+     * Style the rendered sheet for readability: a title banner (row 1), a coloured header
+     * (row 2), bordered and zebra-striped data (row 3+), wrapped long-text columns, centered
+     * numeric point columns, fixed column widths, a frozen header and an auto-filter.
+     */
+    protected function applySheetStyling(Worksheet $sheet): void
+    {
+        $lastColumn = 'M';
+        $headerRow = 2;
+        $firstDataRow = 3;
+        $lastRow = $sheet->getHighestRow();
+
+        // ---- Title banner (row 1) ----
+        $sheet->mergeCells("A1:{$lastColumn}1");
+        $sheet->getRowDimension(1)->setRowHeight(30);
+        $sheet->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F3864']],
+        ]);
+
+        // ---- Header row (row 2) ----
+        $sheet->getRowDimension($headerRow)->setRowHeight(26);
+        $sheet->getStyle("A{$headerRow}:{$lastColumn}{$headerRow}")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2E5496']],
+        ]);
+
+        // ---- Borders across the whole table ----
+        $sheet->getStyle("A1:{$lastColumn}{$lastRow}")->applyFromArray([
+            'borders' => [
+                'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'B7C0CE']],
+            ],
+        ]);
+
+        // ---- Data area (row 3+) ----
+        if ($lastRow >= $firstDataRow) {
+            $sheet->getStyle("A{$firstDataRow}:{$lastColumn}{$lastRow}")
+                ->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            // No + the task-count/point columns (I..L) read best centered
+            $sheet->getStyle("A{$firstDataRow}:A{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("I{$firstDataRow}:L{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("I{$firstDataRow}:L{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER);
+
+            // long-text columns wrap instead of overflowing (H = tasks, M = feedback)
+            $sheet->getStyle("H{$firstDataRow}:H{$lastRow}")->getAlignment()->setWrapText(true);
+            $sheet->getStyle("M{$firstDataRow}:M{$lastRow}")->getAlignment()->setWrapText(true);
+
+            // zebra striping
+            for ($row = $firstDataRow; $row <= $lastRow; $row++) {
+                if (($row - $firstDataRow) % 2 === 1) {
+                    $sheet->getStyle("A{$row}:{$lastColumn}{$row}")->applyFromArray([
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F5FA']],
+                    ]);
+                }
+            }
+        }
+
+        // ---- Column widths (autosize is off; text columns need room to wrap) ----
+        $widths = [
+            'A' => 6, 'B' => 28, 'C' => 16, 'D' => 20, 'E' => 14, 'F' => 24,
+            'G' => 18, 'H' => 46, 'I' => 12, 'J' => 11, 'K' => 13, 'L' => 11, 'M' => 34,
+        ];
+        foreach ($widths as $column => $width) {
+            $sheet->getColumnDimension($column)->setAutoSize(false)->setWidth($width);
+        }
+
+        // ---- Freeze the title + header, filter on the header ----
+        $sheet->freezePane("A{$firstDataRow}");
+        $sheet->setAutoFilter("A{$headerRow}:{$lastColumn}{$headerRow}");
     }
 
     public function failed(\Throwable $exception)

@@ -2,6 +2,8 @@
 
 namespace Modules\Company\Services;
 
+use App\Data\Company\ProjectClass\UpdateStatusData;
+use Modules\Company\Models\ProjectClass;
 use Modules\Company\Repository\ProjectClassRepository;
 
 class ProjectClassService
@@ -35,7 +37,7 @@ class ProjectClassService
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
-            $select = 'id as uid,name,maximal_point,color,base_point,point_2_team,point_3_team,point_4_team,point_5_team';
+            $select = 'id as uid,name,color,reward,pm_reward,vj_reward,is_active as status';
 
             $paginated = $this->repo->pagination(
                 $select,
@@ -44,14 +46,6 @@ class ProjectClassService
                 $itemsPerPage,
                 $page
             );
-
-            $paginated = $paginated->map(function ($item) {
-                $item['point'] = $item->maximal_point;
-
-                $item['maximal_point'] = $item->maximal_point.' '.__('global.point');
-
-                return $item;
-            });
 
             $totalData = $this->repo->list('id', $where)->count();
 
@@ -70,7 +64,7 @@ class ProjectClassService
 
     public function getAll()
     {
-        $data = $this->repo->list('id,name,maximal_point');
+        $data = $this->repo->list('id,name,maximal_point', 'is_active = 1');
 
         return generalResponse('success', false, $data->toArray());
     }
@@ -104,11 +98,21 @@ class ProjectClassService
     public function store(array $data): array
     {
         try {
-            $this->repo->store($data);
+            // maximal_point is a legacy, non-null column that the Create request no longer
+            // collects (the module uses `reward` now), so default it to 0.
+            $data['maximal_point'] = $data['maximal_point'] ?? 0;
+
+            // pm_reward / vj_reward are optional on the request, so default them to 0 to keep an
+            // explicit PM/VJ pot on every class.
+            $data['pm_reward'] = $data['pm_reward'] ?? 0;
+            $data['vj_reward'] = $data['vj_reward'] ?? 0;
+
+            $created = $this->repo->store($data);
 
             return generalResponse(
                 __('global.projectClassCreated'),
                 false,
+                $this->formatClass($created),
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -126,13 +130,40 @@ class ProjectClassService
         try {
             $this->repo->update($data, $id, $where);
 
+            // Return the saved class (incl. reward / pm_reward / vj_reward) so the management
+            // interface can reflect the persisted values without a second request.
+            $fetchWhere = ! empty($where) ? $where : "id = {$id}";
+            $updated = $this->repo->list(
+                'id,name,color,reward,pm_reward,vj_reward,is_active',
+                $fetchWhere
+            )->first();
+
             return generalResponse(
                 __('global.projectClassUpdated'),
                 false,
+                $updated ? $this->formatClass($updated) : [],
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Shape a project class for the management interface (matches the list columns).
+     *
+     * @return array<string, mixed>
+     */
+    protected function formatClass(ProjectClass $class): array
+    {
+        return [
+            'uid' => $class->id,
+            'name' => $class->name,
+            'color' => $class->color,
+            'reward' => $class->reward,
+            'pm_reward' => $class->pm_reward,
+            'vj_reward' => $class->vj_reward,
+            'status' => $class->is_active,
+        ];
     }
 
     /**
@@ -164,8 +195,6 @@ class ProjectClassService
             foreach ($ids as $id) {
                 $relation = $this->repo->show($id, 'id', ['project:id,project_class_id']);
 
-                logging('relation', $relation->toArray());
-
                 if ($relation->project) {
                     return generalResponse(
                         __('global.failedDeleteProjectClassBcsRelation'),
@@ -181,6 +210,21 @@ class ProjectClassService
             return generalResponse(
                 __('global.successDeleteProjectClass'),
                 false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function updateStatus(UpdateStatusData $payload, int $projectClassId): array
+    {
+        try {
+            $this->repo->update([
+                'is_active' => $payload->status,
+            ], $projectClassId);
+
+            return generalResponse(
+                message: 'Success update project class status'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

@@ -4,19 +4,17 @@ namespace Modules\Production\Http\Requests\Project;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class AssignPic extends FormRequest
+class SetLeadPic extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
+     *
+     * @return array<string, string>
      */
     public function rules(): array
     {
         return [
-            'pics' => 'required|array',
-            'pics.*' => 'required|string',
-            // Optional: employee uid of the PM to flag as Lead (largest share of the PM reward
-            // pot). When omitted, no PIC is flagged and the Lead falls back to the earliest one.
-            'lead' => 'nullable|string',
+            'employee_uid' => 'required|string',
         ];
     }
 

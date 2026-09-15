@@ -17,6 +17,7 @@ use Modules\Production\Http\Requests\Incharge\AssignEntertainmentRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommWidget;
 use Modules\Production\Http\Requests\Project\AssignPic;
+use Modules\Production\Http\Requests\Project\SetLeadPic;
 use Modules\Production\Http\Requests\Project\AssignVj;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
@@ -647,6 +648,11 @@ class ProjectController extends Controller
         return $this->service->assignPic($projectUid, $request->validated());
     }
 
+    public function setLeadPic(SetLeadPic $request, string $projectUid)
+    {
+        return apiResponse($this->service->setLeadPic($projectUid, $request->validated()));
+    }
+
     public function subtitutePic(SubtitutePic $request, string $projectUid)
     {
         return apiResponse($this->service->subtitutePic($projectUid, $request->validated()));
@@ -1232,6 +1238,11 @@ class ProjectController extends Controller
         return apiResponse($this->projectDealService->registerOnLead($projectDealUid));
     }
 
+    public function getProjectCostEstimation(string $projectUid): JsonResponse
+    {
+        return apiResponse($this->service->getProjectCostEstimation($projectUid));
+    }
+  
     /**
      * Revert a project task from WaitingApproval status back to WaitingDistribute.
      *

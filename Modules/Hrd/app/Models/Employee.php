@@ -199,7 +199,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output
+            get: fn() => $output
         );
     }
 
@@ -217,7 +217,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn () => (float) $out
+            get: fn() => (float) $out
         );
     }
 
@@ -235,7 +235,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -253,7 +253,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -271,7 +271,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -289,7 +289,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -305,7 +305,7 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -325,7 +325,7 @@ class Employee extends Model
         }
 
         return new Attribute(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -345,7 +345,7 @@ class Employee extends Model
         }
 
         return new Attribute(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -424,6 +424,15 @@ class Employee extends Model
         return $this->hasMany(EmployeePoint::class, 'employee_id');
     }
 
+    /**
+     * Actually it will only one-on-one. This is new code. Keep points() relation to avoid
+     * any issues on running application
+     */
+    public function singlePoint(): HasOne
+    {
+        return $this->hasOne(EmployeePoint::class, 'employee_id');
+    }
+
     public function songTasks(): HasMany
     {
         return $this->hasMany(EntertainmentTaskSong::class, 'employee_id');
@@ -454,37 +463,37 @@ class Employee extends Model
                 $village = Village::select('name')
                     ->find($this->village_id);
 
-                $out .= ', '.$village->name;
+                $out .= ', ' . $village->name;
             }
 
             if ($this->district_id) {
                 $district = District::select('name')
                     ->find($this->district_id);
 
-                $out .= ', '.$district->name;
+                $out .= ', ' . $district->name;
             }
 
             if ($this->city_id) {
                 $city = City::select('name')
                     ->find($this->city_id);
 
-                $out .= ', '.$city->name;
+                $out .= ', ' . $city->name;
             }
 
             if ($this->province_id) {
                 $province = \KodePandai\Indonesia\Models\Province::select('name')
                     ->find($this->province_id);
 
-                $out .= ', '.$province->name;
+                $out .= ', ' . $province->name;
             }
 
             if ($this->postal_code) {
-                $out .= ' '.$this->postal_code;
+                $out .= ' ' . $this->postal_code;
             }
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -496,51 +505,51 @@ class Employee extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out
+            get: fn() => $out
         );
     }
 
     public function idNumberPhoto(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => ($value) ? asset('storage/employees/'.$value) : '',
+            get: fn(?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
         );
     }
 
     public function bankDetail(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => ($value) ? json_decode($value, true) : [],
-            set: fn ($value) => $value ? json_encode($value) : null
+            get: fn($value) => ($value) ? json_decode($value, true) : [],
+            set: fn($value) => $value ? json_encode($value) : null
         );
     }
 
     public function relationContact(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => ($value) ? json_decode($value, true) : [],
-            set: fn ($value) => $value ? json_encode($value) : null
+            get: fn($value) => ($value) ? json_decode($value, true) : [],
+            set: fn($value) => $value ? json_encode($value) : null
         );
     }
 
     public function npwpPhoto(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => ($value) ? asset('storage/employees/'.$value) : '',
+            get: fn(?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
         );
     }
 
     public function bpjsPhoto(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => ($value) ? asset('storage/employees/'.$value) : '',
+            get: fn(?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
         );
     }
 
     public function kkPhoto(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => ($value) ? asset('storage/employees/'.$value) : '',
+            get: fn(?string $value) => ($value) ? asset('storage/employees/' . $value) : '',
         );
     }
 

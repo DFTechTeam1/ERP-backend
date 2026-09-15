@@ -7,7 +7,9 @@ use App\Actions\CreateQuotation;
 use App\Actions\DefineTaskAction;
 use App\Actions\GenerateQuotationNumber;
 use App\Actions\Hrd\PointRecord;
+use App\Actions\Hrd\PointRecordBasedOnReward;
 use App\Actions\PartialTaskPermissionCheck;
+use App\Actions\Production\ProjectActivityRecord;
 use App\Actions\Production\SummarizeTaskTimeline;
 use App\Actions\Project\DetailCache;
 use App\Actions\Project\DetailProject;
@@ -18,9 +20,12 @@ use App\Actions\Project\Entertainment\SwitchSongWorker;
 use App\Actions\Project\FormatBoards;
 use App\Actions\Project\FormatTaskPermission;
 use App\Actions\Project\SaveTaskState;
+use App\Data\Production\Cost\EmployeeRewardListData;
+use App\Data\Production\CostEstimationListData;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
 use App\Enums\Production\Entertainment\TaskSongLogType;
+use App\Enums\Production\ProjectActivityItem;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskPicStatus;
@@ -85,6 +90,7 @@ use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultImageRepository;
 use Modules\Production\Repository\EntertainmentTaskSongResultRepository;
 use Modules\Production\Repository\EntertainmentTaskSongReviseRepository;
+use Modules\Production\Repository\ProjectActivityRepository;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectEquipmentRepository;
 use Modules\Production\Repository\ProjectLeadRepository;
@@ -206,6 +212,8 @@ class ProjectService
 
     private CustomerRepository $customerRepo;
 
+    private ProjectActivityRepository $projectActivityRepo;
+
     /**
      * Construction Data
      */
@@ -257,8 +265,11 @@ class ProjectService
         \App\Services\NasFolderCreationService $nasFolderCreationService,
         ProjectTaskDeadlineRepository $projectTaskDeadlineRepo,
         ProjectLeadRepository $projectLeadRepo,
-        CustomerRepository $customerRepo
+        CustomerRepository $customerRepo,
+        ProjectActivityRepository $projectActivityRepo
     ) {
+        $this->projectActivityRepo = $projectActivityRepo;
+
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
 
         $this->entertainmentTaskSongResultImageRepo = $entertainmentTaskSongResultImageRepo;
@@ -1091,6 +1102,7 @@ class ProjectService
     {
         $data = $this->projectClassRepo->list(
             select: 'id,name',
+            where: "is_active = 1"
         );
 
         $out = [];
@@ -2378,6 +2390,10 @@ class ProjectService
                 collect($data)->except(['date'])->toArray(),
                 $projectUid
             );
+
+            if ($isClassChanged) {
+                ProjectActivityRecord::run(Auth::id(), ProjectActivityItem::ChangeProjectClass, $projectUid, $currentClassName, $nextClassName);
+            }
 
             // manually fire the event
             Event::dispatch('eloquent.updated: ' . get_class(new \Modules\Production\Models\Project), $update);
@@ -6041,7 +6057,7 @@ class ProjectService
 
     public function getProjectStatusses(string $projectUid): array
     {
-        $project = $this->repo->show($projectUid, 'status');
+        $project = $this->repo->show(uid: $projectUid, select: 'status');
 
         $data = \App\Enums\Production\ProjectStatus::cases();
 
@@ -6092,6 +6108,11 @@ class ProjectService
                     }
                 }
             }
+
+            $fromStatus = ProjectStatus::tryFrom((int) ($data['base_status'] ?? 0))?->label() ?? '-';
+            $toStatus = ProjectStatus::tryFrom((int) $data['status'])?->label() ?? '-';
+
+            ProjectActivityRecord::run(Auth::id(), ProjectActivityItem::ChangeStatus, $projectUid, $fromStatus, $toStatus);
 
             $project = $this->repo->show($projectUid, 'id,status,uid');
 
@@ -6591,50 +6612,65 @@ class ProjectService
             ];
             if (! empty($data['points'])) {
                 // Separate special and regular employees
-                $specialEmployees = [];
-                $regularEmployees = [];
+                // $specialEmployees = [];
+                // $regularEmployees = [];
+                //
+                // foreach ($data['points'] as $point) {
+                //     if (isset($point['is_special_employee']) && $point['is_special_employee'] == 1) {
+                //         $specialEmployees[] = $point;
+                //     } else {
+                //         $regularEmployees[] = $point;
+                //     }
+                // }
+                //
+                // // Handle special employees (with accumulation)
+                // if (! empty($specialEmployees)) {
+                //     $recordPoint = PointRecord::run(
+                //         ['points' => $specialEmployees],
+                //         $projectUid,
+                //         'production',
+                //         false
+                //     );
+                //
+                //     if (! $recordPoint) {
+                //         return errorResponse('Failed to record points');
+                //     }
+                // }
+                //
+                // // Handle regular employees (normal flow)
+                // if (! empty($regularEmployees)) {
+                //     $recordPoint = PointRecord::run(
+                //         ['points' => $regularEmployees],
+                //         $projectUid,
+                //         'production'
+                //     );
+                //
+                //     if (! $recordPoint) {
+                //         return errorResponse('Failed to record points');
+                //     }
+                // }
 
-                foreach ($data['points'] as $point) {
-                    if (isset($point['is_special_employee']) && $point['is_special_employee'] == 1) {
-                        $specialEmployees[] = $point;
-                    } else {
-                        $regularEmployees[] = $point;
-                    }
-                }
-
-                // Handle special employees (with accumulation)
-                if (! empty($specialEmployees)) {
-                    $recordPoint = PointRecord::run(
-                        ['points' => $specialEmployees],
-                        $projectUid,
-                        'production',
-                        false
-                    );
-
-                    if (! $recordPoint) {
-                        return errorResponse('Failed to record points');
-                    }
-                }
-
-                // Handle regular employees (normal flow)
-                if (! empty($regularEmployees)) {
-                    $recordPoint = PointRecord::run(
-                        ['points' => $regularEmployees],
-                        $projectUid,
-                        'production'
-                    );
-
-                    if (! $recordPoint) {
-                        return errorResponse('Failed to record points');
-                    }
-                }
-
-                // record project feedback
+                // Record this PM's feedback + the additional points they submitted for their own
+                // team and the shared 3D modeller team. A project can have more than one PM, and
+                // each PM completes the project separately.
                 $isAllRecorded = \App\Actions\Production\RecordProjectFeedback::run(payload: $data, projectUid: $projectUid, user: $user);
+
+                // The reward pot is fixed per project and split across the WHOLE production team by
+                // point-share, so the point/reward chain is recorded exactly once - when the LAST
+                // PM completes (all PICs have submitted). At that point we merge the additional
+                // points every PM submitted (a shared modeller can be rewarded by more than one PM,
+                // so their additional points are summed) and record a single time.
                 if ($isAllRecorded) {
+                    PointRecordBasedOnReward::run($projectId, $this->mergeCompletionPoints($projectId));
+
+                    // Record the fixed PM and VJ rewards (split PM pot + per-VJ amount, per class).
+                    \App\Actions\Hrd\RecordPmVjReward::run($projectId);
+
                     $payloadProject['status'] = \App\Enums\Production\ProjectStatus::Completed->value;
                 }
             }
+
+            // dd('check');
 
             $this->repo->update($payloadProject, $projectUid);
 
@@ -6672,6 +6708,45 @@ class ProjectService
 
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Merge the additional points every PM submitted for a project into a single points list.
+     *
+     * Each PM completes separately and rewards their own team plus the shared 3D modeller team,
+     * so a modeller can receive additional points from more than one PM. Additional points are
+     * summed per employee uid across every project_feedback row. The point/reward calculation
+     * itself derives base points from the project's task histories, so this list only needs to
+     * carry the merged additional_point per employee.
+     *
+     * @return array<int, array{uid: string, additional_point: int}>
+     */
+    protected function mergeCompletionPoints(int $projectId): array
+    {
+        $feedbacks = (new \Modules\Production\Repository\ProjectFeedbackRepository)->list(
+            select: 'id,points',
+            where: "project_id = {$projectId}"
+        );
+
+        $merged = [];
+        foreach ($feedbacks as $feedback) {
+            foreach (($feedback->points ?? []) as $point) {
+                if (empty($point['uid'])) {
+                    continue;
+                }
+
+                $uid = $point['uid'];
+                $merged[$uid] = ($merged[$uid] ?? 0) + (int) ($point['additional_point'] ?? 0);
+            }
+        }
+
+        return collect($merged)
+            ->map(fn (int $additionalPoint, string $uid): array => [
+                'uid' => $uid,
+                'additional_point' => $additionalPoint,
+            ])
+            ->values()
+            ->toArray();
     }
 
     public function assignVJ(array $data, string $projectUid): array
@@ -7047,15 +7122,74 @@ class ProjectService
     }
 
     /**
+     * Designate one of a project's PMs as the Lead. The Lead takes the largest share of the PM
+     * reward pot (see RecordPmVjReward), so exactly one PIC carries is_lead per project - any
+     * previous Lead is demoted.
+     *
+     * @param  array{employee_uid: string}  $data
+     */
+    public function setLeadPic(string $projectUid, array $data): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
+            $employeeId = getIdFromUid($data['employee_uid'], new \Modules\Hrd\Models\Employee);
+
+            $pic = $this->projectPicRepository->show(
+                uid: '',
+                select: 'id,project_id,pic_id',
+                where: "project_id = {$projectId} and pic_id = {$employeeId}"
+            );
+
+            if (! $pic) {
+                return generalResponse(
+                    __('global.employeeIsNotPicOfThisProject'),
+                    true,
+                    [],
+                    400,
+                );
+            }
+
+            // Only one Lead per project: demote everyone, then promote the chosen PM.
+            $this->projectPicRepository->update(['is_lead' => false], '', "project_id = {$projectId}");
+            $this->projectPicRepository->update(['is_lead' => true], '', "project_id = {$projectId} and pic_id = {$employeeId}");
+
+            DB::commit();
+
+            // Invalidate the cached project detail so the refreshed main/support PM info is
+            // rebuilt on the next fetch (see DetailProject/DetailCache which key on this id).
+            clearCache('detailProject'.$projectId);
+
+            return generalResponse(
+                __('global.successSetLeadPic'),
+                false,
+            );
+        } catch (\Throwable $error) {
+            DB::rollBack();
+
+            return errorResponse($error);
+        }
+    }
+
+    /**
      * Main function to handle assignation PIC to selected project
      *
      * @param  array<string, array<string>>  $data
      */
     protected function handleAssignPicLogic(array $data, string $projectUid, int $projectId): void
     {
+        // The Lead PM takes the largest share of the PM reward pot. The frontend may nominate one
+        // via $data['lead'] (an employee uid); if none is nominated, no PIC is flagged and the
+        // reward calculation falls back to the earliest-assigned PIC as Lead.
+        $leadUid = $data['lead'] ?? null;
+
         foreach ($data['pics'] as $pic) {
             $employeeId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee);
-            $this->projectPicRepository->store(['pic_id' => $employeeId, 'project_id' => $projectId]);
+            $this->projectPicRepository->store([
+                'pic_id' => $employeeId,
+                'project_id' => $projectId,
+                'is_lead' => $leadUid !== null && $pic === $leadUid,
+            ]);
         }
 
         \Modules\Production\Jobs\NewProjectJob::dispatch($projectUid)->afterCommit();
@@ -10100,6 +10234,56 @@ class ProjectService
         }
     }
 
+    public function getProjectCostEstimation(string $projectUid): array
+    {
+        try {
+            $project = $this->repo->show(
+                uid: $projectUid,
+                select: 'id,name,venue,project_date,client_portal,status,project_deal_id',
+                relation: [
+                    'projectDeal:id',
+                    'projectDeal.finalQuotation:id,project_deal_id,fix_price',
+                    'rewards.employee:id,name,avatar'
+                ]
+            );
+
+            $fixPrice = $project?->projectDeal?->finalQuotation?->fix_price ?? 0;
+
+            /** @var array<int, EmployeeRewardListData> */
+            $employeeRewards = [];
+
+            foreach ($project->rewards as $reward) {
+                $employeeRewards[] = new EmployeeRewardListData(
+                    id: $reward->id,
+                    name: $reward->employee->name,
+                    avatar: $reward->employee->avatar,
+                    total_point: $reward->total_point,
+                    total_reward: $reward->total_reward
+                );
+            }
+
+            $output = new CostEstimationListData(
+                project_id: $projectUid,
+                client_portal: $project->client_portal,
+                project_name: $project->name,
+                event_date: date('d F Y', strtotime($project->project_date)),
+                venue: $project->venue,
+                total_employees: 0,
+                meal_allowances: [],
+                transport_allowances: [],
+                project_price: $fixPrice,
+                employee_rewards: $employeeRewards
+            );
+
+            return generalResponse(
+                message: "Success",
+                data: $output->toArray()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+  
     /**
      * Revert a task from WaitingApproval back to WaitingDistribute.
      *
