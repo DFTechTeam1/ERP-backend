@@ -1032,9 +1032,24 @@ class SignatureService
         // Remove null value
         $columns = array_values(array_filter($columns));
 
+        // Relation-based placeholders (e.g. employee_position_name -> position.name) are matched by
+        // their placeholder key and resolved from the related model when the document is generated.
+        $relations = [];
+        foreach ($availableColumns as $placeholder => $item) {
+            if (isset($item['relation']) && in_array($placeholder, $mappingPlaceholders)) {
+                $relationName = explode(':', $item['relation'])[0];
+                $relations[] = [
+                    'from' => $placeholder,
+                    'with' => $item['relation'],
+                    'path' => $relationName.'.'.$item['column'],
+                ];
+            }
+        }
+
         return [
             'columns' => $columns,
             'keys' => $keys,
+            'relations' => $relations,
         ];
     }
 
@@ -1090,7 +1105,8 @@ class SignatureService
                 $employee,
                 $columns,
                 $keys,
-                $this->buildDivisionSigners($document)
+                $this->buildDivisionSigners($document),
+                $columnReplacers['relations']
             );
 
             if ($result === null) {
@@ -1173,7 +1189,7 @@ class SignatureService
 
             foreach ($employees as $employee) {
                 try {
-                    $result = $this->createEmployeeDocument($document, $employee, $columns, $keys, $divisionSigners);
+                    $result = $this->createEmployeeDocument($document, $employee, $columns, $keys, $divisionSigners, $columnReplacers['relations']);
 
                     if ($result === null) {
                         $skipped++;
@@ -1405,9 +1421,10 @@ class SignatureService
         Employee|Collection $employee,
         array $columns,
         array $keys,
-        array $divisionSigners
+        array $divisionSigners,
+        array $relations = []
     ): ?array {
-        return DB::transaction(function () use ($document, $employee, $columns, $keys, $divisionSigners) {
+        return DB::transaction(function () use ($document, $employee, $columns, $keys, $divisionSigners, $relations) {
             // Serialize concurrent generations for this employee. Locking the employee row makes
             // the duplicate check below reliable even when a competing request is mid-flight.
             Employee::query()
@@ -1437,6 +1454,20 @@ class SignatureService
                 $mappingPlaceholderReplacer[] = [
                     'from' => $keys[$key],
                     'value' => $employee->$column,
+                ];
+            }
+
+            // Relation-based placeholders (e.g. employee_position_name -> position.name). The
+            // employee row is loaded with a limited select, so resolve the relation on demand.
+            foreach ($relations as $relation) {
+                $related = Employee::query()
+                    ->whereKey($employee->id)
+                    ->with([$relation['with']])
+                    ->first();
+
+                $mappingPlaceholderReplacer[] = [
+                    'from' => $relation['from'],
+                    'value' => data_get($related, $relation['path']) ?? '',
                 ];
             }
 

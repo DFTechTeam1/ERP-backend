@@ -1096,6 +1096,163 @@ class EmployeeService
     }
 
     /**
+     * Create an employee from the v2 (Greatday-oriented) payload, mirroring the erp-backend-node
+     * POST /api/v2/hrd/employees endpoint. Resolves the reference codes/uids, creates the employee
+     * (with the raw greatday_* attributes), optionally invites them as an ERP user (user + role +
+     * activation email), and optionally registers them on Greatday. All-or-nothing in one transaction.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function createEmployeeV2(array $data): array
+    {
+        DB::beginTransaction();
+        try {
+            // Employment status is referenced by its code.
+            $employmentStatus = $this->employmentStatusRepo->show([
+                'where' => ['code' => $data['employment_status']],
+                'select' => ['id', 'code', 'name'],
+            ]);
+            if (! $employmentStatus) {
+                throw new EmployeeException('Invalid employment status');
+            }
+
+            // Employee number and email must be unique.
+            $exists = Employee::where('employee_id', $data['employee_no'])
+                ->orWhere('email', $data['email'])
+                ->exists();
+            if ($exists) {
+                throw new EmployeeException('Email or Employee No already exists');
+            }
+
+            // Position and supervisor are referenced by uid.
+            $positionId = $this->generalService->getIdFromUid($data['position'], new PositionBackup);
+            if (! $positionId) {
+                throw new EmployeeException('Invalid position');
+            }
+
+            $bossId = $this->generalService->getIdFromUid($data['supervisor'], new Employee);
+            if (! $bossId) {
+                throw new EmployeeException('Invalid supervisor');
+            }
+
+            $name = collect([$data['first_name'], $data['middle_name'] ?? null, $data['last_name'] ?? null])
+                ->filter()
+                ->join(' ');
+
+            $nickname = isset($data['nickname'])
+                ? strtolower(preg_replace('/\s+/', '', $data['nickname']))
+                : null;
+
+            $bankDetail = json_encode([[
+                'account_number' => $data['bank_account_number'],
+                'account_holder_name' => $data['bank_account_holder_name'],
+                'is_active' => true,
+                'bank_name' => $data['bank_name'],
+            ]]);
+
+            $payload = [
+                'employment_status_id' => $employmentStatus->id,
+                'name' => $name,
+                'nickname' => $nickname,
+                'email' => $data['email'],
+                'phone' => str_replace('+', '', $data['mobile_phone']),
+                'id_number' => $data['id_number'],
+                'religion' => Religion::Islam->value,
+                'martial_status' => MartialStatus::Single->value,
+                'address' => $data['address'],
+                'current_address' => $data['address'],
+                'date_of_birth' => Carbon::parse($data['birth_day'])->format('Y-m-d'),
+                'place_of_birth' => $data['birth_place'],
+                'gender' => $data['gender'] === '1' ? Gender::Male->value : Gender::Female->value,
+                'bank_detail' => $bankDetail,
+                'position_id' => $positionId,
+                'boss_id' => $bossId,
+                'level_staff' => 'staff',
+                // employment_status_id holds the FK; status is the employee-type enum (Laravel's
+                // greatday create uses Permanent for a new hire).
+                'status' => Status::Permanent->value,
+                'join_date' => Carbon::parse($data['join_date'])->format('Y-m-d'),
+                'created_by' => auth()->id(),
+                'employee_id' => $data['employee_no'],
+                'user_id' => 0,
+                'is_residence_same' => true,
+                'basic_salary' => 0,
+                'salary_type' => 1,
+                'greatday_nationality' => $data['nationality'],
+                'greatday_job_grade' => $data['job_grade'],
+                'greatday_marital_status' => $data['marital_status'],
+                'greatday_cost_center' => $data['cost_center'],
+                'greatday_employment_status' => $data['employment_status'],
+                'greatday_work_location' => $data['work_location'],
+                'greatday_religion' => $data['religion'],
+                'greatday_timezone' => (string) $data['timezone_id'],
+                'greatday_shift_pattern' => $data['shift_pattern'],
+                'greatday_job_status' => $data['job_status'],
+                'greatday_company' => $data['company_id'],
+                'is_phone_verified' => 0,
+            ];
+
+            if (! empty($data['greatday_employee_id'])) {
+                $payload['greatday_emp_id'] = $data['greatday_employee_id'];
+            }
+
+            $employee = $this->repo->store($payload);
+
+            // Invite to ERP: creates the user, assigns the role, links the employee and queues the
+            // activation email (see UserService::mainServiceStoreUser).
+            if (! empty($data['invite_on_erp'])) {
+                $this->userService->mainServiceStoreUser([
+                    'email' => $data['email'],
+                    'password' => Str::random(10),
+                    'role_id' => $data['role'],
+                    'employee_id' => $employee->uid,
+                    'is_external_user' => 0,
+                ]);
+            }
+
+            if (! empty($data['register_on_greatday'])) {
+                $this->registerEmployeeOnGreatday($employee);
+            }
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.successCreateEmployee'),
+                error: false,
+                data: []
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Register a freshly created employee on Greatday and store the returned Greatday employee id.
+     * Mirrors the node syncEmployeeToGreatday (registerOnGreatday + updateEmployeeGreatdayId).
+     */
+    protected function registerEmployeeOnGreatday(Employee $employee): void
+    {
+        $employee->loadMissing(['position:id,greatday_code', 'user:id,employee_id,username']);
+
+        $response = $this->greatdayService->addEmployee($this->buildGreatdayAddPayload($employee, []));
+        $result = $response->json()[0] ?? null;
+
+        if ($response->failed() || ! ($result['success'] ?? false)) {
+            throw new EmployeeException($result['message'] ?? __('notification.greatdayAddEmployeeFailed'));
+        }
+
+        // The add response carries no empId; re-fetch and resolve it by employee number.
+        $match = collect($this->fetchAllGreatdayEmployees())->firstWhere('empNo', $employee->employee_id);
+
+        if ($match) {
+            $this->repo->update(['greatday_emp_id' => $match['empId']], $employee->uid);
+        }
+    }
+
+    /**
      * Update personal data - basic info
      */
     public function updateBasicInfo(array $payload, string $employeeUid): array

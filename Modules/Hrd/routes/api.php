@@ -37,6 +37,14 @@ Route::get('employees/downloadTemplate', [EmployeeController::class, 'downloadTe
 //     Route::post('employees/{employeeId}/resendVerification', [EmployeeController::class, 'resendVerificationEmail'])->name('employees.resendVerificationEmail');
 // });
 
+// v2 endpoints mirroring the erp-backend-node contract (POST /api/v2/hrd/employees).
+Route::controller(EmployeeController::class)
+    ->middleware(['auth.session'])
+    ->prefix('v2/hrd')
+    ->group(function () {
+        Route::post('employees', 'storeV2')->name('employees.v2.store');
+    });
+
 Route::controller(EmployeeController::class)
     ->middleware(['auth.session'])
     ->group(function () {

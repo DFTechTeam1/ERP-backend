@@ -15,6 +15,7 @@ use Modules\Hrd\Data\Employee\LinkEmployeeData;
 use Modules\Hrd\Data\Resign\ResignData;
 use Modules\Hrd\Http\Requests\Employee\AddAsUser;
 use Modules\Hrd\Http\Requests\Employee\Create;
+use Modules\Hrd\Http\Requests\Employee\CreateEmployeeV2;
 use Modules\Hrd\Http\Requests\Employee\EmergencyContact;
 use Modules\Hrd\Http\Requests\Employee\Family;
 use Modules\Hrd\Http\Requests\Employee\Update;
@@ -227,6 +228,16 @@ class EmployeeController extends Controller
         $data = $request->validated();
 
         return apiResponse($this->employeeService->store($data));
+    }
+
+    /**
+     * Create an employee from the v2 (Greatday-oriented) payload.
+     *
+     * Mirrors the erp-backend-node POST /api/v2/hrd/employees endpoint.
+     */
+    public function storeV2(CreateEmployeeV2 $request)
+    {
+        return apiResponse($this->employeeService->createEmployeeV2($request->validated()));
     }
 
     /**

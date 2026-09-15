@@ -39,6 +39,11 @@ return [
             'column' => 'join_date',
             'key' => 'join_date',
         ],
+        'end_date' => [
+            'model' => Employee::class,
+            'column' => 'end_date',
+            'key' => 'end_date',
+        ],
         'employee_position_name' => [
             'model' => Employee::class,
             'relation' => 'position:id,name',
