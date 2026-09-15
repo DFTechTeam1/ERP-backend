@@ -17,6 +17,7 @@ use Modules\Production\Http\Requests\Incharge\AssignEntertainmentRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommWidget;
 use Modules\Production\Http\Requests\Project\AssignPic;
+use Modules\Production\Http\Requests\Project\SetLeadPic;
 use Modules\Production\Http\Requests\Project\AssignVj;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
@@ -645,6 +646,11 @@ class ProjectController extends Controller
     public function assignPic(AssignPic $request, string $projectUid)
     {
         return $this->service->assignPic($projectUid, $request->validated());
+    }
+
+    public function setLeadPic(SetLeadPic $request, string $projectUid)
+    {
+        return apiResponse($this->service->setLeadPic($projectUid, $request->validated()));
     }
 
     public function subtitutePic(SubtitutePic $request, string $projectUid)

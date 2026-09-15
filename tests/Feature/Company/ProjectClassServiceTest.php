@@ -131,6 +131,36 @@ describe('store', function () {
 
         assertDatabaseHas('project_classes', ['name' => 'Gold Tier', 'maximal_point' => 15]);
     });
+
+    it('persists and returns pm_reward and vj_reward', function () {
+        $response = pcService()->store([
+            'name' => 'Class With Pots',
+            'color' => '#111',
+            'reward' => 1000000,
+            'pm_reward' => 1000000,
+            'vj_reward' => 125000,
+        ]);
+
+        expect($response['error'])->toBeFalse()
+            ->and((float) $response['data']['pm_reward'])->toBe(1000000.0)
+            ->and((float) $response['data']['vj_reward'])->toBe(125000.0);
+
+        assertDatabaseHas('project_classes', [
+            'name' => 'Class With Pots',
+            'pm_reward' => 1000000,
+            'vj_reward' => 125000,
+        ]);
+    });
+
+    it('defaults pm_reward and vj_reward to 0 when omitted', function () {
+        pcService()->store([
+            'name' => 'No Pots',
+            'color' => '#222',
+            'reward' => 50000,
+        ]);
+
+        assertDatabaseHas('project_classes', ['name' => 'No Pots', 'pm_reward' => 0, 'vj_reward' => 0]);
+    });
 });
 
 describe('update', function () {
@@ -152,6 +182,24 @@ describe('update', function () {
 
         expect($response['error'])->toBeFalse();
         assertDatabaseHas('project_classes', ['id' => $class->id, 'name' => 'After']);
+    });
+
+    it('persists and returns updated pm_reward and vj_reward', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Editable', 'reward' => 10, 'pm_reward' => 0, 'vj_reward' => 0]);
+
+        $response = pcService()->update([
+            'name' => 'Editable',
+            'color' => '#333',
+            'reward' => 10,
+            'pm_reward' => 2000000,
+            'vj_reward' => 200000,
+        ], (string) $class->id);
+
+        expect($response['error'])->toBeFalse()
+            ->and((float) $response['data']['pm_reward'])->toBe(2000000.0)
+            ->and((float) $response['data']['vj_reward'])->toBe(200000.0);
+
+        assertDatabaseHas('project_classes', ['id' => $class->id, 'pm_reward' => 2000000, 'vj_reward' => 200000]);
     });
 });
 

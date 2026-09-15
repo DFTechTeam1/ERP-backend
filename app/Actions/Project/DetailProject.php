@@ -3,11 +3,16 @@
 namespace App\Actions\Project;
 
 use App\Actions\DefineDetailProjectPermission;
+use App\Enums\Production\Classification;
+use App\Enums\Production\EventType;
+use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Collection;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Production\Models\Project;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\ProjectRepository;
 
@@ -17,7 +22,7 @@ class DetailProject
 
     public function handle(string $uid, ProjectRepository $repo, EntertainmentTaskSongRepository $entertainmentTaskSongRepo)
     {
-        $projectId = getIdFromUid($uid, new \Modules\Production\Models\Project);
+        $projectId = getIdFromUid($uid, new Project);
         $output = getCache('detailProject'.$projectId);
 
         /**
@@ -59,7 +64,7 @@ class DetailProject
         if (! $output) {
             $data = $repo->show($uid, '*', [
                 'marketing:id,name,employee_id',
-                'personInCharges:id,pic_id,project_id',
+                'personInCharges:id,pic_id,project_id,is_lead',
                 'personInCharges.employee:id,name,employee_id,uid,boss_id',
                 'references:id,project_id,media_path,name,type',
                 'marketings:id,marketing_id,project_id',
@@ -71,19 +76,22 @@ class DetailProject
                 'vjs:id,project_id,employee_id',
                 'vjs.employee:id,nickname',
                 'feedbacks:id,project_id,pic_id,feedback',
-                'feedbacks.pic:id,name,avatar'
+                'feedbacks.pic:id,name,avatar',
             ]);
 
             $progress = FormatProjectProgress::run($data->tasks, $projectId);
 
-            $eventTypes = \App\Enums\Production\EventType::cases();
-            $classes = \App\Enums\Production\Classification::cases();
+            $eventTypes = EventType::cases();
+            $classes = Classification::cases();
 
             // get teams
             $projectTeams = GetProjectTeams::run($data);
             $teams = $projectTeams['teams'];
             $pics = $projectTeams['pics'];
             $picIds = $projectTeams['picUids'];
+
+            // Label each PM as the main (Lead) or a support so the interface can tell them apart.
+            $projectManagers = $this->formatProjectManagers($data->personInCharges);
 
             $marketing = $data->marketing ? $data->marketing->name : '-';
 
@@ -120,7 +128,7 @@ class DetailProject
             }
             $currentTaskStatusses = collect($currentTasks)->pluck('status')->count();
             $completedStatus = collect($currentTasks)->filter(function ($filter) {
-                return $filter['status'] == \App\Enums\Production\TaskStatus::Completed->value;
+                return $filter['status'] == TaskStatus::Completed->value;
             })->values()->count();
             // if ($currentTaskStatusses == $completedStatus) {
             //     $allowedUploadShowreels = true;
@@ -165,6 +173,9 @@ class DetailProject
                 'progress' => $progress,
                 'showreels' => $data->showreels_path,
                 'person_in_charges' => $data->personInCharges,
+                'project_managers' => $projectManagers,
+                'main_pm' => collect($projectManagers)->firstWhere('role', 'main'),
+                'support_pms' => collect($projectManagers)->where('role', 'support')->values()->toArray(),
                 'project_maximal_point' => $data->projectClass->maximal_point,
                 'vjs' => $data->vjs,
                 'permission_list' => DefineDetailProjectPermission::run(),
@@ -179,5 +190,35 @@ class DetailProject
         $output = FormatTaskPermission::run($output, $projectId);
 
         return $output;
+    }
+
+    /**
+     * Label each PM (person in charge) as the main (Lead) or a support. The Lead is the PIC
+     * flagged is_lead; when none is flagged the earliest-assigned PIC is treated as the main
+     * (mirrors the fallback in RecordPmVjReward), so a main PM is always identified.
+     *
+     * @param  Collection|\Illuminate\Database\Eloquent\Collection  $personInCharges
+     * @return array<int, array{uid: ?string, employee_id: mixed, name: ?string, is_lead: bool, role: string}>
+     */
+    protected function formatProjectManagers($personInCharges): array
+    {
+        if ($personInCharges->isEmpty()) {
+            return [];
+        }
+
+        $leadId = optional($personInCharges->firstWhere('is_lead', true))->id
+            ?? $personInCharges->sortBy('id')->first()->id;
+
+        return $personInCharges->map(function ($pic) use ($leadId) {
+            $isLead = $pic->id === $leadId;
+
+            return [
+                'uid' => $pic->employee?->uid,
+                'employee_id' => $pic->employee?->employee_id,
+                'name' => $pic->employee?->name,
+                'is_lead' => $isLead,
+                'role' => $isLead ? 'main' : 'support',
+            ];
+        })->values()->toArray();
     }
 }

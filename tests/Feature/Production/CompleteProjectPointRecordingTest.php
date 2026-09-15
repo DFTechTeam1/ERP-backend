@@ -14,6 +14,7 @@ use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Models\ProjectTaskPicHistory;
+use Modules\Production\Models\ProjectVj;
 use Modules\Production\Services\ProjectService;
 use Spatie\Permission\Models\Role;
 
@@ -156,10 +157,9 @@ describe('completeProject point recording', function () {
         expect((int) $employeePoint->total_point)->toBe($sum)
             ->and((int) $employeePoint->total_point)->toBe(2);
 
-        // (5) reward recorded.
-        // total_reward = base * percentageContribution / 100, where
-        // percentageContribution = ceil(totalTask / point * 100). Here the worker did both of
-        // the project's 2 tasks (totalTask = 2, point = 2) -> 100% -> 50000 * 100 / 100 = 50000.
+        // (5) reward recorded. The pot (project_classes.reward) is fixed per class and split
+        // among the production workers by point-share. A sole production worker takes the whole
+        // pot, so base_reward and total_reward are both 50000.
         assertDatabaseHas('employee_rewards', [
             'employee_id' => $worker->id,
             'project_id' => $project->id,
@@ -224,7 +224,7 @@ describe('completeProject point recording', function () {
         ]);
     });
 
-    it('adds additional_point into the reward and the employee total point', function () {
+    it('folds additional_point into total_point while a sole worker still takes the whole pot', function () {
         $class = ProjectClass::factory()->create(['name' => 'Class B', 'reward' => 50000]);
         $project = Project::factory()->create(['project_class_id' => $class->id]);
 
@@ -239,9 +239,9 @@ describe('completeProject point recording', function () {
             'points' => [['uid' => $worker->uid, 'additional_point' => 3]],
         ], $project->uid);
 
-        // reward is driven by percentageContribution (totalTask=2, point=2 -> 100%), NOT by
-        // additional_point: total_reward = 50000 * 100 / 100 = 50000. additional_point still
-        // flows into total_point (2 + 3 = 5) but no longer into the reward.
+        // additional_point flows into total_point (2 + 3 = 5). The reward is the fixed pot split
+        // by point-share; with a sole production worker that is the whole pot (50000) regardless
+        // of how many points they hold.
         assertDatabaseHas('employee_rewards', [
             'employee_id' => $worker->id,
             'project_id' => $project->id,
@@ -266,34 +266,49 @@ describe('completeProject point recording', function () {
             ->and($projectSum)->toBe(5);
     });
 
-    it('scales the reward by percentage contribution and keeps it a whole number', function () {
-        // base reward deliberately NOT divisible by 100 so the raw base * pct / 100 would be
-        // fractional (33333 * 150 / 100 = 49999.5) - the reward must still be a whole number.
-        $class = ProjectClass::factory()->create(['reward' => 33333]);
+    it('splits the fixed pot between production workers as whole numbers that sum to the pot', function () {
+        // pot NOT divisible evenly by the point-share so the raw nominal is fractional
+        // (10000 / 3 = 3333.33) - each reward must still be a whole number and the event payout
+        // must equal the pot exactly (the last row absorbs the rounding remainder).
+        $class = ProjectClass::factory()->create(['reward' => 10000]);
         $project = Project::factory()->create(['project_class_id' => $class->id]);
 
-        $worker = cpEmployeeWithRole($this->productionRole);
+        $alice = cpEmployeeWithRole($this->productionRole);
+        $bob = cpEmployeeWithRole($this->productionRole);
         $pm = cpEmployeeWithRole($this->pmRole);
 
-        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $worker->id]);
-        cpAssignTasks($project, $worker, 2); // worker does 2 of the project's 3 tasks
-        cpAssignTasks($project, $pm, 1);     // PM does the 3rd (excluded from rewards)
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $alice->id]);
+        cpAssignTasks($project, $alice, 1); // 1 point
+        cpAssignTasks($project, $bob, 2);   // 2 points
+        cpAssignTasks($project, $pm, 4);    // PM excluded from the pot
 
-        actingAs(User::where('employee_id', $worker->id)->firstOrFail());
+        actingAs(User::where('employee_id', $alice->id)->firstOrFail());
 
         cpService()->completeProject([
             'feedback' => 'ok',
             'points' => [
-                ['uid' => $worker->uid, 'additional_point' => 0],
+                ['uid' => $alice->uid, 'additional_point' => 0],
+                ['uid' => $bob->uid, 'additional_point' => 0],
                 ['uid' => $pm->uid, 'additional_point' => 0],
             ],
         ], $project->uid);
 
-        // percentageContribution = ceil(3 / 2 * 100) = 150, reward = round(33333 * 150 / 100) = 50000
-        $reward = EmployeeReward::where('employee_id', $worker->id)->first();
-        expect($reward)->not->toBeNull()
-            ->and((float) $reward->total_reward)->toBe(50000.0)
-            ->and(fmod((float) $reward->total_reward, 1))->toBe(0.0); // no decimal part
+        // total production points = 3; alice = round(1/3 * 10000) = 3333;
+        // bob is the last production row, absorbing the remainder = 10000 - 3333 = 6667.
+        $aliceReward = EmployeeReward::where('employee_id', $alice->id)->first();
+        $bobReward = EmployeeReward::where('employee_id', $bob->id)->first();
+
+        expect($aliceReward)->not->toBeNull()
+            ->and((float) $aliceReward->total_reward)->toBe(3333.0)
+            ->and(fmod((float) $aliceReward->total_reward, 1))->toBe(0.0)
+            ->and($bobReward)->not->toBeNull()
+            ->and((float) $bobReward->total_reward)->toBe(6667.0)
+            ->and(fmod((float) $bobReward->total_reward, 1))->toBe(0.0);
+
+        // PM never gets a reward, and the event payout equals the pot exactly
+        assertDatabaseMissing('employee_rewards', ['employee_id' => $pm->id]);
+        $paid = (float) EmployeeReward::where('project_id', $project->id)->sum('total_reward');
+        expect($paid)->toBe(10000.0);
     });
 
     it('leaves the project PartialComplete when not all PICs have submitted feedback', function () {
@@ -323,8 +338,10 @@ describe('completeProject point recording', function () {
             'status' => ProjectStatus::PartialComplete->value,
         ]);
 
-        // points are still recorded regardless of feedback completeness
-        assertDatabaseHas('employee_points', ['employee_id' => $worker->id]);
+        // the pot is split across the whole team once every PM has completed, so nothing is
+        // recorded while the project is still PartialComplete
+        assertDatabaseMissing('employee_points', ['employee_id' => $worker->id]);
+        expect(EmployeeReward::where('project_id', $project->id)->count())->toBe(0);
     });
 
     it('records nothing and leaves the project PartialComplete when no points are provided', function () {
@@ -351,5 +368,133 @@ describe('completeProject point recording', function () {
         expect(EmployeePoint::count())->toBe(0)
             ->and(EmployeeReward::count())->toBe(0);
         assertDatabaseMissing('project_feedback', ['project_id' => $project->id]);
+    });
+
+    it('records points once at final completion and sums modeller points across PMs', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Class C', 'reward' => 10000]);
+        $project = Project::factory()->create([
+            'project_class_id' => $class->id,
+            'status' => ProjectStatus::OnGoing->value,
+        ]);
+
+        // two PMs, each a PIC that completes the project separately
+        $pmA = cpEmployeeWithRole($this->pmRole);
+        $pmB = cpEmployeeWithRole($this->pmRole);
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $pmA->id]);
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $pmB->id]);
+
+        // PM A's team member, PM B's team member, and the shared 3D modeller
+        $workerA = cpEmployeeWithRole($this->productionRole);
+        $workerB = cpEmployeeWithRole($this->productionRole);
+        $modeller = cpEmployeeWithRole($this->productionRole);
+        cpAssignTasks($project, $workerA, 1);   // 1 base point
+        cpAssignTasks($project, $workerB, 1);   // 1 base point
+        cpAssignTasks($project, $modeller, 1);  // 1 base point
+
+        // PM A completes: rewards his own team + the shared modeller (+1)
+        actingAs(User::where('employee_id', $pmA->id)->firstOrFail());
+        cpService()->completeProject([
+            'feedback' => 'PM A done',
+            'points' => [
+                ['uid' => $workerA->uid, 'additional_point' => 0],
+                ['uid' => $modeller->uid, 'additional_point' => 1],
+            ],
+        ], $project->uid);
+
+        // still PartialComplete -> nothing recorded until every PM has completed
+        assertDatabaseHas('projects', ['id' => $project->id, 'status' => ProjectStatus::PartialComplete->value]);
+        expect(EmployeePoint::count())->toBe(0)
+            ->and(EmployeeReward::where('project_id', $project->id)->count())->toBe(0);
+
+        // PM B completes: rewards his own team + the shared modeller (+2)
+        actingAs(User::where('employee_id', $pmB->id)->firstOrFail());
+        cpService()->completeProject([
+            'feedback' => 'PM B done',
+            'points' => [
+                ['uid' => $workerB->uid, 'additional_point' => 0],
+                ['uid' => $modeller->uid, 'additional_point' => 2],
+            ],
+        ], $project->uid);
+
+        // now Completed and recorded exactly once
+        assertDatabaseHas('projects', ['id' => $project->id, 'status' => ProjectStatus::Completed->value]);
+
+        // modeller additional points summed across PMs: 1 + 2 = 3 -> total_point = 1 base + 3 = 4
+        assertDatabaseHas('employee_rewards', [
+            'employee_id' => $modeller->id,
+            'point' => 1,
+            'additional_point' => 3,
+            'total_point' => 4,
+        ]);
+
+        // exactly one reward row per production worker (no duplication from the two completions)
+        expect(EmployeeReward::where('employee_id', $workerA->id)->count())->toBe(1)
+            ->and(EmployeeReward::where('employee_id', $workerB->id)->count())->toBe(1)
+            ->and(EmployeeReward::where('employee_id', $modeller->id)->count())->toBe(1);
+
+        // the fixed pot is paid exactly once across the whole team
+        $paid = (float) EmployeeReward::where('project_id', $project->id)->sum('total_reward');
+        expect($paid)->toBe(10000.0);
+
+        // PMs never earn from the production pot
+        assertDatabaseMissing('employee_rewards', ['employee_id' => $pmA->id]);
+        assertDatabaseMissing('employee_rewards', ['employee_id' => $pmB->id]);
+
+        // modeller's employee_points total reflects the merged additional points
+        $modellerPoint = EmployeePoint::where('employee_id', $modeller->id)->first();
+        expect((int) $modellerPoint->total_point)->toBe(4);
+    });
+
+    it('records production, PM and VJ rewards together at completion, tagged by role', function () {
+        $class = ProjectClass::factory()->create([
+            'name' => 'Class B',
+            'reward' => 10000,       // production pot
+            'pm_reward' => 1000000,  // PM pot
+            'vj_reward' => 125000,   // per-VJ amount
+        ]);
+        $project = Project::factory()->create([
+            'project_class_id' => $class->id,
+            'status' => ProjectStatus::OnGoing->value,
+        ]);
+
+        // sole PM (also the completing PIC), one production worker, one VJ
+        $pm = cpEmployeeWithRole($this->pmRole);
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $pm->id, 'is_lead' => true]);
+
+        $worker = cpEmployeeWithRole($this->productionRole);
+        cpAssignTasks($project, $worker, 2);
+
+        $vj = Employee::factory()->create();
+        ProjectVj::create(['project_id' => $project->id, 'employee_id' => $vj->id, 'created_by' => 0]);
+
+        actingAs(User::where('employee_id', $pm->id)->firstOrFail());
+        cpService()->completeProject([
+            'feedback' => 'done',
+            'points' => [['uid' => $worker->uid, 'additional_point' => 0]],
+        ], $project->uid);
+
+        assertDatabaseHas('projects', ['id' => $project->id, 'status' => ProjectStatus::Completed->value]);
+
+        // production: sole worker takes the whole production pot
+        assertDatabaseHas('employee_rewards', [
+            'employee_id' => $worker->id,
+            'role' => 'production',
+            'total_reward' => 10000,
+        ]);
+        // PM: sole PM takes the whole PM pot
+        assertDatabaseHas('employee_rewards', [
+            'employee_id' => $pm->id,
+            'role' => 'pm',
+            'total_reward' => 1000000,
+        ]);
+        // VJ: the fixed per-VJ amount
+        assertDatabaseHas('employee_rewards', [
+            'employee_id' => $vj->id,
+            'role' => 'vj',
+            'total_reward' => 125000,
+        ]);
+
+        // each recorded exactly once
+        expect(EmployeeReward::where('project_id', $project->id)->count())->toBe(3);
     });
 });

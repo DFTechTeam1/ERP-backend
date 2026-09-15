@@ -2,10 +2,9 @@
 
 namespace Modules\Hrd\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Production\Models\Project;
 
 // use Modules\Hrd\Database\Factories\EmployeeRewardFactory;
@@ -26,7 +25,8 @@ class EmployeeReward extends Model
         'point',
         'additional_point',
         'total_reward',
-        'project_class_name'
+        'project_class_name',
+        'role',
     ];
 
     // protected static function newFactory(): EmployeeRewardFactory
