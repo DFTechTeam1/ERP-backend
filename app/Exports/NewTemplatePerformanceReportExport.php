@@ -180,7 +180,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
      */
     protected function applySheetStyling(Worksheet $sheet): void
     {
-        $lastColumn = 'L';
+        $lastColumn = 'M';
         $headerRow = 2;
         $firstDataRow = 3;
         $lastRow = $sheet->getHighestRow();
@@ -218,14 +218,14 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
             $sheet->getStyle("A{$firstDataRow}:{$lastColumn}{$lastRow}")
                 ->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
-            // No + the point/count columns read best centered
+            // No + the task-count/point columns (I..L) read best centered
             $sheet->getStyle("A{$firstDataRow}:A{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("H{$firstDataRow}:K{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("H{$firstDataRow}:K{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER);
+            $sheet->getStyle("I{$firstDataRow}:L{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("I{$firstDataRow}:L{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER);
 
-            // long-text columns wrap instead of overflowing
-            $sheet->getStyle("G{$firstDataRow}:G{$lastRow}")->getAlignment()->setWrapText(true);
-            $sheet->getStyle("L{$firstDataRow}:L{$lastRow}")->getAlignment()->setWrapText(true);
+            // long-text columns wrap instead of overflowing (H = tasks, M = feedback)
+            $sheet->getStyle("H{$firstDataRow}:H{$lastRow}")->getAlignment()->setWrapText(true);
+            $sheet->getStyle("M{$firstDataRow}:M{$lastRow}")->getAlignment()->setWrapText(true);
 
             // zebra striping
             for ($row = $firstDataRow; $row <= $lastRow; $row++) {
@@ -239,8 +239,8 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
 
         // ---- Column widths (autosize is off; text columns need room to wrap) ----
         $widths = [
-            'A' => 6, 'B' => 28, 'C' => 18, 'D' => 20, 'E' => 24, 'F' => 18,
-            'G' => 46, 'H' => 12, 'I' => 11, 'J' => 13, 'K' => 11, 'L' => 34,
+            'A' => 6, 'B' => 28, 'C' => 16, 'D' => 20, 'E' => 14, 'F' => 24,
+            'G' => 18, 'H' => 46, 'I' => 12, 'J' => 11, 'K' => 13, 'L' => 11, 'M' => 34,
         ];
         foreach ($widths as $column => $width) {
             $sheet->getColumnDimension($column)->setAutoSize(false)->setWidth($width);

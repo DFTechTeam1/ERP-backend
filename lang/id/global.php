@@ -316,6 +316,8 @@ return [
     'equipmentEventHasBeenReturned' => 'Equipment event :event telah dikembalik dan saatnya untuk di cek',
     'successUpdateEmployment' => 'Berhasil mengubah data pekerjaan',
     'successAssignPIC' => 'PIC berhasil di tugaskan dalam project ini. PIC akan mendapat notifikasi pemberitahuan mengenai project ini',
+    'successSetLeadPic' => 'Lead project manager berhasil diatur',
+    'employeeIsNotPicOfThisProject' => 'Karyawan ini bukan PIC dari project ini',
 
     'nameRequired' => 'Nama harus diisi!',
     'employeeIdRequired' => 'ID Karyawan harus diisi!',

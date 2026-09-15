@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Models\EntertainmentTaskSong;
 use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectSongList;
 use Modules\Production\Repository\EntertainmentTaskSongRepository;
 use Modules\Production\Repository\ProjectRepository;
@@ -153,6 +154,45 @@ describe('DetailProject action - cache', function () {
         Project::where('id', $project->id)->update(['name' => 'RENAMED IN DB']);
 
         expect(dpRunAction($project->uid)['name'])->toBe('COLD BUILD');
+    });
+});
+
+describe('DetailProject action - project managers', function () {
+    it('labels the flagged PM as main and the rest as support', function () {
+        dpActingAs();
+        $project = Project::factory()->withBoards()->create(['name' => 'WITH PMS']);
+
+        // PIC employees need a user (GetProjectTeams reads their role); order-independent because
+        // the lead is chosen by the is_lead flag, not assignment order.
+        $lead = Employee::factory()->withUser()->create();
+        $support = Employee::factory()->withUser()->create();
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $support->id, 'is_lead' => false]);
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $lead->id, 'is_lead' => true]);
+
+        $output = dpRunAction($project->uid);
+
+        expect($output)->toHaveKey('project_managers')
+            ->and($output['main_pm']['uid'])->toBe($lead->uid)
+            ->and($output['main_pm']['role'])->toBe('main')
+            ->and($output['main_pm']['is_lead'])->toBeTrue()
+            ->and(collect($output['support_pms'])->pluck('uid')->all())->toBe([$support->uid])
+            ->and($output['support_pms'][0]['role'])->toBe('support');
+    });
+
+    it('treats the earliest-assigned PM as main when none is flagged', function () {
+        dpActingAs();
+        $project = Project::factory()->withBoards()->create(['name' => 'NO FLAG']);
+
+        $first = Employee::factory()->withUser()->create();
+        $second = Employee::factory()->withUser()->create();
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $first->id, 'is_lead' => false]);
+        ProjectPersonInCharge::create(['project_id' => $project->id, 'pic_id' => $second->id, 'is_lead' => false]);
+
+        $output = dpRunAction($project->uid);
+
+        // fallback: the earliest-assigned PIC (lowest id) is the main
+        expect($output['main_pm']['uid'])->toBe($first->uid)
+            ->and(collect($output['support_pms'])->pluck('uid')->all())->toBe([$second->uid]);
     });
 });
 

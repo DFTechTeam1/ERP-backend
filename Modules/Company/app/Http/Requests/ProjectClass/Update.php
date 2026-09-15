@@ -21,6 +21,8 @@ class Update extends FormRequest
             // 'maximal_point' => 'required',
             'color' => 'required',
             'reward' => 'required',
+            'pm_reward' => 'nullable|numeric|min:0',
+            'vj_reward' => 'nullable|numeric|min:0',
             // 'base_point' => 'required|integer|min:0',
             // 'point_2_team' => 'required|integer|min:0',
             // 'point_3_team' => 'required|integer|min:0',

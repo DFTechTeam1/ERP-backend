@@ -6615,11 +6615,22 @@ class ProjectService
                 //     }
                 // }
 
-                PointRecordBasedOnReward::run($projectId, $data['points']);
-
-                // record project feedback
+                // Record this PM's feedback + the additional points they submitted for their own
+                // team and the shared 3D modeller team. A project can have more than one PM, and
+                // each PM completes the project separately.
                 $isAllRecorded = \App\Actions\Production\RecordProjectFeedback::run(payload: $data, projectUid: $projectUid, user: $user);
+
+                // The reward pot is fixed per project and split across the WHOLE production team by
+                // point-share, so the point/reward chain is recorded exactly once - when the LAST
+                // PM completes (all PICs have submitted). At that point we merge the additional
+                // points every PM submitted (a shared modeller can be rewarded by more than one PM,
+                // so their additional points are summed) and record a single time.
                 if ($isAllRecorded) {
+                    PointRecordBasedOnReward::run($projectId, $this->mergeCompletionPoints($projectId));
+
+                    // Record the fixed PM and VJ rewards (split PM pot + per-VJ amount, per class).
+                    \App\Actions\Hrd\RecordPmVjReward::run($projectId);
+
                     $payloadProject['status'] = \App\Enums\Production\ProjectStatus::Completed->value;
                 }
             }
@@ -6662,6 +6673,45 @@ class ProjectService
 
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Merge the additional points every PM submitted for a project into a single points list.
+     *
+     * Each PM completes separately and rewards their own team plus the shared 3D modeller team,
+     * so a modeller can receive additional points from more than one PM. Additional points are
+     * summed per employee uid across every project_feedback row. The point/reward calculation
+     * itself derives base points from the project's task histories, so this list only needs to
+     * carry the merged additional_point per employee.
+     *
+     * @return array<int, array{uid: string, additional_point: int}>
+     */
+    protected function mergeCompletionPoints(int $projectId): array
+    {
+        $feedbacks = (new \Modules\Production\Repository\ProjectFeedbackRepository)->list(
+            select: 'id,points',
+            where: "project_id = {$projectId}"
+        );
+
+        $merged = [];
+        foreach ($feedbacks as $feedback) {
+            foreach (($feedback->points ?? []) as $point) {
+                if (empty($point['uid'])) {
+                    continue;
+                }
+
+                $uid = $point['uid'];
+                $merged[$uid] = ($merged[$uid] ?? 0) + (int) ($point['additional_point'] ?? 0);
+            }
+        }
+
+        return collect($merged)
+            ->map(fn (int $additionalPoint, string $uid): array => [
+                'uid' => $uid,
+                'additional_point' => $additionalPoint,
+            ])
+            ->values()
+            ->toArray();
     }
 
     public function assignVJ(array $data, string $projectUid): array
@@ -7037,15 +7087,74 @@ class ProjectService
     }
 
     /**
+     * Designate one of a project's PMs as the Lead. The Lead takes the largest share of the PM
+     * reward pot (see RecordPmVjReward), so exactly one PIC carries is_lead per project - any
+     * previous Lead is demoted.
+     *
+     * @param  array{employee_uid: string}  $data
+     */
+    public function setLeadPic(string $projectUid, array $data): array
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
+            $employeeId = getIdFromUid($data['employee_uid'], new \Modules\Hrd\Models\Employee);
+
+            $pic = $this->projectPicRepository->show(
+                uid: '',
+                select: 'id,project_id,pic_id',
+                where: "project_id = {$projectId} and pic_id = {$employeeId}"
+            );
+
+            if (! $pic) {
+                return generalResponse(
+                    __('global.employeeIsNotPicOfThisProject'),
+                    true,
+                    [],
+                    400,
+                );
+            }
+
+            // Only one Lead per project: demote everyone, then promote the chosen PM.
+            $this->projectPicRepository->update(['is_lead' => false], '', "project_id = {$projectId}");
+            $this->projectPicRepository->update(['is_lead' => true], '', "project_id = {$projectId} and pic_id = {$employeeId}");
+
+            DB::commit();
+
+            // Invalidate the cached project detail so the refreshed main/support PM info is
+            // rebuilt on the next fetch (see DetailProject/DetailCache which key on this id).
+            clearCache('detailProject'.$projectId);
+
+            return generalResponse(
+                __('global.successSetLeadPic'),
+                false,
+            );
+        } catch (\Throwable $error) {
+            DB::rollBack();
+
+            return errorResponse($error);
+        }
+    }
+
+    /**
      * Main function to handle assignation PIC to selected project
      *
      * @param  array<string, array<string>>  $data
      */
     protected function handleAssignPicLogic(array $data, string $projectUid, int $projectId): void
     {
+        // The Lead PM takes the largest share of the PM reward pot. The frontend may nominate one
+        // via $data['lead'] (an employee uid); if none is nominated, no PIC is flagged and the
+        // reward calculation falls back to the earliest-assigned PIC as Lead.
+        $leadUid = $data['lead'] ?? null;
+
         foreach ($data['pics'] as $pic) {
             $employeeId = getIdFromUid($pic, new \Modules\Hrd\Models\Employee);
-            $this->projectPicRepository->store(['pic_id' => $employeeId, 'project_id' => $projectId]);
+            $this->projectPicRepository->store([
+                'pic_id' => $employeeId,
+                'project_id' => $projectId,
+                'is_lead' => $leadUid !== null && $pic === $leadUid,
+            ]);
         }
 
         \Modules\Production\Jobs\NewProjectJob::dispatch($projectUid)->afterCommit();

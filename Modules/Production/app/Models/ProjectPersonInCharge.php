@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\WhatsappGroup;
 use Modules\Production\Database\Factories\ProjectPersonInChargeFactory;
 
@@ -19,16 +20,27 @@ class ProjectPersonInCharge extends Model
     protected $fillable = [
         'project_id',
         'pic_id',
+        'is_lead',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_lead' => 'boolean',
+        ];
+    }
 
     public function employee(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Hrd\Models\Employee::class, 'pic_id');
+        return $this->belongsTo(Employee::class, 'pic_id');
     }
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Production\Models\Project::class, 'project_id');
+        return $this->belongsTo(Project::class, 'project_id');
     }
 
     public function whatsappGroupPic(): HasOne

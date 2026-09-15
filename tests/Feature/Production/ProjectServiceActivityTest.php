@@ -205,12 +205,13 @@ describe('completeProject point recording', function () {
         expect($employeePoint)->not->toBeNull()
             ->and((int) $employeePoint->total_point)->toBe(2);
 
+        // sole production worker takes the whole fixed pot (project_classes.reward)
         assertDatabaseHas('employee_rewards', [
             'employee_id' => $worker->id,
             'project_id' => $project->id,
             'base_reward' => 50000,
             'total_point' => 2,
-            'total_reward' => 100000,
+            'total_reward' => 50000,
         ]);
     });
 });

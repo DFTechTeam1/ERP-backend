@@ -3,6 +3,7 @@
 namespace Modules\Company\Services;
 
 use App\Data\Company\ProjectClass\UpdateStatusData;
+use Modules\Company\Models\ProjectClass;
 use Modules\Company\Repository\ProjectClassRepository;
 
 class ProjectClassService
@@ -36,7 +37,7 @@ class ProjectClassService
                 $where = "lower(name) LIKE '%{$search}%'";
             }
 
-            $select = 'id as uid,name,color,reward,is_active as status';
+            $select = 'id as uid,name,color,reward,pm_reward,vj_reward,is_active as status';
 
             $paginated = $this->repo->pagination(
                 $select,
@@ -101,11 +102,17 @@ class ProjectClassService
             // collects (the module uses `reward` now), so default it to 0.
             $data['maximal_point'] = $data['maximal_point'] ?? 0;
 
-            $this->repo->store($data);
+            // pm_reward / vj_reward are optional on the request, so default them to 0 to keep an
+            // explicit PM/VJ pot on every class.
+            $data['pm_reward'] = $data['pm_reward'] ?? 0;
+            $data['vj_reward'] = $data['vj_reward'] ?? 0;
+
+            $created = $this->repo->store($data);
 
             return generalResponse(
                 __('global.projectClassCreated'),
                 false,
+                $this->formatClass($created),
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -123,13 +130,40 @@ class ProjectClassService
         try {
             $this->repo->update($data, $id, $where);
 
+            // Return the saved class (incl. reward / pm_reward / vj_reward) so the management
+            // interface can reflect the persisted values without a second request.
+            $fetchWhere = ! empty($where) ? $where : "id = {$id}";
+            $updated = $this->repo->list(
+                'id,name,color,reward,pm_reward,vj_reward,is_active',
+                $fetchWhere
+            )->first();
+
             return generalResponse(
                 __('global.projectClassUpdated'),
                 false,
+                $updated ? $this->formatClass($updated) : [],
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * Shape a project class for the management interface (matches the list columns).
+     *
+     * @return array<string, mixed>
+     */
+    protected function formatClass(ProjectClass $class): array
+    {
+        return [
+            'uid' => $class->id,
+            'name' => $class->name,
+            'color' => $class->color,
+            'reward' => $class->reward,
+            'pm_reward' => $class->pm_reward,
+            'vj_reward' => $class->vj_reward,
+            'status' => $class->is_active,
+        ];
     }
 
     /**
@@ -190,7 +224,7 @@ class ProjectClassService
             ], $projectClassId);
 
             return generalResponse(
-                message: "Success update project class status"
+                message: 'Success update project class status'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

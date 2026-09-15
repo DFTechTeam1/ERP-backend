@@ -212,6 +212,7 @@ Route::middleware(['auth.session'])
         Route::get('project/scheduler/{projectUid}', [ProjectController::class, 'getAllSchedulerProjects']);
         Route::get('project/{projectUid}/getPicScheduler', [ProjectController::class, 'getPicScheduler']);
         Route::post('project/{projectUid}/assignPic', [ProjectController::class, 'assignPic']);
+        Route::post('project/{projectUid}/setLeadPic', [ProjectController::class, 'setLeadPic']);
         Route::post('project/{projectUid}/subtitutePic', [ProjectController::class, 'subtitutePic']);
         Route::get('project/{projectUid}/getPicForSubtitute', [ProjectController::class, 'getPicForSubtitute']);
         Route::get('project/{projectUid}/readyToGo', [ProjectController::class, 'readyToGo']);

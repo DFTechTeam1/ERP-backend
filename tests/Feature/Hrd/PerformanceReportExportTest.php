@@ -27,11 +27,11 @@ use function Pest\Laravel\actingAs;
  * NewTemplatePerformanceReportExport - so it is covered with Excel::fake()/assertQueued().
  *
  * The point rendering the module owner cares about lives in the export's view()
- * (a FromView export of `hrd::new-export-performance-report`), driven by employee_point_projects:
- *   - column F "Poin"           = total_point
- *   - column G                  = the task list
- *   - column I "Point Breakdown"= Original / Additional / Total point lines
- * So the second block renders the REAL .xlsx and reads the cells back with PhpSpreadsheet.
+ * (a FromView export of `hrd::new-export-performance-report`), driven by employee_point_projects.
+ * The sheet has 13 columns (A..M): A No, B Event, C Kelas Proyek, D PM/PIC, E ID Karyawan,
+ * F Nama Karyawan, G Posisi, H Tugas (task list), I Jumlah Tugas, J Poin Dasar, K Poin Tambahan,
+ * L Total Poin, M Feedback. So the second block renders the REAL .xlsx and reads the cells back
+ * with PhpSpreadsheet.
  *
  * registerEvents() (AfterSheet) fires a Pusher notification, which is a network side effect
  * unrelated to point rendering, so the render helper uses a subclass that skips events while
@@ -177,18 +177,18 @@ describe('NewTemplatePerformanceReportExport point rendering', function () {
         // row 1 = title banner, row 2 = header, row 3 = the single data row
         expect((string) $sheet->getCell('B3')->getValue())->toContain('Grand Wedding')                    // event
             ->and((string) $sheet->getCell('C3')->getValue())->toContain($project->projectClass->name)   // Kelas Proyek
-            ->and((string) $sheet->getCell('E3')->getValue())->toContain('Budi Santoso');                 // employee
+            ->and((string) $sheet->getCell('F3')->getValue())->toContain('Budi Santoso');                 // Nama Karyawan
 
-        // task list (G) + task count (H)
-        $tasks = (string) $sheet->getCell('G3')->getValue();
+        // task list (H) + task count (I)
+        $tasks = (string) $sheet->getCell('H3')->getValue();
         expect($tasks)->toContain('Compositing')
             ->and($tasks)->toContain('Animating')
-            ->and((int) $sheet->getCell('H3')->getValue())->toBe(2);
+            ->and((int) $sheet->getCell('I3')->getValue())->toBe(2);
 
         // points now live in dedicated, readable columns: base / additional / total
-        expect((int) $sheet->getCell('I3')->getValue())->toBe(2)  // Poin Dasar
-            ->and((int) $sheet->getCell('J3')->getValue())->toBe(3)  // Poin Tambahan
-            ->and((int) $sheet->getCell('K3')->getValue())->toBe(5); // Total Poin
+        expect((int) $sheet->getCell('J3')->getValue())->toBe(2)  // Poin Dasar
+            ->and((int) $sheet->getCell('K3')->getValue())->toBe(3)  // Poin Tambahan
+            ->and((int) $sheet->getCell('L3')->getValue())->toBe(5); // Total Poin
     });
 
     it('renders total point equal to base point when there is no additional point', function () {
@@ -203,9 +203,9 @@ describe('NewTemplatePerformanceReportExport point rendering', function () {
 
         $sheet = perfRenderSheet('2026-01-01', '2026-01-31');
 
-        expect((int) $sheet->getCell('I3')->getValue())->toBe(4)  // Poin Dasar
-            ->and((int) $sheet->getCell('J3')->getValue())->toBe(0)  // Poin Tambahan
-            ->and((int) $sheet->getCell('K3')->getValue())->toBe(4); // Total Poin
+        expect((int) $sheet->getCell('J3')->getValue())->toBe(4)  // Poin Dasar
+            ->and((int) $sheet->getCell('K3')->getValue())->toBe(0)  // Poin Tambahan
+            ->and((int) $sheet->getCell('L3')->getValue())->toBe(4); // Total Poin
     });
 
     it('renders song names in the tasks column for an entertainment-type point project', function () {
@@ -239,18 +239,18 @@ describe('NewTemplatePerformanceReportExport point rendering', function () {
         $sheet = perfRenderSheet('2026-01-01', '2026-01-31');
 
         expect((string) $sheet->getCell('B3')->getValue())->toContain('Music Festival')
-            ->and((string) $sheet->getCell('E3')->getValue())->toContain('Rangga Putra');
+            ->and((string) $sheet->getCell('F3')->getValue())->toContain('Rangga Putra');
 
         // tasks come from the SONG names (entertainment branch), not production task names
-        $tasks = (string) $sheet->getCell('G3')->getValue();
+        $tasks = (string) $sheet->getCell('H3')->getValue();
         expect($tasks)->toContain('Bohemian Rhapsody')
             ->and($tasks)->toContain('Sweet Child O Mine');
 
         // point rendering still holds for the entertainment type
-        expect((int) $sheet->getCell('H3')->getValue())->toBe(2)  // Jumlah Tugas
-            ->and((int) $sheet->getCell('I3')->getValue())->toBe(4)  // Poin Dasar
-            ->and((int) $sheet->getCell('J3')->getValue())->toBe(2)  // Poin Tambahan
-            ->and((int) $sheet->getCell('K3')->getValue())->toBe(6); // Total Poin
+        expect((int) $sheet->getCell('I3')->getValue())->toBe(2)  // Jumlah Tugas
+            ->and((int) $sheet->getCell('J3')->getValue())->toBe(4)  // Poin Dasar
+            ->and((int) $sheet->getCell('K3')->getValue())->toBe(2)  // Poin Tambahan
+            ->and((int) $sheet->getCell('L3')->getValue())->toBe(6); // Total Poin
     });
 
     it('only includes projects whose project_date is inside the range', function () {
@@ -284,7 +284,7 @@ describe('NewTemplatePerformanceReportExport point rendering', function () {
         $sheet = perfRenderSheet('2026-01-01', '2026-01-31');
 
         expect((string) $sheet->getCell('D3')->getValue())->toContain('Yanuar');   // PM / PIC
-        expect((string) $sheet->getCell('L3')->getValue())->toContain('Well done'); // feedback
+        expect((string) $sheet->getCell('M3')->getValue())->toContain('Well done'); // feedback
     });
 
     it('renders without throwing when the period is not supplied', function () {
