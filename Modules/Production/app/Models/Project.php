@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Models;
 
+use App\Data\Finance\ProjectCost\DashboardCostCompositionData;
 use App\Enums\Cache\CacheKey;
 use App\Services\GeneralService;
 use App\Traits\ModelObserver;
@@ -368,6 +369,26 @@ class Project extends Model
     {
         $builder->whereLike('name', '%' . $name . '%')
             ->whereDate('project_date', $projectDate);
+    }
+
+    public function getCosts()
+    {
+        if (!$this->relationLoaded('rewards')) {
+            $this->with('rewards');
+        }
+
+        $output = [];
+
+        // employee rewards as project cost
+        $employeeRewards = new DashboardCostCompositionData(
+            key: 'employee_reward',
+            label: "Employee Reward",
+            total: $this->rewards->sum('total_reward')
+        );
+
+        array_push($output, $employeeRewards);
+
+        return $output;
     }
 
     // protected static function newFactory(): ProjectFactory

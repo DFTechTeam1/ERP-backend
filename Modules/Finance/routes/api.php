@@ -6,6 +6,7 @@ use Modules\Finance\Http\Controllers\Api\FinanceDashboardController;
 use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\Api\MarketingDashboardController;
+use Modules\Finance\Http\Controllers\Api\ProjectCostController;
 
 /*
  *--------------------------------------------------------------------------
@@ -55,7 +56,6 @@ Route::middleware(['auth.session'])->group(function () {
             // transaction
             Route::post('transaction', [InvoiceController::class, 'createTransaction']);
         });
-
     });
 
     Route::post('finance/report/global', [ApiFinanceController::class, 'exportFinanceData']);
@@ -105,6 +105,15 @@ Route::middleware(['auth.session'])->group(function () {
         ->name('finance.insight.marketingPerformance');
     Route::get('finance/insight/top-deals', [ApiFinanceController::class, 'getTopDeals'])
         ->name('finance.insight.topDeals');
+
+    // Project costs
+    Route::get('production/project-costs', [ProjectCostController::class, 'getDashboard']);
+    Route::get('production/project-costs/summary', [ProjectCostController::class, 'getDashboardSummary']);
+    Route::get('production/project-costs/latest', [ProjectCostController::class, 'getDashboardLatest']);
+    Route::get('production/project-costs/cost-trend', [ProjectCostController::class, 'getCostTrend']);
+    Route::get('production/project-costs/cost-by-class', [ProjectCostController::class, 'getCostByClass']);
+    Route::get('production/project-costs/cost-composition', [ProjectCostController::class, 'getCostComposition']);
+    Route::get('production/project-costs/{projectUid}', [ProjectCostController::class, 'detailProjectCost']);
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])
