@@ -1242,7 +1242,7 @@ class ProjectController extends Controller
     {
         return apiResponse($this->service->getProjectCostEstimation($projectUid));
     }
-  
+
     /**
      * Revert a project task from WaitingApproval status back to WaitingDistribute.
      *

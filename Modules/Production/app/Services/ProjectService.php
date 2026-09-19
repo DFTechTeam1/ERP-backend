@@ -6670,8 +6670,6 @@ class ProjectService
                 }
             }
 
-            // dd('check');
-
             $this->repo->update($payloadProject, $projectUid);
 
             // update project equipment
@@ -6693,6 +6691,9 @@ class ProjectService
 
                 $this->generalService->storeCache(CacheKey::ProjectNeedToBeComplete->value . auth()->id(), $needCompleteCache);
             }
+
+            // forget project costs cache
+            Cache::tags('project_costs')->flush();
 
             DB::commit();
 
@@ -6741,7 +6742,7 @@ class ProjectService
         }
 
         return collect($merged)
-            ->map(fn (int $additionalPoint, string $uid): array => [
+            ->map(fn(int $additionalPoint, string $uid): array => [
                 'uid' => $uid,
                 'additional_point' => $additionalPoint,
             ])
@@ -7158,7 +7159,7 @@ class ProjectService
 
             // Invalidate the cached project detail so the refreshed main/support PM info is
             // rebuilt on the next fetch (see DetailProject/DetailCache which key on this id).
-            clearCache('detailProject'.$projectId);
+            clearCache('detailProject' . $projectId);
 
             return generalResponse(
                 __('global.successSetLeadPic'),
@@ -10283,7 +10284,7 @@ class ProjectService
             return errorResponse($th);
         }
     }
-  
+
     /**
      * Revert a task from WaitingApproval back to WaitingDistribute.
      *
