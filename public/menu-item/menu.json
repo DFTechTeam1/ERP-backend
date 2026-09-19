@@ -286,7 +286,7 @@
                     "lang_id": "Pengeluaran Acara",
                     "lang_en": "Project Costs",
                     "icon": "mdiPlain:mdi-cash",
-                    "permission": "dashboard_access"
+                    "permission": "project_cost_report"
                 }
             ]
         },
