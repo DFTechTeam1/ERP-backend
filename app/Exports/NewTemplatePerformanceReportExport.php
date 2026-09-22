@@ -69,8 +69,8 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
                 'employeePoint:id,type,employee_id',
                 'employeePoint.employee:id,name,position_id,employee_id',
                 'employeePoint.employee.position:id,name',
-                'details.productionTask:id,name',
-                'details.entertainmentTask:id,project_song_list_id',
+                'details.productionTask:id,name,project_id',
+                'details.entertainmentTask:id,project_song_list_id,project_id',
                 'details.entertainmentTask.song:id,name',
             ],
             whereHas: [
@@ -81,14 +81,28 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
         $output = [];
         $entertainmentList = [];
         foreach ($projects as $project) {
-            $type = $project->employeePoint->type;
+            $projectId = (int) $project->project_id;
 
-            $tasks = [];
-            if ($type == 'production') {
-                $tasks = collect($project->details)->pluck('productionTask.name')->toArray();
-            } elseif ($type == 'entertainment') {
-                $tasks = collect($project->details)->pluck('entertainmentTask.song.name')->toArray();
-            }
+            // Resolve each task against this point-project's own project instead of the parent
+            // employee_points.type. That type is a single value per employee and is never updated,
+            // so for anyone who moved between the production and entertainment teams it is wrong for
+            // half their history. Because a detail's task_id is looked up against two different
+            // tables (project_tasks vs entertainment_task_songs) whose ids overlap, the wrong type
+            // silently resolves task_id to an unrelated task from another project. Accepting a task
+            // only when it belongs to this project makes the row correct regardless of the type.
+            $tasks = collect($project->details)->map(function ($detail) use ($projectId) {
+                $productionTask = $detail->productionTask;
+                if ($productionTask && (int) $productionTask->project_id === $projectId) {
+                    return $productionTask->name;
+                }
+
+                $entertainmentTask = $detail->entertainmentTask;
+                if ($entertainmentTask && (int) $entertainmentTask->project_id === $projectId) {
+                    return $entertainmentTask->song?->name;
+                }
+
+                return null;
+            })->filter()->values()->toArray();
 
             $pics = [];
             if ($project->project->personInCharges->count() > 0) {
