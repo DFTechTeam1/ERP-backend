@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Services;
 
+use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
@@ -67,7 +68,7 @@ class ProductionEmployeeDashboardService
             $openTasks = ProjectTask::query()
                 ->with([
                     'project:id,project_date',
-                    'deadlines' => fn ($q) => $q
+                    'deadlines' => fn($q) => $q
                         ->where('employee_id', $employeeId)
                         ->orderBy('deadline'),
                 ])
@@ -80,13 +81,13 @@ class ProductionEmployeeDashboardService
 
             $openCount = $openTasks->count();
             $overdueCount = $openTasks
-                ->filter(fn (ProjectTask $t) => $this->isTaskOverdue($t))
+                ->filter(fn(ProjectTask $t) => $this->isTaskOverdue($t))
                 ->count();
 
             $completedThisWeek = (int) ProjectTaskPic::query()
                 ->where('employee_id', $employeeId)
                 ->whereBetween('updated_at', [$weekStart, $weekEnd])
-                ->whereHas('task', fn (Builder $q) => $q->where('status', TaskStatus::Completed->value))
+                ->whereHas('task', fn(Builder $q) => $q->where('status', TaskStatus::Completed->value))
                 ->count();
 
             // Mirror the Node endpoint (/api/v2/hrd/employees/{uid}/point/{y}/{m}):
@@ -97,11 +98,11 @@ class ProductionEmployeeDashboardService
             $pointsThisMonth = (float) EmployeePointProject::query()
                 ->whereHas(
                     'employeePoint',
-                    fn (Builder $q) => $q->where('employee_id', $employeeId),
+                    fn(Builder $q) => $q->where('employee_id', $employeeId),
                 )
                 ->whereHas(
                     'project',
-                    fn (Builder $q) => $q->whereBetween('project_date', [
+                    fn(Builder $q) => $q->whereBetween('project_date', [
                         $period['start']->copy()->toDateString(),
                         $period['end']->copy()->toDateString(),
                     ]),
@@ -160,7 +161,7 @@ class ProductionEmployeeDashboardService
                     'project:id,uid,name,project_deal_id,project_date',
                     'project.projectDeal:id,name,identifier_number',
                     'board:id,name',
-                    'deadlines' => fn ($q) => $q
+                    'deadlines' => fn($q) => $q
                         ->where('employee_id', $employeeId)
                         ->orderBy('deadline'),
                 ])
@@ -356,6 +357,9 @@ class ProductionEmployeeDashboardService
                     'project.projectDeal:id,name,identifier_number',
                     'board:id,name',
                 ])
+                ->whereHas('project', function (Builder $query) {
+                    $query->whereNot('status', ProjectStatus::Canceled->value);
+                })
                 ->whereIn('id', $allTaskIds)
                 ->where('status', '!=', TaskStatus::Completed->value)
                 ->get();
@@ -375,9 +379,9 @@ class ProductionEmployeeDashboardService
             }
 
             $approvalTasks = $tasks
-                ->filter(fn (ProjectTask $t) => (int) $t->status === TaskStatus::WaitingApproval->value
+                ->filter(fn(ProjectTask $t) => (int) $t->status === TaskStatus::WaitingApproval->value
                     && ! $settledTaskIds->contains($t->id))
-                ->sortBy(fn (ProjectTask $t) => optional($t->created_at)->timestamp ?? PHP_INT_MAX)
+                ->sortBy(fn(ProjectTask $t) => optional($t->created_at)->timestamp ?? PHP_INT_MAX)
                 ->values();
 
             $breakdown['waitingapproval'] = $approvalTasks->count();
@@ -385,7 +389,7 @@ class ProductionEmployeeDashboardService
 
             $approvalItems = $approvalTasks
                 ->take($approvalLimit)
-                ->map(fn (ProjectTask $task) => $this->summaryTaskRow($task))
+                ->map(fn(ProjectTask $task) => $this->summaryTaskRow($task))
                 ->values()
                 ->all();
 
@@ -401,14 +405,14 @@ class ProductionEmployeeDashboardService
             $distributeTotal = 0;
             if ($isLeadModeller) {
                 $distributeTasks = $tasks
-                    ->filter(fn (ProjectTask $t) => (int) $t->status === TaskStatus::WaitingDistribute->value)
-                    ->sortBy(fn (ProjectTask $t) => optional($t->created_at)->timestamp ?? PHP_INT_MAX)
+                    ->filter(fn(ProjectTask $t) => (int) $t->status === TaskStatus::WaitingDistribute->value)
+                    ->sortBy(fn(ProjectTask $t) => optional($t->created_at)->timestamp ?? PHP_INT_MAX)
                     ->values();
 
                 $distributeTotal = $distributeTasks->count();
                 $distributeItems = $distributeTasks
                     ->take($approvalLimit)
-                    ->map(fn (ProjectTask $task) => $this->summaryTaskRow($task))
+                    ->map(fn(ProjectTask $task) => $this->summaryTaskRow($task))
                     ->values()
                     ->all();
             }
@@ -509,7 +513,7 @@ class ProductionEmployeeDashboardService
     private function effectiveDeadline(ProjectTask $task): array
     {
         $personal = $task->relationLoaded('deadlines')
-            ? $task->deadlines->firstWhere(fn ($d) => (bool) $d->deadline)
+            ? $task->deadlines->firstWhere(fn($d) => (bool) $d->deadline)
             : null;
         if ($personal?->deadline) {
             return [
@@ -543,7 +547,7 @@ class ProductionEmployeeDashboardService
         $today = Carbon::today()->startOfDay();
 
         $personal = $task->relationLoaded('deadlines')
-            ? $task->deadlines->firstWhere(fn ($d) => (bool) $d->deadline)
+            ? $task->deadlines->firstWhere(fn($d) => (bool) $d->deadline)
             : null;
         if ($personal?->deadline) {
             if ($personal->actual_finish_time !== null) {

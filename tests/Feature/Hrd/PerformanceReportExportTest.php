@@ -212,12 +212,14 @@ describe('NewTemplatePerformanceReportExport point rendering', function () {
         $project = Project::factory()->create(['name' => 'Music Festival', 'project_date' => '2026-01-18']);
         $employee = Employee::factory()->create(['name' => 'Rangga Putra']);
 
-        // The songs belong to a separate project so THIS project's own entertainmentTaskSong list
-        // stays empty (that list drives a secondary block in the view we are not exercising here).
-        // The entertainment branch resolves task names from each detail's entertainmentTask.song.
-        $songProject = Project::factory()->create();
-        $songA = perfMakeEntertainmentSong($songProject, $employee, 'Bohemian Rhapsody');
-        $songB = perfMakeEntertainmentSong($songProject, $employee, 'Sweet Child O Mine');
+        // Songs belong to THIS point-project's own project: entertainment points are always
+        // recorded for the project the song lives on (mainSongApproveWork loads the song by
+        // project_id, then records the point for that same project), and the export resolves each
+        // detail's task against the point-project's project. That also populates the project's
+        // entertainmentTaskSong list, so the secondary grouped block renders as an extra row below
+        // the main one - the assertions here target the main row (row 3).
+        $songA = perfMakeEntertainmentSong($project, $employee, 'Bohemian Rhapsody');
+        $songB = perfMakeEntertainmentSong($project, $employee, 'Sweet Child O Mine');
 
         $point = EmployeePoint::create([
             'employee_id' => $employee->id,
