@@ -264,4 +264,17 @@ return [
     'documentTemplateRejectedMessageWithReason' => 'Template dokumen ":name" (versi :version) telah ditolak. Alasan: :reason',
     'youAlreadySignedTheDocument' => 'Kamu sudah men-tanda tangani dokumen ini',
     'youDontHaveAccessToSignTheDocument' => 'Kamu tidak punya access untuk men-tanda tangani dokumen ini',
+
+    'project_deal_log' => [
+        'created' => 'Deal :name dibuat dari :source',
+        'deal_updated' => 'memperbarui event :fields',
+        'quotation_added' => 'Menambahkan quotation :number',
+        'price_change_requested' => 'Mengajukan perubahan harga untuk fixed price',
+        'price_change_approved' => 'Menyetujui permintaan perubahan harga',
+        'status_changed' => 'Deal bergerak maju dalam pipeline',
+        'interactive_added' => 'Menambahkan area interaktif :area ke deal',
+        'refund' => 'Refund sebesar :amount diberikan ke customer',
+        'cancelled' => 'Deal dibatalkan. :reason',
+        'final' => 'Deal ditandai sebagai final',
+    ],
 ];

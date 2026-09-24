@@ -272,4 +272,17 @@ return [
     'documentTemplateRejectedMessageWithReason' => 'Your document template ":name" (version :version) has been rejected. Reason: :reason',
     'youAlreadySignedTheDocument' => "You're already signed this document",
     'youDontHaveAccessToSignTheDocument' => "You don't have permission to sign this document",
+
+    'project_deal_log' => [
+        'created' => 'Deal :name created from the :source',
+        'deal_updated' => 'updated the event :fields',
+        'quotation_added' => 'Added quotation :number',
+        'price_change_requested' => 'Requested a price change for the fixed price',
+        'price_change_approved' => 'Approved the requested price change',
+        'status_changed' => 'Deal moved foward in the pipeline',
+        'interactive_added' => 'Added an interactive area of :area to the deal',
+        'refund' => 'Refund of :amount issued to the customer',
+        'cancelled' => 'Deal cancelled. :reason',
+        'final' => 'Deal marked as final',
+    ],
 ];
