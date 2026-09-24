@@ -2340,7 +2340,7 @@ class ProjectService
             // $currentData = $this->formatTasksPermission($currentData, $project->id);
 
             // storeCache('detailProject' . $project->id, $currentData);
-            $currentData = $this->detailCacheAction->handle($id, ['status' => $project->status_text, 'status_raw' => $project->status, 'status_color' => $project->status_color]);
+            $currentData = $this->detailCacheAction->handle($id, ['status' => $project->status_text, 'status_raw' => $project->status, 'status_color' => $project->status_color, 'venue' => $data['venue']]);
 
             DB::commit();
 
