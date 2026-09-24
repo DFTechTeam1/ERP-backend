@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Hrd\Http\Controllers\Api\EmployeeController;
+use Modules\Hrd\Http\Controllers\Api\EmployeeOvertimeController;
 use Modules\Hrd\Http\Controllers\Api\PerformanceReportController;
 use Modules\Hrd\Http\Controllers\Api\PositionSyncController;
 use Modules\Hrd\Http\Controllers\Api\SignatureController;
@@ -40,6 +41,9 @@ Route::get('employees/downloadTemplate', [EmployeeController::class, 'downloadTe
 Route::controller(EmployeeController::class)
     ->middleware(['auth.session'])
     ->group(function () {
+        // Overtime
+        Route::post('overtime/sync', [EmployeeOvertimeController::class, 'resync']);
+
         Route::get('employees', 'list');
         Route::post('employees', 'store')->name('employees.store');
         Route::get('employees/all', 'getAll');
