@@ -138,7 +138,8 @@ Route::middleware(['auth.session'])
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);
         Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
-        Route::post('project/deals/{projectDealUid}/refund', [ProjectController::class, 'storeRefund'])->name('project-deal.refund');
+        Route::post('project/deals/{projectDealUid}/refund', [ProjectController::class, 'storeRefund'])->name('project-deal.refund')
+            ->middleware(PermissionCheck::class . ':create_refund');
         Route::get('project/deals/{projectDealUid}/assignLead', [ProjectController::class, 'registerOnLead'])->name('project-deal.registerOnLead');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
         Route::post('project/deals/{projectDealUid}/update', [ProjectController::class, 'updateFinalDeal'])->name('project-deal.updateFinal');
