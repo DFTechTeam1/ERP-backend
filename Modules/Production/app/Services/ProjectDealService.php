@@ -1140,7 +1140,7 @@ class ProjectDealService
                     'refund_percentage' => $data->refund->refund_percentage,
                     'refund_reason' => $data->refund->refund_reason,
                     'created_at' => date('d F Y', strtotime($data->refund->created_at)),
-                    'creator' => $data->refund->createdBy->employee->name,
+                    'creator' => $data->refund->createdBy?->employee?->name ?? '-',
                     'payment_date' => $data->refund->transaction ? date('d F Y', strtotime($data->refund->transaction->transaction_date)) : '-',
                 ];
             }
