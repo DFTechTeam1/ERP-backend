@@ -17,7 +17,6 @@ use Modules\Production\Http\Requests\Incharge\AssignEntertainmentRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommRequest;
 use Modules\Production\Http\Requests\Incharge\AssignMarcommWidget;
 use Modules\Production\Http\Requests\Project\AssignPic;
-use Modules\Production\Http\Requests\Project\SetLeadPic;
 use Modules\Production\Http\Requests\Project\AssignVj;
 use Modules\Production\Http\Requests\Project\BasicUpdate;
 use Modules\Production\Http\Requests\Project\BulkAssignSong;
@@ -43,6 +42,7 @@ use Modules\Production\Http\Requests\Project\RequestEquipment;
 use Modules\Production\Http\Requests\Project\RequestSong;
 use Modules\Production\Http\Requests\Project\ReturnEquipment;
 use Modules\Production\Http\Requests\Project\ReviseTask;
+use Modules\Production\Http\Requests\Project\SetLeadPic;
 use Modules\Production\Http\Requests\Project\SongReportAsDone;
 use Modules\Production\Http\Requests\Project\SongRevise;
 use Modules\Production\Http\Requests\Project\StoreReferences;
@@ -977,7 +977,7 @@ class ProjectController extends Controller
                 'lastInteractiveRequest',
                 'project:id,project_deal_id,status',
                 'project.interactiveProject:id,parent_project',
-                'projectLead:id,project_deal_id'
+                'projectLead:id,project_deal_id',
             ]
         ));
     }
@@ -1064,7 +1064,7 @@ class ProjectController extends Controller
         $response = $this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
         if (! $response['error'] && request('aid')) {
-            return redirect(route('invoices.approved') . '?type=deal');
+            return redirect(route('invoices.approved').'?type=deal');
         }
 
         return apiResponse($response);
@@ -1085,7 +1085,7 @@ class ProjectController extends Controller
         $response = $this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
         if (! $response['error'] && request('aid')) {
-            return redirect(route('invoices.rejected') . '?type=deal');
+            return redirect(route('invoices.rejected').'?type=deal');
         }
 
         return apiResponse($response);
@@ -1250,10 +1250,31 @@ class ProjectController extends Controller
      *
      * @param  string  $projectUid  Uid of the project that owns the task.
      * @param  string  $taskUid  Uid of the task to revert.
-     * @return JsonResponse  Wraps the service result (HTTP 201 on success, 400 on failure).
+     * @return JsonResponse Wraps the service result (HTTP 201 on success, 400 on failure).
      */
     public function revertToDistribute(string $projectUid, string $taskUid): JsonResponse
     {
         return apiResponse($this->service->revertToDistribute($projectUid, $taskUid));
+    }
+
+    /**
+     * DFEngine project list (paginated, role-scoped).
+     *
+     * @return JsonResponse Wraps {@see ProjectService::listProjectDFEngine()}.
+     */
+    public function listProjectDFEngine(): JsonResponse
+    {
+        return apiResponse($this->service->listProjectDFEngine());
+    }
+
+    /**
+     * DFEngine task list for a single project (paginated, role-scoped).
+     *
+     * @param  string  $projectUid  Uid of the project whose tasks are listed.
+     * @return JsonResponse Wraps {@see ProjectService::listTaskDFEngine()}.
+     */
+    public function listTaskDFEngine(string $projectUid): JsonResponse
+    {
+        return apiResponse($this->service->listTaskDFEngine($projectUid));
     }
 }
