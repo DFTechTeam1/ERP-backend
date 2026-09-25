@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Production\ProjectStatus;
 use App\Enums\Production\TaskPicStatus;
 use App\Enums\Production\TaskStatus;
 use App\Enums\System\BaseRole;
@@ -32,12 +33,18 @@ use function Pest\Laravel\actingAs;
  *   - My-tasks lists only OnProgress + Revise tasks I'm assigned to,
  *     nearest deadline first, with revise_count + is_heavy_revise (>= 3).
  *   - Pool-tasks lists is_pool_task=true rows that don't yet have any pic.
+ *   - Work-summary excludes tasks whose parent project is Canceled.
  */
 function mkDashProject(): Project
 {
     // The Project factory has withBoards() etc; a bare project + one deal
     // is enough for the dashboard to render project_name/identifier fields.
-    return Project::factory()->withBoards()->create();
+    // Pin the status to a live (non-canceled) one: the factory otherwise
+    // randomises it, and getWorkSummary now drops tasks on canceled projects,
+    // which would make the summary assertions flaky.
+    return Project::factory()->withBoards()->create([
+        'status' => ProjectStatus::OnGoing->value,
+    ]);
 }
 
 /**
@@ -463,6 +470,54 @@ it('rejects an unauthenticated caller asking for the work summary with 403', fun
     $result = $this->service->getWorkSummary();
 
     expect($result['code'])->toBe(403);
+});
+
+it('excludes tasks whose parent project is canceled from the work summary', function () {
+    $employee = Employee::factory()->withUser()->create();
+    $user = User::where('employee_id', $employee->id)->first();
+
+    // Control: a task on a live project still counts.
+    mkDashTaskFor($employee, TaskStatus::OnProgress->value);
+
+    // A canceled project's tasks must drop out of every part of the summary,
+    // even though I'm an active pic on them.
+    $canceledProject = Project::factory()->withBoards()->create([
+        'status' => ProjectStatus::Canceled->value,
+    ]);
+    $canceledOnProgress = ProjectTask::factory()->create([
+        'project_id' => $canceledProject->id,
+        'project_board_id' => $canceledProject->boards->first()->id,
+        'status' => TaskStatus::OnProgress->value,
+    ]);
+    ProjectTaskPic::create([
+        'project_task_id' => $canceledOnProgress->id,
+        'employee_id' => $employee->id,
+        'status' => TaskPicStatus::Approved->value,
+        'assigned_at' => now(),
+        'approved_at' => now(),
+    ]);
+    // A WaitingApproval task on the canceled project must not reach approvals.
+    $canceledApproval = ProjectTask::factory()->create([
+        'project_id' => $canceledProject->id,
+        'project_board_id' => $canceledProject->boards->first()->id,
+        'status' => TaskStatus::WaitingApproval->value,
+    ]);
+    ProjectTaskPic::create([
+        'project_task_id' => $canceledApproval->id,
+        'employee_id' => $employee->id,
+        'status' => null,
+        'assigned_at' => now(),
+    ]);
+
+    actingAs($user);
+
+    $result = $this->service->getWorkSummary();
+
+    expect($result['data']['open_total'])->toBe(1)
+        ->and($result['data']['status_breakdown']['onprogress'])->toBe(1)
+        ->and($result['data']['status_breakdown']['waitingapproval'])->toBe(0)
+        ->and($result['data']['approvals']['total'])->toBe(0)
+        ->and($result['data']['approvals']['items'])->toBe([]);
 });
 
 // ---- Lead 3D modeller: waiting-distribute queue ------------------------

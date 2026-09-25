@@ -114,6 +114,11 @@ class ProjectTask extends Model
             ->orderBy('created_at', 'DESC');
     }
 
+    public function picHistories(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicHistory::class, 'project_task_id');
+    }
+
     public function logs(): HasMany
     {
         return $this->hasMany(ProjectTaskLog::class, 'project_task_id')
@@ -151,7 +156,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -163,7 +168,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -180,7 +185,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -197,7 +202,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -209,7 +214,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -221,7 +226,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -237,15 +242,15 @@ class ProjectTask extends Model
                     $start = new DateTime($report['start_at']);
                     $end = $report['end_at'] ? new DateTime($report['end_at']) : new DateTime('now');
                     $diff = date_diff($start, $end);
-                    $day = $diff->d > 0 ? $diff->d.' '.__('global.day') : null;
-                    $hour = $diff->h > 0 ? $diff->h.' '.__('global.hours') : null;
-                    $minute = $diff->i > 0 ? $diff->i.' '.__('global.minutes') : null;
+                    $day = $diff->d > 0 ? $diff->d . ' ' . __('global.day') : null;
+                    $hour = $diff->h > 0 ? $diff->h . ' ' . __('global.hours') : null;
+                    $minute = $diff->i > 0 ? $diff->i . ' ' . __('global.minutes') : null;
                     $workTime = $minute;
                     if ($hour) {
-                        $workTime = $hour.' '.__('global.and').' '.$minute;
+                        $workTime = $hour . ' ' . __('global.and') . ' ' . $minute;
                     }
                     if ($day) {
-                        $workTime = $day.' '.$hour.' '.__('global.and').' '.$minute;
+                        $workTime = $day . ' ' . $hour . ' ' . __('global.and') . ' ' . $minute;
                     }
 
                     $out[] = [
@@ -259,7 +264,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out
+            get: fn() => $out
         );
     }
 
@@ -293,7 +298,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 
@@ -314,7 +319,7 @@ class ProjectTask extends Model
         }
 
         return Attribute::make(
-            get: fn () => $out,
+            get: fn() => $out,
         );
     }
 }

@@ -234,6 +234,10 @@ class RolePermissionSetting extends Seeder
     protected function dashboardPermission()
     {
         return [
+            ['name' => 'dfengine_edit_setting', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dfengine_access', 'group' => 'dashboard', 'used' => [
                 $this->getDirectorRole(),
                 $this->getRootRole(),
@@ -252,6 +256,10 @@ class RolePermissionSetting extends Seeder
                 $this->getRootRole(),
             ]],
             ['name' => 'dashboard_report_access', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
+            ['name' => 'project_cost_report', 'group' => 'dashboard', 'used' => [
                 $this->getDirectorRole(),
                 $this->getRootRole(),
             ]],

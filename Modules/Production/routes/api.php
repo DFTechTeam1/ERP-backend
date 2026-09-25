@@ -94,6 +94,9 @@ Route::middleware(['auth.session'])
                 ->name('dashboard.me.workSummary');
         });
 
+        // Cost Estimation per project
+        Route::get('cost-estimation/{projectUid}', [ProjectController::class, 'getProjectCostEstimation']);
+
         // Project Manager dashboard - scoped to projects the PM is on via
         // ProjectPersonInCharge. PM Admin / Director / Root see all projects.
         Route::prefix('dashboard/pm')->group(function () {
@@ -135,7 +138,8 @@ Route::middleware(['auth.session'])
         Route::get('project/deals/{projectDealUid}', [ProjectController::class, 'detailProjectDeal']);
         Route::put('project/deals/{projectDealUid}', [ProjectController::class, 'updateProjectDeal']);
         Route::post('project/deals/{projectDealUid}/cancel', [ProjectController::class, 'cancelProjectDeal'])->name('project-deal.cancel');
-        Route::post('project/deals/{projectDealUid}/refund', [ProjectController::class, 'storeRefund'])->name('project-deal.refund');
+        Route::post('project/deals/{projectDealUid}/refund', [ProjectController::class, 'storeRefund'])->name('project-deal.refund')
+            ->middleware(PermissionCheck::class . ':create_refund');
         Route::get('project/deals/{projectDealUid}/assignLead', [ProjectController::class, 'registerOnLead'])->name('project-deal.registerOnLead');
         Route::post('project/deals/{projectDealUid}/quotation', [ProjectController::class, 'addMoreQuotation']);
         Route::post('project/deals/{projectDealUid}/update', [ProjectController::class, 'updateFinalDeal'])->name('project-deal.updateFinal');
@@ -160,6 +164,10 @@ Route::middleware(['auth.session'])
         Route::get('project/{projectUid}/getTaskTeamForReview', [ProjectController::class, 'getTaskTeamForReview']);
         Route::get('project/{projectUid}/precheck', [ProjectController::class, 'precheck']);
         Route::post('project/{projectUid}/completeUnfinishedTask', [ProjectController::class, 'completeUnfinishedTask']);
+
+        // Dfengine
+        Route::get('dfengine/projects', [ProjectController::class, 'listProjectDFEngine']);
+        Route::get('dfengine/projects/{projectUid}', [ProjectController::class, 'listTaskDFEngine']);
 
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
@@ -255,6 +263,7 @@ Route::middleware(['auth.session'])
         Route::get('project/scheduler/{projectUid}', [ProjectController::class, 'getAllSchedulerProjects']);
         Route::get('project/{projectUid}/getPicScheduler', [ProjectController::class, 'getPicScheduler']);
         Route::post('project/{projectUid}/assignPic', [ProjectController::class, 'assignPic']);
+        Route::post('project/{projectUid}/setLeadPic', [ProjectController::class, 'setLeadPic']);
         Route::post('project/{projectUid}/subtitutePic', [ProjectController::class, 'subtitutePic']);
         Route::get('project/{projectUid}/getPicForSubtitute', [ProjectController::class, 'getPicForSubtitute']);
         Route::get('project/{projectUid}/readyToGo', [ProjectController::class, 'readyToGo']);
@@ -308,6 +317,8 @@ Route::middleware(['auth.session'])
         Route::post('project/{projectUid}/task/{taskUid}/hold', [ProjectController::class, 'holdTask'])->name('task.hold');
         Route::get('project/{projectUid}/task/{taskUid}/startTask', [ProjectController::class, 'startTask'])->name('task.state');
         Route::get('project/{projectUid}/task/{employeeId}/listTask', [ProjectController::class, 'getEmployeeTaskList']);
+        Route::get('project/{projectUid}/task/{taskUid}/revertToDistribute', [ProjectController::class, 'revertToDistribute'])
+            ->middleware('role:root|director|lead modeller|project manager|project manager admin');
         Route::delete('project/{projectUid}/task/{taskUid}/deletAettachment/{attachmentId}', [ProjectController::class, 'deleteAttachment']);
 
         // incharges

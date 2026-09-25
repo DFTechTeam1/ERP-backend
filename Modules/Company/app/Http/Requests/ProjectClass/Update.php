@@ -18,13 +18,16 @@ class Update extends FormRequest
                 'required',
                 new UniqueLowerRule(new ProjectClass, $this->route('projectClass'), 'name', true),
             ],
-            'maximal_point' => 'required',
+            // 'maximal_point' => 'required',
             'color' => 'required',
-            'base_point' => 'required|integer|min:0',
-            'point_2_team' => 'required|integer|min:0',
-            'point_3_team' => 'required|integer|min:0',
-            'point_4_team' => 'required|integer|min:0',
-            'point_5_team' => 'required|integer|min:0',
+            'reward' => 'required',
+            'pm_reward' => 'nullable|numeric|min:0',
+            'vj_reward' => 'nullable|numeric|min:0',
+            // 'base_point' => 'required|integer|min:0',
+            // 'point_2_team' => 'required|integer|min:0',
+            // 'point_3_team' => 'required|integer|min:0',
+            // 'point_4_team' => 'required|integer|min:0',
+            // 'point_5_team' => 'required|integer|min:0',
         ];
     }
 

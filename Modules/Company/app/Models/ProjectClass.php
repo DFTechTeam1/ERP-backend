@@ -5,11 +5,13 @@ namespace Modules\Company\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Company\Database\Factories\ProjectClassFactory;
+use Modules\Production\Models\Project;
 
 class ProjectClass extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -18,11 +20,15 @@ class ProjectClass extends Model
         'name',
         'maximal_point',
         'color',
-        'base_point',
-        'point_2_team',
-        'point_3_team',
-        'point_4_team',
-        'point_5_team',
+        'base_point', // Legacy
+        'point_2_team', // Legacy
+        'point_3_team', // Legacy
+        'point_4_team', // Legacy
+        'point_5_team', // Legacy
+        'reward',
+        'pm_reward',
+        'vj_reward',
+        'is_active',
     ];
 
     protected static function newFactory(): ProjectClassFactory
@@ -32,6 +38,6 @@ class ProjectClass extends Model
 
     public function project(): HasOne
     {
-        return $this->hasOne(\Modules\Production\Models\Project::class, 'project_class_id');
+        return $this->hasOne(Project::class, 'project_class_id');
     }
 }

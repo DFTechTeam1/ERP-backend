@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Models;
 
+use App\Data\Finance\ProjectCost\DashboardCostCompositionData;
 use App\Enums\Cache\CacheKey;
 use App\Services\GeneralService;
 use App\Traits\ModelObserver;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Hrd\Models\EmployeePointProject;
+use Modules\Hrd\Models\EmployeeReward;
 use Modules\Production\Database\Factories\ProjectFactory;
 
 class Project extends Model
@@ -110,6 +113,21 @@ class Project extends Model
         return $this->hasOne(InteractiveProject::class, 'parent_project', 'id');
     }
 
+    public function projectPointEmployees(): HasMany
+    {
+        return $this->hasMany(EmployeePointProject::class, 'project_id');
+    }
+
+    public function rewards(): HasMany
+    {
+        return $this->hasMany(EmployeeReward::class, 'project_id');
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(ProjectActivity::class, 'project_id');
+    }
+
     public function feedbacks(): HasMany
     {
         return $this->hasMany(ProjectFeedback::class, 'project_id');
@@ -203,6 +221,11 @@ class Project extends Model
         return $this->hasMany(ProjectTask::class, 'project_id');
     }
 
+    public function taskPicHistories(): HasMany
+    {
+        return $this->hasMany(ProjectTaskPicHistory::class, 'project_id');
+    }
+
     public function teamTransfer(): HasMany
     {
         return $this->hasMany(TransferTeamMember::class, 'project_id');
@@ -248,7 +271,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -266,7 +289,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -275,11 +298,11 @@ class Project extends Model
         $output = '';
 
         if (isset($this->attributes['showreels'])) {
-            $output = asset('storage/projects/'.$this->attributes['id'].'/showreels/'.$this->attributes['showreels']);
+            $output = asset('storage/projects/' . $this->attributes['id'] . '/showreels/' . $this->attributes['showreels']);
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -297,7 +320,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -315,7 +338,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -333,7 +356,7 @@ class Project extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -344,8 +367,28 @@ class Project extends Model
 
     public function scopeIsDuplicate(Builder $builder, string $name, string $projectDate)
     {
-        $builder->whereLike('name', '%'. $name. '%')
+        $builder->whereLike('name', '%' . $name . '%')
             ->whereDate('project_date', $projectDate);
+    }
+
+    public function getCosts()
+    {
+        if (!$this->relationLoaded('rewards')) {
+            $this->with('rewards');
+        }
+
+        $output = [];
+
+        // employee rewards as project cost
+        $employeeRewards = new DashboardCostCompositionData(
+            key: 'employee_reward',
+            label: "Employee Reward",
+            total: $this->rewards->sum('total_reward')
+        );
+
+        array_push($output, $employeeRewards);
+
+        return $output;
     }
 
     // protected static function newFactory(): ProjectFactory

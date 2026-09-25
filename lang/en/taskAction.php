@@ -18,4 +18,5 @@ return [
     'revise' => 'Revise',
     'delete' => 'Delete',
     'pickTask' => 'Pick Task',
+    'revertDistribute' => 'Revert to Distribute',
 ];

@@ -10,8 +10,6 @@ use App\Notifications\DummyNotification;
 use App\Services\EncryptionService;
 use App\Services\PusherNotification;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
-use Illuminate\Notifications\Slack\SlackMessage;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +17,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
-use Modules\Company\Notifications\SlackNotification;
 use Modules\Email\Emails\InviteToErpMail;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\FinanceController;
@@ -31,6 +28,7 @@ use Modules\Hrd\Notifications\UserEmailActivation;
 use Modules\Hrd\Services\GreatdayService;
 use Modules\Inventory\Services\InventoryService;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Models\Project;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Services\ProjectService;
 use PhpOffice\PhpWord\TemplateProcessor;
@@ -380,4 +378,5 @@ Route::get('slack-testing', function () {
 
     //     $developer->notify(new SlackNotification($block));
     // }
+    //
 });

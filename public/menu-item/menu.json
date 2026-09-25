@@ -171,7 +171,7 @@
                     "permission": "list_interactive_requests"
                 },
                 {
-                    "path": "/admin/accounting/invoice-changes",
+                    "path": "/admin/finance/invoice-changes",
                     "slug": "invoiceChanges",
                     "lang_id": "Perubahan Invoice",
                     "lang_en": "Invoice Changes",
@@ -249,7 +249,7 @@
             "icon": "mdiPlain:mdi-calculator-variant-outline",
             "childs": [
                 {
-                    "path": "/admin/accounting/leads",
+                    "path": "/admin/finance/leads",
                     "slug": "leads",
                     "lang_id": "Leads",
                     "lang_en": "Leads",
@@ -257,7 +257,7 @@
                     "permission": "list_leads"
                 },
                 {
-                    "path": "/admin/accounting/deals",
+                    "path": "/admin/finance/deals",
                     "slug": "projectDeals",
                     "lang_id": "Deals",
                     "lang_en": "Deals",
@@ -265,7 +265,7 @@
                     "permission": "list_deals"
                 },
                 {
-                    "path": "/admin/accounting/transactions",
+                    "path": "/admin/finance/transactions",
                     "slug": "transactions",
                     "lang_id": "Transaksi",
                     "lang_en": "Transactions",
@@ -273,7 +273,7 @@
                     "permission": "list_transaction"
                 },
                 {
-                    "path": "/admin/accounting/refund",
+                    "path": "/admin/finance/refund",
                     "slug": "refund",
                     "lang_id": "Refund",
                     "lang_en": "Refund",
@@ -385,6 +385,14 @@
                             "permission": "list_audit_log"
                         }
                     ]
+                },
+                {
+                    "path": "/admin/finance/project-costs",
+                    "slug": "ProjectCostsDashboard",
+                    "lang_id": "Pengeluaran Acara",
+                    "lang_en": "Project Costs",
+                    "icon": "mdiPlain:mdi-cash",
+                    "permission": "project_cost_report"
                 }
             ]
         },

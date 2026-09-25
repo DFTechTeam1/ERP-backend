@@ -14,6 +14,9 @@ class AssignPic extends FormRequest
         return [
             'pics' => 'required|array',
             'pics.*' => 'required|string',
+            // Optional: employee uid of the PM to flag as Lead (largest share of the PM reward
+            // pot). When omitted, no PIC is flagged and the Lead falls back to the earliest one.
+            'lead' => 'nullable|string',
         ];
     }
 

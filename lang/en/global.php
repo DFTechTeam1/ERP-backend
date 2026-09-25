@@ -315,6 +315,8 @@ return [
     'equipmentEventHasBeenReturned' => 'Equipment for event :event has been returned and need to be checked',
     'successUpdateEmployment' => 'Success update employment',
     'successAssignPIC' => 'PIC was successfully assigned to this event. The person will receive a notification about this project',
+    'successSetLeadPic' => 'Lead project manager was set successfully',
+    'employeeIsNotPicOfThisProject' => 'This employee is not a person in charge of this project',
 
     'nameRequired' => 'Name is required',
     'employeeIdRequired' => 'Employee id is required',
@@ -377,4 +379,10 @@ return [
     'dealsCreated' => 'Deals created',
     'dealsFinalized' => 'Deals finalized',
     'dealsFullyPaid' => 'Fully paid',
+
+    // Project activity log
+    'projectActivityChangeStatusTitle' => 'Change Status',
+    'projectActivityChangeStatusDescription' => 'Status changed from :from to :to',
+    'projectActivityChangeProjectClassTitle' => 'Change project class',
+    'projectActivityChangeProjectClassDescription' => 'Project class changed from :from to :to',
 ];
