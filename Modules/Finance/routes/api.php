@@ -7,6 +7,7 @@ use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\Api\MarketingDashboardController;
 use Modules\Finance\Http\Controllers\Api\ProjectCostController;
+use Modules\Finance\Http\Controllers\Api\CostCenterController;
 
 /*
  *--------------------------------------------------------------------------
@@ -114,6 +115,15 @@ Route::middleware(['auth.session'])->group(function () {
     Route::get('production/project-costs/cost-by-class', [ProjectCostController::class, 'getCostByClass']);
     Route::get('production/project-costs/cost-composition', [ProjectCostController::class, 'getCostComposition']);
     Route::get('production/project-costs/{projectUid}', [ProjectCostController::class, 'detailProjectCost']);
+
+    // Cost Centers
+    Route::prefix('accounting')->group(function () {
+        Route::get('cost-centers', [CostCenterController::class, 'index']);
+        Route::post('cost-centers', [CostCenterController::class, 'store']);
+        Route::put('cost-centers/{costCenterUid}', [CostCenterController::class, 'update']);
+        Route::delete('cost-centers/{costCenterUid}', [CostCenterController::class, 'destroy']);
+        Route::patch('cost-centers/{costCenterUid}/toggle', [CostCenterController::class, 'toggleStatus']);
+    });
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])
