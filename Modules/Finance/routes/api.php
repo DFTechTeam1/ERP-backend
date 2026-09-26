@@ -8,6 +8,7 @@ use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\Api\MarketingDashboardController;
 use Modules\Finance\Http\Controllers\Api\ProjectCostController;
 use Modules\Finance\Http\Controllers\Api\CostCenterController;
+use Modules\Finance\Http\Controllers\CurrencyController;
 
 /*
  *--------------------------------------------------------------------------
@@ -123,6 +124,14 @@ Route::middleware(['auth.session'])->group(function () {
         Route::put('cost-centers/{costCenterUid}', [CostCenterController::class, 'update']);
         Route::delete('cost-centers/{costCenterUid}', [CostCenterController::class, 'destroy']);
         Route::patch('cost-centers/{costCenterUid}/toggle', [CostCenterController::class, 'toggleStatus']);
+
+        // Currencies
+        Route::get('currencies', [CurrencyController::class, 'index']);
+        Route::post('currencies', [CurrencyController::class, 'store']);
+        Route::put('currencies/{currencyUid}', [CurrencyController::class, 'update']);
+        Route::get('currencies/{currencyUid}/rates', [CurrencyController::class, 'historyRates']);
+        Route::post('currencies/{currencyUid}/rates', [CurrencyController::class, 'addRate']);
+        Route::put('currencies/{currencyUid}/rates/{rateUid}', [CurrencyController::class, 'updateRate']);
     });
 });
 

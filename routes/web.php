@@ -378,5 +378,4 @@ Route::get('slack-testing', function () {
 
     //     $developer->notify(new SlackNotification($block));
     // }
-    //
 });
