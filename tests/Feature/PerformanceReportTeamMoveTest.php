@@ -47,6 +47,7 @@ it('does not leak an out-of-range production task for a former production employ
     $song = ProjectSongList::factory()->create([
         'project_id' => $inRangeProject->id,
         'name' => 'Aug Song',
+        'created_by' => 1,
     ]);
 
     // Entertainment task on the IN-RANGE project, forced to share the production
