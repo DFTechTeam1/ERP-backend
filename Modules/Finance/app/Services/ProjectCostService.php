@@ -114,7 +114,7 @@ class ProjectCostService
             // all year
             $startYear = Carbon::now()->startOfYear()->format('Y-m-d');
             $endYear = Carbon::now()->endOfYear()->format('Y-m-d');
-            $where = "project_date BETWEEN '".$startYear."' AND '".$endYear."'";
+            $where = "project_date BETWEEN '" . $startYear . "' AND '" . $endYear . "'";
             $cacheKey .= ":Y::{$startYear}-{$endYear}";
         } elseif ($this->getYear() && $this->getMonth()) {
             $where = "MONTH(project_date) = '{$this->getMonth()}' AND YEAR(project_date) = '{$this->getYear()}'";
@@ -128,6 +128,18 @@ class ProjectCostService
                 $where .= " AND project_class_id = {$this->getEventClass()}";
             }
             $cacheKey .= ":C::{$this->getEventClass()}";
+        }
+
+        if (request('search')) {
+            $search = request('search');
+            if (empty($where)) {
+                $where = "name LIKE '%{$search}%'";
+            } else {
+                $where .= " AND name LIKE '%{$search}%'";
+            }
+
+            $trim = str_replace(' ', '', strtolower($search));
+            $cacheKey .= ":S::{$trim}";
         }
 
         return [$where, $cacheKey];
