@@ -2,7 +2,11 @@
 
 namespace Modules\Company\Services;
 
+use App\Data\Company\ProjectClass\ListClassData;
+use App\Data\Company\ProjectClass\ListTierClassData;
 use App\Data\Company\ProjectClass\UpdateStatusData;
+use DB;
+use Illuminate\Database\Eloquent\Collection;
 use Modules\Company\Models\ProjectClass;
 use Modules\Company\Repository\ProjectClassRepository;
 
@@ -33,6 +37,8 @@ class ProjectClassService
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
+            $relation = ['tiers:id,project_class_id,pm_count,pm_reward,production_reward'];
+
             if (! empty($search)) {
                 $where = "lower(name) LIKE '%{$search}%'";
             }
@@ -47,13 +53,39 @@ class ProjectClassService
                 $page
             );
 
+            /** @var array<int, ListClassData> */
+            $output = [];
+            foreach ($paginated as $class) {
+                /** @var array<int, ListTierClassData> */
+                $tiers = [];
+
+                foreach ($class->tiers as $tier) {
+                    $tiers[] = new ListTierClassData(
+                        pmCount: $tier->pm_count,
+                        pmReward: $tier->pm_reward,
+                        productionReward: $tier->production_reward
+                    );
+                }
+
+                $output[] = new ListClassData(
+                    uid: (string) $class->uid,
+                    name: $class->name,
+                    color: $class->color,
+                    reward: $class->reward,
+                    pm_reward: $class->pm_reward,
+                    vj_reward: $class->vj_reward,
+                    is_active: $class->status,
+                    pmTiers: $tiers
+                );
+            }
+
             $totalData = $this->repo->list('id', $where)->count();
 
             return generalResponse(
                 'Success',
                 false,
                 [
-                    'paginated' => $paginated,
+                    'paginated' => $output,
                     'totalData' => $totalData,
                 ],
             );
@@ -97,6 +129,7 @@ class ProjectClassService
      */
     public function store(array $data): array
     {
+        DB::beginTransaction();
         try {
             // maximal_point is a legacy, non-null column that the Create request no longer
             // collects (the module uses `reward` now), so default it to 0.
@@ -109,12 +142,28 @@ class ProjectClassService
 
             $created = $this->repo->store($data);
 
+            if (! empty($data['pmTiers'])) {
+                $payloadTiers = [];
+                foreach ($data['tiers'] as $tier) {
+                    $payloadTiers[] = [
+                        'pm_count' => $tier['pmCount'],
+                        'pm_reward' => $tier['pmReward'],
+                        'production_reward' => $tier['productionReward']
+                    ];
+                }
+
+                $created->tiers()->createMany($payloadTiers);
+            }
+
+            DB::commit();
+
             return generalResponse(
                 __('global.projectClassCreated'),
                 false,
                 $this->formatClass($created),
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
             return errorResponse($th);
         }
     }
@@ -127,6 +176,7 @@ class ProjectClassService
         string $id,
         string $where = ''
     ): array {
+        DB::beginTransaction();
         try {
             $this->repo->update($data, $id, $where);
 
@@ -137,6 +187,11 @@ class ProjectClassService
                 'id,name,color,reward,pm_reward,vj_reward,is_active',
                 $fetchWhere
             )->first();
+
+            if (! empty($data['pmTiers'])) {
+            }
+
+            DB::commit();
 
             return generalResponse(
                 __('global.projectClassUpdated'),
@@ -153,7 +208,7 @@ class ProjectClassService
      *
      * @return array<string, mixed>
      */
-    protected function formatClass(ProjectClass $class): array
+    protected function formatClass(ProjectClass|Collection $class): array
     {
         return [
             'uid' => $class->id,
