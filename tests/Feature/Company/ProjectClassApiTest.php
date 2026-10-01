@@ -6,6 +6,7 @@ use Modules\Production\Models\Project;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\assertSoftDeleted;
 
 /**
@@ -180,6 +181,65 @@ describe('POST /api/projectClass/bulk', function () {
         ])->assertStatus(500);
 
         assertDatabaseHas('project_classes', ['id' => $linked->id, 'deleted_at' => null]);
+    });
+});
+
+describe('pm tiers (e2e)', function () {
+    it('creates a class together with its pm tiers', function () {
+        $this->postJson('/api/projectClass', [
+            'name' => 'Class S',
+            'color' => '#FFB74D',
+            'reward' => 3500000,
+            'pm_reward' => 2500000,
+            'vj_reward' => 350000,
+            'pmTiers' => [
+                ['pmCount' => 1, 'pmReward' => 2500000, 'productionReward' => 3500000],
+                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000],
+                ['pmCount' => 3, 'pmReward' => 3000000, 'productionReward' => 4500000],
+            ],
+        ])->assertStatus(201);
+
+        $class = ProjectClass::where('name', 'Class S')->firstOrFail();
+        expect($class->tiers()->count())->toBe(3);
+        assertDatabaseHas('project_class_pm_tiers', [
+            'project_class_id' => $class->id,
+            'pm_count' => 3,
+            'pm_reward' => 3000000,
+            'production_reward' => 4500000,
+        ]);
+    });
+
+    it('adds, updates and deletes tiers in a single update', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Tiered']);
+        $existing = $class->tiers()->create(['pm_count' => 1, 'pm_reward' => 2500000, 'production_reward' => 3500000]);
+        $toDelete = $class->tiers()->create(['pm_count' => 3, 'pm_reward' => 3000000, 'production_reward' => 4500000]);
+
+        $this->putJson("/api/projectClass/{$class->id}", [
+            'name' => 'Tiered',
+            'color' => '#FFB74D',
+            'reward' => 3500000,
+            'pmTiers' => [
+                ['id' => $existing->id, 'pmCount' => 1, 'pmReward' => 2600000, 'productionReward' => 3600000], // update existing
+                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000],                        // create new
+            ],
+            'deletedTierIds' => [$toDelete->id],                                                               // delete
+        ])->assertStatus(201);
+
+        assertDatabaseHas('project_class_pm_tiers', ['id' => $existing->id, 'pm_reward' => 2600000, 'production_reward' => 3600000]);
+        assertDatabaseHas('project_class_pm_tiers', ['project_class_id' => $class->id, 'pm_count' => 2, 'production_reward' => 4000000]);
+        assertDatabaseMissing('project_class_pm_tiers', ['id' => $toDelete->id]);
+    });
+
+    it('exposes pmTiers in the list payload', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Class S List']);
+        $class->tiers()->create(['pm_count' => 2, 'pm_reward' => 2500000, 'production_reward' => 4000000]);
+
+        $this->getJson('/api/projectClass')
+            ->assertStatus(201)
+            ->assertJsonPath('data.paginated.0.pmTiers.0.pmCount', 2)
+            ->assertJsonStructure([
+                'data' => ['paginated' => [['pmTiers' => [['pmCount', 'pmReward', 'productionReward']]]]],
+            ]);
     });
 });
 

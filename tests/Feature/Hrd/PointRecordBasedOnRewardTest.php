@@ -10,6 +10,7 @@ use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Hrd\Models\EmployeePointProjectDetail;
 use Modules\Hrd\Models\EmployeeReward;
 use Modules\Production\Models\Project;
+use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectTask;
 use Modules\Production\Models\ProjectTaskPicHistory;
 use Spatie\Permission\Models\Role;
@@ -80,6 +81,25 @@ function prbrAssignTasks(Project $project, Employee $employee, int $count): arra
     }
 
     return $taskIds;
+}
+
+/** Add a PIC (project manager) to the event - the production pot tier is keyed on this count. */
+function prbrAddPic(Project $project, Employee $employee): ProjectPersonInCharge
+{
+    return ProjectPersonInCharge::create([
+        'project_id' => $project->id,
+        'pic_id' => $employee->id,
+        'is_lead' => false,
+    ]);
+}
+
+function prbrAddTier(ProjectClass $class, int $pmCount, float $productionReward, float $pmReward = 0)
+{
+    return $class->tiers()->create([
+        'pm_count' => $pmCount,
+        'pm_reward' => $pmReward,
+        'production_reward' => $productionReward,
+    ]);
 }
 
 beforeEach(function () {
@@ -356,6 +376,65 @@ describe('PointRecordBasedOnReward pot distribution', function () {
             'base_reward' => 50000,
             'total_reward' => 50000,
             'project_class_name' => 'Class A',
+        ]);
+    });
+});
+
+describe('PointRecordBasedOnReward tiered production pot', function () {
+    // Class S tariff: the production pot changes with PM headcount. The headcount is the number of
+    // PICs (personInCharges) on the event, NOT the number of production workers.
+    it('uses the tier production pot that matches the PM headcount', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Class S', 'reward' => 9999999]); // base ignored
+        prbrAddTier($class, 1, 3500000);
+        prbrAddTier($class, 2, 4000000);
+        prbrAddTier($class, 3, 4500000);
+
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+        // 2 PMs on the event -> pot comes from the 2-PM tier (4,000,000).
+        prbrAddPic($project, Employee::factory()->create());
+        prbrAddPic($project, Employee::factory()->create());
+
+        $worker = prbrEmployeeWithRole($this->productionRole);
+        prbrAssignTasks($project, $worker, 3);
+
+        PointRecordBasedOnReward::run($project->id, [
+            ['uid' => $worker->uid, 'additional_point' => 0],
+        ]);
+
+        // Sole production worker takes 100% of the tier pot; the base reward is ignored.
+        assertDatabaseHas('employee_rewards', [
+            'employee_id' => $worker->id,
+            'project_id' => $project->id,
+            'base_reward' => 4000000,
+            'total_reward' => 4000000,
+            'project_class_name' => 'Class S',
+        ]);
+    });
+
+    it('falls back to the base reward when no tier matches the PM headcount', function () {
+        // Tiers cover 1-3 PMs; a 4-PM event has no matching tier, so the base reward applies.
+        $class = ProjectClass::factory()->create(['name' => 'Class S4', 'reward' => 1000000]);
+        prbrAddTier($class, 1, 3500000);
+        prbrAddTier($class, 2, 4000000);
+        prbrAddTier($class, 3, 4500000);
+
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+        for ($i = 0; $i < 4; $i++) {
+            prbrAddPic($project, Employee::factory()->create());
+        }
+
+        $worker = prbrEmployeeWithRole($this->productionRole);
+        prbrAssignTasks($project, $worker, 2);
+
+        PointRecordBasedOnReward::run($project->id, [
+            ['uid' => $worker->uid, 'additional_point' => 0],
+        ]);
+
+        assertDatabaseHas('employee_rewards', [
+            'employee_id' => $worker->id,
+            'project_id' => $project->id,
+            'base_reward' => 1000000,
+            'total_reward' => 1000000,
         ]);
     });
 });
