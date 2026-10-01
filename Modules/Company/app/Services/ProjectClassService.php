@@ -5,22 +5,21 @@ namespace Modules\Company\Services;
 use App\Data\Company\ProjectClass\ListClassData;
 use App\Data\Company\ProjectClass\ListTierClassData;
 use App\Data\Company\ProjectClass\UpdateStatusData;
-use DB;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Modules\Company\Models\ProjectClass;
+use Modules\Company\Repository\ProjectClassPmTierRepository;
 use Modules\Company\Repository\ProjectClassRepository;
 
 class ProjectClassService
 {
-    private $repo;
-
     /**
      * Construction Data
      */
-    public function __construct()
-    {
-        $this->repo = new ProjectClassRepository;
-    }
+    public function __construct(
+        private readonly ProjectClassRepository $repo,
+        private readonly ProjectClassPmTierRepository $tierRepo
+    ) {}
 
     /**
      * Get list of data
@@ -39,11 +38,12 @@ class ProjectClassService
 
             $relation = ['tiers:id,project_class_id,pm_count,pm_reward,production_reward'];
 
+            $where = 'is_active = 1';
             if (! empty($search)) {
-                $where = "lower(name) LIKE '%{$search}%'";
+                $where .= " and lower(name) LIKE '%".strtolower($search)."%'";
             }
 
-            $select = 'id as uid,name,color,reward,pm_reward,vj_reward,is_active as status';
+            $select = 'id,name,color,reward,pm_reward,vj_reward,is_active as status';
 
             $paginated = $this->repo->pagination(
                 $select,
@@ -61,6 +61,7 @@ class ProjectClassService
 
                 foreach ($class->tiers as $tier) {
                     $tiers[] = new ListTierClassData(
+                        id: (int) $tier->id,
                         pmCount: $tier->pm_count,
                         pmReward: $tier->pm_reward,
                         productionReward: $tier->production_reward
@@ -68,7 +69,7 @@ class ProjectClassService
                 }
 
                 $output[] = new ListClassData(
-                    uid: (string) $class->uid,
+                    uid: (string) $class->id,
                     name: $class->name,
                     color: $class->color,
                     reward: $class->reward,
@@ -140,15 +141,15 @@ class ProjectClassService
             $data['pm_reward'] = $data['pm_reward'] ?? 0;
             $data['vj_reward'] = $data['vj_reward'] ?? 0;
 
-            $created = $this->repo->store($data);
+            $created = $this->repo->store(collect($data)->except(['pmTiers'])->toArray());
 
             if (! empty($data['pmTiers'])) {
                 $payloadTiers = [];
-                foreach ($data['tiers'] as $tier) {
+                foreach ($data['pmTiers'] as $tier) {
                     $payloadTiers[] = [
                         'pm_count' => $tier['pmCount'],
                         'pm_reward' => $tier['pmReward'],
-                        'production_reward' => $tier['productionReward']
+                        'production_reward' => $tier['productionReward'],
                     ];
                 }
 
@@ -164,6 +165,7 @@ class ProjectClassService
             );
         } catch (\Throwable $th) {
             DB::rollBack();
+
             return errorResponse($th);
         }
     }
@@ -174,21 +176,50 @@ class ProjectClassService
     public function update(
         array $data,
         string $id,
-        string $where = ''
     ): array {
         DB::beginTransaction();
         try {
-            $this->repo->update($data, $id, $where);
+            $this->repo->update(collect($data)->except(['pmTiers', 'deletedTierIds'])->toArray(), $id);
 
             // Return the saved class (incl. reward / pm_reward / vj_reward) so the management
-            // interface can reflect the persisted values without a second request.
-            $fetchWhere = ! empty($where) ? $where : "id = {$id}";
-            $updated = $this->repo->list(
-                'id,name,color,reward,pm_reward,vj_reward,is_active',
-                $fetchWhere
-            )->first();
+            // interface can reflect the persisted values without a second request. Fetch by id -
+            // not the first active row - so the response reflects the class that was updated.
+            $updated = $this->repo->show($id, 'id,name,color,reward,pm_reward,vj_reward,is_active');
 
             if (! empty($data['pmTiers'])) {
+                foreach ($data['pmTiers'] as $tier) {
+                    $payloadTier = [
+                        'pm_count' => $tier['pmCount'],
+                        'pm_reward' => $tier['pmReward'],
+                        'production_reward' => $tier['productionReward'],
+                    ];
+
+                    if (isset($tier['id'])) {
+                        $currentTier = $this->tierRepo->show([
+                            'where' => [
+                                'id' => $tier['id'],
+                            ],
+                        ]);
+
+                        // Update if exists, or create it
+                        $this->tierRepo->update($currentTier, $payloadTier);
+                    } else {
+                        $payloadTier['project_class_id'] = $id;
+                        $this->tierRepo->store($payloadTier);
+                    }
+                }
+            }
+
+            foreach (($data['deletedTierIds'] ?? []) as $deleted) {
+                $deletedData = $this->tierRepo->show([
+                    'where' => [
+                        'id' => $deleted,
+                    ],
+                ]);
+
+                if ($deletedData) {
+                    $this->tierRepo->delete($deletedData);
+                }
             }
 
             DB::commit();
@@ -199,6 +230,8 @@ class ProjectClassService
                 $updated ? $this->formatClass($updated) : [],
             );
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return errorResponse($th);
         }
     }

@@ -6,6 +6,7 @@ use Modules\Company\Services\ProjectClassService;
 use Modules\Production\Models\Project;
 
 use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\assertSoftDeleted;
 
 /**
@@ -20,13 +21,15 @@ use function Pest\Laravel\assertSoftDeleted;
  */
 function pcService(): ProjectClassService
 {
-    return new ProjectClassService;
+    // Resolve via the container: the service now constructor-injects two repositories.
+    return app(ProjectClassService::class);
 }
 
 describe('list', function () {
-    it('returns the paginated rows with the aliased columns and the unpaged total', function () {
-        ProjectClass::factory()->create(['name' => 'Gold', 'color' => '#FFD700', 'reward' => 50000, 'is_active' => true]);
-        ProjectClass::factory()->create(['name' => 'Silver', 'color' => '#C0C0C0', 'reward' => 25000, 'is_active' => false]);
+    it('returns only active classes with the list DTO shape (incl. empty pmTiers)', function () {
+        ProjectClass::factory()->create(['name' => 'Gold', 'color' => '#FFD700', 'reward' => 50000, 'pm_reward' => 10000, 'vj_reward' => 2000, 'is_active' => true]);
+        ProjectClass::factory()->create(['name' => 'Bronze', 'color' => '#CD7F32', 'reward' => 30000, 'is_active' => true]);
+        ProjectClass::factory()->create(['name' => 'Silver', 'color' => '#C0C0C0', 'is_active' => false]); // inactive -> excluded
 
         $response = pcService()->list();
 
@@ -34,11 +37,36 @@ describe('list', function () {
             ->and($response['data']['totalData'])->toBe(2)
             ->and($response['data']['paginated'])->toHaveCount(2);
 
+        $names = collect($response['data']['paginated'])->pluck('name');
+        expect($names)->toContain('Gold')
+            ->and($names)->toContain('Bronze')
+            ->and($names)->not->toContain('Silver');
+
         $gold = collect($response['data']['paginated'])->firstWhere('name', 'Gold');
-        expect($gold->uid)->not->toBeNull()               // id aliased to uid
+        expect($gold->uid)->not->toBeNull()                 // id exposed as uid
             ->and($gold->color)->toBe('#FFD700')
             ->and((int) $gold->reward)->toBe(50000)
-            ->and((int) $gold->status)->toBe(1);          // is_active aliased to status
+            ->and((int) $gold->pm_reward)->toBe(10000)
+            ->and((int) $gold->vj_reward)->toBe(2000)
+            ->and($gold->is_active)->toBeTrue()
+            ->and($gold->pmTiers)->toHaveCount(0);          // no tiers
+    });
+
+    it('includes the pm tiers for a tiered class', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Class S', 'reward' => 3500000, 'is_active' => true]);
+        $class->tiers()->createMany([
+            ['pm_count' => 1, 'pm_reward' => 2500000, 'production_reward' => 3500000],
+            ['pm_count' => 2, 'pm_reward' => 2500000, 'production_reward' => 4000000],
+        ]);
+
+        $response = pcService()->list();
+        $row = collect($response['data']['paginated'])->firstWhere('name', 'Class S');
+
+        expect($row->pmTiers)->toHaveCount(2);
+        $tier2 = collect($row->pmTiers)->firstWhere('pmCount', 2);
+        expect($tier2)->not->toBeNull()
+            ->and((int) $tier2->pmReward)->toBe(2500000)
+            ->and((int) $tier2->productionReward)->toBe(4000000);
     });
 
     it('filters by name via the search request parameter', function () {
@@ -51,7 +79,7 @@ describe('list', function () {
 
         expect($response['data']['totalData'])->toBe(1)
             ->and($response['data']['paginated'])->toHaveCount(1)
-            ->and($response['data']['paginated']->first()->name)->toBe('Gold');
+            ->and($response['data']['paginated'][0]->name)->toBe('Gold');
     });
 
     it('returns an empty result when the search matches nothing', function () {
@@ -161,27 +189,56 @@ describe('store', function () {
 
         assertDatabaseHas('project_classes', ['name' => 'No Pots', 'pm_reward' => 0, 'vj_reward' => 0]);
     });
+
+    it('creates the pm tiers supplied with the class', function () {
+        $response = pcService()->store([
+            'name' => 'Class S',
+            'color' => '#FFB74D',
+            'reward' => 3500000,
+            'pm_reward' => 2500000,
+            'vj_reward' => 350000,
+            'pmTiers' => [
+                ['pmCount' => 1, 'pmReward' => 2500000, 'productionReward' => 3500000],
+                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000],
+                ['pmCount' => 3, 'pmReward' => 3000000, 'productionReward' => 4500000],
+            ],
+        ]);
+
+        expect($response['error'])->toBeFalse();
+
+        $class = ProjectClass::where('name', 'Class S')->firstOrFail();
+        expect($class->tiers()->count())->toBe(3);
+        assertDatabaseHas('project_class_pm_tiers', [
+            'project_class_id' => $class->id,
+            'pm_count' => 2,
+            'pm_reward' => 2500000,
+            'production_reward' => 4000000,
+        ]);
+    });
 });
 
 describe('update', function () {
-    it('updates by id and returns the updated message', function () {
+    it('updates by id and returns the updated class', function () {
         $class = ProjectClass::factory()->create(['name' => 'Old Name']);
 
         $response = pcService()->update(['name' => 'New Name', 'color' => '#000', 'reward' => 10], (string) $class->id);
 
         expect($response['error'])->toBeFalse()
-            ->and($response['message'])->toBe(__('global.projectClassUpdated'));
+            ->and($response['message'])->toBe(__('global.projectClassUpdated'))
+            ->and($response['data']['name'])->toBe('New Name');
 
         assertDatabaseHas('project_classes', ['id' => $class->id, 'name' => 'New Name']);
     });
 
-    it('updates via a raw where clause (the path the controller uses)', function () {
-        $class = ProjectClass::factory()->create(['name' => 'Before']);
+    it('returns the class that was updated, not the first active row', function () {
+        // Regression guard: update() used to re-fetch the first active class instead of the edited one.
+        ProjectClass::factory()->create(['name' => 'First Active']);
+        $target = ProjectClass::factory()->create(['name' => 'Target']);
 
-        $response = pcService()->update(['name' => 'After'], 'dummy', 'id = '.$class->id);
+        $response = pcService()->update(['name' => 'Target Renamed', 'color' => '#111', 'reward' => 5], (string) $target->id);
 
-        expect($response['error'])->toBeFalse();
-        assertDatabaseHas('project_classes', ['id' => $class->id, 'name' => 'After']);
+        expect((int) $response['data']['uid'])->toBe($target->id)
+            ->and($response['data']['name'])->toBe('Target Renamed');
     });
 
     it('persists and returns updated pm_reward and vj_reward', function () {
@@ -200,6 +257,65 @@ describe('update', function () {
             ->and((float) $response['data']['vj_reward'])->toBe(200000.0);
 
         assertDatabaseHas('project_classes', ['id' => $class->id, 'pm_reward' => 2000000, 'vj_reward' => 200000]);
+    });
+
+    it('creates a new tier (no id) on update', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Tiered']);
+
+        $response = pcService()->update([
+            'name' => 'Tiered',
+            'color' => '#000',
+            'reward' => 3500000,
+            'pmTiers' => [
+                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000],
+            ],
+        ], (string) $class->id);
+
+        expect($response['error'])->toBeFalse();
+        assertDatabaseHas('project_class_pm_tiers', [
+            'project_class_id' => $class->id,
+            'pm_count' => 2,
+            'pm_reward' => 2500000,
+            'production_reward' => 4000000,
+        ]);
+    });
+
+    it('updates an existing tier in place by id', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Tiered Edit']);
+        $tier = $class->tiers()->create(['pm_count' => 2, 'pm_reward' => 2500000, 'production_reward' => 4000000]);
+
+        pcService()->update([
+            'name' => 'Tiered Edit',
+            'color' => '#000',
+            'reward' => 3500000,
+            'pmTiers' => [
+                ['id' => $tier->id, 'pmCount' => 2, 'pmReward' => 2700000, 'productionReward' => 4200000],
+            ],
+        ], (string) $class->id);
+
+        assertDatabaseHas('project_class_pm_tiers', [
+            'id' => $tier->id,
+            'pm_reward' => 2700000,
+            'production_reward' => 4200000,
+        ]);
+        // updated in place, not duplicated
+        expect($class->tiers()->count())->toBe(1);
+    });
+
+    it('deletes tiers listed in deletedTierIds', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Tiered Delete']);
+        $keep = $class->tiers()->create(['pm_count' => 1, 'pm_reward' => 2500000, 'production_reward' => 3500000]);
+        $drop = $class->tiers()->create(['pm_count' => 2, 'pm_reward' => 2500000, 'production_reward' => 4000000]);
+
+        pcService()->update([
+            'name' => 'Tiered Delete',
+            'color' => '#000',
+            'reward' => 3500000,
+            'deletedTierIds' => [$drop->id],
+        ], (string) $class->id);
+
+        assertDatabaseMissing('project_class_pm_tiers', ['id' => $drop->id]);
+        assertDatabaseHas('project_class_pm_tiers', ['id' => $keep->id]);
     });
 });
 

@@ -12,12 +12,9 @@ use Modules\Company\Services\ProjectClassService;
 
 class ProjectClassController extends Controller
 {
-    private $service;
-
-    public function __construct()
-    {
-        $this->service = new ProjectClassService;
-    }
+    public function __construct(
+        private readonly ProjectClassService $service
+    ) {}
 
     public function getAll()
     {
@@ -53,9 +50,9 @@ class ProjectClassController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Update $request, $id)
+    public function update(Update $request, string $id)
     {
-        return apiResponse($this->service->update($request->validated(), 'dummy', 'id = ' . $id));
+        return apiResponse($this->service->update($request->validated(), $id));
     }
 
     /**
