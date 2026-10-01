@@ -2463,11 +2463,28 @@ Table "project_classes" {
   "point_3_team" tinyint [not null, default: '0']
   "point_4_team" tinyint [not null, default: '0']
   "point_5_team" tinyint [not null, default: '0']
-  "reward" decimal(24, 2) [not null, default: 0]
+  "reward" decimal(24, 2) [not null, default: 0, note: 'Pot produksi fallback (used when the class has no matching pm-count tier)']
+  "pm_reward" decimal(24, 2) [not null, default: 0, note: 'PM pot fallback (used when the class has no matching pm-count tier)']
+  "vj_reward" decimal(24, 2) [not null, default: 0, note: 'Fixed reward PER VJ; flat per class, not tiered']
   "is_active" tinyint [default: true]
   "created_at" timestamp
   "updated_at" timestamp
   "color" varchar(20)
+}
+
+Table "project_class_pm_tiers" {
+  "id" bigint [pk, not null, increment]
+  "project_class_id" bigint [not null]
+  "pm_count" tinyint [not null, note: 'Number of PMs collaborating on the event (1..N)']
+  "pm_reward" decimal(24, 2) [not null, default: 0, note: 'PM pot for this (class, pm_count) tier']
+  "production_reward" decimal(24, 2) [not null, default: 0, note: 'Pot produksi for this (class, pm_count) tier']
+  "created_at" timestamp
+  "updated_at" timestamp
+
+  Indexes {
+    (project_class_id, pm_count) [unique, name: "project_class_pm_tiers_class_count_unique"]
+    project_class_id [name: "project_class_pm_tiers_project_class_id_foreign"]
+  }
 }
 
 Table "project_deal_changes" {
@@ -5361,3 +5378,4 @@ Table "payment_allocations" {
   }
 }
 Ref: "payments"."id" < "payment_allocations"."payment_id" [delete: cascade]
+Ref: "project_classes"."id" < "project_class_pm_tiers"."project_class_id" [delete: cascade]
