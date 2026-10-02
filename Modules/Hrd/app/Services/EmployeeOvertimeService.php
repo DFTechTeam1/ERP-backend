@@ -16,10 +16,12 @@ class EmployeeOvertimeService
         private readonly ProjectRepository $projectRepo
     ) {}
 
-    protected function getProjectData(string $remark)
+    protected function getProjectData(string $remark): array
     {
         $response = Http::withToken(request()->bearerToken())
             ->post(config('app.python_endpoint') . "/listener/project-task-identifier", ['text' => $remark]);
+
+        $output = [];
 
         if ($response->failed()) {
             // write log
@@ -35,12 +37,39 @@ class EmployeeOvertimeService
                         'relation' => 'tasks',
                         'query' => "id IN (" . implode(',', $res['data']['task_ids']) . ")"
                     ]
+                ],
+                relation: [
+                    'tasks:id,name,project_id'
                 ]
             );
 
-            // if ($project)
+            if (!$project->count()) {
+                // write log
+            }
+
+            foreach ($project as $key => $data) {
+                $output[] = [
+                    'id' => $data->id,
+                    'project_name' => $data->name,
+                    'tasks' => []
+                ];
+
+                $tasks = [];
+                foreach ($data->tasks->whereIn('id', $res['data']['task_ids']) as $task) {
+                    $tasks[] = [
+                        'id' => $task->id,
+                        'task_name' => $task->name
+                    ];
+                }
+
+                $output[$key]['tasks'] = $tasks;
+            }
         }
+
+        return $output;
     }
+
+    protected function buildOvertimePayload(array $item, array &$output) {}
 
     protected function parsePayloadDatabase(array $data)
     {
@@ -51,6 +80,15 @@ class EmployeeOvertimeService
                 select: 'id,name',
                 where: "employee_id = '" . $item['empNo'] . "'"
             );
+
+            // Get project ids
+            $projects = $this->getProjectData($data['remark']);
+
+            if (count($projects) > 0) {
+                foreach ($projects as $projectId) {
+                    $output[] = [];
+                }
+            }
 
             $output[] = [
                 'employee_id' => $employee->id,

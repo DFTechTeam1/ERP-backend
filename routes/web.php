@@ -381,15 +381,35 @@ Route::get('slack-testing', function () {
     //
     $repo = app(ProjectRepository::class);
 
-    $data = $repo->list(
+    $projects = $repo->list(
         select: 'id,name,uid',
         whereHas: [
-            [
-                'relation' => 'tasks',
+            ['relation' => 'tasks',
                 'query' => 'id IN (4054, 4055)',
             ],
-        ]
+        ],
+        relation: ['tasks:id,name,project_id']
     );
 
-    return $data;
+    $output = [];
+
+    foreach ($projects as $key => $data) {
+        $output[] = [
+            'id' => $data->id,
+            'project_name' => $data->name,
+            'tasks' => [],
+        ];
+
+        $tasks = [];
+        foreach ($data->tasks->whereIn('id', [4054, 4055]) as $task) {
+            $tasks[] = [
+                'id' => $task->id,
+                'task_name' => $task->name,
+            ];
+        }
+
+        $output[$key]['tasks'] = $tasks;
+    }
+
+    return $output;
 });
