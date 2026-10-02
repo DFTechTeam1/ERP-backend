@@ -2,9 +2,11 @@
 
 namespace App\Actions\Hrd;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\EmployeeReward;
+use Modules\Production\Models\Project;
 use Modules\Production\Repository\ProjectRepository;
 
 /**
@@ -35,6 +37,7 @@ class RecordPmVjReward
             select: 'id,name,project_class_id',
             relation: [
                 'projectClass:id,name,pm_reward,vj_reward',
+                'projectClass.tiers',
                 'personInCharges:id,project_id,pic_id,is_lead',
                 'vjs:id,project_id,employee_id',
             ]
@@ -50,9 +53,30 @@ class RecordPmVjReward
         });
     }
 
+    protected function defineBaseReward(Project|Collection $project, string $type = 'pm'): float
+    {
+        $targetType = "{$type}_reward";
+        $amount = (float) ($project->projectClass->$targetType ?? 0);
+
+        // Only the PM pot is tiered by PM headcount; the VJ reward is always flat per class.
+        // When the class has tiers but none matches the collaborator count, fall back to the
+        // class-level pm_reward (mirrors PointRecordBasedOnReward's fallback to reward).
+        if ($type === 'pm' && $project->projectClass->tiers->isNotEmpty()) {
+            $numberOfCollaborator = $project->personInCharges->count();
+
+            $tier = $project->projectClass->tiers->firstWhere('pm_count', $numberOfCollaborator);
+            $amount = $tier
+                ? (float) $tier->pm_reward
+                : (float) ($project->projectClass->pm_reward ?? 0);
+        }
+
+        return $amount;
+    }
+
     protected function recordPmReward(mixed $project): void
     {
-        $pmPot = (float) ($project->projectClass->pm_reward ?? 0);
+        // $pmPot = (float) ($project->projectClass->pm_reward ?? 0);
+        $pmPot = (float) $this->defineBaseReward($project, 'pm');
         $pics = $project->personInCharges;
 
         if ($pics->isEmpty() || $pmPot <= 0) {
@@ -81,7 +105,8 @@ class RecordPmVjReward
 
     protected function recordVjReward(mixed $project): void
     {
-        $vjReward = (float) ($project->projectClass->vj_reward ?? 0);
+        // $vjReward = (float) ($project->projectClass->vj_reward ?? 0);
+        $vjReward = (float) $this->defineBaseReward($project, 'vj');
 
         foreach ($project->vjs as $vj) {
             // VJ reward is a fixed amount PER VJ, so every VJ earns the full class amount.

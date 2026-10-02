@@ -47,6 +47,15 @@ function pmvjAddVj(Project $project, Employee $employee): ProjectVj
     ]);
 }
 
+function pmvjAddTier(ProjectClass $class, int $pmCount, float $pmReward, float $productionReward = 0)
+{
+    return $class->tiers()->create([
+        'pm_count' => $pmCount,
+        'pm_reward' => $pmReward,
+        'production_reward' => $productionReward,
+    ]);
+}
+
 describe('RecordPmVjReward - PM pot split', function () {
     it('gives the whole PM pot to a sole PM', function () {
         $class = pmvjClass(['pm_reward' => 1000000]);
@@ -180,5 +189,92 @@ describe('RecordPmVjReward - VJ reward', function () {
 
         expect(EmployeeReward::where('project_id', $project->id)->where('role', 'pm')->count())->toBe(1)
             ->and(EmployeeReward::where('project_id', $project->id)->where('role', 'vj')->count())->toBe(1);
+    });
+});
+
+describe('RecordPmVjReward - tiered PM pot', function () {
+    // Class S tariff: the PM pot changes with PM headcount. 1-2 PM -> 2,500,000; 3 PM -> 3,000,000.
+    it('uses the tier PM pot that matches the PM headcount (2 PMs)', function () {
+        $class = pmvjClass(['name' => 'Class S', 'pm_reward' => 9999999]); // base must be ignored
+        pmvjAddTier($class, 1, 2500000);
+        pmvjAddTier($class, 2, 2500000);
+        pmvjAddTier($class, 3, 3000000);
+
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+        $lead = Employee::factory()->create();
+        $support = Employee::factory()->create();
+        pmvjAddPic($project, $lead, isLead: true);
+        pmvjAddPic($project, $support);
+
+        RecordPmVjReward::run($project->id);
+
+        // 2-PM tier pot 2,500,000 split 70/30, base pm_reward ignored.
+        assertDatabaseHas('employee_rewards', ['employee_id' => $lead->id, 'role' => 'pm', 'base_reward' => 2500000, 'total_reward' => 1750000]);
+        assertDatabaseHas('employee_rewards', ['employee_id' => $support->id, 'role' => 'pm', 'total_reward' => 750000]);
+    });
+
+    it('uses the 3-PM tier pot for three PMs', function () {
+        $class = pmvjClass(['name' => 'Class S3', 'pm_reward' => 1]); // base ignored
+        pmvjAddTier($class, 1, 2500000);
+        pmvjAddTier($class, 2, 2500000);
+        pmvjAddTier($class, 3, 3000000);
+
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+        $lead = Employee::factory()->create();
+        $s1 = Employee::factory()->create();
+        $s2 = Employee::factory()->create();
+        pmvjAddPic($project, $lead, isLead: true);
+        pmvjAddPic($project, $s1);
+        pmvjAddPic($project, $s2);
+
+        RecordPmVjReward::run($project->id);
+
+        // 3-PM tier pot 3,000,000 split 50/25/25.
+        assertDatabaseHas('employee_rewards', ['employee_id' => $lead->id, 'role' => 'pm', 'total_reward' => 1500000]);
+        assertDatabaseHas('employee_rewards', ['employee_id' => $s1->id, 'role' => 'pm', 'total_reward' => 750000]);
+        assertDatabaseHas('employee_rewards', ['employee_id' => $s2->id, 'role' => 'pm', 'total_reward' => 750000]);
+
+        $paid = (float) EmployeeReward::where('project_id', $project->id)->where('role', 'pm')->sum('total_reward');
+        expect($paid)->toBe(3000000.0);
+    });
+
+    it('falls back to the base pm_reward when no tier matches the headcount', function () {
+        // Tiers cover 1-3 PMs; a 4-PM event has no matching tier, so the base pm_reward applies
+        // (this is the regression guard: before the fix this silently paid 0).
+        $class = pmvjClass(['name' => 'Class S4', 'pm_reward' => 1000000]);
+        pmvjAddTier($class, 1, 2500000);
+        pmvjAddTier($class, 2, 2500000);
+        pmvjAddTier($class, 3, 3000000);
+
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+        $pms = Employee::factory()->count(4)->create();
+        $pms->each(fn ($pm, $i) => pmvjAddPic($project, $pm, isLead: $i === 0));
+
+        RecordPmVjReward::run($project->id);
+
+        // Base pot 1,000,000 split equally across 4 PMs (beyond the tariff) -> 250k each, exact sum.
+        $rewards = EmployeeReward::where('project_id', $project->id)->where('role', 'pm')->pluck('total_reward');
+        expect($rewards)->toHaveCount(4)
+            ->and((float) $rewards->sum())->toBe(1000000.0);
+        $rewards->each(fn ($amount) => expect((float) $amount)->toBe(250000.0));
+    });
+
+    it('keeps the VJ reward flat (not tiered) even when the class has tiers', function () {
+        $class = pmvjClass(['name' => 'Class S VJ', 'vj_reward' => 350000]);
+        pmvjAddTier($class, 1, 2500000);
+        pmvjAddTier($class, 2, 2500000);
+
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+        $vjA = Employee::factory()->create();
+        $vjB = Employee::factory()->create();
+        pmvjAddVj($project, $vjA);
+        pmvjAddVj($project, $vjB);
+        // A PIC so personInCharges is non-empty (tier resolution reads that count).
+        pmvjAddPic($project, Employee::factory()->create(), isLead: true);
+
+        RecordPmVjReward::run($project->id);
+
+        assertDatabaseHas('employee_rewards', ['employee_id' => $vjA->id, 'role' => 'vj', 'base_reward' => 350000, 'total_reward' => 350000]);
+        assertDatabaseHas('employee_rewards', ['employee_id' => $vjB->id, 'role' => 'vj', 'base_reward' => 350000, 'total_reward' => 350000]);
     });
 });

@@ -23,6 +23,12 @@ class Update extends FormRequest
             'reward' => 'required',
             'pm_reward' => 'nullable|numeric|min:0',
             'vj_reward' => 'nullable|numeric|min:0',
+            'pmTiers' => 'array|nullable',
+            'pmTiers.*.id' => ['nullable'],
+            'pmTiers.*.pmCount' => ['present_with:pmTiers', 'numeric'],
+            'pmTiers.*.pmReward' => ['present_with:pmTiers', 'numeric'],
+            'pmTiers.*.productionReward' => ['present_with:pmTiers', 'numeric'],
+            'deletedTierIds' => ['nullable', 'array']
             // 'base_point' => 'required|integer|min:0',
             // 'point_2_team' => 'required|integer|min:0',
             // 'point_3_team' => 'required|integer|min:0',

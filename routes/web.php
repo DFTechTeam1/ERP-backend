@@ -28,6 +28,7 @@ use Modules\Hrd\Notifications\UserEmailActivation;
 use Modules\Hrd\Services\GreatdayService;
 use Modules\Inventory\Services\InventoryService;
 use Modules\Production\Http\Controllers\Api\QuotationController;
+use Modules\Production\Models\Project;
 use Modules\Production\Repository\ProjectRepository;
 use Modules\Production\Services\ProjectService;
 use PhpOffice\PhpWord\TemplateProcessor;
@@ -377,4 +378,5 @@ Route::get('slack-testing', function () {
 
     //     $developer->notify(new SlackNotification($block));
     // }
+    //
 });

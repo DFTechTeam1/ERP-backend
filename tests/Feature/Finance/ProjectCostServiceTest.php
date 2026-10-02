@@ -127,6 +127,23 @@ describe('getDashboardSummary', function () {
             ->and($data['currency'])->toBe('IDR');
     });
 
+    it('applies the project name search to the summary aggregates (service)', function () {
+        pcostFilters(['year' => '2026', 'search' => 'Alpha']);
+        $alpha = pcostProject(['name' => 'Alpha Wedding'], fixPrice: 100000000);
+        $beta = pcostProject(['name' => 'Beta Gala'], fixPrice: 50000000);
+        pcostReward($alpha, 'A', 1, 300000);
+        pcostReward($beta, 'B', 1, 150000);
+
+        $response = pcostService()->getDashboardSummary();
+
+        expect($response['error'])->toBeFalse();
+        $data = $response['data'];
+        // only the matching "Alpha Wedding" project feeds the totals
+        expect($data['total_projects'])->toBe(1)
+            ->and((float) $data['total_cost'])->toBe(300000.0)
+            ->and((float) $data['total_fix_price'])->toBe(100000000.0);
+    });
+
     it('returns an error response when no project matches (division by zero, characterisation)', function () {
         pcostFilters();
 
@@ -298,6 +315,31 @@ describe('getDashboard', function () {
         $this->getJson('/api/production/project-costs?year=2026&itemsPerPage=10&page=1')
             ->assertStatus(201)
             ->assertJsonPath('data.totalData', 1);
+    });
+
+    it('filters the listing and total by a project name search (service)', function () {
+        pcostFilters(['year' => '2026', 'itemsPerPage' => 10, 'page' => 1, 'search' => 'Alpha']);
+        pcostProject(['name' => 'Alpha Wedding']);
+        pcostProject(['name' => 'Beta Gala']);
+
+        $response = pcostService()->getDashboard();
+
+        expect($response['error'])->toBeFalse();
+        $data = $response['data'];
+        expect($data['totalData'])->toBe(1)                       // total honours the search filter
+            ->and($data['paginated'])->toHaveCount(1)
+            ->and($data['paginated'][0]['name'])->toBe('Alpha Wedding');
+    });
+
+    it('filters the listing by search via the endpoint (e2e)', function () {
+        actingAs(User::factory()->create());
+        pcostProject(['name' => 'Alpha Wedding']);
+        pcostProject(['name' => 'Beta Gala']);
+
+        $this->getJson('/api/production/project-costs?year=2026&itemsPerPage=10&page=1&search=Alpha')
+            ->assertStatus(201)
+            ->assertJsonPath('data.totalData', 1)
+            ->assertJsonPath('data.paginated.0.name', 'Alpha Wedding');
     });
 });
 

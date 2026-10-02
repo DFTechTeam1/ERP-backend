@@ -165,6 +165,10 @@ Route::middleware(['auth.session'])
         Route::get('project/{projectUid}/precheck', [ProjectController::class, 'precheck']);
         Route::post('project/{projectUid}/completeUnfinishedTask', [ProjectController::class, 'completeUnfinishedTask']);
 
+        // Dfengine
+        Route::get('dfengine/projects', [ProjectController::class, 'listProjectDFEngine']);
+        Route::get('dfengine/projects/{projectUid}', [ProjectController::class, 'listTaskDFEngine']);
+
         // interactives
         Route::get('interactives', [InteractiveController::class, 'index'])->name('interactives.list');
         Route::post('interactives/storeTask/{projectUid}', [InteractiveController::class, 'storeTask'])

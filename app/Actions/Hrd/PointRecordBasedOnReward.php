@@ -77,6 +77,20 @@ class PointRecordBasedOnReward
         return $output;
     }
 
+    protected function defineBaseRewardAmount(Project|Collection $project)
+    {
+        $amount = $project->projectClass?->reward ?? 0;
+
+        if ($project->projectClass->tiers->isNotEmpty()) {
+            $numberOfCollaborator = $project->personInCharges->count();
+
+            $tier = $project->projectClass->tiers->firstWhere('pm_count', $numberOfCollaborator);
+            $amount = $tier ? $tier->production_reward : $project->projectClass->reward;
+        }
+
+        return $amount;
+    }
+
     public function handle(string|int $projectId, array $points): void
     {
         $repo = app(ProjectRepository::class);
@@ -90,11 +104,13 @@ class PointRecordBasedOnReward
             relation: [
                 'tasks:id,project_id,name',
                 'projectClass:id,name,reward',
+                'projectClass.tiers',
                 'taskPicHistories:id,project_id,project_task_id,employee_id',
                 'taskPicHistories.employee:id,name,nickname,user_id',
                 'taskPicHistories.employee.user:id,employee_id',
                 'taskPicHistories.employee.singlePoint:id,employee_id',
                 'taskPicHistories.task:id,name',
+                'personInCharges',
             ]
         );
 
@@ -111,7 +127,8 @@ class PointRecordBasedOnReward
         });
 
         DB::transaction(function () use ($mapping, $employeePointProjectRepo, $employeePointRepo, $project, $pointData) {
-            $pot = (float) ($project->projectClass->reward ?? 0);
+            // $pot = (float) ($project->projectClass->reward ?? 0);
+            $pot = $this->defineBaseRewardAmount($project);
 
             // First pass: resolve every participant's employee_point row and point figures so we
             // know each worker's total_point BEFORE splitting the fixed pot across the event.
@@ -151,6 +168,11 @@ class PointRecordBasedOnReward
 
             // Split the fixed pot across the production participants by point-share.
             $rewards = $this->distributeRewards($rows, $pot);
+
+            logging('check', [
+                'reward' => $rewards,
+                'rows' => $rows,
+            ]);
 
             foreach ($rows as $index => $row) {
                 $data = $row['data'];
