@@ -354,7 +354,7 @@ class ProjectDealService
                 if (
                     ($item->project) &&
                     (in_array($item->project->status, [ProjectStatus::ReadyToGo->value, ProjectStatus::Completed->value])) ||
-                    ($projectDate->isPast())
+                    ($item->project && $projectDate->isPast())
                 ) {
                     $canEditInteractive = false;
                     $canAddInteractive = false;
