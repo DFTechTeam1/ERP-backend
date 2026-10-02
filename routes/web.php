@@ -379,4 +379,17 @@ Route::get('slack-testing', function () {
     //     $developer->notify(new SlackNotification($block));
     // }
     //
+    $repo = app(ProjectRepository::class);
+
+    $data = $repo->list(
+        select: 'id,name,uid',
+        whereHas: [
+            [
+                'relation' => 'tasks',
+                'query' => 'id IN (4054, 4055)',
+            ],
+        ]
+    );
+
+    return $data;
 });

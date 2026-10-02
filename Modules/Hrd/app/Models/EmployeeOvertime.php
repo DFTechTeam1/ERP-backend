@@ -2,6 +2,7 @@
 
 namespace Modules\Hrd\Models;
 
+use App\Enums\Employee\OvertimeStatus;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,7 +31,8 @@ class EmployeeOvertime extends Model
         'employee_name',
         'position_name',
         'employee_number',
-        'overtime_date'
+        'overtime_date',
+        'status'
     ];
 
     // protected static function newFactory(): EmployeeOvertimeFactory
@@ -38,6 +40,11 @@ class EmployeeOvertime extends Model
     //     // return EmployeeOvertimeFactory::new();
     // }
     //
+
+    protected $casts = [
+        'status' => OvertimeStatus::class
+    ];
+
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id');
