@@ -147,7 +147,8 @@ class ProjectRepository extends ProjectInterface
         string $uid = '',
         string $select = '*',
         array $relation = [],
-        string $where = ''
+        string $where = '',
+        array $whereHas = []
     ) {
         $query = $this->model->query();
 
@@ -157,6 +158,20 @@ class ProjectRepository extends ProjectInterface
             $query->where('uid', $uid);
         } else {
             $query->whereRaw($where);
+        }
+
+        if (count($whereHas) > 0) {
+            foreach ($whereHas as $queryItem) {
+                if (! isset($queryItem['type'])) {
+                    $query->whereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                } else {
+                    $query->orWhereHas($queryItem['relation'], function ($qd) use ($queryItem) {
+                        $qd->whereRaw($queryItem['query']);
+                    });
+                }
+            }
         }
 
         if ($relation) {

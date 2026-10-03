@@ -29,40 +29,25 @@ class EmployeeOvertimeService
 
         // If success
         $res = $response->json();
-        if (isset($res['data']) && isset($res['data']['task_ids']) && count($res['data']['task_ids']) > 0) {
-            $project = $this->projectRepo->list(
-                select: 'id,name',
-                whereHas: [
-                    [
-                        'relation' => 'tasks',
-                        'query' => "id IN (" . implode(',', $res['data']['task_ids']) . ")"
+
+        if (isset($res['data']) && isset($res['data']['projects']) && count($res['data']['projects']) > 0) {
+            foreach ($res['data']['projects'] as $project) {
+                $projectData = $this->projectRepo->show(
+                    uid: '',
+                    select: 'id,name',
+                    relation: ['tasks:id,name,project_id'],
+                    where: "id = " . $project['id'],
+                    whereHas: [
+                        [
+                            'relation' => 'tasks',
+                            'query' => "id IN (" . implode(',', $project['tasks']) . ")"
+                        ]
                     ]
-                ],
-                relation: [
-                    'tasks:id,name,project_id'
-                ]
-            );
+                );
 
-            if (!$project->count()) {
-                // write log
-            }
-
-            foreach ($project as $key => $data) {
-                $output[] = [
-                    'id' => $data->id,
-                    'project_name' => $data->name,
-                    'tasks' => []
-                ];
-
-                $tasks = [];
-                foreach ($data->tasks->whereIn('id', $res['data']['task_ids']) as $task) {
-                    $tasks[] = [
-                        'id' => $task->id,
-                        'task_name' => $task->name
-                    ];
+                if (isset($project['tasks']) && count($project['tasks']) > 0) {
+                    // $tasks =
                 }
-
-                $output[$key]['tasks'] = $tasks;
             }
         }
 
@@ -85,8 +70,7 @@ class EmployeeOvertimeService
             $projects = $this->getProjectData($data['remark']);
 
             if (count($projects) > 0) {
-                foreach ($projects as $projectId) {
-                    $output[] = [];
+                foreach ($projects as $project) {
                 }
             }
 
