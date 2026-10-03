@@ -2,6 +2,7 @@
 
 namespace Modules\Production\Repository;
 
+use Illuminate\Database\Eloquent\Collection;
 use Modules\Production\Models\Project;
 use Modules\Production\Repository\Interface\ProjectInterface;
 
@@ -20,7 +21,11 @@ class ProjectRepository extends ProjectInterface
     /**
      * Get All Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @param  array<int, \Closure>  $whereExists  Each closure is applied as a whereExists() subquery (AND).
+     * @param  array<int, \Closure>  $orWhereExists  Each closure is applied as an orWhereExists() subquery (OR).
+     * @param  array<int, \Closure>  $whereGroup  Each closure is applied as a nested where() group - use it to
+     *                                            combine whereExists()/orWhereExists() with OR inside one group.
+     * @return Collection
      */
     public function list(
         string $select = '*',
@@ -30,7 +35,10 @@ class ProjectRepository extends ProjectInterface
         string $orderBy = '',
         int $limit = 0,
         array $isGetDistance = [],
-        array $has = []
+        array $has = [],
+        array $whereExists = [],
+        array $orWhereExists = [],
+        array $whereGroup = []
     ) {
         $query = $this->model->query();
 
@@ -57,6 +65,24 @@ class ProjectRepository extends ProjectInterface
         if (! empty($has)) {
             foreach ($has as $hasQuery) {
                 $query->has($hasQuery);
+            }
+        }
+
+        if (! empty($whereGroup)) {
+            foreach ($whereGroup as $group) {
+                $query->where($group);
+            }
+        }
+
+        if (! empty($whereExists)) {
+            foreach ($whereExists as $existsCallback) {
+                $query->whereExists($existsCallback);
+            }
+        }
+
+        if (! empty($orWhereExists)) {
+            foreach ($orWhereExists as $orExistsCallback) {
+                $query->orWhereExists($orExistsCallback);
             }
         }
 
@@ -78,7 +104,11 @@ class ProjectRepository extends ProjectInterface
     /**
      * Paginated data for datatable
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @param  array<int, \Closure>  $whereExists  Each closure is applied as a whereExists() subquery (AND).
+     * @param  array<int, \Closure>  $orWhereExists  Each closure is applied as an orWhereExists() subquery (OR).
+     * @param  array<int, \Closure>  $whereGroup  Each closure is applied as a nested where() group - use it to
+     *                                            combine whereExists()/orWhereExists() with OR inside one group.
+     * @return Collection
      */
     public function pagination(
         string $select = '*',
@@ -88,7 +118,10 @@ class ProjectRepository extends ProjectInterface
         int $page = 1,
         array $whereHas = [],
         string $sortBy = '',
-        array $has = []
+        array $has = [],
+        array $whereExists = [],
+        array $orWhereExists = [],
+        array $whereGroup = []
     ) {
         $query = $this->model->query();
 
@@ -115,6 +148,24 @@ class ProjectRepository extends ProjectInterface
         if (! empty($has)) {
             foreach ($has as $hasQuery) {
                 $query->has($hasQuery);
+            }
+        }
+
+        if (! empty($whereGroup)) {
+            foreach ($whereGroup as $group) {
+                $query->where($group);
+            }
+        }
+
+        if (! empty($whereExists)) {
+            foreach ($whereExists as $existsCallback) {
+                $query->whereExists($existsCallback);
+            }
+        }
+
+        if (! empty($orWhereExists)) {
+            foreach ($orWhereExists as $orExistsCallback) {
+                $query->orWhereExists($orExistsCallback);
             }
         }
 
@@ -141,7 +192,7 @@ class ProjectRepository extends ProjectInterface
     /**
      * Get Detail Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function show(
         string $uid = '',
@@ -171,7 +222,7 @@ class ProjectRepository extends ProjectInterface
     /**
      * Store Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function store(array $data)
     {
@@ -182,7 +233,7 @@ class ProjectRepository extends ProjectInterface
      * Update Data
      *
      * @param  int|string  $id
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function update(array $data, string $id = '', string $where = '')
     {
@@ -203,7 +254,7 @@ class ProjectRepository extends ProjectInterface
      * Delete Data
      *
      * @param  int|string  $id
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function delete(int $id)
     {
@@ -214,7 +265,7 @@ class ProjectRepository extends ProjectInterface
     /**
      * Bulk Delete Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function bulkDelete(array $ids, string $key = '')
     {
