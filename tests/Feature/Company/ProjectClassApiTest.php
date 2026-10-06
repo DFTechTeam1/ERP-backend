@@ -193,9 +193,9 @@ describe('pm tiers (e2e)', function () {
             'pm_reward' => 2500000,
             'vj_reward' => 350000,
             'pmTiers' => [
-                ['pmCount' => 1, 'pmReward' => 2500000, 'productionReward' => 3500000],
-                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000],
-                ['pmCount' => 3, 'pmReward' => 3000000, 'productionReward' => 4500000],
+                ['pmCount' => 1, 'pmReward' => 2500000, 'productionReward' => 3500000, 'leadReward' => 2500000, 'supportReward' => 0],
+                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000, 'leadReward' => 1750000, 'supportReward' => 750000],
+                ['pmCount' => 3, 'pmReward' => 3000000, 'productionReward' => 4500000, 'leadReward' => 1500000, 'supportReward' => 750000],
             ],
         ])->assertStatus(201);
 
@@ -206,6 +206,8 @@ describe('pm tiers (e2e)', function () {
             'pm_count' => 3,
             'pm_reward' => 3000000,
             'production_reward' => 4500000,
+            'lead_reward' => 1500000,
+            'support_reward' => 750000,
         ]);
     });
 
@@ -219,8 +221,8 @@ describe('pm tiers (e2e)', function () {
             'color' => '#FFB74D',
             'reward' => 3500000,
             'pmTiers' => [
-                ['id' => $existing->id, 'pmCount' => 1, 'pmReward' => 2600000, 'productionReward' => 3600000], // update existing
-                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000],                        // create new
+                ['id' => $existing->id, 'pmCount' => 1, 'pmReward' => 2600000, 'productionReward' => 3600000, 'leadReward' => 2600000, 'supportReward' => 0], // update existing
+                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000, 'leadReward' => 1750000, 'supportReward' => 750000],                   // create new
             ],
             'deletedTierIds' => [$toDelete->id],                                                               // delete
         ])->assertStatus(201);
@@ -232,13 +234,13 @@ describe('pm tiers (e2e)', function () {
 
     it('exposes pmTiers in the list payload', function () {
         $class = ProjectClass::factory()->create(['name' => 'Class S List']);
-        $class->tiers()->create(['pm_count' => 2, 'pm_reward' => 2500000, 'production_reward' => 4000000]);
+        $class->tiers()->create(['pm_count' => 2, 'pm_reward' => 2500000, 'production_reward' => 4000000, 'lead_reward' => 1750000, 'support_reward' => 750000]);
 
         $this->getJson('/api/projectClass')
             ->assertStatus(201)
             ->assertJsonPath('data.paginated.0.pmTiers.0.pmCount', 2)
             ->assertJsonStructure([
-                'data' => ['paginated' => [['pmTiers' => [['pmCount', 'pmReward', 'productionReward']]]]],
+                'data' => ['paginated' => [['pmTiers' => [['pmCount', 'pmReward', 'productionReward', 'leadReward', 'supportReward']]]]],
             ]);
     });
 });

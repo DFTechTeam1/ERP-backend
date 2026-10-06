@@ -2,7 +2,6 @@
 
 namespace App\Actions\Hrd;
 
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Hrd\Models\EmployeeReward;
@@ -15,10 +14,11 @@ use Modules\Production\Repository\ProjectRepository;
  * Unlike the production reward, these are NOT point-based. They are fixed per project class
  * (docs/Simulasi_Baseline_Pot_Produksi_Fixed_DFactory.xlsx):
  *
- *   - PM: project_classes.pm_reward is the total PM pot for the event, split by PM headcount -
- *     1 PM: Lead 100%; 2 PM: Lead 70% / Support 30%; 3 PM: Lead 50% / Support 25% / Support 25%.
- *     The Lead is the PIC flagged is_lead (falling back to the earliest-assigned PIC). More than
- *     3 PMs is not covered by the tariff, so the pot is split equally. The last row absorbs the
+ *   - PM: a matching project_class_pm_tier (by PM headcount) sets explicit per-role amounts -
+ *     lead_reward for the Lead PM and support_reward for each Support PM. The Lead is the PIC
+ *     flagged is_lead (falling back to the earliest-assigned PIC). For an untiered class, or a
+ *     headcount with no matching tier, the flat project_classes.pm_reward pot is split by headcount
+ *     instead (1 PM: 100%; 2 PM: 70/30; 3 PM: 50/25/25; more: equally), the last row absorbing the
  *     rounding remainder so the payout equals the pot exactly.
  *   - VJ: project_classes.vj_reward is a fixed amount PER VJ; every VJ on the project earns it.
  *
@@ -53,33 +53,11 @@ class RecordPmVjReward
         });
     }
 
-    protected function defineBaseReward(Project|Collection $project, string $type = 'pm'): float
-    {
-        $targetType = "{$type}_reward";
-        $amount = (float) ($project->projectClass->$targetType ?? 0);
-
-        // Only the PM pot is tiered by PM headcount; the VJ reward is always flat per class.
-        // When the class has tiers but none matches the collaborator count, fall back to the
-        // class-level pm_reward (mirrors PointRecordBasedOnReward's fallback to reward).
-        if ($type === 'pm' && $project->projectClass->tiers->isNotEmpty()) {
-            $numberOfCollaborator = $project->personInCharges->count();
-
-            $tier = $project->projectClass->tiers->firstWhere('pm_count', $numberOfCollaborator);
-            $amount = $tier
-                ? (float) $tier->pm_reward
-                : (float) ($project->projectClass->pm_reward ?? 0);
-        }
-
-        return $amount;
-    }
-
     protected function recordPmReward(mixed $project): void
     {
-        // $pmPot = (float) ($project->projectClass->pm_reward ?? 0);
-        $pmPot = (float) $this->defineBaseReward($project, 'pm');
         $pics = $project->personInCharges;
 
-        if ($pics->isEmpty() || $pmPot <= 0) {
+        if ($pics->isEmpty()) {
             return;
         }
 
@@ -87,8 +65,49 @@ class RecordPmVjReward
         // earliest-assigned one.
         $lead = $pics->firstWhere('is_lead', true) ?? $pics->sortBy('id')->first();
         $supports = $pics->reject(fn ($pic) => $pic->id === $lead->id)->sortBy('id')->values();
-        $ordered = collect([$lead])->concat($supports)->values();
 
+        $tier = $project->projectClass->tiers->isNotEmpty()
+            ? $project->projectClass->tiers->firstWhere('pm_count', $pics->count())
+            : null;
+
+        $className = $project->projectClass->name;
+
+        // Tiered class: the tier sets explicit per-role amounts - lead_reward for the Lead PM and
+        // support_reward for every Support PM (no headcount percentage split). base_reward records
+        // the tier's total PM pot for reference.
+        if ($tier) {
+            $pot = (float) $tier->pm_reward;
+
+            $this->storeReward(
+                projectId: $project->id,
+                employeeId: $lead->pic_id,
+                role: 'pm',
+                baseReward: $pot,
+                totalReward: (float) $tier->lead_reward,
+                className: $className,
+            );
+
+            foreach ($supports as $support) {
+                $this->storeReward(
+                    projectId: $project->id,
+                    employeeId: $support->pic_id,
+                    role: 'pm',
+                    baseReward: $pot,
+                    totalReward: (float) $tier->support_reward,
+                    className: $className,
+                );
+            }
+
+            return;
+        }
+
+        // Untiered class (or no tier for this headcount): split the flat pm_reward pot by headcount.
+        $pmPot = (float) ($project->projectClass->pm_reward ?? 0);
+        if ($pmPot <= 0) {
+            return;
+        }
+
+        $ordered = collect([$lead])->concat($supports)->values();
         $amounts = $this->distributeFixedPot($pmPot, $this->pmSplitPercentages($ordered->count()));
 
         foreach ($ordered as $index => $pic) {
@@ -98,18 +117,17 @@ class RecordPmVjReward
                 role: 'pm',
                 baseReward: $pmPot,
                 totalReward: $amounts[$index],
-                className: $project->projectClass->name,
+                className: $className,
             );
         }
     }
 
     protected function recordVjReward(mixed $project): void
     {
-        // $vjReward = (float) ($project->projectClass->vj_reward ?? 0);
-        $vjReward = (float) $this->defineBaseReward($project, 'vj');
+        // VJ reward is a flat amount PER VJ (never tiered); every VJ earns the full class amount.
+        $vjReward = (float) ($project->projectClass->vj_reward ?? 0);
 
         foreach ($project->vjs as $vj) {
-            // VJ reward is a fixed amount PER VJ, so every VJ earns the full class amount.
             $this->storeReward(
                 projectId: $project->id,
                 employeeId: $vj->employee_id,
