@@ -28,6 +28,8 @@ class Update extends FormRequest
             'pmTiers.*.pmCount' => ['present_with:pmTiers', 'numeric'],
             'pmTiers.*.pmReward' => ['present_with:pmTiers', 'numeric'],
             'pmTiers.*.productionReward' => ['present_with:pmTiers', 'numeric'],
+            'pmTiers.*.leadReward' => ['present_with:pmTiers', 'numeric'],
+            'pmTiers.*.supportReward' => ['present_with:pmTiers', 'numeric'],
             'deletedTierIds' => ['nullable', 'array']
             // 'base_point' => 'required|integer|min:0',
             // 'point_2_team' => 'required|integer|min:0',
