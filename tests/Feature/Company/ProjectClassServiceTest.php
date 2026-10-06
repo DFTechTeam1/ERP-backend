@@ -55,8 +55,8 @@ describe('list', function () {
     it('includes the pm tiers for a tiered class', function () {
         $class = ProjectClass::factory()->create(['name' => 'Class S', 'reward' => 3500000, 'is_active' => true]);
         $class->tiers()->createMany([
-            ['pm_count' => 1, 'pm_reward' => 2500000, 'production_reward' => 3500000],
-            ['pm_count' => 2, 'pm_reward' => 2500000, 'production_reward' => 4000000],
+            ['pm_count' => 1, 'pm_reward' => 2500000, 'production_reward' => 3500000, 'lead_reward' => 2500000, 'support_reward' => 0],
+            ['pm_count' => 2, 'pm_reward' => 2500000, 'production_reward' => 4000000, 'lead_reward' => 1750000, 'support_reward' => 750000],
         ]);
 
         $response = pcService()->list();
@@ -66,7 +66,9 @@ describe('list', function () {
         $tier2 = collect($row->pmTiers)->firstWhere('pmCount', 2);
         expect($tier2)->not->toBeNull()
             ->and((int) $tier2->pmReward)->toBe(2500000)
-            ->and((int) $tier2->productionReward)->toBe(4000000);
+            ->and((int) $tier2->productionReward)->toBe(4000000)
+            ->and((int) $tier2->leadReward)->toBe(1750000)
+            ->and((int) $tier2->supportReward)->toBe(750000);
     });
 
     it('filters by name via the search request parameter', function () {
@@ -198,9 +200,9 @@ describe('store', function () {
             'pm_reward' => 2500000,
             'vj_reward' => 350000,
             'pmTiers' => [
-                ['pmCount' => 1, 'pmReward' => 2500000, 'productionReward' => 3500000],
-                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000],
-                ['pmCount' => 3, 'pmReward' => 3000000, 'productionReward' => 4500000],
+                ['pmCount' => 1, 'pmReward' => 2500000, 'productionReward' => 3500000, 'leadReward' => 2500000, 'supportReward' => 0],
+                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000, 'leadReward' => 1750000, 'supportReward' => 750000],
+                ['pmCount' => 3, 'pmReward' => 3000000, 'productionReward' => 4500000, 'leadReward' => 1500000, 'supportReward' => 750000],
             ],
         ]);
 
@@ -213,6 +215,8 @@ describe('store', function () {
             'pm_count' => 2,
             'pm_reward' => 2500000,
             'production_reward' => 4000000,
+            'lead_reward' => 1750000,
+            'support_reward' => 750000,
         ]);
     });
 });
@@ -267,7 +271,7 @@ describe('update', function () {
             'color' => '#000',
             'reward' => 3500000,
             'pmTiers' => [
-                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000],
+                ['pmCount' => 2, 'pmReward' => 2500000, 'productionReward' => 4000000, 'leadReward' => 1750000, 'supportReward' => 750000],
             ],
         ], (string) $class->id);
 
@@ -277,6 +281,8 @@ describe('update', function () {
             'pm_count' => 2,
             'pm_reward' => 2500000,
             'production_reward' => 4000000,
+            'lead_reward' => 1750000,
+            'support_reward' => 750000,
         ]);
     });
 
@@ -289,7 +295,7 @@ describe('update', function () {
             'color' => '#000',
             'reward' => 3500000,
             'pmTiers' => [
-                ['id' => $tier->id, 'pmCount' => 2, 'pmReward' => 2700000, 'productionReward' => 4200000],
+                ['id' => $tier->id, 'pmCount' => 2, 'pmReward' => 2700000, 'productionReward' => 4200000, 'leadReward' => 1800000, 'supportReward' => 800000],
             ],
         ], (string) $class->id);
 
@@ -297,6 +303,8 @@ describe('update', function () {
             'id' => $tier->id,
             'pm_reward' => 2700000,
             'production_reward' => 4200000,
+            'lead_reward' => 1800000,
+            'support_reward' => 800000,
         ]);
         // updated in place, not duplicated
         expect($class->tiers()->count())->toBe(1);

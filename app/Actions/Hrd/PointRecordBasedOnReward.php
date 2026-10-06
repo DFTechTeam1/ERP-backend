@@ -77,15 +77,17 @@ class PointRecordBasedOnReward
         return $output;
     }
 
-    protected function defineBaseRewardAmount(Project|Collection $project)
+    protected function defineBaseRewardAmount(Project|Collection $project): float
     {
-        $amount = $project->projectClass?->reward ?? 0;
+        $amount = (float) ($project->projectClass->reward ?? 0);
 
+        // The production pot is tiered by PM headcount - each tier carries its own production_reward.
+        // Fall back to the class-level reward when the class has no tier for this headcount.
         if ($project->projectClass->tiers->isNotEmpty()) {
-            $numberOfCollaborator = $project->personInCharges->count();
-
-            $tier = $project->projectClass->tiers->firstWhere('pm_count', $numberOfCollaborator);
-            $amount = $tier ? $tier->production_reward : $project->projectClass->reward;
+            $tier = $project->projectClass->tiers->firstWhere('pm_count', $project->personInCharges->count());
+            $amount = $tier
+                ? (float) $tier->production_reward
+                : (float) ($project->projectClass->reward ?? 0);
         }
 
         return $amount;

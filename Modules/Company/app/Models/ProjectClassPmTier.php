@@ -20,6 +20,8 @@ class ProjectClassPmTier extends Model
         'pm_count',
         'pm_reward',
         'production_reward',
+        'lead_reward',
+        'support_reward'
     ];
 
     // protected static function newFactory(): ProjectClassPmTierFactory
