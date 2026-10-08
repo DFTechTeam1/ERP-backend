@@ -113,6 +113,9 @@ Route::middleware(['auth.session'])->group(function () {
     Route::get('production/project-costs/cost-trend', [ProjectCostController::class, 'getCostTrend']);
     Route::get('production/project-costs/cost-by-class', [ProjectCostController::class, 'getCostByClass']);
     Route::get('production/project-costs/cost-composition', [ProjectCostController::class, 'getCostComposition']);
+    // Reward disbursement export (must sit before the {projectUid} catch-all so "export" is not
+    // matched as a project uid).
+    Route::get('production/project-costs/export', [ProjectCostController::class, 'export']);
     Route::get('production/project-costs/{projectUid}', [ProjectCostController::class, 'detailProjectCost']);
 });
 
