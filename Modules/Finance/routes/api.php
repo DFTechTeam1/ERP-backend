@@ -8,6 +8,7 @@ use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\Api\MarketingDashboardController;
 use Modules\Finance\Http\Controllers\Api\ProjectCostController;
+use Modules\Finance\Http\Controllers\CurrencyController;
 
 /*
  *--------------------------------------------------------------------------
