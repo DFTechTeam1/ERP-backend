@@ -171,6 +171,33 @@ abstract class BaseRepository
     }
 
     /**
+     * Insert or update many rows in a single statement. Rows matching the $uniqueBy columns (which
+     * must be backed by a unique/primary index) are updated on the $update columns; the rest are
+     * inserted. Bypasses model events, so callers must supply any values normally set by a
+     * `creating` hook (e.g. uid).
+     *
+     * @param  array<int,array<string,mixed>>  $values
+     * @param  array<int,string>  $uniqueBy
+     * @param  array<int,string>|null  $update  Columns to update on conflict; null updates all non-unique columns.
+     * @return int The number of affected rows.
+     */
+    public function upsert(array $values, array $uniqueBy, ?array $update = null): int
+    {
+        return $this->query()->upsert($values, $uniqueBy, $update);
+    }
+
+    /**
+     * Bulk-insert many rows in a single statement. Bypasses model events and timestamp handling, so
+     * callers must supply any values normally set automatically (e.g. uid, created_at, updated_at).
+     *
+     * @param  array<int,array<string,mixed>>  $values
+     */
+    public function insert(array $values): bool
+    {
+        return $this->query()->insert($values);
+    }
+
+    /**
      * Fill and persist an existing model.
      *
      * @param  array<string,mixed>  $attributes
