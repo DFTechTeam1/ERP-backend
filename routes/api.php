@@ -210,6 +210,8 @@ Route::prefix('auth')->group(function () {
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
+
+    Route::post('after-effect/login', [LoginController::class, 'loginAfterEffect']);
 });
 
 // Menu tree for the access-token-authenticated user (built fresh from permissions)
