@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "062a0029e1198b9c8fd06457760054a9",
+    "content-hash": "14795c0738c5f51cea941e2c6ade84a3",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -136,6 +136,50 @@
                 }
             ],
             "time": "2026-02-21T08:51:10+00:00"
+        },
+        {
+            "name": "blvckgvd/currencylib",
+            "version": "1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/BLVCKGVD/currencylib.git",
+                "reference": "30e9c33ad0ad18c7e762c7d59dbafdeebb39bade"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/BLVCKGVD/currencylib/zipball/30e9c33ad0ad18c7e762c7d59dbafdeebb39bade",
+                "reference": "30e9c33ad0ad18c7e762c7d59dbafdeebb39bade",
+                "shasum": ""
+            },
+            "require": {
+                "ext-simplexml": "*",
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.6"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Blvckgvd\\Currencylib\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Антон Шульженко",
+                    "email": "antondead1337@gmail.com"
+                }
+            ],
+            "description": "PHP library to convert one currency to another",
+            "support": {
+                "issues": "https://github.com/BLVCKGVD/currencylib/issues",
+                "source": "https://github.com/BLVCKGVD/currencylib/tree/1.0.2"
+            },
+            "time": "2023-05-11T15:28:28+00:00"
         },
         {
             "name": "brainfoolong/cryptojs-aes-php",
