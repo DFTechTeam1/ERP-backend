@@ -2,17 +2,22 @@
 
 namespace App\Services;
 
+use App\Data\Auth\AfterEffect\LoginData;
 use App\Data\User\WhatsappInformationData;
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
 use App\Exceptions\DoNotHaveAppPermission;
+use App\Exceptions\InvalidPassword;
 use App\Exceptions\UserNotFound;
 use App\Models\User;
 use App\Models\UserEncryptedToken;
 use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
+use App\Services\Auth\RefreshTokenService;
+use App\Services\Auth\TokenService;
 use Carbon\Carbon;
+use DateTimeImmutable;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Support\Collection;
@@ -1100,6 +1105,41 @@ class UserService
             ))->values()->all();
 
             return generalResponse(message: 'Success', data: $output);
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function loginAfterEffect(LoginData $payload): array
+    {
+        try {
+            $user = $this->repo->detail(id: '', where: "email = '{$payload->email}'");
+
+            if (! Hash::check($payload->password, $user->password)) {
+                throw new InvalidPassword;
+            }
+
+            $now = new DateTimeImmutable;
+
+            $tokenService = app(TokenService::class);
+
+            $refreshTokenService = app(RefreshTokenService::class);
+            $accessToken = $tokenService->issueAccessToken($user);
+            $refreshToken = $refreshTokenService->issue(
+                user: $user,
+                remember: false,
+                userAgent: request()->userAgent(),
+                ip: request()->ip(),
+            );
+
+            return generalResponse(
+                message: 'Login Success',
+                data: [
+                    'accessToken' => $accessToken,
+                    'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
+                    'refreshToken' => $refreshToken['raw'],
+                ]
+            );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
