@@ -37,7 +37,7 @@ class ExchangeFetcher
      * @throws BaseCurrencyNotFound When no base currency is configured.
      * @throws ExchangeRateFetchFailed When the provider responds with an application-level error.
      */
-    public function handle(bool $fetchCurrenciesOnly = false): Collection
+    public function handle(bool $fetchCurrenciesOnly = true): Collection
     {
         if ($fetchCurrenciesOnly) {
             return $this->fetchSupportedCurrencies();
@@ -50,7 +50,7 @@ class ExchangeFetcher
 
         $baseCurrency = $currencyRepo->show([
             'where' => ['is_base' => 1],
-            'select' => ['code'],
+            'select' => ['code', 'id'],
         ]);
 
         if (! $baseCurrency) {
@@ -87,6 +87,17 @@ class ExchangeFetcher
 
         $today = now()->toDateString();
 
+        // Preload today's rates for this base currency (currency_id => rate) so manual rates are
+        // preserved: a currency whose rate for today was set manually is skipped entirely (never
+        // overwritten); only system rates are refreshed and currencies with no rate yet are inserted.
+        $existingRates = $exchangeRepo->get([
+            'where' => [
+                'rate_date' => $today,
+                'parent_currency_id' => $baseCurrency->id,
+            ],
+            'select' => ['currency_id', 'source'],
+        ])->keyBy('currency_id');
+
         $rows = [];
         foreach ($conversionRates as $code => $rate) {
             $currency = $currencies->get($code);
@@ -95,9 +106,16 @@ class ExchangeFetcher
                 continue;
             }
 
+            $existing = $existingRates->get($currency->id);
+            // Only (re)write system-sourced or brand-new rates; never touch a manual one.
+            if ($existing && $existing->source !== SourceRate::System) {
+                continue;
+            }
+
             $rows[] = [
                 'uid' => Str::uuid()->toString(),
                 'currency_id' => $currency->id,
+                'parent_currency_id' => $baseCurrency->id,
                 'rate_date' => $today,
                 'rate' => $rate,
                 'source' => SourceRate::System->value,
@@ -107,8 +125,8 @@ class ExchangeFetcher
 
         if ($rows !== []) {
             // Single statement; the (currency_id, rate_date) unique index guarantees one rate per day.
-            // Only `rate` is refreshed on conflict, so a manual rate for the day keeps its attribution.
-            $exchangeRepo->upsert($rows, ['currency_id', 'rate_date'], ['rate']);
+            // Manual rates were excluded above, so a conflict only refreshes a previous system rate.
+            $exchangeRepo->upsert($rows, ['currency_id', 'rate_date', 'parent_currency_id'], ['rate']);
         }
 
         return collect(array_keys($conversionRates));

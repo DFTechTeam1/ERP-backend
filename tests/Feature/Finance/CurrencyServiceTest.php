@@ -17,7 +17,8 @@ use function Pest\Laravel\assertDatabaseHas;
  *
  * - syncCurrencies() pulls the provider's supported currencies (code => name, via ExchangeFetcher's
  *   /codes path) and inserts the ones missing from the master table, leaving existing ones alone.
- * - store() / addRate() record a rate's source (manual) and author (created_by).
+ * - fetchRates() fetches and stores today's rates (via ExchangeFetcher's /latest path).
+ * - store() / addRate() record a rate's source (manual), author (created_by) and base as parent.
  * - historyRates() reports each rate's source and the employee who set it.
  */
 function currencyService(): CurrencyService
@@ -74,15 +75,16 @@ it('is a no-op on a second run when the master already has every provider curren
         ->and(Currency::count())->toBe(2);
 });
 
-it('store() records a manual opening rate with its source and author', function () {
+it('store() records a manual opening rate with its source, author and base as parent', function () {
     $user = User::factory()->create();
     actingAs($user);
+    $idr = Currency::create(['name' => 'Indonesian Rupiah', 'code' => 'IDR', 'is_base' => true, 'is_active' => true]);
 
     $response = currencyService()->store(new StoreCurrencyData(
         code: 'GBP',
         name: 'Pound Sterling',
         symbol: '£',
-        opening_rate: 20000,
+        rate: 20000,
     ));
 
     expect($response['error'])->toBeFalse();
@@ -91,6 +93,7 @@ it('store() records a manual opening rate with its source and author', function 
 
     assertDatabaseHas('exchange_rates', [
         'currency_id' => $currency->id,
+        'parent_currency_id' => $idr->id,
         'rate' => 20000,
         'source' => SourceRate::Manual->value,
         'created_by' => $user->id,
@@ -105,8 +108,10 @@ it('historyRates() returns each rate with its source and the employee who set it
     $user = User::where('employee_id', $employee->id)->firstOrFail();
     actingAs($user);
 
+    $idr = Currency::create(['name' => 'Indonesian Rupiah', 'code' => 'IDR', 'is_base' => true, 'is_active' => true]);
     $currency = Currency::create(['name' => 'Euro', 'code' => 'EUR', 'symbol' => '€', 'is_active' => true]);
     $currency->rates()->create([
+        'parent_currency_id' => $idr->id,
         'rate' => 16000,
         'rate_date' => now()->toDateString(),
         'source' => SourceRate::Manual,
@@ -122,6 +127,36 @@ it('historyRates() returns each rate with its source and the employee who set it
     $rows = $response['data']['paginated'];
     expect($rows)->toHaveCount(1)
         ->and($rows[0]->source)->toBe('manual')
-        ->and($rows[0]->setBy)->toBe('Rina')
+        ->and($rows[0]->by)->toBe('Rina')
         ->and($rows[0]->rate)->toBe(16000.0);
+});
+
+it('fetchRates() fetches and stores todays system rates and reports success', function () {
+    actingAs(User::factory()->create());
+    $idr = Currency::create(['name' => 'Indonesian Rupiah', 'code' => 'IDR', 'is_base' => true, 'is_active' => true]);
+    $usd = Currency::create(['name' => 'US Dollar', 'code' => 'USD', 'is_active' => true]);
+
+    Http::fake(['*' => Http::response([
+        'result' => 'success',
+        'conversion_rates' => ['USD' => 0.5, 'EUR' => 0.25],
+    ], 200)]);
+
+    $response = currencyService()->fetchRates();
+
+    expect($response['error'])->toBeFalse()
+        ->and($response['message'])->toBe('Rates updated')
+        ->and((float) ExchangeRate::where('currency_id', $usd->id)->value('rate'))->toBe(0.5)
+        ->and(ExchangeRate::where('currency_id', $usd->id)->value('source'))->toBe(SourceRate::System)
+        ->and((int) ExchangeRate::where('currency_id', $usd->id)->value('parent_currency_id'))->toBe($idr->id);
+});
+
+it('fetchRates() returns an error envelope when no base currency is configured', function () {
+    actingAs(User::factory()->create());
+
+    Http::fake(['*' => Http::response(['result' => 'success', 'conversion_rates' => ['USD' => 0.5]], 200)]);
+
+    // ExchangeFetcher throws BaseCurrencyNotFound, which fetchRates catches and returns as an error.
+    $response = currencyService()->fetchRates();
+
+    expect($response['error'])->toBeTrue();
 });

@@ -22,6 +22,7 @@ class ExchangeRate extends Model
     protected $fillable = [
         'uid',
         'currency_id',
+        'parent_currency_id',
         'rate_date',
         'rate',
         'source',
@@ -46,6 +47,11 @@ class ExchangeRate extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_id');
+    }
+
+    public function parentCurrency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class, 'parent_currency_id');
     }
 
     public function creator(): BelongsTo
