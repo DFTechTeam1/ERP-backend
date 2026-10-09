@@ -5,11 +5,14 @@ namespace App\Actions\Finance\Currency;
 use App\Enums\Finance\ExchangeRate\SourceRate;
 use App\Exceptions\BaseCurrencyNotFound;
 use App\Exceptions\ExchangeRateFetchFailed;
+use App\Repository\UserRepository;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Finance\Repository\CurrencyRepository;
+use Modules\Finance\Repository\ExchangeRateApiLogRepository;
 use Modules\Finance\Repository\ExchangeRateRepository;
 
 class ExchangeFetcher
@@ -42,6 +45,8 @@ class ExchangeFetcher
 
         $currencyRepo = app(CurrencyRepository::class);
         $exchangeRepo = app(ExchangeRateRepository::class);
+        $logRepo = app(ExchangeRateApiLogRepository::class);
+        $userRepo = app(UserRepository::class);
 
         $baseCurrency = $currencyRepo->show([
             'where' => ['is_base' => 1],
@@ -52,13 +57,26 @@ class ExchangeFetcher
             throw new BaseCurrencyNotFound;
         }
 
-        $res = Http::get(config('app.exchange_api_url').'/'.config('app.exchange_api_key')."/latest/{$baseCurrency->code}")
+        $actor = $userRepo->detail(id: Auth::id(), select: 'id,email,employee_id', relation: ['employee:id,name']);
+
+        $fetchUrl = config('app.exchange_api_url').'/'.config('app.exchange_api_key')."/latest/{$baseCurrency->code}";
+        $res = Http::get($fetchUrl)
             ->throw()
             ->json();
 
+        $isFailed = ($res['result'] ?? null) !== 'success' || ! isset($res['conversion_rates']);
+
+        $logRepo->store([
+            'url' => $fetchUrl,
+            'response' => json_encode($res),
+            'is_success' => $isFailed ? false : true,
+            'actor_name' => $actor ? ($actor->employee ? $actor->employee->name : $actor->email) : '-',
+            'response_code' => null,
+        ]);
+
         // ->throw() only catches HTTP 4xx/5xx; the provider also signals quota/key errors with a 200
         // body of {"result":"error", ...}, so the payload itself must be validated before use.
-        if (($res['result'] ?? null) !== 'success' || ! isset($res['conversion_rates'])) {
+        if ($isFailed) {
             throw new ExchangeRateFetchFailed($res['error-type'] ?? 'unknown');
         }
 
@@ -83,6 +101,7 @@ class ExchangeFetcher
                 'rate_date' => $today,
                 'rate' => $rate,
                 'source' => SourceRate::System->value,
+                'created_by' => Auth::id(),
             ];
         }
 

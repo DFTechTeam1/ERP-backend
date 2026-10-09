@@ -40,12 +40,12 @@ class CurrencyService
      * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
      *                                                                                      standard API response envelope; `data.added` is the number of currencies inserted.
      */
-    public function syncCurrencies(): array
+    public function syncCurrencies(bool $fetchCurrencyOnly = true): array
     {
         DB::beginTransaction();
         try {
             /** @var Collection<string, string> $available */
-            $available = ExchangeFetcher::run(fetchCurrenciesOnly: true);
+            $available = ExchangeFetcher::run(fetchCurrenciesOnly: $fetchCurrencyOnly);
 
             $existingCodes = $this->repo->get(['select' => ['code']])->pluck('code')->flip();
 
