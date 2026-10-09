@@ -7,6 +7,7 @@ use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\Api\MarketingDashboardController;
 use Modules\Finance\Http\Controllers\Api\ProjectCostController;
+use Modules\Finance\Http\Controllers\CurrencyController;
 
 /*
  *--------------------------------------------------------------------------
@@ -117,6 +118,18 @@ Route::middleware(['auth.session'])->group(function () {
     // matched as a project uid).
     Route::get('production/project-costs/export', [ProjectCostController::class, 'export']);
     Route::get('production/project-costs/{projectUid}', [ProjectCostController::class, 'detailProjectCost']);
+
+    Route::prefix('accounting')->group(function () {
+        // Currencies
+        Route::get('currencies', [CurrencyController::class, 'index']);
+        Route::post('currencies', [CurrencyController::class, 'store']);
+        Route::get('sync-currencies', [CurrencyController::class, 'syncCurrencies']);
+        Route::post('currencies/rates/fetch', [CurrencyController::class, 'fetchRates']);
+        Route::patch('currencies/{currencyUid}', [CurrencyController::class, 'update']);
+        Route::get('currencies/{currencyUid}/rates', [CurrencyController::class, 'historyRates']);
+        Route::post('currencies/{currencyUid}/rates', [CurrencyController::class, 'addRate']);
+        Route::put('currencies/{currencyUid}/rates/{rateUid}', [CurrencyController::class, 'updateRate']);
+    });
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])

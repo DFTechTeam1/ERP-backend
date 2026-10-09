@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 trait ModelCreationObserver
 {
@@ -13,7 +14,9 @@ trait ModelCreationObserver
         });
 
         static::updating(function (Model $model) {
-            $model->updated_by = auth()->id();
+            if (Schema::hasColumn($model->getTable(), 'updated_by')) {
+                $model->updated_by = auth()->id();
+            }
         });
     }
 }
