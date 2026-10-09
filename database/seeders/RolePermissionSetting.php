@@ -511,6 +511,16 @@ class RolePermissionSetting extends Seeder
     protected function financePermission()
     {
         return [
+            ['name' => 'list_accounting_setting', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'currency_management', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
             ['name' => 'list_transaction', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
