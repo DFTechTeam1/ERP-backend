@@ -63,6 +63,7 @@ use App\Services\UserRoleManagement;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
@@ -107,6 +108,7 @@ use Modules\Production\Jobs\PostEquipmentUpdateJob;
 use Modules\Production\Jobs\Project\RejectRequestEditSongJob;
 use Modules\Production\Jobs\ProjectClassChangedJob;
 use Modules\Production\Jobs\ProofOfWorkJob;
+use Modules\Production\Jobs\RebalanceWorkloadAfterSubtitutePic;
 use Modules\Production\Jobs\RemovePicFromSong;
 use Modules\Production\Jobs\RemovePMFromProjectJob;
 use Modules\Production\Jobs\RemoveUserFromTaskJob;
@@ -664,7 +666,6 @@ class ProjectService
                 page: $page,
                 itemsPerPage: $itemsPerPage
             );
-
             /** @var array<int, TaskListData> */
             $output = [];
             foreach ($tasks as $task) {
@@ -672,7 +673,7 @@ class ProjectService
                     uid: $task->uid,
                     project_uid: $task->project->uid,
                     name: $task->name,
-                    status: $task->task_status,
+                    status: $task->task_status ?? '-',
                     created_at: date('d F Y H:i', strtotime($task->created_at)),
                     updated_at: $task->updated_at ? date('d F Y H:i', strtotime($task->updated_at)) : null,
                     action: [
@@ -737,22 +738,42 @@ class ProjectService
                 $where .= " AND name LIKE '%{$search}%'";
             }
 
-            $whereHas = [];
+            $whereGroup = [];
+            $whereExists = null;
             if ($isProduction) {
                 // Only get boss projects
                 $bossId = $userData->user?->employee?->boss_id;
                 if ($bossId) {
-                    $whereHas[] = [
-                        'relation' => 'personInCharges',
-                        'query' => "pic_id = {$bossId}",
-                    ];
+                    $whereExists = function (Builder $subQuery) use ($bossId) {
+                        $subQuery->selectRaw('1')
+                            ->from('project_person_in_charges as ppic')
+                            ->whereColumn('ppic.project_id', 'projects.id')
+                            ->where('ppic.pic_id', $bossId);
+                    };
                 }
             }
             if ($isProjectManager && $userData->user->employee) {
-                $whereHas[] = [
-                    'relation' => 'personInCharges',
-                    'query' => "pic_id = {$userData->user->employee->id}",
-                ];
+                $whereExists = function (Builder $subQuery) use ($userData) {
+                    $subQuery->selectRaw('1')
+                        ->from('project_person_in_charges as ppic')
+                        ->whereColumn('ppic.project_id', 'projects.id')
+                        ->where('ppic.pic_id', $userData->user->employee->id);
+                };
+            }
+
+            // Scope the list only for production members / PMs: they see the projects they (or
+            // their boss) are PIC of, plus any project they were transferred into (approved
+            // transfer). Unscoped roles (root, director, ...) see every active project.
+            if ($whereExists) {
+                $whereGroup[] = function ($query) use ($whereExists) {
+                    $query->whereExists($whereExists)
+                        ->orWhereExists(function (Builder $sub) {
+                            $sub->selectRaw('1')
+                                ->from('transfer_team_members as ttm')
+                                ->whereColumn('ttm.project_id', 'projects.id')
+                                ->where('ttm.status', TransferTeamStatus::Approved->value);
+                        });
+                };
             }
 
             // get my project
@@ -764,11 +785,11 @@ class ProjectService
             $projects = $this->repo->pagination(
                 select: 'id,uid,name,project_date,project_class_id,created_at,updated_at',
                 where: $where,
-                whereHas: $whereHas,
                 relation: [
                     'tasks:id,name,project_id',
                     'projectClass:id,name',
                 ],
+                whereGroup: $whereGroup,
                 page: $page,
                 itemsPerPage: $itemsPerPage
             );
@@ -7334,7 +7355,11 @@ class ProjectService
         try {
             $projectId = getIdFromUid($projectUid, new Project);
 
-            $this->handleAssignPicLogic($data, $projectUid, $projectId);
+            // AssignPic nominates the Lead via the optional `lead` field (empty = none nominated).
+            $this->handleAssignPicLogic($data, $projectUid, $projectId, $data['lead'] ?? '');
+
+            // Sync the linked lead's PICs with the project's current PICs.
+            $this->changeProjectLeadPIC($projectId);
 
             // update cache
             $currentData = $this->detailCacheAction->handle($projectUid);
@@ -7429,7 +7454,7 @@ class ProjectService
      *
      * @param  array<string, array<string>>  $data
      */
-    protected function handleAssignPicLogic(array $data, string $projectUid, int $projectId): void
+    protected function handleAssignPicLogic(array $data, string $projectUid, int $projectId, string $leaderUid): void
     {
         // The Lead PM takes the largest share of the PM reward pot. The frontend may nominate one
         // via $data['lead'] (an employee uid); if none is nominated, no PIC is flagged and the
@@ -7441,11 +7466,54 @@ class ProjectService
             $this->projectPicRepository->store([
                 'pic_id' => $employeeId,
                 'project_id' => $projectId,
-                'is_lead' => $leadUid !== null && $pic === $leadUid,
+                'is_lead' => $pic == $leaderUid ? true : false,
             ]);
         }
 
         NewProjectJob::dispatch($projectUid)->afterCommit();
+    }
+
+    /**
+     * Keep the linked project lead's pic_id in sync with the project's CURRENT PICs.
+     *
+     * Reads project_person_in_charges for the project (so it reflects the final set after any
+     * add/remove), mirrors those employee ids onto the lead, then asks the Python service to
+     * re-balance. Deriving from the PIC table - rather than the request payload - means the lead
+     * can never drift from project_person_in_charges.
+     *
+     * A lead is linked to a project through the deal (project_deal_id), not a project_id column,
+     * so a project with no deal - or a deal with no lead - is simply skipped.
+     */
+    protected function changeProjectLeadPIC(int $projectId): void
+    {
+        $project = $this->repo->show('', 'id,project_deal_id', [], "id = {$projectId}");
+        if (! $project || ! $project->project_deal_id) {
+            return;
+        }
+
+        $currentLead = $this->projectLeadRepo->show(
+            uid: '',
+            where: "project_deal_id = {$project->project_deal_id}"
+        );
+
+        if (! $currentLead) {
+            return;
+        }
+
+        // The single source of truth is the project's current PICs.
+        $picIds = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}")
+            ->pluck('pic_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->toArray();
+
+        RebalanceWorkloadAfterSubtitutePic::dispatch($projectId, $currentLead->uid);
+
+        // ProjectLeadRepository::update() runs a mass update, which bypasses the model's pic_id
+        // json mutator - so encode here (null when empty) to match how the model reads it back.
+        $this->projectLeadRepo->update([
+            'pic_id' => $picIds ? json_encode($picIds) : null,
+        ], '', "id = {$currentLead->id}");
     }
 
     /**
@@ -7530,7 +7598,7 @@ class ProjectService
     /**
      * Assign new pic or remove current pic of project
      *
-     * @param  array<string, array<string>>  $data
+     * @param  array<string, array<string>|string>  $data
      */
     public function subtitutePic(string $projectUid, array $data): array
     {
@@ -7552,22 +7620,24 @@ class ProjectService
 
             // handle new pic
             if (count($data['pics']) > 0) {
-                $this->handleAssignPicLogic($data, $projectUid, $projectId);
+                $this->handleAssignPicLogic($data, $projectUid, $projectId, $data['leader']);
+            } else {
+                // only update the leader
+                $targetLead = getIdFromUid($data['leader'], new Employee);
+
+                $this->projectPicRepository->update(data: [
+                    'is_lead' => false,
+                ], where: "project_id = {$projectId}");
+                $this->projectPicRepository->update(data: [
+                    'is_lead' => true,
+                ], where: 'pic_id = '.$targetLead.' and project_id = '.$projectId);
             }
 
-            // update cache
-            // $currentData = getCache('detailProject'.$projectId);
-            // if (! $currentData) {
-            //     $currentData = $this->reinitDetailCache((object) ['id' => $projectId, 'uid' => $projectUid]);
-            // }
+            // Sync the linked lead's PICs with the project's current PICs (after remove + add).
+            $this->changeProjectLeadPIC($projectId);
 
             // new pics
             $newPics = $this->projectPicRepository->list('pic_id', "project_id = {$projectId}", ['employee:id,uid,name,employee_id']);
-
-            // $currentData['pic'] = implode(',', collect($newPics)->pluck('employee.name')->toArray());
-            // $currentData['pic_ids'] = collect($newPics)->pluck('employee.uid')->toArray();
-
-            // $currentData = $this->formatTasksPermission($currentData, $projectId);
 
             $currentData = $this->detailCacheAction->run($projectUid, [], true);
 
@@ -7613,7 +7683,7 @@ class ProjectService
             $pics = $this->generalService->mainProcessToGetPicScheduler($projectUid, $startDate, $endDate);
 
             $selectedPic = $this->projectPicRepository->list(
-                'id,project_id,pic_id',
+                'id,project_id,pic_id,is_lead',
                 "project_id = {$projectId}",
                 ['employee:id,uid,name,email,employee_id,avatar'],
             );
@@ -7634,6 +7704,7 @@ class ProjectService
                     'email' => $item->employee->email,
                     'employee_id' => $item->employee->employee_id,
                     'avatar' => $item->employee->avatar,
+                    'is_leader' => $item->is_lead,
                     'projects' => $this->getPicWorkload($item->employee, $projectUid, $startDate, $endDate),
                     'is_recommended' => false,
                 ];

@@ -174,4 +174,8 @@ return [
     'internal_service_secret' => env('INTERNAL_SERVICE_SECRET', null),
 
     'whatsapp_service' => env('WHATSAPP_SERVICE', null),
+
+    'exchange_api_key' => env('EXCHANGE_RATE_API_KEY', null),
+
+    'exchange_api_url' => env('EXCHANGE_RATE_URL', null),
 ];

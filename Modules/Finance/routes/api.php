@@ -7,6 +7,7 @@ use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\Api\MarketingDashboardController;
 use Modules\Finance\Http\Controllers\Api\ProjectCostController;
+use Modules\Finance\Http\Controllers\CurrencyController;
 
 /*
  *--------------------------------------------------------------------------
@@ -113,7 +114,22 @@ Route::middleware(['auth.session'])->group(function () {
     Route::get('production/project-costs/cost-trend', [ProjectCostController::class, 'getCostTrend']);
     Route::get('production/project-costs/cost-by-class', [ProjectCostController::class, 'getCostByClass']);
     Route::get('production/project-costs/cost-composition', [ProjectCostController::class, 'getCostComposition']);
+    // Reward disbursement export (must sit before the {projectUid} catch-all so "export" is not
+    // matched as a project uid).
+    Route::get('production/project-costs/export', [ProjectCostController::class, 'export']);
     Route::get('production/project-costs/{projectUid}', [ProjectCostController::class, 'detailProjectCost']);
+
+    Route::prefix('accounting')->group(function () {
+        // Currencies
+        Route::get('currencies', [CurrencyController::class, 'index']);
+        Route::post('currencies', [CurrencyController::class, 'store']);
+        Route::get('sync-currencies', [CurrencyController::class, 'syncCurrencies']);
+        Route::post('currencies/rates/fetch', [CurrencyController::class, 'fetchRates']);
+        Route::patch('currencies/{currencyUid}', [CurrencyController::class, 'update']);
+        Route::get('currencies/{currencyUid}/rates', [CurrencyController::class, 'historyRates']);
+        Route::post('currencies/{currencyUid}/rates', [CurrencyController::class, 'addRate']);
+        Route::put('currencies/{currencyUid}/rates/{rateUid}', [CurrencyController::class, 'updateRate']);
+    });
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])

@@ -36,11 +36,11 @@ class ProjectClassService
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
 
-            $relation = ['tiers:id,project_class_id,pm_count,pm_reward,production_reward'];
+            $relation = ['tiers:id,project_class_id,pm_count,pm_reward,production_reward,lead_reward,support_reward'];
 
             $where = 'is_active = 1';
             if (! empty($search)) {
-                $where .= " and lower(name) LIKE '%".strtolower($search)."%'";
+                $where .= " and lower(name) LIKE '%" . strtolower($search) . "%'";
             }
 
             $select = 'id,name,color,reward,pm_reward,vj_reward,is_active as status';
@@ -64,7 +64,9 @@ class ProjectClassService
                         id: (int) $tier->id,
                         pmCount: $tier->pm_count,
                         pmReward: $tier->pm_reward,
-                        productionReward: $tier->production_reward
+                        productionReward: $tier->production_reward,
+                        leadReward: $tier->lead_reward,
+                        supportReward: $tier->support_reward
                     );
                 }
 
@@ -150,6 +152,8 @@ class ProjectClassService
                         'pm_count' => $tier['pmCount'],
                         'pm_reward' => $tier['pmReward'],
                         'production_reward' => $tier['productionReward'],
+                        'lead_reward' => $tier['leadReward'],
+                        'support_reward' => $tier['supportReward']
                     ];
                 }
 
@@ -192,6 +196,8 @@ class ProjectClassService
                         'pm_count' => $tier['pmCount'],
                         'pm_reward' => $tier['pmReward'],
                         'production_reward' => $tier['productionReward'],
+                        'lead_reward' => $tier['leadReward'],
+                        'support_reward' => $tier['supportReward']
                     ];
 
                     if (isset($tier['id'])) {

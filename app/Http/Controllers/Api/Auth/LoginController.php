@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Data\Auth\AfterEffect\LoginData;
 use App\Enums\ErrorCode\Code;
 use App\Exceptions\ClaimedTokenResetPassword;
 use App\Exceptions\ExpTokenResetPassword;
@@ -20,6 +21,7 @@ use App\Services\EncryptionService;
 use App\Services\GeneralService;
 use App\Services\UserService;
 use DateTime;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -105,6 +107,11 @@ class LoginController extends Controller
         );
     }
 
+    public function loginAfterEffect(LoginData $payload): JsonResponse
+    {
+        return apiResponse($this->userService->loginAfterEffect($payload));
+    }
+
     public function login(Login $request)
     {
         try {
@@ -180,7 +187,7 @@ class LoginController extends Controller
             Cache::forget('userLogin'.$user->id);
 
             // Hit laravel event
-            event(new \Illuminate\Auth\Events\Logout('web', $user));
+            event(new Logout('web', $user));
 
             $user->tokens()->delete();
 

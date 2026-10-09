@@ -281,6 +281,24 @@
                     "permission": "list_refund"
                 },
                 {
+                    "path": "/admin/accounting/settings",
+                    "slug": "accounting-setting",
+                    "lang_id": "Setting",
+                    "lang_en": "Setting",
+                    "icon": "mdiPlain:mdi-cog",
+                    "permission": "list_accounting_setting",
+                    "childs": [
+                        {
+                            "path": "/admin/accounting/settings/currencies",
+                            "slug": "settingCurrency",
+                            "lang_id": "Mata Uang & Nilai Tukar",
+                            "lang_en": "Currencies & Exchange Rate",
+                            "icon": "mdiPlain:mdi-cash-refund",
+                            "permission": "currency_management"
+                        }
+                    ]
+                },
+                {
                     "path": "/admin/finance/project-costs",
                     "slug": "ProjectCostsDashboard",
                     "lang_id": "Pengeluaran Acara",

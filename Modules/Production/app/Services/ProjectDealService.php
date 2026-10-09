@@ -775,6 +775,7 @@ class ProjectDealService
                         'state:id,name',
                         'class:id,name',
                         'marketings:id,project_deal_id,employee_id',
+                        'projectLead:id,project_deal_id,pic_id'
                     ]
                 );
 

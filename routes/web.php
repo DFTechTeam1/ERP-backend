@@ -378,38 +378,4 @@ Route::get('slack-testing', function () {
 
     //     $developer->notify(new SlackNotification($block));
     // }
-    //
-    $repo = app(ProjectRepository::class);
-
-    $projects = $repo->list(
-        select: 'id,name,uid',
-        whereHas: [
-            ['relation' => 'tasks',
-                'query' => 'id IN (4054, 4055)',
-            ],
-        ],
-        relation: ['tasks:id,name,project_id']
-    );
-
-    $output = [];
-
-    foreach ($projects as $key => $data) {
-        $output[] = [
-            'id' => $data->id,
-            'project_name' => $data->name,
-            'tasks' => [],
-        ];
-
-        $tasks = [];
-        foreach ($data->tasks->whereIn('id', [4054, 4055]) as $task) {
-            $tasks[] = [
-                'id' => $task->id,
-                'task_name' => $task->name,
-            ];
-        }
-
-        $output[$key]['tasks'] = $tasks;
-    }
-
-    return $output;
 });

@@ -411,6 +411,36 @@ describe('PointRecordBasedOnReward tiered production pot', function () {
         ]);
     });
 
+    it('uses a different production pot for a different PM headcount (3 PMs)', function () {
+        // Same class/tiers as the 2-PM case above, but 3 PMs -> the 3-PM tier pot (4,500,000),
+        // proving the production amount differs per tier.
+        $class = ProjectClass::factory()->create(['name' => 'Class S', 'reward' => 9999999]); // base ignored
+        prbrAddTier($class, 1, 3500000);
+        prbrAddTier($class, 2, 4000000);
+        prbrAddTier($class, 3, 4500000);
+
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+        for ($i = 0; $i < 3; $i++) {
+            prbrAddPic($project, Employee::factory()->create());
+        }
+
+        $worker = prbrEmployeeWithRole($this->productionRole);
+        prbrAssignTasks($project, $worker, 2);
+
+        PointRecordBasedOnReward::run($project->id, [
+            ['uid' => $worker->uid, 'additional_point' => 0],
+        ]);
+
+        // Sole production worker takes 100% of the 3-PM tier pot (4,500,000, not 4,000,000).
+        assertDatabaseHas('employee_rewards', [
+            'employee_id' => $worker->id,
+            'project_id' => $project->id,
+            'base_reward' => 4500000,
+            'total_reward' => 4500000,
+            'project_class_name' => 'Class S',
+        ]);
+    });
+
     it('falls back to the base reward when no tier matches the PM headcount', function () {
         // Tiers cover 1-3 PMs; a 4-PM event has no matching tier, so the base reward applies.
         $class = ProjectClass::factory()->create(['name' => 'Class S4', 'reward' => 1000000]);
