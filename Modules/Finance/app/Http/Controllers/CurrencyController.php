@@ -86,4 +86,9 @@ class CurrencyController extends Controller
     {
         return apiResponse($this->service->updateRate($request, $currencyUid, $rateUid));
     }
+
+    public function syncCurrencies(): JsonResponse
+    {
+        return apiResponse($this->service->syncCurrencies(false));
+    }
 }

@@ -4,6 +4,7 @@ namespace Modules\Finance\Models;
 
 use App\Enums\Finance\ExchangeRate\SourceRate;
 use App\Models\User;
+use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ExchangeRate extends Model
 {
-    use HasFactory, ModelObserver;
+    use HasFactory, ModelObserver, ModelCreationObserver;
 
     /**
      * The attributes that are mass assignable.

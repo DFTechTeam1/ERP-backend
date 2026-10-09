@@ -123,6 +123,7 @@ Route::middleware(['auth.session'])->group(function () {
         // Currencies
         Route::get('currencies', [CurrencyController::class, 'index']);
         Route::post('currencies', [CurrencyController::class, 'store']);
+        Route::get('sync-currencies', [CurrencyController::class, 'syncCurrencies']);
         Route::put('currencies/{currencyUid}', [CurrencyController::class, 'update']);
         Route::get('currencies/{currencyUid}/rates', [CurrencyController::class, 'historyRates']);
         Route::post('currencies/{currencyUid}/rates', [CurrencyController::class, 'addRate']);
