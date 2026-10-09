@@ -2,8 +2,14 @@
 
 namespace Modules\Finance\Services;
 
+use Modules\Finance\Repository\DfEngineGenerationRepository;
+
 class AiCostService
 {
+    public function __construct(
+        private readonly DfEngineGenerationRepository $generationRepo
+    ) {}
+
     protected function getFilter(): array
     {
         return [
