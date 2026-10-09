@@ -7,6 +7,7 @@ use App\Exceptions\Auth\RefreshTokenInvalid;
 use App\Http\Controllers\Controller;
 use App\Services\Auth\RefreshTokenService;
 use App\Services\Auth\TokenService;
+use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,12 +44,16 @@ class AuthTokenController extends Controller
         }
 
         $accessToken = $this->tokenService->issueAccessToken($issued['user']);
+        $now = new DateTimeImmutable;
 
         return apiResponse(
             generalResponse(
                 'Success',
                 false,
-                ['access_token' => $accessToken],
+                [
+                    'access_token' => $accessToken,
+                    'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
+                ],
             ),
         )->withCookie(
             $this->refreshTokenService->makeCookie($issued['raw'], (bool) $issued['model']->remember)
