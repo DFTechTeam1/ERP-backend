@@ -294,7 +294,7 @@
                             "lang_id": "Mata Uang & Nilai Tukar",
                             "lang_en": "Currencies & Exchange Rate",
                             "icon": "mdiPlain:mdi-cash-refund",
-                            "permission": "list_currencies"
+                            "permission": "currency_management"
                         }
                     ]
                 },
