@@ -124,7 +124,8 @@ Route::middleware(['auth.session'])->group(function () {
         Route::get('currencies', [CurrencyController::class, 'index']);
         Route::post('currencies', [CurrencyController::class, 'store']);
         Route::get('sync-currencies', [CurrencyController::class, 'syncCurrencies']);
-        Route::put('currencies/{currencyUid}', [CurrencyController::class, 'update']);
+        Route::post('currencies/rates/fetch', [CurrencyController::class, 'fetchRates']);
+        Route::patch('currencies/{currencyUid}', [CurrencyController::class, 'update']);
         Route::get('currencies/{currencyUid}/rates', [CurrencyController::class, 'historyRates']);
         Route::post('currencies/{currencyUid}/rates', [CurrencyController::class, 'addRate']);
         Route::put('currencies/{currencyUid}/rates/{rateUid}', [CurrencyController::class, 'updateRate']);

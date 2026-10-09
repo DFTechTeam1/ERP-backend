@@ -13,6 +13,6 @@ class StoreCurrencyData extends Data
         #[Unique('currencies', 'name')]
         public readonly string $name,
         public readonly string $symbol,
-        public readonly float $opening_rate,
+        public readonly float $rate,
     ) {}
 }

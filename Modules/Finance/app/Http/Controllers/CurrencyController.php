@@ -87,8 +87,23 @@ class CurrencyController extends Controller
         return apiResponse($this->service->updateRate($request, $currencyUid, $rateUid));
     }
 
+    /**
+     * Sync the currency master table with the provider's supported currencies.
+     *
+     * @return JsonResponse The API response envelope.
+     */
     public function syncCurrencies(): JsonResponse
     {
-        return apiResponse($this->service->syncCurrencies(false));
+        return apiResponse($this->service->syncCurrencies());
+    }
+
+    /**
+     * Fetch the latest exchange rates from the provider and store today's rates.
+     *
+     * @return JsonResponse The API response envelope.
+     */
+    public function fetchRates(): JsonResponse
+    {
+        return apiResponse($this->service->fetchRates());
     }
 }

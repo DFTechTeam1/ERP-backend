@@ -9,6 +9,7 @@ use App\Schedules\UpcomingDeadlineTask;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use Modules\Finance\Jobs\ExchangeFetcherJob;
 use Modules\Finance\Jobs\InvoiceDueCheck;
 use Modules\Hrd\Console\CheckEmployeeResign;
 use Modules\Hrd\Console\CheckTransferEntityScheduleCommand;
@@ -62,6 +63,8 @@ Schedule::command(CheckEmployeeResign::class)
 Schedule::command(PaymentDueReminderCommand::class)
     ->dailyAt('06:00')
     ->runInBackground();
+
+Schedule::job(ExchangeFetcherJob::class)->dailyAt('10:00');
 
 Schedule::job(InvoiceDueCheck::class)->dailyAt('06:00');
 
