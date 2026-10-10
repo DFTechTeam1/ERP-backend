@@ -114,6 +114,20 @@ it('summary keeps large USD costs intact (round, not number_format)', function (
     expect((float) aiService()->summary()['data']['costUsd'])->toBe(1500.5);
 });
 
+it('summary handles a zero/missing exchange rate without dividing by zero', function () {
+    request()->merge(['period' => 'this_year']);
+    mockGenerations([
+        aiGen(5.0, 1000, 'image', '2026-01-10', exchangeRate: 0.0), // no rate -> IDR cost 0
+        aiGen(3.0, 500, 'image', '2026-01-20'),                     // normal rate -> 30000
+    ]);
+
+    $res = aiService()->summary();
+
+    expect($res['error'])->toBeFalse()
+        ->and((float) $res['data']['costUsd'])->toBe(8.0)       // USD still summed (5 + 3)
+        ->and((float) $res['data']['costIdr'])->toBe(30000.0);  // only the rated row contributes
+});
+
 it('summaryByActionType groups totals by generation kind', function () {
     request()->merge(['period' => 'this_year']);
     mockGenerations([
