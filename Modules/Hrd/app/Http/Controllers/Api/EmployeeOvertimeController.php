@@ -15,7 +15,7 @@ class EmployeeOvertimeController extends Controller
 
     public function resync(): JsonResponse
     {
-        return apiResponse($this->service->fetchFromGreatday('DO250015'));
+        return apiResponse($this->service->getDataFromGreatday('DF054'));
     }
 
     /**

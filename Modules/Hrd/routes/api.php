@@ -42,7 +42,7 @@ Route::controller(EmployeeController::class)
     ->middleware(['auth.session'])
     ->group(function () {
         // Overtime
-        Route::post('overtime/sync', [EmployeeOvertimeController::class, 'resync']);
+        Route::get('overtime/sync', [EmployeeOvertimeController::class, 'resync']);
 
         Route::get('employees', 'list');
         Route::post('employees', 'store')->name('employees.store');

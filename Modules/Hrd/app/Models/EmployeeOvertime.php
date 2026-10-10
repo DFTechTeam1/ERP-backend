@@ -4,6 +4,7 @@ namespace Modules\Hrd\Models;
 
 use App\Enums\Employee\OvertimeStatus;
 use App\Traits\ModelObserver;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,6 +23,7 @@ class EmployeeOvertime extends Model
     protected $fillable = [
         'uid',
         'employee_id',
+        'master_overtime_hours',
         'overtime_hours',
         'remark',
         'project_id',
@@ -67,5 +69,21 @@ class EmployeeOvertime extends Model
         }
 
         return $this?->employee?->name ?? $this->attributes['employee_name'];
+    }
+
+    public function taskId(): Attribute
+    {
+        return Attribute::make(
+            set: fn($val) => $val ? json_encode($val) : null,
+            get: fn($val) => $val ? json_decode($val, true) : []
+        );
+    }
+
+    public function taskName(): Attribute
+    {
+        return Attribute::make(
+            set: fn($val) => $val ? json_encode($val) : null,
+            get: fn($val) => $val ? json_decode($val, true) : []
+        );
     }
 }

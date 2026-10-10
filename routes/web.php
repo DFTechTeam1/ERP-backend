@@ -30,6 +30,7 @@ use Modules\Inventory\Services\InventoryService;
 use Modules\Production\Http\Controllers\Api\QuotationController;
 use Modules\Production\Models\Project;
 use Modules\Production\Repository\ProjectRepository;
+use Modules\Production\Repository\ProjectTaskRepository;
 use Modules\Production\Services\ProjectService;
 use PhpOffice\PhpWord\TemplateProcessor;
 use Picqer\Barcode\Renderers\PngRenderer;
@@ -378,4 +379,29 @@ Route::get('slack-testing', function () {
 
     //     $developer->notify(new SlackNotification($block));
     // }
+    $output = [
+        [
+            'id' => 1,
+            'tasks' => [
+                4054, 4055,
+            ],
+        ],
+        [
+            'id' => 2,
+            'tasks' => [
+                4148, 4147,
+            ],
+        ],
+    ];
+
+    $data = collect($output)->map(function ($item) {
+        return $item['tasks'];
+    })->flatten()->implode(',');
+
+    $repo = app(ProjectTaskRepository::class);
+    $tasks = $repo->list(select: 'id,name', where: "id IN ({$data})");
+
+    $selected = $tasks->whereIn('id', [4054, 4055]);
+
+    return $selected;
 });
