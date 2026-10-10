@@ -143,7 +143,9 @@ class AiCostService
             ],
             'where' => $where,
         ])->map(function ($item) {
-            $calculation = round($item->cost / $item->exchange_rate);
+            // Guard against a missing/zero exchange rate: without a rate the IDR cost is unknown, so 0.
+            $exchangeRate = (float) $item->exchange_rate;
+            $calculation = $exchangeRate != 0.0 ? round($item->cost / $exchangeRate) : 0;
             $item['total_cost'] = floatval($calculation);
             $item['month'] = date('M', strtotime($item->created_at));
 
