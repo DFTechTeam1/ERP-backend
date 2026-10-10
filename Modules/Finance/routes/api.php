@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Finance\Http\Controllers\Api\AiCostController;
 use Modules\Finance\Http\Controllers\Api\FinanceController as ApiFinanceController;
 use Modules\Finance\Http\Controllers\Api\FinanceDashboardController;
 use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
@@ -129,6 +130,14 @@ Route::middleware(['auth.session'])->group(function () {
         Route::get('currencies/{currencyUid}/rates', [CurrencyController::class, 'historyRates']);
         Route::post('currencies/{currencyUid}/rates', [CurrencyController::class, 'addRate']);
         Route::put('currencies/{currencyUid}/rates/{rateUid}', [CurrencyController::class, 'updateRate']);
+    });
+
+    // Ai Spending
+    Route::prefix('spending')->group(function () {
+        Route::get('summary', [AiCostController::class, 'summary']);
+        Route::get('trend', [AiCostController::class, 'trend']);
+        Route::get('by-action-type', [AiCostController::class, 'summaryByActionType']);
+        Route::get('by-actor', [AiCostController::class, 'summaryByActor']);
     });
 });
 

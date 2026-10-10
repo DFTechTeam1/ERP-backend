@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Model;
  *                                              paired with a Closure constrains that relation
  *   - where:      array<string,mixed>          equality constraints (column => value)
  *   - whereIn:    array<string,array>          IN constraints (column => values)
+ *   - whereBetween: array<string,array{0:mixed,1:mixed}>
+ *                                              BETWEEN constraints (column => [min, max])
  *   - whereHas:   array<int|string,string|Closure(Builder): void|null>
  *                                              relation existence constraints; see
  *                                              normalizeRelationConstraint() for the accepted shapes
@@ -62,6 +64,10 @@ abstract class BaseRepository
 
         foreach ($params['whereIn'] ?? [] as $column => $values) {
             $query->whereIn($column, $values);
+        }
+
+        foreach ($params['whereBetween'] ?? [] as $column => $range) {
+            $query->whereBetween($column, $range);
         }
 
         foreach ($params['whereHas'] ?? [] as $key => $value) {
