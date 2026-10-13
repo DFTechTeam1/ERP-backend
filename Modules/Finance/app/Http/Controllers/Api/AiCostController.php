@@ -2,6 +2,7 @@
 
 namespace Modules\Finance\Http\Controllers\Api;
 
+use App\Data\Finance\AiCost\TopupTokenData;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -110,5 +111,10 @@ class AiCostController extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    public function topup(TopupTokenData $request): JsonResponse
+    {
+        return apiResponse($this->service->topup($request));
     }
 }

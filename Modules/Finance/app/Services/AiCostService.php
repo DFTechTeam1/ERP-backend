@@ -314,6 +314,23 @@ class AiCostService
         }
     }
 
+    public function listTopup(): array
+    {
+        try {
+            $itemsPerPage = request("itemsPerPage");
+            $page = request('page');
+            $search = request('search');
+
+            $topups = $this->topupRepo->get();
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
     public function topup(TopupTokenData $payload): array
     {
         try {
