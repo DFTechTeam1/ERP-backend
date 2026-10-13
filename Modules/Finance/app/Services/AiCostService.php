@@ -13,11 +13,14 @@ use App\Data\Finance\AiCost\TrendData;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Modules\Finance\Models\DfEngineGeneration;
 use Modules\Finance\Repository\DfEngineApiKeyRepository;
 use Modules\Finance\Repository\DfEngineFeatureRepository;
 use Modules\Finance\Repository\DfEngineGenerationRepository;
 use Modules\Finance\Repository\DfEngineMenuRepository;
+use Modules\Finance\Repository\DfEngineTopupRepository;
 
 class AiCostService
 {
@@ -33,7 +36,8 @@ class AiCostService
         private readonly DfEngineFeatureRepository $featureRepo,
         private readonly DfEngineMenuRepository $menuRepo,
         private readonly DfEngineApiKeyRepository $apiKeyRepo,
-        private readonly UserRepository $userRepo
+        private readonly UserRepository $userRepo,
+        private readonly DfEngineTopupRepository $topupRepo
     ) {}
 
     /**
@@ -243,7 +247,7 @@ class AiCostService
 
             // Fill month
             $allMonths = collect(range(1, 12))->map(function ($item) use ($output) {
-                $targetMonth = date('M', strtotime(date('Y').'-'.$item));
+                $targetMonth = date('M', strtotime(date('Y') . '-' . $item));
 
                 $costIdr = collect($output)->firstWhere('month', $targetMonth)?->costIdr ?? 0;
                 $costUsd = collect($output)->firstWhere('month', $targetMonth)?->costUsd ?? 0;
@@ -284,7 +288,7 @@ class AiCostService
             if ($actorIds->isNotEmpty()) {
                 $actors = $this->userRepo->list(
                     select: 'id,employee_id,username',
-                    where: 'id IN ('.$actorIds->map(fn ($id) => (int) $id)->implode(',').')',
+                    where: 'id IN (' . $actorIds->map(fn($id) => (int) $id)->implode(',') . ')',
                     relation: ['employee:id,name', 'roles:id,name']
                 )->keyBy('id');
             }
