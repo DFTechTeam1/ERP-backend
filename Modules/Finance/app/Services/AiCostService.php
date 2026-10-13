@@ -308,4 +308,54 @@ class AiCostService
             return errorResponse($th);
         }
     }
+
+    public function listTopup(): array
+    {
+        try {
+            $itemsPerPage = request("itemsPerPage");
+            $page = request('page');
+            $search = request('search');
+
+            $topups = $this->topupRepo->get();
+            return generalResponse(
+                message: "Success",
+                data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function topup(TopupTokenData $payload): array
+    {
+        try {
+            $rates = DB::select("CALL get_currency_rate('USD')");
+
+            if (gettype($rates) == 'array' && count($rates) == 1) {
+                $rate = $rates[0]->output_rate;
+            }
+
+            $payloadTopup = [
+                'amount_usd' => $payload->amount_usd,
+                'exchange_rate' => $rate ?? 0,
+                'topup_date' => $payload->topup_date,
+                'reference' => '',
+                'note' => $payload->note ?? null,
+                'proof_of_payment' => ''
+            ];
+
+            if ($payload->proof_of_payment) {
+                $file = Storage::putFile('dfengine/topup', $payload->proof_of_payment);
+                $payloadTopup['proof_of_payment'] = $file;
+            }
+
+            $this->topupRepo->store($payloadTopup);
+
+            return generalResponse(
+                message: "Success"
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
 }
