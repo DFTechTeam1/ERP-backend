@@ -139,6 +139,11 @@ Route::middleware(['auth.session'])->group(function () {
         Route::get('by-action-type', [AiCostController::class, 'summaryByActionType']);
         Route::get('by-actor', [AiCostController::class, 'summaryByActor']);
     });
+
+    // Token Topups
+    Route::post('token-topups', [AiCostController::class, 'topup']);
+    Route::get('token-topups', [AiCostController::class, 'listTopup']);
+    Route::get('token-topups/summary', [AiCostController::class, 'getTopupKpi']);
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])

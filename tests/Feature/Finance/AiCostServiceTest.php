@@ -1,15 +1,24 @@
 <?php
 
+use App\Data\Finance\AiCost\TopupTokenData;
+use App\Enums\Finance\ExchangeRate\SourceRate;
 use App\Models\User;
 use App\Repository\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
+use Modules\Finance\Models\Currency;
 use Modules\Finance\Models\DfEngineFeature;
 use Modules\Finance\Models\DfEngineGeneration;
 use Modules\Finance\Models\DfEngineMenu;
+use Modules\Finance\Models\DfEngineTopup;
+use Modules\Finance\Models\ExchangeRate;
 use Modules\Finance\Repository\DfEngineFeatureRepository;
 use Modules\Finance\Repository\DfEngineGenerationRepository;
 use Modules\Finance\Repository\DfEngineMenuRepository;
+use Modules\Finance\Repository\DfEngineTopupRepository;
 use Modules\Finance\Services\AiCostService;
 use Modules\Hrd\Models\Employee;
 use Spatie\Permission\Models\Role;
@@ -84,6 +93,46 @@ function mockGenerations(array $gens, ?Closure $onParams = null): void
             return new Collection($gens);
         });
     });
+}
+
+/** Build an in-memory top-up, optionally with a creator (user + employee). */
+function aiTopup(string $uid, float $amountUsd, float $exchangeRate, string $topupDate, ?string $note = null, ?string $proof = null, ?int $createdBy = null, ?string $email = null, ?string $nickname = null): DfEngineTopup
+{
+    $topup = (new DfEngineTopup)->forceFill([
+        'uid' => $uid,
+        'amount_usd' => $amountUsd,
+        'exchange_rate' => $exchangeRate,
+        'topup_date' => $topupDate,
+        'note' => $note,
+        'reference' => null,
+        'proof_of_payment' => $proof,
+        'created_by' => $createdBy,
+        'created_at' => $topupDate,
+    ]);
+
+    if ($email !== null) {
+        $creator = (new User)->forceFill(['id' => $createdBy ?? 1, 'email' => $email]);
+        $creator->setRelation('employee', $nickname !== null ? (new Employee)->forceFill(['nickname' => $nickname, 'avatar' => 'a.png']) : null);
+        $topup->setRelation('creator', $creator);
+    } else {
+        $topup->setRelation('creator', null);
+    }
+
+    return $topup;
+}
+
+/** Seed a USD->IDR rate so the get_currency_rate stored procedure returns it in-session. */
+function seedUsdRate(float $rate): void
+{
+    $idr = Currency::create(['name' => 'Rupiah', 'code' => 'IDR', 'is_base' => true, 'is_active' => true]);
+    $usd = Currency::create(['name' => 'US Dollar', 'code' => 'USD', 'is_active' => true]);
+    ExchangeRate::create([
+        'currency_id' => $usd->id,
+        'parent_currency_id' => $idr->id,
+        'rate_date' => now()->toDateString(),
+        'rate' => $rate,
+        'source' => SourceRate::System,
+    ]);
 }
 
 // ---- Aggregation (service) ------------------------------------------------
@@ -285,6 +334,87 @@ it('summaryByActor groups spending per actor with resolved name and role', funct
         ->and((float) $rudhi->costUsd)->toBe(2.0);
 });
 
+// ---- Token top-ups (service) ----------------------------------------------
+
+it('listTopup returns paginated top-ups with IDR amount and creator', function () {
+    request()->merge(['itemsPerPage' => 10, 'page' => 1]);
+
+    $topup = aiTopup('TU-1', amountUsd: 100.0, exchangeRate: 0.0001, topupDate: '2026-01-10', note: 'first', proof: 'dfengine/topup/p.jpg', createdBy: 7, email: 'grace@x.com', nickname: 'Grace');
+
+    mock(DfEngineTopupRepository::class, function ($m) use ($topup) {
+        $m->shouldReceive('paginate')->andReturn(new LengthAwarePaginator(new Collection([$topup]), 1, 10, 1));
+        $m->shouldReceive('get')->andReturn(new Collection([$topup]));
+    });
+
+    $res = aiService()->listTopup();
+
+    expect($res['error'])->toBeFalse()
+        ->and($res['data']['totalData'])->toBe(1);
+
+    $first = $res['data']['paginated']->first();
+    expect($first->uid)->toBe('TU-1')
+        ->and((float) $first->amount_usd)->toBe(100.0)
+        ->and((float) $first->amount_idr)->toBe(1000000.0) // 100 / 0.0001
+        ->and($first->note)->toBe('first')
+        ->and($first->creator->nickname)->toBe('Grace')    // employee nickname (precedence fix)
+        ->and($first->creator->user_id)->toBe(7);
+});
+
+it('getTopupKpi sums top-up amounts and reports the last top-up date', function () {
+    mock(DfEngineTopupRepository::class, fn ($m) => $m->shouldReceive('get')->andReturn(new Collection([
+        aiTopup('TU-1', amountUsd: 100.0, exchangeRate: 0.0001, topupDate: '2026-01-10'),
+        aiTopup('TU-2', amountUsd: 50.0, exchangeRate: 0.0001, topupDate: '2026-02-15'),
+    ])));
+
+    $res = aiService()->getTopupKpi();
+
+    expect($res['error'])->toBeFalse();
+    $d = $res['data'];
+    expect($d['total_count'])->toBe(2)
+        ->and((float) $d['total_amount_usd'])->toBe(150.0)
+        ->and((float) $d['total_amount_idr'])->toBe(1500000.0) // 1,000,000 + 500,000
+        ->and($d['last_topup_date'])->toBe('15 February 2026');
+});
+
+it('getTopupKpi returns a dash for the last date when there are no top-ups', function () {
+    mock(DfEngineTopupRepository::class, fn ($m) => $m->shouldReceive('get')->andReturn(new Collection([])));
+
+    $res = aiService()->getTopupKpi();
+
+    expect($res['error'])->toBeFalse()
+        ->and($res['data']['total_count'])->toBe(0)
+        ->and($res['data']['last_topup_date'])->toBe('-');
+});
+
+it('topup stores the amount with the USD rate from the proc and the uploaded proof', function () {
+    Storage::fake();
+    seedUsdRate(0.0001); // the get_currency_rate proc reads this within the test transaction
+
+    $captured = null;
+    mock(DfEngineTopupRepository::class, function ($m) use (&$captured) {
+        $m->shouldReceive('store')->andReturnUsing(function ($payload) use (&$captured) {
+            $captured = $payload;
+
+            return new DfEngineTopup;
+        });
+    });
+
+    $res = aiService()->topup(new TopupTokenData(
+        amount_usd: 100.0,
+        topup_date: '2026-01-10',
+        reference: null,
+        note: 'top up',
+        proof_of_payment: UploadedFile::fake()->create('proof.pdf', 10),
+    ));
+
+    expect($res['error'])->toBeFalse()
+        ->and((float) $captured['amount_usd'])->toBe(100.0)
+        ->and((float) $captured['exchange_rate'])->toBe(0.0001) // resolved by the stored procedure
+        ->and($captured['note'])->toBe('top up')
+        ->and($captured['proof_of_payment'])->not->toBeEmpty();
+    Storage::assertExists($captured['proof_of_payment']);
+});
+
 // ---- E2E over HTTP --------------------------------------------------------
 
 describe('endpoints (e2e)', function () {
@@ -330,5 +460,43 @@ describe('endpoints (e2e)', function () {
             ->assertJsonPath('data.0.name', 'Grace')
             ->assertJsonPath('data.0.role', 'Marketing')
             ->assertJsonPath('data.0.count', 1);
+    });
+
+    it('POST /api/token-topups records a top-up', function () {
+        Storage::fake();
+        seedUsdRate(0.0001);
+        mock(DfEngineTopupRepository::class, fn ($m) => $m->shouldReceive('store')->andReturn(new DfEngineTopup));
+
+        $this->post('/api/token-topups', [
+            'amount_usd' => 100,
+            'topup_date' => '2026-01-10',
+            'note' => 'via api',
+            'proof_of_payment' => UploadedFile::fake()->create('proof.pdf', 10),
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('message', 'Success topup token');
+    });
+
+    it('GET /api/token-topups lists top-ups', function () {
+        $topup = aiTopup('TU-1', amountUsd: 100.0, exchangeRate: 0.0001, topupDate: '2026-01-10', createdBy: 7, email: 'g@x.com', nickname: 'Grace');
+        mock(DfEngineTopupRepository::class, function ($m) use ($topup) {
+            $m->shouldReceive('paginate')->andReturn(new LengthAwarePaginator(new Collection([$topup]), 1, 10, 1));
+            $m->shouldReceive('get')->andReturn(new Collection([$topup]));
+        });
+
+        $this->getJson('/api/token-topups')
+            ->assertStatus(201)
+            ->assertJsonPath('data.totalData', 1)
+            ->assertJsonPath('data.paginated.0.uid', 'TU-1');
+    });
+
+    it('GET /api/token-topups/summary returns the KPI', function () {
+        mock(DfEngineTopupRepository::class, fn ($m) => $m->shouldReceive('get')->andReturn(new Collection([
+            aiTopup('TU-1', amountUsd: 100.0, exchangeRate: 0.0001, topupDate: '2026-01-10'),
+        ])));
+
+        $this->getJson('/api/token-topups/summary')
+            ->assertStatus(201)
+            ->assertJsonPath('data.total_count', 1);
     });
 });

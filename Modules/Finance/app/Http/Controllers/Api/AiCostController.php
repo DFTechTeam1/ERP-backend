@@ -2,6 +2,7 @@
 
 namespace Modules\Finance\Http\Controllers\Api;
 
+use App\Data\Finance\AiCost\TopupTokenData;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -110,5 +111,36 @@ class AiCostController extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    /**
+     * Record a token top-up (amount, exchange rate and proof of payment).
+     *
+     * @param  TopupTokenData  $request  The validated top-up payload.
+     * @return JsonResponse The API response envelope.
+     */
+    public function topup(TopupTokenData $request): JsonResponse
+    {
+        return apiResponse($this->service->topup($request));
+    }
+
+    /**
+     * Return the paginated list of token top-ups.
+     *
+     * @return JsonResponse A paginated list of TopupListData wrapped in the API envelope.
+     */
+    public function listTopup(): JsonResponse
+    {
+        return apiResponse($this->service->listTopup());
+    }
+
+    /**
+     * Return the token top-up KPI summary (totals and last top-up date).
+     *
+     * @return JsonResponse A TopupSummaryData payload wrapped in the API envelope.
+     */
+    public function getTopupKpi(): JsonResponse
+    {
+        return apiResponse($this->service->getTopupKpi());
     }
 }

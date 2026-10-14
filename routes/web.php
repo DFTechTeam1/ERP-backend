@@ -378,4 +378,7 @@ Route::get('slack-testing', function () {
 
     //     $developer->notify(new SlackNotification($block));
     // }
+    $rates = DB::select("CALL get_currency_rate('USD')");
+
+    return $rates[0]->output_rate;
 });
