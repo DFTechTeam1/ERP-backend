@@ -10,7 +10,9 @@ trait ModelCreationObserver
     public static function bootModelCreationObserver()
     {
         static::creating(function (Model $model) {
-            $model->created_by = auth()->id();
+            if (Schema::hasColumn($model->getTable(), 'created_by')) {
+                $model->created_by = auth()->id();
+            }
         });
 
         static::updating(function (Model $model) {
