@@ -355,7 +355,7 @@ class AiCostService
                 return new TopupListData(
                     uid: $item->uid,
                     amount_usd: $item->amount_usd,
-                    amount_idr: $item->exchange_rate ? round($item->amount_usd / $item->exchange_rate) : 0,
+                    amount_idr: (float) $item->exchange_rate ? round($item->amount_usd / $item->exchange_rate) : 0,
                     topup_date: $item->topup_date,
                     reference: $item->reference ?? null,
                     note: $item->note ?? null,
@@ -433,7 +433,7 @@ class AiCostService
     {
         try {
             $topups = $this->topupRepo->get()->map(function ($item) {
-                $item['total_idr'] = $item->exchange_rate ? round($item->amount_usd / $item->exchange_rate) : 0;
+                $item['total_idr'] = (float) $item->exchange_rate ? round($item->amount_usd / $item->exchange_rate) : 0;
 
                 return $item;
             });

@@ -386,6 +386,48 @@ it('getTopupKpi returns a dash for the last date when there are no top-ups', fun
         ->and($res['data']['last_topup_date'])->toBe('-');
 });
 
+// decimal columns come back from MySQL as strings, and "0.00000000" is truthy in PHP, so a naive
+// `$rate ? ...` guard would still divide by zero — the value must be cast to float first.
+it('listTopup handles a zero exchange rate stored as a decimal string without dividing by zero', function () {
+    request()->merge(['itemsPerPage' => 10]);
+
+    $topup = (new DfEngineTopup)->forceFill([
+        'uid' => 'TU-Z',
+        'amount_usd' => 50.0,
+        'exchange_rate' => '0.00000000',
+        'topup_date' => '2026-01-10',
+        'created_at' => '2026-01-10',
+    ]);
+    $topup->setRelation('creator', null);
+
+    mock(DfEngineTopupRepository::class, function ($m) use ($topup) {
+        $m->shouldReceive('paginate')->andReturn(new LengthAwarePaginator(new Collection([$topup]), 1, 10, 1));
+        $m->shouldReceive('get')->andReturn(new Collection([$topup]));
+    });
+
+    $res = aiService()->listTopup();
+
+    expect($res['error'])->toBeFalse()
+        ->and((float) $res['data']['paginated']->first()->amount_idr)->toBe(0.0);
+});
+
+it('getTopupKpi handles a zero exchange rate stored as a decimal string', function () {
+    $topup = (new DfEngineTopup)->forceFill([
+        'uid' => 'TU-Z',
+        'amount_usd' => 50.0,
+        'exchange_rate' => '0.00000000',
+        'topup_date' => '2026-01-10',
+        'created_at' => '2026-01-10',
+    ]);
+
+    mock(DfEngineTopupRepository::class, fn ($m) => $m->shouldReceive('get')->andReturn(new Collection([$topup])));
+
+    $res = aiService()->getTopupKpi();
+
+    expect($res['error'])->toBeFalse()
+        ->and((float) $res['data']['total_amount_idr'])->toBe(0.0);
+});
+
 it('topup stores the amount with the USD rate from the proc and the uploaded proof', function () {
     Storage::fake();
     seedUsdRate(0.0001); // the get_currency_rate proc reads this within the test transaction
