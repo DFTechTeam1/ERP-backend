@@ -5,6 +5,9 @@ namespace Modules\Finance\Services;
 use App\Data\Finance\AiCost\SummaryByActionTypeData;
 use App\Data\Finance\AiCost\SummaryByActorData;
 use App\Data\Finance\AiCost\SummaryData;
+use App\Data\Finance\AiCost\TopupCreatorData;
+use App\Data\Finance\AiCost\TopupListData;
+use App\Data\Finance\AiCost\TopupSummaryData;
 use App\Data\Finance\AiCost\TopupTokenData;
 use App\Data\Finance\AiCost\TrendData;
 use App\Repository\UserRepository;
@@ -244,7 +247,7 @@ class AiCostService
 
             // Fill month
             $allMonths = collect(range(1, 12))->map(function ($item) use ($output) {
-                $targetMonth = date('M', strtotime(date('Y') . '-' . $item));
+                $targetMonth = date('M', strtotime(date('Y').'-'.$item));
 
                 $costIdr = collect($output)->firstWhere('month', $targetMonth)?->costIdr ?? 0;
                 $costUsd = collect($output)->firstWhere('month', $targetMonth)?->costUsd ?? 0;
@@ -285,7 +288,7 @@ class AiCostService
             if ($actorIds->isNotEmpty()) {
                 $actors = $this->userRepo->list(
                     select: 'id,employee_id,username',
-                    where: 'id IN (' . $actorIds->map(fn($id) => (int) $id)->implode(',') . ')',
+                    where: 'id IN ('.$actorIds->map(fn ($id) => (int) $id)->implode(',').')',
                     relation: ['employee:id,name', 'roles:id,name']
                 )->keyBy('id');
             }
@@ -314,23 +317,79 @@ class AiCostService
         }
     }
 
+    /**
+     * List token top-ups (paginated), each with its IDR amount, proof-of-payment URL and creator.
+     * Honours the `itemsPerPage`, `page` and `search` (matched against note) request parameters.
+     *
+     * @return array{error: bool, message: string, data?: array{paginated: \Illuminate\Support\Collection<int, TopupListData>, totalData: int}, code?: int}
+     *                                                                                                                                                      The standard API response envelope.
+     */
     public function listTopup(): array
     {
         try {
-            $itemsPerPage = request("itemsPerPage");
-            $page = request('page');
+            $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length', 15);
             $search = request('search');
 
-            $topups = $this->topupRepo->get();
+            $params = [
+                'with' => [
+                    'creator:id,employee_id,email',
+                    'creator.employee:id,nickname,avatar',
+                ],
+            ];
+            if ($search) {
+                $params['where'] = [
+                    'note' => $search,
+                ];
+            }
+
+            $topups = $this->topupRepo->paginate(
+                params: $params,
+                perPage: $itemsPerPage
+            );
+
+            /** @var array<int, TopupListData> */
+            $output = [];
+
+            $output = $topups->getCollection()->transform(function ($item) {
+
+                return new TopupListData(
+                    uid: $item->uid,
+                    amount_usd: $item->amount_usd,
+                    amount_idr: $item->exchange_rate ? round($item->amount_usd / $item->exchange_rate) : 0,
+                    topup_date: $item->topup_date,
+                    reference: $item->reference ?? null,
+                    note: $item->note ?? null,
+                    proof_of_payment_url: asset('storage/'.$item->proof_of_payment),
+                    creator: new TopupCreatorData(
+                        nickname: $item?->creator?->employee?->nickname ?? ($item->creator ? $item->creator->email : '-'),
+                        image: $item?->creator?->employee?->avatar ?? '',
+                        user_id: $item->created_by ?? '',
+                    ),
+                    created_at: $item->created_at,
+                );
+            });
+            $totalData = $this->topupRepo->get(params: $params)->count();
+
             return generalResponse(
-                message: "Success",
-                data: []
+                message: 'Success',
+                data: [
+                    'paginated' => $output,
+                    'totalData' => $totalData,
+                ]
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }
 
+    /**
+     * Record a token top-up: resolve the current USD→IDR rate via the `get_currency_rate` stored
+     * procedure, store the amount with that exchange rate, and persist the uploaded proof of payment.
+     *
+     * @param  TopupTokenData  $payload  The validated payload (amount_usd, topup_date, reference, note, proof_of_payment).
+     * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
+     *                                                                                      standard API response envelope.
+     */
     public function topup(TopupTokenData $payload): array
     {
         try {
@@ -346,7 +405,7 @@ class AiCostService
                 'topup_date' => $payload->topup_date,
                 'reference' => '',
                 'note' => $payload->note ?? null,
-                'proof_of_payment' => ''
+                'proof_of_payment' => '',
             ];
 
             if ($payload->proof_of_payment) {
@@ -357,7 +416,40 @@ class AiCostService
             $this->topupRepo->store($payloadTopup);
 
             return generalResponse(
-                message: "Success"
+                message: 'Success topup token'
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Build the top-up KPI summary: total count, total amount (USD and IDR) and the last top-up date.
+     *
+     * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
+     *                                                                                      standard API response envelope carrying a TopupSummaryData payload.
+     */
+    public function getTopupKpi(): array
+    {
+        try {
+            $topups = $this->topupRepo->get()->map(function ($item) {
+                $item['total_idr'] = $item->exchange_rate ? round($item->amount_usd / $item->exchange_rate) : 0;
+
+                return $item;
+            });
+            $totalUsd = $topups->sum('amount_usd');
+            $totalIdr = $topups->sum('total_idr');
+
+            $output = new TopupSummaryData(
+                total_count: $topups->count(),
+                total_amount_usd: $totalUsd,
+                total_amount_idr: $totalIdr,
+                last_topup_date: $topups->isNotEmpty() ? Carbon::parse($topups->last()->created_at)->format('d F Y') : '-',
+            );
+
+            return generalResponse(
+                message: 'Success',
+                data: $output->toArray()
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

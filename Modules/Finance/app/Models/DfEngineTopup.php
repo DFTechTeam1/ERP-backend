@@ -2,14 +2,18 @@
 
 namespace Modules\Finance\Models;
 
+use App\Models\User;
+use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 // use Modules\Finance\Database\Factories\DfEngineTopupFactory;
 
 class DfEngineTopup extends Model
 {
-    use HasFactory, ModelObserver;
+    use HasFactory, ModelObserver, ModelCreationObserver;
 
     /**
      * The attributes that are mass assignable.
@@ -29,4 +33,9 @@ class DfEngineTopup extends Model
     // {
     //     // return DfEngineTopupFactory::new();
     // }
+    //
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

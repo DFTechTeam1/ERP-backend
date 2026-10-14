@@ -142,6 +142,8 @@ Route::middleware(['auth.session'])->group(function () {
 
     // Token Topups
     Route::post('token-topups', [AiCostController::class, 'topup']);
+    Route::get('token-topups', [AiCostController::class, 'listTopup']);
+    Route::get('token-topups/summary', [AiCostController::class, 'getTopupKpi']);
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])
