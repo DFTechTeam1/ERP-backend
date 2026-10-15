@@ -2412,7 +2412,7 @@ class ProjectService
                     'projectClass:id,name',
                     'projectDeal:id',
                     'projectDeal.projectLead:id,project_deal_id',
-                    'projectDeal.invoices:id,project_deal_id'
+                    'projectDeal.invoices:id,project_deal_id,raw_data'
                 ]
             );
 
