@@ -102,6 +102,8 @@ class ProjectController extends Controller
                 'marketings.marketing:id,name,employee_id',
                 'projectClass:id,name,color',
                 'vjs.employee:id,nickname',
+                'projectDeal:id',
+                'projectDeal.projectLead:id,project_deal_id'
             ]
         ));
     }
