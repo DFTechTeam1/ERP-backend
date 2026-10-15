@@ -39,7 +39,8 @@ class RefreshTokenService
         bool $remember,
         ?string $userAgent = null,
         ?string $ip = null,
-        ?string $familyId = null
+        ?string $familyId = null,
+        ?int $customExpDateInDays = null
     ): array {
         $raw = Str::random(64);
 
@@ -48,7 +49,7 @@ class RefreshTokenService
             'token_hash' => $this->hash($raw),
             'family_id' => $familyId ?? (string) Str::uuid(),
             'remember' => $remember,
-            'expires_at' => $this->resolveExpiry($remember),
+            'expires_at' => $this->resolveExpiry($remember, $customExpDateInDays),
             'user_agent' => $userAgent,
             'ip' => $ip,
         ]);
@@ -148,11 +149,15 @@ class RefreshTokenService
             ->update(['revoked_at' => now()]);
     }
 
-    private function resolveExpiry(bool $remember): Carbon
+    private function resolveExpiry(bool $remember, ?int $customExpiredTimeInDays): Carbon
     {
         $days = $remember
             ? (int) config('jwt.refresh_ttl_remember')
             : (int) config('jwt.refresh_ttl');
+
+        if ($customExpiredTimeInDays) {
+            $days = $customExpiredTimeInDays;
+        }
 
         return now()->addDays($days);
     }
