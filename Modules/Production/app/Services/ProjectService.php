@@ -2412,6 +2412,7 @@ class ProjectService
                     'projectClass:id,name',
                     'projectDeal:id',
                     'projectDeal.projectLead:id,project_deal_id',
+                    'projectDeal.invoices:id,project_deal_id'
                 ]
             );
 
@@ -2443,6 +2444,18 @@ class ProjectService
                         data: ['project_date' => $data['project_date']],
                         where: "id = {$project->projectDeal->projectLead->id}"
                     );
+                }
+
+                if ($project->projectDeal->invoices->count()) {
+                    foreach ($project->projectDeal->invoices as $invoice) {
+                        $rawData = $invoice->raw_data;
+                        $rawData['projectDate'] = date('d F Y', strtotime($data['project_date']));
+
+                        $this->invoiceRepo->update(
+                            data: ['raw_data' => json_encode($rawData)],
+                            where: "id = {$invoice->id}"
+                        );
+                    }
                 }
             }
 
