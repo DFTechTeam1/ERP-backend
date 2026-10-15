@@ -52,15 +52,20 @@ class AuthTokenController extends Controller
         $accessToken = $this->tokenService->issueAccessToken($issued['user']);
         $now = new DateTimeImmutable;
 
+        $responseData = [
+            'access_token' => $accessToken,
+            'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
+        ];
+
+        // After Effects (and other non-browser clients) authenticate via the body and cannot read
+        // the httpOnly refresh cookie, so hand the rotated token back in the body too. Browsers keep
+        // using the cookie as the sole channel.
+        if ($isAfterEffect && $isAfterEffect == 'after-effect') {
+            $responseData['refresh_token'] = $issued['raw'];
+        }
+
         return apiResponse(
-            generalResponse(
-                'Success',
-                false,
-                [
-                    'access_token' => $accessToken,
-                    'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
-                ],
-            ),
+            generalResponse('Success', false, $responseData),
         )->withCookie(
             $this->refreshTokenService->makeCookie($issued['raw'], (bool) $issued['model']->remember)
         );
