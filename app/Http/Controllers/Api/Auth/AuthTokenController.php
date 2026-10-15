@@ -25,8 +25,14 @@ class AuthTokenController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
+        $isAfterEffect = (bool) $request->header('X-device');
+
         $raw = $request->cookie((string) config('jwt.refresh_cookie'))
             ?? $request->input('refresh_token');
+
+        if ($isAfterEffect) { // force to get from payload when request came from after effect
+            $raw = $request->input('refresh_token');
+        }
 
         if (! $raw) {
             return $this->unauthenticated();
