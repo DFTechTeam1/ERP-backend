@@ -2407,9 +2407,11 @@ class ProjectService
         try {
             $project = $this->repo->show(
                 uid: $projectUid,
-                select: 'id,project_class_id',
+                select: 'id,project_class_id,project_deal_id',
                 relation: [
-                    'projectClass:id,name'
+                    'projectClass:id,name',
+                    'projectDeal:id',
+                    'projectDeal.projectLead:id,project_deal_id',
                 ]
             );
 
@@ -2429,6 +2431,20 @@ class ProjectService
                 collect($data)->except(['date'])->toArray(),
                 $projectUid
             );
+
+            if ($project->projectDeal) {
+                $this->projectDealRepo->update(
+                    data: ['project_date' => $data['project_date']],
+                    id: $project->projectDeal->id
+                );
+
+                if ($project->projectDeal->projectLead) {
+                    $this->projectLeadRepo->update(
+                        data: ['project_date' => $data['project_date']],
+                        where: "id = {$project->projectDeal->projectLead->id}"
+                    );
+                }
+            }
 
             if ($isClassChanged) {
                 ProjectActivityRecord::run(Auth::id(), ProjectActivityItem::ChangeProjectClass, $projectUid, $currentClassName, $nextClassName);
