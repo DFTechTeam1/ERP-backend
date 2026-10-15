@@ -333,6 +333,8 @@ it('rolls back and returns an error envelope when the city cannot be resolved', 
 it('rewrites the venue inside each deal invoice raw_data without inserting new invoice rows', function () {
     ['project' => $project, 'deal' => $deal, 'city' => $city, 'state' => $state] = umdFixture();
 
+    // The invoices are eager-loaded on the deal (projectDeal.invoices:id,project_deal_id,raw_data)
+    // and updated in place, one row at a time.
     $invoiceA = Invoice::factory()->create([
         'project_deal_id' => $deal->id,
         'raw_data' => ['venue' => 'Old Venue A', 'projectName' => 'Keep Me'],
@@ -340,6 +342,11 @@ it('rewrites the venue inside each deal invoice raw_data without inserting new i
     $invoiceB = Invoice::factory()->create([
         'project_deal_id' => $deal->id,
         'raw_data' => ['venue' => 'Old Venue B'],
+    ]);
+    // An invoice with no raw_data yet: the accessor yields [] and venue is written into it.
+    $invoiceEmpty = Invoice::factory()->create([
+        'project_deal_id' => $deal->id,
+        'raw_data' => null,
     ]);
     $countBefore = Invoice::count();
 
@@ -353,7 +360,8 @@ it('rewrites the venue inside each deal invoice raw_data without inserting new i
         ->and(Invoice::count())->toBe($countBefore)
         ->and($invoiceA->fresh()->raw_data['venue'])->toBe('Grand City Convex')
         ->and($invoiceA->fresh()->raw_data['projectName'])->toBe('Keep Me') // other keys preserved
-        ->and($invoiceB->fresh()->raw_data['venue'])->toBe('Grand City Convex');
+        ->and($invoiceB->fresh()->raw_data['venue'])->toBe('Grand City Convex')
+        ->and($invoiceEmpty->fresh()->raw_data['venue'])->toBe('Grand City Convex');
 });
 
 /**
