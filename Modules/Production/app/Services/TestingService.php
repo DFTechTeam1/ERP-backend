@@ -57,12 +57,12 @@ class TestingService
             $newWhereHas = [
                 [
                     'relation' => 'teamTransfer',
-                    'query' => 'employee_id = '.$this->user->employee_id,
+                    'query' => 'employee_id = ' . $this->user->employee_id,
                 ],
             ];
         } else { // get based on task
             if ($employee->position_id == $specialPositionId) {
-                $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = '.$employee->id);
+                $taskIds = $this->projectGroupRepo->taskPicLogRepo->list('id,project_task_id', 'employee_id = ' . $employee->id);
                 $taskIds = collect($taskIds)->pluck('project_task_id')->unique()->values()->toArray();
 
                 // get from project_task_pics table
@@ -78,7 +78,7 @@ class TestingService
                 }
 
                 if (count($taskIds) > 0) {
-                    $queryNewHas = 'id IN ('.implode(',', $taskIds).')';
+                    $queryNewHas = 'id IN (' . implode(',', $taskIds) . ')';
                 } else {
                     $queryNewHas = 'id = 0';
                 }
@@ -136,13 +136,13 @@ class TestingService
         if ($user->hasRole(BaseRole::Entertainment->value)) {
             $whereHas[] = [
                 'relation' => 'entertainmentTaskSong',
-                'query' => 'employee_id = '.$user->load('employee')->employee->id,
+                'query' => 'employee_id = ' . $user->load('employee')->employee->id,
             ];
 
             // condition to get project by vj
             $whereHas[] = [
                 'relation' => 'vjs',
-                'query' => 'employee_id = '.$user->load('employee')->employee->id,
+                'query' => 'employee_id = ' . $user->load('employee')->employee->id,
                 'type' => 'or',
             ];
         }
@@ -166,7 +166,7 @@ class TestingService
         if (! empty(request('sortBy'))) {
             foreach (request('sortBy') as $sort) {
                 if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
-                    $sorts .= $sort['key'].' '.$sort['order'].',';
+                    $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
                 }
             }
 
@@ -198,7 +198,7 @@ class TestingService
         $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses) {
             $pics = collect($item->personInCharges)->map(function ($pic) {
                 return [
-                    'name' => $pic->employee->name.'('.$pic->employee->employee_id.')',
+                    'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
                 ];
             })->pluck('name')->values()->toArray();
 
@@ -210,7 +210,7 @@ class TestingService
             if ($item->marketings->count() > 0) {
                 $marketing = $item->marketings[0]->marketing->name;
                 if ($item->marketings->count() > 1) {
-                    $marketing .= ', and +'.$item->marketings->count() - 1 .' more';
+                    $marketing .= ', and +' . $item->marketings->count() - 1 . ' more';
                 }
             }
 
@@ -329,7 +329,7 @@ class TestingService
             // $filterResult = $this->buildFilterResult();
 
             if (request('filter_month') == 'true' && ! request('date')) {
-                $startMonth = date('Y-m').'-01';
+                $startMonth = date('Y-m') . '-01';
                 $endDateOfMonth = Carbon::createFromDate(
                     (int) date('Y'),
                     (int) date('m'),
@@ -337,7 +337,7 @@ class TestingService
                 )
                     ->endOfMonth()
                     ->format('d');
-                $endMonth = date('Y-m').'-'.$endDateOfMonth;
+                $endMonth = date('Y-m') . '-' . $endDateOfMonth;
                 if (empty($where)) {
                     $where = "project_date BETWEEN '{$startMonth}' AND '{$endMonth}'";
                 } else {
@@ -346,8 +346,8 @@ class TestingService
             }
 
             if (request('filter_year') == 'true' && ! request('date')) {
-                $startMonth = date('Y').'-01-01';
-                $endMonth = date('Y').'-12-31';
+                $startMonth = date('Y') . '-01-01';
+                $endMonth = date('Y') . '-12-31';
 
                 if (empty($where)) {
                     $where = "project_date BETWEEN '{$startMonth}' AND '{$endMonth}'";
@@ -371,7 +371,7 @@ class TestingService
             }
 
             if (request('event_type')) {
-                $eventType = "'".collect(request('event_type'))->implode("','")."'";
+                $eventType = "'" . collect(request('event_type'))->implode("','") . "'";
                 $where .= " AND lower(event_type) IN ({$eventType})";
             }
 
@@ -420,7 +420,7 @@ class TestingService
                 return $this->listForEntertainment($select, $where, $relation);
             }
 
-            $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id,position_id', [], 'id = '.$this->user->employee_id);
+            $employeeId = $this->employeeRepoGroup->employeeRepo->show('dummy', 'id,boss_id,position_id', [], 'id = ' . $this->user->employee_id);
 
             // get project that only related to authorized user
             if ($isProductionRole || $isEntertainmentRole || $this->user->hasRole(BaseRole::LeadModeller->value)) {
@@ -474,7 +474,7 @@ class TestingService
                     if (! auth()->user()->hasRole(BaseRole::ProjectManagerAdmin->value)) {
                         $whereHas[] = [
                             'relation' => 'personInCharges',
-                            'query' => 'pic_id = '.$this->user->employee_id,
+                            'query' => 'pic_id = ' . $this->user->employee_id,
                         ];
                     }
                 }
@@ -484,7 +484,7 @@ class TestingService
             if (! empty(request('sortBy'))) {
                 foreach (request('sortBy') as $sort) {
                     if ($sort['key'] != 'pic' && $sort['key'] != 'uid') {
-                        $sorts .= $sort['key'].' '.$sort['order'].',';
+                        $sorts .= $sort['key'] . ' ' . $sort['order'] . ',';
                     }
                 }
 
@@ -522,10 +522,16 @@ class TestingService
             $classes = Classification::cases();
             $statusses = ProjectStatus::cases();
 
-            $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses, $roles) {
+            $canSeeConnectionBadge = (bool) in_array($this->user->roles->first()->name, [
+                BaseRole::Root->value,
+                BaseRole::Sales->value,
+                BaseRole::Director->value,
+            ]);
+
+            $paginated = collect((object) $paginated)->map(function ($item) use ($eventTypes, $classes, $statusses, $roles, $canSeeConnectionBadge) {
                 $pics = collect($item->personInCharges)->map(function ($pic) {
                     return [
-                        'name' => $pic->employee->name.'('.$pic->employee->employee_id.')',
+                        'name' => $pic->employee->name . '(' . $pic->employee->employee_id . ')',
                     ];
                 })->pluck('name')->values()->toArray();
 
@@ -537,7 +543,7 @@ class TestingService
                 if ($item->marketings->count() > 0) {
                     $marketing = $item->marketings[0]->marketing ? $item->marketings[0]->marketing->name : '';
                     if ($item->marketings->count() > 1) {
-                        $marketing .= ', and +'.$item->marketings->count() - 1 .' more';
+                        $marketing .= ', and +' . $item->marketings->count() - 1 . ' more';
                     }
                 }
 
@@ -621,6 +627,9 @@ class TestingService
                     'need_return_equipment' => $needReturnEquipment,
                     'roles' => $roles,
                     'number_of_equipments' => 0,
+                    'can_see_deal_connection' => $canSeeConnectionBadge,
+                    'hasDeal' => (bool) $item->projectDeal,
+                    'hasLead' => (bool) $item->projectDeal && $item->projectDeal->projectLead,
                     'action' => [
                         'delete' => $this->user->can('delete_project') ? true : false,
                         'detail' => true,
