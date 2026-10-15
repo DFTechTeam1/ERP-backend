@@ -1120,6 +1120,7 @@ class UserService
             }
 
             $now = new DateTimeImmutable;
+            $refreshTimeNow = new DateTimeImmutable;
 
             $tokenService = app(TokenService::class);
 
@@ -1130,6 +1131,7 @@ class UserService
                 remember: false,
                 userAgent: request()->userAgent(),
                 ip: request()->ip(),
+                customExpDateInDays: 7
             );
 
             return generalResponse(
@@ -1138,6 +1140,7 @@ class UserService
                     'accessToken' => $accessToken,
                     'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
                     'refreshToken' => $refreshToken['raw'],
+                    'refreshTokenExp' => $refreshTimeNow->modify('+7 days'),
                 ]
             );
         } catch (\Throwable $th) {
