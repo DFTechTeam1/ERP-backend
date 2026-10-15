@@ -2554,7 +2554,14 @@ class ProjectService
             $city = City::select('name')->find($data['city_id']);
             $state = State::select('name')->find($data['state_id']);
 
-            $project = $this->repo->show(uid: $id, select: 'id,status');
+            $project = $this->repo->show(
+                uid: $id,
+                select: 'id,status,project_deal_id',
+                relation: [
+                    'projectDeal:id',
+                    'projectDeal.projectLead:id,project_deal_id',
+                ]
+            );
             $currentStatus = $project->status_text;
             $nextStatusRaw = ProjectStatus::from($data['status']);
             $nextStatusName = $nextStatusRaw->label();
@@ -2581,6 +2588,30 @@ class ProjectService
 
             $this->repo->update(collect($data)->except(['pic'])->toArray(), $id);
 
+            // update project deal data
+            $this->projectDealRepo->update(
+                data: collect($data)->only([
+                    'venue',
+                    'country_id',
+                    'state_id',
+                    'city_id',
+                    'led_detail',
+                    'led_area',
+                    'collaboration',
+                ])->toArray(),
+                id: $project->project_deal_id
+            );
+
+            // update project lead data
+            $this->projectLeadRepo->update(
+                data: collect($data)->only([
+                    'venue',
+                    'city_id',
+                    'collaboration',
+                ])->toArray(),
+                where: "id = {$project->projectDeal->projectLead->id}"
+            );
+
             $project = $this->repo->show($id, 'id,client_portal,collaboration,event_type,note,status,venue,country_id,state_id,city_id,led_detail,led_area', [
                 'personInCharges:id,pic_id,project_id',
                 'personInCharges.employee:id,name,employee_id,uid,boss_id',
@@ -2591,28 +2622,6 @@ class ProjectService
             $pics = $projectTeams['pics'];
             $picIds = $projectTeams['picUids'];
 
-            // $currentData = getCache('detailProject' . $project->id);
-            // $currentData['venue'] = $project->venue;
-            // $currentData['city_name'] = $city->name;
-            // $currentData['country_id'] = $project->country_id;
-            // $currentData['state_id'] = $project->state_id;
-            // $currentData['city_id'] = $project->city_id;
-            // $currentData['event_type'] = $project->event_type_text;
-            // $currentData['event_type_raw'] = $project->event_type;
-            // $currentData['collaboration'] = $project->collaboration;
-            // $currentData['status'] = $project->status_text;
-            // $currentData['status_raw'] = $project->status;
-            // $currentData['led_area'] = $project->led_area;
-            // $currentData['led_detail'] = json_decode($project->led_detail, true);
-            // $currentData['note'] = $project->note ?? '-';
-            // $currentData['client_portal'] = $project->client_portal;
-            // $currentData['pic'] = implode(', ', $pics);
-            // $currentData['pic_ids'] = $picIds;
-            // $currentData['teams'] = $teams;
-
-            // $currentData = $this->formatTasksPermission($currentData, $project->id);
-
-            // storeCache('detailProject' . $project->id, $currentData);
             $currentData = $this->detailCacheAction->handle($id, ['status' => $project->status_text, 'status_raw' => $project->status, 'status_color' => $project->status_color, 'venue' => $data['venue']]);
 
             DB::commit();
