@@ -81,6 +81,7 @@ use Modules\Company\Repository\PositionRepository;
 use Modules\Company\Repository\ProjectClassRepository;
 use Modules\Company\Repository\SettingRepository;
 use Modules\Finance\Jobs\ProjectHasBeenFinal;
+use Modules\Finance\Repository\InvoiceRepository;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Hrd\Repository\EmployeeTaskPointRepository;
@@ -259,6 +260,8 @@ class ProjectService
 
     private ProjectTaskDeadlineRepository $projectTaskDeadlineRepo;
 
+    private InvoiceRepository $invoiceRepo;
+
     private ProjectLeadRepository $projectLeadRepo;
 
     private $nasFolderCreationService;
@@ -319,8 +322,11 @@ class ProjectService
         ProjectTaskDeadlineRepository $projectTaskDeadlineRepo,
         ProjectLeadRepository $projectLeadRepo,
         CustomerRepository $customerRepo,
-        ProjectActivityRepository $projectActivityRepo
+        ProjectActivityRepository $projectActivityRepo,
+        InvoiceRepository $invoiceRepo
     ) {
+        $this->invoiceRepo = $invoiceRepo;
+
         $this->projectActivityRepo = $projectActivityRepo;
 
         $this->entertainmentTaskSongRevise = $entertainmentTaskSongRevise;
@@ -2559,6 +2565,7 @@ class ProjectService
                 select: 'id,status,project_deal_id',
                 relation: [
                     'projectDeal:id',
+                    'projectDeal.invoices:id,project_deal_id,raw_data',
                     'projectDeal.projectLead:id,project_deal_id',
                 ]
             );
@@ -2601,6 +2608,22 @@ class ProjectService
                 ])->toArray(),
                 id: $project->project_deal_id
             );
+
+            // Update invoice raw data if exists. These invoices already exist, so each row is
+            // updated in place: an upsert would emit INSERT ... ON DUPLICATE KEY UPDATE, and MySQL
+            // in strict mode validates the would-be-inserted row first, failing on the NOT NULL
+            // columns (payment_date, amount, ...) the partial payload omits.
+            if ($project->projectDeal) {
+                foreach ($project->projectDeal->invoices as $invoice) {
+                    $rawData = $invoice->raw_data;
+                    $rawData['venue'] = $data['venue'];
+
+                    $this->invoiceRepo->update(
+                        data: ['raw_data' => json_encode($rawData)],
+                        where: "id = {$invoice->id}"
+                    );
+                }
+            }
 
             // update project lead data
             $this->projectLeadRepo->update(

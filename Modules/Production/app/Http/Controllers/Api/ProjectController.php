@@ -102,6 +102,8 @@ class ProjectController extends Controller
                 'marketings.marketing:id,name,employee_id',
                 'projectClass:id,name,color',
                 'vjs.employee:id,nickname',
+                'projectDeal:id',
+                'projectDeal.projectLead:id,project_deal_id'
             ]
         ));
     }
@@ -1064,7 +1066,7 @@ class ProjectController extends Controller
         $response = $this->projectDealService->approveChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
         if (! $response['error'] && request('aid')) {
-            return redirect(route('invoices.approved').'?type=deal');
+            return redirect(route('invoices.approved') . '?type=deal');
         }
 
         return apiResponse($response);
@@ -1085,7 +1087,7 @@ class ProjectController extends Controller
         $response = $this->projectDealService->rejectChangesProjectDeal(projectDetailChangesUid: $projectDetailChangesUid, payload: $payload);
 
         if (! $response['error'] && request('aid')) {
-            return redirect(route('invoices.rejected').'?type=deal');
+            return redirect(route('invoices.rejected') . '?type=deal');
         }
 
         return apiResponse($response);

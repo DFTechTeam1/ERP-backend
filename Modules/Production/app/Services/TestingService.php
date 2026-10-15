@@ -628,6 +628,8 @@ class TestingService
                     'roles' => $roles,
                     'number_of_equipments' => 0,
                     'can_see_deal_connection' => $canSeeConnectionBadge,
+                    'hasDeal' => (bool) $item->projectDeal,
+                    'hasLead' => (bool) $item->projectDeal && $item->projectDeal->projectLead,
                     'action' => [
                         'delete' => $this->user->can('delete_project') ? true : false,
                         'detail' => true,

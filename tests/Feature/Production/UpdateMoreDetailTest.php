@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Modules\Company\Models\City;
 use Modules\Company\Models\State;
+use Modules\Finance\Models\Invoice;
 use Modules\Hrd\Models\Employee;
 use Modules\Production\Jobs\NotifyProjectStatusChangedJob;
 use Modules\Production\Models\Project;
@@ -327,6 +328,32 @@ it('rolls back and returns an error envelope when the city cannot be resolved', 
     expect($response['error'])->toBeTrue();
     assertDatabaseHas('projects', ['id' => $project->id, 'venue' => 'Hotel Brawijaya']);
     Queue::assertNotPushed(NotifyProjectStatusChangedJob::class);
+});
+
+it('rewrites the venue inside each deal invoice raw_data without inserting new invoice rows', function () {
+    ['project' => $project, 'deal' => $deal, 'city' => $city, 'state' => $state] = umdFixture();
+
+    $invoiceA = Invoice::factory()->create([
+        'project_deal_id' => $deal->id,
+        'raw_data' => ['venue' => 'Old Venue A', 'projectName' => 'Keep Me'],
+    ]);
+    $invoiceB = Invoice::factory()->create([
+        'project_deal_id' => $deal->id,
+        'raw_data' => ['venue' => 'Old Venue B'],
+    ]);
+    $countBefore = Invoice::count();
+
+    $response = umdService()->updateMoreDetail(
+        umdPayload($city, $state, ['status' => umdLoadedStatus($project->uid), 'venue' => 'Grand City Convex']),
+        $project->uid
+    );
+
+    expect($response['error'])->toBeFalse()
+        // the invoices are updated in place - no INSERT ... ON DUPLICATE KEY UPDATE, no new rows
+        ->and(Invoice::count())->toBe($countBefore)
+        ->and($invoiceA->fresh()->raw_data['venue'])->toBe('Grand City Convex')
+        ->and($invoiceA->fresh()->raw_data['projectName'])->toBe('Keep Me') // other keys preserved
+        ->and($invoiceB->fresh()->raw_data['venue'])->toBe('Grand City Convex');
 });
 
 /**
