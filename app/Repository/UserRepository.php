@@ -2,6 +2,9 @@
 
 namespace App\Repository;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+
 class UserRepository
 {
     private $model;
@@ -10,7 +13,7 @@ class UserRepository
 
     public function __construct()
     {
-        $this->model = new \App\Models\User;
+        $this->model = new User;
 
         $this->key = 'id';
     }
@@ -18,7 +21,7 @@ class UserRepository
     /**
      * Get all users
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function list(
         string $select = '*',
@@ -53,7 +56,7 @@ class UserRepository
     /**
      * Paginated data for datatable
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function pagination(
         string $select,
@@ -105,7 +108,7 @@ class UserRepository
     /**
      * Bulk Delete Data
      *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     public function bulkDelete(array $ids, string $key = '')
     {
@@ -116,7 +119,7 @@ class UserRepository
         return $this->model->whereIn($key, $ids)->delete();
     }
 
-    public function detail(string $id = '', string $select = '*', string $where = '', array $relation = [])
+    public function detail(string $id = '', string $select = '*', string $where = '', array $relation = [], array $whereRole = [])
     {
         $query = $this->model->query();
 
@@ -128,6 +131,10 @@ class UserRepository
 
         if (! empty($where)) {
             $query->whereRaw($where);
+        }
+
+        if (! empty($whereRole)) {
+            $query->role($whereRole);
         }
 
         if (! empty($id) && empty($where)) {
