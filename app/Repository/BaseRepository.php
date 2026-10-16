@@ -88,6 +88,10 @@ abstract class BaseRepository
             $query->withWhereHas($relation, $callback);
         }
 
+        foreach ($params['whereDate'] ?? [] as $key => $value) {
+            $query->whereDate($key, $value);
+        }
+
         if (isset($params['select'])) {
             $query->select($params['select']);
         }

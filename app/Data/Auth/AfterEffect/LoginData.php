@@ -11,5 +11,6 @@ class LoginData extends Data
         #[Exists('users', 'email')]
         public readonly string $email,
         public readonly string $password,
+        public readonly ?string $version
     ) {}
 }
