@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Data\Auth\AfterEffect\LoginData;
+use App\Data\User\AfterEffect\UserFormatData;
 use App\Data\User\WhatsappInformationData;
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
@@ -53,6 +54,8 @@ class UserService
 
     private WhatsappOtpRepository $whatsappOtpRepo;
 
+    private AeLoginHistorService $aeLoginHistoryService;
+
     public function __construct(
         UserRepository $userRepo,
         EmployeeRepository $employeeRepo,
@@ -60,8 +63,11 @@ class UserService
         UserLoginHistoryRepository $userLogHistoryRepo,
         GeneralService $generalService,
         RoleService $roleService,
-        WhatsappOtpRepository $whatsappOtpRepo
+        WhatsappOtpRepository $whatsappOtpRepo,
+        AeLoginHistorService $aeLoginHistoryService,
     ) {
+        $this->aeLoginHistoryService = $aeLoginHistoryService;
+
         $this->repo = $userRepo;
 
         $this->employeeRepo = $employeeRepo;
@@ -1113,9 +1119,16 @@ class UserService
     public function loginAfterEffect(LoginData $payload): array
     {
         try {
-            $user = $this->repo->detail(id: '', where: "email = '{$payload->email}'");
+            $user = $this->repo->detail(id: '', where: "email = '{$payload->email}'", relation: ['employee:id,name,nickname']);
+
+            $formatUser = new UserFormatData(
+                userName: $user->employee ? $user->employee->name : $user->email,
+                userId: (int) $user->id,
+                userEmail: $user->email,
+            );
 
             if (! Hash::check($payload->password, $user->password)) {
+                $this->aeLoginHistoryService->failedLog(user: $formatUser, reason: "Password didn't match with our record");
                 throw new InvalidPassword;
             }
 
@@ -1133,6 +1146,13 @@ class UserService
                 ip: request()->ip(),
                 customExpDateInDays: 7
             );
+            $refreshTokenTime = $refreshTimeNow->modify('+7 days');
+
+            $this->aeLoginHistoryService->success(
+                user: $formatUser,
+                payload: $payload,
+                refreshTokenExpires: $refreshTokenTime->format('Y-m-d H:i:s')
+            );
 
             return generalResponse(
                 message: 'Login Success',
@@ -1140,8 +1160,44 @@ class UserService
                     'accessToken' => $accessToken,
                     'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
                     'refreshToken' => $refreshToken['raw'],
-                    'refreshTokenExp' => $refreshTimeNow->modify('+7 days'),
+                    'refreshTokenExp' => $refreshTokenTime,
                 ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function listAeLoginHistories(): array
+    {
+        try {
+            return generalResponse(
+                message: 'Success',
+                data: $this->aeLoginHistoryService->listHistories()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function summaryAeLogin(): array
+    {
+        try {
+            return generalResponse(
+                message: 'Success',
+                data: $this->aeLoginHistoryService->summary(),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function detailAeLog(string $uid): array
+    {
+        try {
+            return generalResponse(
+                message: 'Success',
+                data: $this->aeLoginHistoryService->detail($uid)
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

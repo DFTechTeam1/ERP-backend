@@ -234,6 +234,10 @@ class RolePermissionSetting extends Seeder
     protected function dashboardPermission()
     {
         return [
+            ['name' => 'list_ae_login', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dfengine_edit_setting', 'group' => 'dashboard', 'used' => [
                 $this->getDirectorRole(),
                 $this->getRootRole(),

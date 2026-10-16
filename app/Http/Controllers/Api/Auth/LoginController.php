@@ -353,4 +353,19 @@ class LoginController extends Controller
             $this->userService->userChangePassword($request->all(), $userUid)
         );
     }
+
+    public function listAeLoginHistories(): JsonResponse
+    {
+        return apiResponse($this->userService->listAeLoginHistories());
+    }
+
+    public function summaryAeLogin(): JsonResponse
+    {
+        return apiResponse($this->userService->summaryAeLogin());
+    }
+
+    public function detailAeLog(string $uid): JsonResponse
+    {
+        return apiResponse($this->userService->detailAeLog($uid));
+    }
 }
