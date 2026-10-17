@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Finance\Models\DfEngineGeneration;
 use Modules\Hrd\Models\EmployeePointProject;
 use Modules\Hrd\Models\EmployeeReward;
 use Modules\Production\Database\Factories\ProjectFactory;
@@ -164,6 +165,11 @@ class Project extends Model
     public function vj(): HasOne
     {
         return $this->hasOne(\Modules\Production\Models\ProjectVj::class, 'project_id');
+    }
+
+    public function aiGenerations(): HasMany
+    {
+        return $this->hasMany(DfEngineGeneration::class, 'project_id');
     }
 
     public function vjAfpatAttendances(): HasMany
@@ -377,6 +383,10 @@ class Project extends Model
             $this->with('rewards');
         }
 
+        if (! $this->relationLoaded('aiGenerations')) {
+            $this->with('aiGenerations');
+        }
+
         $output = [];
 
         // employee rewards as project cost
@@ -386,7 +396,21 @@ class Project extends Model
             total: $this->rewards->sum('total_reward')
         );
 
-        array_push($output, $employeeRewards);
+        // Ai cost
+        $format = $this->aiGenerations->map(function ($item) {
+            $rate = floatval($item->exchange_rate);
+            $cost = $rate > 0 ? round(floatval($item->cost / $rate)) : floatval($item->cost);
+            return [
+                'total_cost' => $cost
+            ];
+        });
+        $aiCost = new DashboardCostCompositionData(
+            key: 'ai_cost',
+            label: "Project AI Cost",
+            total: $format->sum('total_cost')
+        );
+
+        array_push($output, $employeeRewards, $aiCost);
 
         return $output;
     }
