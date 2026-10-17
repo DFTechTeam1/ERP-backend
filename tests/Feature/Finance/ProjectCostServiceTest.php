@@ -5,8 +5,10 @@ use App\Enums\Production\ProjectStatus;
 use App\Exports\ProjectRewardReportExport;
 use App\Exports\RewardReportSheet;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Company\Models\ProjectClass;
+use Modules\Finance\Models\DfEngineGeneration;
 use Modules\Finance\Services\ProjectCostService;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeeReward;
@@ -101,6 +103,33 @@ function pcostPic(Project $project, string $name): Employee
     return $employee;
 }
 
+/**
+ * A user backed by an employee, used as the `created_by` of an AI generation.
+ * (df_engine_generations is engine-owned; a test-only table backs these in the test DB.)
+ */
+function pcostAiCreator(string $name): User
+{
+    $employee = Employee::factory()->withUser()->create(['name' => $name]);
+
+    return User::where('employee_id', $employee->id)->firstOrFail();
+}
+
+/**
+ * Attach one AI generation to a project. Its IDR cost is round(cost / rate) (rate > 0).
+ */
+function pcostAiGen(Project $project, User $creator, float $cost, float $rate, string $kind = 'image'): DfEngineGeneration
+{
+    return DfEngineGeneration::create([
+        'uid' => (string) Str::uuid(),
+        'project_id' => $project->id,
+        'created_by' => $creator->id,
+        'cost' => $cost,
+        'exchange_rate' => $rate,
+        'kind' => $kind,
+        'status' => 'success',
+    ]);
+}
+
 beforeEach(function () {
     // getProjects() caches under a single key per filter (PROJECTS:COSTS:Y::2026...). The container
     // test run uses the redis cache (shared with dev), so that key would leak the first test's
@@ -129,6 +158,23 @@ describe('getDashboardSummary', function () {
             ->and((float) $data['average_cost'])->toBe(200000.0)        // 400k / 2
             ->and((float) $data['provisional_count'])->toBe(1.0)        // one not fully paid
             ->and($data['currency'])->toBe('IDR');
+    });
+
+    it('adds the project AI cost on top of employee reward in total cost (service)', function () {
+        pcostFilters();
+        $creator = pcostAiCreator('Designer');
+        $project = pcostProject(fixPrice: 10000000, fullyPaid: true);
+        pcostReward($project, 'Budi', 5, 250000);
+        pcostAiGen($project, $creator, cost: 100000, rate: 2); // -> 50.000 IDR
+        pcostAiGen($project, $creator, cost: 40000, rate: 4);  // -> 10.000 IDR
+
+        $response = pcostService()->getDashboardSummary();
+
+        $data = $response['data'];
+        expect($response['error'])->toBeFalse()
+            ->and((float) $data['total_employee_reward'])->toBe(250000.0)
+            ->and((float) $data['total_cost'])->toBe(310000.0)           // 250k reward + 60k ai
+            ->and((float) $data['total_gross_profit'])->toBe(9690000.0); // 10M - 310k
     });
 
     it('applies the project name search to the summary aggregates (service)', function () {
@@ -187,6 +233,20 @@ describe('getCostTrend', function () {
             ->and((float) $byMonth['Jul 2026']->employee_reward)->toBe(100000.0);
     });
 
+    it('includes the ai cost per month in the trend (service)', function () {
+        pcostFilters();
+        $creator = pcostAiCreator('Designer');
+        $jun = pcostProject(['project_date' => '2026-06-10']);
+        pcostReward($jun, 'Budi', 4, 200000);
+        pcostAiGen($jun, $creator, cost: 90000, rate: 3); // -> 30.000 IDR
+
+        $response = pcostService()->getCostTrend();
+
+        $byMonth = collect($response['data'])->keyBy('month');
+        expect((float) $byMonth['Jun 2026']->ai_cost)->toBe(30000.0)
+            ->and((float) $byMonth['Jun 2026']->total_cost)->toBe(230000.0); // 200k reward + 30k ai
+    });
+
     it('returns the trend via the endpoint (e2e)', function () {
         actingAs(User::factory()->create());
         $project = pcostProject(['project_date' => '2026-06-10']);
@@ -234,7 +294,7 @@ describe('getCostByClass', function () {
 });
 
 describe('getCostComposition', function () {
-    it('returns the employee reward composition total (service)', function () {
+    it('returns the employee reward and ai cost composition components (service)', function () {
         pcostFilters();
         $a = pcostProject();
         $b = pcostProject();
@@ -244,9 +304,26 @@ describe('getCostComposition', function () {
         $response = pcostService()->getCostComposition();
 
         expect($response['error'])->toBeFalse()
-            ->and($response['data'])->toHaveCount(1);
+            ->and($response['data'])->toHaveCount(2);
         expect($response['data'][0]['key'])->toBe('employee_reward')
-            ->and((float) $response['data'][0]['total'])->toBe(300000.0);
+            ->and((float) $response['data'][0]['total'])->toBe(300000.0)
+            ->and($response['data'][1]['key'])->toBe('ai_cost')
+            ->and((float) $response['data'][1]['total'])->toBe(0.0); // no AI generations here
+    });
+
+    it('sums the project AI cost into the ai_cost component (service)', function () {
+        pcostFilters();
+        $creator = pcostAiCreator('Designer');
+        $project = pcostProject();
+        pcostReward($project, 'Budi', 4, 200000);
+        pcostAiGen($project, $creator, cost: 100000, rate: 2); // -> 50.000 IDR
+        pcostAiGen($project, $creator, cost: 60000, rate: 3);  // -> 20.000 IDR
+
+        $response = pcostService()->getCostComposition();
+
+        $components = collect($response['data'])->keyBy('key');
+        expect((float) $components['employee_reward']['total'])->toBe(200000.0)
+            ->and((float) $components['ai_cost']['total'])->toBe(70000.0); // 50k + 20k
     });
 
     it('returns the composition via the endpoint (e2e)', function () {
@@ -370,6 +447,26 @@ describe('detailProjectCost', function () {
             ->and($data['payment_status'])->toBe('partial');           // fix price > 0, nothing paid
     });
 
+    it('groups AI costs per creator with the employee name and usage text (service)', function () {
+        $creator = pcostAiCreator('Designer Dina');
+        $project = pcostProject(['name' => 'AI Project'], fixPrice: 50000000);
+        pcostAiGen($project, $creator, cost: 100000, rate: 2, kind: 'image'); // -> 50.000 IDR
+        pcostAiGen($project, $creator, cost: 60000, rate: 3, kind: 'video');  // -> 20.000 IDR
+
+        $response = pcostService()->detailProjectCost($project->uid);
+
+        expect($response['error'])->toBeFalse();
+        $ai = $response['data']['ai_costs'];
+        expect((float) $ai['total'])->toBe(70000.0)   // 50k + 20k
+            ->and($ai['items'])->toHaveCount(1);       // grouped by creator
+        // name resolves to the employee name (regression: the ?? / ternary precedence bug that
+        // previously returned the email whenever an employee name existed)
+        expect($ai['items'][0]['name'])->toBe('Designer Dina')
+            ->and((float) $ai['items'][0]['total'])->toBe(70000.0)
+            ->and($ai['items'][0]['usage'])->toContain('image')
+            ->and($ai['items'][0]['usage'])->toContain('video');
+    });
+
     it('returns the detail via the endpoint (e2e)', function () {
         actingAs(User::factory()->create());
         $project = pcostProject(['name' => 'Gala Night'], fixPrice: 120000000);
@@ -379,6 +476,17 @@ describe('detailProjectCost', function () {
             ->assertStatus(201)
             ->assertJsonPath('data.name', 'Gala Night')
             ->assertJsonPath('data.employee_rewards.items.0.name', 'Budi');
+    });
+
+    it('returns the grouped AI costs via the detail endpoint (e2e)', function () {
+        actingAs(User::factory()->create());
+        $creator = pcostAiCreator('Designer Dina');
+        $project = pcostProject(['name' => 'AI Gala']);
+        pcostAiGen($project, $creator, cost: 100000, rate: 2);
+
+        $this->getJson("/api/production/project-costs/{$project->uid}")
+            ->assertStatus(201)
+            ->assertJsonPath('data.ai_costs.items.0.name', 'Designer Dina');
     });
 });
 

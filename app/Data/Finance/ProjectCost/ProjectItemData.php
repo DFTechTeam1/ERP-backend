@@ -18,6 +18,7 @@ class ProjectItemData extends Data
         public readonly string $status_color,
         public readonly float $total_cost,
         public readonly float $total_employee_reward,
+        public readonly float $total_ai_cost,
         public readonly float $fix_price,
         public readonly float $amount_paid,
         public readonly bool $is_fully_paid,
