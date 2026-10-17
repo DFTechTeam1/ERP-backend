@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Model;
  *                                              paired with a Closure constrains that relation
  *   - where:      array<string,mixed>          equality constraints (column => value)
  *   - whereIn:    array<string,array>          IN constraints (column => values)
+ *   - whereBetween: array<string,array{0:mixed,1:mixed}>
+ *                                              BETWEEN constraints (column => [min, max])
  *   - whereHas:   array<int|string,string|Closure(Builder): void|null>
  *                                              relation existence constraints; see
  *                                              normalizeRelationConstraint() for the accepted shapes
@@ -64,6 +66,10 @@ abstract class BaseRepository
             $query->whereIn($column, $values);
         }
 
+        foreach ($params['whereBetween'] ?? [] as $column => $range) {
+            $query->whereBetween($column, $range);
+        }
+
         foreach ($params['whereHas'] ?? [] as $key => $value) {
             [$relation, $callback] = $this->normalizeRelationConstraint($key, $value);
 
@@ -80,6 +86,10 @@ abstract class BaseRepository
             [$relation, $callback] = $this->normalizeRelationConstraint($key, $value);
 
             $query->withWhereHas($relation, $callback);
+        }
+
+        foreach ($params['whereDate'] ?? [] as $key => $value) {
+            $query->whereDate($key, $value);
         }
 
         if (isset($params['select'])) {
@@ -168,6 +178,33 @@ abstract class BaseRepository
     public function store(array $attributes): Model
     {
         return $this->query()->create($attributes);
+    }
+
+    /**
+     * Insert or update many rows in a single statement. Rows matching the $uniqueBy columns (which
+     * must be backed by a unique/primary index) are updated on the $update columns; the rest are
+     * inserted. Bypasses model events, so callers must supply any values normally set by a
+     * `creating` hook (e.g. uid).
+     *
+     * @param  array<int,array<string,mixed>>  $values
+     * @param  array<int,string>  $uniqueBy
+     * @param  array<int,string>|null  $update  Columns to update on conflict; null updates all non-unique columns.
+     * @return int The number of affected rows.
+     */
+    public function upsert(array $values, array $uniqueBy, ?array $update = null): int
+    {
+        return $this->query()->upsert($values, $uniqueBy, $update);
+    }
+
+    /**
+     * Bulk-insert many rows in a single statement. Bypasses model events and timestamp handling, so
+     * callers must supply any values normally set automatically (e.g. uid, created_at, updated_at).
+     *
+     * @param  array<int,array<string,mixed>>  $values
+     */
+    public function insert(array $values): bool
+    {
+        return $this->query()->insert($values);
     }
 
     /**

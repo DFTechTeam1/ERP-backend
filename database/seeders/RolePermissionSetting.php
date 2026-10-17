@@ -234,6 +234,10 @@ class RolePermissionSetting extends Seeder
     protected function dashboardPermission()
     {
         return [
+            ['name' => 'list_ae_login', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dfengine_edit_setting', 'group' => 'dashboard', 'used' => [
                 $this->getDirectorRole(),
                 $this->getRootRole(),
@@ -547,6 +551,11 @@ class RolePermissionSetting extends Seeder
                 $this->getFinanceRole(),
             ]],
             ['name' => 'list_accounting_setting', 'group' => 'finance', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'currency_management', 'group' => 'finance', 'used' => [
                 $this->getRootRole(),
                 $this->getDirectorRole(),
                 $this->getFinanceRole(),

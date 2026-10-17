@@ -11,14 +11,29 @@ use App\Data\Finance\ProjectCost\EmployeeRewardData;
 use App\Data\Finance\ProjectCost\EmployeeRewardListData;
 use App\Data\Finance\ProjectCost\ProjectItemData;
 use App\Data\Finance\ProjectCost\ProjectListData;
+use App\Data\Production\Cost\AiCostData;
+use App\Data\Production\Cost\CostListData;
+use App\Exports\ProjectRewardReportExport;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
+use Maatwebsite\Excel\Facades\Excel;
+use Modules\Finance\Models\DfEngineGeneration;
 use Modules\Production\Models\Project;
 use Modules\Production\Repository\ProjectRepository;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProjectCostService
 {
+    /**
+     * Excel number-format code for rupiah amounts: Indonesian locale ([$-421]) with '.' thousands
+     * grouping and no decimals, so 200000 renders as "200.000". Applied as a column format so the
+     * cells stay real numbers (sum-able, and 0 shows as "0" rather than blank) instead of being
+     * pre-formatted strings, which the value binder would coerce back into the wrong number.
+     */
+    private const IDR_NUMBER_FORMAT = '[$-421]#,##0';
+
     /**
      * @param  ProjectRepository  $repo  Repository used to query projects and their cost relations.
      */
@@ -95,6 +110,10 @@ class ProjectCostService
             'rewards.employee.position:id,name',
             'personInCharges:id,project_id,pic_id',
             'personInCharges.employee:id,name',
+            'aiGenerations:id,project_id,cost,exchange_rate,created_by,kind',
+            'aiGenerations.creator:id,employee_id,email',
+            'aiGenerations.creator.employee:id,employee_id,avatar,name,position_id',
+            'aiGenerations.creator.employee.position:id,name',
         ];
     }
 
@@ -130,7 +149,61 @@ class ProjectCostService
             $cacheKey .= ":C::{$this->getEventClass()}";
         }
 
+        if (request('search')) {
+            $search = request('search');
+            if (empty($where)) {
+                $where = "name LIKE '%{$search}%'";
+            } else {
+                $where .= " AND name LIKE '%{$search}%'";
+            }
+
+            $trim = str_replace(' ', '', strtolower($search));
+            $cacheKey .= ":S::{$trim}";
+        }
+
         return [$where, $cacheKey];
+    }
+
+    /**
+     * Convert a single AI generation's cost into the dashboard currency (IDR).
+     *
+     * The engine stores `cost` against an `exchange_rate`; the IDR amount is `cost / rate` (rounded
+     * to a whole rupiah). When no rate is recorded (rate <= 0) the raw cost is returned unchanged,
+     * which also guards against a division by zero. Decimal columns arrive as strings, so both
+     * operands are cast to float first.
+     *
+     * @param  DfEngineGeneration  $item  A single AI generation row.
+     * @return float The generation cost in IDR.
+     */
+    protected function atomicCostCalculation(DfEngineGeneration $item): float
+    {
+        $rate = floatval($item->exchange_rate);
+        $cost = $rate > 0 ? round(floatval($item->cost) / $rate) : floatval($item->cost);
+
+        return $cost;
+    }
+
+    /**
+     * Sum a project's AI generation costs (in IDR) across all its linked generations.
+     *
+     * @param  Project  $project  A project with its `aiGenerations` relation loaded.
+     * @return float The project's total AI cost; 0 when it has no generations.
+     */
+    protected function calculateProjectAiCost(Project $project): float
+    {
+        $output = 0;
+
+        if ($project->aiGenerations->count()) {
+            $formatter = $project->aiGenerations->map(function ($item) {
+                return [
+                    'cost' => $this->atomicCostCalculation($item),
+                ];
+            });
+
+            $output = $formatter->sum('cost');
+        }
+
+        return $output;
     }
 
     /**
@@ -146,6 +219,7 @@ class ProjectCostService
     {
         [$where, $cacheKey] = $this->projectConditions();
 
+        // Cache::tags(['project_costs'])->forget($cacheKey);
         $cache = Cache::get($cacheKey);
         if (! $cache) {
             $cache = Cache::tags(['project_costs'])->remember($cacheKey, 7200, function () use ($where) {
@@ -156,6 +230,10 @@ class ProjectCostService
                     orderBy: 'project_date ASC'
                 )->map(function ($item) {
                     $totalRewards = $item->rewards->sum('total_reward');
+                    $aiCost = $this->calculateProjectAiCost($item);
+
+                    $totalCost = $totalRewards + $aiCost;
+
                     $totalFixPrice = 0;
                     if ($item->projectDeal && $item->projectDeal->finalQuotation) {
                         $totalFixPrice = $item->projectDeal->finalQuotation->fix_price;
@@ -165,7 +243,8 @@ class ProjectCostService
 
                     $item['total_reward'] = $totalRewards;
                     $item['total_fix_price'] = $totalFixPrice;
-                    $item['total_cost'] = $totalRewards;
+                    $item['total_cost'] = $totalCost;
+                    $item['total_ai_cost'] = $aiCost;
                     $item['is_fully_paid'] = $item->projectDeal && $item->projectDeal->is_fully_paid ? true : false;
                     $item['class_name'] = $item->projectClass->name;
 
@@ -235,7 +314,8 @@ class ProjectCostService
                 $output[] = new DashboardCostTrendData(
                     month: "{$month} 2026",
                     total_cost: $project->sum('total_cost'),
-                    employee_reward: $project->sum('total_reward')
+                    employee_reward: $project->sum('total_reward'),
+                    ai_cost: $project->sum('total_ai_cost')
                 );
             }
 
@@ -277,7 +357,7 @@ class ProjectCostService
     }
 
     /**
-     * Build the cost composition rows. Currently only the employee reward component is tracked.
+     * Build the cost composition rows: the employee reward and project AI cost components.
      *
      * @param  Collection<int, Project>  $projects  The projects to compose the totals from.
      * @return array<int, array<string, mixed>> A list of composition components as arrays.
@@ -291,7 +371,13 @@ class ProjectCostService
             total: $projects->sum('total_reward')
         );
 
-        array_push($output, $employeeReward->toArray());
+        $aiCost = new DashboardCostCompositionData(
+            key: 'ai_cost',
+            label: 'Project AI Cost',
+            total: $projects->sum('total_ai_cost')
+        );
+
+        array_push($output, $employeeReward->toArray(), $aiCost->toArray());
 
         return $output;
     }
@@ -334,7 +420,15 @@ class ProjectCostService
             where: $where,
             itemsPerPage: $itemsPerPage,
             page: $page
-        );
+        )->map(function ($item) {
+            $totalReward = $item->rewards->sum('total_reward');
+            $totalCost = $this->calculateProjectAiCost($item);
+            $item['total_reward'] = $totalReward;
+            $item['total_ai_cost'] = $totalCost;
+            $item['total_cost'] = $totalReward + $totalCost;
+
+            return $item;
+        });
 
         return $projects;
     }
@@ -380,8 +474,9 @@ class ProjectCostService
                 pic: $project->personInCharges->count() > 0 ? $project->personInCharges->pluck('employee.name')->join(',') : '-',
                 status: $project->status_text,
                 status_color: $project->status_color,
-                total_cost: $project->rewards->sum('total_reward'),
-                total_employee_reward: $project->rewards->sum('total_reward'),
+                total_cost: $project->total_cost,
+                total_employee_reward: $project->total_reward,
+                total_ai_cost: $project->total_ai_cost,
                 fix_price: $project->projectDeal && $project->projectDeal->latestQuotation ? $project->projectDeal->latestQuotation->fix_price : 0,
                 amount_paid: 0,
                 is_fully_paid: $project?->projectDeal?->latestQuotation?->is_fully_paid ?? false,
@@ -479,6 +574,33 @@ class ProjectCostService
                 );
             }
 
+            $aiCosts = [];
+            foreach ($project->aiGenerations->groupBy('created_by') as $userId => $gen) {
+                $costData = $gen->map(function ($itemGen) {
+                    return [
+                        'cost' => $this->atomicCostCalculation($itemGen),
+                    ];
+                });
+
+                $groupByKind = $gen->groupBy('kind');
+                $usages = [];
+                foreach ($groupByKind as $kind => $value) {
+                    $usages[] = $value->count()." usage of {$kind}";
+                }
+                $usageText = count($usages) > 0 ? collect($usages)->join(',') : 'Ai Usage';
+
+                $aiCosts[] = new CostListData(
+                    id: (int) $gen->first()->id,
+                    employee_id: $gen->first()?->creator?->employee?->employee_id ?? $gen->first()->id,
+                    name: $gen->first()?->creator?->employee?->name
+                        ?? ($gen->first()->creator ? $gen->first()->creator->email : '-'),
+                    position: $gen->first()?->creator?->employee?->position?->name ?? '-',
+                    avatar: $gen->first()?->creator?->employee?->avatar ?? null,
+                    usage: $usageText,
+                    total: $costData->sum('cost'),
+                );
+            }
+
             $output = new DetailProjectCostData(
                 uid: $project->uid,
                 name: $project->name,
@@ -501,6 +623,10 @@ class ProjectCostService
                 employee_rewards: new EmployeeRewardData(
                     total: collect($employeeRewards)->sum('total_reward'),
                     items: $employeeRewards
+                ),
+                ai_costs: new AiCostData(
+                    total: collect($aiCosts)->sum('total'),
+                    items: $aiCosts
                 )
             );
 
@@ -511,5 +637,250 @@ class ProjectCostService
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
+    }
+
+    /**
+     * The eager loaded relations required to build the reward disbursement report. Unlike
+     * {@see projectRelations()} this also loads each reward's `role` and the employee's HR code so the
+     * detail and disbursement sheets can be rendered.
+     *
+     * @return array<int, string> Relation constraints for the repository `with()` call.
+     */
+    protected function exportRelations(): array
+    {
+        return [
+            'projectClass:id,name',
+            'rewards:id,project_id,employee_id,total_point,total_reward,role',
+            'rewards.employee:id,name,employee_id,position_id,uid',
+            'rewards.employee.position:id,name',
+            'personInCharges:id,project_id,pic_id',
+            'personInCharges.employee:id,name',
+        ];
+    }
+
+    /**
+     * Build the SQL where clause for the reward export from the current request filters.
+     *
+     * Unlike {@see projectConditions()} this filters by the requested year directly (not the current
+     * year) and also honours the `finalization` (project status) filter, because the export is a
+     * point-in-time disbursement document that must match exactly what was asked for.
+     *
+     * @return string The where clause, empty when no filter is supplied.
+     */
+    protected function exportConditions(): string
+    {
+        $conditions = [];
+
+        if ($this->getYear() && ! $this->getMonth()) {
+            $conditions[] = "YEAR(project_date) = '{$this->getYear()}'";
+        } elseif ($this->getYear() && $this->getMonth()) {
+            $conditions[] = "YEAR(project_date) = '{$this->getYear()}' AND MONTH(project_date) = '{$this->getMonth()}'";
+        }
+
+        if ($this->getEventClass()) {
+            $conditions[] = "project_class_id = {$this->getEventClass()}";
+        }
+
+        if ($this->getProjectStatus()) {
+            $conditions[] = "status = {$this->getProjectStatus()}";
+        }
+
+        if (request('search')) {
+            $search = request('search');
+            $conditions[] = "name LIKE '%{$search}%'";
+        }
+
+        return implode(' AND ', $conditions);
+    }
+
+    /**
+     * The download file name for the reward report, scoped by the requested year and month.
+     *
+     * @return string e.g. `reward_report_2026_03.xlsx`.
+     */
+    protected function exportFileName(): string
+    {
+        $parts = ['reward_report'];
+
+        if ($this->getYear()) {
+            $parts[] = $this->getYear();
+        }
+
+        if ($this->getMonth()) {
+            $parts[] = str_pad((string) $this->getMonth(), 2, '0', STR_PAD_LEFT);
+        }
+
+        return implode('_', $parts).'.xlsx';
+    }
+
+    /**
+     * Human readable label for a reward's `role` column (production / pm / vj).
+     *
+     * @param  string|null  $role  The stored reward role.
+     * @return string The label shown in the report, or '-' when the role is empty.
+     */
+    protected function rewardRoleLabel(?string $role): string
+    {
+        return match ($role) {
+            'production' => 'Production',
+            'pm' => 'Project Manager',
+            'vj' => 'VJ',
+            default => $role ? ucfirst($role) : '-',
+        };
+    }
+
+    /**
+     * Build the three worksheet definitions for the reward disbursement report:
+     *   - Summary: one row per project with its total reward and total cost (plus a grand total row),
+     *     with a filterable (auto-filter) header over the project rows.
+     *   - Reward Detail: one row per reward line (employee x project x role) supporting each total.
+     *   - Disbursement: one row per employee with the total amount HR must pay out (plus a total row).
+     *
+     * All money values are left as real numbers; the Indonesian "1.000.000" grouping is applied via
+     * each sheet's `formats` (a column => {@see IDR_NUMBER_FORMAT} map), not by pre-formatting strings.
+     *
+     * @param  Collection<int, Project>  $projects  The filtered projects with their reward relations.
+     * @return array<int, array{title: string, headings: array<int, string>, rows: array<int, array<int, mixed>>}>
+     *                                                                                                             The ordered sheet definitions consumed by {@see ProjectRewardReportExport}.
+     */
+    protected function buildRewardSheets(Collection $projects): array
+    {
+        $summaryRows = [];
+        $detailRows = [];
+        $perEmployee = [];
+
+        $summaryRewardTotal = 0.0;
+        $summaryCostTotal = 0.0;
+
+        $no = 1;
+        foreach ($projects as $project) {
+            $projectDate = date('Y-m-d', strtotime($project->project_date));
+            $className = $project->projectClass?->name ?? '-';
+            // (float) guarantees a numeric 0 (never a blank cell) for a project with no reward records.
+            $projectReward = (float) $project->rewards->sum('total_reward');
+            // Total cost currently equals the employee reward total, because employee_reward is the
+            // only cost component tracked; it will diverge once ai_cost is added to cost_items.
+            $projectCost = $projectReward;
+
+            $summaryRewardTotal += $projectReward;
+            $summaryCostTotal += $projectCost;
+
+            $summaryRows[] = [
+                $no++,
+                $project->name,
+                $projectDate,
+                $className,
+                $this->formatProjectPics($project) ?: '-',
+                $project->rewards->count(),
+                $projectReward,
+                $projectCost,
+            ];
+
+            foreach ($project->rewards as $reward) {
+                $employee = $reward->employee;
+                $employeeCode = $employee?->employee_id ?? '-';
+                $employeeName = $employee?->name ?? '-';
+                $position = $employee?->position?->name ?? '-';
+                $amount = (float) ($reward->total_reward ?? 0);
+
+                $detailRows[] = [
+                    $employeeCode,
+                    $employeeName,
+                    $position,
+                    $this->rewardRoleLabel($reward->role),
+                    $project->name,
+                    $className,
+                    $projectDate,
+                    (int) ($reward->total_point ?? 0),
+                    $amount,
+                ];
+
+                $key = $employee?->id ?? $employeeCode;
+                if (! isset($perEmployee[$key])) {
+                    $perEmployee[$key] = [
+                        'code' => $employeeCode,
+                        'name' => $employeeName,
+                        'position' => $position,
+                        'projects' => 0,
+                        'total_reward' => 0.0,
+                    ];
+                }
+                $perEmployee[$key]['projects']++;
+                $perEmployee[$key]['total_reward'] += $amount;
+            }
+        }
+
+        $summaryRows[] = ['', '', '', '', '', 'TOTAL', $summaryRewardTotal, $summaryCostTotal];
+
+        $disbursementRows = [];
+        $disbursementTotal = 0.0;
+        $no = 1;
+        foreach ($perEmployee as $employee) {
+            $disbursementTotal += $employee['total_reward'];
+            $disbursementRows[] = [
+                $no++,
+                $employee['code'],
+                $employee['name'],
+                $employee['position'],
+                $employee['projects'],
+                (float) $employee['total_reward'],
+            ];
+        }
+        $disbursementRows[] = ['', '', '', '', 'TOTAL', $disbursementTotal];
+
+        $summaryHeadings = ['No', 'Project', 'Event Date', 'Event Class', 'PIC', 'Rewarded Employees', 'Total Reward (IDR)', 'Total Cost (IDR)'];
+        // Filterable header covering the heading row and every project row, but not the grand total
+        // row (the last entry in $summaryRows), so filtering never hides the total. count($summaryRows)
+        // = project rows + 1 total, which equals the last data row (heading row 1 + project rows).
+        $summaryLastColumn = Coordinate::stringFromColumnIndex(count($summaryHeadings));
+        $summaryAutoFilter = 'A1:'.$summaryLastColumn.count($summaryRows);
+
+        return [
+            [
+                'title' => 'Summary',
+                'headings' => $summaryHeadings,
+                'rows' => $summaryRows,
+                // Total Reward (G) and Total Cost (H) grouped "1.000.000" style.
+                'formats' => ['G' => self::IDR_NUMBER_FORMAT, 'H' => self::IDR_NUMBER_FORMAT],
+                'autoFilter' => $summaryAutoFilter,
+            ],
+            [
+                'title' => 'Reward Detail',
+                'headings' => ['Employee ID', 'Employee', 'Position', 'Reward Role', 'Project', 'Event Class', 'Event Date', 'Total Point', 'Reward (IDR)'],
+                'rows' => $detailRows,
+                // Reward (I) grouped "1.000.000" style.
+                'formats' => ['I' => self::IDR_NUMBER_FORMAT],
+            ],
+            [
+                'title' => 'Disbursement',
+                'headings' => ['No', 'Employee ID', 'Employee', 'Position', 'Projects', 'Total Reward (IDR)'],
+                'rows' => $disbursementRows,
+                // Total Reward (F) grouped "1.000.000" style.
+                'formats' => ['F' => self::IDR_NUMBER_FORMAT],
+            ],
+        ];
+    }
+
+    /**
+     * Export the employee reward report as a multi-sheet Excel workbook for management and HR.
+     *
+     * The report is built fresh (not from the dashboard cache) from the projects matching the current
+     * request filters (year, month, event_class, finalization, search) and is returned as a direct
+     * download. `cost_items` currently only supports `employee_reward`.
+     *
+     * @return BinaryFileResponse The streamed `.xlsx` download.
+     */
+    public function export(): BinaryFileResponse
+    {
+        $projects = $this->repo->list(
+            select: $this->projectColumns(),
+            relation: $this->exportRelations(),
+            where: $this->exportConditions(),
+            orderBy: 'project_date ASC'
+        );
+
+        $export = new ProjectRewardReportExport($this->buildRewardSheets($projects));
+
+        return Excel::download($export, $this->exportFileName());
     }
 }

@@ -7,7 +7,7 @@ use Spatie\LaravelData\Data;
 class AddRateData extends Data
 {
     public function __construct(
-        public readonly string $effective_date,
+        public readonly string $date,
         public readonly float $rate
     ) {}
 }

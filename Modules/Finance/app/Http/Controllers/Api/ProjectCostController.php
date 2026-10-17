@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Finance\Services\ProjectCostService;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProjectCostController extends Controller
 {
@@ -97,6 +98,18 @@ class ProjectCostController extends Controller
     public function getCostComposition(): JsonResponse
     {
         return apiResponse($this->service->getCostComposition());
+    }
+
+    /**
+     * Stream the employee reward report as a multi-sheet Excel workbook for management and HR.
+     *
+     * Honours the `year`, `month`, `event_class`, `finalization` and `search` query filters.
+     *
+     * @return BinaryFileResponse The `.xlsx` download.
+     */
+    public function export(): BinaryFileResponse
+    {
+        return $this->service->export();
     }
 
     /**

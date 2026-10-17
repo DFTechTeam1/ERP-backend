@@ -2,17 +2,23 @@
 
 namespace App\Services;
 
+use App\Data\Auth\AfterEffect\LoginData;
+use App\Data\User\AfterEffect\UserFormatData;
 use App\Data\User\WhatsappInformationData;
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
 use App\Exceptions\DoNotHaveAppPermission;
+use App\Exceptions\InvalidPassword;
 use App\Exceptions\UserNotFound;
 use App\Models\User;
 use App\Models\UserEncryptedToken;
 use App\Repository\RoleRepository;
 use App\Repository\UserLoginHistoryRepository;
 use App\Repository\UserRepository;
+use App\Services\Auth\RefreshTokenService;
+use App\Services\Auth\TokenService;
 use Carbon\Carbon;
+use DateTimeImmutable;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Support\Collection;
@@ -48,6 +54,8 @@ class UserService
 
     private WhatsappOtpRepository $whatsappOtpRepo;
 
+    private AeLoginHistorService $aeLoginHistoryService;
+
     public function __construct(
         UserRepository $userRepo,
         EmployeeRepository $employeeRepo,
@@ -55,8 +63,11 @@ class UserService
         UserLoginHistoryRepository $userLogHistoryRepo,
         GeneralService $generalService,
         RoleService $roleService,
-        WhatsappOtpRepository $whatsappOtpRepo
+        WhatsappOtpRepository $whatsappOtpRepo,
+        AeLoginHistorService $aeLoginHistoryService,
     ) {
+        $this->aeLoginHistoryService = $aeLoginHistoryService;
+
         $this->repo = $userRepo;
 
         $this->employeeRepo = $employeeRepo;
@@ -197,12 +208,11 @@ class UserService
         $isDirector = false;
         $isProjectManager = false;
 
-        // setup role
+        // setup role (the Role model is assigned to the user below; RoleService::show() no longer
+        // exposes the raw model, so resolve it directly on the sanctum guard, null when not found)
+        $role = null;
         if (isset($data['role_id'])) {
-            $roleData = $this->roleService->show($data['role_id']);
-            if (! $roleData['error']) {
-                $role = $roleData['data']['raw'];
-            }
+            $role = Role::where('id', $data['role_id'])->where('guard_name', 'sanctum')->first();
         }
 
         if (! $data['is_external_user']) {
@@ -1100,6 +1110,94 @@ class UserService
             ))->values()->all();
 
             return generalResponse(message: 'Success', data: $output);
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function loginAfterEffect(LoginData $payload): array
+    {
+        try {
+            $user = $this->repo->detail(id: '', where: "email = '{$payload->email}'", relation: ['employee:id,name,nickname']);
+
+            $formatUser = new UserFormatData(
+                userName: $user->employee ? $user->employee->name : $user->email,
+                userId: (int) $user->id,
+                userEmail: $user->email,
+            );
+
+            if (! Hash::check($payload->password, $user->password)) {
+                $this->aeLoginHistoryService->failedLog(user: $formatUser, reason: "Password didn't match with our record");
+                throw new InvalidPassword;
+            }
+
+            $now = new DateTimeImmutable;
+            $refreshTimeNow = new DateTimeImmutable;
+
+            $tokenService = app(TokenService::class);
+
+            $refreshTokenService = app(RefreshTokenService::class);
+            $accessToken = $tokenService->issueAccessToken($user);
+            $refreshToken = $refreshTokenService->issue(
+                user: $user,
+                remember: false,
+                userAgent: request()->userAgent(),
+                ip: request()->ip(),
+                customExpDateInDays: 7
+            );
+            $refreshTokenTime = $refreshTimeNow->modify('+7 days');
+
+            $this->aeLoginHistoryService->success(
+                user: $formatUser,
+                payload: $payload,
+                refreshTokenExpires: $refreshTokenTime->format('Y-m-d H:i:s')
+            );
+
+            return generalResponse(
+                message: 'Login Success',
+                data: [
+                    'accessToken' => $accessToken,
+                    'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
+                    'refreshToken' => $refreshToken['raw'],
+                    'refreshTokenExp' => $refreshTokenTime,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function listAeLoginHistories(): array
+    {
+        try {
+            return generalResponse(
+                message: 'Success',
+                data: $this->aeLoginHistoryService->listHistories()
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function summaryAeLogin(): array
+    {
+        try {
+            return generalResponse(
+                message: 'Success',
+                data: $this->aeLoginHistoryService->summary(),
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function detailAeLog(string $uid): array
+    {
+        try {
+            return generalResponse(
+                message: 'Success',
+                data: $this->aeLoginHistoryService->detail($uid)
+            );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }

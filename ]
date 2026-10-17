@@ -1,0 +1,1184 @@
+<?php
+
+namespace App\Services;
+
+use App\Data\Auth\AfterEffect\LoginData;
+use App\Data\User\AfterEffect\UserFormatData;
+use App\Data\User\WhatsappInformationData;
+use App\Enums\ErrorCode\Code;
+use App\Enums\System\BaseRole;
+use App\Exceptions\DoNotHaveAppPermission;
+use App\Exceptions\InvalidPassword;
+use App\Exceptions\UserNotFound;
+use App\Models\User;
+use App\Models\UserEncryptedToken;
+use App\Repository\RoleRepository;
+use App\Repository\UserLoginHistoryRepository;
+use App\Repository\UserRepository;
+use App\Services\Auth\RefreshTokenService;
+use App\Services\Auth\TokenService;
+use Carbon\Carbon;
+use DateTimeImmutable;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Notifications\DatabaseNotificationCollection;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Modules\Hrd\Jobs\SendEmailActivationJob;
+use Modules\Hrd\Models\Employee;
+use Modules\Hrd\Models\EmployeeWhatsappGroup;
+use Modules\Hrd\Models\WhatsappGroup;
+use Modules\Hrd\Repository\EmployeeRepository;
+use Modules\Hrd\Repository\WhatsappOtpRepository;
+use Spatie\Permission\Models\Role;
+use Vinkla\Hashids\Facades\Hashids;
+
+class UserService
+{
+    private UserRepository $repo;
+
+    private EmployeeRepository $employeeRepo;
+
+    private RoleRepository $roleRepo;
+
+    private UserLoginHistoryRepository $loginHistoryRepo;
+
+    private GeneralService $generalService;
+
+    private RoleService $roleService;
+
+    private WhatsappOtpRepository $whatsappOtpRepo;
+
+    private AeLoginHistorService $aeLoginHistoryService;
+
+    public function __construct(
+        UserRepository $userRepo,
+        EmployeeRepository $employeeRepo,
+        RoleRepository $roleRepo,
+        UserLoginHistoryRepository $userLogHistoryRepo,
+        GeneralService $generalService,
+        RoleService $roleService,
+        WhatsappOtpRepository $whatsappOtpRepo,
+        AeLoginHistorService $aeLoginHistoryService,
+    ) {
+        $this->aeLoginHistoryService = $aeLoginHistoryService;
+
+        $this->repo = $userRepo;
+
+        $this->employeeRepo = $employeeRepo;
+
+        $this->roleRepo = $roleRepo;
+
+        $this->loginHistoryRepo = $userLogHistoryRepo;
+
+        $this->generalService = $generalService;
+
+        $this->roleService = $roleService;
+
+        $this->whatsappOtpRepo = $whatsappOtpRepo;
+    }
+
+    public function addAsUser(string $userId)
+    {
+        try {
+
+        } catch (\Throwable $th) {
+            return generalResponse(
+                errorMessage($th),
+                true,
+                [],
+                Code::BadRequest->value,
+            );
+        }
+    }
+
+    public function list()
+    {
+        $itemsPerPage = request('itemsPerPage') ?? config('app.pagination_length');
+        $page = request('page') ?? 1;
+        $page = $page == 1 ? 0 : $page;
+        $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+        $where = '';
+
+        $search = request('search');
+
+        if (! empty($search)) { // array
+            $where = formatSearchConditions($search['filters'], $where);
+        }
+
+        $sort = 'email asc';
+        if (request('sort')) {
+            $sort = '';
+            foreach (request('sort') as $sortList) {
+                if ($sortList['field'] == 'email') {
+                    $sort = $sortList['field']." {$sortList['order']},";
+                } else {
+                    $sort .= ','.$sortList['field']." {$sortList['order']},";
+                }
+            }
+
+            $sort = rtrim($sort, ',');
+            $sort = ltrim($sort, ',');
+        }
+
+        $paginated = $this->repo->pagination(
+            'id,uid,email,email_verified_at',
+            $where,
+            ['lastLogin:id,user_id,login_at'],
+            $itemsPerPage,
+            $page,
+            [],
+            $sort
+        );
+
+        $paginated = collect((object) $paginated)->map(function ($item) {
+            $roles = $item->getRoleNames();
+            $isDeletable = true;
+            $isEditable = true;
+            $canResendActivation = false;
+
+            // if user see himself on the list, then user cannot delete the data
+            if ($item->id == Auth::id()) {
+                $isDeletable = false;
+            }
+
+            if (! $item->email_verified_at) {
+                $canResendActivation = true;
+            }
+
+            return [
+                'last_login_at' => $item->lastLogin ? date('Y-m-d H:i:s', strtotime($item->lastLogin->login_at)) : null,
+                'uid' => $item->uid,
+                'email' => $item->email,
+                'role_name' => count($roles) > 0 ? $roles[0] : null,
+                'status' => $item->status,
+                'status_color' => $item->status_color,
+                'is_deleteable' => $isDeletable,
+                'is_editable' => $isEditable,
+                'can_resend_activation' => $canResendActivation,
+            ];
+        })->toArray();
+        $totalData = $this->repo->list('id', $where)->count();
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'paginated' => $paginated,
+                'totalData' => $totalData,
+            ],
+        );
+    }
+
+    public function update(array $data, string $id)
+    {
+        try {
+            $user = $this->repo->detail(id: '', where: "uid = '{$id}'");
+            $roles = $user->roles;
+            foreach ($roles as $role) {
+                $user->removeRole($role);
+            }
+
+            $user->email = $data['email'];
+            $user->save();
+
+            $role = $this->roleRepo->show($data['role_id']);
+            $user->assignRole($role);
+
+            return generalResponse(
+                __('global.successUpdateUser'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Main service to store a new user and send activation link via email
+     */
+    public function mainServiceStoreUser(array $data): User
+    {
+        $isEmployee = false;
+        $isDirector = false;
+        $isProjectManager = false;
+
+        // setup role
+        if (isset($data['role_id'])) {
+            $roleData = $this->roleService->show($data['role_id']);
+            if (! $roleData['error']) {
+                $role = $roleData['data']['raw'];
+            }
+        }
+
+        if (! $data['is_external_user']) {
+            $currentProjectManagerRole = json_decode($this->generalService->getSettingByKey('project_manager_role'), true) ?? [];
+            if (
+                ($currentProjectManagerRole) &&
+                (in_array($data['role_id'], $currentProjectManagerRole))
+            ) {
+                $isProjectManager = true;
+            }
+
+            $directorRole = $this->generalService->getSettingByKey('director_role');
+            if (
+                (isset($data['role_id'])) &&
+                ($directorRole == $data['role_id'])
+            ) {
+                $isDirector = true;
+            }
+
+            $pmAndDirectorRole = collect($currentProjectManagerRole)->merge([$directorRole])->toArray();
+
+            $isEmployee = ! isset($data['role_id']) ? false : ! in_array($data['role_id'], $pmAndDirectorRole);
+
+            $employeeId = $this->generalService->getIdFromUid($data['employee_id'], new Employee);
+        }
+
+        $payload = [
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'is_external_user' => $data['is_external_user'],
+            'employee_id' => $employeeId ?? null,
+            'username' => null,
+            'is_employee' => $isEmployee,
+            'is_director' => $isDirector,
+            'is_project_manager' => $isProjectManager,
+        ];
+
+        // only assign role and send notification to internal user
+        $user = $this->repo->store($payload);
+
+        if ($role) {
+            $user->assignRole($role);
+        }
+
+        if (! $data['is_external_user']) {
+            // update relation on employee
+            $this->employeeRepo->update([
+                'user_id' => $user->id,
+            ], $data['employee_id']);
+
+            SendEmailActivationJob::dispatch($user, $data['password'])->afterCommit();
+        }
+
+        return $user;
+    }
+
+    /**
+     * Store user
+     *
+     * @param  array  $data
+     *                       $data is
+     * @param bool is_external_user
+     * @param string email
+     * @param string employee_id
+     * @param string password
+     * @param int role_id
+     * @return array
+     */
+    public function store(array $data)
+    {
+        DB::beginTransaction();
+        try {
+            $this->mainServiceStoreUser($data);
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successCreateUser'),
+                false
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    public function show(string $id)
+    {
+        $data = $this->repo->detail(id: '', select: '*', where: "uid = '{$id}'");
+        $data->roles;
+
+        $employeeData = $this->employeeRepo->show('id', 'id,uid', [], 'user_id = '.$data->id);
+
+        return generalResponse(
+            'success',
+            false,
+            [
+                'uid' => $data->uid,
+                'id' => $data->id,
+                'employee_uid' => $employeeData ? $employeeData->uid : null,
+                'email' => $data->email,
+                'is_external_user' => $data->is_external_user,
+                'role_id' => isset($data->roles[0]) ? $data->roles[0]->id : 0,
+            ],
+        );
+    }
+
+    public function userChangePassword(array $payload, string $userUid): array
+    {
+        try {
+            $this->repo->update([
+                'password' => Hash::make($payload['password']),
+            ], 'uid', $userUid);
+
+            return generalResponse(
+                message: __('notification.successChangePassword'),
+                error: false
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function activate(string $key)
+    {
+        try {
+            $service = new EncryptionService;
+
+            $email = $service->decrypt($key, env('SALT_KEY'));
+
+            $user = $this->repo->detail('', 'id,email_verified_at', "email = '{$email}'");
+
+            $message = __('global.accontAlreadyActive');
+            if (! $user->email_verified_at) {
+                $this->repo->update([
+                    'email_verified_at' => Carbon::now(),
+                ], 'email', $email);
+                $message = __('global.accountIsActive');
+            }
+
+            return generalResponse(
+                $message,
+                false,
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Delete bulk data
+     */
+    public function bulkDelete(array $ids): array
+    {
+        DB::beginTransaction();
+        try {
+            foreach ($ids as $id) {
+                $user = $this->repo->detail(
+                    select: '*',
+                    where: "uid = '{$id}'"
+                );
+
+                // validate relation
+                $employee = $this->employeeRepo->show(
+                    uid: 'id',
+                    select: 'id,name,email,uid',
+                    relation: [
+                        'projects' => function ($query) {
+                            $query->selectRaw('id,project_id,pic_id')
+                                ->whereHas('project', function ($queryProject) {
+                                    $queryProject->whereRaw('DATE(project_date) > NOW()');
+                                });
+                        },
+                    ],
+                    where: 'user_id = '.$user->id
+                );
+
+                if (
+                    ($employee) &&
+                    (
+                        $employee->projects->count() > 0
+                    )
+                ) {
+                    DB::rollBack();
+
+                    return errorResponse(__('notification.cannotDeleteEmployeeBcsRelation'));
+                }
+
+                $roles = $user->roles;
+                foreach ($roles as $role) {
+                    $user->removeRole($role);
+                }
+
+                // detach from employee data
+                if ($employee) {
+                    $this->employeeRepo->update([
+                        'user_id' => null,
+                    ], $employee->uid);
+                }
+
+                // update email
+                $this->repo->update([
+                    'email' => $user->email.'_deleted_'.strtotime('now'),
+                    'employee_id' => null,
+                ], 'id', $user->id);
+            }
+
+            $this->repo->bulkDelete($ids, 'uid');
+
+            DB::commit();
+
+            return generalResponse(
+                __('global.successDeleteUser'),
+                false,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Encrypted payload:           With these format:
+     *      - token exp
+     *      - user
+     *      - role
+     *      - roleId
+     *      - appName
+     *      - notifications: []
+     *      - encryptedUserId
+     *      - notificationSection                With these format
+     *          - general
+     *          - finance
+     *          - hrd
+     *          - production
+     */
+    protected function getEncryptedPayloadData(array $tokenizer): array
+    {
+        $allRoles = BaseRole::cases();
+        $allRoles = collect($allRoles)->map(function ($roleData) {
+            return $roleData->value;
+        })->toArray();
+
+        $user = $tokenizer['user'];
+        $exp = date('Y-m-d H:i:s', strtotime($tokenizer['token']->accessToken->expires_at));
+        $userIdEncode = Hashids::encode($user->id);
+
+        return [
+            'exp' => $exp,
+            'user' => $tokenizer['user'],
+            'role' => $tokenizer['role'],
+            'role_id' => $tokenizer['role_id'],
+            'app_name' => $this->generalService->getSettingByKey('app_name'),
+            'notification' => [],
+            'encrypted_user_id' => $userIdEncode,
+            'notification_section' => [
+                'general' => $user->hasRole($allRoles),
+                'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
+                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value, BaseRole::Entertainment->value]),
+                'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
+            ],
+        ];
+    }
+
+    /**
+     * Login user
+     */
+    public function login(array $payload, bool $unitTesting = false, bool $onActing = false): array
+    {
+        try {
+            // get user and validate the payload
+            $user = $this->repo->detail(
+                id: 'id',
+                select: 'id,email,employee_id,email_verified_at,password,image',
+                where: "email = '".$payload['email']."' and user_status = 1",
+                relation: [
+                    'employee:id,name,email,user_id,position_id,uid,nickname,phone,is_phone_verified',
+                    'employee.position:id,name',
+                ]
+            );
+
+            if (! $user) {
+                return errorResponse(message: __('global.userNotFound'));
+            }
+
+            if (! $user->email_verified_at) {
+                return errorResponse(message: __('userNotActive'));
+            }
+
+            if (! Hash::check($payload['password'], $user->password)) {
+                event(new Failed('web', $user, ['email' => $user->email]));
+
+                return errorResponse(message: __('global.credentialDoesNotMatch'));
+            }
+
+            if (! isset($user->getRoleNames()[0])) {
+                return errorResponse(message: __('notification.doNotHaveAppPermission'));
+            }
+
+            // format user email first
+            $emailShow = trim(
+                strip_tags(
+                    html_entity_decode(
+                        $user->email, ENT_QUOTES, 'UTF-8')
+                )
+            );
+            if (strlen($user->email) > 15) {
+                $emailShow = mb_substr($emailShow, 0, 15).' ...';
+            } else {
+                $emailShow = $user->email;
+            }
+            $user['email_show'] = $emailShow;
+
+            /**
+             * here we generate all payload that will temporary saved in the frontent
+             * We generate these:
+             *
+             * Encrypted payload:           With these format:
+             *      - token exp
+             *      - user
+             *      - role
+             *      - roleId
+             *      - appName
+             *      - notifications: []
+             *      - encryptedUserId
+             *      - notificationSection                With these format
+             *          - general
+             *          - finance
+             *          - hrd
+             *          - production
+             *
+             * reportingToken
+             * permissionEncrypted
+             * menusEncrypted
+             * mainToken
+             * menus
+             */
+            $token = $this->generalService->generateAuthorizationToken(user: $user);
+
+            return $token;
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function loginBackup(array $validated, bool $unitTesting = false, bool $onActing = false)
+    {
+        $user = $this->repo->detail(
+            id: 'id',
+            select: '*',
+            where: "email = '{$validated['email']}'",
+            relation: ['employee.position', 'roles']
+        );
+
+        if (! $user) {
+            throw new UserNotFound(__('global.userNotFound'));
+        }
+
+        if (! $user->email_verified_at) {
+            throw new UserNotFound(__('global.userNotActive'));
+        }
+
+        if (! Hash::check($validated['password'], $user->password) && ! $onActing) {
+            throw new UserNotFound(__('global.credentialDoesNotMatch'));
+        }
+
+        if (! isset($user->getRoleNames()[0])) {
+            throw new DoNotHaveAppPermission;
+        }
+
+        $menuService = new MenuService;
+
+        $role = $user->getRoleNames()[0];
+        $roles = $user->roles;
+
+        $roleId = null;
+        if (count($roles) > 0) {
+            $roleId = $roles[0]->id;
+        }
+        $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
+
+        $expireTime = now()->addHours(24);
+        if (isset($validated['remember_me'])) {
+            $expireTime = now()->addDays(30);
+        }
+
+        $token = $user->createToken($role, $permissions, $expireTime);
+
+        // generate token for reporting
+        $reportingToken = $this->authorizeReportingAccess(email: $validated['email']);
+
+        $menus = $menuService->getNewFormattedMenu($user->getAllPermissions()->toArray(), $roles->toArray());
+
+        $isProjectManager = false;
+
+        $isEmployee = false;
+
+        $isDirector = false;
+
+        $isSuperUser = false;
+
+        $positionAsDirectors = json_decode($this->generalService->getSettingByKey('position_as_directors'), true);
+
+        $positionAsProjectManager = json_decode($this->generalService->getSettingByKey('position_as_project_manager'), true);
+
+        $superUserRole = $this->generalService->getSettingByKey('super_user_role');
+
+        if ($roleId == $superUserRole) {
+            $isSuperUser = true;
+        }
+
+        if (
+            ($positionAsDirectors) &&
+            ($user->employee) &&
+            (in_array($user->employee->position->uid, $positionAsDirectors))
+        ) {
+            $isDirector = true;
+        }
+
+        if (
+            ($positionAsProjectManager) &&
+            ($user->employee) &&
+            (in_array($user->employee->position->uid, $positionAsProjectManager))
+        ) {
+            $isProjectManager = true;
+        }
+
+        $emailShow = trim(
+            strip_tags(
+                html_entity_decode(
+                    $user->email, ENT_QUOTES, 'UTF-8')
+            )
+        );
+        if (strlen($user->email) > 15) {
+            $emailShow = mb_substr($emailShow, 0, 15).' ...';
+        } else {
+            $emailShow = $user->email;
+        }
+        $user['email_show'] = $emailShow;
+
+        $employee = Employee::select('id')
+            ->find($user->employee_id);
+
+        $notifications = [];
+        if ($employee) {
+            $notifications = $this->generalService->formatNotifications($employee->unreadNotifications->toArray());
+        }
+
+        $userIdEncode = Hashids::encode($user->id);
+
+        $allRoles = BaseRole::cases();
+        $allRoles = collect($allRoles)->map(function ($roleData) {
+            return $roleData->value;
+        })->toArray();
+
+        $payload = [
+            'exp' => date('Y-m-d H:i:s', strtotime($token->accessToken->expires_at)),
+            'user' => $user,
+            'role' => $role,
+            'role_id' => $roleId,
+            'app_name' => $this->generalService->getSettingByKey('app_name'),
+            // 'board_start_calcualted' => $this->generalService->getSettingByKey('board_start_calcualted'),
+            // 'is_director' => $isDirector,
+            // 'is_project_manager' => $isProjectManager,
+            // 'is_super_user' => $isSuperUser,
+            'notifications' => [],
+            'encrypted_user_id' => $userIdEncode,
+            'notification_section' => [
+                'general' => $user->hasRole($allRoles),
+                'finance' => $user->hasRole([BaseRole::Finance->value, BaseRole::Root->value, BaseRole::Director->value]),
+                'production' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::ProjectManager->value, BaseRole::ProjectManagerAdmin->value, BaseRole::ProjectManagerEntertainment->value, BaseRole::Production->value]),
+                'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
+            ],
+        ];
+
+        // this data is used when changing to other subdomains
+        UserEncryptedToken::updateOrCreate(
+            ['user_id' => $user->id],
+            ['data' => json_encode($payload)]
+        );
+
+        $encryptionService = new EncryptionService;
+        $encryptedPayload = $encryptionService->encrypt(json_encode($payload), config('app.salt_key_encryption'));
+
+        // here we will break the payload into some parts to avoid long context in the encrypted payload string
+        // we will remove permissions, menus, and notifications from the payload
+        $permissionsEncrypted = $encryptionService->encrypt(json_encode([
+            'permissions' => $permissions,
+        ]), config('app.salt_key_encryption'));
+        $menusEncrypted = $encryptionService->encrypt(json_encode([
+            'menus' => $menus,
+        ]), config('app.salt_key_encryption'));
+
+        // store histories
+        $this->loginHistoryRepo->store([
+            'user_id' => $user->id,
+            'ip' => $this->generalService->getClientIp(),
+            'browser' => $this->generalService->parseUserAgent($this->generalService->getUserAgentInfo())['browser'],
+            'login_at' => Carbon::now(),
+        ]);
+
+        // store to cache for user device information
+        Cache::rememberForever('userLogin'.$user->id, function () {
+            return [
+                'ip' => $this->generalService->getClientIp(),
+                'browser' => $this->generalService->parseUserAgent($this->generalService->getUserAgentInfo()),
+            ];
+        });
+
+        return [
+            'encryptedPayload' => $encryptedPayload,
+            'reportingToken' => $reportingToken,
+            'pEnc' => $permissionsEncrypted,
+            'mEnc' => $menusEncrypted,
+            'mainToken' => $token->plainTextToken,
+            'menus' => $menus,
+        ];
+    }
+
+    protected function authorizeReportingAccess(string $email)
+    {
+        $response = Http::post(
+            url: config('app.python_endpoint').'/auth/access-token',
+            data: [
+                'email' => $email,
+            ]
+        );
+
+        if ($response->status() != 200) {
+            throw new UserNotFound(message: 'Failed to generate token');
+        }
+
+        $token = $response->json()['data']['access_token'];
+
+        return $token;
+    }
+
+    public function uploadProfileTemp($file)
+    {
+        try {
+            // upload file to storage
+            $imageName = $this->generalService->uploadImageandCompress(
+                path: 'tmp/profiles',
+                image: $file,
+                compressValue: 1
+            );
+
+            if (! $imageName) {
+                return errorResponse('Failed to upload image');
+            }
+
+            return generalResponse(
+                message: 'success',
+                data: [
+                    'file_path' => 'tmp/profiles/'.$imageName,
+                ],
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function verifyOtp(array $payload)
+    {
+        DB::beginTransaction();
+        try {
+            $employee = $this->employeeRepo->show(
+                uid: '',
+                where: "email = '".$payload['email']."'",
+                select: 'id,phone,uid,user_id'
+            );
+
+            if (! $employee) {
+                return errorResponse(message: __('notification.userNotFound'));
+            }
+
+            $verifyData = $this->whatsappOtpRepo->show(
+                uid: '',
+                where: "phone = '{$employee->phone}' and employee_id = {$employee->id} and is_verified = 0",
+                select: 'id,expired_date,otp'
+            );
+
+            if (! $verifyData) {
+                return errorResponse(message: __('notification.dataNotFound'));
+            }
+
+            $expiredDate = Carbon::parse($verifyData->expired_date);
+            if ($expiredDate->isPast()) {
+                return errorResponse(message: __('notification.otpHasBeenExpired'));
+            }
+
+            if ($verifyData->otp != $payload['otp']) {
+                return errorResponse(message: __('notification.otpMismatch'));
+            }
+
+            // Update data
+            $this->whatsappOtpRepo->update(
+                data: [
+                    'is_verified' => 1,
+                ],
+                id: $verifyData->id
+            );
+
+            $this->employeeRepo->update(
+                data: [
+                    'is_phone_verified' => true,
+                ],
+                uid: $employee->uid
+            );
+
+            $user = $this->repo->detail(
+                id: $employee->user_id,
+                select: 'id,email,employee_id,email_verified_at,password,image',
+                relation: [
+                    'employee:id,name,email,user_id,position_id,uid,nickname,phone,is_phone_verified',
+                    'employee.position:id,name',
+                ]
+            );
+
+            // get encryption payload
+            $tokenizer = $this->generalService->generateAuthorizedUserToken(user: $user);
+            $encryptedPayload = $this->generalService->getEncryptedPayloadData(tokenizer: $tokenizer);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('notification.phoneNumberVerfied'),
+                data: [
+                    'token' => $encryptedPayload,
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Update user profile
+     *
+     * @param  array<string, string>  $data
+     * @return array<string, mixed>
+     */
+    public function updateProfile(array $data, int $userId): array
+    {
+        $removedImage = [];
+        DB::beginTransaction();
+        try {
+            $currentUser = $this->repo->detail(
+                select: 'id,image,employee_id',
+                id: $userId,
+                relation: [
+                    'employee:id,phone,is_phone_verified',
+                ]
+            );
+
+            if ((isset($data['profile_image'])) && ($data['profile_image']) && ! Str::contains($data['profile_image'], 'https')) {
+                // get current image from tmp file
+                if (! Storage::disk('public')->exists($data['profile_image'])) {
+                    return errorResponse(__('notification.fileNotFound'));
+                }
+
+                // move image to permanent folder
+                $newImagePath = 'profiles/'.basename($data['profile_image']);
+                Storage::disk('public')->move($data['profile_image'], $newImagePath);
+
+                $completePath = asset('storage/'.$newImagePath);
+
+                $removedImage[] = $currentUser->image;
+
+                $this->repo->update(
+                    data: [
+                        'image' => $completePath,
+                    ],
+                    key: 'id',
+                    value: $userId
+                );
+            }
+
+            $isNeedVerifyPhone = $currentUser->employee->phone != $data['phone'] ? true : false;
+
+            $payloadUpdateEmployee = [
+                'nickname' => $data['nickname'] ?? null,
+                'phone' => $data['phone'],
+                'is_phone_verified' => ! $isNeedVerifyPhone,
+            ];
+
+            if (isset($completePath)) {
+                $payloadUpdateEmployee['avatar'] = $completePath;
+            }
+
+            // upate avatar column in employees table
+            $this->employeeRepo->update(
+                data: $payloadUpdateEmployee,
+                uid: 'uid',
+                where: "id = {$currentUser->employee_id}"
+            );
+
+            $user = $this->repo->detail(
+                id: $userId,
+                select: 'id,email,employee_id,email_verified_at,password,image',
+                relation: [
+                    'employee:id,name,email,user_id,position_id,uid,nickname,phone,is_phone_verified',
+                    'employee.position:id,name',
+                ]
+            );
+
+            // get encryption payload
+            $tokenizer = $this->generalService->generateAuthorizedUserToken(user: $user);
+            $encryptedPayload = $this->generalService->getEncryptedPayloadData(tokenizer: $tokenizer);
+
+            DB::commit();
+
+            // remove image from storage
+            foreach ($removedImage as $imagePath) {
+                // imagepath will be like: http://domain/storage/profiles/imagename.jpg
+                $parsedUrl = parse_url($imagePath);
+                $relativePath = ltrim($parsedUrl['path'], '/storage/');
+                if (Storage::disk('public')->exists($relativePath)) {
+                    Storage::disk('public')->delete($relativePath);
+                }
+            }
+
+            return generalResponse(
+                message: __('notification.successUpdateProfile'),
+                data: [
+                    'token' => $encryptedPayload,
+                ]
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * Resend activation email to user
+     *
+     * @return array<string, mixed>
+     */
+    public function resendActivationEmail(string $userUid): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = $this->repo->detail(
+                id: 'id',
+                select: 'id,email,email_verified_at,password',
+                where: "uid = '{$userUid}'"
+            );
+
+            if (! $user) {
+                return errorResponse(__('global.userNotFound'));
+            }
+
+            if ($user->email_verified_at) {
+                return errorResponse(__('global.accontAlreadyActive'));
+            }
+
+            // generate random password
+            $randomPassword = $this->generalService->generateRandomPassword(8);
+
+            // update user password
+            $this->repo->update([
+                'password' => Hash::make($randomPassword),
+            ], 'id', $user->id);
+
+            SendEmailActivationJob::dispatch($user, $randomPassword)->afterCommit();
+
+            DB::commit();
+
+            return generalResponse(
+                __('notification.successResendActivationEmail'),
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return errorResponse($th);
+        }
+    }
+
+    private function formatOutputNotification(DatabaseNotificationCollection $notifications): Collection
+    {
+        // toBase() guarantees a base Support collection even when empty (an empty
+        // Eloquent collection would otherwise break the later ->merge() with a
+        // "getKey() on array" error once these become plain arrays).
+        return $notifications->toBase()->map(function ($item) {
+            $data = $item['data'] ?? [];
+
+            return [
+                'id' => $item['id'],
+                'title' => $data['title'] ?? '',
+                'message' => $data['message'] ?? '',
+                'icon' => $data['icon'] ?? '🔔',
+                'url' => $data['url'] ?? ($data['href'] ?? ''),
+                'topic' => $data['topic'] ?? RealtimeNotificationService::TOPIC_GENERAL,
+                'division_id' => $data['division_id'] ?? null,
+                'created_at' => date('d F Y H:i', strtotime($item->created_at)),
+            ];
+        })->values();
+    }
+
+    private function getEmployeeNotification(int $userId): Collection
+    {
+        $employee = Employee::where('user_id', $userId)->first();
+
+        if (! $employee) {
+            return collect([]);
+        }
+
+        return $this->formatOutputNotification(notifications: $employee->unreadNotifications);
+    }
+
+    private function getUserNotification(int $userId): Collection
+    {
+        $user = User::find($userId);
+
+        if (! $user) {
+            return collect([]);
+        }
+
+        return $this->formatOutputNotification(notifications: $user->unreadNotifications);
+    }
+
+    private function resolveDivisionName(int $userId): ?string
+    {
+        $employee = Employee::where('user_id', $userId)->first();
+
+        return $employee?->position?->division?->name;
+    }
+
+    /**
+     * @return array{general: Collection, division: Collection, divisionName: ?string}
+     */
+    public function getApplicationNotification(): array
+    {
+        $userId = Auth::id();
+
+        $merged = $this->getEmployeeNotification(userId: $userId)
+            ->merge($this->getUserNotification(userId: $userId));
+
+        return [
+            'general' => $merged->where('topic', RealtimeNotificationService::TOPIC_GENERAL)->values(),
+            'division' => $merged->where('topic', RealtimeNotificationService::TOPIC_DIVISION)->values(),
+            'divisionName' => $this->resolveDivisionName(userId: $userId),
+        ];
+    }
+
+    /**
+     * @return array<WhatsappInformationData>
+     */
+    public function getWhatsappGroup(): array
+    {
+        try {
+            $user = $this->repo->detail(
+                id: Auth::id(),
+                select: 'id,employee_id',
+                relation: ['employee:id,boss_id']
+            );
+
+            if (! $user || ! $user->employee) {
+                return generalResponse(message: 'Success', data: []);
+            }
+
+            $employee = $user->employee;
+
+            // boss_id null = this employee IS a leader, so show their own team group
+            // boss_id set = show their boss's team group
+            $teamOwnerId = $employee->boss_id ?? $employee->id;
+
+            $groups = WhatsappGroup::query()
+                ->where(function ($query) use ($teamOwnerId) {
+                    $query->where('target_type', 'all')
+                        ->orWhere(function ($q) use ($teamOwnerId) {
+                            $q->where('target_type', 'team')
+                                ->where('employee_id', $teamOwnerId);
+                        });
+                })
+                ->get();
+
+            $joinedGroupIds = EmployeeWhatsappGroup::query()
+                ->where('employee_id', $employee->id)
+                ->pluck('group_id')
+                ->all();
+
+            $output = $groups->map(fn (WhatsappGroup $group) => new WhatsappInformationData(
+                id: $group->id,
+                name: $group->group_name,
+                type: $group->target_type->value,
+                joined: in_array($group->group_id, $joinedGroupIds),
+                invitationLink: $group->invitation_link ?? '',
+            ))->values()->all();
+
+            return generalResponse(message: 'Success', data: $output);
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function loginAfterEffect(LoginData $payload): array
+    {
+        try {
+            $user = $this->repo->detail(id: '', where: "email = '{$payload->email}'", relation: ['employee:id,name,nickname']);
+
+            $formatUser = new UserFormatData(
+                userName: $user->employee ? $user->employee->name : $user->email,
+                userId: (int) $user->id,
+                userEmail: $user->email,
+            );
+
+            if (! Hash::check($payload->password, $user->password)) {
+                $this->aeLoginHistoryService->failedLog(user: $formatUser, reason: "Password didn't match with our record");
+                throw new InvalidPassword;
+            }
+
+            $now = new DateTimeImmutable;
+            $refreshTimeNow = new DateTimeImmutable;
+
+            $tokenService = app(TokenService::class);
+
+            $refreshTokenService = app(RefreshTokenService::class);
+            $accessToken = $tokenService->issueAccessToken($user);
+            $refreshToken = $refreshTokenService->issue(
+                user: $user,
+                remember: false,
+                userAgent: request()->userAgent(),
+                ip: request()->ip(),
+                customExpDateInDays: 7
+            );
+            $refreshTokenTime = $refreshTimeNow->modify('+7 days');
+
+            $this->aeLoginHistoryService->success(
+                user: $formatUser,
+                payload: $payload,
+                refreshTokenExpires: $refreshTokenTime->format('Y-m-d H:i:s')
+            );
+
+            return generalResponse(
+                message: 'Login Success',
+                data: [
+                    'accessToken' => $accessToken,
+                    'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
+                    'refreshToken' => $refreshToken['raw'],
+                    'refreshTokenExp' => $refreshTokenTime,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    public function listAeLoginHistories(): array
+    {
+        try {
+
+            // $logs = $this->
+            return generalResponse(
+                message: 'Success',
+                data: []
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+}

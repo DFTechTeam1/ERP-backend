@@ -2,8 +2,13 @@
 
 use App\Data\Finance\ProjectCost\ProjectItemData;
 use App\Enums\Production\ProjectStatus;
+use App\Exports\ProjectRewardReportExport;
+use App\Exports\RewardReportSheet;
 use App\Models\User;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 use Modules\Company\Models\ProjectClass;
+use Modules\Finance\Models\DfEngineGeneration;
 use Modules\Finance\Services\ProjectCostService;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Models\EmployeeReward;
@@ -11,6 +16,7 @@ use Modules\Production\Models\Project;
 use Modules\Production\Models\ProjectDeal;
 use Modules\Production\Models\ProjectPersonInCharge;
 use Modules\Production\Models\ProjectQuotation;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 use function Pest\Laravel\actingAs;
 
@@ -97,6 +103,33 @@ function pcostPic(Project $project, string $name): Employee
     return $employee;
 }
 
+/**
+ * A user backed by an employee, used as the `created_by` of an AI generation.
+ * (df_engine_generations is engine-owned; a test-only table backs these in the test DB.)
+ */
+function pcostAiCreator(string $name): User
+{
+    $employee = Employee::factory()->withUser()->create(['name' => $name]);
+
+    return User::where('employee_id', $employee->id)->firstOrFail();
+}
+
+/**
+ * Attach one AI generation to a project. Its IDR cost is round(cost / rate) (rate > 0).
+ */
+function pcostAiGen(Project $project, User $creator, float $cost, float $rate, string $kind = 'image'): DfEngineGeneration
+{
+    return DfEngineGeneration::create([
+        'uid' => (string) Str::uuid(),
+        'project_id' => $project->id,
+        'created_by' => $creator->id,
+        'cost' => $cost,
+        'exchange_rate' => $rate,
+        'kind' => $kind,
+        'status' => 'success',
+    ]);
+}
+
 beforeEach(function () {
     // getProjects() caches under a single key per filter (PROJECTS:COSTS:Y::2026...). The container
     // test run uses the redis cache (shared with dev), so that key would leak the first test's
@@ -125,6 +158,40 @@ describe('getDashboardSummary', function () {
             ->and((float) $data['average_cost'])->toBe(200000.0)        // 400k / 2
             ->and((float) $data['provisional_count'])->toBe(1.0)        // one not fully paid
             ->and($data['currency'])->toBe('IDR');
+    });
+
+    it('adds the project AI cost on top of employee reward in total cost (service)', function () {
+        pcostFilters();
+        $creator = pcostAiCreator('Designer');
+        $project = pcostProject(fixPrice: 10000000, fullyPaid: true);
+        pcostReward($project, 'Budi', 5, 250000);
+        pcostAiGen($project, $creator, cost: 100000, rate: 2); // -> 50.000 IDR
+        pcostAiGen($project, $creator, cost: 40000, rate: 4);  // -> 10.000 IDR
+
+        $response = pcostService()->getDashboardSummary();
+
+        $data = $response['data'];
+        expect($response['error'])->toBeFalse()
+            ->and((float) $data['total_employee_reward'])->toBe(250000.0)
+            ->and((float) $data['total_cost'])->toBe(310000.0)           // 250k reward + 60k ai
+            ->and((float) $data['total_gross_profit'])->toBe(9690000.0); // 10M - 310k
+    });
+
+    it('applies the project name search to the summary aggregates (service)', function () {
+        pcostFilters(['year' => '2026', 'search' => 'Alpha']);
+        $alpha = pcostProject(['name' => 'Alpha Wedding'], fixPrice: 100000000);
+        $beta = pcostProject(['name' => 'Beta Gala'], fixPrice: 50000000);
+        pcostReward($alpha, 'A', 1, 300000);
+        pcostReward($beta, 'B', 1, 150000);
+
+        $response = pcostService()->getDashboardSummary();
+
+        expect($response['error'])->toBeFalse();
+        $data = $response['data'];
+        // only the matching "Alpha Wedding" project feeds the totals
+        expect($data['total_projects'])->toBe(1)
+            ->and((float) $data['total_cost'])->toBe(300000.0)
+            ->and((float) $data['total_fix_price'])->toBe(100000000.0);
     });
 
     it('returns an error response when no project matches (division by zero, characterisation)', function () {
@@ -164,6 +231,20 @@ describe('getCostTrend', function () {
         $byMonth = collect($response['data'])->keyBy('month');
         expect((float) $byMonth['Jun 2026']->total_cost)->toBe(200000.0)
             ->and((float) $byMonth['Jul 2026']->employee_reward)->toBe(100000.0);
+    });
+
+    it('includes the ai cost per month in the trend (service)', function () {
+        pcostFilters();
+        $creator = pcostAiCreator('Designer');
+        $jun = pcostProject(['project_date' => '2026-06-10']);
+        pcostReward($jun, 'Budi', 4, 200000);
+        pcostAiGen($jun, $creator, cost: 90000, rate: 3); // -> 30.000 IDR
+
+        $response = pcostService()->getCostTrend();
+
+        $byMonth = collect($response['data'])->keyBy('month');
+        expect((float) $byMonth['Jun 2026']->ai_cost)->toBe(30000.0)
+            ->and((float) $byMonth['Jun 2026']->total_cost)->toBe(230000.0); // 200k reward + 30k ai
     });
 
     it('returns the trend via the endpoint (e2e)', function () {
@@ -213,7 +294,7 @@ describe('getCostByClass', function () {
 });
 
 describe('getCostComposition', function () {
-    it('returns the employee reward composition total (service)', function () {
+    it('returns the employee reward and ai cost composition components (service)', function () {
         pcostFilters();
         $a = pcostProject();
         $b = pcostProject();
@@ -223,9 +304,26 @@ describe('getCostComposition', function () {
         $response = pcostService()->getCostComposition();
 
         expect($response['error'])->toBeFalse()
-            ->and($response['data'])->toHaveCount(1);
+            ->and($response['data'])->toHaveCount(2);
         expect($response['data'][0]['key'])->toBe('employee_reward')
-            ->and((float) $response['data'][0]['total'])->toBe(300000.0);
+            ->and((float) $response['data'][0]['total'])->toBe(300000.0)
+            ->and($response['data'][1]['key'])->toBe('ai_cost')
+            ->and((float) $response['data'][1]['total'])->toBe(0.0); // no AI generations here
+    });
+
+    it('sums the project AI cost into the ai_cost component (service)', function () {
+        pcostFilters();
+        $creator = pcostAiCreator('Designer');
+        $project = pcostProject();
+        pcostReward($project, 'Budi', 4, 200000);
+        pcostAiGen($project, $creator, cost: 100000, rate: 2); // -> 50.000 IDR
+        pcostAiGen($project, $creator, cost: 60000, rate: 3);  // -> 20.000 IDR
+
+        $response = pcostService()->getCostComposition();
+
+        $components = collect($response['data'])->keyBy('key');
+        expect((float) $components['employee_reward']['total'])->toBe(200000.0)
+            ->and((float) $components['ai_cost']['total'])->toBe(70000.0); // 50k + 20k
     });
 
     it('returns the composition via the endpoint (e2e)', function () {
@@ -299,6 +397,31 @@ describe('getDashboard', function () {
             ->assertStatus(201)
             ->assertJsonPath('data.totalData', 1);
     });
+
+    it('filters the listing and total by a project name search (service)', function () {
+        pcostFilters(['year' => '2026', 'itemsPerPage' => 10, 'page' => 1, 'search' => 'Alpha']);
+        pcostProject(['name' => 'Alpha Wedding']);
+        pcostProject(['name' => 'Beta Gala']);
+
+        $response = pcostService()->getDashboard();
+
+        expect($response['error'])->toBeFalse();
+        $data = $response['data'];
+        expect($data['totalData'])->toBe(1)                       // total honours the search filter
+            ->and($data['paginated'])->toHaveCount(1)
+            ->and($data['paginated'][0]['name'])->toBe('Alpha Wedding');
+    });
+
+    it('filters the listing by search via the endpoint (e2e)', function () {
+        actingAs(User::factory()->create());
+        pcostProject(['name' => 'Alpha Wedding']);
+        pcostProject(['name' => 'Beta Gala']);
+
+        $this->getJson('/api/production/project-costs?year=2026&itemsPerPage=10&page=1&search=Alpha')
+            ->assertStatus(201)
+            ->assertJsonPath('data.totalData', 1)
+            ->assertJsonPath('data.paginated.0.name', 'Alpha Wedding');
+    });
 });
 
 describe('detailProjectCost', function () {
@@ -324,6 +447,26 @@ describe('detailProjectCost', function () {
             ->and($data['payment_status'])->toBe('partial');           // fix price > 0, nothing paid
     });
 
+    it('groups AI costs per creator with the employee name and usage text (service)', function () {
+        $creator = pcostAiCreator('Designer Dina');
+        $project = pcostProject(['name' => 'AI Project'], fixPrice: 50000000);
+        pcostAiGen($project, $creator, cost: 100000, rate: 2, kind: 'image'); // -> 50.000 IDR
+        pcostAiGen($project, $creator, cost: 60000, rate: 3, kind: 'video');  // -> 20.000 IDR
+
+        $response = pcostService()->detailProjectCost($project->uid);
+
+        expect($response['error'])->toBeFalse();
+        $ai = $response['data']['ai_costs'];
+        expect((float) $ai['total'])->toBe(70000.0)   // 50k + 20k
+            ->and($ai['items'])->toHaveCount(1);       // grouped by creator
+        // name resolves to the employee name (regression: the ?? / ternary precedence bug that
+        // previously returned the email whenever an employee name existed)
+        expect($ai['items'][0]['name'])->toBe('Designer Dina')
+            ->and((float) $ai['items'][0]['total'])->toBe(70000.0)
+            ->and($ai['items'][0]['usage'])->toContain('image')
+            ->and($ai['items'][0]['usage'])->toContain('video');
+    });
+
     it('returns the detail via the endpoint (e2e)', function () {
         actingAs(User::factory()->create());
         $project = pcostProject(['name' => 'Gala Night'], fixPrice: 120000000);
@@ -333,5 +476,207 @@ describe('detailProjectCost', function () {
             ->assertStatus(201)
             ->assertJsonPath('data.name', 'Gala Night')
             ->assertJsonPath('data.employee_rewards.items.0.name', 'Budi');
+    });
+
+    it('returns the grouped AI costs via the detail endpoint (e2e)', function () {
+        actingAs(User::factory()->create());
+        $creator = pcostAiCreator('Designer Dina');
+        $project = pcostProject(['name' => 'AI Gala']);
+        pcostAiGen($project, $creator, cost: 100000, rate: 2);
+
+        $this->getJson("/api/production/project-costs/{$project->uid}")
+            ->assertStatus(201)
+            ->assertJsonPath('data.ai_costs.items.0.name', 'Designer Dina');
+    });
+});
+
+/**
+ * Attach a reward for a SPECIFIC employee to a project (unlike pcostReward which spawns a fresh
+ * employee each call). Used by the export tests, where the same employee must appear on several
+ * projects so the disbursement sheet can aggregate across them.
+ */
+function pcostRewardFor(Project $project, Employee $employee, string $role, int $totalPoint, float $totalReward): EmployeeReward
+{
+    return EmployeeReward::create([
+        'employee_id' => $employee->id,
+        'project_id' => $project->id,
+        'employee_point_project_id' => null,
+        'base_reward' => $totalReward,
+        'total_point' => $totalPoint,
+        'point' => $totalPoint,
+        'additional_point' => 0,
+        'total_reward' => $totalReward,
+        'project_class_name' => $project->projectClass->name ?? null,
+        'role' => $role,
+    ]);
+}
+
+describe('export', function () {
+    it('builds a three-sheet workbook: summary, detail and per-employee disbursement (service)', function () {
+        pcostFilters(['year' => '2026']);
+
+        $class = ProjectClass::factory()->create(['name' => 'Gold', 'color' => '#D4AF37']);
+        $p1 = pcostProject(['name' => 'Wedding Gala', 'project_date' => '2026-03-10'], class: $class);
+        $p2 = pcostProject(['name' => 'Corporate Show', 'project_date' => '2026-04-12'], class: $class);
+
+        $andre = Employee::factory()->create(['name' => 'Andre', 'employee_id' => 'DF-001']);
+        $bella = Employee::factory()->create(['name' => 'Bella', 'employee_id' => 'DF-002']);
+
+        // Andre is rewarded on BOTH projects (as production); Bella only on p1 (as PM).
+        pcostRewardFor($p1, $andre, 'production', 3, 100000);
+        pcostRewardFor($p1, $bella, 'pm', 0, 50000);
+        pcostRewardFor($p2, $andre, 'production', 2, 80000);
+
+        Excel::fake();
+
+        pcostService()->export();
+
+        Excel::assertDownloaded('reward_report_2026.xlsx', function (ProjectRewardReportExport $export) {
+            $sheets = $export->sheets();
+            expect($sheets)->toHaveCount(3);
+
+            [$summary, $detail, $disbursement] = $sheets;
+
+            expect($summary->title())->toBe('Summary')
+                ->and($detail->title())->toBe('Reward Detail')
+                ->and($disbursement->title())->toBe('Disbursement');
+
+            // --- Summary: one row per project + a grand total row, with total reward AND total cost ---
+            expect($summary->headings())->toContain('Total Reward (IDR)')
+                ->and($summary->headings())->toContain('Total Cost (IDR)');
+            $summaryRows = collect($summary->array());
+            $gala = $summaryRows->firstWhere(1, 'Wedding Gala');
+            $show = $summaryRows->firstWhere(1, 'Corporate Show');
+            expect((float) $gala[6])->toBe(150000.0)  // total reward: 100k Andre + 50k Bella
+                ->and((float) $gala[7])->toBe(150000.0)  // total cost (= reward for now)
+                ->and((int) $gala[5])->toBe(2)          // two rewarded employees
+                ->and((float) $show[6])->toBe(80000.0)
+                ->and((float) $show[7])->toBe(80000.0);
+            $summaryTotal = $summaryRows->firstWhere(5, 'TOTAL');
+            expect((float) $summaryTotal[6])->toBe(230000.0)   // grand total reward
+                ->and((float) $summaryTotal[7])->toBe(230000.0); // grand total cost
+
+            // money columns are real numbers displayed via a grouped number format (not strings,
+            // which the value binder would coerce back to the wrong number)
+            expect($summary->columnFormats())->toHaveKey('G')
+                ->and($summary->columnFormats())->toHaveKey('H')
+                ->and($detail->columnFormats())->toHaveKey('I')
+                ->and($detail->columnFormats()['I'])->toContain('#,##0')
+                ->and($disbursement->columnFormats())->toHaveKey('F');
+
+            // only the Summary header is filterable (auto filter registered via an AfterSheet event);
+            // it spans the header + the two project rows (A1:H3), not the grand total row
+            expect($summary->registerEvents())->not->toBeEmpty()
+                ->and($detail->registerEvents())->toBeEmpty()
+                ->and($disbursement->registerEvents())->toBeEmpty();
+
+            // --- Reward Detail: one row per reward line; reward stays numeric ---
+            $detailRows = collect($detail->array());
+            expect($detailRows)->toHaveCount(3);
+            $bellaRow = $detailRows->firstWhere(1, 'Bella');
+            expect($bellaRow[3])->toBe('Project Manager')   // role label mapping
+                ->and($bellaRow[8])->toBe(50000.0);           // numeric reward (grouped at render)
+            // Andre appears on two projects
+            expect($detailRows->where(1, 'Andre'))->toHaveCount(2);
+
+            // --- Disbursement: aggregated per employee + total row ---
+            $disbursementRows = collect($disbursement->array());
+            $andreOut = $disbursementRows->firstWhere(1, 'DF-001');
+            $bellaOut = $disbursementRows->firstWhere(1, 'DF-002');
+            expect((int) $andreOut[4])->toBe(2)              // two projects
+                ->and($andreOut[5])->toBe(180000.0)          // 100k + 80k
+                ->and((int) $bellaOut[4])->toBe(1)
+                ->and($bellaOut[5])->toBe(50000.0);
+            expect($disbursementRows->firstWhere(4, 'TOTAL')[5])->toBe(230000.0);
+
+            return true;
+        });
+    });
+
+    it('shows numeric zero (not a blank cell) in the summary for a project with no reward records (service)', function () {
+        pcostFilters(['year' => '2026']);
+        // a project with a deal/quotation but NO employee rewards attached
+        pcostProject(['name' => 'No Reward Event', 'project_date' => '2026-07-01']);
+
+        Excel::fake();
+
+        pcostService()->export();
+
+        Excel::assertDownloaded('reward_report_2026.xlsx', function (ProjectRewardReportExport $export) {
+            $summaryRows = collect($export->sheets()[0]->array());
+            $row = $summaryRows->firstWhere(1, 'No Reward Event');
+
+            expect($row)->not->toBeNull()
+                ->and($row[5])->toBe(0)       // Rewarded Employees
+                ->and($row[6])->toBe(0.0)     // Total Reward -> numeric 0, never blank
+                ->and($row[7])->toBe(0.0);    // Total Cost   -> numeric 0, never blank
+
+            return true;
+        });
+    });
+
+    it('scopes the report to the requested month and names the file accordingly (service)', function () {
+        pcostFilters(['year' => '2026', 'month' => '3']);
+
+        $inRange = pcostProject(['name' => 'March Event', 'project_date' => '2026-03-20']);
+        $outRange = pcostProject(['name' => 'April Event', 'project_date' => '2026-04-20']);
+        pcostReward($inRange, 'In Range', 1, 70000);
+        pcostReward($outRange, 'Out Range', 1, 99000);
+
+        Excel::fake();
+
+        pcostService()->export();
+
+        Excel::assertDownloaded('reward_report_2026_03.xlsx', function (ProjectRewardReportExport $export) {
+            $summaryRows = collect($export->sheets()[0]->array());
+
+            expect($summaryRows->firstWhere(1, 'March Event'))->not->toBeNull()
+                ->and($summaryRows->firstWhere(1, 'April Event'))->toBeNull();
+            // only the in-range project feeds the grand totals (reward and cost)
+            $total = $summaryRows->firstWhere(5, 'TOTAL');
+            expect((float) $total[6])->toBe(70000.0)
+                ->and((float) $total[7])->toBe(70000.0);
+
+            return true;
+        });
+    });
+
+    it('streams the reward report download via the endpoint (e2e)', function () {
+        actingAs(User::factory()->create());
+        $project = pcostProject(['name' => 'Annual Gala', 'project_date' => '2026-05-01']);
+        pcostReward($project, 'Budi', 4, 200000);
+
+        Excel::fake();
+
+        $this->get('/api/production/project-costs/export?year=2026')
+            ->assertStatus(200);
+
+        Excel::assertDownloaded('reward_report_2026.xlsx');
+    });
+
+    it('renders grouped money, a filterable header, and writes 0 (not blank) into a real xlsx', function () {
+        // Render a sheet straight to xlsx (no fake) so the number format, auto filter and the way a
+        // 0 is written can be read back exactly as a spreadsheet application would see them.
+        $sheet = new RewardReportSheet(
+            title: 'Summary',
+            headings: ['No', 'Project', 'Total Reward (IDR)'],
+            rows: [[1, 'Big Event', 200000.0], [2, 'No Reward Event', 0.0]],
+            columnFormats: ['C' => '[$-421]#,##0'],
+            autoFilter: 'A1:C3',
+        );
+
+        $binary = Excel::raw($sheet, Maatwebsite\Excel\Excel::XLSX);
+        $path = tempnam(sys_get_temp_dir(), 'reward_report_').'.xlsx';
+        file_put_contents($path, $binary);
+        $loaded = IOFactory::load($path)->getActiveSheet();
+
+        // the reward cell is a real number (200000), displayed grouped as "200.000"
+        expect((float) $loaded->getCell('C2')->getValue())->toBe(200000.0)
+            ->and($loaded->getStyle('C2')->getNumberFormat()->getFormatCode())->toBe('[$-421]#,##0')
+            ->and($loaded->getAutoFilter()->getRange())->toBe('A1:C3');
+
+        // a 0 amount is written as numeric 0, NOT skipped into a blank cell
+        expect($loaded->getCell('C3')->getValue())->not->toBeNull()
+            ->and((float) $loaded->getCell('C3')->getValue())->toBe(0.0);
     });
 });

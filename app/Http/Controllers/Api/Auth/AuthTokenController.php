@@ -7,6 +7,7 @@ use App\Exceptions\Auth\RefreshTokenInvalid;
 use App\Http\Controllers\Controller;
 use App\Services\Auth\RefreshTokenService;
 use App\Services\Auth\TokenService;
+use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,8 +25,14 @@ class AuthTokenController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
+        $isAfterEffect = $request->header('X-device');
+
         $raw = $request->cookie((string) config('jwt.refresh_cookie'))
             ?? $request->input('refresh_token');
+
+        if ($isAfterEffect && $isAfterEffect == 'after-effect') { // force to get from payload when request came from after effect
+            $raw = $request->refresh_token;
+        }
 
         if (! $raw) {
             return $this->unauthenticated();
@@ -43,13 +50,22 @@ class AuthTokenController extends Controller
         }
 
         $accessToken = $this->tokenService->issueAccessToken($issued['user']);
+        $now = new DateTimeImmutable;
+
+        $responseData = [
+            'access_token' => $accessToken,
+            'accessTokenExp' => $now->modify('+'.(int) config('jwt.access_ttl').' minutes'),
+        ];
+
+        // After Effects (and other non-browser clients) authenticate via the body and cannot read
+        // the httpOnly refresh cookie, so hand the rotated token back in the body too. Browsers keep
+        // using the cookie as the sole channel.
+        if ($isAfterEffect && $isAfterEffect == 'after-effect') {
+            $responseData['refresh_token'] = $issued['raw'];
+        }
 
         return apiResponse(
-            generalResponse(
-                'Success',
-                false,
-                ['access_token' => $accessToken],
-            ),
+            generalResponse('Success', false, $responseData),
         )->withCookie(
             $this->refreshTokenService->makeCookie($issued['raw'], (bool) $issued['model']->remember)
         );

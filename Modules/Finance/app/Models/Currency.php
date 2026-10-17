@@ -2,6 +2,7 @@
 
 namespace Modules\Finance\Models;
 
+use App\Traits\ModelCreationObserver;
 use App\Traits\ModelObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

@@ -16,6 +16,7 @@ class SubtitutePic extends FormRequest
             'pics.*' => 'string',
             'removed' => 'array',
             'removed.*' => 'string',
+            'leader' => 'string|required'
         ];
     }
 

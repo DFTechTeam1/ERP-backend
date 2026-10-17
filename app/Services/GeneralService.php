@@ -7,18 +7,24 @@
 
 namespace App\Services;
 
+use App\Enums\Cache\CacheKey;
 use App\Enums\Interactive\InteractiveRequestStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\System\BaseRole;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
+use App\Exceptions\UserNotFound;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Modules\Finance\Models\InvoiceRequestUpdate;
 use Modules\Finance\Models\ProjectDealPriceChange;
 use Modules\Finance\Repository\InvoiceRepository;
+use Modules\Hrd\Models\Employee;
 use Modules\Production\Jobs\AddInteractiveProjectJob;
 use Modules\Production\Models\ProjectDealChange;
 use Modules\Production\Repository\ProjectDealRepository;
@@ -131,7 +137,7 @@ class GeneralService
     {
         $cutoff = 950;
 
-        $number = $this->getCache(cacheId: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value);
+        $number = $this->getCache(cacheId: CacheKey::ProjectDealIdentifierNumber->value);
 
         if (! $number) {
             $repo = new ProjectDealRepository;
@@ -156,7 +162,7 @@ class GeneralService
             $lengthOfSentence = strlen($number) < 4 ? 4 : strlen($number) + 1;
             $number = $this->generateSequenceNumber(number: $number, length: $lengthOfSentence);
 
-            $this->storeCache(key: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value, value: $number, isForever: true);
+            $this->storeCache(key: CacheKey::ProjectDealIdentifierNumber->value, value: $number, isForever: true);
         }
 
         return $number;
@@ -209,7 +215,7 @@ class GeneralService
         $repo = new ProjectDealRepository;
 
         // only get final project deal and not fully paid
-        $where = 'status = '.\App\Enums\Production\ProjectDealStatus::Final->value.' AND is_fully_paid = 0 AND DATEDIFF(project_date, CURRENT_DATE) BETWEEN 1 AND 5';
+        $where = 'status = '.ProjectDealStatus::Final->value.' AND is_fully_paid = 0 AND DATEDIFF(project_date, CURRENT_DATE) BETWEEN 1 AND 5';
 
         $data = $repo->list(
             select: 'id,customer_id,name,DATEDIFF(project_date, CURRENT_DATE) as interval_due,project_date,city_id,country_id,is_fully_paid',
@@ -237,15 +243,15 @@ class GeneralService
     public function setProjectIdentifier()
     {
         // get current identifier number from cache
-        $currentIdentifier = (new \App\Services\GeneralService)->generateDealIdentifierNumber();
+        $currentIdentifier = (new GeneralService)->generateDealIdentifierNumber();
 
         // increase value of the identifier number
-        (new \App\Services\GeneralService)->clearCache(cacheId: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value);
+        (new GeneralService)->clearCache(cacheId: CacheKey::ProjectDealIdentifierNumber->value);
         $nextIdentifier = (int) $currentIdentifier + 1;
         // convert to sequence number
         $lengthOfSentence = strlen($nextIdentifier) < 4 ? 4 : strlen($nextIdentifier) + 1;
-        $nextIdentifier = (new \App\Services\GeneralService)->generateSequenceNumber(number: $nextIdentifier, length: $lengthOfSentence);
-        (new \App\Services\GeneralService)->storeCache(key: \App\Enums\Cache\CacheKey::ProjectDealIdentifierNumber->value, value: $nextIdentifier, isForever: true);
+        $nextIdentifier = (new GeneralService)->generateSequenceNumber(number: $nextIdentifier, length: $lengthOfSentence);
+        (new GeneralService)->storeCache(key: CacheKey::ProjectDealIdentifierNumber->value, value: $nextIdentifier, isForever: true);
 
         return $currentIdentifier;
     }
@@ -333,7 +339,7 @@ class GeneralService
 
     public function getDataForRequestInvoiceChangeNotification(int $invoiceRequestId): array
     {
-        $data = \Modules\Finance\Models\InvoiceRequestUpdate::with([
+        $data = InvoiceRequestUpdate::with([
             'invoice:id,uid,parent_number,amount,payment_date,customer_id,project_deal_id,number',
             'invoice.customer:id,name',
             'invoice.projectDeal:id,name',
@@ -360,11 +366,11 @@ class GeneralService
             ];
         }
 
-        $actor = \App\Models\User::with(['employee:id,user_id,name'])
+        $actor = User::with(['employee:id,user_id,name'])
             ->find($data->request_by);
 
         // this cannot be null
-        $director = \Modules\Hrd\Models\Employee::with(['user:id,employee_id,uid'])
+        $director = Employee::with(['user:id,employee_id,uid'])
             ->where('email', 'wesleywiyadi@gmail.com')
             ->first();
 
@@ -378,7 +384,7 @@ class GeneralService
         return $output;
     }
 
-    public function generateAuthorizedUserToken(\App\Models\User $user): array
+    public function generateAuthorizedUserToken(User $user): array
     {
         $role = $user->getRoleNames()[0];
         $roles = $user->roles;
@@ -410,21 +416,19 @@ class GeneralService
      * Generate access token for express app
      * Here we use static password since the express app will not store any user data
      * So the password is only used to validate the request
-     * @param string $email
-     * @return string
      */
     public function authorizeExpressAccess(string $email): string
     {
-        $response = \Illuminate\Support\Facades\Http::post(
+        $response = Http::post(
             url: config('app.express_endpoint').'/hrd/auth/login',
             data: [
                 'email' => $email,
-                'password' => 'password'
+                'password' => 'password',
             ]
         );
 
         if ($response->status() > 300) {
-            throw new \App\Exceptions\UserNotFound(message: 'Failed to generate express token');
+            throw new UserNotFound(message: 'Failed to generate express token');
         }
 
         $token = $response->json()['data']['token'];
@@ -434,12 +438,10 @@ class GeneralService
 
     /**
      * Generate access token for reporting app
-     * @param string $email
-     * @return string
      */
     public function authorizeReportingAccess(string $email): string
     {
-        $response = \Illuminate\Support\Facades\Http::post(
+        $response = Http::post(
             url: config('app.python_endpoint').'/auth/access-token',
             data: [
                 'email' => $email,
@@ -447,7 +449,7 @@ class GeneralService
         );
 
         if ($response->status() > 300) {
-            throw new \App\Exceptions\UserNotFound(message: 'Failed to generate token');
+            throw new UserNotFound(message: 'Failed to generate token');
         }
 
         $token = $response->json()['data']['access_token'];
@@ -472,7 +474,7 @@ class GeneralService
      */
     public function getEncryptedPayloadData(array $tokenizer): string
     {
-        $allRoles = \App\Enums\System\BaseRole::cases();
+        $allRoles = BaseRole::cases();
         $allRoles = collect($allRoles)->map(function ($roleData) {
             return $roleData->value;
         })->toArray();
@@ -481,7 +483,7 @@ class GeneralService
         $exp = date('Y-m-d H:i:s', strtotime($tokenizer['token']->accessToken->expires_at));
         $userIdEncode = Hashids::encode($user->id);
 
-        $output =  [
+        $output = [
             'exp' => $exp,
             'user' => $tokenizer['user'],
             'role' => $tokenizer['role'],
@@ -496,7 +498,7 @@ class GeneralService
                 'hrd' => $user->hasRole([BaseRole::Root->value, BaseRole::Director->value, BaseRole::Hrd->value]),
             ],
             'is_root' => amIRootUser($user),
-            'is_lead_modeller' => amILeadModeller($user)
+            'is_lead_modeller' => amILeadModeller($user),
         ];
 
         return (new EncryptionService)->encrypt(string: json_encode($output), key: config('app.salt_key_encryption'));
@@ -505,7 +507,7 @@ class GeneralService
     /**
      * Here we define all variable that will be saved in the frontend
      */
-    public function generateAuthorizationToken(\App\Models\User $user): array
+    public function generateAuthorizationToken(User $user): array
     {
         $tokenizer = $this->generateAuthorizedUserToken(user: $user);
 
@@ -524,7 +526,7 @@ class GeneralService
 
         $permissions = count($user->getAllPermissions()) > 0 ? $user->getAllPermissions()->pluck('name')->toArray() : [];
 
-        $menus = (new \App\Services\MenuService)->getNewFormattedMenu($user->getAllPermissions()->toArray(), $roles->toArray());
+        $menus = (new MenuService)->getNewFormattedMenu($user->getAllPermissions()->toArray(), $roles->toArray());
 
         $encryptionService = new \App\services\EncryptionService;
         $permissionsEncrypted = $encryptionService->encrypt(string: json_encode([
@@ -541,7 +543,7 @@ class GeneralService
             'mEnc' => $menusEncrypted,
             'mainToken' => $token->plainTextToken,
             'menus' => $menus,
-            'expressToken' => $expressToken
+            'expressToken' => $expressToken,
         ];
     }
 
@@ -604,7 +606,7 @@ class GeneralService
             ];
         }
 
-        $data = (new \Modules\Production\Repository\ProjectDealRepository)->list(
+        $data = (new ProjectDealRepository)->list(
             select: 'id,name,project_date,country_id,state_id,city_id,is_fully_paid,venue,status',
             where: $where,
             whereHas: $whereHas,
@@ -666,7 +668,7 @@ class GeneralService
     {
         $projects = (new ProjectRepository)->list(
             select: 'id,name,uid,project_date,venue,country_id,state_id,city_id',
-            where: "DATE(project_date) > DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND DATE(project_date) < DATE_ADD(CURDATE(), INTERVAL 14 DAY) AND NOT EXISTS (SELECT 1 FROM project_marcomm_attendances WHERE project_marcomm_attendances.project_id = projects.id) AND NOT EXISTS (SELECT 1 FROM project_marcomm_afpat_attendances WHERE project_marcomm_afpat_attendances.project_id = projects.id) AND marcomm_attendance_check = 0",
+            where: 'DATE(project_date) > DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND DATE(project_date) < DATE_ADD(CURDATE(), INTERVAL 14 DAY) AND NOT EXISTS (SELECT 1 FROM project_marcomm_attendances WHERE project_marcomm_attendances.project_id = projects.id) AND NOT EXISTS (SELECT 1 FROM project_marcomm_afpat_attendances WHERE project_marcomm_afpat_attendances.project_id = projects.id) AND marcomm_attendance_check = 0',
             relation: [
                 'country:id,name',
                 'state:id,name',
@@ -766,12 +768,12 @@ class GeneralService
     {
         try {
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'badges' => [
                         'projectDealPriceChanges' => $this->getPriceChangesBadgeCount(),
-                        'projectDealChanges' => $this->getDealChangesBadgeCount()
-                    ]
+                        'projectDealChanges' => $this->getDealChangesBadgeCount(),
+                    ],
                 ]
             );
         } catch (\Throwable $th) {

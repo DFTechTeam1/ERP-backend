@@ -151,4 +151,13 @@ class InvoiceRepository extends InvoiceInterface
 
         return $this->model->whereIn($key, $ids)->delete();
     }
+
+    public function upsert(array $payload, array $uniqueBy, array $updateValue)
+    {
+        return Invoice::upsert(
+            $payload,
+            $uniqueBy,
+            $updateValue
+        );
+    }
 }

@@ -569,6 +569,14 @@
                     "permission": "list_authentication_logs"
                 },
                 {
+                    "path": "/admin/security/after-effects-logins",
+                    "slug": "after-effects-logins",
+                    "lang_id": "AE Login",
+                    "lang_en": "AE Login",
+                    "icon": "mdiPlain:mdi-lock-percent-outline",
+                    "permission": "list_ae_login"
+                },
+                {
                     "path": "/admin/security/nas-audit-log",
                     "slug": "nas-audit-log",
                     "lang_id": "NAS Logs",

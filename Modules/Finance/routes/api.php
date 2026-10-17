@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Finance\Http\Controllers\Api\AiCostController;
 use Modules\Finance\Http\Controllers\Api\FinanceController as ApiFinanceController;
 use Modules\Finance\Http\Controllers\Api\FinanceDashboardController;
 use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
@@ -115,6 +116,9 @@ Route::middleware(['auth.session'])->group(function () {
     Route::get('production/project-costs/cost-trend', [ProjectCostController::class, 'getCostTrend']);
     Route::get('production/project-costs/cost-by-class', [ProjectCostController::class, 'getCostByClass']);
     Route::get('production/project-costs/cost-composition', [ProjectCostController::class, 'getCostComposition']);
+    // Reward disbursement export (must sit before the {projectUid} catch-all so "export" is not
+    // matched as a project uid).
+    Route::get('production/project-costs/export', [ProjectCostController::class, 'export']);
     Route::get('production/project-costs/{projectUid}', [ProjectCostController::class, 'detailProjectCost']);
 
     // Cost Centers
@@ -129,10 +133,26 @@ Route::middleware(['auth.session'])->group(function () {
         Route::get('currencies', [CurrencyController::class, 'index']);
         Route::post('currencies', [CurrencyController::class, 'store']);
         Route::put('currencies/{currencyUid}', [CurrencyController::class, 'update']);
+        Route::get('sync-currencies', [CurrencyController::class, 'syncCurrencies']);
+        Route::post('currencies/rates/fetch', [CurrencyController::class, 'fetchRates']);
+        Route::patch('currencies/{currencyUid}', [CurrencyController::class, 'update']);
         Route::get('currencies/{currencyUid}/rates', [CurrencyController::class, 'historyRates']);
         Route::post('currencies/{currencyUid}/rates', [CurrencyController::class, 'addRate']);
         Route::put('currencies/{currencyUid}/rates/{rateUid}', [CurrencyController::class, 'updateRate']);
     });
+
+    // Ai Spending
+    Route::prefix('spending')->group(function () {
+        Route::get('summary', [AiCostController::class, 'summary']);
+        Route::get('trend', [AiCostController::class, 'trend']);
+        Route::get('by-action-type', [AiCostController::class, 'summaryByActionType']);
+        Route::get('by-actor', [AiCostController::class, 'summaryByActor']);
+    });
+
+    // Token Topups
+    Route::post('token-topups', [AiCostController::class, 'topup']);
+    Route::get('token-topups', [AiCostController::class, 'listTopup']);
+    Route::get('token-topups/summary', [AiCostController::class, 'getTopupKpi']);
 });
 
 Route::get('finance/invoices/approve', [InvoiceController::class, 'emailApproveChanges'])

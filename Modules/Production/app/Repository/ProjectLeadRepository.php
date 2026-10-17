@@ -5,7 +5,8 @@ namespace Modules\Production\Repository;
 use Modules\Production\Models\ProjectLead;
 use Modules\Production\Repository\Interface\ProjectLeadInterface;
 
-class ProjectLeadRepository extends ProjectLeadInterface {
+class ProjectLeadRepository extends ProjectLeadInterface
+{
     private $model;
 
     private $key;
@@ -55,8 +56,7 @@ class ProjectLeadRepository extends ProjectLeadInterface {
         array $relation = [],
         int $itemsPerPage,
         int $page
-    )
-    {
+    ) {
         $query = $this->model->query();
 
         $query->selectRaw($select);
@@ -68,7 +68,7 @@ class ProjectLeadRepository extends ProjectLeadInterface {
         if ($relation) {
             $query->with($relation);
         }
-        
+
         return $query->skip($page)->take($itemsPerPage)->get();
     }
 
@@ -80,14 +80,18 @@ class ProjectLeadRepository extends ProjectLeadInterface {
      * @param array $relation
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function show(string $uid, string $select = '*', array $relation = [])
+    public function show(string $uid, string $select = '*', array $relation = [], string $where = '')
     {
         $query = $this->model->query();
 
         $query->selectRaw($select);
 
-        $query->where("uid", $uid);
-        
+        if (empty($where)) {
+            $query->where("uid", $uid);
+        } else {
+            $query->whereRaw($where);
+        }
+
         if ($relation) {
             $query->with($relation);
         }

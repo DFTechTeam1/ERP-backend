@@ -57,6 +57,18 @@ class CopyDealToProject
             })->toArray()
         );
 
+        // Assign project managers
+        if ($projectDeal->projectLead && $projectDeal->projectLead->pic_id) {
+            $payloadPics = [];
+            foreach ($projectDeal->projectLead->pic_id as $key => $picId) {
+                $payloadPics[] = [
+                    'is_lead' => $key == 0 ? true : false, // Only set lead in first PIC
+                    'pic_id' => $picId,
+                ];
+            }
+            $project->personInCharges()->createMany($payloadPics);
+        }
+
         // create boards data
         $defaultBoards = json_decode($generalService->getSettingByKey('default_boards'), true);
 

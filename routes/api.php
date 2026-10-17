@@ -210,6 +210,8 @@ Route::prefix('auth')->group(function () {
     Route::post('forgotPassword', [LoginController::class, 'forgotPassword']);
     Route::post('resetPassword', [LoginController::class, 'resetPassword']);
     Route::post('userChangePassword/{userUid}', [LoginController::class, 'userChangePassword']);
+
+    Route::post('after-effect/login', [LoginController::class, 'loginAfterEffect']);
 });
 
 // Menu tree for the access-token-authenticated user (built fresh from permissions)
@@ -237,6 +239,11 @@ Route::middleware('auth.session')
 
             return apiResponse($service->getMenuBadges());
         });
+
+        // After effect log history
+        Route::get('ae/login-logs', [LoginController::class, 'listAeLoginHistories']);
+        Route::get('ae/login-logs/summary', [LoginController::class, 'summaryAeLogin']);
+        Route::get('ae/login-logs/{uid}', [LoginController::class, 'detailAeLog']);
 
         Route::get('logs', [DashboardController::class, 'getLogs']);
         Route::post('users/bulk', [UserController::class, 'bulkDelete'])->name('api.users.bulk-delete');

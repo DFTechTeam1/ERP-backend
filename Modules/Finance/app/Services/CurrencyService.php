@@ -11,9 +11,11 @@ use App\Data\Finance\ExchangeRate\ListExchangeRateData;
 use App\Enums\Finance\ExchangeRate\SourceRate;
 use App\Exceptions\DataNotFound;
 use Carbon\Carbon;
-use Google\Service\SecurityCommandCenter\EffectiveEventThreatDetectionCustomModule;
+use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Modules\Finance\Models\Currency;
 use Modules\Finance\Repository\CurrencyRepository;
 use Modules\Finance\Repository\ExchangeRateRepository;
@@ -22,24 +24,59 @@ class CurrencyService
 {
     const DEFAULT_BASE_CURRENCY = 'IDR';
 
+    /**
+     * @param  CurrencyRepository  $repo  Repository for the currency master table.
+     * @param  ExchangeRateRepository  $exchangeRepo  Repository for per-currency exchange rates.
+     */
     public function __construct(
         private readonly CurrencyRepository $repo,
         private readonly ExchangeRateRepository $exchangeRepo
     ) {}
 
-    public function syncCurrencies()
+    /**
+     * Sync the currency master table with the provider's supported currencies: any code the provider
+     * lists that is not already stored is inserted (with its name; symbol is left null so it stays out
+     * of the list() UI until an admin sets one). Existing currencies are left untouched.
+     *
+     * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
+     *                                                                                      standard API response envelope; `data.added` is the number of currencies inserted.
+     */
+    public function syncCurrencies(): array
     {
         DB::beginTransaction();
         try {
-            $currencies = ExchangeFetcher::run(fetchCurrenciesOnly: true);
+            /** @var Collection<string, string> $available */
+            $available = ExchangeFetcher::run(fetchCurrenciesOnly: true);
 
-            foreach ($currencies as $currency) {
+            $existingCodes = $this->repo->get(['select' => ['code']])->pluck('code')->flip();
+
+            $now = now();
+            $rows = [];
+            foreach ($available as $code => $name) {
+                if ($existingCodes->has($code)) {
+                    continue;
+                }
+
+                $rows[] = [
+                    'uid' => Str::uuid()->toString(),
+                    'name' => $name,
+                    'code' => $code,
+                    'is_base' => false,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            if ($rows !== []) {
+                $this->repo->insert($rows);
             }
 
             DB::commit();
 
             return generalResponse(
-                message: "Currencies updated"
+                message: 'Currencies updated',
+                data: ['added' => count($rows)]
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -48,6 +85,47 @@ class CurrencyService
         }
     }
 
+    /**
+     * Fetch the latest exchange rates from the provider and store today's rates (one per tracked
+     * currency, tagged as system-sourced), preserving any manually-set rate for the day. The action
+     * records its own API log, so this is not wrapped in a transaction (a failed attempt must still
+     * leave its log row behind).
+     *
+     * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
+     *                                                                                      standard API response envelope.
+     */
+    public function fetchRates(): array
+    {
+        try {
+            ExchangeFetcher::run(fetchCurrenciesOnly: false);
+
+            return generalResponse(
+                message: 'Rates updated'
+            );
+        } catch (\Throwable $th) {
+            return errorResponse($th);
+        }
+    }
+
+    /**
+     * The id of the base currency (is_base = 1), used as the parent for a manually-entered rate
+     * (a rate is always "currency per base").
+     *
+     * @return int|null The base currency id, or null when none is configured.
+     */
+    protected function baseCurrencyId(): ?int
+    {
+        return $this->repo->show(['where' => ['is_base' => 1], 'select' => ['id']])?->id;
+    }
+
+    /**
+     * Create a new (non-base) currency and, when an opening rate is supplied, record it as today's
+     * manual rate attributed to the acting user. Runs in a transaction.
+     *
+     * @param  StoreCurrencyData  $payload  The validated currency payload (code, name, symbol, rate).
+     * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
+     *                                                                                      standard API response envelope.
+     */
     public function store(StoreCurrencyData $payload): array
     {
         DB::beginTransaction();
@@ -56,23 +134,24 @@ class CurrencyService
                 'name' => $payload->name,
                 'code' => $payload->code,
                 'symbol' => $payload->symbol,
-                'is_base' => false
+                'is_base' => false,
             ]);
 
-            $openingRate = floatval($payload->opening_rate);
+            $openingRate = floatval($payload->rate);
             if ($openingRate > 0) {
                 $currency->rates()->create([
+                    'parent_currency_id' => $this->baseCurrencyId(),
                     'rate' => $openingRate,
                     'rate_date' => Carbon::today()->format('Y-m-d'),
                     'source' => SourceRate::Manual,
-                    'created_by' => Auth::id()
+                    'created_by' => Auth::id(),
                 ]);
             }
 
             DB::commit();
 
             return generalResponse(
-                message: "Currency created"
+                message: 'Currency created'
             );
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -81,6 +160,13 @@ class CurrencyService
         }
     }
 
+    /**
+     * List currencies that have a symbol set, each with its latest rate and the change since the
+     * previous rate. Honours the `search` request filter (matched against name and code).
+     *
+     * @return array{error: bool, message: string, data?: array<int, ListCurrencyData>, code?: int} The
+     *                                                                                              standard API response envelope carrying the formatted currency rows.
+     */
     public function list(): array
     {
         try {
@@ -96,12 +182,12 @@ class CurrencyService
 
             $currencies = $this->repo->get([
                 'with' => [
-                    'latestRates'
+                    'latestRates',
                 ],
                 'whereLike' => $whereLike,
                 'whereNotNull' => [
-                    'symbol'
-                ]
+                    'symbol',
+                ],
             ]);
 
             /** @var array<int, ListCurrencyData> */
@@ -117,7 +203,7 @@ class CurrencyService
                 $output[] = new ListCurrencyData(
                     uid: $currency->uid,
                     name: $currency->name,
-                    symbol: $currency->symbol,
+                    symbol: $currency->symbol ?? '-',
                     code: $currency->code,
                     isBase: $currency->is_base,
                     isActive: $currency->is_active,
@@ -136,6 +222,14 @@ class CurrencyService
         }
     }
 
+    /**
+     * Resolve a currency by its uid, or fail.
+     *
+     * @param  string  $currencyUid  The currency uid.
+     * @return Currency The matching currency (never null; throws instead).
+     *
+     * @throws DataNotFound When no currency matches the uid.
+     */
     protected function show(string $currencyUid): ?Currency
     {
         $currency = $this->repo->showByUid($currencyUid);
@@ -147,19 +241,36 @@ class CurrencyService
         return $currency;
     }
 
+    /**
+     * Update an existing currency's editable fields.
+     *
+     * @param  UpdateCurrencyData  $payload  The validated update payload.
+     * @param  string  $currencyUid  The uid of the currency to update.
+     * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
+     *                                                                                      standard API response envelope.
+     */
     public function update(UpdateCurrencyData $payload, string $currencyUid): array
     {
         try {
             $this->repo->update($this->show($currencyUid), $payload->toArray());
 
             return generalResponse(
-                message: "Currency updated"
+                message: 'Currency updated'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }
 
+    /**
+     * Build the paginated rate history for a currency, newest first by default. Honours the `page`,
+     * `limit` and `sortBy` request parameters, and includes each rate's source and the employee who
+     * set it.
+     *
+     * @param  string  $currencyUid  The uid of the currency whose rates are listed.
+     * @return array{error: bool, message: string, data?: array{paginated: array<int, ListExchangeRateData>, totalData: int}, code?: int}
+     *                                                                                                                                    The standard API response envelope carrying the paginated rate rows and the total count.
+     */
     public function historyRates(string $currencyUid): array
     {
         try {
@@ -168,6 +279,17 @@ class CurrencyService
             $sortBy = request('sortBy');
 
             $currency = $this->repo->showByUid($currencyUid);
+            $baseCurrency = $this->repo->show([
+                'where' => [
+                    'is_base' => 1,
+                ],
+                'select' => ['id'],
+            ]);
+
+            if (! $baseCurrency) {
+                throw new Exception('Base currency is missing');
+            }
+
             $orderBy = [];
 
             if ($sortBy && count($sortBy) > 0) {
@@ -181,21 +303,22 @@ class CurrencyService
             $rates = $this->exchangeRepo->paginate(
                 params: [
                     'where' => [
+                        'parent_currency_id' => $baseCurrency->id,
                         'currency_id' => $currency->id,
                     ],
                     'with' => [
                         'creator:id,employee_id',
-                        'creator.employee:id,uid,name'
+                        'creator.employee:id,uid,name',
                     ],
-                    'orderBy' => $orderBy
+                    'orderBy' => $orderBy,
                 ],
-                perPage: $limit
+                perPage: $limit ?? 100
             );
             $totalData = $this->exchangeRepo->get([
                 'where' => [
                     'currency_id' => $currency->id,
                 ],
-                'select' => ['id']
+                'select' => ['id'],
             ])->count();
 
             /** @var array<int, ListExchangeRateData> */
@@ -204,22 +327,18 @@ class CurrencyService
             foreach ($rates->items() as $rate) {
                 $output[] = new ListExchangeRateData(
                     uid: $rate->uid,
-                    currencyUid: $currencyUid,
-                    effectiveDate: $rate->rate_date,
+                    date: $rate->rate_date,
                     rate: floatval($rate->rate),
                     source: $rate->source->value,
-                    setBy: $rate?->creator?->employee?->name ?? '-',
-                    setByUid: $rate?->creator?->employee?->uid ?? '-',
-                    createdAt: $rate->created_at,
-                    updatedAt: $rate?->updated_at ?? '',
+                    by: $rate?->creator?->employee?->name ?? '-',
                 );
             }
 
             return generalResponse(
-                message: "Success",
+                message: 'Success',
                 data: [
                     'paginated' => $output,
-                    'totalData' => $totalData
+                    'totalData' => $totalData,
                 ]
             );
         } catch (\Throwable $th) {
@@ -227,6 +346,16 @@ class CurrencyService
         }
     }
 
+    /**
+     * Add a manual exchange rate to a currency, attributed to the acting user.
+     *
+     * @param  AddRateData  $payload  The rate payload (effective date and rate value).
+     * @param  string  $currencyUid  The uid of the currency to add the rate to.
+     * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
+     *                                                                                      standard API response envelope.
+     *
+     * @throws DataNotFound Caught internally and returned as an error envelope when the currency is missing.
+     */
     public function addRate(AddRateData $payload, string $currencyUid): array
     {
         try {
@@ -237,20 +366,33 @@ class CurrencyService
             }
 
             $currency->rates()->create([
-                'rate_date' => $payload->effective_date,
+                'parent_currency_id' => $this->baseCurrencyId(),
+                'rate_date' => $payload->date,
                 'rate' => $payload->rate,
                 'source' => SourceRate::Manual,
-                'created_by' => Auth::id()
+                'created_by' => Auth::id(),
             ]);
 
             return generalResponse(
-                message: "New rate has beed added"
+                message: 'New rate has beed added'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
         }
     }
 
+    /**
+     * Update an existing exchange rate's value, re-tagging it as a manual entry. The payload's
+     * effective date is not changed.
+     *
+     * @param  AddRateData  $payload  The rate payload (the new rate value is used).
+     * @param  string  $currencyUid  The uid of the owning currency.
+     * @param  string  $rateUid  The uid of the rate to update.
+     * @return array{error: bool, message: string, data?: array<string, mixed>, code?: int} The
+     *                                                                                      standard API response envelope.
+     *
+     * @throws DataNotFound Caught internally and returned as an error envelope when the currency is missing.
+     */
     public function updateRate(AddRateData $payload, string $currencyUid, string $rateUid): array
     {
         try {
@@ -262,18 +404,18 @@ class CurrencyService
 
             $rate = $this->exchangeRepo->show([
                 'where' => [
-                    'uid' => $rateUid
-                ]
+                    'uid' => $rateUid,
+                ],
             ]);
             if ($rate) {
                 $this->exchangeRepo->update($rate, [
                     'rate' => $payload->rate,
-                    'source' => SourceRate::Manual
+                    'source' => SourceRate::Manual,
                 ]);
             }
 
             return generalResponse(
-                message: "Rate has been updated"
+                message: 'Rate has been updated'
             );
         } catch (\Throwable $th) {
             return errorResponse($th);

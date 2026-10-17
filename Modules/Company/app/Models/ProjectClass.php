@@ -4,6 +4,7 @@ namespace Modules\Company\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Company\Database\Factories\ProjectClassFactory;
@@ -39,5 +40,10 @@ class ProjectClass extends Model
     public function project(): HasOne
     {
         return $this->hasOne(Project::class, 'project_class_id');
+    }
+
+    public function tiers(): HasMany
+    {
+        return $this->hasMany(ProjectClassPmTier::class, 'project_class_id');
     }
 }
