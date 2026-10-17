@@ -10,5 +10,6 @@ class DashboardCostTrendData extends Data
         public readonly string $month,
         public readonly float $total_cost,
         public readonly float $employee_reward,
+        public readonly float $ai_cost
     ) {}
 }

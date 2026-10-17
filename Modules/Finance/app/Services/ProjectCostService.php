@@ -11,11 +11,14 @@ use App\Data\Finance\ProjectCost\EmployeeRewardData;
 use App\Data\Finance\ProjectCost\EmployeeRewardListData;
 use App\Data\Finance\ProjectCost\ProjectItemData;
 use App\Data\Finance\ProjectCost\ProjectListData;
+use App\Data\Production\Cost\AiCostData;
+use App\Data\Production\Cost\CostListData;
 use App\Exports\ProjectRewardReportExport;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Facades\Excel;
+use Modules\Finance\Models\DfEngineGeneration;
 use Modules\Production\Models\Project;
 use Modules\Production\Repository\ProjectRepository;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -107,6 +110,10 @@ class ProjectCostService
             'rewards.employee.position:id,name',
             'personInCharges:id,project_id,pic_id',
             'personInCharges.employee:id,name',
+            'aiGenerations:id,project_id,cost,exchange_rate,created_by,kind',
+            'aiGenerations.creator:id,employee_id,email',
+            'aiGenerations.creator.employee:id,employee_id,avatar,name,position_id',
+            'aiGenerations.creator.employee.position:id,name',
         ];
     }
 
@@ -158,6 +165,48 @@ class ProjectCostService
     }
 
     /**
+     * Convert a single AI generation's cost into the dashboard currency (IDR).
+     *
+     * The engine stores `cost` against an `exchange_rate`; the IDR amount is `cost / rate` (rounded
+     * to a whole rupiah). When no rate is recorded (rate <= 0) the raw cost is returned unchanged,
+     * which also guards against a division by zero. Decimal columns arrive as strings, so both
+     * operands are cast to float first.
+     *
+     * @param  DfEngineGeneration  $item  A single AI generation row.
+     * @return float The generation cost in IDR.
+     */
+    protected function atomicCostCalculation(DfEngineGeneration $item): float
+    {
+        $rate = floatval($item->exchange_rate);
+        $cost = $rate > 0 ? round(floatval($item->cost) / $rate) : floatval($item->cost);
+
+        return $cost;
+    }
+
+    /**
+     * Sum a project's AI generation costs (in IDR) across all its linked generations.
+     *
+     * @param  Project  $project  A project with its `aiGenerations` relation loaded.
+     * @return float The project's total AI cost; 0 when it has no generations.
+     */
+    protected function calculateProjectAiCost(Project $project): float
+    {
+        $output = 0;
+
+        if ($project->aiGenerations->count()) {
+            $formatter = $project->aiGenerations->map(function ($item) {
+                return [
+                    'cost' => $this->atomicCostCalculation($item),
+                ];
+            });
+
+            $output = $formatter->sum('cost');
+        }
+
+        return $output;
+    }
+
+    /**
      * Fetch the filtered projects with their computed cost fields, cached for two hours under the
      * `project_costs` cache tag so the whole group can be flushed at once.
      *
@@ -170,6 +219,7 @@ class ProjectCostService
     {
         [$where, $cacheKey] = $this->projectConditions();
 
+        // Cache::tags(['project_costs'])->forget($cacheKey);
         $cache = Cache::get($cacheKey);
         if (! $cache) {
             $cache = Cache::tags(['project_costs'])->remember($cacheKey, 7200, function () use ($where) {
@@ -180,6 +230,10 @@ class ProjectCostService
                     orderBy: 'project_date ASC'
                 )->map(function ($item) {
                     $totalRewards = $item->rewards->sum('total_reward');
+                    $aiCost = $this->calculateProjectAiCost($item);
+
+                    $totalCost = $totalRewards + $aiCost;
+
                     $totalFixPrice = 0;
                     if ($item->projectDeal && $item->projectDeal->finalQuotation) {
                         $totalFixPrice = $item->projectDeal->finalQuotation->fix_price;
@@ -189,7 +243,8 @@ class ProjectCostService
 
                     $item['total_reward'] = $totalRewards;
                     $item['total_fix_price'] = $totalFixPrice;
-                    $item['total_cost'] = $totalRewards;
+                    $item['total_cost'] = $totalCost;
+                    $item['total_ai_cost'] = $aiCost;
                     $item['is_fully_paid'] = $item->projectDeal && $item->projectDeal->is_fully_paid ? true : false;
                     $item['class_name'] = $item->projectClass->name;
 
@@ -259,7 +314,8 @@ class ProjectCostService
                 $output[] = new DashboardCostTrendData(
                     month: "{$month} 2026",
                     total_cost: $project->sum('total_cost'),
-                    employee_reward: $project->sum('total_reward')
+                    employee_reward: $project->sum('total_reward'),
+                    ai_cost: $project->sum('total_ai_cost')
                 );
             }
 
@@ -301,7 +357,7 @@ class ProjectCostService
     }
 
     /**
-     * Build the cost composition rows. Currently only the employee reward component is tracked.
+     * Build the cost composition rows: the employee reward and project AI cost components.
      *
      * @param  Collection<int, Project>  $projects  The projects to compose the totals from.
      * @return array<int, array<string, mixed>> A list of composition components as arrays.
@@ -315,7 +371,13 @@ class ProjectCostService
             total: $projects->sum('total_reward')
         );
 
-        array_push($output, $employeeReward->toArray());
+        $aiCost = new DashboardCostCompositionData(
+            key: 'ai_cost',
+            label: 'Project AI Cost',
+            total: $projects->sum('total_ai_cost')
+        );
+
+        array_push($output, $employeeReward->toArray(), $aiCost->toArray());
 
         return $output;
     }
@@ -358,7 +420,15 @@ class ProjectCostService
             where: $where,
             itemsPerPage: $itemsPerPage,
             page: $page
-        );
+        )->map(function ($item) {
+            $totalReward = $item->rewards->sum('total_reward');
+            $totalCost = $this->calculateProjectAiCost($item);
+            $item['total_reward'] = $totalReward;
+            $item['total_ai_cost'] = $totalCost;
+            $item['total_cost'] = $totalReward + $totalCost;
+
+            return $item;
+        });
 
         return $projects;
     }
@@ -404,8 +474,9 @@ class ProjectCostService
                 pic: $project->personInCharges->count() > 0 ? $project->personInCharges->pluck('employee.name')->join(',') : '-',
                 status: $project->status_text,
                 status_color: $project->status_color,
-                total_cost: $project->rewards->sum('total_reward'),
-                total_employee_reward: $project->rewards->sum('total_reward'),
+                total_cost: $project->total_cost,
+                total_employee_reward: $project->total_reward,
+                total_ai_cost: $project->total_ai_cost,
                 fix_price: $project->projectDeal && $project->projectDeal->latestQuotation ? $project->projectDeal->latestQuotation->fix_price : 0,
                 amount_paid: 0,
                 is_fully_paid: $project?->projectDeal?->latestQuotation?->is_fully_paid ?? false,
@@ -503,6 +574,33 @@ class ProjectCostService
                 );
             }
 
+            $aiCosts = [];
+            foreach ($project->aiGenerations->groupBy('created_by') as $userId => $gen) {
+                $costData = $gen->map(function ($itemGen) {
+                    return [
+                        'cost' => $this->atomicCostCalculation($itemGen),
+                    ];
+                });
+
+                $groupByKind = $gen->groupBy('kind');
+                $usages = [];
+                foreach ($groupByKind as $kind => $value) {
+                    $usages[] = $value->count()." usage of {$kind}";
+                }
+                $usageText = count($usages) > 0 ? collect($usages)->join(',') : 'Ai Usage';
+
+                $aiCosts[] = new CostListData(
+                    id: (int) $gen->first()->id,
+                    employee_id: $gen->first()?->creator?->employee?->employee_id ?? $gen->first()->id,
+                    name: $gen->first()?->creator?->employee?->name
+                        ?? ($gen->first()->creator ? $gen->first()->creator->email : '-'),
+                    position: $gen->first()?->creator?->employee?->position?->name ?? '-',
+                    avatar: $gen->first()?->creator?->employee?->avatar ?? null,
+                    usage: $usageText,
+                    total: $costData->sum('cost'),
+                );
+            }
+
             $output = new DetailProjectCostData(
                 uid: $project->uid,
                 name: $project->name,
@@ -525,6 +623,10 @@ class ProjectCostService
                 employee_rewards: new EmployeeRewardData(
                     total: collect($employeeRewards)->sum('total_reward'),
                     items: $employeeRewards
+                ),
+                ai_costs: new AiCostData(
+                    total: collect($aiCosts)->sum('total'),
+                    items: $aiCosts
                 )
             );
 

@@ -2,6 +2,7 @@
 
 namespace App\Data\Finance\ProjectCost;
 
+use App\Data\Production\Cost\AiCostData;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
 
@@ -27,6 +28,7 @@ class DetailProjectCostData extends Data
         public readonly float $gross_margin,
         #[DataCollectionOf(DashboardCostCompositionData::class)]
         public readonly array $cost_breakdown,
-        public readonly EmployeeRewardData $employee_rewards
+        public readonly EmployeeRewardData $employee_rewards,
+        public readonly AiCostData $ai_costs
     ) {}
 }
