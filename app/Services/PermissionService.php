@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\User\Permission\AllPermissionListData;
 use App\Repository\PermissionRepository;
 
 class PermissionService
@@ -16,9 +17,11 @@ class PermissionService
     public function getAll()
     {
         $data = $this->repo->list()->map(function ($item) {
-            $item['name'] = str_replace('_', ' ', $item->name);
-
-            return $item;
+            return new AllPermissionListData(
+                uid: $item->id,
+                name: $item->name,
+                group: $item->group,
+            );
         })->groupBy('group')->toArray();
 
         return generalResponse(
