@@ -208,12 +208,11 @@ class UserService
         $isDirector = false;
         $isProjectManager = false;
 
-        // setup role
+        // setup role (the Role model is assigned to the user below; RoleService::show() no longer
+        // exposes the raw model, so resolve it directly on the sanctum guard, null when not found)
+        $role = null;
         if (isset($data['role_id'])) {
-            $roleData = $this->roleService->show($data['role_id']);
-            if (! $roleData['error']) {
-                $role = $roleData['data']['raw'];
-            }
+            $role = Role::where('id', $data['role_id'])->where('guard_name', 'sanctum')->first();
         }
 
         if (! $data['is_external_user']) {
