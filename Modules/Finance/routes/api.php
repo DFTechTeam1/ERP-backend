@@ -1,14 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Finance\Http\Controllers\Api\AccountController;
 use Modules\Finance\Http\Controllers\Api\AiCostController;
+use Modules\Finance\Http\Controllers\Api\CostCenterController;
 use Modules\Finance\Http\Controllers\Api\FinanceController as ApiFinanceController;
 use Modules\Finance\Http\Controllers\Api\FinanceDashboardController;
 use Modules\Finance\Http\Controllers\Api\InvoiceChangeRequestController;
 use Modules\Finance\Http\Controllers\Api\InvoiceController;
 use Modules\Finance\Http\Controllers\Api\MarketingDashboardController;
 use Modules\Finance\Http\Controllers\Api\ProjectCostController;
-use Modules\Finance\Http\Controllers\Api\CostCenterController;
 use Modules\Finance\Http\Controllers\CurrencyController;
 
 /*
@@ -123,6 +124,27 @@ Route::middleware(['auth.session'])->group(function () {
 
     // Cost Centers
     Route::prefix('accounting')->group(function () {
+        // Chart of Accounts (Bagan Akun) — see docs/chart-of-accounts-api-contract.md
+        Route::get('chart-of-accounts', [AccountController::class, 'index'])
+            ->middleware('can:list_coa');
+        Route::post('chart-of-accounts', [AccountController::class, 'store'])
+            ->middleware('can:create_coa');
+        // Must be registered before the {uid} route so "suggest-code" is not matched as a uid.
+        Route::get('chart-of-accounts/suggest-code', [AccountController::class, 'suggestCode'])
+            ->middleware('can:create_coa');
+        Route::get('chart-of-accounts/{uid}', [AccountController::class, 'show'])
+            ->middleware('can:list_coa');
+        Route::patch('chart-of-accounts/{uid}', [AccountController::class, 'update'])
+            ->middleware('can:update_coa');
+        Route::post('chart-of-accounts/{uid}/move', [AccountController::class, 'move'])
+            ->middleware('can:update_coa');
+        Route::patch('chart-of-accounts/{uid}/activate', [AccountController::class, 'activate'])
+            ->middleware('can:update_coa');
+        Route::patch('chart-of-accounts/{uid}/deactivate', [AccountController::class, 'deactivate'])
+            ->middleware('can:update_coa');
+        Route::delete('chart-of-accounts/{uid}', [AccountController::class, 'destroy'])
+            ->middleware('can:delete_coa');
+
         Route::get('cost-centers', [CostCenterController::class, 'index']);
         Route::post('cost-centers', [CostCenterController::class, 'store']);
         Route::put('cost-centers/{costCenterUid}', [CostCenterController::class, 'update']);

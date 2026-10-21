@@ -621,6 +621,32 @@ class RolePermissionSetting extends Seeder
         ];
     }
 
+    protected function accountingPermission()
+    {
+        return [
+            ['name' => 'list_coa', 'group' => 'accounting', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'create_coa', 'group' => 'accounting', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'update_coa', 'group' => 'accounting', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+            ['name' => 'delete_coa', 'group' => 'accounting', 'used' => [
+                $this->getRootRole(),
+                $this->getDirectorRole(),
+                $this->getFinanceRole(),
+            ]],
+        ];
+    }
+
     protected function masterPermission()
     {
         return [
@@ -1556,6 +1582,7 @@ class RolePermissionSetting extends Seeder
             ->merge($this->settingPermission())
             ->merge($this->taskPermission())
             ->merge($this->financePermission())
+            ->merge($this->accountingPermission())
             ->merge($this->projectPermission())
             ->merge($this->interactivePermission())
             ->merge($this->documentPermission())

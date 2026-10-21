@@ -8,6 +8,7 @@ return [
     'unauthorized' => 'Tidak Memiliki Izin.',
     'forbidden' => 'Tidak Memiliki Akses',
     'methodNotAllowed' => 'Metode Tidak Diperbolehkan',
+    'conflict' => 'Konflik',
     'internalServerError' => 'Internal Server Error',
     'userNotFound' => 'User Tidak Ditemukan',
     'broke' => 'Rusak',

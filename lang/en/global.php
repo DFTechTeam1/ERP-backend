@@ -8,6 +8,7 @@ return [
     'unauthorized' => 'Unauthorized',
     'forbidden' => 'Forbidden',
     'methodNotAllowed' => 'Method Not Allowed',
+    'conflict' => 'Conflict',
     'internalServerError' => 'Internal Server Error',
     'userNotFound' => 'User Not Found',
     'broke' => 'Broke',

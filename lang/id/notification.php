@@ -2,6 +2,7 @@
 
 return [
     'costCenterNotFound' => 'Cost center tidak ditemukan',
+    'accountNotFound' => 'Akun tidak ditemukan',
     'onlyOneLevelCostCenterParentAllowed' => 'Hanya 1 level yang diperbolehkan untuk cost center. Parent yang dipilih sudah memiliki parent.',
     'youAreRemovedFromProject' => 'Kamu bukan lagi bagian dari event :project',
     'youAreRemovedFromProjectText' => 'Kamu baru saja di keluarkan dari event :project. Mungkin kamu akan di beri Event yang lebih besar lagi.',

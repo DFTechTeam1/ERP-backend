@@ -1,0 +1,1314 @@
+// =====================================================================
+//  DFACTORY ERP — ACCOUNTING MODULE (PSAK / SAK)
+//  Double-entry general ledger + AR, AP, Cash/Bank, Fixed Assets,
+//  Tax (PPN/PPh), Budget, and Period Closing.
+//
+//  NOTES ON INTEGRATION WITH YOUR EXISTING SCHEMA
+//  - Tables marked "// EXISTING" are stubs. Keep your real definitions;
+//    they are shown only so the foreign keys render. Do not overwrite them.
+//  - Suggested columns to ADD to your existing tables are written as
+//    // + comments inside those stubs.
+//  - Money uses decimal(24,2) to match your `transactions.payment_amount`.
+//  - Base currency is IDR; multi-currency is optional (currencies/exchange_rates).
+//  - Every posted business document (invoice, bill, payment, asset, expense,
+//    depreciation, closing) points to ONE journal via journal_id, and each
+//    journal carries a polymorphic source_type/source_id back to the document.
+// =====================================================================
+
+
+// =====================================================================
+//  ENUMS
+// =====================================================================
+
+// ---- Chart of accounts ----
+Enum account_type {
+  asset
+  liability
+  equity
+  revenue
+  expense
+}
+
+Enum sequence_reset {
+  never      // one continuous counter forever
+  yearly     // counter restarts each year
+  monthly    // counter restarts each month
+}
+
+// Drives automatic grouping in Balance Sheet (Neraca) & Income Statement (Laba Rugi)
+Enum account_subtype {
+  // Assets (Aset)
+  cash_and_bank             // Kas & Bank
+  accounts_receivable       // Piutang Usaha
+  other_receivable          // Piutang Lain-lain
+  inventory                 // Persediaan
+  prepaid_expense           // Beban Dibayar Dimuka
+  advance_to_supplier       // Uang Muka Pembelian
+  other_current_asset       // Aset Lancar Lainnya
+  fixed_asset               // Aset Tetap
+  accumulated_depreciation  // Akumulasi Penyusutan (contra-asset)
+  intangible_asset          // Aset Tak Berwujud
+  other_non_current_asset   // Aset Tidak Lancar Lainnya
+  // Liabilities (Liabilitas)
+  accounts_payable          // Utang Usaha
+  accrued_expense           // Beban Yang Masih Harus Dibayar
+  tax_payable               // Utang Pajak
+  customer_deposit          // Uang Muka Pelanggan / Pendapatan Diterima Dimuka
+  short_term_debt           // Utang Jangka Pendek
+  other_current_liability   // Liabilitas Lancar Lainnya
+  long_term_debt            // Utang Jangka Panjang
+  other_non_current_liability
+  // Equity (Ekuitas)
+  share_capital             // Modal Disetor
+  retained_earnings         // Laba Ditahan
+  current_year_earnings     // Laba Tahun Berjalan
+  owner_drawing             // Prive
+  other_equity
+  // Revenue (Pendapatan)
+  operating_revenue         // Pendapatan Usaha
+  other_income              // Pendapatan Lain-lain
+  // Expense (Beban)
+  cost_of_revenue           // Harga Pokok (HPP)
+  operating_expense         // Beban Operasional
+  other_expense             // Beban Lain-lain
+  tax_expense               // Beban Pajak Penghasilan
+}
+
+Enum normal_balance {
+  debit
+  credit
+}
+
+Enum cash_flow_category {
+  operating   // Aktivitas Operasi
+  investing   // Aktivitas Investasi
+  financing   // Aktivitas Pendanaan
+}
+
+// ---- Periods ----
+Enum fiscal_year_status {
+  open
+  closed
+}
+
+Enum period_status {
+  open      // postings allowed
+  closed    // soft close, reopenable
+  locked    // hard lock, no reopen
+}
+
+Enum cost_center_type {
+  department
+  division
+  project
+  branch
+  other
+}
+
+// ---- Tax ----
+Enum tax_type {
+  ppn         // Pajak Pertambahan Nilai (VAT)
+  pph_21      // Employee income tax
+  pph_22      // Withholding on certain purchases
+  pph_23      // Withholding on services/rent/royalty
+  pph_26      // Withholding to foreign parties
+  pph_4_2     // Final tax (rent of land/building, construction)
+  pph_25      // Monthly installment
+  pph_15      // Special final tax
+  ppnbm       // Luxury goods VAT
+  none
+}
+
+Enum tax_nature {
+  sales
+  purchase
+  withholding
+}
+
+Enum tax_invoice_type {
+  output  // Faktur Pajak Keluaran (we sell)
+  input   // Faktur Pajak Masukan (we buy)
+}
+
+Enum tax_invoice_status {
+  draft
+  issued
+  replaced
+  cancelled
+}
+
+Enum withholding_direction {
+  withheld_by_us    // we withhold from a supplier and remit
+  withheld_from_us  // a customer withholds from our income
+}
+
+// ---- Cash / bank ----
+Enum bank_account_type {
+  cash
+  bank
+  ewallet
+  giro
+  other
+}
+
+Enum payment_method_type {
+  cash
+  transfer
+  card
+  ewallet
+  qris
+  giro
+  other
+}
+
+// ---- Partners ----
+Enum supplier_type {
+  company
+  individual
+  government
+}
+
+// ---- Journals ----
+Enum journal_type {
+  general
+  opening
+  sales
+  purchase
+  cash_receipt
+  cash_payment
+  adjustment
+  closing
+  reversing
+  fixed_asset
+  payroll
+  tax
+  other
+}
+
+Enum journal_status {
+  draft
+  posted
+  void
+}
+
+Enum recurring_frequency {
+  monthly
+  quarterly
+  semi_annual
+  yearly
+}
+
+// ---- Document status ----
+Enum po_status {
+  draft
+  submitted
+  approved
+  partial
+  received
+  closed
+  cancelled
+}
+
+Enum bill_status {
+  draft
+  open
+  partial
+  paid
+  overdue
+  void
+}
+
+Enum payment_status {
+  draft
+  posted
+  void
+}
+
+Enum expense_status {
+  draft
+  submitted
+  approved
+  paid
+  rejected
+  void
+}
+
+Enum cash_advance_status {
+  draft
+  approved
+  disbursed
+  partially_settled
+  settled
+  cancelled
+}
+
+Enum credit_note_status {
+  draft
+  issued
+  applied
+  void
+}
+
+Enum revenue_recognition_method {
+  point_in_time            // recognized on event delivery
+  over_time                // recognized across the engagement
+  percentage_completion    // % of completion (PSAK 72)
+}
+
+// ---- Bank reconciliation ----
+Enum statement_line_status {
+  unmatched
+  matched
+  ignored
+}
+
+Enum reconciliation_status {
+  draft
+  in_progress
+  reconciled
+}
+
+// ---- Fixed assets ----
+Enum depreciation_method {
+  straight_line          // Garis lurus
+  declining_balance      // Saldo menurun
+  double_declining
+  sum_of_years_digits
+  units_of_production
+  no_depreciation        // Land, etc.
+}
+
+Enum asset_status {
+  active
+  fully_depreciated
+  disposed
+  sold
+  written_off
+}
+
+Enum asset_disposal_type {
+  sale
+  write_off
+  donation
+  trade_in
+  lost
+}
+
+// ---- Closing ----
+Enum closing_type {
+  monthly
+  yearly
+}
+
+// ---- Default account mapping keys ----
+Enum default_account_key {
+  ar_control               // Piutang Usaha (control)
+  ap_control               // Utang Usaha (control)
+  cash_default             // Default kas
+  sales_revenue_default    // Pendapatan default
+  cost_of_revenue_default  // HPP default
+  customer_deposit         // Uang Muka Pelanggan
+  supplier_advance         // Uang Muka Pembelian
+  ppn_output               // PPN Keluaran
+  ppn_input                // PPN Masukan
+  pph_payable              // Utang PPh
+  retained_earnings        // Laba Ditahan
+  current_year_earnings    // Laba Tahun Berjalan
+  opening_balance_equity   // Saldo Awal
+  rounding_difference      // Selisih pembulatan
+  exchange_gain            // Laba selisih kurs
+  exchange_loss            // Rugi selisih kurs
+  discount_given           // Potongan penjualan
+  discount_received        // Potongan pembelian
+  bad_debt_expense         // Beban kerugian piutang
+  allowance_doubtful       // Penyisihan piutang tak tertagih
+  bank_charge              // Biaya administrasi bank
+}
+
+
+// =====================================================================
+//  EXISTING TABLES (stubs only — keep your real definitions)
+// =====================================================================
+
+Table users {
+  id bigint [pk, not null] // EXISTING
+  name varchar(255)
+}
+
+Table employees {
+  id bigint [pk, not null] // EXISTING (HR module)
+  name varchar(255)
+}
+
+Table customers {
+  id bigint [pk, not null] // EXISTING — suggested extensions below
+  name varchar(255)
+  npwp varchar(30)                 // + NPWP for faktur pajak
+  is_pkp tinyint(1)                // + Pengusaha Kena Pajak flag
+  receivable_account_id bigint     // + AR control account override (accounts.id)
+}
+
+Table project_deals {
+  id bigint [pk, not null] // EXISTING
+  name varchar(255)
+  customer_id bigint
+  // + revenue_recognition_method, + recognized flag can live here or in revenue_recognitions
+}
+
+Table invoices {
+  id bigint [pk, not null] // EXISTING
+  project_deal_id bigint
+  customer_id bigint
+  amount decimal(24,2)
+  paid_amount decimal(24,2)
+  // + journal_id bigint  (posting reference to journals.id)
+  // + is_tax_invoice, + faktur_number for PPN
+}
+
+Table transactions {
+  id bigint [pk, not null] // EXISTING — your customer payment/receipt log
+  project_deal_id bigint
+  customer_id bigint
+  payment_amount decimal(24,2)
+  invoice_id bigint
+  // + bank_account_id bigint  (which cash/bank account received it)
+  // + journal_id bigint       (posting reference to journals.id)
+}
+
+
+// =====================================================================
+//  MODULE 1 — FOUNDATION / MASTER DATA
+// =====================================================================
+
+Table number_sequences {
+  id bigint [pk, not null, increment]
+  doc_type varchar(50) [not null, note: 'journal, invoice, bill, purchase_order, bill_payment, expense, credit_note, debit_note, cash_advance, bank_transfer, fixed_asset, receipt']
+  name varchar(100) [not null]
+  prefix varchar(20) [not null, note: 'e.g. JV, INV, BILL']
+  format varchar(100) [not null, note: 'Template, e.g. {prefix}/{YYYY}/{MM}/{seq}']
+  padding tinyint [not null, default: 4, note: 'Zero-pad width for the counter -> 0001']
+  reset sequence_reset [not null, default: 'yearly']
+  current_number bigint [not null, default: 0, note: 'Last number used in the current period']
+  current_period varchar(7) [note: 'The YYYY or YYYY-MM the counter belongs to']
+  is_active tinyint(1) [not null, default: 1]
+  updated_at timestamp
+
+  Indexes { doc_type [unique] }
+}
+
+// Chart of Accounts (Bagan Akun)
+Table accounts {
+  id bigint [pk, not null, increment]
+  uid char(36) [not null, unique]
+  code varchar(20) [not null, note: 'Kode akun, e.g. 1-1100']
+  name varchar(150) [not null, note: 'Nama akun']
+  account_type account_type [not null]
+  account_subtype account_subtype [null, note: 'Drives financial statement grouping; null for header/group accounts']
+  normal_balance normal_balance [null, note: 'Derived (never client-set); null for header/group accounts']
+  parent_id bigint [ref: > accounts.id, note: 'Self-reference for hierarchy']
+  level tinyint [not null, default: 0, note: '0-based depth; computed from parent_id']
+  is_postable tinyint(1) [not null, default: 1, note: '0 = header/group, cannot post']
+  is_cash_equivalent tinyint(1) [not null, default: 0, note: 'Part of Cash & Cash Equivalents']
+  cash_flow_category cash_flow_category [note: 'For indirect cash flow statement']
+  currency_code char(3) [not null, default: 'IDR']
+  is_locked tinyint(1) [not null, default: 0, note: 'System account, cannot delete']
+  is_active tinyint(1) [not null, default: 1]
+  description varchar(255)
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    code [unique, name: 'accounts_code_unique']
+    parent_id
+    (account_type, account_subtype)
+  }
+}
+
+// Fiscal Year (Tahun Buku)
+Table fiscal_years {
+  id bigint [pk, not null, increment]
+  uid char(36) [not null, unique]
+  name varchar(50) [not null, note: 'e.g. 2025']
+  start_date date [not null]
+  end_date date [not null]
+  status fiscal_year_status [not null, default: 'open']
+  closed_at timestamp
+  closed_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Accounting Period (Periode Akuntansi) — monthly buckets
+Table accounting_periods {
+  id bigint [pk, not null, increment]
+  uid char(36) [not null, unique]
+  fiscal_year_id bigint [not null, ref: > fiscal_years.id]
+  name varchar(50) [not null, note: 'e.g. Januari 2025']
+  period_number tinyint [not null, note: '1-12']
+  start_date date [not null]
+  end_date date [not null]
+  status period_status [not null, default: 'open']
+  closed_at timestamp
+  closed_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (fiscal_year_id, period_number) [unique]
+    status
+  }
+}
+
+// Cost Center (Divisi / Departemen / Proyek / Cabang)
+Table cost_centers {
+  id bigint [pk, not null, increment]
+  uid char(36) [not null, unique]
+  code varchar(20) [not null]
+  name varchar(100) [not null]
+  type cost_center_type [not null, default: 'department']
+  parent_id bigint [ref: > cost_centers.id]
+  is_active tinyint(1) [not null, default: 1]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { code [unique] }
+}
+
+// Currencies (optional multi-currency) — EXISTING (Modules\Finance\Models\Currency)
+Table currencies {
+  id bigint [pk, not null, increment]
+  uid char(36) [not null, unique]
+  code char(3) [not null, note: 'ISO 4217: IDR, USD, MYR']
+  name varchar(50) [not null]
+  symbol varchar(10)
+  is_base tinyint(1) [not null, default: 0]
+  is_active tinyint(1) [not null, default: 1]
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Exchange rates — EXISTING (Modules\Finance\Models\ExchangeRate)
+Table exchange_rates {
+  id bigint [pk, not null, increment]
+  uid char(36) [not null, unique]
+  currency_id bigint [ref: > currencies.id]
+  parent_currency_id bigint [ref: > currencies.id, note: 'base currency the rate is quoted against']
+  rate_date date [not null]
+  rate decimal(20,8) [not null, note: '1 foreign unit = rate x IDR']
+  source varchar(20) [note: 'system | manual']
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { (currency_id, rate_date) [unique] }
+}
+
+// Tax Codes (PPN, PPh) — each maps to a payable/receivable GL account
+Table tax_codes {
+  id bigint [pk, not null, increment]
+  code varchar(20) [not null, note: 'e.g. PPN-OUT, PPN-IN, PPH23']
+  name varchar(100) [not null]
+  tax_type tax_type [not null]
+  tax_nature tax_nature [not null]
+  rate decimal(6,4) [not null, note: '11.0000 = 11% PPN; 2.0000 = 2% PPh23']
+  is_withholding tinyint(1) [not null, default: 0]
+  is_inclusive tinyint(1) [not null, default: 0, note: 'Amount already includes tax']
+  account_id bigint [ref: > accounts.id, note: 'Tax payable/receivable account']
+  is_active tinyint(1) [not null, default: 1]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { code [unique] }
+}
+
+// Cash & Bank accounts (Kas & Bank) — each linked to a COA account
+Table bank_accounts {
+  id bigint [pk, not null, increment]
+  account_id bigint [not null, ref: > accounts.id, note: 'Linked COA cash/bank account']
+  name varchar(100) [not null, note: 'e.g. BCA Operasional']
+  type bank_account_type [not null, default: 'bank']
+  bank_name varchar(100)
+  account_number varchar(50)
+  account_holder varchar(100)
+  currency_code char(3) [not null, default: 'IDR']
+  opening_balance decimal(24,2) [not null, default: 0]
+  current_balance decimal(24,2) [not null, default: 0, note: 'Cached running balance']
+  is_active tinyint(1) [not null, default: 1]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table payment_methods {
+  id bigint [pk, not null, increment]
+  name varchar(50) [not null]
+  type payment_method_type [not null]
+  bank_account_id bigint [ref: > bank_accounts.id, note: 'Default settlement account']
+  is_active tinyint(1) [not null, default: 1]
+}
+
+// Suppliers / Vendors (Pemasok) — new; AP side did not exist before
+Table suppliers {
+  id bigint [pk, not null, increment]
+  code varchar(30) [not null]
+  name varchar(150) [not null]
+  type supplier_type [not null, default: 'company']
+  npwp varchar(30) [note: 'Tax ID']
+  is_pkp tinyint(1) [not null, default: 0, note: 'VAT-registered']
+  address text
+  phone varchar(30)
+  email varchar(100)
+  contact_person varchar(100)
+  bank_name varchar(100)
+  bank_account_number varchar(50)
+  payable_account_id bigint [ref: > accounts.id, note: 'AP control override']
+  payment_term_days smallint [not null, default: 0]
+  is_active tinyint(1) [not null, default: 1]
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes { code [unique] }
+}
+
+// Named default-account mapping used by all auto-posting logic
+Table default_accounts {
+  id bigint [pk, not null, increment]
+  key default_account_key [not null]
+  account_id bigint [not null, ref: > accounts.id]
+  description varchar(255)
+  updated_at timestamp
+
+  Indexes { key [unique] }
+}
+
+
+// =====================================================================
+//  MODULE 2 — GENERAL LEDGER (Buku Besar & Jurnal)
+// =====================================================================
+
+// Journal header (Bukti Jurnal)
+Table journals {
+  id bigint [pk, not null, increment]
+  journal_number varchar(50) [not null, note: 'e.g. JV/2025/01/0001']
+  journal_date date [not null]
+  period_id bigint [not null, ref: > accounting_periods.id]
+  journal_type journal_type [not null, default: 'general']
+  reference varchar(100) [note: 'External / source reference']
+  description varchar(255)
+  source_type varchar(100) [note: 'Polymorphic originating model, e.g. invoices, bills']
+  source_id bigint [note: 'Polymorphic originating id']
+  currency_code char(3) [not null, default: 'IDR']
+  exchange_rate decimal(20,8) [not null, default: 1]
+  total_debit decimal(24,2) [not null, default: 0]
+  total_credit decimal(24,2) [not null, default: 0]
+  status journal_status [not null, default: 'draft']
+  is_adjusting tinyint(1) [not null, default: 0, note: 'Adjusting entry (jurnal penyesuaian)']
+  is_reversing tinyint(1) [not null, default: 0, note: 'Auto-reverses next period']
+  reversal_of_journal_id bigint [ref: > journals.id, note: 'This journal reverses another']
+  reversed_at timestamp
+  cost_center_id bigint [ref: > cost_centers.id]
+  posted_at timestamp
+  posted_by bigint [ref: > users.id]
+  voided_at timestamp
+  voided_by bigint [ref: > users.id]
+  void_reason varchar(255)
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    journal_number [unique]
+    journal_date
+    (source_type, source_id)
+    period_id
+    status
+  }
+}
+
+// Journal detail (Detail Jurnal) — the actual GL entries
+Table journal_lines {
+  id bigint [pk, not null, increment]
+  journal_id bigint [not null, ref: > journals.id]
+  account_id bigint [not null, ref: > accounts.id]
+  cost_center_id bigint [ref: > cost_centers.id]
+  description varchar(255)
+  debit decimal(24,2) [not null, default: 0]
+  credit decimal(24,2) [not null, default: 0]
+  foreign_debit decimal(24,2) [not null, default: 0, note: 'Amount in foreign currency']
+  foreign_credit decimal(24,2) [not null, default: 0]
+  partner_type varchar(100) [note: 'Polymorphic partner: customers/suppliers/employees']
+  partner_id bigint
+  tax_code_id bigint [ref: > tax_codes.id]
+  line_number smallint
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    journal_id
+    account_id
+    (partner_type, partner_id)
+  }
+}
+
+// Period balances per account (Saldo Akun) — fast trial balance & statements
+Table account_balances {
+  id bigint [pk, not null, increment]
+  account_id bigint [not null, ref: > accounts.id]
+  period_id bigint [not null, ref: > accounting_periods.id]
+  cost_center_id bigint [ref: > cost_centers.id]
+  opening_balance decimal(24,2) [not null, default: 0, note: 'Signed by normal balance']
+  debit_movement decimal(24,2) [not null, default: 0]
+  credit_movement decimal(24,2) [not null, default: 0]
+  closing_balance decimal(24,2) [not null, default: 0]
+  updated_at timestamp
+
+  Indexes { (account_id, period_id, cost_center_id) [unique] }
+}
+
+// Recurring / standard journals (e.g. rent, subscriptions, depreciation batch)
+Table recurring_journals {
+  id bigint [pk, not null, increment]
+  name varchar(100) [not null]
+  journal_type journal_type [not null, default: 'general']
+  frequency recurring_frequency [not null, default: 'monthly']
+  next_run_date date [not null]
+  end_date date
+  description varchar(255)
+  cost_center_id bigint [ref: > cost_centers.id]
+  is_active tinyint(1) [not null, default: 1]
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table recurring_journal_lines {
+  id bigint [pk, not null, increment]
+  recurring_journal_id bigint [not null, ref: > recurring_journals.id]
+  account_id bigint [not null, ref: > accounts.id]
+  cost_center_id bigint [ref: > cost_centers.id]
+  description varchar(255)
+  debit decimal(24,2) [not null, default: 0]
+  credit decimal(24,2) [not null, default: 0]
+}
+
+
+// =====================================================================
+//  MODULE 3 — ACCOUNTS RECEIVABLE (Piutang) — extends invoices/transactions
+// =====================================================================
+
+// Apply a customer payment (transactions row) to one or more invoices
+Table receipt_allocations {
+  id bigint [pk, not null, increment]
+  transaction_id bigint [not null, ref: > transactions.id, note: 'The customer receipt']
+  invoice_id bigint [not null, ref: > invoices.id]
+  allocated_amount decimal(24,2) [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    transaction_id
+    invoice_id
+  }
+}
+
+// Credit Note (Nota Kredit) — sales return / customer-side adjustment
+Table credit_notes {
+  id bigint [pk, not null, increment]
+  number varchar(50) [not null]
+  customer_id bigint [not null, ref: > customers.id]
+  project_deal_id bigint [ref: > project_deals.id]
+  invoice_id bigint [ref: > invoices.id, note: 'Invoice being adjusted']
+  credit_date date [not null]
+  reason varchar(255)
+  amount decimal(24,2) [not null]
+  tax_amount decimal(24,2) [not null, default: 0]
+  applied_amount decimal(24,2) [not null, default: 0]
+  status credit_note_status [not null, default: 'draft']
+  journal_id bigint [ref: > journals.id]
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { number [unique] }
+}
+
+// Revenue Recognition (Pengakuan Pendapatan, accrual / PSAK 72)
+// DP received = liability (customer_deposit); recognize on event delivery + book HPP
+Table revenue_recognitions {
+  id bigint [pk, not null, increment]
+  project_deal_id bigint [not null, ref: > project_deals.id]
+  recognition_date date [not null]
+  contract_amount decimal(24,2) [not null]
+  recognized_amount decimal(24,2) [not null]
+  percentage decimal(5,2) [note: 'For percentage-of-completion']
+  method revenue_recognition_method [not null, default: 'point_in_time']
+  cogs_amount decimal(24,2) [not null, default: 0, note: 'HPP recognized in same entry']
+  journal_id bigint [ref: > journals.id]
+  note varchar(255)
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { project_deal_id }
+}
+
+// AR provision (Penyisihan Piutang Tak Tertagih) — allowance snapshots per period
+Table ar_allowances {
+  id bigint [pk, not null, increment]
+  period_id bigint [not null, ref: > accounting_periods.id]
+  customer_id bigint [ref: > customers.id, note: 'Null = general allowance']
+  base_amount decimal(24,2) [not null, note: 'Outstanding AR considered']
+  allowance_percentage decimal(5,2) [not null, default: 0]
+  allowance_amount decimal(24,2) [not null, default: 0]
+  journal_id bigint [ref: > journals.id]
+  note varchar(255)
+  created_at timestamp
+}
+
+
+// =====================================================================
+//  MODULE 4 — ACCOUNTS PAYABLE (Utang & Pembelian)
+// =====================================================================
+
+// Purchase Order (Pesanan Pembelian) — optional but recommended
+Table purchase_orders {
+  id bigint [pk, not null, increment]
+  po_number varchar(50) [not null]
+  supplier_id bigint [not null, ref: > suppliers.id]
+  order_date date [not null]
+  expected_date date
+  cost_center_id bigint [ref: > cost_centers.id]
+  subtotal decimal(24,2) [not null, default: 0]
+  tax_amount decimal(24,2) [not null, default: 0]
+  total_amount decimal(24,2) [not null, default: 0]
+  status po_status [not null, default: 'draft']
+  note text
+  created_by bigint [ref: > users.id]
+  approved_by bigint [ref: > users.id]
+  approved_at timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { po_number [unique], supplier_id, status }
+}
+
+Table purchase_order_lines {
+  id bigint [pk, not null, increment]
+  purchase_order_id bigint [not null, ref: > purchase_orders.id]
+  account_id bigint [ref: > accounts.id, note: 'Expense / asset / inventory account']
+  description varchar(255) [not null]
+  quantity decimal(15,2) [not null, default: 1]
+  unit_price decimal(24,2) [not null, default: 0]
+  tax_code_id bigint [ref: > tax_codes.id]
+  amount decimal(24,2) [not null, default: 0]
+  cost_center_id bigint [ref: > cost_centers.id]
+}
+
+// Vendor Bill (Faktur Pembelian / Tagihan)
+Table bills {
+  id bigint [pk, not null, increment]
+  bill_number varchar(50) [not null, note: 'Internal number']
+  supplier_invoice_number varchar(100) [note: 'Supplier faktur number']
+  supplier_id bigint [not null, ref: > suppliers.id]
+  purchase_order_id bigint [ref: > purchase_orders.id]
+  bill_date date [not null]
+  due_date date [not null]
+  cost_center_id bigint [ref: > cost_centers.id]
+  currency_code char(3) [not null, default: 'IDR']
+  exchange_rate decimal(20,8) [not null, default: 1]
+  subtotal decimal(24,2) [not null, default: 0]
+  tax_amount decimal(24,2) [not null, default: 0, note: 'PPN masukan']
+  withholding_amount decimal(24,2) [not null, default: 0, note: 'PPh withheld']
+  total_amount decimal(24,2) [not null, default: 0]
+  paid_amount decimal(24,2) [not null, default: 0]
+  status bill_status [not null, default: 'draft']
+  note text
+  journal_id bigint [ref: > journals.id]
+  created_by bigint [ref: > users.id]
+  approved_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    bill_number [unique]
+    supplier_id
+    status
+    due_date
+  }
+}
+
+Table bill_lines {
+  id bigint [pk, not null, increment]
+  bill_id bigint [not null, ref: > bills.id]
+  account_id bigint [not null, ref: > accounts.id]
+  description varchar(255)
+  quantity decimal(15,2) [not null, default: 1]
+  unit_price decimal(24,2) [not null, default: 0]
+  amount decimal(24,2) [not null, default: 0]
+  tax_code_id bigint [ref: > tax_codes.id]
+  tax_amount decimal(24,2) [not null, default: 0]
+  withholding_tax_code_id bigint [ref: > tax_codes.id]
+  withholding_amount decimal(24,2) [not null, default: 0]
+  cost_center_id bigint [ref: > cost_centers.id]
+  fixed_asset_id bigint [ref: > fixed_assets.id, note: 'Set if line is capitalized']
+}
+
+// Payment to suppliers (Pembayaran Utang)
+Table bill_payments {
+  id bigint [pk, not null, increment]
+  payment_number varchar(50) [not null]
+  supplier_id bigint [not null, ref: > suppliers.id]
+  bank_account_id bigint [not null, ref: > bank_accounts.id]
+  payment_method_id bigint [ref: > payment_methods.id]
+  payment_date date [not null]
+  amount decimal(24,2) [not null]
+  reference varchar(100)
+  note varchar(255)
+  status payment_status [not null, default: 'draft']
+  journal_id bigint [ref: > journals.id]
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { payment_number [unique], supplier_id }
+}
+
+Table bill_payment_allocations {
+  id bigint [pk, not null, increment]
+  bill_payment_id bigint [not null, ref: > bill_payments.id]
+  bill_id bigint [not null, ref: > bills.id]
+  allocated_amount decimal(24,2) [not null]
+}
+
+// Debit Note (Nota Debit) — purchase return / supplier-side adjustment
+Table debit_notes {
+  id bigint [pk, not null, increment]
+  number varchar(50) [not null]
+  supplier_id bigint [not null, ref: > suppliers.id]
+  bill_id bigint [ref: > bills.id]
+  debit_date date [not null]
+  reason varchar(255)
+  amount decimal(24,2) [not null]
+  tax_amount decimal(24,2) [not null, default: 0]
+  applied_amount decimal(24,2) [not null, default: 0]
+  status credit_note_status [not null, default: 'draft']
+  journal_id bigint [ref: > journals.id]
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { number [unique] }
+}
+
+
+// =====================================================================
+//  MODULE 5 — CASH MANAGEMENT (Kas: Biaya, Kasbon, Transfer)
+// =====================================================================
+
+// Direct expense / cash-out not routed through a supplier bill
+Table expenses {
+  id bigint [pk, not null, increment]
+  expense_number varchar(50) [not null]
+  expense_date date [not null]
+  bank_account_id bigint [not null, ref: > bank_accounts.id, note: 'Paid from']
+  cost_center_id bigint [ref: > cost_centers.id]
+  payee_type varchar(100) [note: 'Optional polymorphic payee: suppliers/employees']
+  payee_id bigint
+  description varchar(255)
+  subtotal decimal(24,2) [not null, default: 0]
+  tax_amount decimal(24,2) [not null, default: 0]
+  withholding_amount decimal(24,2) [not null, default: 0]
+  total_amount decimal(24,2) [not null, default: 0]
+  status expense_status [not null, default: 'draft']
+  attachment varchar(255)
+  journal_id bigint [ref: > journals.id]
+  created_by bigint [ref: > users.id]
+  approved_by bigint [ref: > users.id]
+  approved_at timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { expense_number [unique], expense_date, status }
+}
+
+Table expense_lines {
+  id bigint [pk, not null, increment]
+  expense_id bigint [not null, ref: > expenses.id]
+  account_id bigint [not null, ref: > accounts.id]
+  description varchar(255)
+  amount decimal(24,2) [not null, default: 0]
+  tax_code_id bigint [ref: > tax_codes.id]
+  cost_center_id bigint [ref: > cost_centers.id]
+}
+
+// Cash Advance (Kasbon / Uang Muka Karyawan)
+Table cash_advances {
+  id bigint [pk, not null, increment]
+  number varchar(50) [not null]
+  employee_id bigint [not null, ref: > employees.id]
+  request_date date [not null]
+  purpose varchar(255)
+  amount decimal(24,2) [not null]
+  settled_amount decimal(24,2) [not null, default: 0]
+  bank_account_id bigint [ref: > bank_accounts.id]
+  advance_account_id bigint [ref: > accounts.id, note: 'Piutang karyawan / uang muka']
+  status cash_advance_status [not null, default: 'draft']
+  journal_id bigint [ref: > journals.id]
+  created_by bigint [ref: > users.id]
+  approved_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { number [unique], employee_id }
+}
+
+Table cash_advance_settlements {
+  id bigint [pk, not null, increment]
+  cash_advance_id bigint [not null, ref: > cash_advances.id]
+  settlement_date date [not null]
+  amount decimal(24,2) [not null, note: 'Realized/spent portion']
+  returned_amount decimal(24,2) [not null, default: 0, note: 'Cash returned to office']
+  expense_id bigint [ref: > expenses.id, note: 'Linked expense realization']
+  journal_id bigint [ref: > journals.id]
+  note varchar(255)
+  created_at timestamp
+}
+
+// Internal transfer between cash/bank accounts (Transfer Antar Kas/Bank)
+Table bank_transfers {
+  id bigint [pk, not null, increment]
+  number varchar(50) [not null]
+  transfer_date date [not null]
+  from_bank_account_id bigint [not null, ref: > bank_accounts.id]
+  to_bank_account_id bigint [not null, ref: > bank_accounts.id]
+  amount decimal(24,2) [not null]
+  admin_fee decimal(24,2) [not null, default: 0]
+  admin_fee_account_id bigint [ref: > accounts.id]
+  reference varchar(100)
+  note varchar(255)
+  journal_id bigint [ref: > journals.id]
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { number [unique] }
+}
+
+
+// =====================================================================
+//  MODULE 6 — BANK RECONCILIATION (Rekonsiliasi Bank)
+// =====================================================================
+
+Table bank_statements {
+  id bigint [pk, not null, increment]
+  bank_account_id bigint [not null, ref: > bank_accounts.id]
+  statement_date date [not null]
+  opening_balance decimal(24,2) [not null, default: 0]
+  closing_balance decimal(24,2) [not null, default: 0]
+  imported_by bigint [ref: > users.id]
+  imported_at timestamp
+  created_at timestamp
+}
+
+Table bank_statement_lines {
+  id bigint [pk, not null, increment]
+  bank_statement_id bigint [not null, ref: > bank_statements.id]
+  transaction_date date [not null]
+  description varchar(255)
+  reference varchar(100)
+  debit decimal(24,2) [not null, default: 0, note: 'Money out']
+  credit decimal(24,2) [not null, default: 0, note: 'Money in']
+  balance decimal(24,2)
+  status statement_line_status [not null, default: 'unmatched']
+  created_at timestamp
+
+  Indexes { bank_statement_id, status }
+}
+
+Table bank_reconciliations {
+  id bigint [pk, not null, increment]
+  bank_account_id bigint [not null, ref: > bank_accounts.id]
+  period_id bigint [ref: > accounting_periods.id]
+  statement_ending_balance decimal(24,2) [not null, default: 0]
+  book_ending_balance decimal(24,2) [not null, default: 0]
+  reconciled_balance decimal(24,2) [not null, default: 0]
+  difference decimal(24,2) [not null, default: 0]
+  status reconciliation_status [not null, default: 'draft']
+  reconciled_by bigint [ref: > users.id]
+  reconciled_at timestamp
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Matches a statement line to a posted journal line
+Table reconciliation_matches {
+  id bigint [pk, not null, increment]
+  bank_reconciliation_id bigint [not null, ref: > bank_reconciliations.id]
+  bank_statement_line_id bigint [ref: > bank_statement_lines.id]
+  journal_line_id bigint [ref: > journal_lines.id]
+  amount decimal(24,2) [not null, default: 0]
+  created_at timestamp
+}
+
+
+// =====================================================================
+//  MODULE 7 — FIXED ASSETS (Aset Tetap & Penyusutan)
+// =====================================================================
+
+Table asset_categories {
+  id bigint [pk, not null, increment]
+  code varchar(20) [not null]
+  name varchar(100) [not null]
+  asset_account_id bigint [ref: > accounts.id, note: 'Aset tetap']
+  accumulated_depreciation_account_id bigint [ref: > accounts.id]
+  depreciation_expense_account_id bigint [ref: > accounts.id]
+  depreciation_method depreciation_method [not null, default: 'straight_line']
+  useful_life_months smallint [not null, default: 48]
+  tax_asset_group varchar(50) [note: 'Kelompok fiskal: I/II/III/IV/Bangunan']
+  is_active tinyint(1) [not null, default: 1]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { code [unique] }
+}
+
+Table fixed_assets {
+  id bigint [pk, not null, increment]
+  asset_number varchar(50) [not null]
+  name varchar(150) [not null]
+  category_id bigint [not null, ref: > asset_categories.id]
+  cost_center_id bigint [ref: > cost_centers.id]
+  acquisition_date date [not null]
+  acquisition_cost decimal(24,2) [not null]
+  salvage_value decimal(24,2) [not null, default: 0]
+  depreciation_method depreciation_method [not null, default: 'straight_line']
+  useful_life_months smallint [not null]
+  depreciation_start_date date
+  accumulated_depreciation decimal(24,2) [not null, default: 0]
+  book_value decimal(24,2) [not null, default: 0]
+  supplier_id bigint [ref: > suppliers.id]
+  bill_id bigint [ref: > bills.id]
+  status asset_status [not null, default: 'active']
+  location varchar(150)
+  serial_number varchar(100)
+  note text
+  journal_id bigint [ref: > journals.id, note: 'Acquisition journal']
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes { asset_number [unique], category_id, status }
+}
+
+// Depreciation schedule / posted entries (Penyusutan)
+Table asset_depreciations {
+  id bigint [pk, not null, increment]
+  fixed_asset_id bigint [not null, ref: > fixed_assets.id]
+  period_id bigint [not null, ref: > accounting_periods.id]
+  depreciation_date date [not null]
+  amount decimal(24,2) [not null]
+  accumulated_after decimal(24,2) [not null]
+  book_value_after decimal(24,2) [not null]
+  is_posted tinyint(1) [not null, default: 0]
+  journal_id bigint [ref: > journals.id]
+  created_at timestamp
+
+  Indexes { (fixed_asset_id, period_id) [unique] }
+}
+
+Table asset_disposals {
+  id bigint [pk, not null, increment]
+  fixed_asset_id bigint [not null, ref: > fixed_assets.id]
+  disposal_date date [not null]
+  disposal_type asset_disposal_type [not null]
+  proceeds decimal(24,2) [not null, default: 0]
+  book_value_at_disposal decimal(24,2) [not null, default: 0]
+  gain_loss decimal(24,2) [not null, default: 0, note: 'Laba/rugi pelepasan']
+  buyer varchar(150)
+  bank_account_id bigint [ref: > bank_accounts.id]
+  journal_id bigint [ref: > journals.id]
+  note varchar(255)
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+}
+
+
+// =====================================================================
+//  MODULE 8 — TAX (Perpajakan: PPN & PPh)
+// =====================================================================
+
+// Faktur Pajak (PPN Keluaran & Masukan)
+Table tax_invoices {
+  id bigint [pk, not null, increment]
+  faktur_number varchar(30) [note: 'Nomor Seri Faktur Pajak']
+  type tax_invoice_type [not null]
+  transaction_date date [not null]
+  partner_type varchar(100) [note: 'customers / suppliers']
+  partner_id bigint
+  npwp varchar(30)
+  dpp decimal(24,2) [not null, note: 'Dasar Pengenaan Pajak (tax base)']
+  ppn_amount decimal(24,2) [not null, default: 0]
+  ppnbm_amount decimal(24,2) [not null, default: 0]
+  source_type varchar(100) [note: 'invoices / bills']
+  source_id bigint
+  status tax_invoice_status [not null, default: 'draft']
+  is_reported tinyint(1) [not null, default: 0, note: 'Reported in SPT Masa PPN']
+  reported_period varchar(7) [note: 'YYYY-MM']
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { (type, reported_period), (source_type, source_id) }
+}
+
+// Bukti Potong PPh (withholding slips, both directions)
+Table withholding_tax_slips {
+  id bigint [pk, not null, increment]
+  slip_number varchar(50) [note: 'Nomor bukti potong']
+  tax_code_id bigint [not null, ref: > tax_codes.id]
+  direction withholding_direction [not null]
+  partner_type varchar(100) [note: 'customers / suppliers / employees']
+  partner_id bigint
+  npwp varchar(30)
+  transaction_date date [not null]
+  tax_base decimal(24,2) [not null, note: 'DPP']
+  tax_rate decimal(6,4) [not null]
+  tax_amount decimal(24,2) [not null]
+  source_type varchar(100) [note: 'bills / invoices / expenses / payroll']
+  source_id bigint
+  is_reported tinyint(1) [not null, default: 0]
+  reported_period varchar(7) [note: 'YYYY-MM']
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { (direction, reported_period) }
+}
+
+
+// =====================================================================
+//  MODULE 9 — PERIOD CLOSING & AUDIT (Tutup Buku)
+// =====================================================================
+
+Table period_closings {
+  id bigint [pk, not null, increment]
+  period_id bigint [not null, ref: > accounting_periods.id]
+  closing_type closing_type [not null, default: 'monthly']
+  closing_journal_id bigint [ref: > journals.id, note: 'Closing entries journal']
+  net_income decimal(24,2) [not null, default: 0]
+  retained_earnings_amount decimal(24,2) [not null, default: 0, note: 'Moved to RE at year-end']
+  status period_status [not null, default: 'closed']
+  note varchar(255)
+  closed_by bigint [ref: > users.id]
+  closed_at timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes { period_id [unique] }
+}
+
+// Immutable audit trail for accounting actions (post/void/edit)
+Table accounting_audit_logs {
+  id bigint [pk, not null, increment]
+  auditable_type varchar(100) [not null, note: 'journals / bills / invoices / ...']
+  auditable_id bigint [not null]
+  action varchar(50) [not null, note: 'created / updated / posted / voided / reversed']
+  changes json
+  user_id bigint [ref: > users.id]
+  ip_address varchar(45)
+  created_at timestamp
+
+  Indexes { (auditable_type, auditable_id) }
+}
+
+
+// =====================================================================
+//  TABLE GROUPS (for the ERD diagram)
+// =====================================================================
+
+TableGroup "Existing (stubs)" {
+  users
+  employees
+  customers
+  project_deals
+  invoices
+  transactions
+}
+
+TableGroup "1. Foundation" {
+  accounts
+  fiscal_years
+  accounting_periods
+  cost_centers
+  currencies
+  exchange_rates
+  tax_codes
+  bank_accounts
+  payment_methods
+  suppliers
+  default_accounts
+}
+
+TableGroup "2. General Ledger" {
+  journals
+  journal_lines
+  account_balances
+  recurring_journals
+  recurring_journal_lines
+}
+
+TableGroup "3. Accounts Receivable" {
+  receipt_allocations
+  credit_notes
+  revenue_recognitions
+  ar_allowances
+}
+
+TableGroup "4. Accounts Payable" {
+  purchase_orders
+  purchase_order_lines
+  bills
+  bill_lines
+  bill_payments
+  bill_payment_allocations
+  debit_notes
+}
+
+TableGroup "5. Cash Management" {
+  expenses
+  expense_lines
+  cash_advances
+  cash_advance_settlements
+  bank_transfers
+}
+
+TableGroup "6. Bank Reconciliation" {
+  bank_statements
+  bank_statement_lines
+  bank_reconciliations
+  reconciliation_matches
+}
+
+TableGroup "7. Fixed Assets" {
+  asset_categories
+  fixed_assets
+  asset_depreciations
+  asset_disposals
+}
+
+TableGroup "8. Tax" {
+  tax_invoices
+  withholding_tax_slips
+}
+
+TableGroup "9. Closing & Audit" {
+  period_closings
+  accounting_audit_logs
+}

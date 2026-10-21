@@ -8,6 +8,44 @@ Enum "allowances_period_enum" {
   "per_event"
 }
 
+Enum account_subtype {
+  // Assets (Aset)
+  cash_and_bank             // Kas & Bank
+  accounts_receivable       // Piutang Usaha
+  other_receivable          // Piutang Lain-lain
+  inventory                 // Persediaan
+  prepaid_expense           // Beban Dibayar Dimuka
+  advance_to_supplier       // Uang Muka Pembelian
+  other_current_asset       // Aset Lancar Lainnya
+  fixed_asset               // Aset Tetap
+  accumulated_depreciation  // Akumulasi Penyusutan (contra-asset)
+  intangible_asset          // Aset Tak Berwujud
+  other_non_current_asset   // Aset Tidak Lancar Lainnya
+  // Liabilities (Liabilitas)
+  accounts_payable          // Utang Usaha
+  accrued_expense           // Beban Yang Masih Harus Dibayar
+  tax_payable               // Utang Pajak
+  customer_deposit          // Uang Muka Pelanggan / Pendapatan Diterima Dimuka
+  short_term_debt           // Utang Jangka Pendek
+  other_current_liability   // Liabilitas Lancar Lainnya
+  long_term_debt            // Utang Jangka Panjang
+  other_non_current_liability
+  // Equity (Ekuitas)
+  share_capital             // Modal Disetor
+  retained_earnings         // Laba Ditahan
+  current_year_earnings     // Laba Tahun Berjalan
+  owner_drawing             // Prive
+  other_equity
+  // Revenue (Pendapatan)
+  operating_revenue         // Pendapatan Usaha
+  other_income              // Pendapatan Lain-lain
+  // Expense (Beban)
+  cost_of_revenue           // Harga Pokok (HPP)
+  operating_expense         // Beban Operasional
+  other_expense             // Beban Lain-lain
+  tax_expense               // Beban Pajak Penghasilan
+}
+
 Enum "NasCmdType" {
   "create"
   "write"
@@ -4664,6 +4702,34 @@ Enum "payment_status_enum" {
 }
 
 // ---- 1. Chart of Accounts & settings ---------------------------------------
+Table accounts {
+  id bigint [pk, not null, increment]
+  code varchar(20) [not null, note: 'Kode akun, e.g. 1-1100']
+  name varchar(150) [not null, note: 'Nama akun']
+  account_type account_type [not null]
+  account_subtype account_subtype [not null, note: 'Drives financial statement grouping']
+  normal_balance normal_balance [not null]
+  parent_id bigint [ref: > accounts.id, note: 'Self-reference for hierarchy']
+  level tinyint [not null, default: 1]
+  is_postable tinyint(1) [not null, default: 1, note: '0 = header/group, cannot post']
+  is_cash_equivalent tinyint(1) [not null, default: 0, note: 'Part of Cash & Cash Equivalents']
+  cash_flow_category cash_flow_category [note: 'For indirect cash flow statement']
+  currency_code char(3) [not null, default: 'IDR']
+  is_locked tinyint(1) [not null, default: 0, note: 'System account, cannot delete']
+  is_active tinyint(1) [not null, default: 1]
+  description varchar(255)
+  created_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    code [unique, name: 'accounts_code_unique']
+    parent_id
+    (account_type, account_subtype)
+  }
+}
+
 Table "chart_of_accounts" {
   "id" bigint [pk, not null, increment]
   "uid" char(36) [not null]

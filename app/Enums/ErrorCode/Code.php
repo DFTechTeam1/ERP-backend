@@ -11,6 +11,7 @@ enum Code: int
     case Forbidden = 403;
     case NotFound = 404;
     case MethodNotAllowed = 405;
+    case Conflict = 409;
     case ValidationError = 422;
     case InternalServerError = 500;
 
@@ -24,6 +25,7 @@ enum Code: int
             self::Forbidden => __('global.forbidden'),
             self::NotFound => __('global.notFound'),
             self::MethodNotAllowed => __('global.methodNotAllowed'),
+            self::Conflict => __('global.conflict'),
             self::InternalServerError => __('global.internalServerError'),
             self::ValidationError => __('global.validationError'),
         };
