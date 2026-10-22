@@ -2,9 +2,11 @@
 
 namespace Modules\Hrd\Services;
 
+use Modules\Hrd\Models\EmployeePoint;
 use Modules\Hrd\Repository\EmployeePointProjectDetailRepository;
 use Modules\Hrd\Repository\EmployeePointProjectRepository;
 use Modules\Hrd\Repository\EmployeePointRepository;
+use Modules\Production\Models\EntertainmentTaskSong;
 
 class EmployeePointService
 {
@@ -78,61 +80,59 @@ class EmployeePointService
      * 3. Search the detail of tasks in the employee_point_project_details by passing employee_point_projects.id
      * 4. Get the detail of task based on employee_points.type production or entertainment
      *
-     * @return \Modules\Hrd\Models\EmployeePoint
+     * @return EmployeePoint
      */
     public function renderEachEmployeePoint(int $employeeId = 17, string $startDate = '', string $endDate = '')
     {
-        $data = $this->repo->show(
-            uid: 'string',
-            select: 'id,employee_id,type',
+        // An employee may hold more than one employee_point row (one per type:
+        // production + entertainment). Aggregate across all of them, and resolve
+        // each task by its stored task_type so overlapping task ids never pick the
+        // wrong table (project_tasks vs entertainment_task_songs).
+        $pointIds = collect($this->repo->list(
+            select: 'id',
             where: "employee_id = {$employeeId}",
-        );
+        ))->pluck('id')->toArray();
 
         $totalPoint = 0;
         $totalProject = 0;
         $taskDetail = [];
 
-        if ($data) {
-            $relation = [
-                'project:id,name AS project_name',
-                'details:id,point_id,task_id',
-                'details.productionTask:id,name,created_at',
-            ];
-            if ($data->type != 'production') {
-                $relation = [
-                    'project:id,name AS project_name',
-                    'details:id,point_id,task_id',
-                    'details.entertainmentTask:id,project_song_list_id,created_at',
-                    'details.entertainmentTask.song:id,name',
-                ];
-            }
+        if (! empty($pointIds)) {
             $details = $this->pointProjectRepo->list(
                 select: 'id,employee_point_id,project_id,total_point AS total_point_per_project,additional_point,calculated_prorate_point,prorate_point,original_point',
-                where: "employee_point_id = {$data->id}",
-                relation: $relation,
+                where: 'employee_point_id IN ('.implode(',', $pointIds).')',
+                relation: [
+                    'project:id,name AS project_name',
+                    'details:id,point_id,task_id,task_type',
+                    'details.productionTask:id,name,project_id,created_at',
+                    'details.entertainmentTask:id,project_song_list_id,project_id,created_at',
+                    'details.entertainmentTask.song:id,name',
+                ],
                 whereHas: [
                     ['relation' => 'project', 'query' => "project_date BETWEEN '{$startDate}' AND '{$endDate}'"],
                 ]
             );
 
-            $data['point_details'] = $details;
             $totalPoint = collect($details)->pluck('total_point_per_project')->sum();
             $totalProject = $details->count();
-            $taskDetail = [];
+
             foreach ($details as $detail) {
+                $projectId = (int) $detail->project_id;
                 $outputTasks = [];
                 foreach ($detail->details as $task) {
-                    if ($data->type == 'production') {
-                        $outputTasks[] = [
-                            'name' => $task->productionTask->name,
-                            'assigned_at' => date('d F Y, H:i', strtotime($task->productionTask->created_at)),
-                        ];
-                    } else {
-                        $outputTasks[] = [
-                            'name' => $task->entertainmentTask->song->name,
-                            'assigned_at' => date('d F Y, H:i', strtotime($task->entertainmentTask->created_at)),
-                        ];
+                    $resolved = $task->resolveTask($projectId);
+                    if (! $resolved) {
+                        continue;
                     }
+
+                    $name = $resolved instanceof EntertainmentTaskSong
+                        ? $resolved->song?->name
+                        : $resolved->name;
+
+                    $outputTasks[] = [
+                        'name' => $name,
+                        'assigned_at' => date('d F Y, H:i', strtotime($resolved->created_at)),
+                    ];
                 }
 
                 $taskDetail[] = [

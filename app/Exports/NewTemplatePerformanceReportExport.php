@@ -65,7 +65,7 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
                             'projectClass:id,name',
                         ]);
                 },
-                'details:id,point_id,task_id',
+                'details:id,point_id,task_id,task_type',
                 'employeePoint:id,type,employee_id',
                 'employeePoint.employee:id,name,position_id,employee_id',
                 'employeePoint.employee.position:id,name',
@@ -83,25 +83,12 @@ class NewTemplatePerformanceReportExport implements FromView, ShouldQueue, WithE
         foreach ($projects as $project) {
             $projectId = (int) $project->project_id;
 
-            // Resolve each task against this point-project's own project instead of the parent
-            // employee_points.type. That type is a single value per employee and is never updated,
-            // so for anyone who moved between the production and entertainment teams it is wrong for
-            // half their history. Because a detail's task_id is looked up against two different
-            // tables (project_tasks vs entertainment_task_songs) whose ids overlap, the wrong type
-            // silently resolves task_id to an unrelated task from another project. Accepting a task
-            // only when it belongs to this project makes the row correct regardless of the type.
+            // Resolve each task by its stored task_type so the overlapping task_id
+            // (project_tasks vs entertainment_task_songs) always hits the right table,
+            // regardless of the parent employee_points.type. Rows not yet backfilled
+            // (task_type null) fall back to matching the task to this project.
             $tasks = collect($project->details)->map(function ($detail) use ($projectId) {
-                $productionTask = $detail->productionTask;
-                if ($productionTask && (int) $productionTask->project_id === $projectId) {
-                    return $productionTask->name;
-                }
-
-                $entertainmentTask = $detail->entertainmentTask;
-                if ($entertainmentTask && (int) $entertainmentTask->project_id === $projectId) {
-                    return $entertainmentTask->song?->name;
-                }
-
-                return null;
+                return $detail->resolveTaskName($projectId);
             })->filter()->values()->toArray();
 
             $pics = [];

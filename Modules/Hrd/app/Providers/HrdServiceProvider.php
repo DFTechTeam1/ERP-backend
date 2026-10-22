@@ -5,6 +5,7 @@ namespace Modules\Hrd\Providers;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Hrd\Console\AutoUpdateEmployeeTimeoff;
+use Modules\Hrd\Console\BackfillPointTaskType;
 use Modules\Hrd\Console\CheckEmployeeResign;
 use Modules\Hrd\Console\CheckTransferEntityScheduleCommand;
 use Modules\Hrd\Console\CreatePartnerUser;
@@ -66,6 +67,7 @@ class HrdServiceProvider extends ServiceProvider
     protected function registerCommands(): void
     {
         $this->commands([
+            BackfillPointTaskType::class,
             ManualExportPerformanceReport::class,
             MigrationEmployeePointToNewSchema::class,
             MakeEmployeeAsSync::class,

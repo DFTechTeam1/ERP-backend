@@ -2,6 +2,7 @@
 
 namespace Modules\Finance\Jobs;
 
+use App\Models\User;
 use App\Services\GeneralService;
 use App\Services\PusherNotification;
 use Illuminate\Bus\Queueable;
@@ -28,11 +29,11 @@ class InvoiceDueCheck implements ShouldQueue
      */
     public function handle(): void
     {
-        $generalService = new GeneralService;
+        $generalService = app(GeneralService::class);
 
         $invoices = $generalService->getInvoiceDueData();
 
-        $users = \App\Models\User::role(['root', 'finance'])
+        $users = User::role(['root', 'finance'])
             ->with([
                 'employee:id,name',
             ])
@@ -41,16 +42,24 @@ class InvoiceDueCheck implements ShouldQueue
         // get related marketings and merge to existing users
         foreach ($invoices as $invoice) {
             foreach ($invoice->projectDeal->marketings as $marketing) {
-                $marketingUser = \App\Models\User::with(['employee:id,name'])
+                $marketingUser = User::with(['employee:id,name'])
                     ->where('employee_id', $marketing->employee_id)->first();
 
-                $users->push($marketingUser);
+                // A marketing may have no user account; skip it so the notify loop
+                // below never calls notify() on null.
+                if ($marketingUser) {
+                    $users->push($marketingUser);
+                }
             }
         }
 
-        $pusher = new PusherNotification;
+        $pusher = app(PusherNotification::class);
 
         foreach ($users as $user) {
+            if (! $user) {
+                continue;
+            }
+
             if ($invoices->count() > 0) {
                 $user->notify(new InvoiceDueCheckNotification($invoices, $user));
 
