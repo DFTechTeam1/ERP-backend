@@ -37,6 +37,7 @@ class DfengineService
 
         return [
             'isRoot' => $user->hasRole(BaseRole::Root->value),
+            'isDirector' => $user->hasRole(BaseRole::Director->value),
             'isProjectManager' => in_array($userRole, $this->getProjectManagerRoles()),
             'isProduction' => in_array($userRole, $this->getProductionRoles()),
         ];
@@ -51,6 +52,7 @@ class DfengineService
         return new UserData(
             user: $user,
             isRoot: $defineRole['isRoot'],
+            isDirector: $defineRole['isDirector'],
             isProjectManager: $defineRole['isProjectManager'],
             isProduction: $defineRole['isProduction']
         );

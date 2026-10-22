@@ -642,6 +642,11 @@ class ProjectService
             $dfengine = app(DfengineService::class);
             $userData = $dfengine->getUser();
 
+            $allowedTaskStatus = [
+                TaskStatus::OnProgress->value,
+                TaskStatus::CheckByPm->value,
+            ];
+
             $where = "project_id = {$project->id}";
 
             if ($search) {
@@ -650,21 +655,27 @@ class ProjectService
 
             if ($status) {
                 $where .= " AND status = {$status}";
+            } else {
+                $where .= " AND status IN (" . implode(',', $allowedTaskStatus) . ")";
             }
 
             $whereHas = [];
+            $has = [];
 
             if ($userData->isProduction && $userData->user->employee) {
                 $whereHas[] = [
                     'relation' => 'pics',
                     'query' => 'employee_id = ' . $userData->user->employee->id,
                 ];
+            } else if ($userData->isDirector || $userData->isRoot) {
+                $has[] = 'pics';
             }
 
             $tasks = $this->taskRepo->pagination(
                 select: 'id,uid,name,project_id,status,created_at,updated_at',
                 where: $where,
                 whereHas: $whereHas,
+                has: $has,
                 relation: [
                     'pics:id,project_task_id,employee_id',
                     'project:id,uid',
