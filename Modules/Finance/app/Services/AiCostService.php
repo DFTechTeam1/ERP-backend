@@ -11,10 +11,13 @@ use App\Data\Finance\AiCost\TopupSummaryData;
 use App\Data\Finance\AiCost\TopupTokenData;
 use App\Data\Finance\AiCost\TrendData;
 use App\Repository\UserRepository;
+use App\Services\Slack;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Modules\Email\Data\Notification\SendSlackMessageData;
 use Modules\Finance\Models\DfEngineGeneration;
 use Modules\Finance\Repository\DfEngineApiKeyRepository;
 use Modules\Finance\Repository\DfEngineFeatureRepository;
@@ -247,7 +250,7 @@ class AiCostService
 
             // Fill month
             $allMonths = collect(range(1, 12))->map(function ($item) use ($output) {
-                $targetMonth = date('M', strtotime(date('Y').'-'.$item));
+                $targetMonth = date('M', strtotime(date('Y') . '-' . $item));
 
                 $costIdr = collect($output)->firstWhere('month', $targetMonth)?->costIdr ?? 0;
                 $costUsd = collect($output)->firstWhere('month', $targetMonth)?->costUsd ?? 0;
@@ -288,7 +291,7 @@ class AiCostService
             if ($actorIds->isNotEmpty()) {
                 $actors = $this->userRepo->list(
                     select: 'id,employee_id,username',
-                    where: 'id IN ('.$actorIds->map(fn ($id) => (int) $id)->implode(',').')',
+                    where: 'id IN (' . $actorIds->map(fn($id) => (int) $id)->implode(',') . ')',
                     relation: ['employee:id,name', 'roles:id,name']
                 )->keyBy('id');
             }
@@ -359,7 +362,7 @@ class AiCostService
                     topup_date: $item->topup_date,
                     reference: $item->reference ?? null,
                     note: $item->note ?? null,
-                    proof_of_payment_url: asset('storage/'.$item->proof_of_payment),
+                    proof_of_payment_url: asset('storage/' . $item->proof_of_payment),
                     creator: new TopupCreatorData(
                         nickname: $item?->creator?->employee?->nickname ?? ($item->creator ? $item->creator->email : '-'),
                         image: $item?->creator?->employee?->avatar ?? '',
@@ -379,6 +382,43 @@ class AiCostService
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
+        }
+    }
+
+    protected function callTokenUpdater(): void
+    {
+        try {
+            $response = Http::withToken(request()->bearerToken())
+                ->patch(config('app.engine_endpoint') . '/key-management/credits');
+
+            if ($response->failed()) {
+                $payload = [
+                    'messageTitle' => 'failed to update openrouter token',
+                    'title' => "failed update token",
+                    'sectionBlock' => [
+                        [
+                            'message' => 'failed to call open router token updated. ' . $response->json('message') ?? 'no message from respnose'
+                        ]
+                    ]
+                ];
+            } else {
+                $payload = [
+                    'messageTitle' => 'Update open router token success',
+                    'title' => "Success to update open router token",
+                ];
+            }
+            Slack::sendMessage(SendSlackMessageData::from($payload));
+        } catch (\Throwable $th) {
+            $payload = [
+                'messageTitle' => 'Failed to update OpenRouter token',
+                'title' => "Failed update Token",
+                'sectionBlock' => [
+                    [
+                        'message' => 'Failed to call open router token updated. ' . $th->getMessage() . ', at line ' . $th->getLine() . ', check file ' . $th->getFile()
+                    ]
+                ]
+            ];
+            Slack::sendMessage(SendSlackMessageData::from($payload));
         }
     }
 
@@ -414,6 +454,8 @@ class AiCostService
             }
 
             $this->topupRepo->store($payloadTopup);
+
+            $this->callTokenUpdater();
 
             return generalResponse(
                 message: 'Success topup token'

@@ -178,4 +178,6 @@ return [
     'exchange_api_key' => env('EXCHANGE_RATE_API_KEY', null),
 
     'exchange_api_url' => env('EXCHANGE_RATE_URL', null),
+
+    'engine_endpoint' => env('ENGINE_ENDPOINT', null),
 ];
