@@ -238,6 +238,10 @@ class RolePermissionSetting extends Seeder
                 $this->getDirectorRole(),
                 $this->getRootRole(),
             ]],
+            ['name' => 'dfengine_update_project_setting', 'group' => 'dashboard', 'used' => [
+                $this->getDirectorRole(),
+                $this->getRootRole(),
+            ]],
             ['name' => 'dfengine_edit_setting', 'group' => 'dashboard', 'used' => [
                 $this->getDirectorRole(),
                 $this->getRootRole(),
