@@ -65,7 +65,8 @@ class ProjectTaskRepository extends ProjectTaskInterface
         int $itemsPerPage,
         int $page,
         array $whereHas = [],
-        string $sortBy = ''
+        string $sortBy = '',
+        array $has = []
     ) {
         $query = $this->model->query();
 
@@ -84,6 +85,12 @@ class ProjectTaskRepository extends ProjectTaskInterface
                 $query->whereHas($wh['relation'], function (Builder $query) use ($wh) {
                     $query->whereRaw($wh['query']);
                 });
+            }
+        }
+
+        if (! empty($has)) {
+            foreach ($has as $hasData) {
+                $query->has($hasData);
             }
         }
 

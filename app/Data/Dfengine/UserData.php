@@ -10,6 +10,7 @@ class UserData extends Data
     public function __construct(
         public readonly User $user,
         public readonly bool $isRoot,
+        public readonly bool $isDirector,
         public readonly bool $isProduction,
         public readonly bool $isProjectManager
     ) {}
