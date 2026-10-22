@@ -6,6 +6,7 @@ use App\Services\GeneralService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Crypt;
 use Modules\Production\Models\ProjectDeal;
 
 class PaymentDueReminderNotification extends Notification
@@ -25,7 +26,7 @@ class PaymentDueReminderNotification extends Notification
 
         // general service
         $generalService = new GeneralService;
-        $this->invoiceNumber = $generalService->generateInvoiceNumber();
+        $this->invoiceNumber = $generalService->generateInvoiceNumber(identifierNumber: $projectDeal->identifier_number);
     }
 
     /**
@@ -45,7 +46,7 @@ class PaymentDueReminderNotification extends Notification
     {
         setEmailConfiguration();
 
-        $uid = \Illuminate\Support\Facades\Crypt::encryptString($this->projectDeal->id);
+        $uid = Crypt::encryptString($this->projectDeal->id);
 
         return (new MailMessage)
             ->subject('Payment Due')

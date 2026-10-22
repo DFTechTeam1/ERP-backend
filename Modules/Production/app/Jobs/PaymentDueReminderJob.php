@@ -27,13 +27,15 @@ class PaymentDueReminderJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $generalService = new GeneralService;
+        $generalService = app(GeneralService::class);
 
         $data = $generalService->getUpcomingPaymentDue();
 
         foreach ($data as $deal) {
             foreach ($deal->marketings as $marketing) {
-                $marketing->employee->notify(new PaymentDueReminderNotification($deal));
+                // A marketing row can reference an employee with no record (or no
+                // notifiable user); skip it instead of fatally calling notify() on null.
+                $marketing->employee?->notify(new PaymentDueReminderNotification($deal));
             }
         }
     }

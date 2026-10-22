@@ -136,7 +136,9 @@ class PointRecordBasedOnReward
             // know each worker's total_point BEFORE splitting the fixed pot across the event.
             $rows = [];
             foreach ($mapping as $data) {
-                $employeePoint = $employeePointRepo->show(uid: '', where: 'employee_id = '.$data['employee_id']);
+                // Scope by type so production and entertainment points never collapse
+                // into a single, stale-typed employee_point row.
+                $employeePoint = $employeePointRepo->show(uid: '', where: "employee_id = {$data['employee_id']} AND type = '{$data['employee_type']}'");
                 if (! $employeePoint) {
                     $employeePoint = $employeePointRepo->store([
                         'employee_id' => $data['employee_id'],
@@ -186,7 +188,12 @@ class PointRecordBasedOnReward
                 );
 
                 // One detail row per task; tasks_detail is a Collection, so createMany(array).
-                $pointProject->details()->createMany(collect($data['tasks_detail'])->toArray());
+                // Stamp task_type so the overlapping task_id resolves against the right table.
+                $pointProject->details()->createMany(
+                    collect($data['tasks_detail'])
+                        ->map(fn ($detail) => array_merge((array) $detail, ['task_type' => $data['employee_type']]))
+                        ->toArray()
+                );
 
                 $pointProject->rewards()->create([
                     'employee_id' => $data['employee_id'],
@@ -208,8 +215,9 @@ class PointRecordBasedOnReward
                     'reward' => $rewards[$index],
                 ]);
 
-                // Update employee total point
-                $employeePointRepo->update(['total_point' => $employeePoint->total_point + $row['total_point']], '', 'employee_id = '.$data['employee_id']);
+                // Update this type's employee_point total (scoped to the row by id so a
+                // production and an entertainment record do not accumulate into each other).
+                $employeePointRepo->update(['total_point' => $employeePoint->total_point + $row['total_point']], '', 'id = '.$employeePoint->id);
             }
         });
     }
