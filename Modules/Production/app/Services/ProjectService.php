@@ -636,6 +636,7 @@ class ProjectService
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
             $status = request('status');
+            $user = Auth::user();
 
             $project = $this->repo->show($projectUid, 'id');
 
@@ -679,7 +680,7 @@ class ProjectService
                     uid: $task->uid,
                     project_uid: $task->project->uid,
                     name: $task->name,
-                    status: $task->task_status ?? '-',
+                    status: $task->task_status,
                     created_at: date('d F Y H:i', strtotime($task->created_at)),
                     updated_at: $task->updated_at ? date('d F Y H:i', strtotime($task->updated_at)) : null,
                     action: [
@@ -723,6 +724,7 @@ class ProjectService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $user = Auth::user();
 
             $dfengine = app(DfengineService::class);
 
