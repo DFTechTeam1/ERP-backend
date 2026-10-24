@@ -636,11 +636,17 @@ class ProjectService
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
             $search = request('search');
             $status = request('status');
+            $user = Auth::user();
 
             $project = $this->repo->show($projectUid, 'id');
 
             $dfengine = app(DfengineService::class);
             $userData = $dfengine->getUser();
+
+            $allowedTaskStatus = [
+                TaskStatus::OnProgress->value,
+                TaskStatus::CheckByPm->value,
+            ];
 
             $where = "project_id = {$project->id}";
 
@@ -650,21 +656,27 @@ class ProjectService
 
             if ($status) {
                 $where .= " AND status = {$status}";
+            } else {
+                $where .= " AND status IN (" . implode(',', $allowedTaskStatus) . ")";
             }
 
             $whereHas = [];
+            $has = [];
 
             if ($userData->isProduction && $userData->user->employee) {
                 $whereHas[] = [
                     'relation' => 'pics',
                     'query' => 'employee_id = ' . $userData->user->employee->id,
                 ];
+            } else if ($userData->isDirector || $userData->isRoot) {
+                $has[] = 'pics';
             }
 
             $tasks = $this->taskRepo->pagination(
                 select: 'id,uid,name,project_id,status,created_at,updated_at',
                 where: $where,
                 whereHas: $whereHas,
+                has: $has,
                 relation: [
                     'pics:id,project_task_id,employee_id',
                     'project:id,uid',
@@ -679,7 +691,7 @@ class ProjectService
                     uid: $task->uid,
                     project_uid: $task->project->uid,
                     name: $task->name,
-                    status: $task->task_status ?? '-',
+                    status: $task->task_status,
                     created_at: date('d F Y H:i', strtotime($task->created_at)),
                     updated_at: $task->updated_at ? date('d F Y H:i', strtotime($task->updated_at)) : null,
                     action: [
@@ -723,6 +735,7 @@ class ProjectService
             $page = request('page') ?? 1;
             $page = $page == 1 ? 0 : $page;
             $page = $page > 0 ? $page * $itemsPerPage - $itemsPerPage : 0;
+            $user = Auth::user();
 
             $dfengine = app(DfengineService::class);
 

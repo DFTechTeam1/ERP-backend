@@ -16,8 +16,8 @@ final class SendSlackMessageData extends BaseData
         public string $messageTitle,
         public string $title,
         #[DataCollectionOf(SlackSectionBlockData::class)]
-        public ?DataCollection $sectionBlock,
+        public ?DataCollection $sectionBlock = null,
         #[DataCollectionOf(SlackSectionBlockData::class)]
-        public ?DataCollection $contextBlock,
+        public ?DataCollection $contextBlock = null,
     ) {}
 }

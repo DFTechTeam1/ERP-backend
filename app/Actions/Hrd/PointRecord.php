@@ -22,7 +22,6 @@ class PointRecord
      *
      * Complete step is:
      * 1. Check data by employee_id in the employee_points table
-     *
      */
     public function handle(
         array $payload, string $projectUid, string $type, bool $isRegularEmployee = true
@@ -45,8 +44,12 @@ class PointRecord
             foreach ($payload['points'] as $data) {
                 $employeeId = $generalService->getIdFromUid($data['uid'], new Employee);
 
+                // Scope by type: a production and an entertainment point for the same
+                // employee are distinct records. Looking up by employee_id alone collapsed
+                // them, so a worker who moved teams kept one stale type for all history.
                 $currentPoint = EmployeePoint::selectRaw('id')
                     ->where('employee_id', $employeeId)
+                    ->where('type', $type)
                     ->first();
 
                 if (! $currentPoint) {
@@ -64,7 +67,7 @@ class PointRecord
                 if (! $pointProject) {
                     $point = $data['point'];
                     $additionalPoint = $data['additional_point'];
-                    $originalPoint = !isset($data['original_point']) ? $point - $additionalPoint : $data['original_point'];
+                    $originalPoint = ! isset($data['original_point']) ? $point - $additionalPoint : $data['original_point'];
                     $pointProject = EmployeePointProject::create([
                         'employee_point_id' => $currentPoint->id,
                         'project_id' => $projectId,
@@ -76,26 +79,18 @@ class PointRecord
                     ]);
                 }
 
-                // add detail
+                // add detail — store the task_type so the overlapping task_id can be
+                // resolved against the correct table (project_tasks vs entertainment_task_songs).
                 foreach ($data['tasks'] as $task) {
                     EmployeePointProjectDetail::create([
                         'point_id' => $pointProject->id,
                         'task_id' => $task,
+                        'task_type' => $type,
                     ]);
                 }
 
                 // update total point
-                $parent = EmployeePoint::select('id')
-                    ->where('employee_id', $employeeId)
-                    ->get();
-                $child = EmployeePointProject::selectRaw('total_point')
-                    ->whereIn('employee_point_id', collect($parent)->pluck('id')->toArray())
-                    ->get();
-                $totalPoint = collect($child)->pluck('total_point')->sum();
-                EmployeePoint::where('employee_id', $employeeId)
-                    ->update([
-                        'total_point' => $totalPoint,
-                    ]);
+                $this->updateEmployeeTotalPoint($employeeId);
             }
 
             return true;
@@ -108,21 +103,20 @@ class PointRecord
 
     /**
      * Handle point recording for special employees with support for multiple PIC assessments.
-     * 
+     *
      * This method handles special employee points across multiple PIC submissions:
      * - First PIC: Creates initial point record
      * - Subsequent PICs: Updates existing record by accumulating additional points
-     * 
+     *
      * Rule:
      * 1. Check if special employee already has a point record for this specific project
      * 2. If exists, UPDATE the record by adding new additional_point from current PIC
      * 3. If not exists, CREATE new point record with initial points
      * 4. Always recalculate total_point = point + accumulated additional_point
-     * 
-     * @param array $payload - Contains points array with employee data
-     * @param string $projectUid - The project UID
-     * @param string $type - Type of point (production/entertainment)
-     * @return bool
+     *
+     * @param  array  $payload  - Contains points array with employee data
+     * @param  string  $projectUid  - The project UID
+     * @param  string  $type  - Type of point (production/entertainment)
      */
     public function handleSpecialEmployeePoints(
         array $payload, string $projectUid, string $type
@@ -133,7 +127,7 @@ class PointRecord
 
             foreach ($payload['points'] as $data) {
                 // Skip if not a special employee
-                if (!isset($data['is_special_employee']) || $data['is_special_employee'] != 1) {
+                if (! isset($data['is_special_employee']) || $data['is_special_employee'] != 1) {
                     continue;
                 }
 
@@ -147,11 +141,11 @@ class PointRecord
                     // Update by accumulating additional points from current PIC
                     $oldAdditionalPoint = $existingRecord->additional_point;
                     $newAdditionalPoint = $oldAdditionalPoint + $data['additional_point'];
-                    
+
                     // Recalculate total point (base point + accumulated additional points)
                     $basePoint = $data['original_point'];
                     $newTotalPoint = $basePoint + $newAdditionalPoint;
-                    
+
                     $existingRecord->update([
                         'additional_point' => $newAdditionalPoint,
                         'total_point' => $newTotalPoint,
@@ -166,11 +160,12 @@ class PointRecord
                             $existingTaskDetail = EmployeePointProjectDetail::where('point_id', $existingRecord->id)
                                 ->where('task_id', $task)
                                 ->first();
-                            
-                            if (!$existingTaskDetail) {
+
+                            if (! $existingTaskDetail) {
                                 EmployeePointProjectDetail::create([
                                     'point_id' => $existingRecord->id,
                                     'task_id' => $task,
+                                    'task_type' => $type,
                                 ]);
                             }
                         }
@@ -187,16 +182,17 @@ class PointRecord
                         'new_additional_point' => $newAdditionalPoint,
                         'new_total_point' => $newTotalPoint,
                     ]);
-                    
+
                     continue;
                 }
 
                 // If no existing record, proceed with creating new point record
                 $currentPoint = EmployeePoint::selectRaw('id')
                     ->where('employee_id', $employeeId)
+                    ->where('type', $type)
                     ->first();
 
-                if (!$currentPoint) {
+                if (! $currentPoint) {
                     $currentPoint = EmployeePoint::create([
                         'employee_id' => $employeeId,
                         'total_point' => 0,
@@ -221,6 +217,7 @@ class PointRecord
                         EmployeePointProjectDetail::create([
                             'point_id' => $pointProject->id,
                             'task_id' => $task,
+                            'task_type' => $type,
                         ]);
                     }
                 }
@@ -252,10 +249,6 @@ class PointRecord
 
     /**
      * Check if special employee already has a point record for the specific project.
-     * 
-     * @param int $employeeId
-     * @param int $projectId
-     * @return EmployeePointProject|null
      */
     private function checkExistingSpecialEmployeePoint(int $employeeId, int $projectId): ?EmployeePointProject
     {
@@ -276,25 +269,22 @@ class PointRecord
 
     /**
      * Update the total point for an employee by summing all their project points.
-     * 
-     * @param int $employeeId
-     * @return void
      */
     private function updateEmployeeTotalPoint(int $employeeId): void
     {
-        $parent = EmployeePoint::select('id')
+        // Each employee_point row (one per type) holds the sum of its own
+        // point-projects, so a production and an entertainment record never pool
+        // into one another.
+        $points = EmployeePoint::select('id')
             ->where('employee_id', $employeeId)
             ->get();
 
-        $child = EmployeePointProject::selectRaw('total_point')
-            ->whereIn('employee_point_id', collect($parent)->pluck('id')->toArray())
-            ->get();
+        foreach ($points as $point) {
+            $totalPoint = EmployeePointProject::where('employee_point_id', $point->id)
+                ->sum('total_point');
 
-        $totalPoint = collect($child)->pluck('total_point')->sum();
-
-        EmployeePoint::where('employee_id', $employeeId)
-            ->update([
-                'total_point' => $totalPoint,
-            ]);
+            EmployeePoint::where('id', $point->id)
+                ->update(['total_point' => $totalPoint]);
+        }
     }
 }

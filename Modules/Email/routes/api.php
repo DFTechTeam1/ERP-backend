@@ -27,7 +27,7 @@ Route::middleware(['internal.service'])
         Route::post('send/employee-mutation', [ApiEmailController::class, 'send']);
     });
 
-Route::middleware(['internal.service'])
+Route::middleware(['auth.session'])
     ->name('slack')
     ->prefix('system-slack')
     ->group(function () {

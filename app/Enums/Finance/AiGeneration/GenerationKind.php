@@ -13,4 +13,5 @@ enum GenerationKind: string
     case Chat = 'chat';
     case Enhancer = 'enhancer';
     case ImageEdit = 'image_edit';
+    case PromptValidation = 'prompt_validation';
 }
