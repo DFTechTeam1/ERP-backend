@@ -118,16 +118,16 @@ class ProjectDeal extends Model
     public function ledDetail(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value ? json_decode($value, true) : null,
-            set: fn ($value) => $value ? json_encode($value) : null
+            get: fn($value) => $value ? json_decode($value, true) : null,
+            set: fn($value) => $value ? json_encode($value) : null
         );
     }
 
     public function interactiveDetail(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value ? json_decode($value, true) : null,
-            set: fn ($value) => $value ? json_encode($value) : null
+            get: fn($value) => $value ? json_decode($value, true) : null,
+            set: fn($value) => $value ? json_encode($value) : null
         );
     }
 
@@ -296,7 +296,7 @@ class ProjectDeal extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output
+            get: fn() => $output
         );
     }
 
@@ -314,7 +314,7 @@ class ProjectDeal extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -332,7 +332,7 @@ class ProjectDeal extends Model
         }
 
         return Attribute::make(
-            get: fn () => $output,
+            get: fn() => $output,
         );
     }
 
@@ -362,7 +362,7 @@ class ProjectDeal extends Model
             $output = $this->finalQuotation ? $this->finalQuotation->fix_price : 0;
         }
 
-        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
@@ -376,7 +376,7 @@ class ProjectDeal extends Model
             $output = $this->latestQuotation->fix_price;
         }
 
-        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
@@ -390,7 +390,7 @@ class ProjectDeal extends Model
             $output = $this->firstTransaction ? $this->firstTransaction->payment_amount : 0;
         }
 
-        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
@@ -410,7 +410,7 @@ class ProjectDeal extends Model
             }
         }
 
-        return $formatPrice ? 'Rp'.number_format(num: $output, decimal_separator: ',') : floatval($output);
+        return $formatPrice ? 'Rp' . number_format(num: $output, decimal_separator: ',') : floatval($output);
     }
 
     /**
@@ -517,7 +517,7 @@ class ProjectDeal extends Model
 
     public function scopeIsDuplicate(Builder $builder, string $name, string $projectDate)
     {
-        $builder->whereLike('name', '%'.$name.'%')
+        $builder->whereLike('name', '%' . $name . '%')
             ->whereDate('project_date', $projectDate);
     }
 }

@@ -5,6 +5,7 @@ namespace Modules\Finance\Providers;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Finance\Console\ConsolidatePaymentStatus;
 use Modules\Finance\Console\MigrateSourceableInTransaction;
 use Modules\Finance\Console\SyncRecapTransactionsCommand;
 use Modules\Finance\Models\Transaction;
@@ -65,6 +66,7 @@ class FinanceServiceProvider extends ServiceProvider
         $this->commands([
             MigrateSourceableInTransaction::class,
             SyncRecapTransactionsCommand::class,
+            ConsolidatePaymentStatus::class
         ]);
     }
 

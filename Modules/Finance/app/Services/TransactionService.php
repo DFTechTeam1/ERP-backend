@@ -249,7 +249,7 @@ class TransactionService
                 ->orderBy('payment_amount', 'desc')
                 ->limit(10)
                 ->get()
-                ->map(fn (Transaction $trx) => [
+                ->map(fn(Transaction $trx) => [
                     'name' => $trx->projectDeal?->name ?? '-',
                     'type' => $trx->projectDeal?->event_type?->label() ?? 'Event',
                     'amount' => (float) $trx->payment_amount,
@@ -318,9 +318,9 @@ class TransactionService
             if ($data->attachments->isNotEmpty()) {
                 $attachment = $data->attachments->first()->image;
                 if ($data->transaction_type == TransactionType::Refund) {
-                    $attachment = asset('storage/refunds/'.$attachment);
+                    $attachment = asset('storage/refunds/' . $attachment);
                 } else {
-                    $attachment = asset('storage/transactions/'.$attachment);
+                    $attachment = asset('storage/transactions/' . $attachment);
                 }
             }
             $output = [
@@ -388,9 +388,12 @@ class TransactionService
                 $type = TransactionType::DownPayment;
             } elseif ($projectDeal->getRemainingPayment() == $payload['payment_amount']) {
                 $type = TransactionType::Repayment;
-                $allPaid = true;
             } else {
                 $type = TransactionType::Credit;
+            }
+
+            if ($projectDeal->getRemainingPayment() == $payload['payment_amount']) {
+                $allPaid = true;
             }
 
             // get invoice id based on invoice uid
@@ -401,7 +404,7 @@ class TransactionService
             $payload['customer_id'] = $projectDeal->customer_id;
             $payload['transaction_type'] = $type;
             $payload['invoice_id'] = $invoiceId;
-            $payload['trx_id'] = "TRX - {$projectDeal->identifier_number} - ".now()->format('Y');
+            $payload['trx_id'] = "TRX - {$projectDeal->identifier_number} - " . now()->format('Y');
             $payload['sourceable_type'] = Invoice::class;
             $payload['sourceable_id'] = $invoiceId;
 
@@ -471,8 +474,8 @@ class TransactionService
             // delete image
             if (count($tmp) > 0) {
                 foreach ($tmp as $tmpFile) {
-                    if (Storage::exists('transactions/'.$tmpFile)) {
-                        Storage::delete('transactions/'.$tmpFile);
+                    if (Storage::exists('transactions/' . $tmpFile)) {
+                        Storage::delete('transactions/' . $tmpFile);
                     }
                 }
             }

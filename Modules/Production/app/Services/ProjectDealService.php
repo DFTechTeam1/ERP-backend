@@ -16,6 +16,7 @@ use App\Enums\Production\ProjectDealChangeStatus;
 use App\Enums\Production\ProjectDealStatus;
 use App\Enums\Production\ProjectLeadStatus;
 use App\Enums\Production\ProjectStatus;
+use App\Enums\System\BaseRole;
 use App\Enums\Transaction\InvoiceStatus;
 use App\Enums\Transaction\TransactionType;
 use App\Exceptions\DataNotFound;
@@ -361,6 +362,9 @@ class ProjectDealService
 
                     $canEditProjectDeal = false;
                     $canRequestPriceChanges = false;
+                }
+                if ($user->hasRole([BaseRole::Root->value, BaseRole::Director->value])) {
+                    $canRequestPriceChanges = true;
                 }
 
                 return [
