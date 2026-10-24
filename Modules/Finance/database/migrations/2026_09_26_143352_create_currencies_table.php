@@ -11,16 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('currencies', function (Blueprint $table) {
-            $table->id();
-            $table->uuid('uid')->unique();
-            $table->string('name', 50);
-            $table->string('symbol', 10)->nullable();
-            $table->string('code', 10);
-            $table->boolean('is_base')->default(false);
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('currencies')) {
+            Schema::create('currencies', function (Blueprint $table) {
+                $table->id();
+                $table->uuid('uid')->unique();
+                $table->string('name', 50);
+                $table->string('symbol', 10)->nullable();
+                $table->string('code', 10);
+                $table->boolean('is_base')->default(false);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+            });
+        }
     }
 
     /**
@@ -28,6 +30,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('currencies');
+        if (Schema::hasTable('currencies')) {
+            Schema::dropIfExists('currencies');
+        }
     }
 };

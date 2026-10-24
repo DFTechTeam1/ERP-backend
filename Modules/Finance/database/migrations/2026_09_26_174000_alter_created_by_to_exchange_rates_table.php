@@ -12,8 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('exchange_rates', function (Blueprint $table) {
-            $table->foreignId('created_by')
-                ->constrained('users');
+            if (! Schema::hasColumn('exchange_rates', 'created_by')) {
+                $table->foreignId('created_by')
+                    ->nullable()
+                    ->constrained('users');
+            }
         });
     }
 
@@ -22,9 +25,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('exchange_rates', function (Blueprint $table) {
-            $table->dropForeign(['created_by']);
-            $table->dropColumn('created_by');
+        $fkKeys = Schema::getForeignKeys('exchange_rates');
+        Schema::table('exchange_rates', function (Blueprint $table) use ($fkKeys) {
+            $fkExists = collect($fkKeys)->contains(fn($fk) => in_array('created_by', $fk['columns']));
+            if ($fkExists) {
+                $table->dropForeign(['created_by']);
+            }
+
+            if (Schema::hasColumn('exchange_rates', 'created_by')) {
+                $table->dropColumn('created_by');
+            }
         });
     }
 };

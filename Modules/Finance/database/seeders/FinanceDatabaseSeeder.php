@@ -12,7 +12,8 @@ class FinanceDatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            CurrencySeeder::class
+            CurrencySeeder::class,
+            AccountSeeder::class
         ]);
     }
 }

@@ -13,6 +13,7 @@ use App\Enums\Accounting\NormalBalance;
 use App\Enums\ErrorCode\Code;
 use App\Enums\System\BaseRole;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Finance\Exceptions\Accounting\AccountRuleException;
 use Modules\Finance\Models\Account;
@@ -110,14 +111,14 @@ class AccountService
                 'select' => ['code'],
             ])->pluck('code')->all();
 
-            $seed = $parent->code.'1';
+            $seed = $parent->code . '1';
         } else {
             $siblingCodes = $this->repo->get([
                 'where' => ['parent_id' => null, 'account_type' => $payload->account_type->value],
                 'select' => ['code'],
             ])->pluck('code')->all();
 
-            $seed = $this->typeDigit($payload->account_type).'-000';
+            $seed = $this->typeDigit($payload->account_type) . '-000';
         }
 
         $code = $this->nextCode($siblingCodes, $seed);
@@ -157,31 +158,39 @@ class AccountService
      */
     public function store(StoreAccountData $payload): array
     {
-        $parent = $this->resolveParentForCreate($payload);
-        $isPostable = $payload->is_postable ?? true;
+        DB::beginTransaction();
+        try {
+            $parent = $this->resolveParentForCreate($payload);
+            $isPostable = $payload->is_postable ?? true;
 
-        $account = $this->repo->store([
-            'code' => $payload->code,
-            'name' => $payload->name,
-            'account_type' => $payload->account_type,
-            'account_subtype' => $payload->account_subtype,
-            'parent_id' => $parent?->id,
-            'level' => $parent ? ((int) $parent->level + 1) : 0,
-            'is_postable' => $isPostable,
-            'is_cash_equivalent' => (bool) $payload->is_cash_equivalent,
-            'cash_flow_category' => $payload->cash_flow_category,
-            'normal_balance' => $isPostable ? $this->deriveNormalBalance($payload->account_type, $payload->account_subtype) : null,
-            'is_active' => true,
-            'is_locked' => false,
-        ]);
+            $account = $this->repo->store([
+                'code' => $payload->code,
+                'name' => $payload->name,
+                'account_type' => $payload->account_type,
+                'account_subtype' => $payload->account_subtype,
+                'parent_id' => $parent?->id,
+                'level' => $parent ? ((int) $parent->level + 1) : 0,
+                'is_postable' => $isPostable,
+                'is_cash_equivalent' => (bool) $payload->is_cash_equivalent,
+                'cash_flow_category' => $payload->cash_flow_category,
+                'normal_balance' => $isPostable ? $this->deriveNormalBalance($payload->account_type, $payload->account_subtype) : null,
+                'is_active' => true,
+                'is_locked' => false,
+            ]);
 
-        $account->setRelation('parent', $parent);
+            $account->setRelation('parent', $parent);
 
-        return generalResponse(
-            message: __('accounting.coa.saved'),
-            data: $this->toResource($account, $parent?->uid, new Optional, $this->computeBalance($account))->toArray(),
-            code: Code::Created->value,
-        );
+            DB::commit();
+
+            return generalResponse(
+                message: __('accounting.coa.saved'),
+                data: $this->toResource($account, $parent?->uid, new Optional, $this->computeBalance($account))->toArray(),
+                code: Code::Created->value,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
     }
 
     /**
@@ -376,24 +385,35 @@ class AccountService
      */
     public function delete(string $uid): array
     {
-        $account = $this->resolve($uid);
+        DB::beginTransaction();
 
-        if ($account->is_locked) {
-            throw AccountRuleException::lockedGeneric();
-        }
-        if ($account->children()->exists()) {
-            throw AccountRuleException::hasChildren();
-        }
-        if ($this->hasTransactions($account) || $this->computeBalance($account) !== 0) {
-            throw AccountRuleException::hasTransactions(__('accounting.field.code'));
-        }
+        try {
+            $account = $this->resolve($uid);
 
-        $this->repo->delete($account);
+            if ($account->is_locked) {
+                throw AccountRuleException::lockedGeneric();
+            }
+            if ($account->children()->exists()) {
+                throw AccountRuleException::hasChildren();
+            }
+            if ($this->hasTransactions($account) || $this->computeBalance($account) !== 0) {
+                throw AccountRuleException::hasTransactions(__('accounting.field.code'));
+            }
 
-        return generalResponse(
-            message: __('accounting.coa.deleted'),
-            code: Code::Success->value,
-        );
+            // update code string
+            $this->repo->update($account, ['code' => $account->code . 'deleted']);
+            $this->repo->delete($account);
+
+            DB::commit();
+
+            return generalResponse(
+                message: __('accounting.coa.deleted'),
+                code: Code::Success->value,
+            );
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return errorResponse($th);
+        }
     }
 
     /**
@@ -635,7 +655,7 @@ class AccountService
     protected function buildFlat(Collection $matches): array
     {
         return $matches
-            ->map(fn (Account $account) => $this->toResource($account, $account->parent?->uid, new Optional, $this->computeBalance($account))->toArray())
+            ->map(fn(Account $account) => $this->toResource($account, $account->parent?->uid, new Optional, $this->computeBalance($account))->toArray())
             ->values()
             ->all();
     }
@@ -674,7 +694,7 @@ class AccountService
             }
         }
 
-        return array_map(fn (Account $root) => $this->buildTreeNode($root, $childrenMap)->toArray(), $roots);
+        return array_map(fn(Account $root) => $this->buildTreeNode($root, $childrenMap)->toArray(), $roots);
     }
 
     /**

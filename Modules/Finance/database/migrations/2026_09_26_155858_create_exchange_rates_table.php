@@ -11,16 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('exchange_rates', function (Blueprint $table) {
-            $table->id();
-            $table->uuid('uid')->unique();
-            $table->foreignId('currency_id')
-                ->constrained('currencies')
-                ->cascadeOnDelete();
-            $table->date('rate_date');
-            $table->decimal('rate', 20, 8)->default(0);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('exchange_rates')) {
+            Schema::create('exchange_rates', function (Blueprint $table) {
+                $table->id();
+                $table->uuid('uid')->unique();
+                $table->foreignId('currency_id')
+                    ->constrained('currencies')
+                    ->cascadeOnDelete();
+                $table->date('rate_date');
+                $table->decimal('rate', 20, 8)->default(0);
+                $table->timestamps();
+            });
+        }
     }
 
     /**
@@ -28,6 +30,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('exchange_rates');
+        if (Schema::hasTable('exchange_rates')) {
+            Schema::dropIfExists('exchange_rates');
+        }
     }
 };

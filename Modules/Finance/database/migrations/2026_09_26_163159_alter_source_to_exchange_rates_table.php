@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('exchange_rates', function (Blueprint $table) {
-            $table->string('source', 20)->comment('system | manual');
+            if (! Schema::hasColumn('exchange_rates', 'source')) {
+                $table->string('source', 20)->comment('system | manual');
+            }
         });
     }
 
@@ -22,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('exchange_rates', function (Blueprint $table) {
-            $table->dropColumn('source');
+            if (Schema::hasColumn('exchange_rates', 'source')) {
+                $table->dropColumn('source');
+            }
         });
     }
 };

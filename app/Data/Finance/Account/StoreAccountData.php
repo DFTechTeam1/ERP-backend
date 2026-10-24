@@ -27,7 +27,7 @@ class StoreAccountData extends Data
     public static function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:20', Rule::unique('accounts', 'code')],
+            'code' => ['required', 'string', 'max:20', Rule::unique('accounts', 'code')->whereNull('deleted_at')],
             'name' => ['required', 'string', 'max:150'],
             'account_type' => ['required', Rule::enum(AccountType::class)],
             'account_subtype' => ['nullable', Rule::enum(AccountSubtype::class)],
