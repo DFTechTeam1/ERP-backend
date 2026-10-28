@@ -683,7 +683,6 @@ class ProjectService
                 page: $page,
                 itemsPerPage: $itemsPerPage
             );
-
             /** @var array<int, TaskListData> */
             $output = [];
             foreach ($tasks as $task) {
@@ -780,8 +779,11 @@ class ProjectService
                 };
             }
 
-            $whereGroup[] = function ($query) use ($whereExists) {
-                if ($whereExists) {
+            // Scope the list only for production members / PMs: they see the projects they (or
+            // their boss) are PIC of, plus any project they were transferred into (approved
+            // transfer). Unscoped roles (root, director, ...) see every active project.
+            if ($whereExists) {
+                $whereGroup[] = function ($query) use ($whereExists) {
                     $query->whereExists($whereExists)
                         ->orWhereExists(function (Builder $sub) {
                             $sub->selectRaw('1')
@@ -789,15 +791,8 @@ class ProjectService
                                 ->whereColumn('ttm.project_id', 'projects.id')
                                 ->where('ttm.status', TransferTeamStatus::Approved->value);
                         });
-                } else {
-                    $query->whereExists(function (Builder $subQuery) {
-                        $subQuery->selectRaw('1')
-                            ->from('transfer_team_members as ttm')
-                            ->whereColumn('ttm.project_id', 'projects.id')
-                            ->where('ttm.status', TransferTeamStatus::Approved->value);
-                    });
-                }
-            };
+                };
+            }
 
             // get my project
             if ($mine) {
