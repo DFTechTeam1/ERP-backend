@@ -4,6 +4,7 @@ namespace Modules\Production\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Production\Console\BackfillProjectLeadPic;
 use Modules\Production\Console\ClearAllCache;
 use Modules\Production\Console\InitProjectCount;
 use Modules\Production\Console\MigrateCurrentProjectFeedback;
@@ -61,7 +62,8 @@ class ProductionServiceProvider extends ServiceProvider
             PaymentDueReminderCommand::class,
             SynchronizeEventDealsWithProduction::class,
             ResyncNasFolderCreation::class,
-            MigrateCurrentProjectFeedback::class
+            MigrateCurrentProjectFeedback::class,
+            BackfillProjectLeadPic::class,
         ]);
     }
 
