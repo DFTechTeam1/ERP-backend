@@ -28,7 +28,7 @@ class ProjectTaskRepository extends ProjectTaskInterface
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [])
+    public function list(string $select = '*', string $where = '', array $relation = [], array $whereHas = [], array $has = [])
     {
         $query = $this->model->query();
 
@@ -43,6 +43,12 @@ class ProjectTaskRepository extends ProjectTaskInterface
                 $query->whereHas($wh['relation'], function (Builder $query) use ($wh) {
                     $query->whereRaw($wh['query']);
                 });
+            }
+        }
+
+        if (! empty($has)) {
+            foreach ($has as $hasData) {
+                $query->has($hasData);
             }
         }
 

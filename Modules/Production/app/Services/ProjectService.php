@@ -26,7 +26,9 @@ use App\Actions\Project\FormatTaskPermission;
 use App\Actions\Project\SaveTaskState;
 use App\Data\Production\Cost\EmployeeRewardListData;
 use App\Data\Production\CostEstimationListData;
+use App\Data\Production\Dfengine\ProductionTaskListData;
 use App\Data\Production\Dfengine\ProjectListData;
+use App\Data\Production\Dfengine\SongListData;
 use App\Data\Production\Dfengine\TaskListData;
 use App\Enums\Cache\CacheKey;
 use App\Enums\Employee\Status;
@@ -672,42 +674,76 @@ class ProjectService
                 $has[] = 'pics';
             }
 
-            $tasks = $this->taskRepo->pagination(
-                select: 'id,uid,name,project_id,status,created_at,updated_at',
-                where: $where,
-                whereHas: $whereHas,
-                has: $has,
-                relation: [
-                    'pics:id,project_task_id,employee_id',
-                    'project:id,uid',
-                ],
-                page: $page,
-                itemsPerPage: $itemsPerPage
-            );
+            $entertainmentRoles = [
+                BaseRole::Entertainment->value,
+                BaseRole::ProjectManagerEntertainment->value
+            ];
+
             /** @var array<int, TaskListData> */
-            $output = [];
-            foreach ($tasks as $task) {
-                $output[] = new TaskListData(
-                    uid: $task->uid,
-                    project_uid: $task->project->uid,
-                    name: $task->name,
-                    status: $task->task_status,
-                    created_at: date('d F Y H:i', strtotime($task->created_at)),
-                    updated_at: $task->updated_at ? date('d F Y H:i', strtotime($task->updated_at)) : null,
-                    action: [
-                        'can_open' => true,
-                    ]
+            $taskLists = [];
+            $songLists = [];
+
+            if (in_array($user->roles->first()->name, $entertainmentRoles)) {
+                $whereSong = "status IN (" . TaskSongStatus::OnProgress->value . "," . TaskSongStatus::Active->value . ") AND project_id = " . $project->id;
+
+                if ($user->hasRole(BaseRole::Entertainment->value)) {
+                    $whereSong .= " AND employee_id = " . $user->employee_id;
+                }
+
+                $songs = $this->entertainmentTaskSongRepo->list(
+                    where: $whereSong,
+                    relation: ['song:id,uid,name', 'project:uid,id']
                 );
+                foreach ($songs as $song) {
+                    $songLists[] = new SongListData(
+                        uid: $song->song->uid,
+                        project_uid: $song->project->uid,
+                        name: $song->song->name,
+                        status: $song->status_text,
+                        created_at: $song->created_at,
+                        updated_at: $song->updated_at,
+                        action: [
+                            'can_open' => true,
+                        ]
+                    );
+                }
             }
 
-            $totalData = $this->taskRepo->list(select: 'id', where: $where, whereHas: $whereHas)->count();
+            if (! in_array($user->roles->first()->name, $entertainmentRoles)) {
+                $tasks = $this->taskRepo->list(
+                    select: 'id,uid,name,project_id,status,created_at,updated_at',
+                    where: $where,
+                    whereHas: $whereHas,
+                    has: $has,
+                    relation: [
+                        'pics:id,project_task_id,employee_id',
+                        'project:id,uid',
+                    ],
+                );
+
+                foreach ($tasks as $task) {
+                    $taskLists[] = new ProductionTaskListData(
+                        uid: $task->uid,
+                        project_uid: $task->project->uid,
+                        name: $task->name,
+                        status: $task->task_status,
+                        created_at: date('d F Y H:i', strtotime($task->created_at)),
+                        updated_at: $task->updated_at ? date('d F Y H:i', strtotime($task->updated_at)) : null,
+                        action: [
+                            'can_open' => true,
+                        ]
+                    );
+                }
+            }
+
+            $output = new TaskListData(
+                tasks: $taskLists,
+                songs: $songLists
+            );
 
             return generalResponse(
                 message: 'Success',
-                data: [
-                    'totalData' => $totalData,
-                    'paginated' => $output,
-                ]
+                data: $output->toArray()
             );
         } catch (\Throwable $th) {
             return errorResponse($th);
@@ -751,6 +787,11 @@ class ProjectService
                 ProjectStatus::PartialComplete->value,
             ];
 
+            $entertainmentRoles = [
+                BaseRole::Entertainment->value,
+                BaseRole::ProjectManagerEntertainment->value
+            ];
+
             $where = 'status IN (' . implode(',', $expectedProjectStatus) . ')';
 
             if ($search) {
@@ -758,6 +799,7 @@ class ProjectService
             }
 
             $whereGroup = [];
+            $has = [];
             $whereExists = null;
             if ($isProduction) {
                 // Only get boss projects
@@ -801,9 +843,16 @@ class ProjectService
                 }
             }
 
+            if (in_array($user->roles->first()->name, $entertainmentRoles)) {
+                $whereGroup = [];
+
+                $has[] = 'songs';
+            }
+
             $projects = $this->repo->pagination(
                 select: 'id,uid,name,project_date,project_class_id,created_at,updated_at',
                 where: $where,
+                has: $has,
                 relation: [
                     'tasks:id,name,project_id',
                     'projectClass:id,name',
