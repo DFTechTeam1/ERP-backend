@@ -3,9 +3,12 @@
 namespace App\Actions\Project;
 
 use App\Actions\DefineTaskAction;
+use App\Enums\Production\ProjectStatus;
+use App\Enums\Production\TaskStatus;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
+use Modules\Production\Models\Project;
 use Modules\Production\Repository\ProjectBoardRepository;
 use Modules\Production\Repository\ProjectPersonInChargeRepository;
 use Modules\Production\Repository\ProjectRepository;
@@ -38,7 +41,7 @@ class FormatBoards
             $leaderModeller = getIdFromUid($leaderModeller, new Employee);
         }
 
-        $projectId = getIdFromUid($projectUid, new \Modules\Production\Models\Project);
+        $projectId = getIdFromUid($projectUid, new Project);
         $employeeId = $user->employee_id ?? 0;
         $superUserRole = isSuperUserRole();
 
@@ -126,6 +129,7 @@ class FormatBoards
             $outputTask = [];
             foreach ($tasks as $keyTask => $task) {
                 $outputTask[$keyTask] = $task;
+                $outputTask[$keyTask]['exclude_from_point'] = (bool) $task->exclude_from_point_calculation;
 
                 unset($outputTask[$keyTask]['time_tracker']);
 
@@ -134,7 +138,7 @@ class FormatBoards
                 // check if task already active or not, if not show activating button
                 $isActive = false;
 
-                if ($task->project->status != \App\Enums\Production\ProjectStatus::Draft->value) {
+                if ($task->project->status != ProjectStatus::Draft->value) {
                     foreach ($task->pics as $pic) {
                         if ($pic->employee_id == $employeeId) {
 
@@ -149,7 +153,7 @@ class FormatBoards
                 $picUids = collect($task->pics)->pluck('employee.uid')->toArray();
 
                 $needUserApproval = false;
-                if ($task->status == \App\Enums\Production\TaskStatus::WaitingApproval->value && (in_array($employeeId, $picIds) || $isDirector || $isProjectPic)) {
+                if ($task->status == TaskStatus::WaitingApproval->value && (in_array($employeeId, $picIds) || $isDirector || $isProjectPic)) {
                     $needUserApproval = true;
 
                     // disable user approval if this task is for 3D MODELLER LEADER
@@ -161,13 +165,13 @@ class FormatBoards
                 $outputTask[$keyTask]['need_user_approval'] = $needUserApproval;
 
                 // override is_active where task status is ON PROGRESS
-                if ($task->status == \App\Enums\Production\TaskStatus::OnProgress->value) {
+                if ($task->status == TaskStatus::OnProgress->value) {
                     $isActive = true;
                 }
 
-                $outputTask[$keyTask]['stop_action'] = $task->project->status == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
+                $outputTask[$keyTask]['stop_action'] = $task->project->status == ProjectStatus::Draft->value ? true : false;
 
-                $outputTask[$keyTask]['need_approval_pm'] = $isProjectPic && $task->status == \App\Enums\Production\TaskStatus::CheckByPm->value;
+                $outputTask[$keyTask]['need_approval_pm'] = $isProjectPic && $task->status == TaskStatus::CheckByPm->value;
 
                 $outputTask[$keyTask]['time_tracker'] = $this->formatTimeTracker($task->times->toArray());
 
@@ -206,9 +210,9 @@ class FormatBoards
                         in_array($employeeId, $picIds) ||
                         $superUserRole || $isProjectPic || $isDirector || isAssistantPMRole()
                     ) &&
-                    $task->project->status == \App\Enums\Production\ProjectStatus::OnGoing->value &&
-                    ($task->status == \App\Enums\Production\TaskStatus::OnProgress->value ||
-                    $task->status == \App\Enums\Production\TaskStatus::Revise->value)
+                    $task->project->status == ProjectStatus::OnGoing->value &&
+                    ($task->status == TaskStatus::OnProgress->value ||
+                    $task->status == TaskStatus::Revise->value)
                 ) {
                     $outputTask[$keyTask]['action_to_complete_task'] = true;
                 } else {
@@ -226,10 +230,11 @@ class FormatBoards
             $poolOutputTask = [];
             foreach ($board->poolTasks as $keyTask => $task) {
                 $poolOutputTask[$keyTask] = $task;
+                $poolOutputTask[$keyTask]['exclude_from_point'] = $task->exclude_from_point_calculation;
                 unset($poolOutputTask[$keyTask]['time_tracker']);
                 $poolOutputTask[$keyTask]['action_list'] = DefineTaskAction::run($task, $user, $projectData->status, $this->specialPositionid, $isProjectPic);
                 $poolOutputTask[$keyTask]['need_user_approval'] = false;
-                $poolOutputTask[$keyTask]['stop_action'] = $task->project->status == \App\Enums\Production\ProjectStatus::Draft->value ? true : false;
+                $poolOutputTask[$keyTask]['stop_action'] = $task->project->status == ProjectStatus::Draft->value ? true : false;
                 $poolOutputTask[$keyTask]['need_approval_pm'] = false;
                 $poolOutputTask[$keyTask]['time_tracker'] = [];
                 $poolOutputTask[$keyTask]['is_project_pic'] = $isProjectPic;

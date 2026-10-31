@@ -83,6 +83,26 @@ function prbrAssignTasks(Project $project, Employee $employee, int $count): arra
     return $taskIds;
 }
 
+/**
+ * Attach one task flagged exclude_from_point_calculation and record a PIC-history row for
+ * $employee on it. The action must NOT count this task as a point.
+ */
+function prbrAssignExcludedTask(Project $project, Employee $employee): int
+{
+    $task = ProjectTask::factory()->create([
+        'project_id' => $project->id,
+        'name' => 'Excluded Task',
+        'exclude_from_point_calculation' => true,
+    ]);
+    ProjectTaskPicHistory::create([
+        'project_id' => $project->id,
+        'project_task_id' => $task->id,
+        'employee_id' => $employee->id,
+    ]);
+
+    return $task->id;
+}
+
 /** Add a PIC (project manager) to the event - the production pot tier is keyed on this count. */
 function prbrAddPic(Project $project, Employee $employee): ProjectPersonInCharge
 {
@@ -202,6 +222,87 @@ describe('PointRecordBasedOnReward point recording', function () {
             'employee_id' => $worker->id,
             'type' => 'entertainment',
         ]);
+    });
+});
+
+describe('PointRecordBasedOnReward excluded tasks', function () {
+    it('does not count a task flagged exclude_from_point_calculation as a point', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Class A', 'reward' => 50000]);
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+
+        $worker = prbrEmployeeWithRole($this->productionRole);
+        prbrAssignTasks($project, $worker, 2);                    // 2 counted tasks
+        $excludedTaskId = prbrAssignExcludedTask($project, $worker); // must NOT count
+
+        PointRecordBasedOnReward::run($project->id, [
+            ['uid' => $worker->uid, 'additional_point' => 0],
+        ]);
+
+        $pointProject = EmployeePointProject::where('project_id', $project->id)->first();
+        expect((int) $pointProject->total_point)->toBe(2)   // 2, not 3
+            ->and((int) $pointProject->original_point)->toBe(2);
+
+        // one detail per COUNTED task only; the excluded task has no detail row
+        expect(EmployeePointProjectDetail::where('point_id', $pointProject->id)->count())->toBe(2);
+        assertDatabaseMissing('employee_point_project_details', [
+            'point_id' => $pointProject->id,
+            'task_id' => $excludedTaskId,
+        ]);
+
+        // reward and employee-point total reflect the 2 counted points, not 3
+        assertDatabaseHas('employee_rewards', [
+            'employee_id' => $worker->id,
+            'total_point' => 2,
+            'total_reward' => 50000,
+        ]);
+        expect((int) EmployeePoint::where('employee_id', $worker->id)->first()->total_point)->toBe(2);
+    });
+
+    it('splits the pot on counted points only when one worker has an excluded task', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Class C', 'reward' => 10000]);
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+
+        $alice = prbrEmployeeWithRole($this->productionRole);
+        $bob = prbrEmployeeWithRole($this->productionRole);
+
+        prbrAssignTasks($project, $alice, 2);        // 2 counted
+        prbrAssignTasks($project, $bob, 2);          // 2 counted ...
+        prbrAssignExcludedTask($project, $bob);      // ... + 1 excluded (ignored)
+
+        PointRecordBasedOnReward::run($project->id, [
+            ['uid' => $alice->uid, 'additional_point' => 0],
+            ['uid' => $bob->uid, 'additional_point' => 0],
+        ]);
+
+        // counted points: alice 2, bob 2 (NOT 3) -> 50/50 split of 10000
+        assertDatabaseHas('employee_rewards', ['employee_id' => $alice->id, 'total_point' => 2, 'total_reward' => 5000]);
+        assertDatabaseHas('employee_rewards', ['employee_id' => $bob->id, 'total_point' => 2, 'total_reward' => 5000]);
+
+        $paid = (float) EmployeeReward::where('project_id', $project->id)->sum('total_reward');
+        expect($paid)->toBe(10000.0);
+    });
+
+    it('skips a worker whose tasks are all excluded', function () {
+        $class = ProjectClass::factory()->create(['name' => 'Class A', 'reward' => 30000]);
+        $project = Project::factory()->create(['project_class_id' => $class->id]);
+
+        $producer = prbrEmployeeWithRole($this->productionRole);
+        $excludedOnly = prbrEmployeeWithRole($this->productionRole);
+
+        prbrAssignTasks($project, $producer, 2);
+        prbrAssignExcludedTask($project, $excludedOnly); // only an excluded task
+
+        PointRecordBasedOnReward::run($project->id, [
+            ['uid' => $producer->uid, 'additional_point' => 0],
+            ['uid' => $excludedOnly->uid, 'additional_point' => 0],
+        ]);
+
+        // the producer holds all the production points -> takes the whole pot
+        assertDatabaseHas('employee_rewards', ['employee_id' => $producer->id, 'total_point' => 2, 'total_reward' => 30000]);
+
+        // the excluded-only worker contributed no point -> no point / reward rows at all
+        assertDatabaseMissing('employee_points', ['employee_id' => $excludedOnly->id]);
+        assertDatabaseMissing('employee_rewards', ['employee_id' => $excludedOnly->id]);
     });
 });
 

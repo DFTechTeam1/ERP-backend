@@ -54,24 +54,32 @@ class PointRecordBasedOnReward
             $isProjectManager = in_array($userRoleId, $projectManagerRoles) ? true : false;
             $isEntertainmentTeam = in_array($userRoleId, $entertainmentRoles) ? true : false;
 
-            if (! $isProjectManager) {
-                $output[] = [
-                    'employee_point_id' => $group->first()->employee?->singlePoint?->id ?? 0,
-                    'project_id' => $project->id,
-                    'total_point' => $group->count(),
-                    'additional_point' => 0,
-                    'prorate_point' => 0,
-                    'calculated_prorate_point' => 0,
-                    'employee_type' => $isEntertainmentTeam ? 'entertainment' : 'production',
-                    'original_point' => $group->count(),
-                    'employee_id' => $group->first()->employee->id,
-                    'tasks_detail' => $group->map(function ($item) {
-                        return [
-                            'task_id' => $item->task->id,
-                        ];
-                    }),
-                ];
+            if ($isProjectManager) {
+                continue;
             }
+
+            // A task flagged exclude_from_point_calculation must not count as a point. The task()
+            // relation is scoped to exclude_from_point_calculation = 0, so an excluded task's
+            // history comes back with a null task - drop those from both the point count and the
+            // detail rows. A member whose tasks are all excluded contributes no production point
+            // and is skipped entirely (no employee_point / reward row).
+            $countedTasks = $group->filter(fn ($item) => $item->task !== null)->values();
+            if ($countedTasks->isEmpty()) {
+                continue;
+            }
+
+            $output[] = [
+                'employee_point_id' => $group->first()->employee?->singlePoint?->id ?? 0,
+                'project_id' => $project->id,
+                'total_point' => $countedTasks->count(),
+                'additional_point' => 0,
+                'prorate_point' => 0,
+                'calculated_prorate_point' => 0,
+                'employee_type' => $isEntertainmentTeam ? 'entertainment' : 'production',
+                'original_point' => $countedTasks->count(),
+                'employee_id' => $group->first()->employee->id,
+                'tasks_detail' => $countedTasks->map(fn ($item) => ['task_id' => $item->task->id]),
+            ];
         }
 
         return $output;
@@ -205,14 +213,6 @@ class PointRecordBasedOnReward
                     'total_reward' => $rewards[$index],
                     'project_class_name' => $project->projectClass->name,
                     'role' => 'production',
-                ]);
-
-                logging('cost reward data', [
-                    'pot' => $pot,
-                    'totalPoint' => $row['total_point'],
-                    'point' => $row['point'],
-                    'additionalPoint' => $row['additional_point'],
-                    'reward' => $rewards[$index],
                 ]);
 
                 // Update this type's employee_point total (scoped to the row by id so a

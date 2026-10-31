@@ -24,6 +24,7 @@ use App\Actions\Project\Entertainment\SwitchSongWorker;
 use App\Actions\Project\FormatBoards;
 use App\Actions\Project\FormatTaskPermission;
 use App\Actions\Project\SaveTaskState;
+use App\Actions\Project\Task\MarkAsComplete;
 use App\Data\Production\Cost\EmployeeRewardListData;
 use App\Data\Production\CostEstimationListData;
 use App\Data\Production\Dfengine\ProductionTaskListData;
@@ -3040,11 +3041,12 @@ class ProjectService
                 return errorResponse(message: __('notification.cannotCombineModeller'));
             }
 
-            $currentTask = $this->taskRepo->show(uid: $taskUid, select: 'id,status,project_id,end_date');
+            $currentTask = $this->taskRepo->show(uid: $taskUid, select: 'id,status,project_id,end_date,exclude_from_point_calculation');
             if (
                 (isset($data['users'])) &&
                 (count($data['users']) > 0) &&
-                ! $currentTask->end_date
+                ! $currentTask->end_date &&
+                ! $currentTask->exclude_from_point_calculation
             ) {
                 return errorResponse(message: __('notification.pleaseAddDeadlineBeforeContinue'));
             }
@@ -3155,9 +3157,13 @@ class ProjectService
                     $payloadStatus['status'] = null;
                 }
 
-                // if currentTask status is null, than now we have pic, than change to waiting approval
+                // if currentTask status is null, than now we have pic, than change to waiting approval.
+                // An excluded task (exclude_from_point_calculation) skips approval: as soon as it has a
+                // pic it goes straight to OnProgress.
                 if ((! $currentTask->status && $lastPic->count() > 0) || $currentTask->status == TaskStatus::Completed->value) {
-                    $payloadStatus['status'] = TaskStatus::WaitingApproval->value;
+                    $payloadStatus['status'] = $currentTask->exclude_from_point_calculation
+                        ? TaskStatus::OnProgress->value
+                        : TaskStatus::WaitingApproval->value;
                 }
 
                 // is for lead modeller
@@ -3218,6 +3224,10 @@ class ProjectService
             $task = $this->formattedDetailTask($taskUid);
 
             if (! $isForProjectManager) {
+                // IF task is exclude from point calculate, manually add end date / deadline on it
+                if ($currentTask->exclude_from_point_calculation) {
+                    $task->end_date = now()->addYear()->format('Y-m-d H:s');
+                }
                 $this->assignPicToCurrentTaskDeadline(task: $task);
             }
 
@@ -3721,16 +3731,34 @@ class ProjectService
                 where: "id = {$board->project_id}"
             );
 
+            $hasPic = isset($data['pic']) && count($data['pic']) > 0;
+            $isExcluded = (bool) ($data['exclude_from_point'] ?? false);
+
+            // Without a PIC the task stays in the pool with no status. Once it has a PIC an
+            // excluded task (exclude_from_point_calculation) skips the approval flow and starts
+            // OnProgress immediately; the lead-modeller distribution case is preserved.
+            $taskStatus = null;
+            if ($hasPic) {
+                if ($isForLeadModeller) {
+                    $taskStatus = TaskStatus::WaitingDistribute->value;
+                } elseif ($isExcluded) {
+                    $taskStatus = TaskStatus::OnProgress->value;
+                } else {
+                    $taskStatus = TaskStatus::WaitingApproval->value;
+                }
+            }
+
             $taskPayload = [
                 'name' => $data['name'],
                 'project_id' => $board->project_id,
                 'project_board_id' => $boardId,
                 'start_date' => date('Y-m-d'),
-                'status' => ! isset($data['pic']) || (isset($data['pic']) && count($data['pic']) == 0) ? null : ($isForLeadModeller ? TaskStatus::WaitingDistribute->value : TaskStatus::WaitingApproval->value),
+                'status' => $taskStatus,
                 'end_date' => ! empty($data['end_date']) ? date('Y-m-d H:i:s', strtotime($data['end_date'])) : null,
                 'description' => $data['description'] ?? null,
-                'is_pool_task' => isset($data['pic']) && count($data['pic']) > 0 ? false : true,
-                'is_pool_type' => isset($data['pic']) && count($data['pic']) > 0 ? false : true,
+                'is_pool_task' => ! $hasPic,
+                'is_pool_type' => ! $hasPic,
+                'exclude_from_point_calculation' => $isExcluded,
             ];
 
             $task = $this->taskRepo->store($taskPayload);
@@ -6184,13 +6212,22 @@ class ProjectService
      */
     protected function mainMarkAsCompleted(string $projectUid, string $taskUid, ?object $employee = null, bool $sendNotification = true)
     {
+        $taskDetail = $this->taskRepo->show($taskUid, 'id,project_board_id,exclude_from_point_calculation,project_id');
+        $taskId = $taskDetail->id;
+        $projectId = $taskDetail->project_id;
+
+        $currentPic = $this->taskPicRepo->list('employee_id', 'project_task_id = ' . $taskId, ['employee:id,uid']);
+
+        if ($taskDetail->exclude_from_point_calculation) {
+            $this->taskRepo->update(['status' => null], $taskUid);
+
+            goto output;
+        }
+
         if ($employee) {
             // THIS IS REMARK REQUEST CAME FROM TELEGRAM
             $this->telegramEmployee = $employee;
         }
-
-        $taskId = getIdFromUid($taskUid, new ProjectTask);
-        $projectId = getIdFromUid($projectUid, new Project);
 
         // this variable is to alert current pics which is the worker
         $currentTaskData = $this->taskRepo->show($taskUid, 'id,current_pics,current_board,project_board_id,is_pool_type');
@@ -6201,15 +6238,12 @@ class ProjectService
             $currentPicIds[] = $employee->id;
         }
 
-        $currentPic = $this->taskPicRepo->list('employee_id', 'project_task_id = ' . $taskId, ['employee:id,uid']);
-
         // change worktime status of Project Manager
         foreach ($currentPic as $pic) {
             $this->setTaskWorkingTime($taskId, $pic->employee_id, WorkType::Finish->value);
         }
 
         // move task to next board
-        $taskDetail = $this->taskRepo->show($taskUid, 'id,project_board_id');
         $sourceBoardId = $taskDetail->project_board_id;
 
         // get next board
@@ -6272,19 +6306,10 @@ class ProjectService
             Artisan::call('cache:clear');
         } else {
             $task = $this->formattedDetailTask($taskUid);
-
-            $currentData = $this->detailCacheAction->handle(
-                projectUid: $projectUid,
-                forceUpdateAll: true,
-            );
-
-            $payloadOutput = [
-                'task' => $task,
-                'full_detail' => $currentData,
-            ];
         }
 
         // complete work state
+        //
         $this->projectTaskWorkStateRepo->update(
             data: [
                 'complete_at' => Carbon::now(),
@@ -6305,6 +6330,18 @@ class ProjectService
             TaskIsCompleteJob::dispatch($currentPicIds, $taskId)->afterCommit();
         }
 
+        output:
+
+        $currentData = $this->detailCacheAction->handle(
+            projectUid: $projectUid,
+            forceUpdateAll: true,
+        );
+
+        $payloadOutput = [
+            'task' => $task,
+            'full_detail' => $currentData,
+        ];
+
         return $payloadOutput;
     }
 
@@ -6320,7 +6357,8 @@ class ProjectService
     {
         DB::beginTransaction();
         try {
-            $payloadOutput = $this->mainMarkAsCompleted($projectUid, $taskUid, $employee);
+            // $payloadOutput = $this->mainMarkAsCompleted($projectUid, $taskUid, $employee);
+            $payloadOutput = MarkAsComplete::run($projectUid, $taskUid, $employee);
 
             DB::commit();
 
@@ -6862,8 +6900,7 @@ class ProjectService
                 whereHas: [
                     [
                         'relation' => 'task',
-                        'query' => '',
-                        'type' => 'plain',
+                        'query' => 'exclude_from_point_calculation = 0',
                     ],
                 ]
             );
