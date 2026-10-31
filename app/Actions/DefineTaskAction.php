@@ -302,7 +302,7 @@ class DefineTaskAction
             return null;
         }
 
-        if (($task->status == TaskStatus::OnProgress->value || $task->status == TaskStatus::Revise->value) && ($this->isMyTask || $this->hasSuperPower())) {
+        if (($task->status == TaskStatus::OnProgress->value || $task->status == TaskStatus::Revise->value) && ($this->isMyTask || $this->hasSuperPower()) && ! $task->exclude_from_point_calculation) {
             $complete = $this->buildOutput($key, false, $detail);
         }
 
@@ -469,11 +469,11 @@ class DefineTaskAction
 
         // The lead modeller must not hold a task that is in progress (their team is working on it)
         // when they are not its PIC.
-        if ($this->isLeadModeller() && ! $this->isMyTask && $task->status == TaskStatus::OnProgress->value) {
+        if ($this->isLeadModeller() && ! $this->isMyTask && $task->status == TaskStatus::OnProgress->value && $task->exclude_from_point_calculation) {
             return null;
         }
 
-        if (($this->hasSuperPower() || $this->isMyTask) && ($task->status == TaskStatus::OnProgress->value || $task->status == TaskStatus::Revise->value)) {
+        if (($this->hasSuperPower() || $this->isMyTask) && ($task->status == TaskStatus::OnProgress->value || $task->status == TaskStatus::Revise->value) && ! $task->exclude_from_point_calculation) {
             $hold = $this->buildOutput($key, false, $detail);
         }
 
@@ -542,7 +542,7 @@ class DefineTaskAction
     {
         $complete = null;
 
-        if ($this->hasSuperPower() && $task->status == TaskStatus::CheckByPm->value) {
+        if (($this->hasSuperPower() && $task->status == TaskStatus::CheckByPm->value) || ($this->hasSuperPower() && $task->exclude_from_point_calculation) && $task->status) {
             $complete = $this->buildOutput($key, false, $detail);
         }
 

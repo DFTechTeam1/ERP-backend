@@ -128,6 +128,11 @@ class ProjectTaskPicLogRepository extends ProjectTaskPicLogInterface
         return $this->model->create($data);
     }
 
+    public function insert(array $data)
+    {
+        return $this->model->insert($data);
+    }
+
     /**
      * Update Data
      *

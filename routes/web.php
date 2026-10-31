@@ -378,7 +378,23 @@ Route::get('slack-testing', function () {
 
     //     $developer->notify(new SlackNotification($block));
     // }
-    $rates = DB::select("CALL get_currency_rate('USD')");
 
-    return $rates[0]->output_rate;
+    $repo = app(ProjectRepository::class);
+    $data = $repo->show(
+        uid: '99d386da-1cb7-47b2-bb66-558455fce89e',
+        select: 'id,name,project_date,project_class_id',
+        relation: [
+            'tasks:id,project_id,name',
+            'projectClass:id,name,reward',
+            'projectClass.tiers',
+            'taskPicHistories:id,project_id,project_task_id,employee_id',
+            'taskPicHistories.employee:id,name,nickname,user_id',
+            'taskPicHistories.employee.user:id,employee_id',
+            'taskPicHistories.employee.singlePoint:id,employee_id',
+            'taskPicHistories.task:id,name',
+            'personInCharges',
+        ]
+    );
+
+    return $data->toArray();
 });

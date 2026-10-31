@@ -19,6 +19,7 @@ class CreatePoolTask extends FormRequest
             'pic.*' => 'nullable|string',
             'media' => 'nullable|array',
             'media.*' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf',
+            'exclude_from_point' => 'int'
         ];
     }
 
