@@ -48,11 +48,12 @@ function amtEmployee(): Employee
     return Employee::factory()->withUser()->create();
 }
 
-function amtTask(?int $status, ?string $endDate = '2026-10-01 10:00:00'): ProjectTask
+function amtTask(?int $status, ?string $endDate = '2026-10-01 10:00:00', bool $excludeFromPoint = false): ProjectTask
 {
     return ProjectTask::factory()->create([
         'status' => $status,
         'end_date' => $endDate,
+        'exclude_from_point_calculation' => $excludeFromPoint,
     ]);
 }
 
@@ -110,6 +111,38 @@ describe('task status resolution', function () {
         assertDatabaseHas('project_tasks', [
             'id' => $task->id,
             'status' => TaskStatus::WaitingApproval->value,
+        ]);
+    });
+
+    it('moves a status-less excluded task straight to OnProgress once it has a pic', function () {
+        // A pool task flagged exclude_from_point_calculation skips the approval flow: assigning a
+        // member takes it directly to OnProgress instead of WaitingApproval.
+        $task = amtTask(status: null, excludeFromPoint: true);
+        $emp = amtEmployee();
+
+        $response = amtService()->assignMemberToTask(['users' => [$emp->uid], 'removed' => []], $task->uid);
+
+        expect($response['error'])->toBeFalse();
+        assertDatabaseHas('project_tasks', [
+            'id' => $task->id,
+            'status' => TaskStatus::OnProgress->value,
+            'is_pool_task' => false,
+        ]);
+        assertDatabaseHas('project_task_pics', [
+            'project_task_id' => $task->id,
+            'employee_id' => $emp->id,
+        ]);
+    });
+
+    it('moves a Completed excluded task to OnProgress on reassignment', function () {
+        $task = amtTask(status: TaskStatus::Completed->value, excludeFromPoint: true);
+        $emp = amtEmployee();
+
+        amtService()->assignMemberToTask(['users' => [$emp->uid], 'removed' => []], $task->uid);
+
+        assertDatabaseHas('project_tasks', [
+            'id' => $task->id,
+            'status' => TaskStatus::OnProgress->value,
         ]);
     });
 

@@ -32,7 +32,7 @@ class ProjectTaskPicHistory extends Model
 
     public function task(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Production\Models\ProjectTask::class, 'project_task_id');
+        return $this->belongsTo(\Modules\Production\Models\ProjectTask::class, 'project_task_id')->where('exclude_from_point_calculation', 0);
     }
 
     public function taskLog(): HasMany

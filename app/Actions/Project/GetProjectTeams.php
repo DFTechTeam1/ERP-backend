@@ -2,7 +2,11 @@
 
 namespace App\Actions\Project;
 
+use App\Enums\Employee\Status;
+use App\Enums\Production\TransferTeamStatus;
+use App\Models\User;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Modules\Company\Models\PositionBackup;
 use Modules\Hrd\Models\Employee;
 use Modules\Hrd\Repository\EmployeeRepository;
 use Modules\Production\Models\ProjectTaskPicHistory;
@@ -24,14 +28,14 @@ class GetProjectTeams
         $picUids = [];
 
         if ($productionPositions = json_decode(getSettingByKey('position_as_production'), true)) {
-            $productionPositions = \Modules\Company\Models\PositionBackup::whereIn('uid', $productionPositions)
+            $productionPositions = PositionBackup::whereIn('uid', $productionPositions)
                 ->pluck('id')
                 ->toArray();
         }
 
         // batch-load all PIC users with their roles to avoid N queries in the loop
         $picEmployeeIds = collect($project->personInCharges)->pluck('pic_id')->toArray();
-        $picUsersWithRoles = \App\Models\User::with('roles:id,name')
+        $picUsersWithRoles = User::with('roles:id,name')
             ->whereIn('employee_id', $picEmployeeIds)
             ->get(['id', 'employee_id'])
             ->keyBy('employee_id');
@@ -63,7 +67,7 @@ class GetProjectTeams
         $specialEmployee = [];
         $specialIds = [];
         if ($specialPosition) {
-            $specialPosition = getIdFromUid($specialPosition, new \Modules\Company\Models\PositionBackup);
+            $specialPosition = getIdFromUid($specialPosition, new PositionBackup);
             $whereSpecial = "position_id = {$specialPosition}";
             $isLeadModeller = false;
             if ($leadModeller != null && $leadModeller != '' && $leadModeller != 'null' && ! $allSpecialPosition) {
@@ -89,7 +93,7 @@ class GetProjectTeams
         $roles = $user->roles;
         $roleId = $roles[0]->id;
         $superUserRole = getSettingByKey('super_user_role');
-        $transferCondition = 'status = '.\App\Enums\Production\TransferTeamStatus::Approved->value.' and project_id = '.$project->id.' and is_entertainment = 0';
+        $transferCondition = 'status = '.TransferTeamStatus::Approved->value.' and project_id = '.$project->id.' and is_entertainment = 0';
         if ($roleId != $superUserRole) {
             $transferCondition .= ' and requested_by = '.$user->employee_id;
         }
@@ -101,7 +105,7 @@ class GetProjectTeams
             $employeeCondition = 'boss_id IN (0)';
         }
 
-        $employeeCondition .= ' and status != '.\App\Enums\Employee\Status::Inactive->value;
+        $employeeCondition .= ' and status != '.Status::Inactive->value;
 
         if (count($specialIds) > 0) {
             $specialId = implode(',', $specialIds);

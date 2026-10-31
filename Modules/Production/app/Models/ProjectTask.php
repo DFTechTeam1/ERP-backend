@@ -42,6 +42,7 @@ class ProjectTask extends Model
         'is_modeler_task',
         'is_pool_task',
         'is_pool_type',
+        'exclude_from_point_calculation'
     ];
 
     protected static function newFactory(): ProjectTaskFactory
