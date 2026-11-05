@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Modules\Production\Http\Controllers\Api\DeadlineChangeReasonController;
+use Modules\Production\Http\Controllers\Api\EntertainmentController;
 use Modules\Production\Http\Controllers\Api\InteractiveController;
 use Modules\Production\Http\Controllers\Api\ProductionEmployeeDashboardController;
 use Modules\Production\Http\Controllers\Api\ProjectController;
@@ -251,6 +252,11 @@ Route::middleware(['auth.session'])
         Route::post('project/{projectUid}/song/reject/{songUid}', [ProjectController::class, 'rejectEditSong'])->name('projects.rejectEditSong');
         Route::post('project/{projectUid}/song/subtituteSongPic/{songUid}', [ProjectController::class, 'subtituteSongPic'])->name('projects.subtituteSongPic');
         Route::get('project/{projectUid}/song/removePic/{songUid}', [ProjectController::class, 'removePicSong'])->name('projects.removePicSong');
+
+        // Songs v2
+        Route::prefix('entertainment')->group(function () {
+            Route::post('projects/{projectUid}/songs', [EntertainmentController::class, 'createSong']);
+        });
 
         // entertainment
         Route::get('/project/{projectUid}/entertainment/listMember', [ProjectController::class, 'entertainmentListMember'])->name('projecjts.entertainmentListMember');

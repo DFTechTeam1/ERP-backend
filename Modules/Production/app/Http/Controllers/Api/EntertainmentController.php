@@ -1,0 +1,70 @@
+<?php
+
+namespace Modules\Production\Http\Controllers\Api;
+
+use App\Data\Entertainment\BulkCreateSongData;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Modules\Production\Services\EntertainmentService;
+
+class EntertainmentController extends Controller
+{
+    public function __construct(
+        private readonly EntertainmentService $service
+    ) {}
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        //
+
+        return response()->json([]);
+    }
+
+    public function createSong(BulkCreateSongData $payload, string $projectUid)
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        //
+
+        return response()->json([]);
+    }
+
+    /**
+     * Show the specified resource.
+     */
+    public function show($id)
+    {
+        //
+
+        return response()->json([]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        //
+
+        return response()->json([]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy($id)
+    {
+        //
+
+        return response()->json([]);
+    }
+}
