@@ -255,7 +255,15 @@ Route::middleware(['auth.session'])
 
         // Songs v2
         Route::prefix('entertainment')->group(function () {
-            Route::post('projects/{projectUid}/songs', [EntertainmentController::class, 'createSong']);
+            Route::get('projects/{projectUid}/songs', [EntertainmentController::class, 'index'])
+                ->middleware(PermissionCheck::class . ':list_request_song');
+            Route::get('projects/{projectUid}/songs/{songUid}', [EntertainmentController::class, 'show']);
+            Route::put('projects/{projectUid}/songs/{songUid}', [EntertainmentController::class, 'update'])
+                ->middleware(PermissionCheck::class . ':edit_request_song');
+            Route::delete('projects/{projectUid}/songs/{songUid}', [EntertainmentController::class, 'update'])
+                ->middleware(PermissionCheck::class . ':delete_request_song');
+            Route::post('projects/{projectUid}/songs', [EntertainmentController::class, 'createSong'])
+                ->middleware(PermissionCheck::class . ':create_request_song');
         });
 
         // entertainment

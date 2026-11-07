@@ -28,6 +28,7 @@ class ProjectSongList extends Model
         'created_by',
         'target_name',
         'reason',
+        'song_group'
     ];
 
     protected static function newFactory(): ProjectSongListFactory
