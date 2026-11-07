@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Internal;
 
 use App\Enums\ErrorCode\Code;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -20,17 +21,19 @@ class SendNotificationRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'recipient_email'  => 'required|email',
-            'action'           => 'required|string',
-            'channels'         => 'required|array|min:1',
-            'channels.*'       => 'required|string|in:email,slack,telegram,database',
-            'data'             => 'nullable|array',
-            'options'          => 'nullable|array',
+            'recipient_email' => 'required|email',
+            'action' => 'required|string',
+            // Optional: when omitted, channels come from the template's notification_channel.
+            // When provided, they override the template for this call.
+            'channels' => 'nullable|array',
+            'channels.*' => 'required|string|in:email,slack,telegram,database',
+            'data' => 'nullable|array',
+            'options' => 'nullable|array',
         ];
     }
 

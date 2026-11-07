@@ -293,6 +293,8 @@ Route::middleware('auth.session')
                 )
             );
         });
+
+        Route::post('internal/notifications/send', [App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
     });
 
 Route::post('line-webhook', [LineController::class, 'webhook']);
@@ -412,7 +414,7 @@ Route::get('/files/{path}', function (Request $request, $path) {
 Route::middleware('internal.service')
     ->prefix('internal')
     ->group(function () {
-        Route::post('notifications/send', [App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
+        // Route::post('notifications/send', [App\Http\Controllers\Api\Internal\NotificationController::class, 'send']);
         Route::post('system/reset-cache', function (Request $request) {
             Artisan::call('cache:clear');
         });

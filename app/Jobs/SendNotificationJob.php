@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,9 +28,13 @@ class SendNotificationJob implements ShouldQueue
      * Notification data
      */
     private $recipients;
+
     private string $action;
+
     private array $data;
+
     private array $channels;
+
     private array $options;
 
     /**
@@ -41,7 +44,7 @@ class SendNotificationJob implements ShouldQueue
         $recipients,
         string $action,
         array $data = [],
-        array $channels = [NotificationService::CHANNEL_DATABASE],
+        array $channels = [],
         array $options = []
     ) {
         $this->recipients = $recipients;

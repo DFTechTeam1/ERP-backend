@@ -20,6 +20,9 @@ use Modules\Hrd\Models\Employee;
  * - Database
  * 
  * Usage:
+ * // channels resolved from the template's notification_channel:
+ * NotificationService::send($user, 'user_assigned_to_task', $data);
+ * // or override the channels for this call only:
  * NotificationService::send($user, 'user_assigned_to_task', $data, ['email', 'database']);
  */
 class NotificationService
@@ -48,7 +51,9 @@ class NotificationService
      * @param User|array $recipients - Single user or array of users
      * @param string $action - Notification action/type from notification_settings
      * @param array $data - Data for template parameters
-     * @param array $channels - Channels to send notification (email, slack, telegram, database)
+     * @param array $channels - Optional. Channels to deliver on (email, slack, telegram, database).
+     *                          When empty, resolved from the template's notification_channel
+     *                          (falling back to [database]); when provided, overrides the template.
      * @param array $options - Additional options (attachments, images, etc)
      * @return array - Result of each channel delivery
      */
@@ -56,7 +61,7 @@ class NotificationService
         $recipients,
         string $action,
         array $data = [],
-        array $channels = [self::CHANNEL_DATABASE],
+        array $channels = [],
         array $options = []
     ): array {
         // Normalize recipients to array
@@ -106,6 +111,22 @@ class NotificationService
             
             $results['error'] = 'Template not found';
             return $results;
+        }
+
+        // Resolve delivery channels. An explicit $channels argument always wins (per-call
+        // override); otherwise fall back to the template's configured notification_channel, and
+        // finally to database when the template defines none. getTemplate() uses the query builder,
+        // so notification_channel is a raw JSON string here and must be decoded.
+        if (empty($channels)) {
+            $templateChannels = $template->notification_channel
+                ? json_decode($template->notification_channel, true)
+                : null;
+
+            $channels = (is_array($templateChannels) && count($templateChannels) > 0)
+                ? $templateChannels
+                : [self::CHANNEL_DATABASE];
+
+            $results['channels_source'] = 'template';
         }
 
         // Process template with data
@@ -487,8 +508,27 @@ class NotificationService
     }
 
     /**
+     * Render a template with data WITHOUT persisting or sending anything.
+     *
+     * Used by the template-management "preview" endpoint so the editor can show a live
+     * rendering. Shares processTemplate() so the placeholder grammar stays single-sourced.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{rendered: string, rendered_html: string}
+     */
+    public static function preview(string $template, ?string $templateHtml, array $data = []): array
+    {
+        return [
+            'rendered' => self::processTemplate($template, $data, false),
+            'rendered_html' => ! empty($templateHtml)
+                ? self::processTemplate($templateHtml, $data, true)
+                : '',
+        ];
+    }
+
+    /**
      * Get notification template from database
-     * 
+     *
      * @param string $action
      * @return object|null
      */
@@ -509,15 +549,22 @@ class NotificationService
      * - <document1>, <document2>, ..., <documentN> for document URLs
      * - <bubble> for new line
      * 
-     * @param string $template
+     * @param string|null $template
      * @param array $data
      * @param bool $isHtml
      * @return string
      */
-    private static function processTemplate(string $template, array $data, bool $isHtml = false): string
+    private static function processTemplate(?string $template, array $data, bool $isHtml = false): string
     {
-        $message = $template;
-        
+        // Either body may be empty/null (a template can define only a plain or only an HTML
+        // version, or neither): render that as an empty string instead of crashing on the
+        // string type-hint. Nothing to substitute into an empty body, so return early.
+        $message = $template ?? '';
+
+        if ($message === '') {
+            return '';
+        }
+
         // Replace parameter placeholders (parameter1, parameter2, ..., parameterN)
         foreach ($data as $key => $value) {
             // Skip special arrays (images, audios, documents)
@@ -598,7 +645,7 @@ class NotificationService
         $recipients,
         string $action,
         array $data = [],
-        array $channels = [self::CHANNEL_DATABASE],
+        array $channels = [],
         array $options = []
     ): void {
         \App\Jobs\SendNotificationJob::dispatch($recipients, $action, $data, $channels, $options);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Internal\SendNotificationRequest;
 use App\Models\User;
 use App\Services\NotificationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 class NotificationController extends Controller
@@ -14,10 +15,11 @@ class NotificationController extends Controller
      * Send a notification from an internal service (Express, Python, etc.).
      *
      * The recipient is resolved by email. The action must match a row in
-     * the notification_settings table. Channels default to ['email'] when
-     * the request omits them.
+     * the notification_settings table. When the request omits `channels`,
+     * they are resolved from that template's notification_channel (falling
+     * back to ['database']); when provided, they override the template.
      */
-    public function send(SendNotificationRequest $request): \Illuminate\Http\JsonResponse
+    public function send(SendNotificationRequest $request): JsonResponse
     {
         $recipient = User::where('email', $request->recipient_email)->first();
 
@@ -31,16 +33,17 @@ class NotificationController extends Controller
             );
         }
 
-        $channels = $request->channels;
+        // Omitted channels => let NotificationService resolve them from the template.
+        $channels = $request->channels ?? [];
         $data = $request->data ?? [];
         $options = $request->options ?? [];
         $serviceName = $request->header('X-Service-Name');
 
         Log::info('Internal notification request received', [
-            'service'   => $serviceName,
+            'service' => $serviceName,
             'recipient' => $request->recipient_email,
-            'action'    => $request->action,
-            'channels'  => $channels,
+            'action' => $request->action,
+            'channels' => $channels,
         ]);
 
         NotificationService::sendAsync(
@@ -56,8 +59,8 @@ class NotificationController extends Controller
                 message: 'Notification queued successfully.',
                 data: [
                     'recipient' => $recipient->email,
-                    'action'    => $request->action,
-                    'channels'  => $channels,
+                    'action' => $request->action,
+                    'channels' => $channels,
                 ],
             ),
         );

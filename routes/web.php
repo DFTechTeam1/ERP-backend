@@ -8,6 +8,7 @@ use App\Imports\SummaryInventoryReport;
 use App\Models\User;
 use App\Notifications\DummyNotification;
 use App\Services\EncryptionService;
+use App\Services\NotificationService;
 use App\Services\PusherNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -362,39 +363,14 @@ Route::get('signature', function () {
     ]);
 });
 Route::get('slack-testing', function () {
-    // $developer = \App\Models\User::where('email', config('app.developer_email'))->first();
-    // logging('slack developer', [
-    //     'dev' => $developer,
-    //     'log' => config('services.slack')
-    // ]);
-    // if ($developer) {
-    //     // build block and content
-    //     $block = (new SlackMessage)
-    //         ->text('testing')
-    //         ->headerBlock('testing header')
-    //         ->sectionBlock(function (SectionBlock $block) {
-    //             $block->text('testng')->markdown();
-    //         });
+    $user = User::where('email', 'gumilang@dfactory.pro')->first();
 
-    //     $developer->notify(new SlackNotification($block));
-    // }
-
-    $repo = app(ProjectRepository::class);
-    $data = $repo->show(
-        uid: '99d386da-1cb7-47b2-bb66-558455fce89e',
-        select: 'id,name,project_date,project_class_id',
-        relation: [
-            'tasks:id,project_id,name',
-            'projectClass:id,name,reward',
-            'projectClass.tiers',
-            'taskPicHistories:id,project_id,project_task_id,employee_id',
-            'taskPicHistories.employee:id,name,nickname,user_id',
-            'taskPicHistories.employee.user:id,employee_id',
-            'taskPicHistories.employee.singlePoint:id,employee_id',
-            'taskPicHistories.task:id,name',
-            'personInCharges',
-        ]
+    app(NotificationService::class)->sendAsync(
+        $user,                 // recipient: an ERP User
+        'song_created',
+        [
+            'parameter1' => 'Rudhi',
+            'parameter2' => 'project one',
+        ],
     );
-
-    return $data->toArray();
 });
