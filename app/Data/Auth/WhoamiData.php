@@ -16,6 +16,7 @@ use Spatie\LaravelData\Data;
 class WhoamiData extends Data
 {
     public function __construct(
+        public int $id,
         public string $uid,
         public ?string $name,
         public ?string $username,
@@ -29,6 +30,7 @@ class WhoamiData extends Data
     public static function fromUser(User $user): self
     {
         return new self(
+            id: (int) $user->id,
             uid: (string) $user->uid,
             name: $user->name,
             username: $user->username,
