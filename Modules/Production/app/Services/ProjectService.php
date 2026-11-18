@@ -9540,8 +9540,13 @@ class ProjectService
     {
         try {
             $projectId = $this->generalService->getIdFromUid($projectUid, new Project);
-            // get all project task with status is not the same with completed
-            $tasksProjects = $this->getUnfinishedTasks($projectId);
+
+            // A regular PM is gated only by their OWN unfinished tasks (per-PM completion), so
+            // another PM's ongoing work never blocks them. Root, Director and the configured
+            // super-user role override every team, so they are gated by the WHOLE project's
+            // unfinished tasks and may complete on everyone's behalf.
+            $seesAllTasks = isSuperUserRole() || isDirector();
+            $tasksProjects = $this->getUnfinishedTasks($projectId, $seesAllTasks ? null : Auth::id());
             $tasks = $tasksProjects['production_tasks'];
             $songs = $tasksProjects['songs'];
 
@@ -9551,6 +9556,7 @@ class ProjectService
                 message: 'Success',
                 data: [
                     'needToCompleteTask' => $needToCompleteTasks,
+                    'scope' => $seesAllTasks ? 'all' : 'own',
                     'tasks' => $tasks,
                     'songs' => $songs,
                 ]
@@ -9561,18 +9567,29 @@ class ProjectService
     }
 
     /**
-     * Get unfinished tasks
+     * Get unfinished tasks.
+     *
+     * When $createdBy is given, only tasks that PM created are returned. A project can have more
+     * than one PM and each one completes the project separately (see completeProject), so another
+     * PM's unfinished tasks must never block this PM's precheck/completion. project_tasks.created_by
+     * stores the creator's user id.
      */
-    protected function getUnfinishedTasks(int $projectId): array
+    protected function getUnfinishedTasks(int $projectId, ?int $createdBy = null): array
     {
         $notAllowed = [
             TaskStatus::Completed->value,
             TaskStatus::WaitingDistribute->value,
         ];
 
+        $where = 'status NOT IN (' . implode(',', $notAllowed) . ") AND status IS NOT NULL AND project_id = {$projectId}";
+
+        if ($createdBy !== null) {
+            $where .= " AND created_by = {$createdBy}";
+        }
+
         $tasks = $this->taskRepo->list(
             select: 'id,name,status,uid',
-            where: 'status NOT IN (' . implode(',', $notAllowed) . ") AND status IS NOT NULL AND project_id = {$projectId}",
+            where: $where,
             relation: [
                 'pics:id,project_task_id,employee_id',
                 'pics.employee:id,nickname',
@@ -9625,7 +9642,10 @@ class ProjectService
         try {
             $user = Auth::user();
             $projectId = $this->generalService->getIdFromUid($projectUid, new Project);
-            $unfinishedTasks = $this->getUnfinishedTasks($projectId);
+            // A PM completes only their own unfinished tasks; a super user (root/director) completes
+            // the whole project's, matching the precheck gate.
+            $seesAllTasks = isSuperUserRole() || isDirector();
+            $unfinishedTasks = $this->getUnfinishedTasks($projectId, $seesAllTasks ? null : $user->id);
 
             if (count($unfinishedTasks['production_tasks']) > 7) {
                 return errorResponse(message: __('notification.toManyUnfinishedTask'));
