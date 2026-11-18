@@ -468,8 +468,8 @@ class DefineTaskAction
         $hold = null;
 
         // The lead modeller must not hold a task that is in progress (their team is working on it)
-        // when they are not its PIC.
-        if ($this->isLeadModeller() && ! $this->isMyTask && $task->status == TaskStatus::OnProgress->value && $task->exclude_from_point_calculation) {
+        // when they are not its PIC. Mirrors the complete-button guard above.
+        if ($this->isLeadModeller() && ! $this->isMyTask && $task->status == TaskStatus::OnProgress->value) {
             return null;
         }
 
