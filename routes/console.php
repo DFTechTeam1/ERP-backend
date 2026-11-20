@@ -18,6 +18,7 @@ use Modules\Hrd\Console\UpdateEmployeeActivePerMonth;
 use Modules\Production\Console\ClearAllCache;
 use Modules\Production\Console\PaymentDueReminderCommand;
 use Modules\Production\Console\ResyncNasFolderCreation;
+use Spatie\ScheduleMonitor\Models\MonitoredScheduledTaskLogItem;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -32,6 +33,11 @@ Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 
 // prune long-expired refresh tokens
 Schedule::command(PruneRefreshTokens::class)->dailyAt('02:00');
+
+// prune schedule-monitor log items older than config('schedule-monitor.delete_log_items_older_than_days')
+Schedule::command('model:prune', [
+    '--model' => [MonitoredScheduledTaskLogItem::class],
+])->dailyAt('01:30');
 
 Schedule::call(new PostNotifyCompleteProject)->monitorName('post-notify-complete-project')->dailyAt('00:01');
 
