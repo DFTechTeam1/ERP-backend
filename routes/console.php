@@ -33,9 +33,9 @@ Schedule::command(ClearLogSchedule::class)->dailyAt('01:00');
 // prune long-expired refresh tokens
 Schedule::command(PruneRefreshTokens::class)->dailyAt('02:00');
 
-Schedule::call(new PostNotifyCompleteProject)->dailyAt('00:01');
+Schedule::call(new PostNotifyCompleteProject)->monitorName('post-notify-complete-project')->dailyAt('00:01');
 
-Schedule::call(new UpcomingDeadlineTask)->dailyAt('09:00');
+Schedule::call(new UpcomingDeadlineTask)->monitorName('upcoming-deadline-task')->dailyAt('09:00');
 
 Schedule::command(pruneInteractiveAsset::class)->everyMinute();
 

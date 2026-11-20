@@ -10,6 +10,7 @@ use App\Http\Middleware\InternalServiceMiddleware;
 use App\Http\Middleware\LogMcpAccess;
 use App\Http\Middleware\PartnerMiddleware;
 use App\Http\Middleware\PermissionCheck;
+use App\Http\Middleware\PrometheusRequestMetrics;
 use App\Http\Middleware\ScalarAuth;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -41,6 +42,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // scheme. Without this, $request->isSecure() is false and signed-route
         // validation runs over http while generation forces https — a mismatch.
         $middleware->trustProxies(at: '*');
+
+        // Record every HTTP request (method, route, status, duration) for Prometheus.
+        // Appended so it wraps route dispatch; the observation is taken in terminate()
+        // with the final response. The internal /metrics endpoint is registered in
+        // PrometheusServiceProvider and guarded to private networks only.
+        $middleware->append(PrometheusRequestMetrics::class);
 
         $middleware->validateCsrfTokens(except: [
             '/oauth/token',
