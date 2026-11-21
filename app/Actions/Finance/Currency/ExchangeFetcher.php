@@ -57,7 +57,15 @@ class ExchangeFetcher
             throw new BaseCurrencyNotFound;
         }
 
-        $actor = $userRepo->detail(id: Auth::id(), select: 'id,email,employee_id', relation: ['employee:id,name']);
+        // If this being call from queue job, auth with empty
+        $userId = Auth::id();
+        if (! $userId) {
+            $developerEmail = config('app.developer_email');
+            $developerUser = $userRepo->detail(where: "email = '{$developerEmail}'", select: 'id');
+            $userId = $developerUser->id;
+        }
+
+        $actor = $userRepo->detail(id: $userId, select: 'id,email,employee_id', relation: ['employee:id,name']);
 
         $fetchUrl = config('app.exchange_api_url').'/'.config('app.exchange_api_key')."/latest/{$baseCurrency->code}";
         $res = Http::get($fetchUrl)
