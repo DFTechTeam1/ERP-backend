@@ -153,6 +153,7 @@ class AiCostService
                 'created_at' => $filter['period'],
             ],
             'where' => $where,
+            'select' => ['exchange_rate', 'cost', 'created_at', 'token_usage', 'created_by']
         ])->map(function ($item) {
             // Guard against a missing/zero exchange rate: without a rate the IDR cost is unknown, so 0.
             $exchangeRate = (float) $item->exchange_rate;
